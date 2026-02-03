@@ -1,0 +1,400 @@
+
+import { Company, OperationEntry, Staff, TaxRegime, ReportStatus, StatsType } from '../types';
+
+const STORAGE_KEYS = {
+  COMPANIES: 'asos_final_v5_companies',
+  OPERATIONS: 'asos_final_v5_operations',
+  STAFF: 'asos_final_v5_staff',
+  LAST_SYNC: 'asos_final_v5_sync'
+};
+
+// Siz yuborgan CSV ma'lumotlarining xom nusxasi (pars qilish uchun)
+const RAW_CSV_DATA = `1,MONTAJ TEPLO ENERGO MCHJ,306033555,Айланма,Otabek,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+2,"""FINANCE COUNCIL"" MCHJ",302672452,Қатъий,Ruslan,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,ruzmetov_otabek,8H2mNeKEQZAhk,,,,,,,,
+3,"""ЧП ""ROAD RIDERS""",306807944,НДС,Abrorbek,,,,,,,,,,,,,,,+,+,+,,road.riders,Road-2025,+,+,+,,,,,
+4,"ЧП ""SEVEN\`S UP""",306918663,Қатъий,Ruslan,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,ruzmetov_otabek,8H2mNeKEQZAhk,,,,,,,,
+5,"ООО ""TEN BRANCHES""",307053253,Айланма,Go'zaloy,,,,,,,,,,,,,,,+,+,0,,,,,+,+,,,,,
+6,"СП ""ZIL-BAX""",307972154,Қатъий,Abrorbek,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,kartoteka ,,,,,+,+,,,,,
+7,"OOO ""SARDORBEK HOUSE""",308435425,Қатъий,Ruslan,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,,,,,,,,,,
+8,"""DILFUZAXON AVTO""",304825630,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,+,,axmedova_zu,Axmedova_Zu2025,,,,,,+,+,TOPSHIRMAYDI
+9,"""SOF MEDTEX"" MCHJ",309899654,НДС,Maxmuda,,,,,,,,,,,,,,,+,+,-,,jamshidbek_sharipov,Qd666m5rcnLgnV,,,,,,,,
+10,"OOO ""RONICS""",,НДС,Muslimbek,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,+
+11,"""SAPRAMTECH"" OOO",308023653,НДС,Muslimbek,,,,,,,,,,,,,,,+,+,-,,pavel_maksudov,P909940904p.,,,,,,,,
+12,GELECTRONIC,308820248,НДС,Mirabbos,,,,,,,,,,,,,,,+,+,+,,beksssssssss,S@farov01,,,,,,,,
+13,SHIRIN XK,310055812,НДС,Go'zaloy,,,,,,,,,,,,,,,+,+,+,,sayfullayevsaydulla,AA123456789aa@,,,,,,,,
+14,MELIOMASH,301502362,НДС,Go'zaloy,,,,,,,,,,,,,,,+,+,kartoteka,,sayfullayevsaydulla,mguWeKrhPeCXst,,,,,,,,
+15,"""C A WOLVES""",304940229,НДС,Axmadjon,,,,,,,,,,,,,,,+,+,+,,,,+,+,+,,,,,
+16,"""AL-AZIZ ACADEMY"" НОУ",305713761,НДС,Musobek,,,,,,,,,,,,,,,+,-,-,,aziz6463,QnTn234McFY_ub,,,,,,,,
+17,"ООО ""INTEST MAX""",306784151,НДС,Go'zaloy,,,,,,,,,,,,,,,+,+,+,,sardorkosimov,vtfSwhvLQHFLA@,,,,,+,,,
+18,"""AVIA GORODOK""",307058508,Қатъий,Axmadjon,,,,,,,,,,,,,,,+,+,+,,soatxaqberdiyev,Abrorjon_007,,,,,,,,+
+19,"""AVTOMATLASHTIRILGAN ELEKTRIK YURITMA""",307821555,Айланма,Otabek,,,,,,,,,,,,,,,+,+,kartoteka ,,,,,,,,,,,
+20,BM UNIT,207134036,Қатъий,Humora,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+21,"ООО ""AVTO LUXURY TRADE""",,Қатъий,Axmadjon,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,,,,,,,,,,
+22,KOLBERG PRODUCTION,307043621,НДС,,,,,,,,,,,,,,,,+,+,,,,,,,,,,,,
+23,"""AKJ SEBZOR BO\`LIMI""",,НДС,Otabek,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+24,"""AKJ TUZEL BO\`LIMI""",309112486,НДС,Otabek,,,,,,,,,,,,,,,+,+,0,,,,,+,+,,,,,
+25,"""WALL STREET ACADEMY""",305150198,НДС,Maxmuda,,,,,,,,,,,,,,,+,+,-,,komron300@yandex.ru,qF5HJS_27juPBX,+,+,+,,,,,
+26,DOMINANT DOMKUR- SIGN OF QUALITY,307829726,НДС,Otabek,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+27,LIDER ELITE,306116238,НДС,Zamira,,,,,,,,,,,,,,,+,+,+,,djurayevdil,DJurayevdil86@,,,,,,,,
+28,NATURE ECO WOOD MCHJ,310072135,НДС,Mirabbos,,,,,,,,,,,,,,,?,Ishi qilinmayapdi ,Ishi qilinmayapdi ,,sunnatjon090893,Sunnatjon_090893,,,,,,,,
+29,SAUNA 999,,НДС,Mirabbos,,,,,,,,,,,,,,,?,Ishi qilinmayapdi ,Ishi qilinmayapdi ,,kamoljon200470,Kamoljon_200470,,,,,,,,
+30,MASHXUR TAOM,309706846,НДС,Musobek,,,,,,,,,,,,,,,+,-,+,,djavxarova_dilfuza,xqC3ewet1LAZvG,,,,,,,,
+31,KIFTI OFTOB SARBONI,,НДС,Mirabbos,,,,,,,,,,,,,,,+,+,+,,ab0558645,Ab.0558645,,,,,,,,
+32,"ЧП ""MATYUSUF SALAEV""",309339417,Айланма,Humora,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+33,"OOO ""MAGISTRAL TRANS QURILISH""",,НДС,Humora,,,,,,,,,,,,,,,+,+,+,, jaxongirovjasurbek@gmail.com,Magistral*01,,,,,,,,
+34,"""SHIRIN LYUKS TAOM"" 01.09.2021",,Айланма,Musobek,,,,,,,,,,,,,,,-,-,0,,djavxarova_dilfuza,xqC3ewet1LAZvG,,+,+,,,+,+,+
+35,BY ETIKETKA,206155668,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,+,,,,+,+,+,,,,,
+36,IN VITRO PLANTS,207189989,НДС,Mirabbos,,,,,,,,,,,,,,,+,+,0,,sidikovshuhrat,Sidikovshuhr@t01,,,,,,,,
+37,"ООО ""BASKETBALL ACADEMY""",302813323,НДС,Otabek,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+38,"""KESH LOGIST""",,НДС,Otabek,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+39,"ООО ""SHIRIN SUPER TAOM""",,НДС,Musobek,,,,,,,,,,,,,,,+,-,+,,djavxarova_dilfuza,xqC3ewet1LAZvG,,,,,,,,
+40,"""JS MUROTOV"" АДВОКАТЛИК БЮРОСИ""",307205799,НДС,Maxmuda,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+41,VMM RELIABLE LEGAL PROTECTION,307947611,НДС,Maxmuda,,,,,,,,,,,,,,,+,-,+,,K04Hvuh8,8mz626Xrj7wkLZ,+,+,+,,,,,
+42,"""RUSLAN GRAND """,308543061,Айланма,Javohir,,,,,,,,,,,,,,,-,+,+,,,,,,,,,,,
+43,"ЧП ""CHIRCHIQ SAHOVAT""",309249687,Айланма,Ruslan,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+44,"""JT INVESTMENT HUB""",207314302,Айланма,Maxmuda,,,,,,,,,,,,,,,+,-,+,,,,,+,+,,,,,
+45,"""G-R-A-N-D ELECTRONICS""",303451710,Қатъий,Mirabbos,,,,,,,,,,,,,,,+,+,+,,shaxerg2266,Shaxerg_2266,,,,,,+,+,+
+46,"""XASANOV SABIRJAN LASHOVICH"" AB",307077420,НДС,Dilhush,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,-,,,,,,,,,,,+
+47,"""GITA DASTURCHILAR AKADEMIYASI"" MCHJ",307159792,НДС,Dilhush,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+48,"ООО ""HIGH-TECH GROUP""",308034845,НДС,Maxmuda,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,-,,,,+,+,+,,,,,
+49,XK UNIMEAL BUSINESS ENTITY,308038910,Қатъий,Humora,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+50,"""ЧП INTER PROF EDUCATION""",307446998,НДС,Humora,,,,,,,,,,,,,,,+,+,+,,2vyjtgvc,@interprof01,+,+,+,,,,,
+51,TRUST MEDICAL LAB,305610162,НДС,Mirabbos,,,,,,,,,,,,,,,+,+,+,,vositxon0208,Vositxon-0208,,,,,,,,
+52,"LANGUAGE ACADEMY""",308763019,НДС,Abdug'ani,,,,,,,,,,,,,,,+,+,+,,azizxonkuchimov,Ab12345678@,+,+,+,,,,,
+53,BEK AND COMPANY,,НДС,Mirabbos,,,,,,,,,,,,,,,+,+,kartoteka ,,,,,,,,,,,
+54,7-NINE МЧЖ,305630035,НДС,Musobek,,,,,,,,,,,,,,,+,+,+,,iiislom13@gmail.com,fGj8ghQH3nhcAY,+,+,+,,,,,
+55,BELLSTORE,304107369,НДС,Go'zaloy,,,,,,,,,,,,,,,+,+,kartoteka,,costatrade,D@vletov01,,,,,,,,
+56,"""STUDY GUIDE""",,НДС,Axmadjon,,,,,,,,,,,,,,,+,+,+,,blacks707,Omonov_01,,,,,,+,,
+57,HILOL PHARM,308836242,НДС,Abdug'ani,,,,,,,,,,,,,,,+,+,+,,mirzoyev_nozir,Parolapteka$2019,+,+,+,,,,,
+58,"""HI-TECH ORIENT MED-BUSINESS MCHJ",,НДС,Muslimbek,,,,,,,,,,,,,,,+,+,+,,id.egov.uz.alisher,*GEzM31a07b89,+,+,+,,,,,
+59,"""FINANCE SCHOOL""",307409092,НДС,Humora,,,,,,,,,,,,,,,+,+,-,,solaeva_zubayda ,Gmyn4gK3jde1aB,,,,,,,,+
+60,"""KIDS NUR CITY"" ООО",303408381,НДС,Musobek,,,,,,,,,,,,,,,+,-,+,,sevara_nurillayevna,n_cU_uYNNntweJ,,,,,,,,
+61,TAKSIM-KEBAB GROUP MCHJ,305979201,НДС,Abdug'ani,,,,,,,,,,,,,,,+,+,0,,,,+,+,+,,,,,
+62,NIGINA FARM,306672520,НДС,Zamira,,,,,,,,,,,,,,,+,+,+,,malik19820409,SL1Dd7kFrechy@,,,,,,,,
+63,DOUBLE X PRO,308234589,Қатъий,Hasan,,,,,,,,,,,,,,,+,+,+,,1980husanjon,b3FqXmXVkk6qUB,,,,,,,,
+64,"""MUZAFFARXO\`JA-HILOL"" Х.Ф.",306774385,НДС,Musobek,,,,,,,,,,,,,,,+,+,+,,xanxodjayeva_x,aR3ecTKYs55dQ@,,,,,,,,
+65,"""AMIRBEK-RUXSHONA PHARM"" XK",,НДС,Zamira,,,,,,,,,,,,,,,+,+,+,,shomurotov_sh,shomurotov_SH12345678,,,,,,,,+
+66,EZGU NIYAT ,,НДС,Zamira,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+67,"""PHARM SMART"" MCHJ",,НДС,Javohir,,,,,,,,,,,,,,,+,+,+,,yuldashev_sardor,CvPU3b@HY1X7wZ,,,,,,,,
+68,HAPPY CLEAN MChJ,206450634,Қатъий,Dilhush,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,+
+69,VIRTUS-SOCIUM МЧЖ,303328933,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,+,,abdulloh757,uA9UBGszMm,,,,,,,,
+70,MIRGAS OIL MCHJ,309680747,НДС,Mirabbos,,,,,,,,,,,,,,,+,+,+,,sharaf974,Isl@movSh01,,,,,,,,
+71,TRINITY TECHNOLOGY MCHJ,300772550,НДС,,,,,,,,,,,,,,,,-,+,+,,,,,,,,,,,
+72,ASAD s,308241991,Айlanma,Ketgan ,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+73,SOBIROV I YATT,309291123,Айланma,Abdug'ani,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+74,RIZO MULK MCHJ,,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,+,,yudina.aida,Yudina.Aida309918004,,,,,,,,
+75,ENGLIFY,,НДС,Axmadjon,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+76,J-R GROUP,305218618,НДС,Mirabbos,,,,,,,,,,,,,,,+,+,-,,sidikovshuhrat,Sidikovshuhr@t01,,,,,,,,
+77,PHARZAM FARM,301197434,НДС,Javohir,,,,,,,,,,,,,,,+,+,+,,pharzampharm1,4spaTqTPqH@Mkt,,,,,,+,+,+
+78,BADEX LIFE,,НДС,Muslimbek,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,xomid1991,Akam4545,,,,,,,,
+79,RONICS ENGINEERING TEAM,,Қатъий,Muslimbek,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+80,Raximjonova Dilnoza YATT,,Айланma,Go'zaloy,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+81,HI UNIT,,Қатъий,Humora,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+82,BRAND NEW HOUSES,309918004,НДС,Humora,,,,,,,,,,,,,,,+,+,-,,AB2201950,ZhDDr85TmXFO,,,,,,,,
+83,MARGARET,,Айланma,Otabek,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+84,IT-INTEGRATOR,,НДС,Muslimbek,,,,,,,,,,,,,,,+,+,-,,,,+,+,+,,,+,+,+
+85,UNI GLOBAL,,Айланma,Humora,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+86,KOLBERG MEDICAL,,НДС,Ilhom,,,,,,,,,,,,,,,+,+,+,,k_production,MpfKC8JAUJdNjK,,,,-,,,,
+87,TULYAGANOV FX,,НДС,Mirabbos,,,,,,,,,,,,,,,+,+,kartoteka,,,,,,,,,,,
+88,SOFI TEAM,,Қатъий,Ruslan,,,,,,,,,,,,,,,+,+,+,,ruzmetov_otabek,8H2mNeKEQZAhk,,,,,,,,
+89,RM MUROD BIZNES,,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,kartoteka,,,,+,+,+,,,,,
+90,BAROKAT TEAM,310310683,Қатъий,Ruslan,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,ruzmetov_otabek,8H2mNeKEQZAhk,,,,,,,,
+91,UZART GROUP PROJEKT,,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,kartoteka,,abdulloh757,uA9UBGszMm,,,,,,,,
+92,KORBAZAAR,,НДС,Abdug'ani,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,furkat91,utgTznQstreZK,,,,,,,,
+93,NURDEVAI,310190353,Айланma,Otabek,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,0,,,,,,,,,,,
+94,MEDICAL GM,,НДС,Musobek,,,,,,,,,,,,,,,+,+,+,,malif,eB4Ft3qykc,,,,,,,,
+95,LUNA CATERING TEAM,,Қатъий,Humora,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,+,,
+96,QUDRATILLA ILA,,Айланma,Otabek,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+97,MG BUSINESS BROKERS,,Айланma,Otabek,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,0,,,,,,,,,,,
+98,FIDELITY SERVISE,,Қатъий,Humora,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,+,+,TOPSHIRMAYDI
+99,NOEL TRIP,,Айланma,Javohir,,,,,,,,,,,,,,,+,+,+,,,,,,,,,+,+,+
+100,IE ASILBEKOVA ZULFIYA,,НДС,Dilhush,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+101,VIKTORIYA TIBBIY KORIK,,НДС,Musobek,,,,,,,,,,,,,,,+,+,-,,malif,eB4Ft3qykc,,,,,,,,
+102,UPGRADE AUTO,,НДС,Javohir,,,,,,,,,,,,,,,?,,ishlamayabti,,,,,,,,,,,
+103,NOMDOR PALOV,,НДС,Maxmuda,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+104,KOKTOSH SHIFO,,НДС,Musobek,,,,,,,,,,,,,,,+,+,+,,malif,eB4Ft3qykc,,,,,,,,
+105,ALIF PHARMA,308248942,НДС,Musobek,,,,,,,,,,,,,,,+,+,+,,33800,gKuz4bxNUD4tU@,+,+,+,,,,,
+106,GAZA LUX,310327837,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,+,,,,,,,,,,,
+107,CRAVE TECH,308229886,НДС,Go'zaloy,,,,,,,,,,,,,,,+,+,+,,sardor.kuddusov,mguWeKrhPeCXst,,,,,,,,+
+108,TURON FAYZ,310823283,НДС,Abrorbek,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,-,+,,,,,,,,,,,
+109,THE POWERFULL TEAM,,Қатъий,Ruslan,,,,,,,,,,,,,,,+,+,+,,solaeva_zubayda,Gmyn4gK3jde1aB,,,,,,,,
+110,HAYRULLO QAZISI,310234803,Айланma,Zamira,,,,,,,,,,,,,,,+,+,+,,3119171sh,NFrWcu1SWkLY3@,,+,+,,,,,
+111,LIDER BUSINESS,309081756,НДС,Zamira,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+112,MAX NUTRITION,,НДС,Muslimbek,,,,,,,,,,,,,,,+,+,+,,xomid1991,Akam4545,,,,,,,,
+113,DR1VE,305701286,НДС,Otabek,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+114,ANVAR FARM,,НДС,Muslimbek,,,,,,,,,,,,,,,+,-,-,,a5anvar,Ad19801989!,,,,,,+,+,+
+115,FERUZA NUR MED,310928627,НДС,Abdug'ani,,,,,,,,,,,,,,,+,+,+,,vufj1hkp,Ab12345678@,,,,,,,,
+116,DURDONA ECO FARM,310886087,НДС,Abdug'ani,,,,,,,,,,,,,,,+,+,+,,ad7183912,Ab12345678@,,,,,,,,+
+117,XURSAND HOUSE,,Айланma,Humora,,,,,,,,,,,,,,,+,+,-,,djumanov01.05.1969,cGTBWPy7erYNVW,,,,,,,,
+118,BUSINESS INVEST COOPERATION,,НДС,Humora,,,,,,,,,,,,,,,+,+,+,,xudaynazar.xodjaniyazov,Business*1,+,+,+,,,,,
+119,SAFORT HOUSE,,НДС,Humora,,,,,,,,,,,,,,,+,+,-,,,,+,+,+,,,,,
+120,INVEST PERSONA,,НДС,Humora,,,,,,,,,,,,,,,+,+,-,,,,+,+,+,,,,,
+121,STANDART CHICKEN,,НДС,Musobek,,,,,,,,,,,,,,,+,+,+,,mirsaidov.sh,TLfgZp8WRg9gC8,,,,,,,,
+122,ROYAL BEAUTY,,Айланma,Hasan,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+123,PATRONUM,,Айланma,Hasan,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,runkler,Ab12345678@,,+,+,,,,,
+124,LIVINGSTONE,,НДС,Maxmuda,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,,,,,,,,,,
+125,AFUBBA,,Қатъий,Abrorbek,,,,,,,,,,,,,,,+,-,-,,,,,,,,,,,
+126,NODIR TRADING,,Қатъий,Abrorbek,,,,,,,,,,,,,,,+,-,-,,,,,,,,,,,
+127,SMS 86,,НДС,Abrorbek,,,,,,,,,,,,,,ариза,+,-,-,,,,,,,,,,,
+128,AFUBBA 726,,НДС,Abrorbek,,,,,,,,,,,,,,ариза,+,-,-,,,,,,,,,,,
+129,1149 ALKIMYOGAR,,НДС,Abrorbek,,,,,,,,,,,,,,ариза,+,-,+,,,,,,,,,,,
+130,DINAR CLASS,,Қатъий,Hasan,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+131,BINAAR,,НДС,Olloshkur,,,,,,,,,,,,,,,+,+,+,,,,,,,,,+,+,+
+132,SAFETY CCTV,,НДС,Humora,,,,,,,,,,,,,,,+,+,+,,safetycctv,Safety@1,,,,,,,,
+133,INTER DELEKATES,,НДС,Maxmuda,,,,,,,,,,,,,,,+,+,0,,,,,,,,,+,+,TOPSHIRMAYDI
+134,STAR KAMERA,,НДС,Mirabbos,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,rosttech,Sotiboldiyev-01,,,,,,,,
+135,AHSAN TECHNOLOGY,,НДС,Mirabbos,,,,,,,,,,,,,,сураш керак,+,+,kartoteka,,rosttech,Sotiboldiyev-01,,,,,,OSHIBKA,+,+
+136,BIG TEAM,,Айланma,Mirabbos,,,,,,,,,,,,,,,+,+,kartoteka,,,,,,,,,+,+,TOPSHIRMAYDI
+137,TIM BUILD,,НДС,Mirahmad,,,,,,,,,,,,,,,+,+,-,,farxod86$$,jzmPCq_VW35HxN,,,,,,,,
+138,GARANT KOMPLEKS,,Айланma,Humora,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,0,,,,,,,,,,,
+139,TASTIFY,,қатий,Ruslan ,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,+,+,,aminboyev_a,nF5FMwsC43,,,,,,,,
+140,CONSTANT GROWTH,311490690,НДС,Zamira,,,,,,,,,,,,,,,+,+,+,,raximov_botirjon,BABXqYgLNz,,,,,,,,
+141,ELSANQURILISH,,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,-,,muhiddinovich@mc,ZnV7dTuY4C@fV8,,,,,,,,
+142,EASTREX,,НДС,Dilhush,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+143,XURSHID AVTO,,Айланma,Otabek,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+144,KIDDLE LAND,207074634,НДС,Javohir,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+145,JASURBEK YUKSALISH OMAD,202410242,НДС,Dilhush,,,,,,,,,,,,,,,+,+,-,,alisheribrohimov,sPx8r8rCTUXrD2,,,,,,+,+,+
+146,DIGITAL MASTERS ACADEMY,304033493,Айланma,Maxmuda,,,,,,,,,,,,,,,+,-,-,,,,,+,+,,,+,+,+
+147,NOMDOR OSH,,НДС,Maxmuda,,,,,,,,,,,,,,,+,-,+,,zigirosh,Palov22@,,,,,,,,
+148,AVVITAL NATURALS,308580358,НДС,Muslimbek,,,,,,,,,,,,,,,+,+,+,,xomid1991,Akam4545.,,,,,,,,+
+149,SHIFO DOKTOR XASAN,309162077,НДС,Abdug'ani,,,,,,,,,,,,,,,+,+,+,,dano_muxamedova,Ab12345678@,+,+,+,,,,,+
+150,DOOS DISTRIBUTION,311201305,НДС,Javohir,,,,,,,,,,,,,,,+,+,+,,xolboyevd-01,mAZJ86BLZsRuAp,,,,,,,,
+151,ZVEZDA FARM,311453174,НДС,Javohir,,,,,,,+aylanmaga utkazishga ariza berildi,,,,,,,,+,-,0,,xolboyevd-01,mAZJ86BLZsRuAp,,,,,,,,
+152,HUMMA,310885405,Айланma,Abrorbek,,,,,,,,,,,,,,,+,+,+,,sicario4488,Magilan@940557,,+,+,,,,,
+153,AVTO YOL XIZMATI MARKAZI,,Айланma,Dilhush,,,,,,,,,,,,,,,+,+,kartoteka,,farxod86$$ ,jzmPCq_VW35HxN,,,,,,,,
+154,YOL TRANS SANOATI,,НДС,Dilhush,,,,,,,,,,,,,,,+,+,-,,farxod86$$ ,jzmPCq_VW35HxN,,,,,,,,
+155,FC YOLBARS,,Айланma,Otabek,,,,,,,,,,,,,,НДС га утказиш,+,+,+,,,,,,,,,,,
+156,ULTIMATE ENERGY,,Айланma,Dilhush,,,,,,,,,,,,,,,+,+,kartoteka,,,,,,,,,,,
+157,REAL RESPECT,,Айlanma,Mirabbos ,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+158,TERRA AGRO,,НДС,Olloshkur,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+159,GELATO ICE CREAM,,НДС,Olloshkur,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+160,ARM INTER GROUP TRAVEL,,Айlanma,Otabek,,,,,,,,,,,,,,,+,+,kartoteka,,,,,,,,,,,
+161,VERTEX BETON,,НДС,Humora,,,,,,,,,,,,,,,+,+,+,,adxamov9797jasurbek,3VE9V6A5R7anV6,,,,,,,,
+162,SPECIAL CARGO,,НДС,Go'zaloy,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+163,SHEL A,,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,+,,,,,,,,,,,
+164,X PRO TEAM,,қатий,Hasan ,,,,,,,,,,,,,,,+,+,+,,1980husanjon,b3FqXmXVkk6qUB,,,,,,,,
+165,YATT Sardiyev,,Айланma,Go'zaloy,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+166,Murod aka (Yattlar),,Айlanma,Zamira,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+167,RICH Y S,,НДС,Olloshkur,,,,,,,,,,,,,,,+,-,+,,,,,,,,,,,
+168,RAMAZON PRODUCT LINE,,НДС,Olloshkur,,,,,,,,,,,,,,,+,-,+,,,,,,,,,,,
+169,LINE OF NATURE,,НДС,Olloshkur,,,,,,,,,,,,,,,+,-,+,,,,,,,,,,,
+170,GS TRADE Corp,,НДС,Olloshkur,,,,,,,,,,,,,,,+,-,0,,,,,,,,,,,
+171,ISHONCHLI XAFSIZ HUDUD,,қатий,Mirabbos,,,,,,,,,,,,,,,+,+,0,,rosttech,Sotiboldiyev-01,,,,,,,,
+172,NEW ALKIMYOGAR GROUP,,қатий,Abrorbek,,,,,,,,,,,,,,,+,-,-,,,,,,,,,,,
+173,PAPER EXPERT,,қатий,Abrorbek,,,,,,,,,,,,,,,+,-,-,,,,,,,,,,,
+174,HOMEBAZAAR YATT,,Айlanma,Hasan,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+175,ACADEMY RIZOMULK,,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,+,,lenochkakno,vRkRS5p@52QAPG,,,,,,,,
+176,NEKOVA MAHLIYO bogcha,,НДС,Abrorbek,,,,,,,,,,,,,,,+,-,-,,nekova15121981,9ASqNauHpuQGe6,+,+,+,,,,,
+177,MADINA FARM,,НДС,Otabek,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+178,SPLENDID SERVICE,,қатий,Humora,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+179,SPLENDID CATERING,,қатий,Humora,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+180,TRUSTLY SERVICE,,Қатьий,Humora,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+181,TAKSIM-KEBAB TEAM,,Айланma,Abdug'ani,,,,,,,,,,,,,,,+,+,0,,,,,+,+,,,,,
+182,LEMON FIT,,       НДС,Abrorbek,,,,,,,,,,,,,,,+,-,+,,,,,,,,,,,
+183,URBAN HEATING GROUP,,       НДС,Mirahmad,,,,,,,,,,,,,,,+,-,+,,azizxodjayevbaxtiyor,UCfeLFbudTwwrB,,,,,,,,
+184,ARVAGTEXNIK,,       НДС,Mirahmad,,,,,,,,,,,,,,,+,-,-,,tursunov_2022,Tursunov_2022,,,,,,,,
+185,DARVESHI NAVOI,,       НДС,Mirahmad,,,,,,,,,,,,,,,+,-,-,,firuz161287,dAhReMMbzycpEZ,,,,,,,,
+186,LIDERS BARAKA,,       НДС,Mirahmad,,,,,,,,,,,,,,,+,-,-,,mirjan160393,Z9m2AEEG8tGjSf,,,,,,,,
+187,BORAN LIDERS,,       НДС,Mirahmad,,,,,,,,,,,,,,,+,-,-,,shakhzodz99,6_KgDJYZaqJ,,,,,,,,
+188,AYOQSH,,       НДС,Abdug'ani,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+189,AZS SHOFAYZ,,       НДС,Abdug'ani,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+190,ELIT CHICKEN,,Айlanma,Musobek,,,,,,,,,,,,,,,+,+,0,,mirsaidov.sh,TLfgZp8WRg9gC8,,,,,,,,
+191,VENU,,       НДС,Zamira,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+192,FUTURE IT,,       НДС,Zamira,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+193,BARQAROR 2018 (Antic),,Айланma,Zamira,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+194,SOFT COMFORT MK4,,Айланma,Zamira,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+195,SKY GATE SERVICES,,Айланma,Maxmuda,,,,,,,,,,,,,,,+,+,0,,,,,+,+,,,,,
+196,GEO DRILLING SERVICE,,       НДС,Maxmuda,,,,,,,,,,,,,,,+,-,-,,,,,,,,,,,
+197,STIL SERVIS,,       НДС,Abdug'ani,,,,,,,,,,,,,,,+,-,+,,stil-servis,Asd12345678+,,,,,,,,
+198,DSKP AMUDARYO,,       НДС,Zamira,,,,,,,,,,,,,,,+,+,-,,davronbek1973,Davronbek1973&@,,,,,,,,
+199,siddiq biznes group mchj,,       НДС,Adham,,,,,,,,,,,,,,,+,+,+,,fozilbek5187@gmail.com,_Q2DCLEAutQ4b7,,,,,,,,
+200,FAXRIDDIN SAODAT FARM,,       НДС,Hasan,,,,,,,,,,,,,,,+,+,+,,z.faxriddinova07.02,Z.faxriddinova07.02,,,,,,,,
+201,RIELTORLAR PALATASI YSHB,,       НДС,Mirabbos ,,,,,,,,,,,,,,,+,+,0,,stroyhouse,Stroyhouse.3059,,,,,,,,
+202,QULAY BOX,,қатъий,Mirabbos ,,,,,,,,,,,,,,,+,+,+,,costatrade,D@vletov01,,,,,,,,
+203,BRR OIL BIZNES,,       НДС,Muslimbek,,,,,,,,,,,,,,,+,-,-,,,,,,,,,,,
+204,Ohangaron Rustam Fayz,,       НДС,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+205,Jizzakh Majic Star,,       НДС,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+206,Toolstrek Ca,,қатъий,Ruslan,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+207,Dilorom-Xidoyat,,       НДС,Musobek,,,,,,,,,,,,,,,+,-,+,,,,,,,,,,,
+208,Tursunxoja Xidoyat,,       НДС,Javohir,,,,,,,,,,,,,,,+,-,+,,nodir585,Nodir_585,,,,,,,,
+209,Favvora Fayz,,Айlanma,Javohir,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+210,WISE-STORE MCHJ,,       НДС,Olloshkur,,,,,,,,,,,,,,,+,-,+,,,,,,,,,,,
+211,Special Building store,,       НДС,Olloshkur,,,,,,,,,,,,,,,+,-,0,,,,,,,,,,,
+212,Stroy Market,,       НДС,Olloshkur,,,,,,,,,,,,,,,+,-,+,,sherali19850,AZ123456az@,,,,,,,,
+213,Vazifa Venchur,,Айlanma,Elbek,,,,,,,,,,,,,,,+,+,-,,,,,+,+,,,,,
+214,GRAYD GROUP MCHJ,,Айlanma,Elbek,,,,,,,,,,,,,,,+,+,-,,,,,+,+,,,,,
+215,"""SALOHIDDIN SFX"" MCHJ",,Айlanma,Elbek,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+216,Goodwill business servis MCHJ,,       НДС,Musobek,,,,,,,,,,,,,,,+,-,+,,goodwill,163Jb15HFVS9,,,,,,,,
+217,Saidbek Mustafo MCHJ,,       НДС,Elbek,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+218,MIRZAYEVLAR LOGISTICS,,       НДС,Adham,,,,,,,,,,,,,,,+,+,-,,z452iyodbek,AwF48myagHE3As,,,,,,,,
+219,ORIENT-CHEMICAL,,       НДС,Adham,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+220,SHOHRUZ-IMRON-SHERDOR OK,,Айlanma,Adham,,,,,,,,,,,,,,,+,+,+,,,,,+,+,,,,,
+221,NORBEKOV IT,,ятт,Adham,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+222,MIXTRUE SEMENT,,       НДС,Adham,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+223,FOREST SCHOOL,,Айланma,Elbek,,,,,,,,,,,,,,НДС га утказиш,+,+,-,,,,,,,,,,,
+224,BEST BROOMS,,Айланma,Elbek,,,,,,,,,,,,,,,+,+,kartoteka ,,,,,,,,,,,
+225,LOGAN,,       НДС,Abrorbek,,,,,,,,,,,,,,,+,-,+,,,,,,,,,,,
+226,"""In'tegrity"" MCHJ",,Айланma,Mirabbos,,,,,,,,,,,,,,,+,+,kartoteka,,,,,,,,,,,
+227,YATT Abdurasulova Lola,,ятт,Mirabbos,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+228,"""Omad texno-trans"" MCHJ",,       НДС,Adham,,,,,,,,,,,,,,,+,-,kartoteka,,,,,+,+,,,,,
+229,YATT Dilova Nigora,,ятт,Adham,,,,,,,,,,,,,,,-,+,0,,,,,,,,,,,
+230,"""Sunny brand"" OK",,Айланma,Adham,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+231,"""Dilsevar Hojakbar"" MCHJ",,Айланma,Otabek,,,,,,,,,,,,,,,-,-,kartoteka,,,,,,,,,,,
+232,"""AvloAI"" MCHJ",,       НДС,Otabek,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+233,"""Mastercoffee Roaster"" MCHJ",,Айlanma,Mirabbos,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+234,"""Dashtobod aloqa-service"" MCHJ",,       НДС,Otabek,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+235,EUROSOFT,,       НДС,Otabek ,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+236,"""Corsa' MChJ",,Айланma,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+237,"""Shox-Muhandis""",,Айланma,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+238,"""Iftixor Holding"" MChJ",,Айланma,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+239,Avto nams,,       НДС,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+240,Hyper nams,,       НДС,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+241,Integral servis,,       НДС,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+242,FAROBIY 77,,       НДС,Kamron,,,,,,,,,,,,,,,+,+,kartoteka,,,,,,,,,,,
+243,ASIA PRO GROUP,,       НДС,Elbek,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+244,TOSHMI DIAGNOSTIKA,,       НДС,Elbek,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+245,HALOL OSHPAZ,,Айlanma,Elbek,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+246,HALOL OSHPAZ JAMOASI,,катъий,Elbek,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+247,AZIM DARYO,,Айланma,Humora,,,,,,,,,,,,,,,+,+,kartoteka,,,,,,,,,,,
+248,GIPPER LUVER,,катъий,Humora,,,,,,,,,,,,,,,+,+,kartoteka,,,,,,,,,,,
+249,7 NEBO,,Айланma,Humora,,,,,,,,,,,,,,,+,+,kartoteka,,,,,,,,,,,
+250,SIRLY MCHJ,,       НДС,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+251,NOSIROV XOJIAKBAR YaTT,,ятт,Kamron,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+252,ALIMXANOV ABDURAZZOQ,,ятт,Kamron,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+253,SUHROBBEK PARIZODA,,       НДС,Kamron,,,,,,,,,,,,,,ариза,+,+,-,,,,,,,,,,,
+254,SAHARA UTD,,Айlanma,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+255,VULKAN TRADE,,       НДС,Zamira,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+256,E DOKON,,       НДС,Zamira,,,,,,,,,,,,,,,+,+,+,,,,,,,,,,,
+257,VT TRAVEL,,       НДС,Zamira,,,,,,,,,,,,,,,+,+,+,,,,+,+,+,,,,,
+258,HARDPRESS CNC,,Айlanma,Kamron,,,,,,,,,,,,,,,+,+,-,,,,,,,,,,,
+259,AIFREIGHT,,Айlanma,Go'zaloy,,,,,,,,,,,,,,,+,+,0,,,,,+,+,,,,,
+260,IBRAGIMOV SALE,,Айlanma,Mirahmad,,,,,,,,,,,,,,,+,-,eski platyojkalar bor,,,,,+,+,,,,,
+261,GREAT KOMAX,,НДС,Muslimbek,,,,,,,,,,,,,,,+,+,0,,,,,,,,,,,
+262,RF BUILDINGS,,Айланma,Maxmuda,,,,,,,,,,,,,,,+,+,0,,,,,+,+,,,,,
+263,Infinity group in industry,,       НДС,Go'zaloy,,,,,,,,,,,,,,,+,+,0,,,,+,+,+,,,,,`;
+
+const parseStatus = (val: string): ReportStatus => {
+  if (val === '+') return ReportStatus.ACCEPTED;
+  if (val === '-') return ReportStatus.NOT_SUBMITTED;
+  if (val === '0') return ReportStatus.NOT_REQUIRED;
+  if (val === 'ариза') return ReportStatus.IN_PROGRESS;
+  if (val === 'kartoteka') return ReportStatus.BLOCKED;
+  return ReportStatus.UNKNOWN;
+};
+
+const seedInitialData = () => {
+  const lines = RAW_CSV_DATA.split('\n').filter(l => l.trim());
+  const companies: Company[] = [];
+  const operations: OperationEntry[] = [];
+  const accountants = new Set<string>();
+
+  lines.forEach((line) => {
+    // CSV pars qilish (vergullarga qarab, qo'shtirnoq ichidagi vergullarni inobatga olgan holda)
+    const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+    
+    if (parts.length < 5) return;
+
+    const id = parts[0];
+    const name = parts[1].replace(/"/g, '').trim();
+    const inn = parts[2].trim();
+    const regime = parts[3].trim();
+    const accountant = parts[4].trim() || 'Noma\'lum';
+    
+    // Statuslarni olish (CSV ustunlariga qarab: 25-Foyda, 26-F2, 27-F1, 28-Stat)
+    const profitTax = parseStatus(parts[25]?.trim());
+    const f2 = parseStatus(parts[26]?.trim());
+    const f1 = parseStatus(parts[27]?.trim());
+    const stats = parseStatus(parts[28]?.trim());
+    
+    // Login-parol (ustun 22, 23)
+    const login = parts[22]?.trim();
+    const pass = parts[23]?.trim();
+
+    accountants.add(accountant);
+
+    const cId = `c_${id}`;
+    companies.push({
+      id: cId,
+      name,
+      inn: inn || '300000000',
+      accountantName: accountant,
+      accountantId: accountant.toLowerCase(),
+      taxRegime: regime.includes('НДС') ? TaxRegime.VAT : regime.includes('Айланма') ? TaxRegime.TURNOVER : TaxRegime.FIXED,
+      department: 'Buxgalteriya',
+      statsType: StatsType.KB1,
+      login,
+      password: pass,
+      createdAt: new Date().toISOString()
+    });
+
+    operations.push({
+      id: `op_${id}`,
+      companyId: cId,
+      period: '2024 Yillik',
+      profitTaxStatus: profitTax,
+      form1Status: f1,
+      form2Status: f2,
+      statsStatus: stats,
+      comment: parts[30] || '', // Izoh
+      updatedAt: new Date().toISOString(),
+      history: []
+    });
+  });
+
+  const staff: Staff[] = Array.from(accountants).map((name, i) => ({
+    id: name.toLowerCase(),
+    name,
+    role: 'Buxgalter',
+    avatarColor: `hsl(${i * 137.508}, 50%, 50%)`
+  }));
+
+  localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(staff));
+  localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(companies));
+  localStorage.setItem(STORAGE_KEYS.OPERATIONS, JSON.stringify(operations));
+  localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toLocaleString());
+};
+
+export const db = {
+  init: () => {
+    if (!localStorage.getItem(STORAGE_KEYS.COMPANIES) || localStorage.getItem(STORAGE_KEYS.COMPANIES)?.length === 0) {
+      seedInitialData();
+    }
+  },
+  getCompanies: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPANIES) || '[]') as Company[],
+  getOperations: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.OPERATIONS) || '[]') as OperationEntry[],
+  getStaff: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.STAFF) || '[]') as Staff[],
+  getLastSync: () => localStorage.getItem(STORAGE_KEYS.LAST_SYNC) || 'Hech qachon',
+  
+  saveOperation: (op: OperationEntry) => {
+    const ops = db.getOperations();
+    const idx = ops.findIndex(o => o.id === op.id);
+    if (idx >= 0) ops[idx] = op;
+    else ops.push(op);
+    localStorage.setItem(STORAGE_KEYS.OPERATIONS, JSON.stringify(ops));
+  },
+  
+  saveCompany: (company: Company) => {
+    const data = db.getCompanies();
+    const idx = data.findIndex(c => c.id === company.id);
+    if (idx >= 0) data[idx] = company;
+    else data.push(company);
+    localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(data));
+  },
+
+  saveStaff: (person: Staff) => {
+    const data = db.getStaff();
+    const idx = data.findIndex(s => s.id === person.id);
+    if (idx >= 0) data[idx] = person;
+    else data.push(person);
+    localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(data));
+  },
+
+  syncWithSheets: async () => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toLocaleString());
+        resolve(true);
+      }, 1000);
+    });
+  }
+};

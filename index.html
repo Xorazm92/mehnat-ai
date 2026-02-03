@@ -1,0 +1,77 @@
+
+<!DOCTYPE html>
+<html lang="uz" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASOS ERP | macOS Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+          darkMode: 'class',
+          theme: {
+            extend: {
+              fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+              colors: {
+                apple: {
+                  bg: '#F5F5F7',
+                  darkBg: '#1C1C1E',
+                  card: 'rgba(255, 255, 255, 0.7)',
+                  darkCard: 'rgba(44, 44, 46, 0.7)',
+                  accent: '#007AFF',
+                  border: 'rgba(0,0,0,0.08)',
+                  darkBorder: 'rgba(255,255,255,0.1)'
+                }
+              }
+            }
+          }
+        }
+    </script>
+    <style>
+        body { 
+          transition: background-color 0.3s ease, color 0.3s ease; 
+          -webkit-font-smoothing: antialiased;
+        }
+        .glass { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .sidebar-active {
+          background: rgba(0, 122, 255, 0.1);
+          color: #007AFF !important;
+        }
+        .dark .sidebar-active {
+          background: rgba(10, 132, 255, 0.2);
+          color: #0A84FF !important;
+        }
+        /* Custom scrollbar to match macOS style */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { 
+          background: rgba(0,0,0,0.1); 
+          border-radius: 10px; 
+        }
+        .dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+        
+        @keyframes subtleScale {
+          from { opacity: 0; transform: scale(0.98); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-macos { animation: subtleScale 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "recharts": "https://esm.sh/recharts@^3.7.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-apple-bg dark:bg-apple-darkBg text-[#1d1d1f] dark:text-[#f5f5f7]">
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

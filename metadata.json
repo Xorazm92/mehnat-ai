@@ -1,0 +1,5 @@
+{
+  "name": "ASOS Accounting Manager",
+  "description": "A professional accounting status dashboard for managing company reports (Profit Tax, Balance Sheet, Financial Results, and Statistics) with Google Sheets-inspired data structure and KPI tracking.",
+  "requestFramePermissions": []
+}
