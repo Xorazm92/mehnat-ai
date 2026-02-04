@@ -14,6 +14,7 @@ import { db } from './lib/db';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'uz');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark' || 
@@ -78,11 +79,14 @@ const App: React.FC = () => {
     return staff.map(s => {
       const myCompanies = companies.filter(c => c.accountantName === s.name);
       const myOps = operations.filter(op => myCompanies.some(c => c.id === op.companyId));
+      
       const total = myCompanies.length;
-      const annualCompleted = myOps.filter(op => 
-        op.profitTaxStatus === ReportStatus.ACCEPTED || op.profitTaxStatus === ReportStatus.NOT_REQUIRED
-      ).length;
+      const annualCompleted = myOps.filter(op => op.profitTaxStatus === ReportStatus.ACCEPTED || op.profitTaxStatus === ReportStatus.NOT_REQUIRED).length;
+      const annualPending = myOps.filter(op => op.profitTaxStatus === ReportStatus.NOT_SUBMITTED || op.profitTaxStatus === ReportStatus.REJECTED).length;
+      const annualBlocked = myOps.filter(op => op.profitTaxStatus === ReportStatus.BLOCKED || op.form1Status === ReportStatus.BLOCKED).length;
+      
       const statsCompleted = myOps.filter(op => op.statsStatus === ReportStatus.ACCEPTED).length;
+      
       const annualProgress = total > 0 ? Math.round((annualCompleted / total) * 100) : 0;
       const statsProgress = total > 0 ? Math.round((statsCompleted / total) * 100) : 0;
 
@@ -90,6 +94,8 @@ const App: React.FC = () => {
         name: s.name, 
         totalCompanies: total, 
         annualCompleted, 
+        annualPending,
+        annualBlocked,
         statsCompleted, 
         annualProgress, 
         statsProgress,
@@ -99,14 +105,20 @@ const App: React.FC = () => {
   }, [staff, companies, operations]);
 
   return (
-    <div className="min-h-screen flex selection:bg-blue-500/30">
+    <div className="min-h-screen flex selection:bg-blue-500/30 overflow-x-hidden">
       <Sidebar 
         activeView={activeView} 
-        onViewChange={(view) => { setActiveView(view); setActiveFilter('all'); }} 
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        onViewChange={(view) => { 
+          setActiveView(view); 
+          setActiveFilter('all'); 
+          setIsMobileMenuOpen(false);
+        }} 
         lang={lang}
       />
       
-      <main className="flex-1 lg:pl-20 xl:pl-64 transition-all duration-300">
+      <main className="flex-1 lg:pl-20 xl:pl-64 transition-all duration-300 min-w-0">
         <TopBar 
           isDarkMode={isDarkMode} 
           onThemeToggle={toggleTheme}
@@ -115,9 +127,10 @@ const App: React.FC = () => {
           lastSync={lastSync}
           onSync={handleSync}
           isSyncing={isSyncing}
+          onMenuToggle={() => setIsMobileMenuOpen(true)}
         />
         
-        <div className="max-w-[1600px] mx-auto p-6 md:p-10 animate-macos">
+        <div className="max-w-[1600px] mx-auto p-4 md:p-10 animate-macos">
           {activeView === 'dashboard' && (
             <>
               <Dashboard 

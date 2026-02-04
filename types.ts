@@ -74,14 +74,15 @@ export interface Staff {
 export interface AccountantKPI {
   name: string;
   totalCompanies: number;
-  annualCompleted: number;
+  annualCompleted: number; // '+' statusdagilar
+  annualPending: number;   // '-' statusdagilar
+  annualBlocked: number;   // 'kartoteka' statusdagilar
   statsCompleted: number;
   annualProgress: number; 
   statsProgress: number;  
   zone: 'green' | 'yellow' | 'red';
 }
 
-// Added missing Config interface used in mockData.ts
 export interface Config {
   profitTaxDeadline: string;
   statsDeadline: string;

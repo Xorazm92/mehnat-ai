@@ -34,20 +34,21 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
 
     return categories.map(cat => {
       // Barcha statuslar bo'yicha hisoblash
-      // Added explicit generic to reduce to ensure correct typing of the accumulator and return value
-      const statusCounts = operations.reduce<Record<string, number>>((acc, op) => {
+      // Fix: Removed type arguments from reduce call and added type assertion to initial value to resolve "Untyped function calls may not accept type arguments"
+      const statusCounts = operations.reduce((acc, op) => {
         const val = (op as any)[cat.key] || '-';
         acc[val] = (acc[val] || 0) + 1;
         return acc;
-      }, {});
+      }, {} as Record<string, number>);
 
-      // Object.entries(statusCounts) now returns [string, number][] ensuring value is a number for arithmetic sorting
+      // Object.entries(statusCounts) returns [string, number][]
+      // Fix: Ensured sorting operands are treated as numbers to resolve arithmetic operation type errors.
       const data = Object.entries(statusCounts).map(([status, count]) => ({
         name: status,
         value: count,
         color: STATUS_COLORS[status] || STATUS_COLORS['default'],
         filterKey: `${cat.key}:${status}`
-      })).sort((a, b) => b.value - a.value);
+      })).sort((a: any, b: any) => (b.value as number) - (a.value as number));
       
       return { ...cat, data };
     });

@@ -36,24 +36,24 @@ const Dashboard: React.FC<DashboardProps> = ({ companies, operations, activeFilt
     return (
       <button 
         onClick={() => onFilterChange(isActive ? 'all' : id)}
-        className={`relative p-7 rounded-[2rem] border transition-all duration-300 text-left overflow-hidden group
+        className={`relative p-6 md:p-9 rounded-[2rem] md:rounded-[2.5rem] border transition-all duration-300 text-left overflow-hidden group
           ${isActive 
-            ? 'bg-white dark:bg-white/10 ring-4 ring-apple-accent/20 border-apple-accent shadow-xl scale-[1.02]' 
+            ? 'bg-white dark:bg-white/10 ring-4 ring-apple-accent/20 border-apple-accent shadow-2xl' 
             : 'bg-white dark:bg-apple-darkCard border-apple-border dark:border-apple-darkBorder hover:border-slate-300 dark:hover:border-slate-600 shadow-sm'}`}
       >
-        <div className="absolute -right-4 -top-4 text-7xl opacity-[0.05] group-hover:scale-125 transition-transform duration-500">{icon}</div>
-        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">{label}</p>
-        <div className="flex items-baseline gap-1.5">
-          <h3 className={`text-4xl font-extrabold tracking-tighter ${isActive ? 'text-apple-accent' : 'text-slate-800 dark:text-white'}`}>{value}</h3>
+        <div className="absolute -right-4 -top-4 text-6xl md:text-8xl opacity-[0.07] group-hover:scale-125 transition-transform duration-700 pointer-events-none">{icon}</div>
+        <p className="text-tiny md:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 md:mb-5">{label}</p>
+        <div className="flex items-baseline gap-2">
+          <h3 className={`text-4xl md:text-5xl font-extrabold tracking-tighter tabular-nums ${isActive ? 'text-apple-accent' : 'text-slate-800 dark:text-white'}`}>{value}</h3>
         </div>
-        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-3">{sub}</p>
-        {isActive && <div className="absolute bottom-0 left-0 h-1.5 w-full bg-apple-accent"></div>}
+        <p className="text-xs md:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-3 md:mt-5 line-clamp-1">{sub}</p>
+        {isActive && <div className="absolute bottom-0 left-0 h-2 w-full bg-apple-accent"></div>}
       </button>
     );
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-8 mb-10 md:mb-16">
       <Card id="progress" label={t.annualProgress} value={`${progress}%`} sub={`${stats.completed} bitgan / завершено`} color="blue" icon="📈" />
       <Card id="delayed" label={t.debtors} value={stats.delayed} sub="Qarzdorlar / Должники" color="red" icon="🚨" />
       <Card id="blocked" label={t.blocked} value={stats.blocked} sub="Hisob band / Счет заблокирован" color="orange" icon="🔒" />

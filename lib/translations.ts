@@ -47,7 +47,14 @@ export const translations = {
     period: "Davr",
     status: "Holati",
     edit: "Tahrirlash",
-    delete: "O'chirish"
+    delete: "O'chirish",
+    statShort: "STAT %",
+    leadAccountant: "Bosh buxgalter",
+    analyticalCenter: "Tahlil markazi",
+    efficiencyMonitor: "Samaradorlik monitoringi",
+    goal: "Maqsad",
+    professional: "Professional",
+    admin: "Admin"
   },
   ru: {
     dashboard: "Панель управления",
@@ -96,6 +103,13 @@ export const translations = {
     period: "Период",
     status: "Статус",
     edit: "Изменить",
-    delete: "Удалить"
+    delete: "Удалить",
+    statShort: "СТАТ %",
+    leadAccountant: "Главный бухгалтер",
+    analyticalCenter: "Аналитический центр",
+    efficiencyMonitor: "Мониторинг эффективности",
+    goal: "Цель",
+    professional: "Профессиональный",
+    admin: "Админ"
   }
 };

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Search, Bell, Sun, Moon, RefreshCw, Languages } from 'lucide-react';
+import { Search, Sun, Moon, RefreshCw, Languages, Menu } from 'lucide-react';
 import { Language } from '../types';
 import { translations } from '../lib/translations';
 
@@ -12,15 +12,19 @@ interface TopBarProps {
   lastSync: string;
   onSync: () => void;
   isSyncing: boolean;
+  onMenuToggle: () => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLangToggle, lastSync, onSync, isSyncing }) => {
+const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLangToggle, lastSync, onSync, isSyncing, onMenuToggle }) => {
   const t = translations[lang];
 
   return (
-    <header className="h-20 bg-white/80 dark:bg-apple-darkCard/80 glass border-b border-apple-border dark:border-apple-darkBorder flex items-center justify-between px-8 sticky top-0 z-40">
-      <div className="flex items-center gap-6 flex-1 max-w-xl">
-        <div className="relative w-full group">
+    <header className="h-16 md:h-20 bg-white/80 dark:bg-apple-darkCard/80 glass border-b border-apple-border dark:border-apple-darkBorder flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
+      <div className="flex items-center gap-3 md:gap-6 flex-1 max-w-xl">
+        <button onClick={onMenuToggle} className="lg:hidden p-2 text-slate-500 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl">
+          <Menu size={20} />
+        </button>
+        <div className="relative w-full group hidden sm:block">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
           <input 
             type="text" 
@@ -30,13 +34,13 @@ const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLang
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-1.5 p-1 bg-black/5 dark:bg-white/5 rounded-xl">
+      <div className="flex items-center gap-2 md:gap-6">
+        <div className="flex items-center gap-1 p-1 bg-black/5 dark:bg-white/5 rounded-xl">
           <button 
             onClick={onLangToggle}
-            className="flex items-center gap-2 px-3 py-2 text-xs font-black uppercase text-slate-500 hover:text-apple-accent hover:bg-white dark:hover:bg-apple-darkCard rounded-lg transition-all"
+            className="flex items-center gap-2 px-2 md:px-3 py-2 text-[10px] md:text-xs font-black uppercase text-slate-500 hover:text-apple-accent hover:bg-white dark:hover:bg-apple-darkCard rounded-lg transition-all"
           >
-            <Languages size={14} />
+            <Languages size={14} className="hidden xs:block" />
             {lang}
           </button>
           <button 
@@ -54,16 +58,15 @@ const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLang
           </button>
         </div>
 
-        <div className="flex items-center gap-3 pl-4 border-l border-apple-border dark:border-apple-darkBorder">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold leading-none mb-1">Farrux R.</p>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Admin</p>
+        <div className="flex items-center gap-2 md:gap-3 md:pl-4 md:border-l border-apple-border dark:border-apple-darkBorder">
+          <div className="text-right hidden xs:block">
+            <p className="text-xs md:text-sm font-bold leading-none mb-1">Farrux R.</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{t.admin}</p>
           </div>
-          {/* macOS Traffic Lights - Windows Style (Right Aligned) */}
-          <div className="flex gap-1.5 ml-2 border-l border-apple-border dark:border-apple-darkBorder pl-4">
-            <div className="w-3 h-3 rounded-full bg-[#27C93F] cursor-pointer hover:opacity-80 transition-opacity"></div>
-            <div className="w-3 h-3 rounded-full bg-[#FFBD2E] cursor-pointer hover:opacity-80 transition-opacity"></div>
-            <div className="w-3 h-3 rounded-full bg-[#FF5F56] cursor-pointer hover:opacity-80 transition-opacity"></div>
+          <div className="hidden md:flex gap-1.5 ml-2 border-l border-apple-border dark:border-apple-darkBorder pl-4">
+            <div className="w-3 h-3 rounded-full bg-[#27C93F]"></div>
+            <div className="w-3 h-3 rounded-full bg-[#FFBD2E]"></div>
+            <div className="w-3 h-3 rounded-full bg-[#FF5F56]"></div>
           </div>
         </div>
       </div>

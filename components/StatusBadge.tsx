@@ -25,7 +25,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   };
 
   return (
-    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-extrabold border uppercase tracking-widest ${getStyles()}`}>
+    <span className={`px-4 py-1.5 rounded-xl text-tiny md:text-xs font-extrabold border uppercase tracking-widest ${getStyles()} shadow-sm inline-flex items-center justify-center min-w-[50px]`}>
       {status === ReportStatus.BLOCKED ? 'KARTOTEKA' : status}
     </span>
   );

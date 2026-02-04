@@ -12,15 +12,17 @@ interface Props {
 
 const StaffKPIReport: React.FC<Props> = ({ kpis, staff, lang, onStaffSelect }) => {
   const t = translations[lang];
+  
   const totals = kpis.reduce((acc, k) => ({
     firms: acc.firms + k.totalCompanies,
     annual: acc.annual + k.annualCompleted,
+    pending: acc.pending + k.annualPending,
+    blocked: acc.blocked + k.annualBlocked,
     stats: acc.stats + k.statsCompleted
-  }), { firms: 0, annual: 0, stats: 0 });
+  }), { firms: 0, annual: 0, pending: 0, blocked: 0, stats: 0 });
 
   const totalAnnualProgress = totals.firms > 0 ? Math.round((totals.annual / totals.firms) * 100) : 0;
-  const totalStatsProgress = totals.firms > 0 ? Math.round((totals.stats / totals.firms) * 100) : 0;
-
+  
   const handleStaffClick = (staffName: string) => {
     const foundStaff = staff.find(s => s.name === staffName);
     if (foundStaff) {
@@ -29,69 +31,104 @@ const StaffKPIReport: React.FC<Props> = ({ kpis, staff, lang, onStaffSelect }) =
   };
 
   return (
-    <div className="bg-white dark:bg-apple-darkCard rounded-3xl border border-apple-border dark:border-apple-darkBorder shadow-sm overflow-hidden mb-12 animate-macos">
-      <div className="p-6 border-b border-apple-border dark:border-apple-darkBorder flex justify-between items-center bg-slate-50/30 dark:bg-white/5">
-        <div>
-          <h2 className="text-xl font-extrabold tracking-tight text-slate-800 dark:text-white">{t.kpiReport}</h2>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Global monitoring center</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.annualProgress}</p>
-            <p className="text-sm font-black text-apple-accent">{totalAnnualProgress}%</p>
+    <div className="bg-[#1C1C1E] dark:bg-[#1C1C1E] rounded-[2.5rem] border border-[#2C2C2E] shadow-2xl overflow-hidden mb-12 md:mb-20 animate-macos">
+      <div className="p-8 md:p-12 border-b border-[#2C2C2E] flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 bg-[#2C2C2E]/30">
+        <div className="space-y-2">
+          <div className="flex items-center gap-4">
+             <div className="h-5 w-1.5 bg-[#007AFF] rounded-full"></div>
+             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white uppercase">{t.kpiReport}</h2>
           </div>
-          <div className="h-2 w-32 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
-            <div className="h-full bg-apple-accent transition-all duration-1000" style={{ width: `${totalAnnualProgress}%` }}></div>
+          <p className="text-xs md:text-sm font-black text-[#8E8E93] uppercase tracking-[0.2em] ml-6">{t.analyticalCenter}</p>
+        </div>
+        
+        <div className="flex items-center gap-10 w-full xl:w-auto bg-[#2C2C2E]/50 p-6 rounded-3xl border border-white/5">
+          <div className="text-right">
+            <p className="text-tiny font-black text-[#8E8E93] uppercase tracking-widest mb-1">{t.annualProgress}</p>
+            <p className="text-2xl md:text-4xl font-black text-[#007AFF] tabular-nums">{totalAnnualProgress}%</p>
+          </div>
+          <div className="h-4 w-48 md:w-64 bg-white/5 rounded-full overflow-hidden border border-white/5">
+            <div 
+              className={`h-full transition-all duration-1000 ${totalAnnualProgress >= 90 ? 'bg-[#34C759]' : totalAnnualProgress >= 60 ? 'bg-[#FF9500]' : 'bg-[#FF3B30]'}`} 
+              style={{ width: `${totalAnnualProgress}%` }}
+            ></div>
           </div>
         </div>
       </div>
       
-      <div className="overflow-x-auto no-scrollbar">
-        <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto scrollbar-thin">
+        <table className="w-full text-left border-collapse min-w-[1100px]">
           <thead>
-            <tr className="bg-slate-50/50 dark:bg-white/5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-apple-border dark:border-apple-darkBorder">
-              <th className="px-8 py-5 border-r dark:border-apple-darkBorder">{t.accountant}</th>
-              <th className="px-6 py-5 text-center border-r dark:border-apple-darkBorder">{t.firmCount}</th>
-              <th className="px-6 py-5 text-center border-r dark:border-apple-darkBorder">{t.annualCompleted}</th>
-              <th className="px-6 py-5 text-center border-r dark:border-apple-darkBorder">{t.statsCompleted}</th>
-              <th className="px-6 py-5 text-center border-r dark:border-apple-darkBorder text-apple-accent">Yillik/Год %</th>
-              <th className="px-6 py-5 text-center text-[#34C759]">Stat/Стат %</th>
+            <tr className="bg-[#2C2C2E]/20 text-xs md:text-sm font-black uppercase tracking-widest text-[#8E8E93] border-b border-[#2C2C2E]">
+              <th className="px-10 py-10 border-r border-[#2C2C2E]">{t.accountant}</th>
+              <th className="px-6 py-10 text-center border-r border-[#2C2C2E]">{t.total}</th>
+              <th className="px-6 py-10 text-center text-[#34C759] border-r border-[#2C2C2E]">+</th>
+              <th className="px-6 py-10 text-center text-[#FF375F] border-r border-[#2C2C2E]">-</th>
+              <th className="px-6 py-10 text-center text-[#FF9F0A] border-r border-[#2C2C2E]">{t.blocked}</th>
+              <th className="px-10 py-10 text-center border-r border-[#2C2C2E]">{t.annualProgress}</th>
+              <th className="px-10 py-10 text-center text-[#30D158]">{t.statShort}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-apple-border dark:divide-apple-darkBorder">
-            {kpis.map((k, idx) => (
+          <tbody className="divide-y divide-[#2C2C2E]">
+            {kpis.map((k) => (
               <tr 
                 key={k.name} 
-                className="hover:bg-apple-accent/[0.03] dark:hover:bg-apple-accent/[0.05] transition-colors group cursor-pointer"
+                className="hover:bg-white/[0.03] transition-all group cursor-pointer"
                 onClick={() => handleStaffClick(k.name)}
               >
-                <td className="px-8 py-4 border-r dark:border-apple-darkBorder">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-apple-accent/10 flex items-center justify-center text-[10px] font-black text-apple-accent group-hover:bg-apple-accent group-hover:text-white transition-all">
+                <td className="px-10 py-8 border-r border-[#2C2C2E]">
+                  <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-[#007AFF]/10 flex items-center justify-center text-xl md:text-2xl font-black text-[#007AFF] shadow-lg group-hover:scale-110 transition-transform duration-300">
                       {k.name.charAt(0)}
                     </div>
-                    <span className="font-bold text-sm text-slate-700 dark:text-slate-200 group-hover:text-apple-accent transition-colors underline decoration-apple-accent/20 underline-offset-4">
-                      {k.name}
-                    </span>
+                    <div>
+                      <span className="font-black text-lg md:text-2xl text-white block tracking-tight group-hover:text-[#007AFF] transition-colors">
+                        {k.name}
+                      </span>
+                      <span className="text-tiny md:text-xs font-bold text-[#8E8E93] uppercase tracking-widest mt-1">{t.leadAccountant}</span>
+                    </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-center text-slate-500 dark:text-slate-400 border-r dark:border-apple-darkBorder font-mono font-bold text-xs">{k.totalCompanies}</td>
-                <td className="px-6 py-4 text-center text-slate-500 dark:text-slate-400 border-r dark:border-apple-darkBorder font-mono font-bold text-xs">{k.annualCompleted}</td>
-                <td className="px-6 py-4 text-center text-slate-500 dark:text-slate-400 border-r dark:border-apple-darkBorder font-mono font-bold text-xs">{k.statsCompleted}</td>
-                <td className="px-6 py-4 text-center font-black text-sm border-r dark:border-apple-darkBorder text-apple-accent">{k.annualProgress}%</td>
-                <td className="px-6 py-4 text-center font-black text-sm text-[#34C759]">{k.statsProgress}%</td>
+                <td className="px-6 py-8 text-center text-[#8E8E93] border-r border-[#2C2C2E] font-bold text-xl md:text-2xl tabular-nums">
+                  {k.totalCompanies}
+                </td>
+                <td className="px-6 py-8 text-center border-r border-[#2C2C2E] tabular-nums font-black text-[#34C759] text-xl md:text-2xl">
+                  {k.annualCompleted}
+                </td>
+                <td className="px-6 py-8 text-center border-r border-[#2C2C2E] tabular-nums font-black text-[#FF375F] text-xl md:text-2xl">
+                  {k.annualPending}
+                </td>
+                <td className="px-6 py-8 text-center border-r border-[#2C2C2E] tabular-nums font-black text-[#FF9F0A] text-xl md:text-2xl">
+                  {k.annualBlocked}
+                </td>
+                <td className="px-10 py-8 border-r border-[#2C2C2E]">
+                  <div className="flex items-center gap-6">
+                    <span className={`text-xl md:text-2xl font-black tabular-nums w-16 text-right ${k.annualProgress >= 90 ? 'text-[#34C759]' : k.annualProgress >= 60 ? 'text-[#FF9F0A]' : 'text-[#FF375F]'}`}>
+                      {k.annualProgress}%
+                    </span>
+                    <div className="h-3 flex-1 bg-white/5 rounded-full overflow-hidden min-w-[120px]">
+                      <div 
+                        className={`h-full transition-all duration-1000 ${k.annualProgress >= 90 ? 'bg-[#34C759]' : k.annualProgress >= 60 ? 'bg-[#FF9F0A]' : 'bg-[#FF375F]'}`} 
+                        style={{ width: `${k.annualProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-10 py-8 text-center font-black text-xl md:text-2xl text-[#30D158] tabular-nums">
+                   {k.statsProgress}%
+                </td>
               </tr>
             ))}
           </tbody>
-          <tfoot className="bg-slate-900 text-white dark:bg-black">
-            <tr className="font-black text-[10px] uppercase tracking-widest">
-              <td className="px-8 py-5">{t.total} (Всего)</td>
-              <td className="px-6 py-5 text-center border-l border-white/10">{totals.firms}</td>
-              <td className="px-6 py-5 text-center border-l border-white/10">{totals.annual}</td>
-              <td className="px-6 py-5 text-center border-l border-white/10">{totals.stats}</td>
-              <td className="px-6 py-5 text-center border-l border-white/10 text-apple-accent">{totalAnnualProgress}%</td>
-              <td className="px-6 py-5 text-center border-l border-white/10 text-[#32D74B]">{totalStatsProgress}%</td>
-            </tr>
+          <tfoot className="bg-[#2C2C2E]/40 font-black">
+             <tr className="text-white text-base md:text-lg border-t border-[#2C2C2E]">
+                <td className="px-10 py-10 uppercase tracking-[0.2em] text-[#8E8E93] font-black">{t.total}</td>
+                <td className="px-6 py-10 text-center tabular-nums">{totals.firms}</td>
+                <td className="px-6 py-10 text-center text-[#34C759] tabular-nums">{totals.annual}</td>
+                <td className="px-6 py-10 text-center text-[#FF375F] tabular-nums">{totals.pending}</td>
+                <td className="px-6 py-10 text-center text-[#FF9F0A] tabular-nums">{totals.blocked}</td>
+                <td className="px-10 py-10 text-center text-[#007AFF] tabular-nums text-2xl md:text-4xl">{totalAnnualProgress}%</td>
+                <td className="px-10 py-10 text-center text-[#30D158] tabular-nums text-2xl md:text-4xl">{Math.round((totals.stats / totals.firms) * 100)}%</td>
+             </tr>
           </tfoot>
         </table>
       </div>
