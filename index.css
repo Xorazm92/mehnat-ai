@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.011em;
+}
+
+body {
+  @apply transition-colors duration-300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.glass {
+  @apply backdrop-blur-[25px];
+}
+
+.sidebar-active {
+  background: rgba(0, 122, 255, 0.1);
+  color: #007aff !important;
+}
+
+.dark .sidebar-active {
+  background: rgba(10, 132, 255, 0.2);
+  color: #0a84ff !important;
+}
+
+/* Professional Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 20px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+@keyframes subtleScale {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-macos {
+  animation: subtleScale 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Table enhancements */
+table {
+  border-spacing: 0;
+  width: 100%;
+}
+
+th,
+td {
+  white-space: nowrap;
+}
+
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+}

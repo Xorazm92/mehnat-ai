@@ -1,5 +1,5 @@
 
-export type AppView = 'dashboard' | 'organizations' | 'staff' | 'reports' | 'analysis';
+export type AppView = 'dashboard' | 'organizations' | 'staff' | 'reports' | 'analysis' | 'documents';
 export type Language = 'uz' | 'ru';
 
 export enum TaxRegime {
@@ -78,8 +78,8 @@ export interface AccountantKPI {
   annualPending: number;   // '-' statusdagilar
   annualBlocked: number;   // 'kartoteka' statusdagilar
   statsCompleted: number;
-  annualProgress: number; 
-  statsProgress: number;  
+  annualProgress: number;
+  statsProgress: number;
   zone: 'green' | 'yellow' | 'red';
 }
 

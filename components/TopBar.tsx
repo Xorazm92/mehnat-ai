@@ -13,9 +13,12 @@ interface TopBarProps {
   onSync: () => void;
   isSyncing: boolean;
   onMenuToggle: () => void;
+  userName?: string;
+  userRole?: string;
+  onLogout?: () => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLangToggle, lastSync, onSync, isSyncing, onMenuToggle }) => {
+const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLangToggle, lastSync, onSync, isSyncing, onMenuToggle, userName, userRole, onLogout }) => {
   const t = translations[lang];
 
   return (
@@ -60,14 +63,22 @@ const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLang
 
         <div className="flex items-center gap-2 md:gap-3 md:pl-4 md:border-l border-apple-border dark:border-apple-darkBorder">
           <div className="text-right hidden xs:block">
-            <p className="text-xs md:text-sm font-bold leading-none mb-1">Farrux R.</p>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{t.admin}</p>
+            <p className="text-xs md:text-sm font-bold leading-none mb-1">{userName || '—'}</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{userRole || t.admin}</p>
           </div>
           <div className="hidden md:flex gap-1.5 ml-2 border-l border-apple-border dark:border-apple-darkBorder pl-4">
             <div className="w-3 h-3 rounded-full bg-[#27C93F]"></div>
             <div className="w-3 h-3 rounded-full bg-[#FFBD2E]"></div>
             <div className="w-3 h-3 rounded-full bg-[#FF5F56]"></div>
           </div>
+          {onLogout && (
+            <button 
+              onClick={onLogout}
+              className="px-3 py-2 text-xs font-bold uppercase tracking-wide bg-black/5 dark:bg-white/5 rounded-lg text-slate-500 hover:text-apple-accent hover:bg-white dark:hover:bg-apple-darkCard transition-all"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </div>
     </header>

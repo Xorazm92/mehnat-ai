@@ -1,0 +1,9 @@
+{
+  "name": "ASOS Accounting Manager",
+  "short_name": "ASOS ERP",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F5F7",
+  "theme_color": "#007AFF",
+  "icons": []
+}

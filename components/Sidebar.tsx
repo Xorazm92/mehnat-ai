@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AppView, Language } from '../types';
-import { LayoutDashboard, Building2, Users, FileBarChart, PieChart, Settings, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, FileBarChart, PieChart, Settings, LogOut, X, FileText } from 'lucide-react';
 import { translations } from '../lib/translations';
 
 interface SidebarProps {
@@ -18,6 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewCh
     { id: 'dashboard' as AppView, icon: <LayoutDashboard size={20} />, label: t.dashboard },
     { id: 'organizations' as AppView, icon: <Building2 size={20} />, label: t.organizations },
     { id: 'reports' as AppView, icon: <FileBarChart size={20} />, label: t.reports },
+    { id: 'documents' as AppView, icon: <FileText size={20} />, label: t.documents || 'Hujjatlar' },
     { id: 'analysis' as AppView, icon: <PieChart size={20} />, label: t.analysis },
     { id: 'staff' as AppView, icon: <Users size={20} />, label: t.staff },
   ];
@@ -25,11 +26,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewCh
   return (
     <>
       {/* Mobile Overlay */}
-      <div 
+      <div
         className={`fixed inset-0 bg-black/50 z-[55] lg:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
-      
+
       <aside className={`fixed left-0 top-0 h-full w-64 lg:w-20 xl:w-64 bg-white/90 dark:bg-apple-darkCard glass border-r border-apple-border dark:border-apple-darkBorder flex flex-col py-6 z-[60] transition-all duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="mb-12 px-6 lg:px-0 lg:w-full xl:px-8 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -51,11 +52,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewCh
             <button
               key={item.id}
               onClick={() => onViewChange(item.id)}
-              className={`flex items-center gap-3.5 p-3.5 rounded-xl transition-all duration-200 group relative ${
-                activeView === item.id 
-                  ? 'sidebar-active shadow-sm' 
-                  : 'text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
+              className={`flex items-center gap-3.5 p-3.5 rounded-xl transition-all duration-200 group relative ${activeView === item.id
+                ? 'sidebar-active shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
             >
               <div className={`shrink-0 transition-transform duration-200 ${activeView === item.id ? 'scale-110' : 'group-hover:scale-110'}`}>
                 {item.icon}

@@ -54,7 +54,15 @@ export const translations = {
     efficiencyMonitor: "Samaradorlik monitoringi",
     goal: "Maqsad",
     professional: "Professional",
-    admin: "Admin"
+    admin: "Admin",
+    gridView: "Setkali ko'rinish",
+    tableView: "Jadval ko'rinish",
+    login: "Login",
+    password: "Parol",
+    prev: "Oldingi",
+    next: "Keyingi",
+    page: "Sahifa",
+    of: "dan"
   },
   ru: {
     dashboard: "Панель управления",

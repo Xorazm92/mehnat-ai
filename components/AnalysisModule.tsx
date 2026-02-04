@@ -13,7 +13,7 @@ interface Props {
 
 const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilterApply }) => {
   const t = translations[lang];
-  
+
   // Ranglar palitrasi - macOS uslubida
   const STATUS_COLORS: Record<string, string> = {
     '+': '#34C759',      // Success
@@ -49,7 +49,7 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
         color: STATUS_COLORS[status] || STATUS_COLORS['default'],
         filterKey: `${cat.key}:${status}`
       })).sort((a: any, b: any) => (b.value as number) - (a.value as number));
-      
+
       return { ...cat, data };
     });
   }, [operations, t.profitTax, t.form1, t.form2, t.stats]);
@@ -79,35 +79,35 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
           <p className="text-sm font-semibold text-slate-400">{t.totalFirms}: <span className="text-apple-accent">{companies.length}</span></p>
         </div>
         <div className="hidden md:block text-right">
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Guidance</p>
-           <div className="flex gap-2">
-              {Object.entries(STATUS_COLORS).filter(([k]) => k !== 'default').map(([k, v]) => (
-                <div key={k} className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-white/5 rounded-lg border border-apple-border dark:border-apple-darkBorder">
-                  <div className="w-2 h-2 rounded-full" style={{backgroundColor: v}}></div>
-                  <span className="text-[9px] font-bold text-slate-500 uppercase">{k}</span>
-                </div>
-              ))}
-           </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Guidance</p>
+          <div className="flex gap-2">
+            {Object.entries(STATUS_COLORS).filter(([k]) => k !== 'default').map(([k, v]) => (
+              <div key={k} className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-white/5 rounded-lg border border-apple-border dark:border-apple-darkBorder">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: v }}></div>
+                <span className="text-[9px] font-bold text-slate-500 uppercase">{k}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {reportStats.map(stat => (
-          <div key={stat.key} className="bg-white dark:bg-apple-darkCard p-10 rounded-[2.5rem] border border-apple-border dark:border-apple-darkBorder flex flex-col hover:shadow-2xl transition-all group">
+          <div key={stat.key} className="bg-white dark:bg-apple-darkCard p-10 rounded-[2.5rem] border border-apple-border dark:border-apple-darkBorder flex flex-col hover:shadow-2xl transition-all group min-w-0">
             <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2 flex items-center gap-3">
               <div className="w-1.5 h-6 bg-apple-accent rounded-full group-hover:h-8 transition-all"></div>
               {stat.label}
             </h3>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8 ml-4">Segmentni bosing / Нажмите на сегмент</p>
-            
-            <div className="h-72 mb-8 relative">
-              <ResponsiveContainer width="100%" height="100%">
+
+            <div className="h-72 min-h-[288px] mb-8 relative">
+              <ResponsiveContainer width="100%" height="100%" minHeight={288}>
                 <PieChart>
-                  <Pie 
-                    data={stat.data} 
-                    innerRadius={70} 
-                    outerRadius={100} 
-                    paddingAngle={4} 
+                  <Pie
+                    data={stat.data}
+                    innerRadius={70}
+                    outerRadius={100}
+                    paddingAngle={4}
                     dataKey="value"
                     stroke="none"
                     className="cursor-pointer outline-none"
@@ -115,18 +115,18 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
                     activeShape={renderActiveShape}
                   >
                     {stat.data.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.color} 
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color}
                         className="hover:opacity-80 transition-opacity"
                       />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{
-                      borderRadius: '20px', 
-                      border: 'none', 
-                      boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', 
+                      borderRadius: '20px',
+                      border: 'none',
+                      boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
                       background: 'rgba(255,255,255,0.95)',
                       padding: '12px 16px'
                     }}
@@ -146,13 +146,13 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
 
             <div className="grid grid-cols-2 gap-3">
               {stat.data.map((d) => (
-                <button 
-                  key={d.name} 
+                <button
+                  key={d.name}
                   onClick={() => onFilterApply(d.filterKey)}
                   className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-2xl hover:bg-white dark:hover:bg-apple-darkBg hover:shadow-lg hover:ring-2 hover:ring-apple-accent/10 transition-all text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full shadow-sm" style={{backgroundColor: d.color}}></div>
+                    <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: d.color }}></div>
                     <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight">{d.name}</span>
                   </div>
                   <span className="text-sm font-black text-slate-800 dark:text-white">{d.value}</span>
