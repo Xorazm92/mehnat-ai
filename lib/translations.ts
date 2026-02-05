@@ -55,6 +55,12 @@ export const translations = {
     goal: "Maqsad",
     professional: "Professional",
     admin: "Admin",
+    kassa: "Kassa",
+    expenses: "Xarajatlar",
+    amount: "Summa",
+    date: "Sana",
+    category: "Kategoriyasi",
+    balance: "Balans",
     gridView: "Setkali ko'rinish",
     tableView: "Jadval ko'rinish",
     login: "Login",
@@ -118,6 +124,12 @@ export const translations = {
     efficiencyMonitor: "Мониторинг эффективности",
     goal: "Цель",
     professional: "Профессиональный",
-    admin: "Админ"
+    admin: "Админ",
+    kassa: "Касса",
+    expenses: "Расходы",
+    amount: "Сумма",
+    date: "Дата",
+    category: "Категория",
+    balance: "Баланс"
   }
 };

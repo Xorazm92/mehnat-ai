@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Company, Staff, TaxRegime, StatsType, Language } from '../types';
 import { translations } from '../lib/translations';
-import { Plus, Search, Edit3, Trash2, X, Check, LayoutGrid, List, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, X, Check, LayoutGrid, List, Eye, EyeOff, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 
 interface Props {
   companies: Company[];
@@ -20,17 +20,50 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<keyof Company>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterActive, setFilterActive] = useState<boolean | null>(true); // null for all, true for active, false for archived
   const itemsPerPage = 10;
 
   const filtered = useMemo(() => {
-    return companies.filter(c =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.inn.includes(search)
-    );
-  }, [companies, search]);
+    return companies
+      .filter(c => {
+        const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.inn.includes(search);
+        const matchesFilter = filterActive === null || c.isActive === filterActive;
+        return matchesSearch && matchesFilter;
+      })
+      .sort((a, b) => {
+        const valA = a[sortField] || '';
+        const valB = b[sortField] || '';
+        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+  }, [companies, search, sortField, sortOrder, filterActive]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleExport = () => {
+    const headers = ['Nomi', 'INN', 'Buxgalter', 'Rejim', 'Login', 'Parol', 'Ega'];
+    const rows = filtered.map(c => [
+      c.name,
+      c.inn,
+      c.accountantName,
+      c.taxRegime,
+      c.login || '',
+      c.password || '',
+      c.ownerName || ''
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'organizations.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const startEdit = (c: Company) => {
     setForm(c);
@@ -63,6 +96,27 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
         <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
           <div className="flex bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-inner">
             <button
+              onClick={() => setFilterActive(true)}
+              className={`px-4 py-2 rounded-xl transition-all text-xs font-black ${filterActive === true ? 'bg-white dark:bg-apple-darkBg text-apple-accent shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Faol
+            </button>
+            <button
+              onClick={() => setFilterActive(false)}
+              className={`px-4 py-2 rounded-xl transition-all text-xs font-black ${filterActive === false ? 'bg-white dark:bg-apple-darkBg text-apple-accent shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Arxiv
+            </button>
+            <button
+              onClick={() => setFilterActive(null)}
+              className={`px-4 py-2 rounded-xl transition-all text-xs font-black ${filterActive === null ? 'bg-white dark:bg-apple-darkBg text-apple-accent shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Hammasi
+            </button>
+          </div>
+
+          <div className="flex bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-inner">
+            <button
               onClick={() => setViewMode('grid')}
               className={`p-3 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-apple-darkBg text-apple-accent shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
               title={t.gridView}
@@ -79,7 +133,15 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
           </div>
 
           <button
-            onClick={() => { setIsAdding(true); setForm({ id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString() }); }}
+            onClick={handleExport}
+            className="p-3.5 bg-white dark:bg-apple-darkCard text-slate-400 hover:text-apple-accent border border-apple-border dark:border-apple-darkBorder rounded-2xl transition-all shadow-sm"
+            title="Excelga eksport"
+          >
+            <Download size={20} />
+          </button>
+
+          <button
+            onClick={() => { setIsAdding(true); setForm({ id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString(), isActive: true }); }}
             className="flex-1 md:flex-none grow bg-apple-accent text-white px-8 py-4.5 rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20 hover:bg-blue-600 transition-all active:scale-95"
           >
             <Plus size={20} /> <span className="hidden sm:inline">{t.addCompany}</span>
@@ -174,9 +236,79 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                     </select>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-6 pt-6">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Bank Client</label>
+                    <select
+                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
+                      value={form.bankClientId || ''}
+                      onChange={e => {
+                        const s = staff.find(x => x.id === e.target.value);
+                        setForm({ ...form, bankClientId: e.target.value, bankClientName: s?.name || '' });
+                      }}
+                    >
+                      <option value="">Tanlang</option>
+                      {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Nazoratchi</label>
+                    <select
+                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
+                      value={form.supervisorId || ''}
+                      onChange={e => {
+                        const s = staff.find(x => x.id === e.target.value);
+                        setForm({ ...form, supervisorId: e.target.value, supervisorName: s?.name || '' });
+                      }}
+                    >
+                      <option value="">Tanlang</option>
+                      {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-6 pt-8 border-t dark:border-apple-darkBorder mt-6">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Shartnoma Summasi</label>
+                    <input
+                      type="number"
+                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
+                      value={form.contractAmount || 0}
+                      onChange={e => setForm({ ...form, contractAmount: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Buxgalter %</label>
+                    <input
+                      type="number"
+                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
+                      value={form.accountantPerc || 0}
+                      onChange={e => setForm({ ...form, accountantPerc: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Bank Client Summa</label>
+                    <input
+                      type="number"
+                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
+                      value={form.bankClientSum || 0}
+                      onChange={e => setForm({ ...form, bankClientSum: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Nazoratchi %</label>
+                    <input
+                      type="number"
+                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
+                      value={form.supervisorPerc || 0}
+                      onChange={e => setForm({ ...form, supervisorPerc: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 border-t dark:border-apple-darkBorder pt-8">
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-8 border-t dark:border-apple-darkBorder pt-8">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">{t.login}</label>
                   <input
@@ -195,6 +327,29 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                     onChange={e => setForm({ ...form, password: e.target.value })}
                   />
                 </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Ega (Kontakt)</label>
+                  <input
+                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
+                    placeholder="Ega ismi"
+                    value={form.ownerName || ''}
+                    onChange={e => setForm({ ...form, ownerName: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="md:col-span-2 flex items-center gap-4 bg-slate-50 dark:bg-white/5 p-6 rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div
+                    onClick={() => setForm({ ...form, isActive: !form.isActive })}
+                    className={`w-14 h-8 rounded-full transition-all relative ${form.isActive ? 'bg-apple-accent shadow-lg shadow-blue-500/30' : 'bg-slate-300'}`}
+                  >
+                    <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${form.isActive ? 'left-7' : 'left-1'}`}></div>
+                  </div>
+                  <span className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight">
+                    {form.isActive ? 'Faol Holatda' : 'Arxivlangan'}
+                  </span>
+                </label>
               </div>
 
               <div className="md:col-span-2 flex gap-6 pt-4">
@@ -226,6 +381,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                     <div className="flex flex-wrap gap-2 mt-2">
                       <span className="text-[10px] font-black px-3 py-1 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-lg tabular-nums">INN: {c.inn}</span>
                       <span className="text-[10px] font-black px-3 py-1 bg-apple-accent/10 text-apple-accent rounded-lg uppercase">{c.taxRegime}</span>
+                      {c.ownerName && <span className="text-[10px] font-black px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-lg">{c.ownerName}</span>}
                     </div>
                   </div>
                   <button onClick={() => startEdit(c)} className="p-3 self-start bg-slate-50 dark:bg-white/5 text-slate-400 rounded-xl hover:text-apple-accent transition-all opacity-0 group-hover:opacity-100"><Edit3 size={18} /></button>
@@ -264,12 +420,27 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
               <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-white/10 text-[11px] font-black uppercase tracking-widest text-slate-400 border-b dark:border-apple-darkBorder">
-                    <th className="px-10 py-8 sticky left-0 bg-slate-50 dark:bg-apple-darkCard z-20 shadow-sm">{t.companyName}</th>
-                    <th className="px-6 py-8">{t.inn}</th>
+                    <th
+                      className="px-10 py-8 sticky left-0 bg-slate-50 dark:bg-apple-darkCard z-20 shadow-sm cursor-pointer hover:text-apple-accent transition-colors"
+                      onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
+                    >
+                      {t.companyName} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th
+                      className="px-6 py-8 cursor-pointer hover:text-apple-accent transition-colors"
+                      onClick={() => { setSortField('inn'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
+                    >
+                      {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </th>
                     <th className="px-6 py-8">{t.regime}</th>
-                    <th className="px-6 py-8">{t.accountant}</th>
+                    <th
+                      className="px-6 py-8 cursor-pointer hover:text-apple-accent transition-colors"
+                      onClick={() => { setSortField('accountantName'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
+                    >
+                      {t.accountant} {sortField === 'accountantName' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th className="px-6 py-8">Ega</th>
                     <th className="px-6 py-8">{t.login}</th>
-                    <th className="px-6 py-8">{t.password}</th>
                     <th className="px-8 py-8 text-right">{t.actions}</th>
                   </tr>
                 </thead>
@@ -290,6 +461,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                       </td>
                       <td className="px-6 py-6">
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{c.accountantName}</span>
+                      </td>
+                      <td className="px-6 py-6">
+                        <span className="text-xs font-bold text-slate-500">{c.ownerName || '—'}</span>
                       </td>
                       <td className="px-6 py-6">
                         <div className="flex items-center gap-2 group/val">

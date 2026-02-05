@@ -10,7 +10,11 @@ import StaffKPIReport from './components/StaffKPIReport';
 import StaffProfileDrawer from './components/StaffProfileDrawer';
 import CompanyDrawer from './components/CompanyDrawer';
 import DocumentsModule from './components/DocumentsModule';
-import { AppView, Company, OperationEntry, Staff, AccountantKPI, ReportStatus, Language } from './types';
+import SalaryKPIModule from './components/SalaryKPIModule';
+import KassaModule from './components/KassaModule';
+import ExpenseModule from './components/ExpenseModule';
+import StaffCabinet from './components/StaffCabinet';
+import { AppView, Company, OperationEntry, Staff, AccountantKPI, ReportStatus, Language, Payment, Expense } from './types';
 import { supabase } from './lib/supabaseClient';
 import {
   fetchProfile,
@@ -20,7 +24,11 @@ import {
   fetchKpiMetrics,
   upsertCompany,
   upsertOperation,
-  upsertStaff
+  upsertStaff,
+  fetchPayments,
+  fetchExpenses,
+  upsertPayment,
+  upsertExpense
 } from './lib/supabaseData';
 import type { Session } from '@supabase/supabase-js';
 
@@ -36,6 +44,8 @@ const App: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [operations, setOperations] = useState<OperationEntry[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState('');
@@ -91,15 +101,19 @@ const App: React.FC = () => {
 
   const refreshData = async () => {
     setIsSyncing(true);
-    const [c, o, s, kpi] = await Promise.all([
+    const [c, o, s, kpi, p, e] = await Promise.all([
       fetchCompanies(),
       fetchOperations(),
       fetchStaff(),
-      fetchKpiMetrics()
+      fetchKpiMetrics(),
+      fetchPayments(),
+      fetchExpenses()
     ]);
     setCompanies(c);
     setOperations(o);
     setStaff(s);
+    setPayments(p);
+    setExpenses(e);
     setLastSync(new Date().toLocaleString());
     setIsSyncing(false);
   };
@@ -328,6 +342,41 @@ const App: React.FC = () => {
                 lang={lang}
               />
             )}
+
+            {activeView === 'kpi' && (
+              <SalaryKPIModule
+                companies={companies}
+                operations={operations}
+                staff={staff}
+                lang={lang}
+              />
+            )}
+
+            {activeView === 'kassa' && (
+              <KassaModule
+                companies={companies}
+                payments={payments}
+                lang={lang}
+                onSavePayment={async (p) => { await upsertPayment(p); refreshData(); }}
+              />
+            )}
+
+            {activeView === 'expenses' && (
+              <ExpenseModule
+                expenses={expenses}
+                lang={lang}
+                onSaveExpense={async (e) => { await upsertExpense(e); refreshData(); }}
+              />
+            )}
+
+            {activeView === 'cabinet' && session?.user && (
+              <StaffCabinet
+                currentStaff={staff.find(s => s.id === session.user.id) || { id: session.user.id, name: userName, role: userRole, avatarColor: '#3b82f6' }}
+                companies={companies}
+                operations={operations}
+                lang={lang}
+              />
+            )}
           </div>
         </div>
 
@@ -345,6 +394,8 @@ const App: React.FC = () => {
           <CompanyDrawer
             company={selectedCompany}
             operation={selectedOperation}
+            payments={payments}
+            lang={lang}
             onClose={() => setSelectedCompany(null)}
           />
         )}

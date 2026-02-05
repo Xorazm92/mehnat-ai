@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AppView, Language } from '../types';
-import { LayoutDashboard, Building2, Users, FileBarChart, PieChart, Settings, LogOut, X, FileText } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, FileBarChart, PieChart, Settings, LogOut, X, FileText, TrendingUp, Wallet, Receipt, UserCircle } from 'lucide-react';
 import { translations } from '../lib/translations';
 
 interface SidebarProps {
@@ -16,9 +16,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewCh
   const t = translations[lang];
   const menuItems = [
     { id: 'dashboard' as AppView, icon: <LayoutDashboard size={20} />, label: t.dashboard },
+    { id: 'cabinet' as AppView, icon: <UserCircle size={20} />, label: 'Shaxsiy Kabinet' },
     { id: 'organizations' as AppView, icon: <Building2 size={20} />, label: t.organizations },
     { id: 'reports' as AppView, icon: <FileBarChart size={20} />, label: t.reports },
+    { id: 'kassa' as AppView, icon: <Wallet size={20} />, label: 'Kassa' },
+    { id: 'expenses' as AppView, icon: <Receipt size={20} />, label: 'Xarajatlar' },
     { id: 'documents' as AppView, icon: <FileText size={20} />, label: t.documents || 'Hujjatlar' },
+    { id: 'kpi' as AppView, icon: <TrendingUp size={20} />, label: 'Samaradorlik' },
     { id: 'analysis' as AppView, icon: <PieChart size={20} />, label: t.analysis },
     { id: 'staff' as AppView, icon: <Users size={20} />, label: t.staff },
   ];

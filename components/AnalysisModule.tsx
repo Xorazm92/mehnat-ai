@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { Company, OperationEntry, ReportStatus, Language } from '../types';
 import { translations } from '../lib/translations';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector } from 'recharts';
+import { Download, Calendar } from 'lucide-react';
 
 interface Props {
   companies: Company[];
@@ -13,8 +14,34 @@ interface Props {
 
 const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilterApply }) => {
   const t = translations[lang];
+  const [selectedPeriod, setSelectedPeriod] = React.useState('2024 Yillik');
 
-  // Ranglar palitrasi - macOS uslubida
+  const handleExport = () => {
+    const headers = ['Firma Nomi', 'INN', 'Soliq Rejimi', 'Foyda Solig\'i', 'Balans (F1)', 'Moliya (F2)', 'Statistika'];
+    const rows = companies.map(c => {
+      const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
+      return [
+        c.name,
+        c.inn,
+        c.taxRegime,
+        op?.profitTaxStatus || '-',
+        op?.form1Status || '-',
+        op?.form2Status || '-',
+        op?.statsStatus || '-'
+      ].join(',');
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `hisobot_${selectedPeriod.replace(' ', '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Status colors - macOS style
   const STATUS_COLORS: Record<string, string> = {
     '+': '#34C759',      // Success
     '-': '#FF3B30',      // Error
@@ -23,6 +50,10 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
     'ariza': '#5856D6',    // Indigo
     'default': '#D1D1D6'
   };
+
+  const filteredOperations = useMemo(() => {
+    return operations.filter(op => op.period === selectedPeriod);
+  }, [operations, selectedPeriod]);
 
   const reportStats = useMemo(() => {
     const categories = [
@@ -33,16 +64,12 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
     ];
 
     return categories.map(cat => {
-      // Barcha statuslar bo'yicha hisoblash
-      // Fix: Removed type arguments from reduce call and added type assertion to initial value to resolve "Untyped function calls may not accept type arguments"
-      const statusCounts = operations.reduce((acc, op) => {
+      const statusCounts = filteredOperations.reduce((acc, op) => {
         const val = (op as any)[cat.key] || '-';
         acc[val] = (acc[val] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
-      // Object.entries(statusCounts) returns [string, number][]
-      // Fix: Ensured sorting operands are treated as numbers to resolve arithmetic operation type errors.
       const data = Object.entries(statusCounts).map(([status, count]) => ({
         name: status,
         value: count,
@@ -52,7 +79,7 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
 
       return { ...cat, data };
     });
-  }, [operations, t.profitTax, t.form1, t.form2, t.stats]);
+  }, [filteredOperations, t.profitTax, t.form1, t.form2, t.stats]);
 
   const renderActiveShape = (props: any) => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
@@ -71,16 +98,39 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
     );
   };
 
+  const periods = [...new Set(operations.map(o => o.period))];
+
   return (
     <div className="space-y-10 animate-fade-in pb-20">
-      <div className="bg-white dark:bg-apple-darkCard p-10 rounded-[2.5rem] shadow-sm border border-apple-border dark:border-apple-darkBorder flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-2">{t.analysis}</h2>
-          <p className="text-sm font-semibold text-slate-400">{t.totalFirms}: <span className="text-apple-accent">{companies.length}</span></p>
+      <div className="bg-white dark:bg-apple-darkCard p-10 rounded-[2.5rem] shadow-sm border border-apple-border dark:border-apple-darkBorder flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-8 w-full md:w-auto">
+          <div>
+            <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-2">{t.analysis}</h2>
+            <p className="text-sm font-semibold text-slate-400">{t.totalFirms}: <span className="text-apple-accent">{companies.length}</span></p>
+          </div>
+          <div className="h-12 w-px bg-slate-100 dark:bg-apple-darkBorder hidden md:block"></div>
+          <div className="flex-1 md:flex-none relative">
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              className="w-full md:w-48 appearance-none bg-slate-50 dark:bg-apple-darkBg border border-transparent focus:border-apple-accent rounded-2xl px-6 py-4 font-black text-slate-700 dark:text-white outline-none transition-all cursor-pointer"
+            >
+              {periods.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <Calendar className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+          </div>
         </div>
-        <div className="hidden md:block text-right">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Guidance</p>
-          <div className="flex gap-2">
+
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <button
+            onClick={handleExport}
+            className="flex-1 md:flex-none flex items-center justify-center gap-3 bg-white dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder rounded-2xl px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all shadow-sm active:scale-95"
+          >
+            <Download size={16} className="text-apple-accent" />
+            Excelga Eksport
+          </button>
+
+          <div className="hidden xl:flex gap-2">
             {Object.entries(STATUS_COLORS).filter(([k]) => k !== 'default').map(([k, v]) => (
               <div key={k} className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-white/5 rounded-lg border border-apple-border dark:border-apple-darkBorder">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: v }}></div>

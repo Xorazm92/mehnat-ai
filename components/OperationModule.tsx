@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Company, OperationEntry, ReportStatus, Language } from '../types';
+import { Company, OperationEntry, ReportStatus, Language, KPIMetrics } from '../types';
 import { translations } from '../lib/translations';
 import StatusBadge from './StatusBadge';
 import { Search, Download, Filter, ChevronLeft, ChevronRight, FileBarChart } from 'lucide-react';
@@ -74,6 +74,17 @@ const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter 
     onUpdate({ ...op, [field]: val as ReportStatus, updatedAt: new Date().toISOString() });
   };
 
+  const [expandedKpiId, setExpandedKpiId] = useState<string | null>(null);
+
+  const updateKpiMetric = (op: OperationEntry, field: keyof KPIMetrics, value: any) => {
+    const currentKpi = op.kpi || {
+      supervisorAttendance: true, bankClientAttendance: true, bankClientTgOk: true, bankClientTgMissed: 0,
+      accTgOk: true, accTgMissed: 0, didox: true, letters: true, myMehnat: true, oneC: true,
+      autoCameral: true, cashFlow: true, taxInfo: true, payroll: true, debt: true, pnl: true
+    };
+    onUpdate({ ...op, kpi: { ...currentKpi, [field]: value }, updatedAt: new Date().toISOString() });
+  };
+
   return (
     <div className="space-y-8 md:space-y-10 animate-fade-in pb-20">
       <div className="bg-white dark:bg-apple-darkCard p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-apple-border dark:border-apple-darkBorder flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
@@ -110,10 +121,11 @@ const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter 
 
       <div className="bg-white dark:bg-apple-darkCard rounded-[2.5rem] md:rounded-[3rem] border border-apple-border dark:border-apple-darkBorder overflow-hidden shadow-2xl">
         <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-apple-accent">
-          <table className="w-full text-left border-collapse min-w-[1200px]">
+          <table className="w-full text-left border-collapse min-w-[1300px]">
             <thead>
               <tr className="bg-slate-50 dark:bg-white/10 text-[11px] md:text-xs font-black uppercase tracking-widest text-slate-400 border-b dark:border-apple-darkBorder sticky top-0 z-30">
                 <th className="px-10 md:px-12 py-8 md:py-10 sticky left-0 bg-slate-50 dark:bg-apple-darkCard z-40 w-80 md:w-96 shadow-sm border-r dark:border-apple-darkBorder">{t.organizations}</th>
+                <th className="px-6 py-8 text-center bg-slate-50 dark:bg-apple-darkCard/80 backdrop-blur-md">KPI</th>
                 <th className="px-6 py-8 text-center bg-slate-50 dark:bg-apple-darkCard/80 backdrop-blur-md">{t.profitTax}</th>
                 <th className="px-6 py-8 text-center bg-slate-50 dark:bg-apple-darkCard/80 backdrop-blur-md">{t.form1}</th>
                 <th className="px-6 py-8 text-center bg-slate-50 dark:bg-apple-darkCard/80 backdrop-blur-md">{t.form2}</th>
@@ -127,50 +139,163 @@ const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter 
                   id: Math.random().toString(), companyId: c.id, period,
                   profitTaxStatus: ReportStatus.NOT_SUBMITTED, form1Status: ReportStatus.NOT_SUBMITTED,
                   form2Status: ReportStatus.NOT_SUBMITTED, statsStatus: ReportStatus.NOT_SUBMITTED,
-                  comment: '', updatedAt: '', history: []
+                  comment: '', updatedAt: '', history: [], kpi: undefined
                 };
 
+                const isExpanded = expandedKpiId === c.id;
+
                 return (
-                  <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all group">
-                    <td
-                      className="px-10 md:px-12 py-6 md:py-8 sticky left-0 bg-white dark:bg-apple-darkCard group-hover:bg-slate-50 dark:group-hover:bg-apple-darkBg z-20 shadow-sm transition-colors border-r dark:border-apple-darkBorder cursor-pointer"
-                      onClick={() => onCompanySelect(c)}
-                    >
-                      <div className="font-extrabold text-slate-800 dark:text-white text-base md:text-lg truncate w-64 md:w-80 tracking-tighter leading-none mb-2 hover:text-apple-accent transition-colors">{c.name}</div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="text-[10px] font-black text-slate-400 font-mono tracking-tighter tabular-nums bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded shadow-inner">INN: {c.inn}</span>
-                        <span className="px-2 py-1 bg-apple-accent/10 text-[9px] font-black text-apple-accent uppercase rounded-md tracking-wider border border-apple-accent/20">{c.accountantName}</span>
-                      </div>
-                    </td>
-                    {[
-                      { field: 'profitTaxStatus' },
-                      { field: 'form1Status' },
-                      { field: 'form2Status' },
-                      { field: 'statsStatus' }
-                    ].map((item) => (
-                      <td key={item.field} className="px-4 py-6 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <select
-                            className="bg-transparent border-none text-[10px] font-black text-slate-400 hover:text-apple-accent outline-none cursor-pointer appearance-none text-center transition-colors focus:ring-0"
-                            value={(op as any)[item.field]}
-                            onChange={e => handleStatusChange(op as any, item.field as any, e.target.value)}
-                          >
-                            {Object.values(ReportStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                          <StatusBadge status={(op as any)[item.field]} />
+                  <React.Fragment key={c.id}>
+                    <tr className={`hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all group ${isExpanded ? 'bg-apple-accent/5' : ''}`}>
+                      <td
+                        className="px-10 md:px-12 py-6 md:py-8 sticky left-0 bg-white dark:bg-apple-darkCard group-hover:bg-slate-50 dark:group-hover:bg-apple-darkBg z-20 shadow-sm transition-colors border-r dark:border-apple-darkBorder cursor-pointer"
+                        onClick={() => onCompanySelect(c)}
+                      >
+                        <div className="font-extrabold text-slate-800 dark:text-white text-base md:text-lg truncate w-64 md:w-80 tracking-tighter leading-none mb-2 hover:text-apple-accent transition-colors">{c.name}</div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="text-[10px] font-black text-slate-400 font-mono tracking-tighter tabular-nums bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded shadow-inner">INN: {c.inn}</span>
+                          <span className="px-2 py-1 bg-apple-accent/10 text-[9px] font-black text-apple-accent uppercase rounded-md tracking-wider border border-apple-accent/20">{c.accountantName}</span>
                         </div>
                       </td>
-                    ))}
-                    <td className="px-10 py-6">
-                      <textarea
-                        rows={1}
-                        className="w-full min-w-[280px] bg-slate-50 dark:bg-white/5 border border-apple-border dark:border-apple-darkBorder rounded-2xl p-4 text-sm font-bold outline-none focus:bg-white dark:focus:bg-apple-darkBg focus:ring-4 focus:ring-apple-accent/10 transition-all resize-none shadow-sm"
-                        placeholder={t.comment + "..."}
-                        value={op.comment}
-                        onChange={e => onUpdate({ ...op as any, comment: e.target.value })}
-                      />
-                    </td>
-                  </tr>
+
+                      <td className="px-6 py-8 text-center bg-slate-50/30 dark:bg-white/5">
+                        <button
+                          onClick={() => setExpandedKpiId(isExpanded ? null : c.id)}
+                          className={`p-3 rounded-xl transition-all font-black text-[10px] uppercase tracking-widest ${isExpanded ? 'bg-apple-accent text-white shadow-lg' : 'bg-slate-100 dark:bg-white/10 text-slate-500 hover:bg-apple-accent/10 hover:text-apple-accent'}`}
+                        >
+                          {isExpanded ? 'Yopish' : 'KPI Kirish'}
+                        </button>
+                      </td>
+
+                      {[
+                        { field: 'profitTaxStatus' },
+                        { field: 'form1Status' },
+                        { field: 'form2Status' },
+                        { field: 'statsStatus' }
+                      ].map((item) => (
+                        <td key={item.field} className="px-4 py-6 text-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <select
+                              className="bg-transparent border-none text-[10px] font-black text-slate-400 hover:text-apple-accent outline-none cursor-pointer appearance-none text-center transition-colors focus:ring-0"
+                              value={(op as any)[item.field]}
+                              onChange={e => handleStatusChange(op as any, item.field as any, e.target.value)}
+                            >
+                              {Object.values(ReportStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                            <StatusBadge status={(op as any)[item.field]} />
+                          </div>
+                        </td>
+                      ))}
+                      <td className="px-10 py-6">
+                        <textarea
+                          rows={1}
+                          className="w-full min-w-[280px] bg-slate-50 dark:bg-white/5 border border-apple-border dark:border-apple-darkBorder rounded-2xl p-4 text-sm font-bold outline-none focus:bg-white dark:focus:bg-apple-darkBg focus:ring-4 focus:ring-apple-accent/10 transition-all resize-none shadow-sm"
+                          placeholder={t.comment + "..."}
+                          value={op.comment}
+                          onChange={e => onUpdate({ ...op as any, comment: e.target.value })}
+                        />
+                      </td>
+                    </tr>
+
+                    {isExpanded && (
+                      <tr className="bg-slate-50/50 dark:bg-black/20 animate-macos">
+                        <td colSpan={7} className="px-10 py-10">
+                          <div className="flex flex-col gap-10">
+                            {/* Rule 1 & 2: Supervisor & Bank Client Toggles */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              <div className="p-6 bg-white dark:bg-apple-darkCard rounded-[2rem] border border-apple-border dark:border-apple-darkBorder shadow-sm">
+                                <h4 className="text-[10px] font-black uppercase text-apple-accent mb-4 tracking-widest">Rule 1: Nazoratchi</h4>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold text-slate-500">Ishga kelish (±0.5%)</span>
+                                  <button
+                                    onClick={() => updateKpiMetric(op as any, 'supervisorAttendance', !((op.kpi as any)?.supervisorAttendance))}
+                                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${((op.kpi as any)?.supervisorAttendance) ? 'bg-emerald-500 text-white shadow-lg' : 'bg-rose-500 text-white'}`}
+                                  >
+                                    {((op.kpi as any)?.supervisorAttendance) ? '+0.5%' : '-0.5%'}
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="p-6 bg-white dark:bg-apple-darkCard rounded-[2rem] border border-apple-border dark:border-apple-darkBorder shadow-sm">
+                                <h4 className="text-[10px] font-black uppercase text-blue-500 mb-4 tracking-widest">Rule 2: Bank Klient</h4>
+                                <div className="space-y-4 text-xs font-bold">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-slate-500">Attendance (±1%)</span>
+                                    <button
+                                      onClick={() => updateKpiMetric(op as any, 'bankClientAttendance', !((op.kpi as any)?.bankClientAttendance))}
+                                      className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${((op.kpi as any)?.bankClientAttendance) ? 'bg-emerald-500 text-white shadow-lg' : 'bg-rose-500 text-white'}`}
+                                    >
+                                      {((op.kpi as any)?.bankClientAttendance) ? '+1%' : '-1%'}
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-slate-500">TG Ok (+1%/0)</span>
+                                    <button
+                                      onClick={() => updateKpiMetric(op as any, 'bankClientTgOk', !((op.kpi as any)?.bankClientTgOk))}
+                                      className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${((op.kpi as any)?.bankClientTgOk) ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-100 dark:bg-white/10 text-slate-400'}`}
+                                    >
+                                      {((op.kpi as any)?.bankClientTgOk) ? '+1%' : 'Yo\'q'}
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center justify-between pt-2 border-t dark:border-apple-darkBorder">
+                                    <span className="text-slate-400">TG Missed (ea -0.5%)</span>
+                                    <input
+                                      type="number"
+                                      className="w-16 bg-slate-50 dark:bg-white/5 border-none rounded-lg text-center font-black py-1"
+                                      value={(op.kpi as any)?.bankClientTgMissed || 0}
+                                      onChange={e => updateKpiMetric(op as any, 'bankClientTgMissed', parseInt(e.target.value) || 0)}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Rule 3: Accountant Checklist */}
+                            <div>
+                              <h3 className="text-[10px] font-black uppercase text-slate-400 mb-6 tracking-[0.2em]">Rule 3: Buxgalter Checklist (±% Metrics)</h3>
+                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                {[
+                                  { label: 'TG Javob', f: 'accTgOk', p: '+1%', m: '0' },
+                                  { label: 'Didox', f: 'didox', p: '+0.25%', m: '-0.25%' },
+                                  { label: 'Xatlar', f: 'letters', p: '+0.25%', m: '-0.25%' },
+                                  { label: 'MyMehnat', f: 'myMehnat', p: '+0.25%', m: '-0.25%' },
+                                  { label: '1C Baza', f: 'oneC', p: '+1%', m: '0' },
+                                  { label: 'AvtoCam.', f: 'autoCameral', p: '+0.25%', m: '-0.25%' },
+                                  { label: 'Pul Oqimi', f: 'cashFlow', p: '+0.2%', m: '-0.2%' },
+                                  { label: 'Soliq Info', f: 'taxInfo', p: '+0.2%', m: '-0.2%' },
+                                  { label: 'Oylik Hisob', f: 'payroll', p: '+0.2%', m: '-0.2%' },
+                                  { label: 'Deb/Kred', f: 'debt', p: '+0.2%', m: '-0.2%' },
+                                  { label: 'F&Z Hisob', f: 'pnl', p: '+0.2%', m: '-0.2%' }
+                                ].map(item => (
+                                  <div key={item.f} className="p-4 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-sm flex flex-col gap-3">
+                                    <span className="text-[9px] font-black uppercase text-slate-400">{item.label}</span>
+                                    <button
+                                      onClick={() => updateKpiMetric(op as any, item.f as any, !((op.kpi as any)?.[item.f]))}
+                                      className={`py-2 rounded-xl text-[9px] font-black transition-all ${((op.kpi as any)?.[item.f]) ? 'bg-emerald-500 text-white shadow-lg' : 'bg-rose-500 text-white'}`}
+                                    >
+                                      {((op.kpi as any)?.[item.f]) ? item.p : item.m}
+                                    </button>
+                                  </div>
+                                ))}
+                                <div className="p-4 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-sm flex flex-col gap-3">
+                                  <span className="text-[9px] font-black uppercase text-rose-500">TG Kechikish</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-bold text-slate-400">Soni:</span>
+                                    <input
+                                      type="number"
+                                      className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-lg text-center font-black py-1 text-xs"
+                                      value={(op.kpi as any)?.accTgMissed || 0}
+                                      onChange={e => updateKpiMetric(op as any, 'accTgMissed', parseInt(e.target.value) || 0)}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
