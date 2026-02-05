@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { Company, OperationEntry, Staff, Language, ReportStatus } from '../types';
 import { translations } from '../lib/translations';
 import { User, Briefcase, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import { calculateStaffSalaryAndKPI } from './SalaryKPIModule';
+
 
 interface StaffCabinetProps {
     currentStaff: Staff;
@@ -14,6 +14,8 @@ interface StaffCabinetProps {
 
 const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, operations, lang }) => {
     const t = translations[lang];
+
+    const [salarySummary, setSalarySummary] = React.useState<number>(0);
 
     const myCompanies = useMemo(() => {
         return companies.filter(c =>
@@ -30,21 +32,23 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
             op.profitTaxStatus === ReportStatus.ACCEPTED
         ).length;
 
-        // Calculate predicted salary
-        let totalSalary = 0;
-        myCompanies.forEach(c => {
-            const op = operations.find(o => o.companyId === c.id);
-            const { finalSalary } = calculateStaffSalaryAndKPI(c, currentStaff, op);
-            totalSalary += finalSalary;
-        });
-
         return {
             total,
             completed,
-            progress: total > 0 ? Math.round((completed / total) * 100) : 0,
-            totalSalary
+            progress: total > 0 ? Math.round((completed / total) * 100) : 0
         };
-    }, [myCompanies, operations, currentStaff]);
+    }, [myCompanies, operations]);
+
+    // Async Fetch Salary
+    React.useEffect(() => {
+        const fetchSalary = async () => {
+            const { calculateEmployeeSalary } = await import('../lib/supabaseData');
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            const data = await calculateEmployeeSalary(currentStaff.id, `${currentMonth}-01`);
+            if (data) setSalarySummary(data.totalSalary);
+        };
+        fetchSalary();
+    }, [currentStaff.id]);
 
     return (
         <div className="space-y-8 animate-macos">
@@ -62,7 +66,7 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
                 </div>
                 <div className="bg-slate-50 dark:bg-apple-darkBg p-6 rounded-[2rem] text-center border border-slate-100 dark:border-apple-darkBorder">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Taxminiy Maosh</p>
-                    <p className="text-3xl font-black text-apple-accent tracking-tighter tabular-nums">{stats.totalSalary.toLocaleString()} <span className="text-xs">UZS</span></p>
+                    <p className="text-3xl font-black text-apple-accent tracking-tighter tabular-nums">{salarySummary.toLocaleString()} <span className="text-xs">UZS</span></p>
                 </div>
             </div>
 

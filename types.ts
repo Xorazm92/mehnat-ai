@@ -56,6 +56,38 @@ export enum StatsType {
   SMALL = 'Small'
 }
 
+// Company Status (Tab 6: XAVF)
+export enum CompanyStatus {
+  ACTIVE = 'active',
+  SUSPENDED = 'suspended',
+  DEBTOR = 'debtor',
+  PROBLEM = 'problem',
+  BANKRUPT = 'bankrupt'
+}
+
+// Risk Level (Tab 6: XAVF)
+export enum RiskLevel {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high'
+}
+
+// 1C Accounting Status (Tab 2: SOLIQ)
+export enum OneCStatus {
+  CLOUD = 'cloud',
+  LOCAL = 'local',
+  SERVER = 'server',
+  NONE = 'none'
+}
+
+// Credential Service Types (Tab 3: LOGINLAR)
+export enum CredentialService {
+  SOLIQ = 'soliq',
+  DIDOX = 'didox',
+  MY_MEHNAT = 'my_mehnat',
+  BANK_CLIENT = 'bank_client'
+}
+
 export interface HistoryLog {
   action: string;
   date: string;
@@ -63,6 +95,34 @@ export interface HistoryLog {
   user: string;
 }
 
+// Client Credential (Tab 3: LOGINLAR)
+export interface ClientCredential {
+  id: string;
+  companyId: string;
+  serviceName: CredentialService | string;
+  loginId: string;
+  encryptedPassword: string;
+  keyFilePath?: string;
+  notes?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+}
+
+// Client History (Tab 4: JAMOA & Audit)
+export interface ClientHistory {
+  id: string;
+  companyId: string;
+  changeType: string;
+  fieldName?: string;
+  oldValue?: string;
+  newValue?: string;
+  changedBy?: string;
+  changedByName?: string;
+  changedAt: string;
+  notes?: string;
+}
+
+// Extended Company Interface with 6-Tab Profile fields
 export interface Company {
   id: string;
   name: string;
@@ -86,6 +146,38 @@ export interface Company {
   ownerName?: string;
   isActive?: boolean;
   createdAt?: string;
+
+  // Tab 1: PASPORT (Passport)
+  brandName?: string;
+  directorName?: string;
+  directorPhone?: string;
+  legalAddress?: string;
+  founderName?: string;
+  logoUrl?: string;
+  certificateFilePath?: string;
+  charterFilePath?: string;
+
+  // Tab 2: SOLIQ (Tax & Obligations)
+  vatCertificateDate?: string;
+  hasLandTax?: boolean;
+  hasWaterTax?: boolean;
+  hasPropertyTax?: boolean;
+  hasExciseTax?: boolean;
+  hasAuctionTax?: boolean;
+  oneCStatus?: OneCStatus;
+  oneCLocation?: string;
+
+  // Tab 5: SHARTNOMA (Contract)
+  contractNumber?: string;
+  contractDate?: string;
+  paymentDay?: number;
+  firmaSharePercent?: number;
+  currentBalance?: number;
+
+  // Tab 6: XAVF (Risk)
+  companyStatus?: CompanyStatus;
+  riskLevel?: RiskLevel;
+  riskNotes?: string;
 }
 
 export interface KPIMetrics {
@@ -126,12 +218,16 @@ export interface OperationEntry {
   kpi?: KPIMetrics;
 }
 
+export type StaffStatus = 'active' | 'vacation' | 'sick';
+
 export interface Staff {
   id: string;
   name: string;
   role: string;
   avatarColor: string;
   phone?: string;
+  status?: StaffStatus;
+  rating?: number;
 }
 
 export interface AccountantKPI {
@@ -150,4 +246,143 @@ export interface Config {
   profitTaxDeadline: string;
   statsDeadline: string;
   kpiNorm: number;
+}
+
+// =====================================================
+// AVTOMATIK KPI TIZIMI — Types
+// =====================================================
+
+// KPI Input Type
+export type KPIInputType = 'checkbox' | 'counter' | 'number' | 'rating';
+
+// KPI Role Type
+export type KPIRoleType = 'accountant' | 'bank_client' | 'supervisor';
+
+// KPI Rule (Dinamik qoida)
+export interface KPIRule {
+  id: string;
+  name: string;                    // Internal: "telegram_response"
+  nameUz: string;                  // O'zbekcha: "Telegramda javob"
+  role: KPIRoleType;
+  rewardPercent: number;           // +1.0%
+  penaltyPercent: number;          // -0.5%
+  inputType: KPIInputType;
+  category: string;                // 'attendance', 'telegram', 'reports'
+  description?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+// Monthly Performance Entry (Oylik natija)
+export interface MonthlyPerformance {
+  id: string;
+  month: string;                   // '2026-02-01'
+  companyId: string;
+  companyName?: string;
+  employeeId: string;
+  employeeName?: string;
+  ruleId: string;
+  ruleName?: string;
+  ruleNameUz?: string;
+  value: number;                   // 1=Ha, 0=Yo'q, 5=5 ta kechikish
+  calculatedScore: number;         // Avtomat hisoblangan foiz
+  notes?: string;
+  changeReason?: string;
+  recordedBy?: string;
+  recordedAt?: string;
+}
+
+// Payroll Adjustment Type
+export type PayrollAdjustmentType = 'bonus' | 'avans' | 'jarima' | 'manual' | 'other';
+
+// Payroll Adjustment (Qo'lda to'lovlar)
+export interface PayrollAdjustment {
+  id: string;
+  month: string;
+  employeeId: string;
+  employeeName?: string;
+  adjustmentType: PayrollAdjustmentType;
+  amount: number;                  // Musbat yoki manfiy
+  reason: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  isApproved: boolean;
+  createdAt?: string;
+  createdBy?: string;
+}
+
+// Employee Salary Summary (Xodim oylik xulosasi)
+export interface EmployeeSalarySummary {
+  employeeId: string;
+  employeeName: string;
+  employeeRole: string;
+  month: string;
+
+  // Firmalar
+  companyCount: number;
+
+  // Oylik bo'limlari
+  baseSalary: number;              // Asosiy oylik (shartnomalardan)
+  kpiBonus: number;                // KPI bonus (musbat)
+  kpiPenalty: number;              // KPI jarima (manfiy)
+  adjustments: number;             // Qo'lda qo'shilganlar
+
+  // Jami
+  totalSalary: number;
+
+  // Tafsilotlar
+  performanceDetails?: MonthlyPerformance[];
+  adjustmentDetails?: PayrollAdjustment[];
+}
+
+// Performance Change Log (O'zgarishlar tarixi)
+export interface PerformanceChangeLog {
+  id: string;
+  performanceId: string;
+  oldValue: number;
+  newValue: number;
+  changeReason: string;
+  changedBy: string;
+  changedByName?: string;
+  changedAt: string;
+}
+
+// =====================================================
+// RBAC & HISTORY (Integration)
+// =====================================================
+
+export type ClientAssignmentRole = 'accountant' | 'bank_manager' | 'supervisor';
+export type AssignmentStatus = 'active' | 'inactive';
+
+export interface ClientAssignment {
+  id: string;
+  companyId: string; // Changed from clientId
+  staffId: string;   // Changed from userId
+  roleType: ClientAssignmentRole;
+  assignedAt: string; // Changed from startDate
+  endedAt?: string;   // Changed from endDate
+  isActive: boolean; // Changed from status
+  createdBy?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  action: string;
+  entityType?: string;
+  entityId?: string;
+  details?: any; // JSONB
+  ipAddress?: string;
+  createdAt: string;
+}
+
+export interface Document {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+  size?: string;
+  uploadedAt: string;
+  companyId?: string;
+  staffId?: string;
 }

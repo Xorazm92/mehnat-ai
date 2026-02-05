@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { AlertCircle } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import Dashboard from './components/Dashboard';
@@ -31,6 +32,7 @@ import {
   upsertExpense
 } from './lib/supabaseData';
 import type { Session } from '@supabase/supabase-js';
+import { ALLOWED_VIEWS, ROLES, UserRole } from './lib/permissions';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>('dashboard');
@@ -259,6 +261,7 @@ const App: React.FC = () => {
           setSelectedCompany(null);
         }}
         lang={lang}
+        userRole={userRole}
       />
 
       <main className="flex-1 lg:pl-20 xl:pl-64 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-300">
@@ -278,104 +281,121 @@ const App: React.FC = () => {
 
         <div className="flex-1 overflow-y-auto scrollbar-thin overflow-x-hidden">
           <div className="max-w-[1600px] mx-auto p-4 md:p-10 animate-macos min-h-full">
-            {activeView === 'dashboard' && (
+            {/* Access Control for Main Content */}
+            {(!((ALLOWED_VIEWS[(userRole as UserRole) || ROLES.ACCOUNTANT] || ALLOWED_VIEWS[ROLES.ACCOUNTANT]).includes(activeView))) ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center opacity-80">
+                <AlertCircle size={64} className="text-rose-500 mb-6 drop-shadow-xl" />
+                <h2 className="text-4xl font-black text-slate-800 dark:text-white mb-3 tracking-tight">Access Denied</h2>
+                <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Sizda ushbu sahifani ko'rish huquqi yo'q.</p>
+              </div>
+            ) : (
               <>
-                <Dashboard
-                  companies={companies}
-                  operations={operations}
-                  activeFilter={'none'}
-                  onFilterChange={handleDashboardFilter}
-                  lang={lang}
-                />
-                <StaffKPIReport
-                  kpis={kpis}
-                  staff={staff}
-                  lang={lang}
-                  onStaffSelect={setSelectedStaff}
-                />
+                {activeView === 'dashboard' && (
+                  <>
+                    <Dashboard
+                      companies={companies}
+                      operations={operations}
+                      staff={staff}
+                      activeFilter={'none'}
+                      onFilterChange={handleDashboardFilter}
+                      lang={lang}
+                      userRole={userRole}
+                      userId={session?.user?.id}
+                    />
+                    <StaffKPIReport
+                      kpis={kpis}
+                      staff={staff}
+                      lang={lang}
+                      onStaffSelect={setSelectedStaff}
+                    />
+                  </>
+                )}
+
+                {activeView === 'organizations' && (
+                  <OrganizationModule
+                    companies={companies}
+                    staff={staff}
+                    lang={lang}
+                    onSave={async (c) => { await upsertCompany(c); refreshData(); }}
+                    onCompanySelect={setSelectedCompany}
+                  />
+                )}
+
+                {activeView === 'reports' && (
+                  <OperationModule
+                    companies={companies}
+                    operations={operations}
+                    activeFilter={activeFilter}
+                    lang={lang}
+                    onUpdate={async (op) => { await upsertOperation(op); refreshData(); }}
+                    onCompanySelect={setSelectedCompany}
+                  />
+                )}
+
+                {activeView === 'analysis' && (
+                  <AnalysisModule
+                    companies={companies}
+                    operations={operations}
+                    lang={lang}
+                    onFilterApply={handleAnalysisFilterApply}
+                  />
+                )}
+
+                {activeView === 'staff' && (
+                  <StaffModule
+                    staff={staff}
+                    companies={companies}
+                    lang={lang}
+                    onSave={async (s) => { await upsertStaff(s); refreshData(); }}
+                    onStaffSelect={setSelectedStaff}
+                  />
+                )}
+
+                {activeView === 'documents' && (
+                  <DocumentsModule
+                    companies={companies}
+                    lang={lang}
+                  />
+                )}
+
+                {activeView === 'kpi' && (
+                  <SalaryKPIModule
+                    companies={companies}
+                    operations={operations}
+                    staff={staff}
+                    lang={lang}
+                    currentUserId={session?.user?.id}
+                    currentUserRole={userRole}
+                  />
+                )}
+
+                {activeView === 'kassa' && (
+                  <KassaModule
+                    companies={companies}
+                    payments={payments}
+                    lang={lang}
+                    onSavePayment={async (p) => { await upsertPayment(p); refreshData(); }}
+                  />
+                )}
+
+                {activeView === 'expenses' && (
+                  <ExpenseModule
+                    expenses={expenses}
+                    lang={lang}
+                    onSaveExpense={async (e) => { await upsertExpense(e); refreshData(); }}
+                  />
+                )}
+
+                {activeView === 'cabinet' && session?.user && (
+                  <StaffCabinet
+                    currentStaff={staff.find(s => s.id === session.user.id) || { id: session.user.id, name: userName, role: userRole, avatarColor: '#3b82f6' }}
+                    companies={companies}
+                    operations={operations}
+                    lang={lang}
+                  />
+                )}
+
               </>
-            )}
-
-            {activeView === 'organizations' && (
-              <OrganizationModule
-                companies={companies}
-                staff={staff}
-                lang={lang}
-                onSave={async (c) => { await upsertCompany(c); refreshData(); }}
-                onCompanySelect={setSelectedCompany}
-              />
-            )}
-
-            {activeView === 'reports' && (
-              <OperationModule
-                companies={companies}
-                operations={operations}
-                activeFilter={activeFilter}
-                lang={lang}
-                onUpdate={async (op) => { await upsertOperation(op); refreshData(); }}
-                onCompanySelect={setSelectedCompany}
-              />
-            )}
-
-            {activeView === 'analysis' && (
-              <AnalysisModule
-                companies={companies}
-                operations={operations}
-                lang={lang}
-                onFilterApply={handleAnalysisFilterApply}
-              />
-            )}
-
-            {activeView === 'staff' && (
-              <StaffModule
-                staff={staff}
-                companies={companies}
-                lang={lang}
-                onSave={async (s) => { await upsertStaff(s); refreshData(); }}
-                onStaffSelect={setSelectedStaff}
-              />
-            )}
-
-            {activeView === 'documents' && (
-              <DocumentsModule
-                companies={companies}
-                lang={lang}
-              />
-            )}
-
-            {activeView === 'kpi' && (
-              <SalaryKPIModule
-                companies={companies}
-                operations={operations}
-                staff={staff}
-                lang={lang}
-              />
-            )}
-
-            {activeView === 'kassa' && (
-              <KassaModule
-                companies={companies}
-                payments={payments}
-                lang={lang}
-                onSavePayment={async (p) => { await upsertPayment(p); refreshData(); }}
-              />
-            )}
-
-            {activeView === 'expenses' && (
-              <ExpenseModule
-                expenses={expenses}
-                lang={lang}
-                onSaveExpense={async (e) => { await upsertExpense(e); refreshData(); }}
-              />
-            )}
-
-            {activeView === 'cabinet' && session?.user && (
-              <StaffCabinet
-                currentStaff={staff.find(s => s.id === session.user.id) || { id: session.user.id, name: userName, role: userRole, avatarColor: '#3b82f6' }}
-                companies={companies}
-                operations={operations}
-                lang={lang}
-              />
             )}
           </div>
         </div>

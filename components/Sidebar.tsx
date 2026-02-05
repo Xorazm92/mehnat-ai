@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { AppView, Language } from '../types';
 import { LayoutDashboard, Building2, Users, FileBarChart, PieChart, Settings, LogOut, X, FileText, TrendingUp, Wallet, Receipt, UserCircle } from 'lucide-react';
 import { translations } from '../lib/translations';
+import { ALLOWED_VIEWS, ROLES, UserRole } from '../lib/permissions';
 
 interface SidebarProps {
   activeView: AppView;
@@ -10,10 +10,12 @@ interface SidebarProps {
   onClose: () => void;
   onViewChange: (view: AppView) => void;
   lang: Language;
+  userRole?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewChange, lang }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewChange, lang, userRole }) => {
   const t = translations[lang];
+
   const menuItems = [
     { id: 'dashboard' as AppView, icon: <LayoutDashboard size={20} />, label: t.dashboard },
     { id: 'cabinet' as AppView, icon: <UserCircle size={20} />, label: 'Shaxsiy Kabinet' },
@@ -22,10 +24,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewCh
     { id: 'kassa' as AppView, icon: <Wallet size={20} />, label: 'Kassa' },
     { id: 'expenses' as AppView, icon: <Receipt size={20} />, label: 'Xarajatlar' },
     { id: 'documents' as AppView, icon: <FileText size={20} />, label: t.documents || 'Hujjatlar' },
-    { id: 'kpi' as AppView, icon: <TrendingUp size={20} />, label: 'Samaradorlik' },
+    { id: 'kpi' as AppView, icon: <TrendingUp size={20} />, label: t.kpi || 'Samaradorlik' },
     { id: 'analysis' as AppView, icon: <PieChart size={20} />, label: t.analysis },
     { id: 'staff' as AppView, icon: <Users size={20} />, label: t.staff },
   ];
+
+  // RBAC Filtering
+  const currentUserRole = (userRole as UserRole) || ROLES.ACCOUNTANT; // Default safe role
+  const allowedViews = ALLOWED_VIEWS[currentUserRole] || ALLOWED_VIEWS[ROLES.ACCOUNTANT];
+
+  const filteredItems = menuItems.filter(item => allowedViews.includes(item.id));
 
   return (
     <>
@@ -52,7 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewCh
         </div>
 
         <nav className="flex flex-col gap-1.5 w-full px-3 xl:px-4">
-          {menuItems.map((item) => (
+          {filteredItems.map((item) => (
             <button
               key={item.id}
               onClick={() => onViewChange(item.id)}
