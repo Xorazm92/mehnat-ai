@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Expense, Language } from '../types';
 import { translations } from '../lib/translations';
-import { Receipt, Plus, Search, Filter, Trash2, Calendar, Tag, ChevronRight, TrendingDown } from 'lucide-react';
+import { Receipt, Plus, Search, Filter, Edit3, Trash2, Calendar, Tag, ChevronRight, TrendingDown } from 'lucide-react';
 
 interface ExpenseModuleProps {
     expenses: Expense[];
@@ -127,14 +127,24 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                                 <div className="font-black text-rose-600 text-lg tracking-tighter">-{expense.amount.toLocaleString()}</div>
                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">UZS</div>
                             </div>
-                            {onDeleteExpense && (
+                            <div className="flex items-center gap-2">
                                 <button
-                                    onClick={() => onDeleteExpense(expense.id)}
-                                    className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500 transition-all p-2"
+                                    onClick={() => { setEditingExpense(expense); setIsModalOpen(true); }}
+                                    className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-apple-accent transition-all p-2"
+                                    title="Tahrirlash"
                                 >
-                                    <Trash2 size={18} />
+                                    <Edit3 size={18} />
                                 </button>
-                            )}
+                                {onDeleteExpense && (
+                                    <button
+                                        onClick={() => { if (confirm('Xarajatni o\'chirishni tasdiqlaysizmi?')) onDeleteExpense(expense.id); }}
+                                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500 transition-all p-2"
+                                        title="O'chirish"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 ))}

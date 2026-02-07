@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import Dashboard from './components/Dashboard';
@@ -15,7 +16,9 @@ import SalaryKPIModule from './components/SalaryKPIModule';
 import KassaModule from './components/KassaModule';
 import ExpenseModule from './components/ExpenseModule';
 import StaffCabinet from './components/StaffCabinet';
-import { AppView, Company, OperationEntry, Staff, AccountantKPI, ReportStatus, Language, Payment, Expense } from './types';
+import PayrollDrafts from './components/PayrollDrafts';
+import AuditLogModule from './components/AuditLogModule';
+import { AppView, Company, OperationEntry, Staff, AccountantKPI, ReportStatus, Language, Payment, Expense, EmployeeSalarySummary, ContractAssignment } from './types';
 import { supabase } from './lib/supabaseClient';
 import {
   fetchProfile,
@@ -24,12 +27,18 @@ import {
   fetchStaff,
   fetchKpiMetrics,
   upsertCompany,
+  deleteCompany,
+  onboardCompany,
   upsertOperation,
   upsertStaff,
+  deleteStaff,
   fetchPayments,
   fetchExpenses,
   upsertPayment,
-  upsertExpense
+  upsertExpense,
+  deletePayment,
+  deleteExpense,
+  fetchContractAssignments
 } from './lib/supabaseData';
 import type { Session } from '@supabase/supabase-js';
 import { ALLOWED_VIEWS, ROLES, UserRole } from './lib/permissions';
@@ -48,6 +57,7 @@ const App: React.FC = () => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [assignments, setAssignments] = useState<ContractAssignment[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState('');
@@ -103,19 +113,21 @@ const App: React.FC = () => {
 
   const refreshData = async () => {
     setIsSyncing(true);
-    const [c, o, s, kpi, p, e] = await Promise.all([
+    const [c, o, s, kpi, p, e, ass] = await Promise.all([
       fetchCompanies(),
       fetchOperations(),
       fetchStaff(),
       fetchKpiMetrics(),
       fetchPayments(),
-      fetchExpenses()
+      fetchExpenses(),
+      fetchContractAssignments()
     ]);
     setCompanies(c);
     setOperations(o);
     setStaff(s);
     setPayments(p);
     setExpenses(e);
+    setAssignments(ass);
     setLastSync(new Date().toLocaleString());
     setIsSyncing(false);
   };
@@ -207,6 +219,7 @@ const App: React.FC = () => {
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-apple-darkBg p-6">
+        <Toaster position="top-center" richColors />
         <form onSubmit={handleSignIn} className="w-full max-w-md bg-white dark:bg-apple-darkCard rounded-[2.5rem] shadow-2xl p-10 space-y-6 border border-slate-100 dark:border-apple-darkBorder animate-macos">
           <div className="text-center mb-8">
             <div className="bg-apple-accent h-16 w-16 rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-blue-500/20 mx-auto mb-4">
@@ -250,6 +263,7 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen flex selection:bg-apple-accent/30 overflow-hidden bg-slate-50 dark:bg-apple-darkBg">
+      <Toaster position="top-center" richColors />
       <Sidebar
         activeView={activeView}
         isOpen={isMobileMenuOpen}
@@ -277,6 +291,7 @@ const App: React.FC = () => {
           userName={userName}
           userRole={userRole}
           onLogout={handleSignOut}
+          onProfileClick={() => setActiveView('cabinet')}
         />
 
         <div className="flex-1 overflow-y-auto scrollbar-thin overflow-x-hidden">
@@ -296,6 +311,8 @@ const App: React.FC = () => {
                       companies={companies}
                       operations={operations}
                       staff={staff}
+                      payments={payments}
+                      expenses={expenses}
                       activeFilter={'none'}
                       onFilterChange={handleDashboardFilter}
                       lang={lang}
@@ -316,7 +333,24 @@ const App: React.FC = () => {
                     companies={companies}
                     staff={staff}
                     lang={lang}
-                    onSave={async (c) => { await upsertCompany(c); refreshData(); }}
+                    onSave={async (c, assignments) => {
+                      if (assignments) {
+                        await onboardCompany(c, assignments);
+                      } else {
+                        await upsertCompany(c as Company);
+                      }
+                      refreshData();
+                    }}
+                    onDelete={async (id) => {
+                      try {
+                        await deleteCompany(id);
+                        toast.success('Firma muvaffaqiyatli o\'chirildi');
+                        refreshData();
+                      } catch (e) {
+                        console.error(e);
+                        toast.error('O\'chirishda xatolik yuz berdi. Balki ushbu firmaga bog\'liq hujjatlar mavjuddir?');
+                      }
+                    }}
                     onCompanySelect={setSelectedCompany}
                   />
                 )}
@@ -347,6 +381,16 @@ const App: React.FC = () => {
                     companies={companies}
                     lang={lang}
                     onSave={async (s) => { await upsertStaff(s); refreshData(); }}
+                    onDelete={async (id) => {
+                      try {
+                        await deleteStaff(id);
+                        toast.success('Xodim muvaffaqiyatli o\'chirildi');
+                        refreshData();
+                      } catch (e) {
+                        console.error(e);
+                        toast.error('Xodimni o\'chirish imkonsiz. Unga bog\'liq ma\'lumotlar bo\'lishi mumkin.');
+                      }
+                    }}
                     onStaffSelect={setSelectedStaff}
                   />
                 )}
@@ -369,12 +413,31 @@ const App: React.FC = () => {
                   />
                 )}
 
+                {activeView === 'payroll' && (
+                  <PayrollDrafts
+                    staff={staff}
+                    companies={companies}
+                    lang={lang}
+                    userRole={userRole}
+                  />
+                )}
+
                 {activeView === 'kassa' && (
                   <KassaModule
                     companies={companies}
                     payments={payments}
                     lang={lang}
                     onSavePayment={async (p) => { await upsertPayment(p); refreshData(); }}
+                    onDeletePayment={async (id) => {
+                      try {
+                        await deletePayment(id);
+                        toast.success('To\'lov o\'chirildi');
+                        refreshData();
+                      } catch (e) {
+                        console.error(e);
+                        toast.error('O\'chirishda xatolik.');
+                      }
+                    }}
                   />
                 )}
 
@@ -383,6 +446,16 @@ const App: React.FC = () => {
                     expenses={expenses}
                     lang={lang}
                     onSaveExpense={async (e) => { await upsertExpense(e); refreshData(); }}
+                    onDeleteExpense={async (id) => {
+                      try {
+                        await deleteExpense(id);
+                        toast.success('Xarajat o\'chirildi');
+                        refreshData();
+                      } catch (e) {
+                        console.error(e);
+                        toast.error('O\'chirishda xatolik.');
+                      }
+                    }}
                   />
                 )}
 
@@ -403,7 +476,8 @@ const App: React.FC = () => {
         {selectedStaff && (
           <StaffProfileDrawer
             staff={selectedStaff}
-            companies={companies.filter(c => c.accountantId === selectedStaff.id)}
+            companies={companies}
+            assignments={assignments.filter(a => a.userId === selectedStaff.id)}
             operations={operations}
             lang={lang}
             onClose={() => setSelectedStaff(null)}

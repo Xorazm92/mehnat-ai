@@ -1,5 +1,5 @@
 
-export type AppView = 'dashboard' | 'organizations' | 'staff' | 'reports' | 'analysis' | 'documents' | 'kpi' | 'kassa' | 'expenses' | 'cabinet';
+export type AppView = 'dashboard' | 'organizations' | 'staff' | 'reports' | 'analysis' | 'documents' | 'kpi' | 'kassa' | 'expenses' | 'cabinet' | 'payroll' | 'audit_logs';
 export type Language = 'uz' | 'ru';
 
 export enum PaymentStatus {
@@ -29,13 +29,15 @@ export interface Expense {
   createdAt: string;
 }
 
-export enum TaxRegime {
-  VAT = 'НДС',
-  TURNOVER = 'Айланма',
-  FIXED = 'Қатъий',
-  YATT = 'ЯТТ',
-  INCOME = 'Фойда'
+export enum TaxType {
+  NDS_PROFIT = 'nds_profit',
+  TURNOVER = 'turnover',
+  FIXED = 'fixed'
 }
+
+export type ServerInfo = 'CR1' | 'CR2' | 'CR3';
+export type SalaryCalculationType = 'percent' | 'fixed';
+export type ContractRole = 'accountant' | 'controller' | 'bank_manager';
 
 export enum ReportStatus {
   ACCEPTED = '+',
@@ -54,6 +56,14 @@ export enum StatsType {
   MICRO = 'Micro',
   MEHNAT1 = '1-Mehnat',
   SMALL = 'Small'
+}
+
+export enum ServiceScope {
+  ACCOUNTING = 'Buxgalteriya',
+  HR = 'Kadrlar ishi',
+  BANKING = 'Bank xizmatlari',
+  CONSULTING = 'Konsalting',
+  LEGAL = 'Huquqiy maslahat'
 }
 
 // Company Status (Tab 6: XAVF)
@@ -127,27 +137,36 @@ export interface Company {
   id: string;
   name: string;
   inn: string;
-  accountantName: string;
-  taxRegime: TaxRegime;
+  taxType: TaxType;
+  internalContractor?: string;
+  serverInfo?: ServerInfo;
+  baseName1c?: string;
+  kpiEnabled?: boolean;
+  contractAmount?: number;
+  isActive?: boolean;
+  createdAt: string;
+
+  // Optional/Extended fields
+  department?: string;
   login?: string;
   password?: string;
-  department: string;
-  accountantId: string;
+  ownerName?: string;
+  accountantId?: string;
+  accountantName?: string;
   bankClientId?: string;
   bankClientName?: string;
   supervisorId?: string;
   supervisorName?: string;
-  contractAmount: number;
-  accountantPerc: number;
-  bankClientSum: number;
-  chiefAccountantSum: number;
-  supervisorPerc: number;
+  accountantPerc?: number;
+  bankClientSum?: number;
+  chiefAccountantSum?: number;
+  supervisorPerc?: number;
   statsType?: StatsType;
-  ownerName?: string;
-  isActive?: boolean;
-  createdAt?: string;
+  itParkResident?: boolean;
+  statReports?: string[];
+  serviceScope?: string[];
 
-  // Tab 1: PASPORT (Passport)
+  // Tab 1: PASPORT
   brandName?: string;
   directorName?: string;
   directorPhone?: string;
@@ -157,7 +176,7 @@ export interface Company {
   certificateFilePath?: string;
   charterFilePath?: string;
 
-  // Tab 2: SOLIQ (Tax & Obligations)
+  // Tab 2: SOLIQ
   vatCertificateDate?: string;
   hasLandTax?: boolean;
   hasWaterTax?: boolean;
@@ -167,14 +186,14 @@ export interface Company {
   oneCStatus?: OneCStatus;
   oneCLocation?: string;
 
-  // Tab 5: SHARTNOMA (Contract)
+  // Tab 5: SHARTNOMA
   contractNumber?: string;
   contractDate?: string;
   paymentDay?: number;
   firmaSharePercent?: number;
   currentBalance?: number;
 
-  // Tab 6: XAVF (Risk)
+  // Tab 6: XAVF
   companyStatus?: CompanyStatus;
   riskLevel?: RiskLevel;
   riskNotes?: string;
@@ -213,6 +232,8 @@ export interface OperationEntry {
   form2Status: ReportStatus;
   statsStatus: ReportStatus;
   comment: string;
+  profitTaxDeadline?: string;
+  statsDeadline?: string;
   updatedAt: string;
   history: HistoryLog[];
   kpi?: KPIMetrics;
@@ -223,11 +244,18 @@ export type StaffStatus = 'active' | 'vacation' | 'sick';
 export interface Staff {
   id: string;
   name: string;
+  username?: string; // New
   role: string;
   avatarColor: string;
   phone?: string;
+  gender?: 'erkak' | 'ayol';
+  birthDate?: string;
+  education?: 'oliy' | 'orta' | 'magistratura';
+  hiredAt?: string;
+  firedAt?: string;
   status?: StaffStatus;
   rating?: number;
+  is_active: boolean; // New
 }
 
 export interface AccountantKPI {
@@ -351,18 +379,17 @@ export interface PerformanceChangeLog {
 // RBAC & HISTORY (Integration)
 // =====================================================
 
-export type ClientAssignmentRole = 'accountant' | 'bank_manager' | 'supervisor';
-export type AssignmentStatus = 'active' | 'inactive';
-
-export interface ClientAssignment {
+export interface ContractAssignment {
   id: string;
-  companyId: string; // Changed from clientId
-  staffId: string;   // Changed from userId
-  roleType: ClientAssignmentRole;
-  assignedAt: string; // Changed from startDate
-  endedAt?: string;   // Changed from endDate
-  isActive: boolean; // Changed from status
-  createdBy?: string;
+  clientId: string;
+  userId: string;
+  role: ContractRole;
+  salaryType: SalaryCalculationType;
+  salaryValue: number;
+  startDate: string;
+  endDate?: string;
+  isActive?: boolean;
+  createdAt?: string;
 }
 
 export interface AuditLog {

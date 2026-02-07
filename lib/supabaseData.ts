@@ -6,17 +6,18 @@ import {
   Payment,
   Expense,
   StatsType,
-  TaxRegime,
+  TaxType,
   ReportStatus,
   Document,
   ClientCredential,
-  ClientHistory,
+  ContractAssignment,
+  ContractRole,
   KPIRule,
   MonthlyPerformance,
   PayrollAdjustment,
   EmployeeSalarySummary,
-  ClientAssignment,
-  ClientAssignmentRole
+  ClientHistory,
+  SalaryCalculationType
 } from '../types';
 
 interface CompanyNotesFallback {
@@ -32,6 +33,8 @@ interface CompanyNotesFallback {
   sperc?: number;
   on?: string;
   ia?: boolean;
+  stats?: string[];
+  scope?: string[];
 }
 
 // --- helpers for status mapping between UI enums and DB enums ---
@@ -124,6 +127,11 @@ export const upsertKPIRule = async (rule: Partial<KPIRule>) => {
   };
 
   const { error } = await supabase.from('kpi_rules').upsert(payload);
+  if (error) throw error;
+};
+
+export const deleteKPIRule = async (id: string) => {
+  const { error } = await supabase.from('kpi_rules').delete().eq('id', id);
   if (error) throw error;
 };
 
@@ -226,7 +234,7 @@ export const upsertPayrollAdjustment = async (adj: Partial<PayrollAdjustment>) =
 
 // 4. Calculate Salary (via Database Function)
 export const calculateEmployeeSalary = async (employeeId: string, month: string): Promise<EmployeeSalarySummary | null> => {
-  const { data, error } = await supabase.rpc('calculate_employee_salary', {
+  const { data, error } = await supabase.rpc('calculate_employee_salary_v2', {
     p_employee_id: employeeId,
     p_month: month
   });
@@ -294,13 +302,16 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       inn: c.inn,
       accountantName: c.accountant?.full_name || c.accountant_id,
       accountantId: c.accountant_id,
-      taxRegime: c.tax_regime,
+      taxType: c.tax_type_new || c.tax_regime,
       department: c.department,
       statsType: c.stats_type,
       login: c.login,
       password: c.password_encrypted,
       createdAt: c.created_at,
-      // Priority: Schema Column > JSON Fallback > Default
+      internalContractor: c.internal_contractor,
+      serverInfo: c.server_info,
+      baseName1c: c.base_name_1c,
+      kpiEnabled: c.kpi_enabled,
       bankClientId: c.bank_client_id || extra.bcid,
       bankClientName: extra.bcn,
       supervisorId: c.supervisor_id || extra.sid,
@@ -312,6 +323,7 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       supervisorPerc: c.supervisor_perc ?? (extra.sperc || 0),
       ownerName: extra.on,
       isActive: c.is_active ?? (extra.ia ?? true),
+      itParkResident: c.it_park_resident,
       // Tab 1: PASPORT fields
       brandName: c.brand_name,
       directorName: c.director_name,
@@ -339,12 +351,31 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       // Tab 6: XAVF fields
       companyStatus: c.company_status ?? 'active',
       riskLevel: c.risk_level ?? 'low',
-      riskNotes: c.risk_notes
+      riskNotes: c.risk_notes,
+      statReports: c.stat_reports || extra.stats,
+      serviceScope: c.service_scope || extra.scope
     };
   }) as Company[];
 };
 
 export const upsertCompany = async (company: Company) => {
+  // UUID validation regex
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  // Ensure we have a valid UUID for the company ID
+  let validId = company.id;
+  if (!validId || !uuidRegex.test(validId)) {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      validId = crypto.randomUUID();
+    } else {
+      validId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+  }
+
   // Serialize complex data for fallback storage in 'notes'
   const fallbackJson = JSON.stringify({
     v: 1,
@@ -358,20 +389,33 @@ export const upsertCompany = async (company: Company) => {
     casum: company.chiefAccountantSum,
     sperc: company.supervisorPerc,
     on: company.ownerName,
-    ia: company.isActive
+    ia: company.isActive,
+    stats: company.statReports,
+    scope: company.serviceScope
   });
 
+
   const payload = {
-    id: company.id,
+    id: validId,
+
     name: company.name,
     inn: company.inn,
-    tax_regime: company.taxRegime,
+    tax_regime: company.taxType === 'nds_profit' ? 'vat' : (company.taxType === 'turnover' ? 'turnover' : 'fixed'),
+    tax_type_new: company.taxType,
     stats_type: company.statsType,
-    department: company.department,
+    department: company.department || 'default',
+
     accountant_id: company.accountantId,
     login: company.login,
     password_encrypted: company.password,
     notes: fallbackJson,
+    internal_contractor: company.internalContractor,
+    server_info: company.serverInfo,
+    base_name_1c: company.baseName1c,
+    kpi_enabled: company.kpiEnabled,
+    it_park_resident: company.itParkResident,
+    stat_reports: company.statReports,
+    service_scope: company.serviceScope,
     ...(company.bankClientId ? { bank_client_id: company.bankClientId } : {}),
     ...(company.supervisorId ? { supervisor_id: company.supervisorId } : {}),
     contract_amount: company.contractAmount,
@@ -410,24 +454,101 @@ export const upsertCompany = async (company: Company) => {
   };
 
   try {
+    const { data: existing } = await supabase.from('companies').select('*').eq('id', validId).maybeSingle();
+
     const { error } = await supabase.from('companies').upsert(payload);
+
     if (error) {
-      // If column error, retry with ONLY standard columns (Pure Fallback)
       if (error.code === '42703') {
         const fallbackPayload = { ...payload };
-        delete fallbackPayload.bank_client_id;
-        delete fallbackPayload.supervisor_id;
-        delete fallbackPayload.contract_amount;
-        delete fallbackPayload.accountant_perc;
-        delete fallbackPayload.bank_client_sum;
-        delete fallbackPayload.supervisor_perc;
+        delete (fallbackPayload as any).bank_client_id;
+        delete (fallbackPayload as any).supervisor_id;
+        delete (fallbackPayload as any).contract_amount;
+        delete (fallbackPayload as any).accountant_perc;
+        delete (fallbackPayload as any).bank_client_sum;
+        delete (fallbackPayload as any).supervisor_perc;
         const { error: fErr } = await supabase.from('companies').upsert(fallbackPayload);
         if (fErr) throw fErr;
       } else {
         throw error;
       }
     }
+
+    // Audit Log
+    if (existing) {
+      logAuditAction(validId, 'update', 'company', validId, { before: existing, after: payload });
+    } else {
+      logAuditAction(validId, 'create', 'company', validId, { data: payload });
+    }
+
+
   } catch (e) { console.error(e); throw e; }
+};
+
+export const deleteCompany = async (id: string) => {
+  const { error } = await supabase.from('companies').delete().eq('id', id);
+  if (error) throw error;
+};
+
+export const onboardCompany = async (company: Partial<Company>, assignments: any[]) => {
+  // UUID validation regex
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  // Generate a proper UUID if the provided ID is invalid or missing
+  let companyId: string;
+  if (company.id && uuidRegex.test(company.id)) {
+    companyId = company.id;
+  } else {
+    // Generate a valid UUID
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      companyId = crypto.randomUUID();
+    } else {
+      // Fallback: generate a valid UUID v4 format
+      companyId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+  }
+
+  // 1. Save Company
+  await upsertCompany({ ...company, id: companyId } as Company);
+
+  // 2. Save Assignments
+  for (const ass of assignments) {
+    if (ass.userId && uuidRegex.test(ass.userId)) {
+      await supabase.from('contract_assignments').insert({
+        client_id: companyId,
+        user_id: ass.userId,
+        role: ass.role,
+        salary_type: ass.salaryType || 'percent',
+        salary_value: ass.salaryValue || 20,
+        start_date: new Date().toISOString().split('T')[0]
+      });
+
+      logAuditAction(companyId, 'assign_role', 'contract_assignment', companyId, ass);
+    }
+  }
+};
+
+
+export const fetchContractAssignments = async (clientId?: string, userId?: string): Promise<ContractAssignment[]> => {
+  let query = supabase.from('contract_assignments').select('*');
+  if (clientId) query = query.eq('client_id', clientId);
+  if (userId) query = query.eq('user_id', userId);
+  const { data, error } = await query;
+  if (error) { console.error('fetchContractAssignments', error); return []; }
+  return data.map(a => ({
+    id: a.id,
+    clientId: a.client_id,
+    userId: a.user_id,
+    role: a.role as ContractRole,
+    salaryType: a.salary_type as SalaryCalculationType,
+    salaryValue: a.salary_value,
+    startDate: a.start_date,
+    endDate: a.end_date
+  }));
 };
 
 // Operations
@@ -487,6 +608,11 @@ export const upsertOperation = async (op: OperationEntry) => {
   } catch (e) { console.error(e); throw e; }
 };
 
+export const deleteOperation = async (id: string) => {
+  const { error } = await supabase.from('operations').delete().eq('id', id);
+  if (error) throw error;
+};
+
 // Staff
 export const fetchStaff = async (): Promise<Staff[]> => {
   const { data, error } = await supabase
@@ -514,6 +640,11 @@ export const upsertStaff = async (staff: Staff) => {
     phone: staff.phone,
   };
   const { error } = await supabase.from('profiles').upsert(payload);
+  if (error) throw error;
+};
+
+export const deleteStaff = async (id: string) => {
+  const { error } = await supabase.from('profiles').delete().eq('id', id);
   if (error) throw error;
 };
 
@@ -580,6 +711,11 @@ export const upsertPayment = async (p: Partial<Payment>) => {
   if (error) throw error;
 };
 
+export const deletePayment = async (id: string) => {
+  const { error } = await supabase.from('payments').delete().eq('id', id);
+  if (error) throw error;
+};
+
 // Expenses
 export const fetchExpenses = async (): Promise<Expense[]> => {
   const { data, error } = await supabase
@@ -608,6 +744,11 @@ export const upsertExpense = async (e: Partial<Expense>) => {
     description: e.description
   };
   const { error } = await supabase.from('expenses').upsert(payload);
+  if (error) throw error;
+};
+
+export const deleteExpense = async (id: string) => {
+  const { error } = await supabase.from('expenses').delete().eq('id', id);
   if (error) throw error;
 };
 
@@ -653,6 +794,11 @@ export const upsertCredential = async (cred: Partial<ClientCredential>) => {
   if (error) throw error;
 };
 
+export const deleteCredential = async (id: string) => {
+  const { error } = await supabase.from('client_credentials').delete().eq('id', id);
+  if (error) throw error;
+};
+
 // Log when someone views a credential
 export const logCredentialAccess = async (credentialId: string, companyId: string, userId: string, action: string = 'view') => {
   const { error } = await supabase.from('credential_access_log').insert({
@@ -686,9 +832,9 @@ export const fetchCredentialAccessLogs = async (companyId: string) => {
 export const fetchClientHistory = async (companyId: string): Promise<ClientHistory[]> => {
   const { data, error } = await supabase
     .from('client_history')
-    .select('*, changed_by_profile:profiles!client_history_changed_by_fkey(full_name)')
+    .select('*')
     .eq('company_id', companyId)
-    .order('changed_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(100);
   if (error) {
     console.error('fetchClientHistory', error);
@@ -697,16 +843,17 @@ export const fetchClientHistory = async (companyId: string): Promise<ClientHisto
   return data.map(h => ({
     id: h.id,
     companyId: h.company_id,
-    changeType: h.change_type,
+    changeType: h.action || h.change_type,
     fieldName: h.field_name,
     oldValue: h.old_value,
     newValue: h.new_value,
-    changedBy: h.changed_by,
-    changedByName: h.changed_by_profile?.full_name,
-    changedAt: h.changed_at,
-    notes: h.notes
+    changedBy: h.user_id || h.changed_by,
+    changedByName: null,
+    changedAt: h.created_at || h.changed_at,
+    notes: h.details?.notes || h.notes
   })) as ClientHistory[];
 };
+
 
 // Manual history entry (for non-trigger logging)
 export const insertClientHistory = async (entry: Partial<ClientHistory>) => {
@@ -727,12 +874,12 @@ export const insertClientHistory = async (entry: Partial<ClientHistory>) => {
 // RBAC: CLIENT ASSIGNMENTS (The Link)
 // =====================================================
 
-export const fetchClientAssignments = async (companyId: string): Promise<ClientAssignment[]> => {
+export const fetchClientAssignments = async (companyId: string): Promise<ContractAssignment[]> => {
   const { data, error } = await supabase
-    .from('client_assignments')
+    .from('contract_assignments')
     .select('*')
-    .eq('company_id', companyId)
-    .order('assigned_at', { ascending: false });
+    .eq('client_id', companyId)
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('fetchClientAssignments', error);
@@ -741,48 +888,49 @@ export const fetchClientAssignments = async (companyId: string): Promise<ClientA
 
   return data.map(d => ({
     id: d.id,
-    companyId: d.company_id,
-    staffId: d.staff_id,
-    roleType: d.role_type,
-    assignedAt: d.assigned_at,
-    endedAt: d.ended_at,
-    isActive: d.is_active,
-    createdBy: d.created_by
+    clientId: d.client_id,
+    userId: d.user_id,
+    role: d.role,
+    salaryType: d.salary_type,
+    salaryValue: d.salary_value,
+    startDate: d.start_date,
+    endDate: d.end_date,
+    isActive: !d.end_date || new Date(d.end_date) > new Date(),
+    createdAt: d.created_at
   }));
 };
 
 export const createAssignment = async (
   companyId: string,
-  staffId: string,
-  roleType: ClientAssignmentRole,
+  userId: string,
+  role: ContractRole,
   startDate: string
 ) => {
   const payload = {
-    company_id: companyId,
-    staff_id: staffId,
-    role_type: roleType,
-    assigned_at: startDate,
-    is_active: true
+    client_id: companyId,
+    user_id: userId,
+    role: role,
+    start_date: startDate
   };
 
-  const { error } = await supabase.from('client_assignments').insert(payload);
+  const { error } = await supabase.from('contract_assignments').insert(payload);
   if (error) throw error;
 };
 
 export const endAssignment = async (assignmentId: string, endDate: string) => {
   const { error } = await supabase
-    .from('client_assignments')
-    .update({ ended_at: endDate, is_active: false })
+    .from('contract_assignments')
+    .update({ end_date: endDate })
     .eq('id', assignmentId);
   if (error) throw error;
 };
 
 // Smart Handover (Bulk Transfer)
-export const transferClients = async (fromUserId: string, toUserId: string, roleType: ClientAssignmentRole) => {
+export const transferClients = async (fromUserId: string, toUserId: string, role: string) => {
   const { error } = await supabase.rpc('transfer_clients', {
     p_from_user: fromUserId,
     p_to_user: toUserId,
-    p_role: roleType
+    p_role: role
   });
 
   if (error) {
@@ -792,14 +940,53 @@ export const transferClients = async (fromUserId: string, toUserId: string, role
 };
 
 // Audit Log
+// Valid actions for the audit_action enum: 'create', 'update', 'delete', 'login', 'logout'
 export const logAuditAction = async (userId: string, action: string, entityType: string, entityId: string, details: any) => {
-  const { error } = await supabase.from('audit_logs').insert({
-    user_id: userId,
-    action,
-    entity_type: entityType,
-    entity_id: entityId,
-    details,
-    ip_address: 'client-side' // Real IP usually captured by server/edge function
-  });
-  if (error) console.error('logAuditAction', error);
+  // Map custom actions to valid enum values
+  const validActions = ['create', 'update', 'delete', 'login', 'logout'];
+  const mappedAction = action === 'assign_role' ? 'create' :
+    validActions.includes(action) ? action : 'update';
+
+  try {
+    let finalUserId: string | null = null;
+
+    // 1. Try to use the passed userId if it looks valid and isn't the entityId (which implies mistake)
+    if (userId &&
+      userId !== entityId &&
+      userId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      finalUserId = userId;
+    }
+
+    // 2. If no valid user provided, try to get current auth user
+    if (!finalUserId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) finalUserId = user.id;
+    }
+
+    // 3. Verify foreign key existence (optional, but good for avoiding 23503)
+    // If we have a user ID, let's verify it quickly or just catch the error.
+    // simpler: If it fails with FK violation, retry with null user_id
+
+    const payload = {
+      user_id: finalUserId,
+      action: mappedAction,
+      table_name: entityType,
+      record_id: entityId,
+      new_data: details
+    };
+
+    const { error } = await supabase.from('audit_logs').insert(payload);
+
+    if (error) {
+      if (error.code === '23503') { // Foreign key violation
+        // Retry with null user_id
+        await supabase.from('audit_logs').insert({ ...payload, user_id: null });
+      } else {
+        console.error('logAuditAction', error);
+      }
+    }
+  } catch (e) {
+    console.error('logAuditAction exception', e);
+  }
 };
+

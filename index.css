@@ -1,16 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  letter-spacing: -0.011em;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.015em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  @apply transition-colors duration-300;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  @apply bg-[#F8FAFC] text-slate-900 transition-colors duration-500 selection:bg-blue-100;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  @apply bg-[#0B0F19] text-slate-100 selection:bg-blue-900/30;
+}
+
+.dashboard-card {
+  @apply bg-white dark:bg-[#161B29] border border-slate-200/60 dark:border-white/[0.05] rounded-[2.5rem] hover:shadow-premium transition-all duration-300;
+  box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.ai-button-glow {
+  background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
+  @apply relative overflow-hidden shadow-lg shadow-purple-500/30 font-black text-white px-4 py-2.5 rounded-xl flex items-center gap-2;
+}
+
+.ai-button-glow::before {
+  content: '';
+  @apply absolute inset-0 bg-white/20 -translate-x-full -skew-x-12 transition-transform duration-1000;
+}
+
+.ai-button-glow:hover::before {
+  @apply translate-x-[200%];
 }
 
 .tabular-nums {
@@ -18,17 +48,16 @@ body {
 }
 
 .glass {
-  @apply backdrop-blur-[25px];
+  @apply backdrop-blur-xl bg-white/70 border border-white/40;
+}
+
+.glass-dark {
+  @apply backdrop-blur-xl bg-[#161B29]/60 border border-white/[0.08];
 }
 
 .sidebar-active {
-  background: rgba(0, 122, 255, 0.1);
-  color: #007aff !important;
-}
-
-.dark .sidebar-active {
-  background: rgba(10, 132, 255, 0.2);
-  color: #0a84ff !important;
+  background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%);
+  @apply text-white shadow-xl shadow-indigo-500/30 font-bold border-none !important;
 }
 
 /* Professional Scrollbar */
@@ -55,6 +84,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

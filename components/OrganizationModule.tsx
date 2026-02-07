@@ -1,20 +1,24 @@
 import React, { useState, useMemo } from 'react';
-import { Company, Staff, TaxRegime, StatsType, Language, CompanyStatus, RiskLevel } from '../types';
+import { Company, Staff, TaxType, StatsType, Language, CompanyStatus, RiskLevel } from '../types';
+import { supabase } from '../lib/supabaseClient';
 import { translations } from '../lib/translations';
-import { Plus, Search, Edit3, Trash2, X, Check, LayoutGrid, List, Eye, EyeOff, ChevronLeft, ChevronRight, Download, Filter, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, X, Check, LayoutGrid, List, Eye, EyeOff, ChevronLeft, ChevronRight, Download, Filter, AlertTriangle, Building2, Server, Calculator, Users } from 'lucide-react';
+import OnboardingWizard from './OnboardingWizard';
 
 interface Props {
   companies: Company[];
   staff: Staff[];
   lang: Language;
-  onSave: (company: Company) => void;
+  onSave: (company: Partial<Company>, assignments?: any[]) => void;
+  onDelete: (id: string) => void;
   onCompanySelect: (c: Company) => void;
 }
 
-const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, onCompanySelect }) => {
+const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, onDelete, onCompanySelect }) => {
   const t = translations[lang];
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingAssignments, setEditingAssignments] = useState<any[] | undefined>(undefined);
   const [isAdding, setIsAdding] = useState(false);
   const [form, setForm] = useState<Partial<Company>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
@@ -29,6 +33,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterEmployee, setFilterEmployee] = useState<string>('all');
   const [filterRisk, setFilterRisk] = useState<string>('all');
+  const [filterServer, setFilterServer] = useState<string>('all');
+  const [filterItPark, setFilterItPark] = useState<string>('all');
+  const [filterKpi, setFilterKpi] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
 
   const itemsPerPage = 10;
@@ -59,7 +66,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
         const matchesActive = filterActive === null || c.isActive === filterActive;
 
         // Tax type filter
-        const matchesTax = filterTaxType === 'all' || c.taxRegime === filterTaxType;
+        const matchesTax = filterTaxType === 'all' || c.taxType === filterTaxType;
 
         // Status filter
         const matchesStatus = filterStatus === 'all' || (c.companyStatus || 'active') === filterStatus;
@@ -70,7 +77,16 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
         // Risk filter
         const matchesRisk = filterRisk === 'all' || (c.riskLevel || 'low') === filterRisk;
 
-        return matchesSearch && matchesActive && matchesTax && matchesStatus && matchesEmployee && matchesRisk;
+        // Server filter
+        const matchesServer = filterServer === 'all' || c.serverInfo === filterServer;
+
+        // IT Park filter
+        const matchesItPark = filterItPark === 'all' || (filterItPark === 'yes' ? c.itParkResident : !c.itParkResident);
+
+        // KPI filter
+        const matchesKpi = filterKpi === 'all' || (filterKpi === 'yes' ? c.kpiEnabled : !c.kpiEnabled);
+
+        return matchesSearch && matchesActive && matchesTax && matchesStatus && matchesEmployee && matchesRisk && matchesServer && matchesItPark && matchesKpi;
       })
       .sort((a, b) => {
         const valA = a[sortField] || '';
@@ -105,9 +121,34 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
     document.body.removeChild(link);
   };
 
-  const startEdit = (c: Company) => {
+  const startEdit = async (c: Company) => {
     setForm(c);
     setEditingId(c.id);
+
+    // Fetch current assignments for this company to pass to the wizard
+    const { data: assRes } = await supabase.from('contract_assignments').select('*').eq('client_id', c.id);
+    const existingAssignments = (assRes || []).map(a => ({
+      role: a.role,
+      userId: a.user_id,
+      salaryType: a.salary_type,
+      salaryValue: a.salary_value
+    }));
+
+    // If we have existing assignments, use them; otherwise, provide defaults
+    const finalAssignments = existingAssignments.length > 0 ? existingAssignments : [
+      { role: 'accountant', userId: '', salaryType: 'percent', salaryValue: 70 },
+      { role: 'controller', userId: '', salaryType: 'fixed', salaryValue: 50000 },
+      { role: 'bank_manager', userId: '', salaryType: 'fixed', salaryValue: 50000 }
+    ];
+
+    setEditingAssignments(finalAssignments);
+    setIsAdding(true);
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (confirm(`${name} firmasini o'chirishni tasdiqlaysizmi?`)) {
+      onDelete(id);
+    }
   };
 
   const handleSave = () => {
@@ -214,7 +255,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                 className="w-full p-3 rounded-xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-2 focus:ring-apple-accent/20 font-bold text-sm"
               >
                 <option value="all">Hammasi</option>
-                {Object.values(TaxRegime).map(v => <option key={v} value={v}>{v}</option>)}
+                {Object.values(TaxType).map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
 
@@ -262,6 +303,49 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                 <option value="high">🔴 Yuqori</option>
               </select>
             </div>
+
+            {/* Server Filter */}
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">1C Server</label>
+              <select
+                value={filterServer}
+                onChange={(e) => { setFilterServer(e.target.value); setCurrentPage(1); }}
+                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-2 focus:ring-apple-accent/20 font-bold text-sm"
+              >
+                <option value="all">Hammasi</option>
+                <option value="CR1">CR1</option>
+                <option value="CR2">CR2</option>
+                <option value="CR3">CR3</option>
+              </select>
+            </div>
+
+            {/* IT Park Filter */}
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">IT Park</label>
+              <select
+                value={filterItPark}
+                onChange={(e) => { setFilterItPark(e.target.value); setCurrentPage(1); }}
+                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-2 focus:ring-apple-accent/20 font-bold text-sm"
+              >
+                <option value="all">Hammasi</option>
+                <option value="yes">✅ Rezident</option>
+                <option value="no">❌ Rezident emas</option>
+              </select>
+            </div>
+
+            {/* KPI Filter */}
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">KPI Tizimi</label>
+              <select
+                value={filterKpi}
+                onChange={(e) => { setFilterKpi(e.target.value); setCurrentPage(1); }}
+                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-2 focus:ring-apple-accent/20 font-bold text-sm"
+              >
+                <option value="all">Hammasi</option>
+                <option value="yes">✅ Yoqilgan</option>
+                <option value="no">❌ O'chirilgan</option>
+              </select>
+            </div>
           </div>
 
           {/* Reset Filters */}
@@ -288,205 +372,27 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
       </div>
 
       <div className="space-y-8">
-        {(isAdding || editingId) && (
-          <div className="bg-white dark:bg-apple-darkCard p-10 rounded-[2.5rem] md:rounded-[3rem] border-2 border-apple-accent/30 shadow-2xl animate-macos">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-4">
-                <span className="w-2 h-8 bg-apple-accent rounded-full"></span>
-                {editingId ? t.edit : t.addCompany}
-              </h3>
-              <button
-                onClick={() => { setIsAdding(false); setEditingId(null); }}
-                className="p-3 bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-rose-500 rounded-xl transition-all"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">{t.companyName}</label>
-                  <input
-                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                    placeholder={t.companyName}
-                    value={form.name || ''}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">{t.inn}</label>
-                  <input
-                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                    placeholder={t.inn}
-                    value={form.inn || ''}
-                    onChange={e => setForm({ ...form, inn: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">{t.accountant}</label>
-                  <select
-                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                    value={form.accountantId || ''}
-                    onChange={e => {
-                      const s = staff.find(x => x.id === e.target.value);
-                      setForm({ ...form, accountantId: e.target.value, accountantName: s?.name || '' });
-                    }}
-                  >
-                    <option value="">{t.selectAccountant}</option>
-                    {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">{t.regime}</label>
-                    <select
-                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                      value={form.taxRegime || ''}
-                      onChange={e => setForm({ ...form, taxRegime: e.target.value as TaxRegime })}
-                    >
-                      {Object.values(TaxRegime).map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">{t.stats}</label>
-                    <select
-                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                      value={form.statsType || ''}
-                      onChange={e => setForm({ ...form, statsType: e.target.value as StatsType })}
-                    >
-                      {Object.values(StatsType).map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6 pt-6">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Bank Client</label>
-                    <select
-                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                      value={form.bankClientId || ''}
-                      onChange={e => {
-                        const s = staff.find(x => x.id === e.target.value);
-                        setForm({ ...form, bankClientId: e.target.value, bankClientName: s?.name || '' });
-                      }}
-                    >
-                      <option value="">Tanlang</option>
-                      {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Nazoratchi</label>
-                    <select
-                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                      value={form.supervisorId || ''}
-                      onChange={e => {
-                        const s = staff.find(x => x.id === e.target.value);
-                        setForm({ ...form, supervisorId: e.target.value, supervisorName: s?.name || '' });
-                      }}
-                    >
-                      <option value="">Tanlang</option>
-                      {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-6 pt-8 border-t dark:border-apple-darkBorder mt-6">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Shartnoma Summasi</label>
-                    <input
-                      type="number"
-                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                      value={form.contractAmount || 0}
-                      onChange={e => setForm({ ...form, contractAmount: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Buxgalter %</label>
-                    <input
-                      type="number"
-                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                      value={form.accountantPerc || 0}
-                      onChange={e => setForm({ ...form, accountantPerc: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Bank Client Summa</label>
-                    <input
-                      type="number"
-                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                      value={form.bankClientSum || 0}
-                      onChange={e => setForm({ ...form, bankClientSum: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Nazoratchi %</label>
-                    <input
-                      type="number"
-                      className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                      value={form.supervisorPerc || 0}
-                      onChange={e => setForm({ ...form, supervisorPerc: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-8 border-t dark:border-apple-darkBorder pt-8">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">{t.login}</label>
-                  <input
-                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                    placeholder={t.login}
-                    value={form.login || ''}
-                    onChange={e => setForm({ ...form, login: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">{t.password}</label>
-                  <input
-                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                    placeholder={t.password}
-                    value={form.password || ''}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Ega (Kontakt)</label>
-                  <input
-                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all font-bold"
-                    placeholder="Ega ismi"
-                    value={form.ownerName || ''}
-                    onChange={e => setForm({ ...form, ownerName: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="md:col-span-2 flex items-center gap-4 bg-slate-50 dark:bg-white/5 p-6 rounded-2xl border border-apple-border dark:border-apple-darkBorder">
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div
-                    onClick={() => setForm({ ...form, isActive: !form.isActive })}
-                    className={`w-14 h-8 rounded-full transition-all relative ${form.isActive ? 'bg-apple-accent shadow-lg shadow-blue-500/30' : 'bg-slate-300'}`}
-                  >
-                    <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${form.isActive ? 'left-7' : 'left-1'}`}></div>
-                  </div>
-                  <span className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight">
-                    {form.isActive ? 'Faol Holatda' : 'Arxivlangan'}
-                  </span>
-                </label>
-              </div>
-
-              <div className="md:col-span-2 flex gap-6 pt-4">
-                <button onClick={handleSave} className="flex-1 bg-apple-accent text-white p-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20 hover:bg-blue-600 transition-all active:scale-95">
-                  <Check size={20} /> {t.save}
-                </button>
-                <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="px-10 bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-white p-5 rounded-2xl font-black hover:bg-slate-200 transition-all">
-                  {t.cancel}
-                </button>
-              </div>
+        {isAdding && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fade-in">
+            <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-hide">
+              <OnboardingWizard
+                staff={staff}
+                initialData={form}
+                initialAssignments={editingAssignments}
+                onSave={(data, assignments) => {
+                  onSave({ ...data, id: editingId || data.id }, assignments);
+                  setIsAdding(false);
+                  setEditingId(null);
+                  setForm({});
+                  setEditingAssignments(undefined);
+                }}
+                onCancel={() => {
+                  setIsAdding(false);
+                  setEditingId(null);
+                  setForm({});
+                  setEditingAssignments(undefined);
+                }}
+              />
             </div>
           </div>
         )}
@@ -515,11 +421,16 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                       {c.brandName && <p className="text-xs text-slate-400 font-medium">{c.brandName}</p>}
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         <span className="text-[10px] font-black px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-lg tabular-nums">INN: {c.inn}</span>
-                        <span className="text-[10px] font-black px-2 py-0.5 bg-apple-accent/10 text-apple-accent rounded-lg uppercase">{c.taxRegime}</span>
+                        <span className="text-[10px] font-black px-2 py-0.5 bg-apple-accent/10 text-apple-accent rounded-lg uppercase">{c.taxType}</span>
+                        {c.itParkResident && <span className="text-[10px] font-black px-2 py-0.5 bg-indigo-500/10 text-indigo-500 rounded-lg uppercase">IT Park</span>}
+                        {c.serverInfo && <span className="text-[10px] font-black px-2 py-0.5 bg-amber-500/10 text-amber-600 rounded-lg uppercase">{c.serverInfo}</span>}
                         {c.ownerName && <span className="text-[10px] font-black px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-lg">{c.ownerName}</span>}
                       </div>
                     </div>
-                    <button onClick={() => startEdit(c)} className="p-3 self-start bg-slate-50 dark:bg-white/5 text-slate-400 rounded-xl hover:text-apple-accent transition-all opacity-0 group-hover:opacity-100"><Edit3 size={18} /></button>
+                    <div className="flex flex-col gap-2 self-start opacity-0 group-hover:opacity-100 transition-all">
+                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="p-3 bg-slate-50 dark:bg-white/5 text-slate-400 rounded-xl hover:text-apple-accent transition-all"><Edit3 size={18} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="p-3 bg-slate-50 dark:bg-white/5 text-slate-400 rounded-xl hover:text-rose-500 transition-all"><Trash2 size={18} /></button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-auto">
@@ -604,7 +515,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                         </td>
                         {/* Tax Regime */}
                         <td className="px-4 py-5">
-                          <span className="px-2 py-1 bg-apple-accent/10 text-apple-accent text-[10px] font-black uppercase rounded-lg">{c.taxRegime}</span>
+                          <span className="px-2 py-1 bg-apple-accent/10 text-apple-accent text-[10px] font-black uppercase rounded-lg">{c.taxType}</span>
                         </td>
                         {/* Director */}
                         <td className="px-4 py-5">
@@ -637,6 +548,13 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                               title="Tahrirlash"
                             >
                               <Edit3 size={16} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }}
+                              className="p-2.5 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
+                              title="O'chirish"
+                            >
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         </td>

@@ -2,16 +2,17 @@
 import React, { useState, useMemo } from 'react';
 import { Company, Payment, PaymentStatus, Language } from '../types';
 import { translations } from '../lib/translations';
-import { Wallet, Search, Plus, Filter, CheckCircle2, Clock, AlertTriangle, MoreVertical, CreditCard } from 'lucide-react';
+import { Wallet, Search, Plus, Filter, CheckCircle2, Clock, AlertTriangle, Trash2, MoreVertical, CreditCard } from 'lucide-react';
 
 interface KassaModuleProps {
     companies: Company[];
     payments: Payment[];
     lang: Language;
     onSavePayment: (payment: Partial<Payment>) => Promise<void>;
+    onDeletePayment: (id: string) => Promise<void>;
 }
 
-const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, onSavePayment }) => {
+const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, onSavePayment, onDeletePayment }) => {
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
@@ -163,10 +164,10 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                     <td className="px-8 py-6">
                                         {item.payment ? (
                                             <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${item.payment.status === PaymentStatus.PAID
-                                                    ? 'bg-emerald-500/10 text-emerald-600'
-                                                    : item.payment.status === PaymentStatus.PENDING
-                                                        ? 'bg-amber-500/10 text-amber-600'
-                                                        : 'bg-rose-500/10 text-rose-600'
+                                                ? 'bg-emerald-500/10 text-emerald-600'
+                                                : item.payment.status === PaymentStatus.PENDING
+                                                    ? 'bg-amber-500/10 text-amber-600'
+                                                    : 'bg-rose-500/10 text-rose-600'
                                                 }`}>
                                                 {item.payment.status === PaymentStatus.PAID ? <CheckCircle2 size={12} /> : <Clock size={12} />}
                                                 {item.payment.status}
@@ -179,21 +180,33 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                         )}
                                     </td>
                                     <td className="px-8 py-6">
-                                        <button
-                                            onClick={() => {
-                                                setEditingPayment(item.payment || {
-                                                    companyId: item.id,
-                                                    amount: item.contractAmount,
-                                                    period: selectedPeriod,
-                                                    status: PaymentStatus.PAID,
-                                                    paymentDate: new Date().toISOString().split('T')[0]
-                                                });
-                                                setIsModalOpen(true);
-                                            }}
-                                            className="text-blue-500 hover:text-blue-700 p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all active:scale-95"
-                                        >
-                                            <CreditCard size={18} />
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setEditingPayment(item.payment || {
+                                                        companyId: item.id,
+                                                        amount: item.contractAmount,
+                                                        period: selectedPeriod,
+                                                        status: PaymentStatus.PAID,
+                                                        paymentDate: new Date().toISOString().split('T')[0]
+                                                    });
+                                                    setIsModalOpen(true);
+                                                }}
+                                                className="text-blue-500 hover:text-blue-700 p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all active:scale-95"
+                                                title="To'lov / Tahrirlash"
+                                            >
+                                                <CreditCard size={18} />
+                                            </button>
+                                            {item.payment && (
+                                                <button
+                                                    onClick={() => { if (confirm('To\'lovni o\'chirishni tasdiqlaysizmi?')) onDeletePayment(item.payment!.id); }}
+                                                    className="text-slate-300 hover:text-rose-500 p-2 rounded-xl hover:bg-rose-500/10 transition-all active:scale-95"
+                                                    title="O'chirish"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

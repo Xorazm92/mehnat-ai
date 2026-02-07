@@ -1,4 +1,4 @@
-import { ClientAssignmentRole, AppView } from '../types';
+import { ContractRole, AppView } from '../types';
 
 // Role Definitions (mirroring DB)
 export const ROLES = {
@@ -36,8 +36,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Capability[]> = {
 
 // View Access Control
 export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
-    [ROLES.SUPER_ADMIN]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet'],
-    [ROLES.SUPERVISOR]: ['dashboard', 'organizations', 'staff', 'reports', 'kpi', 'cabinet'],
+    [ROLES.SUPER_ADMIN]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll', 'audit_logs'],
+    [ROLES.SUPERVISOR]: ['dashboard', 'organizations', 'staff', 'reports', 'kpi', 'cabinet', 'payroll'],
     [ROLES.ACCOUNTANT]: ['dashboard', 'organizations', 'reports', 'cabinet'], // Filtered orgs
     [ROLES.BANK_MANAGER]: ['dashboard', 'kassa', 'expenses', 'cabinet']
 };

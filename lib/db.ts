@@ -1,5 +1,5 @@
 
-import { Company, OperationEntry, Staff, TaxRegime, ReportStatus, StatsType } from '../types';
+import { Company, OperationEntry, Staff, TaxType, ReportStatus, StatsType } from '../types';
 
 const STORAGE_KEYS = {
   COMPANIES: 'asos_final_v5_companies',
@@ -291,7 +291,7 @@ const seedInitialData = () => {
   lines.forEach((line) => {
     // CSV pars qilish (vergullarga qarab, qo'shtirnoq ichidagi vergullarni inobatga olgan holda)
     const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-    
+
     if (parts.length < 5) return;
 
     const id = parts[0];
@@ -299,13 +299,13 @@ const seedInitialData = () => {
     const inn = parts[2].trim();
     const regime = parts[3].trim();
     const accountant = parts[4].trim() || 'Noma\'lum';
-    
+
     // Statuslarni olish (CSV ustunlariga qarab: 25-Foyda, 26-F2, 27-F1, 28-Stat)
     const profitTax = parseStatus(parts[25]?.trim());
     const f2 = parseStatus(parts[26]?.trim());
     const f1 = parseStatus(parts[27]?.trim());
     const stats = parseStatus(parts[28]?.trim());
-    
+
     // Login-parol (ustun 22, 23)
     const login = parts[22]?.trim();
     const pass = parts[23]?.trim();
@@ -319,7 +319,7 @@ const seedInitialData = () => {
       inn: inn || '300000000',
       accountantName: accountant,
       accountantId: accountant.toLowerCase(),
-      taxRegime: regime.includes('НДС') ? TaxRegime.VAT : regime.includes('Айланма') ? TaxRegime.TURNOVER : TaxRegime.FIXED,
+      taxType: regime.includes('НДС') ? TaxType.NDS_PROFIT : (regime.includes('Айланма') || regime.includes('Айlanma')) ? TaxType.TURNOVER : TaxType.FIXED,
       department: 'Buxgalteriya',
       statsType: StatsType.KB1,
       login,
@@ -364,7 +364,7 @@ export const db = {
   getOperations: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.OPERATIONS) || '[]') as OperationEntry[],
   getStaff: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.STAFF) || '[]') as Staff[],
   getLastSync: () => localStorage.getItem(STORAGE_KEYS.LAST_SYNC) || 'Hech qachon',
-  
+
   saveOperation: (op: OperationEntry) => {
     const ops = db.getOperations();
     const idx = ops.findIndex(o => o.id === op.id);
@@ -372,7 +372,7 @@ export const db = {
     else ops.push(op);
     localStorage.setItem(STORAGE_KEYS.OPERATIONS, JSON.stringify(ops));
   },
-  
+
   saveCompany: (company: Company) => {
     const data = db.getCompanies();
     const idx = data.findIndex(c => c.id === company.id);

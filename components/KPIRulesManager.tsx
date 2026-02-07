@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { KPIRule, Language, KPIRoleType, KPIInputType } from '../types';
-import { fetchKPIRules, upsertKPIRule } from '../lib/supabaseData';
+import { fetchKPIRules, upsertKPIRule, deleteKPIRule } from '../lib/supabaseData';
 import { translations } from '../lib/translations';
 import { Settings, Plus, Edit3, Trash2, CheckCircle2 } from 'lucide-react';
 
@@ -41,6 +41,18 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
     const toggleActive = async (rule: KPIRule) => {
         await upsertKPIRule({ ...rule, isActive: !rule.isActive });
         loadRules();
+    };
+
+    const handleDelete = async (id: string, name: string) => {
+        if (confirm(`${name} qoidasini o'chirishni tasdiqlaysizmi?`)) {
+            try {
+                await deleteKPIRule(id);
+                loadRules();
+            } catch (e) {
+                console.error(e);
+                alert('Xatolik yuz berdi');
+            }
+        }
     };
 
     return (
@@ -98,8 +110,16 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
                                 <button
                                     onClick={() => setEditingRule(rule)}
                                     className="p-3 bg-slate-100 dark:bg-white/10 text-slate-400 hover:text-apple-accent hover:bg-apple-accent/10 rounded-xl transition-all"
+                                    title="Tahrirlash"
                                 >
                                     <Edit3 size={18} />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(rule.id, rule.nameUz)}
+                                    className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all"
+                                    title="O'chirish"
+                                >
+                                    <Trash2 size={18} />
                                 </button>
                             </div>
                         </div>

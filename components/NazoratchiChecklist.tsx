@@ -50,7 +50,11 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
         [companies, selectedCompanyId]);
 
     const handleToggle = async (rule: KPIRule, company: Company, employeeId: string, currentValue: number) => {
-        const newValue = currentValue === 1 ? 0 : 1;
+        // Cycle: 0 -> 1 -> -1 -> 0
+        let newValue = 0;
+        if (currentValue === 0) newValue = 1;
+        else if (currentValue === 1) newValue = -1;
+        else newValue = 0;
 
         // Optimistic update
         const tempId = Math.random().toString();
@@ -61,7 +65,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
             employeeId: employeeId,
             ruleId: rule.id,
             value: newValue,
-            calculatedScore: 0 // Will be calc by DB
+            calculatedScore: 0
         };
 
         setPerformances(prev => {
@@ -119,8 +123,8 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                 key={c.id}
                                 onClick={() => setSelectedCompanyId(c.id)}
                                 className={`p-4 rounded-2xl cursor-pointer transition-all border-2 ${selectedCompanyId === c.id
-                                        ? 'bg-apple-accent/10 border-apple-accent'
-                                        : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-white/5'
+                                    ? 'bg-apple-accent/10 border-apple-accent'
+                                    : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-white/5'
                                     }`}
                             >
                                 <div className="flex justify-between items-start mb-2">
@@ -192,25 +196,31 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                         return (
                                             <div
                                                 key={rule.id}
-                                                onClick={() => handleToggle(rule, selectedCompany, selectedCompany.accountantId || '', isDone ? 1 : 0)}
-                                                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group active:scale-95 ${isDone
-                                                        ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500/20'
-                                                        : 'bg-white dark:bg-apple-darkBg border-slate-100 dark:border-white/5 hover:border-apple-accent/50'
+                                                onClick={() => handleToggle(rule, selectedCompany, selectedCompany.accountantId || '', perf?.value || 0)}
+                                                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group active:scale-95 ${perf?.value === 1 ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500/20' :
+                                                    perf?.value === -1 ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-500/20' :
+                                                        'bg-white dark:bg-apple-darkBg border-slate-100 dark:border-white/5 hover:border-apple-accent/50'
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-4">
-                                                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${isDone ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-slate-100 dark:bg-white/10 text-slate-300'
+                                                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${perf?.value === 1 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' :
+                                                        perf?.value === -1 ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' :
+                                                            'bg-slate-100 dark:bg-white/10 text-slate-300'
                                                         }`}>
-                                                        <CheckCircle2 size={isDone ? 20 : 18} strokeWidth={3} />
+                                                        {perf?.value === -1 ? <XCircle size={20} strokeWidth={3} /> : <CheckCircle2 size={perf?.value === 1 ? 20 : 18} strokeWidth={3} />}
                                                     </div>
                                                     <div>
-                                                        <p className={`font-bold text-sm ${isDone ? 'text-slate-800 dark:text-white' : 'text-slate-500'}`}>
+                                                        <p className={`font-bold text-sm ${perf?.value !== 0 ? 'text-slate-800 dark:text-white' : 'text-slate-500'}`}>
                                                             {lang === 'uz' ? rule.nameUz : rule.name}
                                                         </p>
-                                                        <p className="text-[10px] font-black text-slate-400 mt-0.5">
-                                                            {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
-                                                            {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
-                                                        </p>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <p className="text-[10px] font-black text-slate-400">
+                                                                {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
+                                                                {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
+                                                            </p>
+                                                            {perf?.value === 1 && <span className="text-[9px] font-black text-emerald-500 uppercase tracking-tight">Mukofot</span>}
+                                                            {perf?.value === -1 && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tight">Jarima</span>}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -228,30 +238,35 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {rules.filter(r => r.role === 'bank_client').map(rule => {
                                             const perf = performances.find(p => p.companyId === selectedCompany.id && p.ruleId === rule.id);
-                                            const isDone = perf?.value === 1;
 
                                             return (
                                                 <div
                                                     key={rule.id}
-                                                    onClick={() => handleToggle(rule, selectedCompany, selectedCompany.bankClientId || '', isDone ? 1 : 0)}
-                                                    className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group active:scale-95 ${isDone
-                                                            ? 'bg-purple-50 dark:bg-purple-500/10 border-purple-500/20'
-                                                            : 'bg-white dark:bg-apple-darkBg border-slate-100 dark:border-white/5 hover:border-purple-500/50'
+                                                    onClick={() => handleToggle(rule, selectedCompany, selectedCompany.bankClientId || '', perf?.value || 0)}
+                                                    className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group active:scale-95 ${perf?.value === 1 ? 'bg-purple-50 dark:bg-purple-500/10 border-purple-500/20' :
+                                                            perf?.value === -1 ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-500/20' :
+                                                                'bg-white dark:bg-apple-darkBg border-slate-100 dark:border-white/5 hover:border-purple-500/50'
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-4">
-                                                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${isDone ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30' : 'bg-slate-100 dark:bg-white/10 text-slate-300'
+                                                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${perf?.value === 1 ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30' :
+                                                                perf?.value === -1 ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' :
+                                                                    'bg-slate-100 dark:bg-white/10 text-slate-300'
                                                             }`}>
-                                                            <CheckCircle2 size={isDone ? 20 : 18} strokeWidth={3} />
+                                                            {perf?.value === -1 ? <XCircle size={20} strokeWidth={3} /> : <CheckCircle2 size={perf?.value === 1 ? 20 : 18} strokeWidth={3} />}
                                                         </div>
                                                         <div>
-                                                            <p className={`font-bold text-sm ${isDone ? 'text-slate-800 dark:text-white' : 'text-slate-500'}`}>
+                                                            <p className={`font-bold text-sm ${perf?.value !== 0 ? 'text-slate-800 dark:text-white' : 'text-slate-500'}`}>
                                                                 {lang === 'uz' ? rule.nameUz : rule.name}
                                                             </p>
-                                                            <p className="text-[10px] font-black text-slate-400 mt-0.5">
-                                                                {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
-                                                                {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
-                                                            </p>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <p className="text-[10px] font-black text-slate-400">
+                                                                    {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
+                                                                    {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
+                                                                </p>
+                                                                {perf?.value === 1 && <span className="text-[9px] font-black text-purple-500 uppercase tracking-tight">Mukofot</span>}
+                                                                {perf?.value === -1 && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tight">Jarima</span>}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>

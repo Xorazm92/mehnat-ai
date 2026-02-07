@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Staff, Company, OperationEntry, Language, EmployeeSalarySummary } from '../types';
+import { Staff, Company, OperationEntry, Language, EmployeeSalarySummary, ContractAssignment } from '../types';
 import { translations } from '../lib/translations';
 import StatusBadge from './StatusBadge';
 import { calculateEmployeeSalary } from '../lib/supabaseData';
@@ -22,12 +22,13 @@ import {
 interface Props {
   staff: Staff;
   companies: Company[];
+  assignments?: ContractAssignment[];
   operations: OperationEntry[];
   lang: Language;
   onClose: () => void;
 }
 
-const StaffProfileDrawer: React.FC<Props> = ({ staff, companies, operations, lang, onClose }) => {
+const StaffProfileDrawer: React.FC<Props> = ({ staff, companies, assignments, operations, lang, onClose }) => {
   const t = translations[lang];
   const [activeTab, setActiveTab] = useState<'portfolio' | 'finance' | 'docs'>('portfolio');
   const [salarySummary, setSalarySummary] = useState<EmployeeSalarySummary | null>(null);
@@ -147,48 +148,66 @@ const StaffProfileDrawer: React.FC<Props> = ({ staff, companies, operations, lan
                   <div className="h-full bg-indigo-500 w-3/4 rounded-full"></div>
                 </div>
                 <p className="mt-4 text-sm font-bold text-indigo-500">
-                  Jami shartnoma summasi: {companies.reduce((acc, c) => acc + (c.contractAmount || 0), 0).toLocaleString()} UZS
+                  Jami shartnoma summasi: {
+                    assignments?.reduce((acc, a) => {
+                      const c = companies.find(comp => comp.id === a.clientId);
+                      return acc + (c?.contractAmount || 0);
+                    }, 0).toLocaleString() || '0'
+                  } UZS
                 </p>
               </div>
 
-              {/* Companies List */}
-              <div className="bg-white dark:bg-apple-darkCard rounded-[2.5rem] border border-apple-border dark:border-apple-darkBorder overflow-hidden shadow-sm">
-                <div className="overflow-x-auto scrollbar-thin">
-                  <table className="w-full text-left border-collapse min-w-[600px]">
-                    <thead>
-                      <tr className="bg-slate-50 dark:bg-white/5 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 border-b dark:border-apple-darkBorder">
-                        <th className="px-6 py-6">{t.companyName}</th>
-                        <th className="px-4 py-6 text-center border-l dark:border-apple-darkBorder">Status</th>
-                        <th className="px-4 py-6 text-center border-l dark:border-apple-darkBorder">Oylik Statusi</th>
-                        <th className="px-4 py-6 text-right border-l dark:border-apple-darkBorder"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-apple-border dark:divide-apple-darkBorder">
-                      {companies.map(c => {
-                        const op = operations.find(o => o.companyId === c.id);
-                        return (
-                          <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-all group">
-                            <td className="px-6 py-4">
-                              <div className="font-black text-slate-800 dark:text-white text-sm">{c.name}</div>
-                              <div className="text-[10px] font-bold text-slate-400 mt-0.5">INN: {c.inn}</div>
-                            </td>
-                            <td className="px-4 py-4 text-center border-l dark:border-apple-darkBorder">
-                              <StatusBadge status={op?.profitTaxStatus || '-'} />
-                            </td>
-                            <td className="px-4 py-4 text-center border-l dark:border-apple-darkBorder">
-                              <span className="text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md">Hisoblangan</span>
-                            </td>
-                            <td className="px-4 py-4 text-right border-l dark:border-apple-darkBorder">
-                              <button className="p-2 bg-slate-100 dark:bg-white/10 text-slate-400 hover:text-apple-accent rounded-lg transition-colors group-hover:scale-105">
-                                <ExternalLink size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+              {/* Portfolio Sections */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {(() => {
+                  if (!assignments || assignments.length === 0) {
+                    return <div className="col-span-2 py-12 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest bg-slate-50 dark:bg-white/5 rounded-[2.5rem]">Hech qanday biriktirilgan firma topilmadi</div>;
+                  }
+
+                  const roleGroups = assignments.reduce((acc, a) => {
+                    const role = a.role || 'other';
+                    if (!acc[role]) acc[role] = [];
+                    acc[role].push(a);
+                    return acc;
+                  }, {} as Record<string, ContractAssignment[]>);
+
+                  return Object.entries(roleGroups).map(([role, asgns]: [string, ContractAssignment[]]) => {
+                    const label = role === 'accountant' ? 'Buxgalteriya' :
+                      role === 'supervisor' ? 'Nazorat' :
+                        role === 'bank_manager' ? 'Bank Klient' : role.replace('_', ' ').toUpperCase();
+                    const color = role === 'accountant' ? 'bg-apple-accent' :
+                      role === 'supervisor' ? 'bg-amber-500' : 'bg-emerald-500';
+
+                    return (
+                      <div key={role} className="space-y-4">
+                        <div className="flex items-center gap-3 px-2">
+                          <div className={`w-1.5 h-6 ${color} rounded-full`}></div>
+                          <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">{label} ({asgns.length})</h3>
+                        </div>
+                        <div className="bg-white dark:bg-apple-darkCard rounded-[2rem] border border-apple-border dark:border-apple-darkBorder overflow-hidden shadow-sm">
+                          <div className="divide-y divide-apple-border dark:divide-apple-darkBorder">
+                            {asgns.map(asgn => {
+                              const c = companies.find(comp => comp.id === asgn.clientId);
+                              if (!c) return null;
+                              const op = operations.find(o => o.companyId === c.id);
+                              return (
+                                <div key={asgn.id} className="p-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+                                  <div className="min-w-0 flex-1 pr-4">
+                                    <div className="font-bold text-slate-800 dark:text-white text-sm truncate">{c.name}</div>
+                                    <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-tighter">
+                                      {asgn.salaryValue}{asgn.salaryType === 'percent' ? '%' : " so'm"} • INN {c.inn}
+                                    </div>
+                                  </div>
+                                  <StatusBadge status={op?.profitTaxStatus || '-'} size="sm" />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
