@@ -1,34 +1,45 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Company, OperationEntry, ReportStatus, Language } from '../types';
 import { translations } from '../lib/translations';
 
 interface AccountantDashboardProps {
     companies: Company[];
     operations: OperationEntry[];
+    selectedPeriod: string;
     lang: Language;
 }
 
-const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ companies, operations, lang }) => {
+const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ companies, operations, selectedPeriod, lang }) => {
     const t = translations[lang];
 
-    // Filter operations for these companies
+    // Filter operations for these companies AND current period
     const myOpIds = new Set(companies.map(c => c.id));
-    const myOperations = operations.filter(op => myOpIds.has(op.companyId));
+    const myOperations = operations.filter(op => op.period === selectedPeriod && myOpIds.has(op.companyId));
 
-    const stats = {
-        total: companies.length,
-        completed: myOperations.filter(op =>
-            op.profitTaxStatus === ReportStatus.ACCEPTED &&
-            op.form1Status === ReportStatus.ACCEPTED
-        ).length,
-        delayed: myOperations.filter(op =>
-            op.profitTaxStatus === ReportStatus.NOT_SUBMITTED ||
-            op.form1Status === ReportStatus.NOT_SUBMITTED
-        ).length,
-        blocked: myOperations.filter(op =>
-            op.statsStatus === ReportStatus.BLOCKED || op.form1Status === ReportStatus.BLOCKED
-        ).length
-    };
+    const stats = useMemo(() => {
+        let completed = 0;
+        let delayed = 0;
+        let blocked = 0;
+
+        companies.forEach(c => {
+            const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
+            if (!op) {
+                delayed++; // No record = not submitted
+            } else {
+                if (op.profitTaxStatus === ReportStatus.ACCEPTED && op.form1Status === ReportStatus.ACCEPTED) {
+                    completed++;
+                }
+                if (op.profitTaxStatus === ReportStatus.NOT_SUBMITTED || op.form1Status === ReportStatus.NOT_SUBMITTED) {
+                    delayed++;
+                }
+                if (op.statsStatus === ReportStatus.BLOCKED || op.form1Status === ReportStatus.BLOCKED) {
+                    blocked++;
+                }
+            }
+        });
+
+        return { total: companies.length, completed, delayed, blocked };
+    }, [companies, operations, selectedPeriod]);
 
     const progress = stats.total > 0 ? Math.round((stats.completed / (stats.total || 1)) * 100) : 0;
 

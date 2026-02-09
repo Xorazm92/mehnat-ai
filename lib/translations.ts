@@ -68,7 +68,12 @@ export const translations = {
     prev: "Oldingi",
     next: "Keyingi",
     page: "Sahifa",
-    of: "dan"
+    of: "dan",
+    year: "Yil",
+    quarter: "Chorak",
+    deadline: "Oxirgi muddat",
+    deadlineProfit: "Foyda muddati",
+    deadlineStats: "Stat muddati"
   },
   ru: {
     dashboard: "Панель управления",
@@ -130,6 +135,11 @@ export const translations = {
     amount: "Сумма",
     date: "Дата",
     category: "Категория",
-    balance: "Баланс"
+    balance: "Баланс",
+    year: "Год",
+    quarter: "Квартал",
+    deadline: "Крайний срок",
+    deadlineProfit: "Срок прибыли",
+    deadlineStats: "Срок стат"
   }
 };

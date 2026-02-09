@@ -575,6 +575,8 @@ export const fetchOperations = async (): Promise<OperationEntry[]> => {
       form2Status: fromDbStatus(o.form2_status),
       statsStatus: fromDbStatus(o.stats_status),
       comment: o.comment?.startsWith('{"kpi":') ? '' : (o.comment || ''),
+      profitTaxDeadline: o.deadline_profit_tax,
+      statsDeadline: o.deadline_stats,
       updatedAt: o.updated_at,
       history: [],
       kpi: kpiData
@@ -583,16 +585,33 @@ export const fetchOperations = async (): Promise<OperationEntry[]> => {
 };
 
 export const upsertOperation = async (op: OperationEntry) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let validId = op.id;
+
+  if (!validId || !uuidRegex.test(validId)) {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      validId = crypto.randomUUID();
+    } else {
+      validId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+  }
+
   const kpiStore = op.kpi ? JSON.stringify({ kpi: op.kpi }) : (op.comment || '');
 
   const payload = {
-    id: op.id,
+    id: validId,
     company_id: op.companyId,
     period: op.period,
     profit_tax_status: toDbStatus(op.profitTaxStatus),
     form1_status: toDbStatus(op.form1Status),
     form2_status: toDbStatus(op.form2Status),
     stats_status: toDbStatus(op.statsStatus),
+    deadline_profit_tax: op.profitTaxDeadline,
+    deadline_stats: op.statsDeadline,
     comment: op.kpi ? kpiStore : op.comment, // Store KPI in comment if column missing
     kpi: op.kpi // Try real column
   };
@@ -600,8 +619,10 @@ export const upsertOperation = async (op: OperationEntry) => {
   try {
     const { error } = await supabase.from('operations').upsert(payload);
     if (error && error.code === '42703') {
-      const fallbackPayload = { ...payload };
+      const fallbackPayload = { ...payload } as any;
       delete fallbackPayload.kpi;
+      delete fallbackPayload.deadline_profit_tax;
+      delete fallbackPayload.deadline_stats;
       const { error: fErr } = await supabase.from('operations').upsert(fallbackPayload);
       if (fErr) throw fErr;
     } else if (error) throw error;

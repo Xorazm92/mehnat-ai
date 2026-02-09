@@ -8,13 +8,14 @@ import { Download, Calendar } from 'lucide-react';
 interface Props {
   companies: Company[];
   operations: OperationEntry[];
+  selectedPeriod: string;
+  onPeriodChange: (p: string) => void;
   lang: Language;
   onFilterApply: (filterStr: string) => void;
 }
 
-const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilterApply }) => {
+const AnalysisModule: React.FC<Props> = ({ companies, operations, selectedPeriod, onPeriodChange, lang, onFilterApply }) => {
   const t = translations[lang];
-  const [selectedPeriod, setSelectedPeriod] = React.useState('2024 Yillik');
 
   const handleExport = () => {
     const headers = ['Firma Nomi', 'INN', 'Soliq Rejimi', 'Foyda Solig\'i', 'Balans (F1)', 'Moliya (F2)', 'Statistika'];
@@ -23,7 +24,7 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
       return [
         c.name,
         c.inn,
-        c.taxRegime,
+        c.taxType,
         op?.profitTaxStatus || '-',
         op?.form1Status || '-',
         op?.form2Status || '-',
@@ -112,7 +113,7 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, lang, onFilter
           <div className="flex-1 md:flex-none relative">
             <select
               value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
+              onChange={(e) => onPeriodChange(e.target.value)}
               className="w-full md:w-48 appearance-none bg-slate-50 dark:bg-apple-darkBg border border-transparent focus:border-apple-accent rounded-2xl px-6 py-4 font-black text-slate-700 dark:text-white outline-none transition-all cursor-pointer"
             >
               {periods.map(p => <option key={p} value={p}>{p}</option>)}

@@ -14,6 +14,8 @@ interface DashboardProps {
   expenses: Expense[];
   activeFilter?: string;
   onFilterChange?: (filter: string) => void;
+  selectedPeriod: string;
+  onPeriodChange: (p: string) => void;
   lang: Language;
   userRole?: string;
   userId?: string;
@@ -27,6 +29,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   expenses = [],
   activeFilter = 'all',
   onFilterChange = (_: string) => { },
+  selectedPeriod,
+  onPeriodChange,
   lang,
   userRole,
   userId
@@ -36,7 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   // Role-Based Routing
   if (userRole === ROLES.ACCOUNTANT) {
     const myCompanies = userId ? companies.filter(c => c.accountantId === userId) : [];
-    return <AccountantDashboard companies={myCompanies} operations={operations} lang={lang} />;
+    return <AccountantDashboard companies={myCompanies} operations={operations} selectedPeriod={selectedPeriod} lang={lang} />;
   }
 
   if (userRole === ROLES.SUPERVISOR) {
@@ -49,7 +53,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     // For now, return Admin View or Accountant View
     // Let's use Accountant Dashboard logic but for Bank Clients
     const myCompanies = userId ? companies.filter(c => c.bankClientId === userId) : [];
-    return <AccountantDashboard companies={myCompanies} operations={operations} lang={lang} />;
+    return <AccountantDashboard companies={myCompanies} operations={operations} selectedPeriod={selectedPeriod} lang={lang} />;
   }
 
   // --- PREMIUM ADMIN DASHBOARD ---
@@ -129,16 +133,23 @@ const Dashboard: React.FC<DashboardProps> = ({
     const netProfit = totalIncome - totalExpenses;
 
     // 6. REPORT PROGRESS (Global)
-    const reportStats = { done: 0, pending: 0, blocked: 0, total: operations.length * 4 || 1 };
-    operations.forEach(op => {
-      [op.profit_tax_status, op.form1_status, op.form2_status, op.stats_status].forEach(st => {
-        if (st === 'accepted' || st === 'submitted') reportStats.done++;
-        else if (st === 'not_submitted') reportStats.pending++;
-        else if (st === 'blocked') reportStats.blocked++;
-      });
+    const statsTotal = companies.length * 4 || 1;
+    const reportStats = { done: 0, pending: 0, blocked: 0, total: statsTotal };
+
+    companies.forEach(c => {
+      const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
+      if (!op) {
+        reportStats.pending += 4;
+      } else {
+        [op.profitTaxStatus, op.form1Status, op.form2Status, op.statsStatus].forEach(st => {
+          if (st === '+' || st === 'topshirildi') reportStats.done++;
+          else if (st === 'kartoteka') reportStats.blocked++;
+          else reportStats.pending++;
+        });
+      }
     });
 
-    const completionRate = (reportStats.done / reportStats.total) * 100;
+    const completionRate = (reportStats.done / statsTotal) * 100;
 
     return {
       ageDistribution: [
@@ -170,6 +181,24 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="space-y-8 animate-macos pb-10 max-w-[1400px] mx-auto">
       {/* 🚀 ELITE HEADER STATS */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-2">
+        <div>
+          <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{t.dashboard}</h2>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{selectedPeriod}</p>
+        </div>
+        <div className="flex bg-white dark:bg-apple-darkCard p-2 rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-sm">
+          <select
+            value={selectedPeriod}
+            onChange={(e) => onPeriodChange(e.target.value)}
+            className="bg-transparent border-none text-xs font-black text-slate-700 dark:text-white outline-none px-4 py-2 cursor-pointer appearance-none"
+          >
+            {['2024 Yillik', '2024 Q1', '2024 Q2', '2024 Q3', '2024 Q4', '2025 Yillik', '2025 Q1'].map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.headerMetrics.map((stat, i) => (
           <div key={i} className="relative dashboard-card p-6 overflow-hidden group hover:-translate-y-1 transition-all duration-300">

@@ -59,6 +59,10 @@ const App: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [assignments, setAssignments] = useState<ContractAssignment[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [selectedPeriod, setSelectedPeriod] = useState(() => {
+    const year = new Date().getFullYear();
+    return `${year} Yillik`;
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState('');
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
@@ -163,7 +167,7 @@ const App: React.FC = () => {
   const kpis: AccountantKPI[] = useMemo(() => {
     return staff.map(s => {
       const myCompanies = companies.filter(c => c.accountantId === s.id);
-      const myOps = operations.filter(op => myCompanies.some(c => c.id === op.companyId));
+      const myOps = operations.filter(op => op.period === selectedPeriod && myCompanies.some(c => c.id === op.companyId));
 
       const total = myCompanies.length;
       const annualCompleted = myOps.filter(op => op.profitTaxStatus === ReportStatus.ACCEPTED || op.profitTaxStatus === ReportStatus.NOT_REQUIRED).length;
@@ -184,15 +188,15 @@ const App: React.FC = () => {
         statsCompleted,
         annualProgress,
         statsProgress,
-        zone: annualProgress >= 90 ? 'green' : annualProgress >= 60 ? 'yellow' : 'red'
+        zone: annualProgress >= 90 ? 'green' : (annualProgress >= 60 ? 'yellow' : 'red')
       };
     }).sort((a, b) => b.annualProgress - a.annualProgress);
-  }, [staff, companies, operations]);
+  }, [staff, companies, operations, selectedPeriod]);
 
   const selectedOperation = useMemo(() => {
     if (!selectedCompany) return null;
-    return operations.find(o => o.companyId === selectedCompany.id) || null;
-  }, [selectedCompany, operations]);
+    return operations.find(o => o.companyId === selectedCompany.id && o.period === selectedPeriod) || null;
+  }, [selectedCompany, operations, selectedPeriod]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,6 +318,8 @@ const App: React.FC = () => {
                       payments={payments}
                       expenses={expenses}
                       activeFilter={'none'}
+                      selectedPeriod={selectedPeriod}
+                      onPeriodChange={setSelectedPeriod}
                       onFilterChange={handleDashboardFilter}
                       lang={lang}
                       userRole={userRole}
@@ -360,6 +366,8 @@ const App: React.FC = () => {
                     companies={companies}
                     operations={operations}
                     activeFilter={activeFilter}
+                    selectedPeriod={selectedPeriod}
+                    onPeriodChange={setSelectedPeriod}
                     lang={lang}
                     onUpdate={async (op) => { await upsertOperation(op); refreshData(); }}
                     onCompanySelect={setSelectedCompany}
@@ -370,6 +378,8 @@ const App: React.FC = () => {
                   <AnalysisModule
                     companies={companies}
                     operations={operations}
+                    selectedPeriod={selectedPeriod}
+                    onPeriodChange={setSelectedPeriod}
                     lang={lang}
                     onFilterApply={handleAnalysisFilterApply}
                   />

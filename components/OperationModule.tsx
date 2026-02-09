@@ -2,27 +2,37 @@ import React, { useState, useMemo } from 'react';
 import { Company, OperationEntry, ReportStatus, Language, KPIMetrics } from '../types';
 import { translations } from '../lib/translations';
 import StatusBadge from './StatusBadge';
-import { Search, Download, Filter, ChevronLeft, ChevronRight, FileBarChart } from 'lucide-react';
+import { Search, Download, Filter, ChevronLeft, ChevronRight, FileBarChart, Calendar, Clock } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Props {
   companies: Company[];
   operations: OperationEntry[];
   activeFilter?: string;
+  selectedPeriod: string;
+  onPeriodChange: (p: string) => void;
   lang: Language;
   onUpdate: (op: OperationEntry) => void;
   onCompanySelect: (c: Company) => void;
 }
 
-const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter = 'all', lang, onUpdate, onCompanySelect }) => {
+const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter = 'all', selectedPeriod, onPeriodChange, lang, onUpdate, onCompanySelect }) => {
   const t = translations[lang];
   const [search, setSearch] = useState('');
-  const [period, setPeriod] = useState('2024 Yillik');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const years = ['2023', '2024', '2025'];
+  const quarters = ['Yillik', 'Q1', 'Q2', 'Q3', 'Q4'];
+
+  const handlePeriodChange = (val: string) => {
+    onPeriodChange(val);
+    setCurrentPage(1);
+  };
+
   const filtered = useMemo(() => {
     return companies.filter(c => {
-      const op = operations.find(o => o.companyId === c.id);
+      const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
       const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.inn.includes(search);
 
       if (!matchesSearch) return false;
@@ -36,23 +46,26 @@ const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter 
       }
 
       if (activeFilter === 'delayed') {
+        if (!op) return true; // No record means not submitted yet
         return op.profitTaxStatus === ReportStatus.NOT_SUBMITTED ||
           op.form1Status === ReportStatus.NOT_SUBMITTED ||
           op.statsStatus === ReportStatus.NOT_SUBMITTED ||
           op.profitTaxStatus === ReportStatus.REJECTED;
       }
       if (activeFilter === 'blocked') {
+        if (!op) return false;
         return op.form1Status === ReportStatus.BLOCKED ||
           op.profitTaxStatus === ReportStatus.BLOCKED ||
           op.form2Status === ReportStatus.BLOCKED;
       }
       if (activeFilter === 'progress') {
+        if (!op) return false;
         return op.profitTaxStatus === ReportStatus.ACCEPTED && op.form1Status === ReportStatus.ACCEPTED;
       }
 
       return true;
     });
-  }, [companies, operations, search, activeFilter]);
+  }, [companies, operations, search, activeFilter, selectedPeriod]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -70,8 +83,22 @@ const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter 
     return activeFilter;
   }, [activeFilter, t, lang]);
 
-  const handleStatusChange = (op: OperationEntry, field: keyof OperationEntry, val: string) => {
-    onUpdate({ ...op, [field]: val as ReportStatus, updatedAt: new Date().toISOString() });
+  const handleStatusChange = async (op: OperationEntry, field: keyof OperationEntry, val: string) => {
+    try {
+      await onUpdate({ ...op, [field]: val as ReportStatus, updatedAt: new Date().toISOString() });
+      toast.success(t.save + '!');
+    } catch (e) {
+      toast.error('Xatolik yuz berdi');
+    }
+  };
+
+  const handleDeadlineChange = async (op: OperationEntry, field: 'profitTaxDeadline' | 'statsDeadline', val: string) => {
+    try {
+      await onUpdate({ ...op, [field]: val, updatedAt: new Date().toISOString() });
+      toast.success(t.deadline + ' ' + t.save + '!');
+    } catch (e) {
+      toast.error('Xatolik yuz berdi');
+    }
   };
 
   const [expandedKpiId, setExpandedKpiId] = useState<string | null>(null);
@@ -103,7 +130,25 @@ const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter 
         </div>
 
         <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
-          <div className="relative flex-1 xl:w-[450px] group min-w-0">
+          <div className="flex bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-inner">
+            <select
+              value={selectedPeriod.split(' ')[0]}
+              onChange={(e) => handlePeriodChange(`${e.target.value} ${selectedPeriod.split(' ')[1]}`)}
+              className="bg-transparent border-none text-xs font-black text-slate-500 outline-none px-3 py-2 cursor-pointer appearance-none"
+            >
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <div className="w-px h-4 bg-apple-border dark:bg-apple-darkBorder self-center mx-1"></div>
+            <select
+              value={selectedPeriod.split(' ')[1]}
+              onChange={(e) => handlePeriodChange(`${selectedPeriod.split(' ')[0]} ${e.target.value}`)}
+              className="bg-transparent border-none text-xs font-black text-slate-500 outline-none px-3 py-2 cursor-pointer appearance-none"
+            >
+              {quarters.map(q => <option key={q} value={q}>{q}</option>)}
+            </select>
+          </div>
+
+          <div className="relative flex-1 xl:w-[350px] group min-w-0">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-apple-accent transition-colors" size={18} />
             <input
               type="text"
@@ -135,8 +180,13 @@ const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter 
             </thead>
             <tbody className="divide-y divide-apple-border dark:divide-apple-darkBorder">
               {paginated.map(c => {
-                const op = operations.find(o => o.companyId === c.id) || {
-                  id: Math.random().toString(), companyId: c.id, period,
+                const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod) || {
+                  id: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                  }),
+                  companyId: c.id, period: selectedPeriod,
                   profitTaxStatus: ReportStatus.NOT_SUBMITTED, form1Status: ReportStatus.NOT_SUBMITTED,
                   form2Status: ReportStatus.NOT_SUBMITTED, statsStatus: ReportStatus.NOT_SUBMITTED,
                   comment: '', updatedAt: '', history: [], kpi: undefined
@@ -168,10 +218,10 @@ const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter 
                       </td>
 
                       {[
-                        { field: 'profitTaxStatus' },
-                        { field: 'form1Status' },
-                        { field: 'form2Status' },
-                        { field: 'statsStatus' }
+                        { field: 'profitTaxStatus', deadlineField: 'profitTaxDeadline', label: t.profitTax, dlLabel: t.deadlineProfit },
+                        { field: 'form1Status', label: t.form1 },
+                        { field: 'form2Status', label: t.form2 },
+                        { field: 'statsStatus', deadlineField: 'statsDeadline', label: t.stats, dlLabel: t.deadlineStats }
                       ].map((item) => (
                         <td key={item.field} className="px-4 py-6 text-center">
                           <div className="flex flex-col items-center gap-3">
@@ -183,6 +233,20 @@ const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter 
                               {Object.values(ReportStatus).map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                             <StatusBadge status={(op as any)[item.field]} />
+                            {item.deadlineField && (
+                              <div className="mt-2 flex flex-col items-center gap-1 group/dl">
+                                <span className="text-[8px] font-black text-slate-400 transition-colors group-hover/dl:text-apple-accent uppercase">{item.dlLabel}</span>
+                                <div className="relative">
+                                  <Calendar size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 group-hover/dl:text-apple-accent transition-colors" />
+                                  <input
+                                    type="date"
+                                    className="pl-6 pr-2 py-1 bg-slate-50 dark:bg-white/5 border border-apple-border dark:border-apple-darkBorder rounded-lg text-[10px] font-bold outline-none focus:ring-2 focus:ring-apple-accent/20 transition-all appearance-none cursor-pointer"
+                                    value={(op as any)[item.deadlineField] || ''}
+                                    onChange={e => handleDeadlineChange(op as any, item.deadlineField as any, e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </td>
                       ))}

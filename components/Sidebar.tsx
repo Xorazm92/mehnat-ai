@@ -50,13 +50,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewCh
             onClick={() => onViewChange('dashboard')}
             className="flex items-center gap-4 group transition-all active:scale-95"
           >
-            <div className="h-12 w-12 rounded-[1.25rem] bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 shrink-0 group-hover:rotate-6 transition-transform">
-              <div className="grid grid-cols-2 gap-1 p-2">
-                <div className="w-2 h-2 rounded-full bg-white"></div>
-                <div className="w-2 h-2 rounded-full bg-white/50"></div>
-                <div className="w-2 h-2 rounded-full bg-white/50"></div>
-                <div className="w-2 h-2 rounded-full bg-white"></div>
-              </div>
+            <div className="h-12 w-12 rounded-[1.25rem] bg-white dark:bg-apple-darkBg p-2 flex items-center justify-center shadow-xl border border-slate-100 dark:border-white/5 shrink-0 group-hover:rotate-6 transition-transform">
+              <img src="/logo.png" alt="ASOS Logo" className="w-full h-full object-contain" />
             </div>
             <div className="xl:block lg:hidden text-left">
               <h1 className="font-black text-2xl text-slate-800 dark:text-white tracking-tighter leading-none">ASOS</h1>
