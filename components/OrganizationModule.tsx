@@ -467,7 +467,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
               <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-white/10 text-[11px] font-black uppercase tracking-widest text-slate-400 border-b dark:border-apple-darkBorder">
-                    <th className="px-4 py-6 w-10">Xavf</th>
+                    <th className="px-4 py-6 w-10 text-center">№</th>
+                    <th className="px-4 py-6 w-10 text-center">Xavf</th>
                     <th
                       className="px-6 py-6 sticky left-0 bg-slate-50 dark:bg-apple-darkCard z-20 shadow-sm cursor-pointer hover:text-apple-accent transition-colors"
                       onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
@@ -481,13 +482,11 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                       {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </th>
                     <th className="px-4 py-6">{t.regime}</th>
-                    <th className="px-4 py-6">Direktor</th>
-                    <th
-                      className="px-4 py-6 cursor-pointer hover:text-apple-accent transition-colors"
-                      onClick={() => { setSortField('accountantName'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
-                    >
-                      {t.accountant} {sortField === 'accountantName' && (sortOrder === 'asc' ? '↑' : '↓')}
-                    </th>
+                    <th className="px-4 py-6">Raxbar / Ega</th>
+                    <th className="px-4 py-6">Buxgalter</th>
+                    <th className="px-4 py-6">Nazoratchi</th>
+                    <th className="px-4 py-6">Server</th>
+                    <th className="px-4 py-6">Bank Klient</th>
                     <th className="px-4 py-6">Holat</th>
                     <th className="px-6 py-6 text-right">{t.actions}</th>
                   </tr>
@@ -497,11 +496,12 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                     const risk = getRiskIndicator(c);
                     return (
                       <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all group">
-                        {/* Risk Indicator */}
-                        <td className="px-4 py-5">
+                        <td className="px-4 py-5 text-center">
+                          <span className="text-[10px] font-bold text-slate-300 font-mono">{c.originalIndex || '-'}</span>
+                        </td>
+                        <td className="px-4 py-5 text-center">
                           <span className={`text-lg ${risk.color}`} title={c.riskLevel || 'low'}>{risk.emoji}</span>
                         </td>
-                        {/* Company Name */}
                         <td
                           className="px-6 py-5 sticky left-0 bg-white dark:bg-apple-darkCard group-hover:bg-slate-50 dark:group-hover:bg-apple-darkBg/90 z-20 shadow-sm transition-colors cursor-pointer"
                           onClick={() => onCompanySelect(c)}
@@ -509,50 +509,62 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                           <div className="font-extrabold text-slate-800 dark:text-white text-sm tracking-tight hover:text-apple-accent transition-colors">{c.name}</div>
                           {c.brandName && <div className="text-[10px] text-slate-400 font-medium">{c.brandName}</div>}
                         </td>
-                        {/* INN */}
                         <td className="px-4 py-5">
                           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 font-mono tabular-nums">{c.inn}</span>
                         </td>
-                        {/* Tax Regime */}
                         <td className="px-4 py-5">
-                          <span className="px-2 py-1 bg-apple-accent/10 text-apple-accent text-[10px] font-black uppercase rounded-lg">{c.taxType}</span>
-                        </td>
-                        {/* Director */}
-                        <td className="px-4 py-5">
-                          <div className="text-xs font-bold text-slate-700 dark:text-slate-300">{c.directorName || '—'}</div>
-                          {c.directorPhone && <div className="text-[10px] text-slate-400 font-mono">{c.directorPhone}</div>}
-                        </td>
-                        {/* Accountant */}
-                        <td className="px-4 py-5">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{c.accountantName}</span>
-                        </td>
-                        {/* Status */}
-                        <td className="px-4 py-5">
-                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${risk.bg} ${risk.color}`}>
-                            {c.companyStatus === 'active' || !c.companyStatus ? 'Faol' : c.companyStatus === 'suspended' ? "To'xtatilgan" : c.companyStatus === 'debtor' ? 'Qarzdor' : c.companyStatus === 'problem' ? 'Muammoli' : 'Bankrot'}
+                          <span className={`px-2 py-1 ${c.taxType?.includes('nds') ? 'bg-rose-500/10 text-rose-500' : 'bg-apple-accent/10 text-apple-accent'} text-[10px] font-black uppercase rounded-lg`}>
+                            {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'Aylanma' : (c.taxType || 'Fix'))}
                           </span>
                         </td>
-                        {/* Actions */}
+                        <td className="px-4 py-5">
+                          <div className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">{c.directorName || c.ownerName || '—'}</div>
+                          {c.directorPhone && <div className="text-[10px] text-slate-400 font-mono">{c.directorPhone}</div>}
+                        </td>
+                        <td className="px-4 py-5">
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-200">{c.accountantName || '—'}</p>
+                          {c.accountantPerc ? <span className="text-[9px] font-bold text-slate-400">{c.accountantPerc}%</span> : null}
+                        </td>
+                        <td className="px-4 py-5">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{c.supervisorName || '—'}</span>
+                        </td>
+                        <td className="px-4 py-5">
+                          <div className="flex flex-col gap-0.5 min-w-[100px]">
+                            {c.serverInfo && <span className="text-[9px] font-black text-apple-accent">{c.serverInfo}</span>}
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 truncate" title={c.serverName}>{c.serverName || '—'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-5">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{c.bankClientName || '—'}</span>
+                            {c.bankClientPerc ? <span className="text-[9px] text-slate-400 font-bold">{c.bankClientPerc}%</span> : (c.bankClientSum ? <span className="text-[9px] text-slate-400 font-bold">{c.bankClientSum.toLocaleString()}</span> : null)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-5">
+                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${risk.bg} ${risk.color}`}>
+                            {c.companyStatus === 'active' || !c.companyStatus ? 'FAOL' : c.companyStatus === 'suspended' ? "TO'XTATILGAN" : c.companyStatus === 'debtor' ? 'QARZDOR' : c.companyStatus === 'problem' ? 'MUAMMOLI' : 'BANKROT'}
+                          </span>
+                        </td>
                         <td className="px-6 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => onCompanySelect(c)}
-                              className="p-2.5 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-xl hover:bg-apple-accent hover:text-white transition-all"
-                              title="Ko'rish"
+                              onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }}
+                              className="p-2.5 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-xl hover:bg-apple-accent hover:text-white transition-all shadow-sm"
+                              title="Details"
                             >
                               <Eye size={16} />
                             </button>
                             <button
-                              onClick={() => startEdit(c)}
-                              className="p-2.5 bg-apple-accent/10 text-apple-accent rounded-xl hover:bg-apple-accent hover:text-white transition-all"
-                              title="Tahrirlash"
+                              onClick={(e) => { e.stopPropagation(); startEdit(c); }}
+                              className="p-2.5 bg-apple-accent/10 text-apple-accent rounded-xl hover:bg-apple-accent hover:text-white transition-all shadow-sm"
+                              title="Edit"
                             >
                               <Edit3 size={16} />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }}
-                              className="p-2.5 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
-                              title="O'chirish"
+                              className="p-2.5 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                              title="Delete"
                             >
                               <Trash2 size={16} />
                             </button>

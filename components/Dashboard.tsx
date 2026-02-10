@@ -134,10 +134,13 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     // 6. REPORT PROGRESS (Global)
     const statsTotal = companies.length * 4 || 1;
-    const reportStats = { done: 0, pending: 0, blocked: 0, total: statsTotal };
+    const reportStats = { done: 0, pending: 0, blocked: 0, total: statsTotal, itParkCount: 0 };
 
     companies.forEach(c => {
       const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
+      // Count IT Park residents
+      if (c.itParkResident) reportStats.itParkCount = (reportStats.itParkCount || 0) + 1;
+
       if (!op) {
         reportStats.pending += 4;
       } else {
@@ -174,6 +177,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         { label: 'SOF FOYDA', value: netProfit, sub: 'Operatsion foyda', color: 'bg-indigo-600', icon: '📈' },
         { label: 'PROGRESS %', value: completionRate.toFixed(1), sub: 'Hisobotlar unumdorligi', color: 'bg-amber-500', icon: '🎯' },
         { label: 'XODIMLAR', value: counts.total, sub: 'Faol jamoa a\'zolari', color: 'bg-slate-800', icon: '👥' },
+        { label: 'IT PARK', value: reportStats.itParkCount, sub: 'Rezident Firmalar', color: 'bg-indigo-500', icon: '🚀' },
       ]
     };
   }, [staff, companies, payments, expenses, operations]);
@@ -199,7 +203,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {stats.headerMetrics.map((stat, i) => (
           <div key={i} className="relative dashboard-card p-6 overflow-hidden group hover:-translate-y-1 transition-all duration-300">
             <div className={`absolute top-0 left-0 w-1.5 h-full ${stat.color}`}></div>
@@ -214,6 +218,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               </h3>
               {i < 2 && <span className="text-[10px] font-bold text-slate-400">uzs</span>}
               {i === 3 && <span className="text-[10px] font-bold text-slate-400">kishi</span>}
+              {i === 4 && <span className="text-[10px] font-bold text-slate-400">ta</span>}
             </div>
             <p className="text-[10px] font-bold text-slate-400 mt-2 flex items-center gap-1">
               <span className="w-1 h-1 rounded-full bg-slate-300"></span> {stat.sub}

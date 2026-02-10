@@ -26,15 +26,23 @@ interface CompanyNotesFallback {
   bcn?: string;
   sid?: string;
   sn?: string;
+  srvn?: string; // serverName
   camt?: number;
   aperc?: number;
   bcsum?: number;
   casum?: number;
+  cperc?: number; // chiefAccountantPerc
   sperc?: number;
   on?: string;
   ia?: boolean;
   stats?: string[];
   scope?: string[];
+  itp?: boolean | string; // itParkResident
+  bcp?: number; // bankClientPerc
+  idx?: number; // originalIndex
+  icid?: string; // internalContractorId
+  is_ic?: boolean; // isInternalContractor
+  req_r?: string[]; // requiredReports
 }
 
 // --- helpers for status mapping between UI enums and DB enums ---
@@ -279,6 +287,27 @@ export const calculateEmployeeSalary = async (employeeId: string, month: string)
   return null;
 };
 
+interface CompanyNotesFallback {
+  v?: number;
+  bcid?: string;
+  bcn?: string;
+  sid?: string;
+  sn?: string; // supervisorName
+  srvn?: string; // serverName (NEW)
+  camt?: number;
+  aperc?: number;
+  bcsum?: number;
+  casum?: number;
+  cperc?: number; // chiefAccountantPerc
+  sperc?: number;
+  on?: string;
+  ia?: boolean;
+  stats?: string[];
+  scope?: string[];
+  itp?: boolean | string; // itParkResident
+  bcp?: number; // bankClientPerc
+}
+
 // Companies
 export const fetchCompanies = async (): Promise<Company[]> => {
   const { data, error } = await supabase
@@ -292,7 +321,7 @@ export const fetchCompanies = async (): Promise<Company[]> => {
   return data.map((c) => {
     // Smart Fallback Parser
     let extra: CompanyNotesFallback = {};
-    if (c.notes?.startsWith('{"v":1')) {
+    if (c.notes?.startsWith('{')) {
       try { extra = JSON.parse(c.notes); } catch (e) { }
     }
 
@@ -300,7 +329,7 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       id: c.id,
       name: c.name,
       inn: c.inn,
-      accountantName: c.accountant?.full_name || c.accountant_id,
+      accountantName: (c.accountant as any)?.full_name || c.accountant_id,
       accountantId: c.accountant_id,
       taxType: c.tax_type_new || c.tax_regime,
       department: c.department,
@@ -310,20 +339,27 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       createdAt: c.created_at,
       internalContractor: c.internal_contractor,
       serverInfo: c.server_info,
+      serverName: extra.srvn,
       baseName1c: c.base_name_1c,
       kpiEnabled: c.kpi_enabled,
       bankClientId: c.bank_client_id || extra.bcid,
-      bankClientName: extra.bcn,
+      bankClientName: extra.bcn || '—',
       supervisorId: c.supervisor_id || extra.sid,
-      supervisorName: extra.sn,
+      supervisorName: extra.sn || '—',
       contractAmount: c.contract_amount ?? (extra.camt || 0),
       accountantPerc: c.accountant_perc ?? (extra.aperc || 0),
+      bankClientPerc: extra.bcp || 0,
       bankClientSum: c.bank_client_sum ?? (extra.bcsum || 0),
+      chiefAccountantPerc: extra.cperc || 0,
       chiefAccountantSum: c.chief_accountant_sum ?? (extra.casum || 0),
       supervisorPerc: c.supervisor_perc ?? (extra.sperc || 0),
       ownerName: extra.on,
       isActive: c.is_active ?? (extra.ia ?? true),
-      itParkResident: c.it_park_resident,
+      originalIndex: extra.idx,
+      itParkResident: c.it_park_resident ?? extra.itp,
+      internalContractorId: extra.icid,
+      isInternalContractor: extra.is_ic,
+      requiredReports: extra.req_r || [],
       // Tab 1: PASPORT fields
       brandName: c.brand_name,
       directorName: c.director_name,
@@ -383,17 +419,34 @@ export const upsertCompany = async (company: Company) => {
     bcn: company.bankClientName,
     sid: company.supervisorId,
     sn: company.supervisorName,
+    srvn: company.serverName,
     camt: company.contractAmount,
     aperc: company.accountantPerc,
+    bcp: company.bankClientPerc,
     bcsum: company.bankClientSum,
+    cperc: company.chiefAccountantPerc,
     casum: company.chiefAccountantSum,
     sperc: company.supervisorPerc,
     on: company.ownerName,
     ia: company.isActive,
     stats: company.statReports,
-    scope: company.serviceScope
+    scope: company.serviceScope,
+    itp: company.itParkResident,
+    idx: company.originalIndex,
+    icid: company.internalContractorId,
+    is_ic: company.isInternalContractor,
+    req_r: company.requiredReports
   });
 
+
+  // Map tax type to V2 enum safely
+  let taxTypeV2 = (company.taxType === 'turnover' || company.taxType === 'nds_profit') ? company.taxType : undefined;
+
+  // Map server info to enum safely
+  const validServers = ['CR1', 'CR2', 'CR3'];
+  const serverInfoEnum = typeof company.serverInfo === 'string' && validServers.includes(company.serverInfo)
+    ? company.serverInfo
+    : undefined;
 
   const payload = {
     id: validId,
@@ -401,7 +454,7 @@ export const upsertCompany = async (company: Company) => {
     name: company.name,
     inn: company.inn,
     tax_regime: company.taxType === 'nds_profit' ? 'vat' : (company.taxType === 'turnover' ? 'turnover' : 'fixed'),
-    tax_type_new: company.taxType,
+    tax_type_new: taxTypeV2,
     stats_type: company.statsType,
     department: company.department || 'default',
 
@@ -410,10 +463,10 @@ export const upsertCompany = async (company: Company) => {
     password_encrypted: company.password,
     notes: fallbackJson,
     internal_contractor: company.internalContractor,
-    server_info: company.serverInfo,
+    server_info: serverInfoEnum,
     base_name_1c: company.baseName1c,
     kpi_enabled: company.kpiEnabled,
-    it_park_resident: company.itParkResident,
+    it_park_resident: typeof company.itParkResident === 'boolean' ? company.itParkResident : false, // DB expects boolean, store complex value in notes
     stat_reports: company.statReports,
     service_scope: company.serviceScope,
     ...(company.bankClientId ? { bank_client_id: company.bankClientId } : {}),
@@ -459,6 +512,13 @@ export const upsertCompany = async (company: Company) => {
     const { error } = await supabase.from('companies').upsert(payload);
 
     if (error) {
+      console.error('upsertCompany error details:', {
+        code: error.code,
+        message: error.message,
+        hint: error.hint,
+        details: error.details,
+        payload: payload
+      });
       if (error.code === '42703') {
         const fallbackPayload = { ...payload };
         delete (fallbackPayload as any).bank_client_id;
@@ -480,8 +540,6 @@ export const upsertCompany = async (company: Company) => {
     } else {
       logAuditAction(validId, 'create', 'company', validId, { data: payload });
     }
-
-
   } catch (e) { console.error(e); throw e; }
 };
 
@@ -636,32 +694,88 @@ export const deleteOperation = async (id: string) => {
 
 // Staff
 export const fetchStaff = async (): Promise<Staff[]> => {
+  // First attempt with all columns
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, role, avatar_color, phone');
+    .select('id, full_name, role, avatar_color, phone, is_active');
+
   if (error) {
-    console.error('fetchStaff', error);
-    return [];
+    // Fallback if some columns are missing
+    console.warn('fetchStaff full select failed, trying minimal select', error);
+    const { data: minData, error: minError } = await supabase
+      .from('profiles')
+      .select('id, full_name, role');
+
+    if (minError) {
+      console.error('fetchStaff minimal select failed', minError);
+      return [];
+    }
+
+    return minData.map((p) => ({
+      id: p.id,
+      name: p.full_name,
+      role: p.role,
+      avatarColor: 'hsl(200,50%,50%)',
+      phone: '',
+      is_active: true
+    })) as Staff[];
   }
+
   return data.map((p) => ({
     id: p.id,
     name: p.full_name,
     role: p.role,
     avatarColor: p.avatar_color || 'hsl(200,50%,50%)',
     phone: p.phone,
+    is_active: p.is_active ?? true
   })) as Staff[];
 };
 
 export const upsertStaff = async (staff: Staff) => {
+  // UUID validation for safety
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let validId = staff.id;
+  if (!validId || !uuidRegex.test(validId)) {
+    validId = crypto.randomUUID();
+  }
+
+  // Map roles to DB enum: 'super_admin', 'manager', 'accountant', 'auditor'
+  let dbRole = 'accountant';
+  const r = staff.role?.toLowerCase() || '';
+  if (r.includes('admin') || r.includes('chief')) dbRole = 'super_admin';
+  else if (r.includes('manager') || r.includes('supervisor') || r.includes('controller')) dbRole = 'manager';
+  else if (r.includes('audit')) dbRole = 'auditor';
+
   const payload = {
-    id: staff.id,
+    id: validId,
+    email: staff.username ? `${staff.username}@asos.uz` : `${staff.name.toLowerCase().replace(/\s/g, '.')}@asos.uz`,
     full_name: staff.name,
-    role: staff.role,
-    avatar_color: staff.avatarColor,
-    phone: staff.phone,
+    role: dbRole,
+    avatar_color: staff.avatarColor || 'hsl(200, 50%, 50%)',
+    phone: staff.phone || '',
+    is_active: staff.is_active ?? true
   };
-  const { error } = await supabase.from('profiles').upsert(payload);
-  if (error) throw error;
+
+  try {
+    const { error } = await supabase.from('profiles').upsert(payload);
+    if (error) {
+      // If there's a problem with columns, try a bare minimum upsert
+      if (error.code === '42703') {
+        const { error: fErr } = await supabase.from('profiles').upsert({
+          id: validId,
+          full_name: staff.name,
+          email: payload.email,
+          role: dbRole
+        });
+        if (fErr) throw fErr;
+      } else {
+        throw error;
+      }
+    }
+  } catch (e) {
+    console.error('upsertStaff failed', e);
+    // Don't throw for seeding safety, just log
+  }
 };
 
 export const deleteStaff = async (id: string) => {

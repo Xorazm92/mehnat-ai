@@ -139,10 +139,12 @@ export interface Company {
   inn: string;
   taxType: TaxType;
   internalContractor?: string;
-  serverInfo?: ServerInfo;
+  serverInfo?: ServerInfo | string; // Relaxed to string to allow free text from JSON
+  serverName?: string; // New from JSON: "Сервер номи"
   baseName1c?: string;
   kpiEnabled?: boolean;
   contractAmount?: number;
+  originalIndex?: number; // From JSON "№"
   isActive?: boolean;
   createdAt: string;
 
@@ -154,17 +156,22 @@ export interface Company {
   accountantId?: string;
   accountantName?: string;
   bankClientId?: string;
-  bankClientName?: string;
+  bankClientName?: string; // New from JSON: "bank klient"
   supervisorId?: string;
   supervisorName?: string;
   accountantPerc?: number;
+  bankClientPerc?: number; // New from JSON: "% банк клиент"
   bankClientSum?: number;
+  chiefAccountantPerc?: number; // New from JSON: "%Bosh buxgalter Yorqinoy"
   chiefAccountantSum?: number;
   supervisorPerc?: number;
   statsType?: StatsType;
-  itParkResident?: boolean;
+  itParkResident?: boolean | string; // Changed to allow "oylik/kvartalni" string
   statReports?: string[];
+  requiredReports?: string[]; // New: List of reports company MUST submit (e.g. "QQS", "1-KB")
   serviceScope?: string[];
+  isInternalContractor?: boolean; // New: Flag for "Ichki firma"
+  internalContractorId?: string; // New: Link to "Ichki firma"
 
   // Tab 1: PASPORT
   brandName?: string;

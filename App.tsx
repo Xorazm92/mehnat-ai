@@ -40,6 +40,7 @@ import {
   deleteExpense,
   fetchContractAssignments
 } from './lib/supabaseData';
+import { seedFirmaData } from './lib/seedFirmaData';
 import type { Session } from '@supabase/supabase-js';
 import { ALLOWED_VIEWS, ROLES, UserRole } from './lib/permissions';
 
@@ -74,6 +75,13 @@ const App: React.FC = () => {
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (selectedCompany) {
+      const updated = companies.find(c => c.id === selectedCompany.id);
+      if (updated) setSelectedCompany(updated);
+    }
+  }, [companies]);
 
   useEffect(() => {
     const init = async () => {
@@ -126,6 +134,53 @@ const App: React.FC = () => {
       fetchExpenses(),
       fetchContractAssignments()
     ]);
+
+    // Derive correct staff roles from companies data
+    // DB has all as 'accountant' by default — fix using company references
+    const roleCountMap = new Map<string, { accountant: number; bank_manager: number; supervisor: number }>();
+    c.forEach(company => {
+      // By ID
+      if (company.accountantId) {
+        if (!roleCountMap.has(company.accountantId)) roleCountMap.set(company.accountantId, { accountant: 0, bank_manager: 0, supervisor: 0 });
+        roleCountMap.get(company.accountantId)!.accountant++;
+      }
+      if (company.bankClientId) {
+        if (!roleCountMap.has(company.bankClientId)) roleCountMap.set(company.bankClientId, { accountant: 0, bank_manager: 0, supervisor: 0 });
+        roleCountMap.get(company.bankClientId)!.bank_manager++;
+      }
+      if (company.supervisorId) {
+        if (!roleCountMap.has(company.supervisorId)) roleCountMap.set(company.supervisorId, { accountant: 0, bank_manager: 0, supervisor: 0 });
+        roleCountMap.get(company.supervisorId)!.supervisor++;
+      }
+      // By Name (for staff without IDs)
+      s.forEach(staff => {
+        const sn = staff.name.trim().toLowerCase();
+        if (!company.bankClientId && company.bankClientName?.trim().toLowerCase() === sn) {
+          if (!roleCountMap.has(staff.id)) roleCountMap.set(staff.id, { accountant: 0, bank_manager: 0, supervisor: 0 });
+          roleCountMap.get(staff.id)!.bank_manager++;
+        }
+        if (!company.supervisorId && company.supervisorName?.trim().toLowerCase() === sn) {
+          if (!roleCountMap.has(staff.id)) roleCountMap.set(staff.id, { accountant: 0, bank_manager: 0, supervisor: 0 });
+          roleCountMap.get(staff.id)!.supervisor++;
+        }
+      });
+    });
+
+    // Apply derived roles
+    s.forEach(staff => {
+      const counts = roleCountMap.get(staff.id);
+      if (counts) {
+        if (counts.bank_manager > counts.accountant && counts.bank_manager >= counts.supervisor) {
+          staff.role = 'bank_manager';
+        } else if (counts.supervisor > counts.accountant && counts.supervisor > counts.bank_manager) {
+          staff.role = 'supervisor';
+        }
+        // If accountant is highest or equal, keep 'accountant' (already default)
+      }
+      // Special: Yorqinoy is always chief
+      if (staff.name.trim().toLowerCase() === 'yorqinoy') staff.role = 'chief';
+    });
+
     setCompanies(c);
     setOperations(o);
     setStaff(s);
@@ -150,8 +205,21 @@ const App: React.FC = () => {
 
   const handleSync = async () => {
     setIsSyncing(true);
-    await refreshData();
-    setIsSyncing(false);
+    try {
+      toast.info('Ma\'lumotlar yangilanmoqda...');
+      const seedResult = await seedFirmaData();
+      if (seedResult.success) {
+        toast.success(`Tizim yangilandi! ${seedResult.count} ta firma tekshirildi.`);
+      } else {
+        toast.warning('Fayldan yangilashda xatolik, lekin tizim ishmoqda.');
+      }
+      await refreshData();
+    } catch (e) {
+      console.error(e);
+      toast.error('Xatolik yuz berdi');
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleDashboardFilter = (filterId: string) => {
@@ -389,6 +457,7 @@ const App: React.FC = () => {
                   <StaffModule
                     staff={staff}
                     companies={companies}
+                    operations={operations}
                     lang={lang}
                     onSave={async (s) => { await upsertStaff(s); refreshData(); }}
                     onDelete={async (id) => {
@@ -427,6 +496,7 @@ const App: React.FC = () => {
                   <PayrollDrafts
                     staff={staff}
                     companies={companies}
+                    operations={operations}
                     lang={lang}
                     userRole={userRole}
                   />

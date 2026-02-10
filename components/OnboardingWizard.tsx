@@ -28,9 +28,10 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
     });
 
     const [assignments, setAssignments] = useState<any[]>(initialAssignments || [
-        { role: 'accountant', userId: '', salaryType: 'percent', salaryValue: 70 },
-        { role: 'controller', userId: '', salaryType: 'fixed', salaryValue: 50000 },
-        { role: 'bank_manager', userId: '', salaryType: 'fixed', salaryValue: 50000 }
+        { role: 'accountant', userId: '', salaryType: 'percent', salaryValue: 20 },
+        { role: 'chief', userId: 'b717137c-607f-4f16-91ba-01ec093c3288', salaryType: 'percent', salaryValue: 7 }, // Yorqinoy focus
+        { role: 'controller', userId: '', salaryType: 'percent', salaryValue: 5 },
+        { role: 'bank_manager', userId: '', salaryType: 'percent', salaryValue: 5 }
     ]);
 
     const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
@@ -93,13 +94,59 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ichki Shartnoma Tomoni</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Brend Nomi (Brand Name)</label>
                                 <input
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
-                                    placeholder="Sizning qaysi firmangiz bilan shartnoma?"
-                                    value={formData.internalContractor || ''}
-                                    onChange={e => setFormData({ ...formData, internalContractor: e.target.value })}
+                                    placeholder="Masalan: MONTAJ"
+                                    value={formData.brandName || ''}
+                                    onChange={e => setFormData({ ...formData, brandName: e.target.value })}
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Direktor Ism-Sharifi</label>
+                                <input
+                                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
+                                    placeholder="Masalan: Sobirov Ali"
+                                    value={formData.directorName || ''}
+                                    onChange={e => setFormData({ ...formData, directorName: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Direktor Telefoni</label>
+                                <input
+                                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
+                                    placeholder="+998 90 123 45 67"
+                                    value={formData.directorPhone || ''}
+                                    onChange={e => setFormData({ ...formData, directorPhone: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2 col-span-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Yuridik Manzil</label>
+                                <input
+                                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
+                                    placeholder="Masalan: Toshkent sh., Chilonzor tumani..."
+                                    value={formData.legalAddress || ''}
+                                    onChange={e => setFormData({ ...formData, legalAddress: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ichki Shartnoma Tomoni</label>
+                                <select
+                                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold appearance-none"
+                                    value={formData.internalContractor || ''}
+                                    onChange={e => setFormData({ ...formData, internalContractor: e.target.value, isInternalContractor: false })}
+                                >
+                                    <option value="">Tanlanmagan</option>
+                                    <option value="Seven UP">Seven UP</option>
+                                    <option value="Finance Council">Finance Council</option>
+                                    <option value="The power full">The power full</option>
+                                    <option value="Barokat team">Barokat team</option>
+                                    <option value="SOFI TEAM">SOFI TEAM</option>
+                                    <option value="OOO SARDORBEK HOUSE">OOO SARDORBEK HOUSE</option>
+                                    <option value="TASTIFY">TASTIFY</option>
+                                    <option value="Toolstrek Ca">Toolstrek Ca</option>
+                                    <option value="MOLIYA AI">MOLIYA AI</option>
+                                </select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Shartnoma Summasi</label>
@@ -108,6 +155,24 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
                                     value={formData.contractAmount || 0}
                                     onChange={e => setFormData({ ...formData, contractAmount: Number(e.target.value) })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Shartnoma №</label>
+                                <input
+                                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
+                                    placeholder="Masalan: 12-A"
+                                    value={formData.contractNumber || ''}
+                                    onChange={e => setFormData({ ...formData, contractNumber: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Shartnoma Sanasi</label>
+                                <input
+                                    type="date"
+                                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
+                                    value={formData.contractDate || ''}
+                                    onChange={e => setFormData({ ...formData, contractDate: e.target.value })}
                                 />
                             </div>
                         </div>
@@ -125,9 +190,10 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     value={formData.serverInfo}
                                     onChange={e => setFormData({ ...formData, serverInfo: e.target.value as ServerInfo })}
                                 >
-                                    <option value="CR1">CR1 (Server 1)</option>
-                                    <option value="CR2">CR2 (Server 2)</option>
-                                    <option value="CR3">CR3 (Server 3)</option>
+                                    <option value="srv1c1">srv1c1 (Server 1)</option>
+                                    <option value="srv1c2">srv1c2 (Server 2)</option>
+                                    <option value="srv1c3">srv1c3 (Server 3)</option>
+                                    <option value="srv2">srv2 (Main Server)</option>
                                 </select>
                             </div>
                             <div className="space-y-2">
@@ -137,6 +203,15 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     placeholder="Masalan: Montaj_Teplo_2024"
                                     value={formData.baseName1c || ''}
                                     onChange={e => setFormData({ ...formData, baseName1c: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2 col-span-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Server Nomi (Firma Bazasi uchun)</label>
+                                <input
+                                    className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
+                                    placeholder="Masalan: 44.AMIRBEK"
+                                    value={formData.serverName || ''}
+                                    onChange={e => setFormData({ ...formData, serverName: e.target.value })}
                                 />
                             </div>
                         </div>
@@ -173,6 +248,27 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                             </div>
                                             <span className="font-bold text-slate-800 dark:text-white">{tax.label}</span>
                                         </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block ml-1">Majburiy Hisobotlar (Required)</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {['1-KB', '1-Mehnat', 'QQS', 'Aylanma', 'Foyda', 'Suv', 'Yer', 'Mulk'].map(rep => (
+                                        <label key={rep} className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-xl border border-apple-border dark:border-apple-darkBorder cursor-pointer hover:border-apple-accent transition-all">
+                                            <input
+                                                type="checkbox"
+                                                className="w-4 h-4 accent-apple-accent"
+                                                checked={formData.requiredReports?.includes(rep) || false}
+                                                onChange={e => {
+                                                    const current = formData.requiredReports || [];
+                                                    const next = e.target.checked ? [...current, rep] : current.filter(r => r !== rep);
+                                                    setFormData({ ...formData, requiredReports: next });
+                                                }}
+                                            />
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{rep}</span>
+                                        </label>
                                     ))}
                                 </div>
                             </div>
@@ -229,7 +325,9 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                             {assignments.map((asgn) => (
                                 <div key={asgn.role} className="p-6 bg-slate-50 dark:bg-white/5 rounded-2xl border border-apple-border dark:border-apple-darkBorder grid grid-cols-12 gap-6 items-end">
                                     <div className="col-span-3">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">{asgn.role.toUpperCase().replace('_', ' ')}</label>
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
+                                            {asgn.role === 'chief' ? 'BOSH BUXGALTER (YORQINOY)' : asgn.role.toUpperCase().replace('_', ' ')}
+                                        </label>
                                         <select
                                             className="w-full p-3 rounded-xl bg-white dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder font-bold text-sm"
                                             value={asgn.userId}

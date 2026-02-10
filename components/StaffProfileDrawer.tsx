@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Staff, Company, OperationEntry, Language, EmployeeSalarySummary, ContractAssignment } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Staff, Company, OperationEntry, Language, EmployeeSalarySummary, ContractAssignment, MonthlyPerformance } from '../types';
 import { translations } from '../lib/translations';
 import StatusBadge from './StatusBadge';
-import { calculateEmployeeSalary } from '../lib/supabaseData';
+import { fetchMonthlyPerformance } from '../lib/supabaseData';
+import { calculateCompanySalaries } from '../lib/kpiLogic';
 import {
   X,
   Building2,
@@ -31,21 +32,73 @@ interface Props {
 const StaffProfileDrawer: React.FC<Props> = ({ staff, companies, assignments, operations, lang, onClose }) => {
   const t = translations[lang];
   const [activeTab, setActiveTab] = useState<'portfolio' | 'finance' | 'docs'>('portfolio');
-  const [salarySummary, setSalarySummary] = useState<EmployeeSalarySummary | null>(null);
+  const [performances, setPerformances] = useState<MonthlyPerformance[]>([]);
   const [loadingSalary, setLoadingSalary] = useState(false);
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
-  // Fetch salary data when tab changes to finance or initially
+  const salarySummary = useMemo(() => {
+    const checkMonth = currentMonth;
+    let totalBase = 0;
+    let totalKpiBonus = 0;
+    let totalKpiPenalty = 0;
+
+    const sNameLower = staff.name.trim().toLowerCase();
+
+    const myCompanies = companies.filter(c =>
+      c.accountantId === staff.id ||
+      c.bankClientId === staff.id ||
+      c.supervisorId === staff.id ||
+      (!c.bankClientId && c.bankClientName && c.bankClientName.trim().toLowerCase() === sNameLower) ||
+      (!c.supervisorId && c.supervisorName && c.supervisorName.trim().toLowerCase() === sNameLower)
+    );
+
+    myCompanies.forEach(c => {
+      const op = operations.find(o => o.companyId === c.id && o.period === checkMonth);
+      const results = calculateCompanySalaries(c, op, performances);
+
+      results.filter(r =>
+        r.staffId === staff.id ||
+        (r.staffName && r.staffName.trim().toLowerCase() === sNameLower)
+      ).forEach(res => {
+        totalBase += res.baseAmount;
+        if (res.finalAmount < res.baseAmount) {
+          totalKpiPenalty += (res.baseAmount - res.finalAmount);
+        } else if (res.finalAmount > res.baseAmount) {
+          totalKpiBonus += (res.finalAmount - res.baseAmount);
+        }
+      });
+    });
+
+    return {
+      employeeId: staff.id,
+      employeeName: staff.name,
+      employeeRole: staff.role,
+      month: currentMonth,
+      companyCount: myCompanies.length,
+      baseSalary: totalBase,
+      kpiBonus: totalKpiBonus,
+      kpiPenalty: -totalKpiPenalty,
+      adjustments: 0,
+      totalSalary: totalBase - totalKpiPenalty + totalKpiBonus,
+      performanceDetails: performances
+    } as EmployeeSalarySummary;
+  }, [staff.id, companies, operations, currentMonth, performances]);
+
+  // Fetch performance data when tab changes to finance or initially
   useEffect(() => {
-    const loadSalary = async () => {
+    const loadPerf = async () => {
       setLoadingSalary(true);
-      const data = await calculateEmployeeSalary(staff.id, `${currentMonth}-01`);
-      setSalarySummary(data);
+      try {
+        const data = await fetchMonthlyPerformance(`${currentMonth}-01`, undefined, staff.id);
+        setPerformances(data);
+      } catch (e) {
+        console.error(e);
+      }
       setLoadingSalary(false);
     };
 
-    if (activeTab === 'finance' && !salarySummary) {
-      loadSalary();
+    if (activeTab === 'finance' && performances.length === 0) {
+      loadPerf();
     }
   }, [activeTab, staff.id]);
 

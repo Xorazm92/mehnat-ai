@@ -4,7 +4,7 @@ import { translations } from '../lib/translations';
 import StatusBadge from './StatusBadge';
 import { fetchDocuments, fetchCredentials, fetchClientHistory, logCredentialAccess } from '../lib/supabaseData';
 import { supabase } from '../lib/supabaseClient';
-import { X, Shield, History, FileText, Lock, Globe, Building, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Send, Check, Calculator, Trash2 } from 'lucide-react';
+import { X, Shield, History, FileText, Lock, Globe, Building, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Send, Check, Calculator, Trash2, Plus, ChevronRight, ArrowRight } from 'lucide-react';
 
 interface DrawerProps {
   company: Company | null;
@@ -28,6 +28,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabId>('pasport');
+  const [isEditingMainLogin, setIsEditingMainLogin] = useState(false);
+  const [isAddingCredential, setIsAddingCredential] = useState(false);
+  const [newCred, setNewCred] = useState({ serviceName: '', loginId: '', password: '', notes: '' });
+  const [tempLogin, setTempLogin] = useState(company.login || '');
+  const [tempPassword, setTempPassword] = useState(company.password || '');
 
   useEffect(() => {
     if (company) {
@@ -172,6 +177,21 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   <p className="text-sm text-slate-300">Hujjatlar mavjud emas</p>
                 )}
               </div>
+
+              {/* Service Scope in Passport */}
+              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                <div className="flex items-center gap-3 mb-4">
+                  <Check size={16} className="text-apple-accent" />
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Xizmatlar Ko'lami</h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {company.serviceScope?.length ? company.serviceScope.map(s => (
+                    <span key={s} className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 text-[10px] font-black rounded-lg uppercase border border-emerald-500/10">{s}</span>
+                  )) : (
+                    <p className="text-xs font-bold text-slate-300">Xizmatlar tanlanmagan</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -181,7 +201,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                 <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">1C Server & Baza</h4>
                   <div className="space-y-2">
-                    <p className="text-sm font-black text-slate-700 dark:text-white">Server: <span className="text-apple-accent">{company.serverInfo || '—'}</span></p>
+                    <p className="text-sm font-black text-slate-700 dark:text-white">Server ID: <span className="text-apple-accent">{company.serverInfo || '—'}</span></p>
+                    {company.serverName && (
+                      <p className="text-sm font-black text-slate-700 dark:text-white">Server Nomi: <span className="text-emerald-500">{company.serverName}</span></p>
+                    )}
                     <p className="text-xs font-bold text-slate-400">Baza: {company.baseName1c || '—'}</p>
                   </div>
                 </div>
@@ -200,12 +223,29 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                     )) : <p className="text-xs text-slate-300">belgilanmagan</p>}
                   </div>
                 </div>
+
                 <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Xizmatlar Ko'lami</h4>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Majburiy Hisobotlar</h4>
                   <div className="flex flex-wrap gap-2">
-                    {company.serviceScope?.length ? company.serviceScope.map(s => (
-                      <span key={s} className="px-2.5 py-1 bg-apple-accent/10 text-[10px] font-black rounded-lg text-apple-accent">{s}</span>
+                    {company.requiredReports?.length ? company.requiredReports.map(r => (
+                      <span key={r} className="px-2.5 py-1 bg-rose-500/10 text-[10px] font-black rounded-lg text-rose-500">{r}</span>
                     )) : <p className="text-xs text-slate-300">belgilanmagan</p>}
+                  </div>
+                </div>
+
+                <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder col-span-1 md:col-span-2">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Xizmatlar Ko'lami (Scope)</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {company.serviceScope?.length ? company.serviceScope.map(s => (
+                      <div key={s} className="flex items-center gap-2 px-3 py-2 bg-apple-accent/5 border border-apple-accent/10 text-apple-accent rounded-xl">
+                        <Check size={12} className="shrink-0" />
+                        <span className="text-[10px] font-black uppercase truncate">{s}</span>
+                      </div>
+                    )) : (
+                      <div className="col-span-full py-4 text-center border-2 border-dashed border-apple-border dark:border-apple-darkBorder rounded-2xl">
+                        <p className="text-xs font-bold text-slate-300 tracking-tight">Xizmatlar tanlanmagan</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -229,36 +269,181 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
           {activeTab === 'loginlar' && (
             <div className="space-y-6 animate-fade-in">
               <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <Globe size={16} className="text-apple-accent" />
                     <h4 className="text-sm font-black text-slate-700 dark:text-white">Soliq.uz (Asosiy)</h4>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Login</p>
-                    <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200">{company.login || '—'}</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Parol</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200">
-                        {showPasswords['main'] ? company.password || '—' : '••••••••'}
-                      </p>
-                      <button onClick={() => setShowPasswords(prev => ({ ...prev, main: !prev.main }))} className="text-slate-300">
-                        {showPasswords['main'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                  {isEditingMainLogin ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setIsEditingMainLogin(false);
+                          setTempLogin(company.login || '');
+                          setTempPassword(company.password || '');
+                        }}
+                        className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase hover:text-slate-600 transition-colors"
+                      >
+                        Bekor qilish
                       </button>
+                      <button
+                        onClick={async () => {
+                          if (onSave) {
+                            await onSave({ ...company, login: tempLogin, password: tempPassword });
+                          }
+                          setIsEditingMainLogin(false);
+                        }}
+                        className="px-4 py-1.5 bg-apple-accent text-white text-[10px] font-black uppercase rounded-lg shadow-lg shadow-blue-500/10 hover:bg-blue-600 transition-all font-bold"
+                      >
+                        Saqlash
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setIsEditingMainLogin(true)}
+                      className="px-3 py-1.5 bg-slate-50 dark:bg-white/5 text-[10px] font-black text-slate-400 uppercase rounded-lg hover:text-apple-accent hover:bg-apple-accent/5 transition-all"
+                    >
+                      Tahrirlash
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Login</p>
+                    {isEditingMainLogin ? (
+                      <input
+                        type="text"
+                        className="w-full bg-white dark:bg-apple-darkBg p-2 rounded-lg border border-apple-border dark:border-apple-darkBorder font-mono text-sm font-bold outline-none focus:ring-2 focus:ring-apple-accent/20"
+                        value={tempLogin}
+                        onChange={(e) => setTempLogin(e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200 ml-1">{company.login || '—'}</p>
+                    )}
+                  </div>
+                  <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Parol</p>
+                    <div className="flex items-center justify-between">
+                      {isEditingMainLogin ? (
+                        <input
+                          type="text"
+                          className="w-full bg-white dark:bg-apple-darkBg p-2 rounded-lg border border-apple-border dark:border-apple-darkBorder font-mono text-sm font-bold outline-none focus:ring-2 focus:ring-apple-accent/20"
+                          value={tempPassword}
+                          onChange={(e) => setTempPassword(e.target.value)}
+                        />
+                      ) : (
+                        <>
+                          <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200 ml-1">
+                            {showPasswords['main'] ? company.password || '—' : '••••••••'}
+                          </p>
+                          <button onClick={() => setShowPasswords(prev => ({ ...prev, main: !prev.main }))} className="text-slate-300 hover:text-apple-accent transition-colors">
+                            {showPasswords['main'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {credentials.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Qo'shimcha Kirish Ma'lumotlari</h4>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between ml-1">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Qo'shimcha Kirish Ma'lumotlari</h4>
+                  <button
+                    onClick={() => setIsAddingCredential(true)}
+                    className="flex items-center gap-1.5 text-[10px] font-black text-apple-accent uppercase py-1 px-3 bg-apple-accent/5 rounded-full hover:bg-apple-accent/10 transition-all"
+                  >
+                    <Plus size={12} /> Yangi Qo'shish
+                  </button>
+                </div>
+
+                {isAddingCredential && (
+                  <div className="p-5 bg-slate-50 dark:bg-apple-darkCard rounded-2xl border-2 border-dashed border-apple-accent/30 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="col-span-2">
+                        <label className="text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Xizmat nomi (Masalan: Didox, Bank-Klient)</label>
+                        <input
+                          type="text"
+                          placeholder="Xizmat nomi..."
+                          className="w-full bg-white dark:bg-apple-darkBg p-3 rounded-xl border border-apple-border dark:border-apple-darkBorder font-bold text-sm outline-none focus:ring-2 focus:ring-apple-accent/20 transition-all"
+                          value={newCred.serviceName}
+                          onChange={e => setNewCred({ ...newCred, serviceName: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Login</label>
+                        <input
+                          type="text"
+                          placeholder="Login..."
+                          className="w-full bg-white dark:bg-apple-darkBg p-3 rounded-xl border border-apple-border dark:border-apple-darkBorder font-mono font-bold text-sm outline-none focus:ring-2 focus:ring-apple-accent/20 transition-all"
+                          value={newCred.loginId}
+                          onChange={e => setNewCred({ ...newCred, loginId: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Parol</label>
+                        <input
+                          type="text"
+                          placeholder="Parol..."
+                          className="w-full bg-white dark:bg-apple-darkBg p-3 rounded-xl border border-apple-border dark:border-apple-darkBorder font-mono font-bold text-sm outline-none focus:ring-2 focus:ring-apple-accent/20 transition-all"
+                          value={newCred.password}
+                          onChange={e => setNewCred({ ...newCred, password: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Izoh (ixtiyoriy)</label>
+                        <textarea
+                          placeholder="Tahlillar, kalitlar va h.k..."
+                          className="w-full bg-white dark:bg-apple-darkBg p-3 rounded-xl border border-apple-border dark:border-apple-darkBorder font-medium text-xs outline-none focus:ring-2 focus:ring-apple-accent/20 transition-all resize-none"
+                          rows={2}
+                          value={newCred.notes}
+                          onChange={e => setNewCred({ ...newCred, notes: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setIsAddingCredential(false)}
+                        className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase hover:text-slate-600 transition-colors"
+                      >
+                        Bekor qilish
+                      </button>
+                      <button
+                        disabled={!newCred.serviceName || !newCred.loginId}
+                        onClick={async () => {
+                          const { data, error } = await supabase.from('client_credentials').insert({
+                            company_id: company.id,
+                            service_name: newCred.serviceName,
+                            login_id: newCred.loginId,
+                            encrypted_password: newCred.password,
+                            notes: newCred.notes,
+                            updated_by: (await supabase.auth.getUser()).data.user?.id
+                          }).select();
+
+                          if (data) {
+                            setCredentials(prev => [...prev, ...data.map(d => ({
+                              id: d.id,
+                              companyId: d.company_id,
+                              serviceName: d.service_name,
+                              loginId: d.login_id,
+                              encryptedPassword: d.encrypted_password,
+                              notes: d.notes
+                            }))]);
+                            setIsAddingCredential(false);
+                            setNewCred({ serviceName: '', loginId: '', password: '', notes: '' });
+                          }
+                        }}
+                        className="px-6 py-2 bg-apple-accent text-white text-[10px] font-black uppercase rounded-xl shadow-lg shadow-blue-500/10 hover:bg-blue-600 transition-all disabled:opacity-50"
+                      >
+                        Qo'shish
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {credentials.map((cred) => (
-                    <div key={cred.id} className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder group relative">
+                    <div key={cred.id} className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder group relative hover:border-apple-accent/30 transition-all">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
                           <Key size={16} className="text-apple-accent" />
@@ -280,17 +465,17 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
+                        <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-apple-border dark:border-apple-darkBorder">
                           <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Login</p>
-                          <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200">{cred.loginId || '—'}</p>
+                          <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200 truncate">{cred.loginId || '—'}</p>
                         </div>
-                        <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
+                        <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-apple-border dark:border-apple-darkBorder">
                           <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Parol</p>
                           <div className="flex items-center justify-between">
                             <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200">
                               {showPasswords[cred.id] ? cred.encryptedPassword || '—' : '••••••••'}
                             </p>
-                            <button onClick={() => handleShowPassword(cred.id, company.id)} className="text-slate-300">
+                            <button onClick={() => handleShowPassword(cred.id, company.id)} className="text-slate-300 hover:text-apple-accent transition-colors">
                               {showPasswords[cred.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                             </button>
                           </div>
@@ -305,7 +490,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -378,6 +563,16 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
           {activeTab === 'shartnoma' && (
             <div className="space-y-6 animate-fade-in">
               <div className="grid grid-cols-2 gap-4">
+                {company.internalContractor && (
+                  <div className="p-5 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 col-span-2">
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Ichki Pudratchi (Ijrochi)</p>
+                    <div className="flex items-center gap-3">
+                      <Building2 size={24} className="text-indigo-500" />
+                      <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">{company.internalContractor}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Shartnoma Raqami</p>
                   <p className="text-sm font-black text-slate-800 dark:text-white">{company.contractNumber || '—'}</p>
@@ -394,7 +589,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                 <div className="grid grid-cols-2 gap-8">
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Xizmat Narxi</p>
-                    <p className="text-2xl font-black text-apple-accent">{contractAmount.toLocaleString()} so'm</p>
+                    <p className="text-2xl font-black text-apple-accent">{company.contractAmount?.toLocaleString()} so'm</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Joriy Balans</p>
@@ -403,24 +598,45 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                     </p>
                   </div>
                 </div>
+
+                <div className="mt-8 pt-8 border-t border-slate-100 dark:border-white/5">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Kaskadli Taqsimot (Oylik prognozi)</h4>
+                  <div className="space-y-3">
+                    {/* Calculation: Head 7%, Controller 5%, Bank 5%, Accountant 20% */}
+                    {[
+                      { label: 'Bosh Buxgalter (Yorqinoy)', perc: company.chiefAccountantPerc || 7, sum: company.chiefAccountantSum, type: 'head' },
+                      { label: 'Nazoratchi', perc: company.supervisorPerc || 5, type: 'sup' },
+                      { label: 'Bank Klient', perc: company.bankClientPerc || 5, sum: company.bankClientSum, type: 'bank' },
+                      { label: 'Buxgalter', perc: company.accountantPerc || 20, type: 'acc' }
+                    ].map((item, i) => {
+                      const amount = company.contractAmount || 0;
+                      const val = item.sum || (amount * (item.perc / 100));
+                      return (
+                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{item.label}</span>
+                          <div className="text-right">
+                            <p className="text-sm font-black text-slate-800 dark:text-white">{val.toLocaleString()} so'm</p>
+                            <p className="text-[10px] text-slate-400">{item.sum ? 'Fikslangan' : `${item.perc}% ulush`}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <div className="flex items-center justify-between p-3 bg-emerald-500/10 rounded-xl mt-2 border border-emerald-500/20">
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Kompaniya Qoldig'i</span>
+                      <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                        {((company.contractAmount || 0) - (
+                          (company.chiefAccountantSum || ((company.contractAmount || 0) * (company.chiefAccountantPerc || 7) / 100)) +
+                          (company.supervisorPerc ? (company.contractAmount || 0) * company.supervisorPerc / 100 : 0) +
+                          (company.bankClientSum || ((company.contractAmount || 0) * (company.bankClientPerc || 5) / 100)) +
+                          ((company.contractAmount || 0) * (company.accountantPerc || 20) / 100)
+                        )).toLocaleString()} so'm
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
-                <div className="flex items-center gap-3 mb-4">
-                  <Calculator size={16} className="text-apple-accent" />
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Taqsimot</h4>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 font-bold">Firma Ulushi:</span>
-                    <span className="font-black text-slate-700 dark:text-white">{firmaShare.toLocaleString()} so'm ({(company.firmaSharePercent || 50)}%)</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 font-bold">Buxgalter Ulushi:</span>
-                    <span className="font-black text-slate-700 dark:text-white">{buxgalterShare.toLocaleString()} so'm ({(company.accountantPerc || 20)}%)</span>
-                  </div>
-                </div>
-              </div>
+
             </div>
           )}
 

@@ -1,20 +1,23 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Staff, Company, Language, EmployeeSalarySummary } from '../types';
-import { calculateEmployeeSalary } from '../lib/supabaseData';
+import { Staff, Company, Language, EmployeeSalarySummary, OperationEntry, MonthlyPerformance } from '../types';
+import { fetchMonthlyPerformance } from '../lib/supabaseData';
+import { calculateCompanySalaries } from '../lib/kpiLogic';
 import { translations } from '../lib/translations';
 import { DollarSign, CheckCircle2, AlertCircle, FileText, ChevronRight } from 'lucide-react';
 
 interface Props {
     staff: Staff[];
     companies: Company[];
+    operations: OperationEntry[];
     lang: Language;
     userRole?: string;
 }
 
-const PayrollDrafts: React.FC<Props> = ({ staff, companies, lang, userRole }) => {
+const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, userRole }) => {
     const t = translations[lang];
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
-    const [drafts, setDrafts] = useState<Record<string, EmployeeSalarySummary>>({});
+    const [performanceList, setPerformanceList] = useState<MonthlyPerformance[]>([]);
     const [loading, setLoading] = useState(false);
 
     const superAdminCommission = useMemo(() => {
@@ -22,20 +25,74 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, lang, userRole }) =>
         return totalTurnover * 0.07;
     }, [companies]);
 
-    const loadDrafts = async () => {
-        setLoading(true);
+    // Calculate drafts on the fly using useMemo instead of async state for better reactivity
+    const drafts = useMemo(() => {
         const results: Record<string, EmployeeSalarySummary> = {};
-        for (const s of staff) {
-            const summary = await calculateEmployeeSalary(s.id, `${month}-01`);
-            if (summary) results[s.id] = summary;
+        const checkMonth = month;
+
+        staff.forEach(s => {
+            let totalBase = 0;
+            let totalKpiBonus = 0;
+            let totalKpiPenalty = 0;
+
+            const sNameLower = s.name.trim().toLowerCase();
+
+            const myCompanies = companies.filter(c =>
+                c.accountantId === s.id ||
+                c.bankClientId === s.id ||
+                c.supervisorId === s.id ||
+                (!c.bankClientId && c.bankClientName && c.bankClientName.trim().toLowerCase() === sNameLower) ||
+                (!c.supervisorId && c.supervisorName && c.supervisorName.trim().toLowerCase() === sNameLower)
+            );
+
+            myCompanies.forEach(c => {
+                const op = operations.find(o => o.companyId === c.id && o.period === checkMonth);
+                const roleResults = calculateCompanySalaries(c, op, performanceList);
+
+                roleResults.filter(r =>
+                    r.staffId === s.id ||
+                    (r.staffName && r.staffName.trim().toLowerCase() === sNameLower)
+                ).forEach(res => {
+                    totalBase += res.baseAmount;
+                    if (res.finalAmount < res.baseAmount) {
+                        totalKpiPenalty += (res.baseAmount - res.finalAmount);
+                    } else if (res.finalAmount > res.baseAmount) {
+                        totalKpiBonus += (res.finalAmount - res.baseAmount);
+                    }
+                });
+            });
+
+            results[s.id] = {
+                employeeId: s.id,
+                employeeName: s.name,
+                employeeRole: s.role,
+                month,
+                companyCount: myCompanies.length,
+                baseSalary: totalBase,
+                kpiBonus: totalKpiBonus,
+                kpiPenalty: -totalKpiPenalty,
+                adjustments: 0,
+                totalSalary: totalBase - totalKpiPenalty + totalKpiBonus,
+                performanceDetails: performanceList.filter(p => p.employeeId === s.id)
+            };
+        });
+        return results;
+    }, [staff, companies, operations, month, performanceList]);
+
+    const loadPerformance = async () => {
+        setLoading(true);
+        try {
+            const data = await fetchMonthlyPerformance(`${month}-01`);
+            setPerformanceList(data);
+        } catch (e) {
+            console.error(e);
         }
-        setDrafts(results);
         setLoading(false);
     };
 
     useEffect(() => {
-        loadDrafts();
-    }, [month, staff]);
+        loadPerformance();
+    }, [month]);
 
     return (
         <div className="space-y-8 animate-fade-in">
@@ -63,7 +120,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, lang, userRole }) =>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {staff.map(s => {
                     const draft = drafts[s.id];
-                    if (!draft) return null;
+                    if (!draft || draft.companyCount === 0) return null;
 
                     return (
                         <div key={s.id} className="bg-white dark:bg-apple-darkCard p-6 rounded-[2rem] border border-apple-border dark:border-apple-darkBorder hover:shadow-2xl transition-all group">
@@ -91,7 +148,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, lang, userRole }) =>
                                     <span className="text-xs font-bold text-slate-500">KPI Bonus</span>
                                     <span className="font-mono font-black text-emerald-500">+{draft.kpiBonus.toLocaleString()} sum</span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-transparent">
+                                <div className="flex justify-between items-center p-3 bg-rose-50 dark:bg-rose-500/5 rounded-xl border border-transparent">
                                     <span className="text-xs font-bold text-slate-500">KPI Jarima</span>
                                     <span className="font-mono font-black text-rose-500">{draft.kpiPenalty.toLocaleString()} sum</span>
                                 </div>
@@ -108,6 +165,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, lang, userRole }) =>
                     );
                 })}
             </div>
+            {loading && <div className="text-center py-10 text-slate-400 animate-pulse font-bold">Yuklanmoqda...</div>}
         </div>
     );
 };

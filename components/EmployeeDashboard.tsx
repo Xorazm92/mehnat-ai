@@ -1,20 +1,63 @@
-import React, { useState, useEffect } from 'react';
-import { EmployeeSalarySummary, Language, MonthlyPerformance } from '../types';
-import { calculateEmployeeSalary, fetchMonthlyPerformance } from '../lib/supabaseData';
+import React, { useState, useEffect, useMemo } from 'react';
+import { EmployeeSalarySummary, Language, MonthlyPerformance, Company, OperationEntry } from '../types';
+import { fetchMonthlyPerformance } from '../lib/supabaseData';
+import { calculateCompanySalaries } from '../lib/kpiLogic';
 import { translations } from '../lib/translations';
 import { Wallet, TrendingUp, AlertCircle, Award, Star, TrendingDown } from 'lucide-react';
 
 interface Props {
     currentUserId: string;
+    companies: Company[];
+    operations: OperationEntry[];
     lang: Language;
 }
 
-const EmployeeDashboard: React.FC<Props> = ({ currentUserId, lang }) => {
+const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operations, lang }) => {
     const t = translations[lang];
-    const [summary, setSummary] = useState<EmployeeSalarySummary | null>(null);
     const [performances, setPerformances] = useState<MonthlyPerformance[]>([]);
     const [loading, setLoading] = useState(true);
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+
+    const summary = useMemo(() => {
+        const checkMonth = month;
+        let totalBase = 0;
+        let totalKpiBonus = 0;
+        let totalKpiPenalty = 0;
+
+        const myCompanies = companies.filter(c =>
+            c.accountantId === currentUserId ||
+            c.bankClientId === currentUserId ||
+            c.supervisorId === currentUserId
+        );
+
+        myCompanies.forEach(c => {
+            const op = operations.find(o => o.companyId === c.id && o.period === checkMonth);
+            const results = calculateCompanySalaries(c, op, performances);
+
+            results.filter(r => r.staffId === currentUserId).forEach(res => {
+                totalBase += res.baseAmount;
+                if (res.finalAmount < res.baseAmount) {
+                    totalKpiPenalty += (res.baseAmount - res.finalAmount);
+                } else if (res.finalAmount > res.baseAmount) {
+                    totalKpiBonus += (res.finalAmount - res.baseAmount);
+                }
+            });
+        });
+
+        return {
+            employeeId: currentUserId,
+            employeeName: 'Self',
+            employeeRole: '',
+            month,
+            companyCount: myCompanies.length,
+            baseSalary: totalBase,
+            kpiBonus: totalKpiBonus,
+            kpiPenalty: -totalKpiPenalty,
+            adjustments: 0, // Would need fetching adjustments
+            totalSalary: totalBase - totalKpiPenalty + totalKpiBonus,
+            performanceDetails: []
+        } as EmployeeSalarySummary;
+    }, [currentUserId, companies, operations, month, performances]);
 
     useEffect(() => {
         loadData();
@@ -22,12 +65,12 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, lang }) => {
 
     const loadData = async () => {
         setLoading(true);
-        const [salaryData, perfData] = await Promise.all([
-            calculateEmployeeSalary(currentUserId, `${month}-01`),
-            fetchMonthlyPerformance(`${month}-01`, undefined, currentUserId)
-        ]);
-        setSummary(salaryData);
-        setPerformances(perfData);
+        try {
+            const perfData = await fetchMonthlyPerformance(`${month}-01`, undefined, currentUserId);
+            setPerformances(perfData);
+        } catch (e) {
+            console.error(e);
+        }
         setLoading(false);
     };
 

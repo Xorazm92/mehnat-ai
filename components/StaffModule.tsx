@@ -1,19 +1,20 @@
 
 import React, { useState } from 'react';
-import { Staff, Company, Language } from '../types';
+import { Staff, Company, Language, OperationEntry } from '../types';
 import { translations } from '../lib/translations';
 import { UserPlus, Phone, Briefcase, Trash2, Edit3, X, Check } from 'lucide-react';
 
 interface Props {
   staff: Staff[];
   companies: Company[];
+  operations: OperationEntry[];
   lang: Language;
   onSave: (s: Staff) => void;
   onDelete: (id: string) => void;
   onStaffSelect: (s: Staff) => void;
 }
 
-const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete, onStaffSelect }) => {
+const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSave, onDelete, onStaffSelect }) => {
   const t = translations[lang];
   const [isAdding, setIsAdding] = useState(false);
   const [form, setForm] = useState<Partial<Staff>>({});

@@ -1,35 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import { Staff, EmployeeSalarySummary, Language, PayrollAdjustment } from '../types';
-import { calculateEmployeeSalary, upsertPayrollAdjustment, fetchPayrollAdjustments } from '../lib/supabaseData';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Staff, EmployeeSalarySummary, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance } from '../types';
+import { upsertPayrollAdjustment, fetchPayrollAdjustments, fetchMonthlyPerformance } from '../lib/supabaseData';
+import { calculateCompanySalaries } from '../lib/kpiLogic';
 import { translations } from '../lib/translations';
 import { Wallet, MinusCircle, PlusCircle, Save } from 'lucide-react';
 
 interface Props {
     staff: Staff[];
+    companies: Company[];
+    operations: OperationEntry[];
     lang: Language;
     currentUserRole?: string;
 }
 
-const PayrollTable: React.FC<Props> = ({ staff, lang, currentUserRole }) => {
+const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, currentUserRole }) => {
     const t = translations[lang];
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-    const [summaries, setSummaries] = useState<EmployeeSalarySummary[]>([]);
-    const [loading, setLoading] = useState(false);
     const [editingAdj, setEditingAdj] = useState<{ empId: string, type: 'bonus' | 'jarima' | 'avans', amount: number, reason: string } | null>(null);
+    const [adjustmentsList, setAdjustmentsList] = useState<PayrollAdjustment[]>([]);
+    const [performanceList, setPerformanceList] = useState<MonthlyPerformance[]>([]);
+
+    const loadMonthlyData = async () => {
+        try {
+            const [adj, perf] = await Promise.all([
+                fetchPayrollAdjustments(month + '-01'),
+                fetchMonthlyPerformance(month + '-01')
+            ]);
+            setAdjustmentsList(adj);
+            setPerformanceList(perf);
+        } catch (e) {
+            console.error("Error loading monthly data:", e);
+        }
+    };
 
     useEffect(() => {
-        loadData();
-    }, [month, staff]);
+        loadMonthlyData();
+    }, [month]);
 
-    const loadData = async () => {
-        setLoading(true);
-        const results = await Promise.all(
-            staff.map(s => calculateEmployeeSalary(s.id, `${month}-01`))
-        );
-        // Filter out nulls
-        setSummaries(results.filter((s): s is EmployeeSalarySummary => s !== null));
-        setLoading(false);
-    };
+    const summaries = useMemo(() => {
+        return staff.map(s => {
+            const checkMonth = month; // Filter operations by this month if needed
+
+            let totalBase = 0;
+            let totalKpiBonus = 0;
+            let totalKpiPenalty = 0;
+
+            const sNameLower = s.name.trim().toLowerCase();
+
+            const myCompanies = companies.filter(c =>
+                c.accountantId === s.id ||
+                c.bankClientId === s.id ||
+                c.supervisorId === s.id ||
+                // Name-based fallback for staff without profile IDs
+                (!c.bankClientId && c.bankClientName && c.bankClientName.trim().toLowerCase() === sNameLower) ||
+                (!c.supervisorId && c.supervisorName && c.supervisorName.trim().toLowerCase() === sNameLower)
+            );
+
+            myCompanies.forEach(c => {
+                const op = operations.find(o => o.companyId === c.id && o.period === checkMonth);
+                const results = calculateCompanySalaries(c, op, performanceList);
+
+                // Match by ID first, then by name as fallback
+                results.filter(r =>
+                    r.staffId === s.id ||
+                    (r.staffName && r.staffName.trim().toLowerCase() === sNameLower)
+                ).forEach(res => {
+                    totalBase += res.baseAmount;
+
+                    if (res.finalAmount < res.baseAmount) {
+                        const diff = res.baseAmount - res.finalAmount;
+                        totalKpiPenalty += diff;
+                    } else if (res.finalAmount > res.baseAmount) {
+                        totalKpiBonus += (res.finalAmount - res.baseAmount);
+                    }
+                });
+            });
+
+            // Adjustments logic
+            const myAdj = adjustmentsList.filter(a => a.employeeId === s.id && a.month.startsWith(month)).reduce((sum, a) => sum + a.amount, 0);
+
+            return {
+                employeeId: s.id,
+                employeeName: s.name,
+                employeeRole: s.role,
+                month,
+                companyCount: myCompanies.length,
+                baseSalary: totalBase,
+                kpiBonus: totalKpiBonus,
+                kpiPenalty: -totalKpiPenalty,
+                adjustments: myAdj,
+                totalSalary: totalBase - totalKpiPenalty + totalKpiBonus + myAdj,
+                performanceDetails: []
+            } as EmployeeSalarySummary;
+        }).filter(s => s.companyCount > 0);
+    }, [staff, companies, operations, month, adjustmentsList, performanceList]);
 
     const handleAddAdjustment = async () => {
         if (!editingAdj) return;
@@ -41,10 +105,10 @@ const PayrollTable: React.FC<Props> = ({ staff, lang, currentUserRole }) => {
                 adjustmentType: editingAdj.type,
                 amount: editingAdj.type === 'jarima' || editingAdj.type === 'avans' ? -Math.abs(editingAdj.amount) : Math.abs(editingAdj.amount),
                 reason: editingAdj.reason,
-                isApproved: true // Auto-approve for admins
+                isApproved: true
             });
             setEditingAdj(null);
-            loadData();
+            loadMonthlyData();
         } catch (e) {
             console.error(e);
             alert('Xatolik yuz berdi');

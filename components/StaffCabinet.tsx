@@ -1,7 +1,8 @@
-
 import React, { useMemo } from 'react';
-import { Company, OperationEntry, Staff, Language, ReportStatus } from '../types';
+import { Company, OperationEntry, Staff, Language, ReportStatus, MonthlyPerformance } from '../types';
 import { translations } from '../lib/translations';
+import { fetchMonthlyPerformance } from '../lib/supabaseData';
+import { calculateCompanySalaries } from '../lib/kpiLogic';
 import { User, Briefcase, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 
@@ -16,6 +17,7 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
     const t = translations[lang];
 
     const [salarySummary, setSalarySummary] = React.useState<number>(0);
+    const [performances, setPerformances] = React.useState<MonthlyPerformance[]>([]);
 
     const myCompanies = useMemo(() => {
         return companies.filter(c =>
@@ -39,16 +41,39 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
         };
     }, [myCompanies, operations]);
 
-    // Async Fetch Salary
+    // Calculate Salary using client-side logic
     React.useEffect(() => {
-        const fetchSalary = async () => {
-            const { calculateEmployeeSalary } = await import('../lib/supabaseData');
+        const loadSalaryData = async () => {
             const currentMonth = new Date().toISOString().slice(0, 7);
-            const data = await calculateEmployeeSalary(currentStaff.id, `${currentMonth}-01`);
-            if (data) setSalarySummary(data.totalSalary);
+            try {
+                const perfData = await fetchMonthlyPerformance(`${currentMonth}-01`, undefined, currentStaff.id);
+                setPerformances(perfData);
+
+                let totalBase = 0;
+                let totalKpiBonus = 0;
+                let totalKpiPenalty = 0;
+
+                myCompanies.forEach(c => {
+                    const op = operations.find(o => o.companyId === c.id && o.period === currentMonth);
+                    const results = calculateCompanySalaries(c, op, perfData);
+
+                    results.filter(r => r.staffId === currentStaff.id).forEach(res => {
+                        totalBase += res.baseAmount;
+                        if (res.finalAmount < res.baseAmount) {
+                            totalKpiPenalty += (res.baseAmount - res.finalAmount);
+                        } else if (res.finalAmount > res.baseAmount) {
+                            totalKpiBonus += (res.finalAmount - res.baseAmount);
+                        }
+                    });
+                });
+
+                setSalarySummary(totalBase - totalKpiPenalty + totalKpiBonus);
+            } catch (e) {
+                console.error(e);
+            }
         };
-        fetchSalary();
-    }, [currentStaff.id]);
+        loadSalaryData();
+    }, [currentStaff.id, myCompanies, operations]);
 
     return (
         <div className="space-y-8 animate-macos">
