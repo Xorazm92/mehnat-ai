@@ -637,7 +637,8 @@ export const fetchOperations = async (): Promise<OperationEntry[]> => {
       statsDeadline: o.deadline_stats,
       updatedAt: o.updated_at,
       history: [],
-      kpi: kpiData
+      kpi: kpiData,
+      tasks: o.tasks || [] // Include tasks
     };
   }) as OperationEntry[];
 };
@@ -671,7 +672,8 @@ export const upsertOperation = async (op: OperationEntry) => {
     deadline_profit_tax: op.profitTaxDeadline,
     deadline_stats: op.statsDeadline,
     comment: op.kpi ? kpiStore : op.comment, // Store KPI in comment if column missing
-    kpi: op.kpi // Try real column
+    kpi: op.kpi, // Try real column
+    tasks: op.tasks // Add tasks field
   };
 
   try {

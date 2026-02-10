@@ -230,20 +230,62 @@ export interface KPIMetrics {
   pnl: boolean;                 // ±0.2%
 }
 
+export type OperationFieldKey =
+  'aylanma_qqs' | 'daromad_soliq' | 'inps' | 'foyda_soliq' |
+  'moliyaviy_natija' | 'buxgalteriya_balansi' | 'yer_soliq' |
+  'mol_mulk_soliq' | 'suv_soliq' | 'statistika' | 'bonak' |
+  'nds_bekor' | 'it_park' | '1c_baza';
+
+export type TaskStatus = 'new' | 'submitted' | 'pending_review' |
+  'approved' | 'rejected' | 'overdue' | 'not_required' | 'blocked';
+
+export interface OperationTemplate {
+  key: OperationFieldKey;
+  nameUz: string;
+  nameRu: string;
+  assignedRole: 'accountant' | 'bank_manager';
+  deadlineDay: number;       // Oyning nechanchi kunida
+  frequency: 'monthly' | 'quarterly' | 'yearly';
+  condition?: (company: Company) => boolean;  // Qachon kerak
+}
+
+export interface OperationTask {
+  id: string; // Unique ID (compound of companyId + key + period)
+  companyId: string;
+  companyName: string;
+  templateKey: OperationFieldKey;
+  templateName: string;
+  assigneeId?: string;       // Buxgalter/Bank menejer ID
+  assigneeName: string;
+  controllerId?: string;     // Nazoratchi ID
+  controllerName: string;
+  period: string;            // "2026-02"
+  deadline: string;          // ISO date
+  status: TaskStatus;
+  jsonValue: string;         // JSON dagi qiymat ("+", "-", "0", "kartoteka")
+  submittedAt?: string;
+  verifiedAt?: string;
+  comment?: string;
+  evidenceFile?: string;
+  serverInfo?: string;       // "srv2", "srv1c2" etc.
+  serverName?: string;       // "46.Montaj-Teplo-Energo"
+}
+
 export interface OperationEntry {
   id: string;
   companyId: string;
   period: string;
-  profitTaxStatus: ReportStatus;
-  form1Status: ReportStatus;
-  form2Status: ReportStatus;
-  statsStatus: ReportStatus;
+  profitTaxStatus: ReportStatus; // Legacy support
+  form1Status: ReportStatus;     // Legacy support
+  form2Status: ReportStatus;     // Legacy support
+  statsStatus: ReportStatus;     // Legacy support
   comment: string;
   profitTaxDeadline?: string;
   statsDeadline?: string;
   updatedAt: string;
   history: HistoryLog[];
   kpi?: KPIMetrics;
+  tasks?: OperationTask[];       // NEW: List of all dynamic tasks
 }
 
 export type StaffStatus = 'active' | 'vacation' | 'sick';

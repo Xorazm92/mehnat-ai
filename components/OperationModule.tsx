@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { Company, OperationEntry, ReportStatus, Language, KPIMetrics } from '../types';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Company, OperationEntry, OperationTask, TaskStatus, Language, OperationFieldKey } from '../types';
 import { translations } from '../lib/translations';
-import StatusBadge from './StatusBadge';
-import { Search, Download, Filter, ChevronLeft, ChevronRight, FileBarChart, Calendar, Clock } from 'lucide-react';
+import { OPERATION_TEMPLATES } from '../lib/operationTemplates';
+import { Search, Filter, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronRight, ShieldCheck, UserCheck, LayoutGrid, List } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -14,388 +14,716 @@ interface Props {
   lang: Language;
   onUpdate: (op: OperationEntry) => void;
   onCompanySelect: (c: Company) => void;
+  userRole: string;
+  currentUserId?: string;
 }
 
-const OperationModule: React.FC<Props> = ({ companies, operations, activeFilter = 'all', selectedPeriod, onPeriodChange, lang, onUpdate, onCompanySelect }) => {
+const OperationModule: React.FC<Props> = ({
+  companies,
+  operations,
+  activeFilter = 'all',
+  selectedPeriod,
+  onPeriodChange,
+  lang,
+  onUpdate,
+  onCompanySelect,
+  userRole,
+  currentUserId
+}) => {
   const t = translations[lang];
   const [search, setSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [viewMode, setViewMode] = useState<'matrix' | 'list'>('matrix'); // Admin can toggle
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCompanyForEdit, setSelectedCompanyForEdit] = useState<Company | null>(null);
+  const [editingTasks, setEditingTasks] = useState<string[]>([]); // List of active template keys
 
-  const years = ['2023', '2024', '2025'];
-  const quarters = ['Yillik', 'Q1', 'Q2', 'Q3', 'Q4'];
-
-  const handlePeriodChange = (val: string) => {
-    onPeriodChange(val);
-    setCurrentPage(1);
-  };
-
-  const filtered = useMemo(() => {
-    return companies.filter(c => {
-      const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
-      const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.inn.includes(search);
-
-      if (!matchesSearch) return false;
-      if (activeFilter === 'all' || activeFilter === 'none') return true;
-
-      if (!op) return false;
-
-      if (activeFilter.includes(':')) {
-        const [field, status] = activeFilter.split(':');
-        return (op as any)[field] === status;
-      }
-
-      if (activeFilter === 'delayed') {
-        if (!op) return true; // No record means not submitted yet
-        return op.profitTaxStatus === ReportStatus.NOT_SUBMITTED ||
-          op.form1Status === ReportStatus.NOT_SUBMITTED ||
-          op.statsStatus === ReportStatus.NOT_SUBMITTED ||
-          op.profitTaxStatus === ReportStatus.REJECTED;
-      }
-      if (activeFilter === 'blocked') {
-        if (!op) return false;
-        return op.form1Status === ReportStatus.BLOCKED ||
-          op.profitTaxStatus === ReportStatus.BLOCKED ||
-          op.form2Status === ReportStatus.BLOCKED;
-      }
-      if (activeFilter === 'progress') {
-        if (!op) return false;
-        return op.profitTaxStatus === ReportStatus.ACCEPTED && op.form1Status === ReportStatus.ACCEPTED;
-      }
-
-      return true;
-    });
-  }, [companies, operations, search, activeFilter, selectedPeriod]);
-
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  const filterLabel = useMemo(() => {
-    if (activeFilter === 'all' || activeFilter === 'none') return t.total;
-    if (activeFilter === 'delayed') return t.debtors;
-    if (activeFilter === 'blocked') return t.blocked;
-    if (activeFilter === 'progress') return t.completedFirms;
-    if (activeFilter.includes(':')) {
-      const [field, status] = activeFilter.split(':');
-      const fieldName = translations[lang][field as keyof typeof t] || field.replace('Status', '').toUpperCase();
-      return `${fieldName} | ${status === '+' ? t.annualCompleted : status}`;
-    }
-    return activeFilter;
-  }, [activeFilter, t, lang]);
-
-  const handleStatusChange = async (op: OperationEntry, field: keyof OperationEntry, val: string) => {
-    try {
-      await onUpdate({ ...op, [field]: val as ReportStatus, updatedAt: new Date().toISOString() });
-      toast.success(t.save + '!');
-    } catch (e) {
-      toast.error('Xatolik yuz berdi');
+  // --- Helper Functions ---
+  const getTaskStatusColor = (status: TaskStatus) => {
+    switch (status) {
+      case 'approved': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400';
+      case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400';
+      case 'submitted': return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400';
+      case 'pending_review': return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400';
+      case 'blocked': return 'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400';
+      case 'overdue': return 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400';
+      case 'not_required': return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500';
+      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
-  const handleDeadlineChange = async (op: OperationEntry, field: 'profitTaxDeadline' | 'statsDeadline', val: string) => {
-    try {
-      await onUpdate({ ...op, [field]: val, updatedAt: new Date().toISOString() });
-      toast.success(t.deadline + ' ' + t.save + '!');
-    } catch (e) {
-      toast.error('Xatolik yuz berdi');
+  const getStatusIcon = (status: TaskStatus) => {
+    switch (status) {
+      case 'approved': return <CheckCircle2 size={16} />;
+      case 'rejected': return <XCircle size={16} />;
+      case 'submitted': return <UserCheck size={16} />;
+      case 'pending_review': return <Clock size={16} />;
+      case 'blocked': return <AlertTriangle size={16} />;
+      case 'overdue': return <AlertTriangle size={16} />;
+      case 'not_required': return <span className="text-xs font-mono">N/A</span>;
+      default: return <span className="text-xs">-</span>;
     }
-  };
+  }
 
-  const [expandedKpiId, setExpandedKpiId] = useState<string | null>(null);
+  // --- Actions ---
+  const handleQuickToggle = async (companyId: string, templateKey: string) => {
+    if (userRole !== 'admin' && userRole !== 'super_admin') return;
 
-  const updateKpiMetric = (op: OperationEntry, field: keyof KPIMetrics, value: any) => {
-    const currentKpi = op.kpi || {
-      supervisorAttendance: true, bankClientAttendance: true, bankClientTgOk: true, bankClientTgMissed: 0,
-      accTgOk: true, accTgMissed: 0, didox: true, letters: true, myMehnat: true, oneC: true,
-      autoCameral: true, cashFlow: true, taxInfo: true, payroll: true, debt: true, pnl: true
+    const op = operations.find(o => o.companyId === companyId && o.period === selectedPeriod);
+    let updatedTasks = [...(op?.tasks || [])];
+    const existingIndex = updatedTasks.findIndex(t => t.templateKey === templateKey);
+
+    if (existingIndex >= 0) {
+      const currentStatus = updatedTasks[existingIndex].status;
+      // Toggle between 'new' and 'not_required'
+      updatedTasks[existingIndex] = {
+        ...updatedTasks[existingIndex],
+        status: currentStatus === 'not_required' ? 'new' : 'not_required'
+      };
+    } else {
+      // Create new task
+      const tmpl = OPERATION_TEMPLATES.find(t => t.key === templateKey);
+      const company = companies.find(c => c.id === companyId);
+      if (!tmpl || !company) return;
+
+      updatedTasks.push({
+        id: Math.random().toString(36).substr(2, 9),
+        companyId: company.id,
+        companyName: company.name,
+        templateKey: tmpl.key,
+        templateName: lang === 'uz' ? tmpl.nameUz : tmpl.nameRu,
+        assigneeName: company.accountantName || 'Tayinlanmagan',
+        controllerName: 'Nazorat',
+        period: selectedPeriod,
+        deadline: new Date().toISOString(),
+        status: 'new',
+        jsonValue: '+'
+      });
+    }
+
+    const newOp: OperationEntry = op ? {
+      ...op,
+      tasks: updatedTasks,
+      updatedAt: new Date().toISOString()
+    } : {
+      id: Math.random().toString(36).substr(2, 9),
+      companyId: companyId,
+      period: selectedPeriod,
+      profitTaxStatus: '?' as any,
+      form1Status: '?' as any,
+      form2Status: '?' as any,
+      statsStatus: '?' as any,
+      tasks: updatedTasks,
+      updatedAt: new Date().toISOString(),
+      history: []
     };
-    onUpdate({ ...op, kpi: { ...currentKpi, [field]: value }, updatedAt: new Date().toISOString() });
+
+    try {
+      await onUpdate(newOp);
+      toast.success("Operatsiya holati yangilandi");
+    } catch (e) {
+      toast.error("Xatolik yuz berdi");
+    }
   };
 
-  return (
-    <div className="space-y-8 md:space-y-10 animate-fade-in pb-20">
-      <div className="bg-white dark:bg-apple-darkCard p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-apple-border dark:border-apple-darkBorder flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
-        <div className="flex-1 w-full">
-          <div className="flex flex-wrap items-center gap-4 md:gap-6 mb-3">
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-white tracking-tight">{t.reports}</h2>
-            {activeFilter !== 'all' && (
-              <div className="px-4 py-2 bg-apple-accent text-white text-[10px] md:text-xs font-black uppercase rounded-xl flex items-center gap-3 animate-bounce-subtle">
-                <Filter size={12} /> {filterLabel}
+  const handleTaskStatusChange = async (companyId: string, taskKey: string, newStatus: TaskStatus) => {
+    // Find the operation entry
+    const operation = operations.find(o => o.companyId === companyId && o.period === selectedPeriod);
+    if (!operation) return;
+
+    // Clone tasks
+    const updatedTasks = operation.tasks?.map(t => {
+      if (t.templateKey === taskKey) {
+        return {
+          ...t,
+          status: newStatus,
+          verifiedAt: newStatus === 'approved' ? new Date().toISOString() : undefined,
+          submittedAt: newStatus === 'submitted' ? new Date().toISOString() : t.submittedAt
+        };
+      }
+      return t;
+    }) || [];
+
+    // Create updated operation object
+    const updatedOp = {
+      ...operation,
+      tasks: updatedTasks,
+      updatedAt: new Date().toISOString()
+    };
+
+    // Optimistic update locally (parent should handle refresh, but for UI responsiveness)
+    // We rely on onUpdate to trigger data save and refresh
+    try {
+      await onUpdate(updatedOp);
+      toast.success(`Status o'zgartirildi: ${newStatus}`);
+    } catch (e) {
+      toast.error("Xatolik yuz berdi");
+      console.error(e);
+    }
+  };
+
+  // --- Data Filtering ---
+  const periods = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const list = [`${currentYear} Yillik`];
+    for (let i = 0; i < 12; i++) {
+      const month = String(i + 1).padStart(2, '0');
+      list.push(`${currentYear}-${month}`);
+    }
+    return list;
+  }, []);
+
+  const filteredData = useMemo(() => {
+    let filteredCompanies = companies;
+
+    if (search) {
+      const lowerSearch = search.toLowerCase();
+      filteredCompanies = filteredCompanies.filter(c =>
+        c.name.toLowerCase().includes(lowerSearch) ||
+        c.inn.includes(lowerSearch) ||
+        (c.accountantName && c.accountantName.toLowerCase().includes(lowerSearch))
+      );
+    }
+
+    // Role-based filtering
+    if (userRole === 'accountant' && currentUserId) {
+      // Staff only sees their own companies
+      filteredCompanies = filteredCompanies.filter(c => c.accountantId === currentUserId);
+    }
+    // Supervisors might see all or assigned ones - assuming all for now or handled by company.supervisorId
+    // If strict supervisor view needed:
+    // if (userRole === 'supervisor' && currentUserId) {
+    //    filteredCompanies = filteredCompanies.filter(c => c.supervisorId === currentUserId);
+    // }
+
+    // Pre-calculate operations map for O(1) lookup
+    const map = new Map<string, OperationEntry>();
+    operations.forEach(o => {
+      if (o.period === selectedPeriod) {
+        map.set(o.companyId, o);
+      }
+    });
+
+    return filteredCompanies.map(company => {
+      const op = map.get(company.id);
+      const tasks = op?.tasks || [];
+      return { company, op, tasks };
+    });
+  }, [companies, operations, search, selectedPeriod, userRole, currentUserId]);
+
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const top = topScrollRef.current;
+    const bottom = bottomScrollRef.current;
+    if (!top || !bottom) return;
+
+    const syncTop = () => {
+      if (bottom.scrollLeft !== top.scrollLeft) {
+        bottom.scrollLeft = top.scrollLeft;
+      }
+    };
+    const syncBottom = () => {
+      if (top.scrollLeft !== bottom.scrollLeft) {
+        top.scrollLeft = bottom.scrollLeft;
+      }
+    };
+
+    top.addEventListener('scroll', syncTop);
+    bottom.addEventListener('scroll', syncBottom);
+    return () => {
+      top.removeEventListener('scroll', syncTop);
+      bottom.removeEventListener('scroll', syncBottom);
+    };
+  }, []);
+
+
+  // --- Actions ---
+
+  const openEditModal = (company: Company) => {
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
+      onCompanySelect(company);
+      return;
+    }
+
+    setSelectedCompanyForEdit(company);
+    // Find current tasks
+    const op = operations.find(o => o.companyId === company.id && o.period === selectedPeriod);
+    if (op?.tasks) {
+      const activeKeys = op.tasks.filter(t => t.status !== 'not_required').map(t => t.templateKey);
+      setEditingTasks(activeKeys);
+    } else {
+      setEditingTasks([]);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSaveOperations = async () => {
+    if (!selectedCompanyForEdit) return;
+
+    const op = operations.find(o => o.companyId === selectedCompanyForEdit.id && o.period === selectedPeriod);
+    let existingTasks = op?.tasks || [];
+
+    // 1. Process active keys (ensure they exist with 'new' or keep existing status)
+    const updatedTasks = [...existingTasks];
+
+    OPERATION_TEMPLATES.forEach(tmpl => {
+      const isEnabled = editingTasks.includes(tmpl.key);
+      const existingIndex = updatedTasks.findIndex(t => t.templateKey === tmpl.key);
+
+      if (isEnabled) {
+        if (existingIndex >= 0) {
+          // If it was 'not_required', reset to 'new'
+          if (updatedTasks[existingIndex].status === 'not_required') {
+            updatedTasks[existingIndex] = {
+              ...updatedTasks[existingIndex],
+              status: 'new'
+            };
+          }
+        } else {
+          // Create new task
+          updatedTasks.push({
+            id: Math.random().toString(36).substr(2, 9),
+            companyId: selectedCompanyForEdit.id,
+            companyName: selectedCompanyForEdit.name,
+            templateKey: tmpl.key,
+            templateName: lang === 'uz' ? tmpl.nameUz : tmpl.nameRu,
+            assigneeName: selectedCompanyForEdit.accountantName || 'Tayinlanmagan',
+            controllerName: 'Nazorat',
+            period: selectedPeriod,
+            deadline: new Date().toISOString(), // Todo: calculate real deadline
+            status: 'new',
+            jsonValue: '+'
+          });
+        }
+      } else {
+        // Disable it
+        if (existingIndex >= 0) {
+          updatedTasks[existingIndex] = {
+            ...updatedTasks[existingIndex],
+            status: 'not_required'
+          };
+        }
+      }
+    });
+
+    const newOp: OperationEntry = op ? {
+      ...op,
+      tasks: updatedTasks,
+      updatedAt: new Date().toISOString()
+    } : {
+      // Create new operation entry if doesn't exist
+      id: Math.random().toString(36).substr(2, 9),
+      companyId: selectedCompanyForEdit.id,
+      period: selectedPeriod,
+      profitTaxStatus: '?' as any,
+      form1Status: '?' as any,
+      form2Status: '?' as any,
+      statsStatus: '?' as any,
+      tasks: updatedTasks,
+      updatedAt: new Date().toISOString(),
+      history: []
+    };
+
+    try {
+      await onUpdate(newOp);
+      setIsModalOpen(false);
+      toast.success("Operatsiyalar yangilandi");
+    } catch (e) {
+      toast.error("Saqlashda xatolik");
+    }
+  };
+
+  const renderOperationsModal = () => {
+    if (!isModalOpen || !selectedCompanyForEdit) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-fade-in">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+            <h3 className="text-xl font-bold">{selectedCompanyForEdit.name} - Operatsiyalar</h3>
+            <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full text-gray-400">
+              <XCircle size={24} />
+            </button>
+          </div>
+
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-white/5 flex gap-3">
+            <button
+              onClick={() => setEditingTasks(OPERATION_TEMPLATES.map(t => t.key))}
+              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Hammasini belgilash
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={() => setEditingTasks([])}
+              className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline"
+            >
+              Hammasini o'chirish
+            </button>
+          </div>
+
+          <div className="overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {OPERATION_TEMPLATES.map(tmpl => (
+              <div
+                key={tmpl.key}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-3 ${editingTasks.includes(tmpl.key)
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-500/50'
+                  }`}
+                onClick={() => {
+                  if (editingTasks.includes(tmpl.key)) {
+                    setEditingTasks(prev => prev.filter(k => k !== tmpl.key));
+                  } else {
+                    setEditingTasks(prev => [...prev, tmpl.key]);
+                  }
+                }}
+              >
+                <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${editingTasks.includes(tmpl.key)
+                  ? 'bg-blue-500 border-blue-500 text-white'
+                  : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-transparent'
+                  }`}>
+                  {editingTasks.includes(tmpl.key) && <CheckCircle2 size={14} />}
+                </div>
+                <span className="font-medium text-sm">{lang === 'uz' ? tmpl.nameUz : tmpl.nameRu}</span>
               </div>
-            )}
+            ))}
           </div>
-          <p className="text-sm md:text-base font-semibold text-slate-400">
-            <span className="tabular-nums text-apple-accent font-black">{filtered.length}</span> {t.firmCount}
-          </p>
+
+          <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3 bg-gray-50 dark:bg-white/5">
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="px-5 py-2.5 rounded-xl font-medium text-gray-500 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={handleSaveOperations}
+              className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 transition-all active:scale-95"
+            >
+              Saqlash
+            </button>
+          </div>
         </div>
+      </div>
+    );
+  };
 
-        <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
-          <div className="flex bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-inner">
-            <select
-              value={selectedPeriod.split(' ')[0]}
-              onChange={(e) => handlePeriodChange(`${e.target.value} ${selectedPeriod.split(' ')[1]}`)}
-              className="bg-transparent border-none text-xs font-black text-slate-500 outline-none px-3 py-2 cursor-pointer appearance-none"
-            >
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-            <div className="w-px h-4 bg-apple-border dark:bg-apple-darkBorder self-center mx-1"></div>
-            <select
-              value={selectedPeriod.split(' ')[1]}
-              onChange={(e) => handlePeriodChange(`${selectedPeriod.split(' ')[0]} ${e.target.value}`)}
-              className="bg-transparent border-none text-xs font-black text-slate-500 outline-none px-3 py-2 cursor-pointer appearance-none"
-            >
-              {quarters.map(q => <option key={q} value={q}>{q}</option>)}
-            </select>
-          </div>
+  // --- Render Views ---
 
-          <div className="relative flex-1 xl:w-[350px] group min-w-0">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-apple-accent transition-colors" size={18} />
-            <input
-              type="text"
-              placeholder={t.search}
-              className="w-full pl-14 pr-6 py-4.5 md:py-5 bg-slate-50 dark:bg-white/5 border border-apple-border dark:border-apple-darkBorder rounded-2xl outline-none focus:bg-white dark:focus:bg-apple-darkBg focus:ring-4 focus:ring-apple-accent/5 transition-all font-bold text-sm md:text-base shadow-inner"
-              value={search}
-              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-            />
+  // 1. Matrix View (Admin/Supervisor)
+  const renderMatrixView = () => (
+    <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm relative group">
+      {/* --- TOP SYNCHRONIZED SCROLLBAR --- */}
+      <div
+        ref={topScrollRef}
+        className="overflow-x-auto h-4 bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-gray-800 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
+      >
+        <div style={{ width: `${300 + (OPERATION_TEMPLATES.length * 100)}px`, height: '1px' }}></div>
+      </div>
+
+      <div ref={bottomScrollRef} className="overflow-x-auto scrollbar-thin">
+        <table className="w-full text-sm text-left border-collapse min-w-[300px]">
+          <thead>
+            <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-gray-800">
+              <th className="p-4 font-black text-xs uppercase tracking-widest text-gray-500 sticky left-0 bg-gray-50 dark:bg-[#1C1C1E] z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] dark:shadow-none min-w-[200px]">
+                Firma Nomi
+              </th>
+              {OPERATION_TEMPLATES.map(tmpl => (
+                <th key={tmpl.key} className="p-4 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <span>{lang === 'uz' ? tmpl.nameUz : tmpl.nameRu}</span>
+                    <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full text-gray-400">
+                      {tmpl.deadlineDay}-sana
+                    </span>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            {filteredData.map(({ company, tasks }) => (
+              <tr key={company.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                <td className="p-4 font-medium sticky left-0 bg-white dark:bg-[#1C1C1E] group-hover:bg-gray-50 dark:group-hover:bg-[#2C2C2E] transition-colors z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] dark:shadow-none border-r border-transparent dark:border-gray-800">
+                  <div
+                    className="w-full truncate cursor-pointer hover:text-blue-500 transition-colors"
+                    onClick={() => openEditModal(company)}
+                  >
+                    {company.name}
+                  </div>
+                  <div className="text-xs text-gray-400 font-mono mt-0.5">{company.inn}</div>
+                </td>
+                {OPERATION_TEMPLATES.map(tmpl => {
+                  const task = tasks.find(t => t.templateKey === tmpl.key);
+                  const status = task ? task.status : 'new';
+
+                  return (
+                    <td
+                      key={tmpl.key}
+                      className={`p-2 text-center transition-all cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-500/10 group/cell`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (status === 'not_required') {
+                          handleQuickToggle(company.id, tmpl.key);
+                        } else {
+                          openEditModal(company);
+                        }
+                      }}
+                    >
+                      <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${getTaskStatusColor(status)} transition-transform group-hover/cell:scale-110 shadow-sm`} title={`${status} ${task?.comment ? '- ' + task.comment : ''}`}>
+                        {getStatusIcon(status)}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  // 2. Staff List View (Detailed)
+  const renderStaffView = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {filteredData.map(({ company, tasks }) => {
+        // Only show companies that have tasks (filteredData already handles user role)
+        if (tasks.filter(t => t.status !== 'not_required').length === 0) return null;
+
+        return (
+          <div key={company.id} className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl p-5 hover:border-blue-500/30 transition-all shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="font-semibold text-lg">{company.name}</h3>
+                <p className="text-sm text-gray-400">{company.inn} • {company.region || 'Toshkent'}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-white/5 px-2 py-1 rounded-lg text-xs font-mono text-gray-500">
+                {tasks.filter(t => t.status === 'approved').length} / {tasks.filter(t => t.status !== 'not_required').length}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {tasks.filter(t => t.status !== 'not_required').map(task => (
+                <div key={task.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-black/20 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getTaskStatusColor(task.status)}`}>
+                      {getStatusIcon(task.status)}
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm">{task.templateName}</div>
+                      <div className="text-xs text-gray-400">
+                        Deadline: {new Date(task.deadline).getDate()}-sana
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {task.status === 'new' && (
+                      <button
+                        onClick={() => handleTaskStatusChange(company.id, task.templateKey, 'submitted')}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      >
+                        Topshirish
+                      </button>
+                    )}
+                    {task.status === 'rejected' && (
+                      <button
+                        onClick={() => handleTaskStatusChange(company.id, task.templateKey, 'submitted')}
+                        className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      >
+                        Qayta topshirish
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <button className="p-4.5 md:p-5 bg-apple-accent text-white rounded-2xl md:rounded-[1.5rem] hover:bg-blue-600 transition-all shadow-2xl shadow-blue-500/20 active:scale-95 group">
-            <Download size={20} className="group-hover:translate-y-0.5 transition-transform" />
-          </button>
+        )
+      })}
+    </div>
+  );
+
+  // 3. Nazoratchi View (Supervisor)
+  const renderSupervisorView = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-blue-500 text-white rounded-[2rem] p-6 relative overflow-hidden">
+          <div className="relative z-10">
+            <div className="text-blue-100 mb-1">Kutilmoqda</div>
+            <div className="text-4xl font-bold">12</div>
+            <div className="text-sm mt-2">Tasdiqlash uchun kutayotgan hisobotlar</div>
+          </div>
+          <div className="absolute -right-5 -bottom-5 opacity-20 transform rotate-12">
+            <Clock size={100} />
+          </div>
+        </div>
+        <div className="bg-emerald-500 text-white rounded-[2rem] p-6 relative overflow-hidden">
+          <div className="relative z-10">
+            <div className="text-emerald-100 mb-1">Tasdiqlandi</div>
+            <div className="text-4xl font-bold">145</div>
+            <div className="text-sm mt-2">Ushbu oy uchun muvaffaqiyatli</div>
+          </div>
+          <div className="absolute -right-5 -bottom-5 opacity-20 transform rotate-12">
+            <ShieldCheck size={100} />
+          </div>
+        </div>
+        <div className="bg-rose-500 text-white rounded-[2rem] p-6 relative overflow-hidden">
+          <div className="relative z-10">
+            <div className="text-rose-100 mb-1">Rad etildi</div>
+            <div className="text-4xl font-bold">3</div>
+            <div className="text-sm mt-2">Qayta ishlash talab etiladi</div>
+          </div>
+          <div className="absolute -right-5 -bottom-5 opacity-20 transform rotate-12">
+            <AlertTriangle size={100} />
+          </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-apple-darkCard rounded-[2.5rem] md:rounded-[3rem] border border-apple-border dark:border-apple-darkBorder overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-apple-accent">
-          <table className="w-full text-left border-collapse min-w-[1300px]">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-white/10 text-[11px] md:text-xs font-black uppercase tracking-widest text-slate-400 border-b dark:border-apple-darkBorder sticky top-0 z-30">
-                <th className="px-10 md:px-12 py-8 md:py-10 sticky left-0 bg-slate-50 dark:bg-apple-darkCard z-40 w-80 md:w-96 shadow-sm border-r dark:border-apple-darkBorder">{t.organizations}</th>
-                <th className="px-6 py-8 text-center bg-slate-50 dark:bg-apple-darkCard/80 backdrop-blur-md">KPI</th>
-                <th className="px-6 py-8 text-center bg-slate-50 dark:bg-apple-darkCard/80 backdrop-blur-md">{t.profitTax}</th>
-                <th className="px-6 py-8 text-center bg-slate-50 dark:bg-apple-darkCard/80 backdrop-blur-md">{t.form1}</th>
-                <th className="px-6 py-8 text-center bg-slate-50 dark:bg-apple-darkCard/80 backdrop-blur-md">{t.form2}</th>
-                <th className="px-6 py-8 text-center bg-slate-50 dark:bg-apple-darkCard/80 backdrop-blur-md">{t.stats}</th>
-                <th className="px-10 py-10 bg-slate-50 dark:bg-apple-darkCard/80 backdrop-blur-md">{t.comment}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-apple-border dark:divide-apple-darkBorder">
-              {paginated.map(c => {
-                const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod) || {
-                  id: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-                    const r = Math.random() * 16 | 0;
-                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                    return v.toString(16);
-                  }),
-                  companyId: c.id, period: selectedPeriod,
-                  profitTaxStatus: ReportStatus.NOT_SUBMITTED, form1Status: ReportStatus.NOT_SUBMITTED,
-                  form2Status: ReportStatus.NOT_SUBMITTED, statsStatus: ReportStatus.NOT_SUBMITTED,
-                  comment: '', updatedAt: '', history: [], kpi: undefined
-                };
+      {/* Pending Tasks List */}
+      <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+        <h3 className="text-lg font-bold mb-6 px-2">Tasdiqlashni kutayotgan vazifalar</h3>
+        <div className="space-y-4">
+          {filteredData.flatMap(d => d.tasks).filter(t => t.status === 'pending_review').map(task => (
+            <div key={task.id} className="flex flex-col md:flex-row items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition-all">
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">{task.companyName}</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{task.templateName} • {task.assigneeName}</p>
+                </div>
+              </div>
 
-                const isExpanded = expandedKpiId === c.id;
+              <div className="flex items-center gap-3 mt-4 md:mt-0 w-full md:w-auto">
+                <div className="px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/10 text-xs font-mono text-gray-500">
+                  {task.jsonValue}
+                </div>
+                <button
+                  onClick={() => handleTaskStatusChange(task.companyId, task.templateKey, 'approved')}
+                  className="flex-1 md:flex-none px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  Tasdiqlash
+                </button>
+                <button
+                  onClick={() => handleTaskStatusChange(task.companyId, task.templateKey, 'rejected')}
+                  className="flex-1 md:flex-none px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Rad etish
+                </button>
+              </div>
+            </div>
+          ))}
 
-                return (
-                  <React.Fragment key={c.id}>
-                    <tr className={`hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all group ${isExpanded ? 'bg-apple-accent/5' : ''}`}>
-                      <td
-                        className="px-10 md:px-12 py-6 md:py-8 sticky left-0 bg-white dark:bg-apple-darkCard group-hover:bg-slate-50 dark:group-hover:bg-apple-darkBg z-20 shadow-sm transition-colors border-r dark:border-apple-darkBorder cursor-pointer"
-                        onClick={() => onCompanySelect(c)}
-                      >
-                        <div className="font-extrabold text-slate-800 dark:text-white text-base md:text-lg truncate w-64 md:w-80 tracking-tighter leading-none mb-2 hover:text-apple-accent transition-colors">{c.name}</div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className="text-[10px] font-black text-slate-400 font-mono tracking-tighter tabular-nums bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded shadow-inner">INN: {c.inn}</span>
-                          <span className="px-2 py-1 bg-apple-accent/10 text-[9px] font-black text-apple-accent uppercase rounded-md tracking-wider border border-apple-accent/20">{c.accountantName}</span>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-8 text-center bg-slate-50/30 dark:bg-white/5">
-                        <button
-                          onClick={() => setExpandedKpiId(isExpanded ? null : c.id)}
-                          className={`p-3 rounded-xl transition-all font-black text-[10px] uppercase tracking-widest ${isExpanded ? 'bg-apple-accent text-white shadow-lg' : 'bg-slate-100 dark:bg-white/10 text-slate-500 hover:bg-apple-accent/10 hover:text-apple-accent'}`}
-                        >
-                          {isExpanded ? 'Yopish' : 'KPI Kirish'}
-                        </button>
-                      </td>
-
-                      {[
-                        { field: 'profitTaxStatus', deadlineField: 'profitTaxDeadline', label: t.profitTax, dlLabel: t.deadlineProfit },
-                        { field: 'form1Status', label: t.form1 },
-                        { field: 'form2Status', label: t.form2 },
-                        { field: 'statsStatus', deadlineField: 'statsDeadline', label: t.stats, dlLabel: t.deadlineStats }
-                      ].map((item) => (
-                        <td key={item.field} className="px-4 py-6 text-center">
-                          <div className="flex flex-col items-center gap-3">
-                            <select
-                              className="bg-transparent border-none text-[10px] font-black text-slate-400 hover:text-apple-accent outline-none cursor-pointer appearance-none text-center transition-colors focus:ring-0"
-                              value={(op as any)[item.field]}
-                              onChange={e => handleStatusChange(op as any, item.field as any, e.target.value)}
-                            >
-                              {Object.values(ReportStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                            <StatusBadge status={(op as any)[item.field]} />
-                            {item.deadlineField && (
-                              <div className="mt-2 flex flex-col items-center gap-1 group/dl">
-                                <span className="text-[8px] font-black text-slate-400 transition-colors group-hover/dl:text-apple-accent uppercase">{item.dlLabel}</span>
-                                <div className="relative">
-                                  <Calendar size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 group-hover/dl:text-apple-accent transition-colors" />
-                                  <input
-                                    type="date"
-                                    className="pl-6 pr-2 py-1 bg-slate-50 dark:bg-white/5 border border-apple-border dark:border-apple-darkBorder rounded-lg text-[10px] font-bold outline-none focus:ring-2 focus:ring-apple-accent/20 transition-all appearance-none cursor-pointer"
-                                    value={(op as any)[item.deadlineField] || ''}
-                                    onChange={e => handleDeadlineChange(op as any, item.deadlineField as any, e.target.value)}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      ))}
-                      <td className="px-10 py-6">
-                        <textarea
-                          rows={1}
-                          className="w-full min-w-[280px] bg-slate-50 dark:bg-white/5 border border-apple-border dark:border-apple-darkBorder rounded-2xl p-4 text-sm font-bold outline-none focus:bg-white dark:focus:bg-apple-darkBg focus:ring-4 focus:ring-apple-accent/10 transition-all resize-none shadow-sm"
-                          placeholder={t.comment + "..."}
-                          value={op.comment}
-                          onChange={e => onUpdate({ ...op as any, comment: e.target.value })}
-                        />
-                      </td>
-                    </tr>
-
-                    {isExpanded && (
-                      <tr className="bg-slate-50/50 dark:bg-black/20 animate-macos">
-                        <td colSpan={7} className="px-10 py-10">
-                          <div className="flex flex-col gap-10">
-                            {/* Rule 1 & 2: Supervisor & Bank Client Toggles */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                              <div className="p-6 bg-white dark:bg-apple-darkCard rounded-[2rem] border border-apple-border dark:border-apple-darkBorder shadow-sm">
-                                <h4 className="text-[10px] font-black uppercase text-apple-accent mb-4 tracking-widest">Rule 1: Nazoratchi</h4>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs font-bold text-slate-500">Ishga kelish (±0.5%)</span>
-                                  <button
-                                    onClick={() => updateKpiMetric(op as any, 'supervisorAttendance', !((op.kpi as any)?.supervisorAttendance))}
-                                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${((op.kpi as any)?.supervisorAttendance) ? 'bg-emerald-500 text-white shadow-lg' : 'bg-rose-500 text-white'}`}
-                                  >
-                                    {((op.kpi as any)?.supervisorAttendance) ? '+0.5%' : '-0.5%'}
-                                  </button>
-                                </div>
-                              </div>
-
-                              <div className="p-6 bg-white dark:bg-apple-darkCard rounded-[2rem] border border-apple-border dark:border-apple-darkBorder shadow-sm">
-                                <h4 className="text-[10px] font-black uppercase text-blue-500 mb-4 tracking-widest">Rule 2: Bank Klient</h4>
-                                <div className="space-y-4 text-xs font-bold">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-slate-500">Attendance (±1%)</span>
-                                    <button
-                                      onClick={() => updateKpiMetric(op as any, 'bankClientAttendance', !((op.kpi as any)?.bankClientAttendance))}
-                                      className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${((op.kpi as any)?.bankClientAttendance) ? 'bg-emerald-500 text-white shadow-lg' : 'bg-rose-500 text-white'}`}
-                                    >
-                                      {((op.kpi as any)?.bankClientAttendance) ? '+1%' : '-1%'}
-                                    </button>
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-slate-500">TG Ok (+1%/0)</span>
-                                    <button
-                                      onClick={() => updateKpiMetric(op as any, 'bankClientTgOk', !((op.kpi as any)?.bankClientTgOk))}
-                                      className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${((op.kpi as any)?.bankClientTgOk) ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-100 dark:bg-white/10 text-slate-400'}`}
-                                    >
-                                      {((op.kpi as any)?.bankClientTgOk) ? '+1%' : 'Yo\'q'}
-                                    </button>
-                                  </div>
-                                  <div className="flex items-center justify-between pt-2 border-t dark:border-apple-darkBorder">
-                                    <span className="text-slate-400">TG Missed (ea -0.5%)</span>
-                                    <input
-                                      type="number"
-                                      className="w-16 bg-slate-50 dark:bg-white/5 border-none rounded-lg text-center font-black py-1"
-                                      value={(op.kpi as any)?.bankClientTgMissed || 0}
-                                      onChange={e => updateKpiMetric(op as any, 'bankClientTgMissed', parseInt(e.target.value) || 0)}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Rule 3: Accountant Checklist */}
-                            <div>
-                              <h3 className="text-[10px] font-black uppercase text-slate-400 mb-6 tracking-[0.2em]">Rule 3: Buxgalter Checklist (±% Metrics)</h3>
-                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                                {[
-                                  { label: 'TG Javob', f: 'accTgOk', p: '+1%', m: '0' },
-                                  { label: 'Didox', f: 'didox', p: '+0.25%', m: '-0.25%' },
-                                  { label: 'Xatlar', f: 'letters', p: '+0.25%', m: '-0.25%' },
-                                  { label: 'MyMehnat', f: 'myMehnat', p: '+0.25%', m: '-0.25%' },
-                                  { label: '1C Baza', f: 'oneC', p: '+1%', m: '0' },
-                                  { label: 'AvtoCam.', f: 'autoCameral', p: '+0.25%', m: '-0.25%' },
-                                  { label: 'Pul Oqimi', f: 'cashFlow', p: '+0.2%', m: '-0.2%' },
-                                  { label: 'Soliq Info', f: 'taxInfo', p: '+0.2%', m: '-0.2%' },
-                                  { label: 'Oylik Hisob', f: 'payroll', p: '+0.2%', m: '-0.2%' },
-                                  { label: 'Deb/Kred', f: 'debt', p: '+0.2%', m: '-0.2%' },
-                                  { label: 'F&Z Hisob', f: 'pnl', p: '+0.2%', m: '-0.2%' }
-                                ].map(item => (
-                                  <div key={item.f} className="p-4 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-sm flex flex-col gap-3">
-                                    <span className="text-[9px] font-black uppercase text-slate-400">{item.label}</span>
-                                    <button
-                                      onClick={() => updateKpiMetric(op as any, item.f as any, !((op.kpi as any)?.[item.f]))}
-                                      className={`py-2 rounded-xl text-[9px] font-black transition-all ${((op.kpi as any)?.[item.f]) ? 'bg-emerald-500 text-white shadow-lg' : 'bg-rose-500 text-white'}`}
-                                    >
-                                      {((op.kpi as any)?.[item.f]) ? item.p : item.m}
-                                    </button>
-                                  </div>
-                                ))}
-                                <div className="p-4 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-sm flex flex-col gap-3">
-                                  <span className="text-[9px] font-black uppercase text-rose-500">TG Kechikish</span>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-bold text-slate-400">Soni:</span>
-                                    <input
-                                      type="number"
-                                      className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-lg text-center font-black py-1 text-xs"
-                                      value={(op.kpi as any)?.accTgMissed || 0}
-                                      onChange={e => updateKpiMetric(op as any, 'accTgMissed', parseInt(e.target.value) || 0)}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-          {paginated.length === 0 && (
-            <div className="p-32 flex flex-col items-center justify-center text-slate-300">
-              <FileBarChart size={64} className="mb-4 opacity-10" />
-              <p className="font-black uppercase tracking-widest text-base">{t.noData}</p>
+          {filteredData.flatMap(d => d.tasks).filter(t => t.status === 'pending_review').length === 0 && (
+            <div className="text-center py-10 text-gray-400">
+              Hozircha tekshiruv uchun vazifalar yo'q
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t dark:border-apple-darkBorder pt-10">
-          <p className="text-sm font-bold text-slate-400">
-            {t.page} <span className="text-slate-800 dark:text-white font-black">{currentPage}</span> {t.of} {totalPages}
+  return (
+    <div className="space-y-8 animate-fade-in pb-24">
+      {/* Header Controls */}
+      <div className="bg-white dark:bg-[#1C1C1E] p-6 md:p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col xl:flex-row justify-between items-center gap-6">
+        <div>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
+            {userRole === 'accountant' ? 'Mening Vazifalarim' : userRole === 'supervisor' ? 'Nazorat Markazi' : t.reports}
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            {selectedPeriod} davri uchun operatsiyalar holati
           </p>
-          <div className="flex gap-4">
+        </div>
+
+        <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
+          {/* Period Selector */}
+          {/* Period Selector */}
+          <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-2xl w-full md:w-auto items-center">
+            {/* Previous Month */}
             <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="flex items-center gap-3 bg-white dark:bg-apple-darkCard border border-apple-border dark:border-apple-darkBorder px-6 py-3.5 rounded-2xl disabled:opacity-30 font-black text-xs hover:border-apple-accent transition-all shadow-sm active:scale-95"
+              onClick={() => {
+                // Logic to go to prev month
+                // Simple implementation: just text input or dropdown is better for now
+                // Or better: List all relevant options dynamically
+              }}
+              className="p-2 hover:bg-white dark:hover:bg-white/10 rounded-xl hidden"
             >
-              <ChevronLeft size={16} /> {t.prev}
+              <ChevronRight className="rotate-180" size={20} />
             </button>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="flex items-center gap-3 bg-white dark:bg-apple-darkCard border border-apple-border dark:border-apple-darkBorder px-6 py-3.5 rounded-2xl disabled:opacity-30 font-black text-xs hover:border-apple-accent transition-all shadow-sm active:scale-95"
-            >
-              {t.next} <ChevronRight size={16} />
-            </button>
+
+            <div className="flex overflow-x-auto scrollbar-none gap-1 max-w-[300px] md:max-w-none">
+              {periods.map(p => (
+                <button
+                  key={p}
+                  onClick={() => onPeriodChange(p)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${selectedPeriod === p
+                    ? 'bg-white dark:bg-white/10 shadow-sm text-gray-900 dark:text-white'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                >
+                  {p.endsWith('Yillik') ? p : new Date(p + '-01').toLocaleString(lang === 'uz' ? 'uz-UZ' : 'ru-RU', { month: 'long' })}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search & Actions */}
+          <div className="flex gap-3 w-full md:w-auto">
+            {/* View Toggle for Admin */}
+            {userRole !== 'accountant' && userRole !== 'supervisor' && (
+              <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-xl">
+                <button
+                  onClick={() => setViewMode('matrix')}
+                  className={`p-2 rounded-lg transition-all ${viewMode === 'matrix' ? 'bg-white dark:bg-white/10 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}
+                  title="Matrix View"
+                >
+                  <LayoutGrid size={18} />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-white/10 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}
+                  title="List View"
+                >
+                  <List size={18} />
+                </button>
+              </div>
+            )}
+
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Izlash..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-white/5 border-none rounded-xl focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
+              />
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Main Content Area */}
+      {userRole === 'accountant' ? renderStaffView() :
+        userRole === 'supervisor' ? renderSupervisorView() :
+          renderMatrixView()}
+
+      {filteredData.length === 0 && (
+        <div className="text-center py-20">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-white/5 mb-4 text-gray-400">
+            <Filter size={32} />
+          </div>
+          <p className="text-gray-500 dark:text-gray-400">Ma'lumot topilmadi</p>
+        </div>
       )}
+
+      {renderOperationsModal()}
     </div>
   );
 };

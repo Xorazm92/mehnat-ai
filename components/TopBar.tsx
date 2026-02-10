@@ -23,7 +23,7 @@ const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLang
   const t = translations[lang];
 
   return (
-    <header className="h-16 md:h-20 bg-white/80 dark:bg-[#0B0F19]/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-white/[0.05] flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
+    <header className="h-16 md:h-20 bg-white/70 dark:bg-[#0B0F19]/70 backdrop-blur-2xl border-b border-slate-200/60 dark:border-white/[0.05] flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
       <div className="flex items-center gap-3 md:gap-6 flex-1 max-w-xl">
         <button onClick={onMenuToggle} className="lg:hidden p-2 text-slate-500 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl">
           <Menu size={20} />
@@ -71,7 +71,7 @@ const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLang
               {userName ? userName.charAt(0).toUpperCase() : 'A'}
             </div>
             <div className="text-left pr-2 md:pr-4">
-              <p className="text-xs md:text-sm font-black text-slate-800 dark:text-white leading-tight">{userName || 'Administrator'}</p>
+              <p className="text-xs md:text-sm font-black text-slate-800 dark:text-white leading-tight premium-text-gradient">{userName || 'Administrator'}</p>
               <p className="text-[9px] md:text-[10px] text-blue-500 dark:text-blue-400 font-black uppercase tracking-widest">{userRole || 'Admin'}</p>
             </div>
           </button>

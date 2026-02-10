@@ -99,12 +99,14 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
             {/* LEFT: Company List */}
             <div className="w-full lg:w-1/3 bg-white dark:bg-apple-darkCard rounded-[2rem] border border-apple-border dark:border-apple-darkBorder flex flex-col overflow-hidden shadow-xl">
                 <div className="p-6 border-b border-apple-border dark:border-apple-darkBorder">
-                    <h3 className="text-xl font-black text-slate-800 dark:text-white mb-4">Firmalar</h3>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-white mb-4 premium-text-gradient">
+                        {lang === 'uz' ? 'Firmalar' : 'Фирмы'}
+                    </h3>
                     <div className="relative">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <input
                             type="text"
-                            placeholder="Firma qidirish..."
+                            placeholder={lang === 'uz' ? 'Firma qidirish...' : 'Поиск фирмы...'}
                             className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-white/5 rounded-xl border-none outline-none font-bold text-sm"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
@@ -158,11 +160,11 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                         <div className="p-8 border-b border-apple-border dark:border-apple-darkBorder bg-slate-50 dark:bg-white/5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-2">{selectedCompany.name}</h2>
+                                    <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-2 premium-text-gradient">{selectedCompany.name}</h2>
                                     <div className="flex gap-4 text-sm font-bold text-slate-500">
                                         <span className="flex items-center gap-2">
                                             <span className="w-2 h-2 rounded-full bg-apple-accent"></span>
-                                            Buxgalter: {selectedCompany.accountantName}
+                                            {lang === 'uz' ? 'Buxgalter' : 'Бухгалтер'}: {selectedCompany.accountantName}
                                         </span>
                                         <span className="flex items-center gap-2">
                                             <span className="w-2 h-2 rounded-full bg-purple-500"></span>
@@ -171,7 +173,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Joriy Oy</p>
+                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">{lang === 'uz' ? 'Joriy Oy' : 'Текущий Месяц'}</p>
                                     <input
                                         type="month"
                                         value={month}
@@ -186,7 +188,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                             {/* Accountant Tasks */}
                             <div className="mb-8">
                                 <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <span className="w-6 h-[2px] bg-slate-300"></span> Buxgalter Vazifalari (KPI)
+                                    <span className="w-6 h-[2px] bg-slate-300"></span> {lang === 'uz' ? 'Buxgalter Vazifalari (KPI)' : 'Задачи Бухгалтера (KPI)'}
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {rules.filter(r => r.role === 'accountant').map(rule => {
@@ -233,7 +235,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                             {selectedCompany.bankClientId && (
                                 <div>
                                     <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <span className="w-6 h-[2px] bg-slate-300"></span> Bank Klient Vazifalari
+                                        <span className="w-6 h-[2px] bg-slate-300"></span> {lang === 'uz' ? 'Bank Klient Vazifalari' : 'Задачи Банк-Клиента'}
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {rules.filter(r => r.role === 'bank_client').map(rule => {
@@ -244,14 +246,14 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                     key={rule.id}
                                                     onClick={() => handleToggle(rule, selectedCompany, selectedCompany.bankClientId || '', perf?.value || 0)}
                                                     className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group active:scale-95 ${perf?.value === 1 ? 'bg-purple-50 dark:bg-purple-500/10 border-purple-500/20' :
-                                                            perf?.value === -1 ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-500/20' :
-                                                                'bg-white dark:bg-apple-darkBg border-slate-100 dark:border-white/5 hover:border-purple-500/50'
+                                                        perf?.value === -1 ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-500/20' :
+                                                            'bg-white dark:bg-apple-darkBg border-slate-100 dark:border-white/5 hover:border-purple-500/50'
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-4">
                                                         <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${perf?.value === 1 ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30' :
-                                                                perf?.value === -1 ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' :
-                                                                    'bg-slate-100 dark:bg-white/10 text-slate-300'
+                                                            perf?.value === -1 ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' :
+                                                                'bg-slate-100 dark:bg-white/10 text-slate-300'
                                                             }`}>
                                                             {perf?.value === -1 ? <XCircle size={20} strokeWidth={3} /> : <CheckCircle2 size={perf?.value === 1 ? 20 : 18} strokeWidth={3} />}
                                                         </div>
@@ -284,8 +286,8 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                             <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse delay-75"></div>
                             <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse delay-150"></div>
                         </div>
-                        <p className="font-black text-lg">Baholash uchun chapdan firmani tanlang</p>
-                        <p className="text-sm mt-2 max-w-xs text-slate-400">Tezkor checklist yordamida buxgalter va bank xodimlarini baholang</p>
+                        <p className="font-black text-lg text-slate-500">{lang === 'uz' ? 'Baholash uchun chapdan firmani tanlang' : 'Выберите фирму слева для оценки'}</p>
+                        <p className="text-sm mt-2 max-w-xs text-slate-400 italic">{lang === 'uz' ? 'Tezkor checklist yordamida buxgalter va bank xodimlarini baholang' : 'Оценивайте бухгалтеров и банковских сотрудников с помощью быстрого чек-листа'}</p>
                     </div>
                 )}
             </div>

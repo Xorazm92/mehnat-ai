@@ -11,20 +11,21 @@ interface SidebarProps {
   onViewChange: (view: AppView) => void;
   lang: Language;
   userRole?: string;
+  pendingReportsCount?: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewChange, lang, userRole }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewChange, lang, userRole, pendingReportsCount = 0 }) => {
   const t = translations[lang];
 
   const menuItems = [
     { id: 'dashboard' as AppView, icon: <LayoutDashboard size={20} />, label: t.dashboard },
     { id: 'organizations' as AppView, icon: <Building2 size={20} />, label: t.organizations },
     { id: 'reports' as AppView, icon: <FileBarChart size={20} />, label: t.reports },
-    { id: 'kassa' as AppView, icon: <Wallet size={20} />, label: 'Kassa' },
-    { id: 'expenses' as AppView, icon: <Receipt size={20} />, label: 'Xarajatlar' },
+    { id: 'kassa' as AppView, icon: <Wallet size={20} />, label: t.kassa || 'Kassa' },
+    { id: 'expenses' as AppView, icon: <Receipt size={20} />, label: t.expenses || 'Xarajatlar' },
     { id: 'documents' as AppView, icon: <FileText size={20} />, label: t.documents || 'Hujjatlar' },
     { id: 'kpi' as AppView, icon: <TrendingUp size={20} />, label: t.kpi || 'Samaradorlik' },
-    { id: 'payroll' as AppView, icon: <DollarSign size={20} />, label: 'Oyliklar' },
+    { id: 'payroll' as AppView, icon: <DollarSign size={20} />, label: t.payroll || 'Oyliklar' },
     { id: 'analysis' as AppView, icon: <PieChart size={20} />, label: t.analysis },
     { id: 'staff' as AppView, icon: <Users size={20} />, label: t.staff },
     { id: 'audit_logs' as AppView, icon: <Shield size={20} />, label: 'Audit Log' },
@@ -75,8 +76,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, isOpen, onClose, onViewCh
                 {item.icon}
               </div>
               <span className="xl:block lg:hidden font-bold text-[0.938rem] tracking-tight">{item.label}</span>
-              {item.id === 'reports' && (
-                <span className="ml-auto bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-rose-500/40">12</span>
+              {item.id === 'reports' && pendingReportsCount > 0 && (
+                <span className="ml-auto bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-rose-500/40">{pendingReportsCount}</span>
               )}
             </button>
           ))}

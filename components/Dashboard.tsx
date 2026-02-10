@@ -187,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* 🚀 ELITE HEADER STATS */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-2">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{t.dashboard}</h2>
+          <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight premium-text-gradient">{t.dashboard}</h2>
           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{selectedPeriod}</p>
         </div>
         <div className="flex bg-white dark:bg-apple-darkCard p-2 rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-sm">
@@ -212,7 +212,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <span className="text-xl">{stat.icon}</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tighter">
+              <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tighter premium-text-gradient">
                 {typeof stat.value === 'number' && i !== 2 ? stat.value.toLocaleString() : stat.value}
                 {i === 2 && '%'}
               </h3>
@@ -242,7 +242,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0}>
+            <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={50}>
               <AreaChart data={stats.financialTrends}>
 
                 <defs>
@@ -271,7 +271,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
           <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-8">Hisobotlar Progressi</h4>
           <div className="h-48 relative">
-            <ResponsiveContainer width="100%" height="100%" minHeight={150} minWidth={0}>
+            <ResponsiveContainer width="100%" height="100%" minHeight={150} minWidth={0} debounce={50}>
               <PieChart>
 
                 <Pie data={stats.reportDonut} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">

@@ -1,7 +1,8 @@
 
-import { Company, TaxType, StatsType } from '../types';
+import { Company, TaxType, StatsType, OperationTask, TaskStatus, OperationFieldKey, ReportStatus } from '../types';
 import { supabase } from './supabaseClient';
-import { upsertCompany, fetchStaff } from './supabaseData';
+import { upsertCompany, fetchStaff, upsertOperation } from './supabaseData';
+import { OPERATION_TEMPLATES, MAP_JSON_FIELD_TO_KEY } from './operationTemplates';
 
 interface FirmaJsonItem {
     "№": number;
@@ -268,6 +269,91 @@ export const seedFirmaData = async () => {
                     assignmentsCreated += assignmentsToInsert.length;
                 }
             }
+
+            // 4. Seed Operations & Tasks (for current period)
+            const currentPeriod = "2025-02"; // Hardcoded for now, or could be dynamic
+            const { data: existingOp } = await supabase
+                .from('operations')
+                .select('id')
+                .eq('company_id', company.id)
+                .eq('period', currentPeriod)
+                .maybeSingle();
+
+            const opId = existingOp?.id || crypto.randomUUID();
+            const tasks: OperationTask[] = [];
+
+            // Iterate through templates to create tasks
+            for (const template of OPERATION_TEMPLATES) {
+                // Find matching JSON key for this template
+                const jsonKeyEntry = Object.entries(MAP_JSON_FIELD_TO_KEY).find(([_, k]) => k === template.key);
+                if (!jsonKeyEntry) continue;
+
+                const jsonKey = jsonKeyEntry[0];
+                const jsonValue = getVal(item, [jsonKey]);
+
+                // Map JSON value to TaskStatus
+                let status: TaskStatus = 'new';
+                const valStr = String(jsonValue || '').trim().toLowerCase();
+
+                if (valStr === '+' || valStr === 'topshirildi') status = 'approved';
+                else if (valStr === '-') status = 'new'; // Not done yet
+                else if (valStr === '0' || valStr === 'not_required') status = 'not_required';
+                else if (valStr === 'kartoteka') status = 'blocked';
+                else if (valStr.includes('ariza') || valStr === 'in_progress') status = 'pending_review';
+                else if (valStr === 'rad etildi') status = 'rejected';
+                else if (valStr === '?') status = 'new'; // Unknown -> treat as new
+
+                // Determine assignee
+                let assigneeId = undefined;
+                let assigneeName = '';
+                if (template.assignedRole === 'accountant') {
+                    assigneeId = company.accountantId;
+                    assigneeName = company.accountantName || '';
+                } else if (template.assignedRole === 'bank_manager') {
+                    assigneeId = company.bankClientId;
+                    assigneeName = company.bankClientName || '';
+                }
+
+                // Controller is always supervisor
+                const controllerId = company.supervisorId;
+                const controllerName = company.supervisorName || '';
+
+                // Create task
+                if (jsonValue !== undefined || template.frequency === 'monthly') { // Create if value exists or it's a monthly task
+                    tasks.push({
+                        id: `${opId}-${template.key}`,
+                        companyId: company.id,
+                        companyName: company.name,
+                        templateKey: template.key,
+                        templateName: template.nameUz,
+                        assigneeId,
+                        assigneeName,
+                        controllerId,
+                        controllerName,
+                        period: currentPeriod,
+                        deadline: new Date(2025, 1, template.deadlineDay).toISOString(), // 2025-02-DD
+                        status,
+                        jsonValue: String(jsonValue || ''),
+                        submittedAt: status === 'approved' ? new Date().toISOString() : undefined,
+                        verifiedAt: status === 'approved' ? new Date().toISOString() : undefined,
+                    });
+                }
+            }
+
+            // Upsert operation with tasks
+            await upsertOperation({
+                id: opId,
+                companyId: company.id,
+                period: currentPeriod,
+                profitTaxStatus: ReportStatus.UNKNOWN,
+                form1Status: ReportStatus.UNKNOWN,
+                form2Status: ReportStatus.UNKNOWN,
+                statsStatus: ReportStatus.UNKNOWN,
+                comment: '',
+                updatedAt: new Date().toISOString(),
+                history: [],
+                tasks: tasks
+            });
         }
 
         console.log(`Seeding complete! ${companiesProcessed} companies processed, ${assignmentsCreated} assignments created, ${assignmentErrors} assignment errors.`);

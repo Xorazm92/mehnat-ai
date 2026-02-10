@@ -76,6 +76,22 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
+  const pendingReportsCount = useMemo(() => {
+    // Only count for relevant roles (Supervisor/Admin) or show own pending actions for Accountants?
+    // For now, matching the "Notification" context which usually implies "To Do" for the user.
+    if (userRole === 'accountant') {
+      // For accountants, maybe show "Rejected" or "New" tasks?
+      // Leaving 0 for now to keep it clean, or could count 'rejected'
+      return 0;
+    }
+
+    return operations
+      .filter(op => op.period === selectedPeriod)
+      .flatMap(op => op.tasks || [])
+      .filter(t => t.status === 'pending_review')
+      .length;
+  }, [operations, selectedPeriod, userRole]);
+
   useEffect(() => {
     if (selectedCompany) {
       const updated = companies.find(c => c.id === selectedCompany.id);
@@ -333,6 +349,8 @@ const App: React.FC = () => {
     );
   }
 
+
+
   return (
     <div className="h-screen flex selection:bg-apple-accent/30 overflow-hidden bg-slate-50 dark:bg-apple-darkBg">
       <Toaster position="top-center" richColors />
@@ -348,6 +366,7 @@ const App: React.FC = () => {
         }}
         lang={lang}
         userRole={userRole}
+        pendingReportsCount={pendingReportsCount}
       />
 
       <main className="flex-1 lg:pl-20 xl:pl-64 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-300">
@@ -439,6 +458,8 @@ const App: React.FC = () => {
                     lang={lang}
                     onUpdate={async (op) => { await upsertOperation(op); refreshData(); }}
                     onCompanySelect={setSelectedCompany}
+                    userRole={userRole}
+                    currentUserId={session?.user?.id}
                   />
                 )}
 

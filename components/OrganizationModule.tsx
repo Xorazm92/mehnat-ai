@@ -168,7 +168,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
     <div className="space-y-8 md:space-y-10 animate-fade-in pb-20">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-apple-darkCard p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-apple-border dark:border-apple-darkBorder gap-8">
         <div className="flex-1">
-          <h2 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-tight mb-2">{t.organizations}</h2>
+          <h2 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-tight mb-2 premium-text-gradient">{t.organizations}</h2>
           <p className="text-sm md:text-base font-semibold text-slate-400">
             {t.totalFirms}: <span className="text-apple-accent tabular-nums">{filtered.length}</span>
           </p>
@@ -506,7 +506,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                           className="px-6 py-5 sticky left-0 bg-white dark:bg-apple-darkCard group-hover:bg-slate-50 dark:group-hover:bg-apple-darkBg/90 z-20 shadow-sm transition-colors cursor-pointer"
                           onClick={() => onCompanySelect(c)}
                         >
-                          <div className="font-extrabold text-slate-800 dark:text-white text-sm tracking-tight hover:text-apple-accent transition-colors">{c.name}</div>
+                          <div className="font-extrabold text-slate-800 dark:text-white text-sm tracking-tight hover:text-apple-accent transition-colors premium-text-gradient">{c.name}</div>
                           {c.brandName && <div className="text-[10px] text-slate-400 font-medium">{c.brandName}</div>}
                         </td>
                         <td className="px-4 py-5">
