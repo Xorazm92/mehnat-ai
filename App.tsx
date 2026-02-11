@@ -30,6 +30,7 @@ import {
   deleteCompany,
   onboardCompany,
   upsertOperation,
+  upsertOperationsBatch,
   upsertStaff,
   deleteStaff,
   fetchPayments,
@@ -457,6 +458,7 @@ const App: React.FC = () => {
                     onPeriodChange={setSelectedPeriod}
                     lang={lang}
                     onUpdate={async (op) => { await upsertOperation(op); refreshData(); }}
+                    onBatchUpdate={async (ops) => { await upsertOperationsBatch(ops); refreshData(); }}
                     onCompanySelect={setSelectedCompany}
                     userRole={userRole}
                     currentUserId={session?.user?.id}

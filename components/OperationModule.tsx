@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Company, OperationEntry, OperationTask, TaskStatus, Language, OperationFieldKey } from '../types';
 import { translations } from '../lib/translations';
-import { OPERATION_TEMPLATES } from '../lib/operationTemplates';
-import { Search, Filter, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronRight, ShieldCheck, UserCheck, LayoutGrid, List } from 'lucide-react';
+import { OPERATION_TEMPLATES, MAP_JSON_FIELD_TO_KEY } from '../lib/operationTemplates';
+import { Search, Filter, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronRight, ShieldCheck, UserCheck, LayoutGrid, List, RefreshCw, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   onPeriodChange: (p: string) => void;
   lang: Language;
   onUpdate: (op: OperationEntry) => void;
+  onBatchUpdate?: (ops: OperationEntry[]) => void;
   onCompanySelect: (c: Company) => void;
   userRole: string;
   currentUserId?: string;
@@ -26,6 +27,7 @@ const OperationModule: React.FC<Props> = ({
   onPeriodChange,
   lang,
   onUpdate,
+  onBatchUpdate,
   onCompanySelect,
   userRole,
   currentUserId
@@ -36,6 +38,27 @@ const OperationModule: React.FC<Props> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCompanyForEdit, setSelectedCompanyForEdit] = useState<Company | null>(null);
   const [editingTasks, setEditingTasks] = useState<string[]>([]); // List of active template keys
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [activePicker, setActivePicker] = useState<{ companyId: string, templateKey: string } | null>(null);
+
+  const normalizeName = (name: string) => {
+    return name.toLowerCase()
+      .replace(/["'“”«»]/g, '')
+      .replace(/mchj|xk|fx|ok|llc|oao|ooo|чп|хк|ок|мчж|латлар/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const generateUUID = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
 
   // --- Helper Functions ---
   const getTaskStatusColor = (status: TaskStatus) => {
@@ -53,20 +76,23 @@ const OperationModule: React.FC<Props> = ({
 
   const getStatusIcon = (status: TaskStatus) => {
     switch (status) {
-      case 'approved': return <CheckCircle2 size={16} />;
-      case 'rejected': return <XCircle size={16} />;
-      case 'submitted': return <UserCheck size={16} />;
-      case 'pending_review': return <Clock size={16} />;
-      case 'blocked': return <AlertTriangle size={16} />;
-      case 'overdue': return <AlertTriangle size={16} />;
-      case 'not_required': return <span className="text-xs font-mono">N/A</span>;
-      default: return <span className="text-xs">-</span>;
+      case 'approved': return <span className="font-bold text-sm leading-none">+</span>;
+      case 'rejected': return <span className="font-bold text-[9px] uppercase tracking-tighter leading-none">rad</span>;
+      case 'submitted': return <span className="font-bold text-sm leading-none">✓</span>;
+      case 'pending_review': return <span className="text-[8px] font-bold uppercase leading-[0.8] tracking-tighter text-center px-0.5">ariza</span>;
+      case 'blocked': return <span className="text-[8px] font-bold uppercase leading-[0.8] tracking-tighter text-center px-0.5">karto<br />teka</span>;
+      case 'overdue': return <span className="font-bold text-sm leading-none">-</span>;
+      case 'not_required': return <span className="font-bold text-xs opacity-60">0</span>;
+      case 'new': return <span className="text-gray-400/50 font-bold">-</span>;
+      default: return <span className="text-gray-400/50 font-bold">-</span>;
     }
   }
 
+
+
   // --- Actions ---
   const handleQuickToggle = async (companyId: string, templateKey: string) => {
-    if (userRole !== 'admin' && userRole !== 'super_admin') return;
+    if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'supervisor') return;
 
     const op = operations.find(o => o.companyId === companyId && o.period === selectedPeriod);
     let updatedTasks = [...(op?.tasks || [])];
@@ -86,7 +112,7 @@ const OperationModule: React.FC<Props> = ({
       if (!tmpl || !company) return;
 
       updatedTasks.push({
-        id: Math.random().toString(36).substr(2, 9),
+        id: generateUUID(),
         companyId: company.id,
         companyName: company.name,
         templateKey: tmpl.key,
@@ -95,7 +121,7 @@ const OperationModule: React.FC<Props> = ({
         controllerName: 'Nazorat',
         period: selectedPeriod,
         deadline: new Date().toISOString(),
-        status: 'new',
+        status: 'approved', // Default to approved when manually toggled on
         jsonValue: '+'
       });
     }
@@ -105,7 +131,7 @@ const OperationModule: React.FC<Props> = ({
       tasks: updatedTasks,
       updatedAt: new Date().toISOString()
     } : {
-      id: Math.random().toString(36).substr(2, 9),
+      id: generateUUID(),
       companyId: companyId,
       period: selectedPeriod,
       profitTaxStatus: '?' as any,
@@ -125,40 +151,221 @@ const OperationModule: React.FC<Props> = ({
     }
   };
 
+  // --- Auto-Sync Logic ---
+  const handleSyncFromJson = async (silent = false) => {
+    if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'supervisor') return;
+
+    if (!silent) setIsSyncing(true);
+
+    try {
+      const response = await fetch('/Firma online.json');
+      if (!response.ok) throw new Error('JSON faylni yuklab bo\'lmadi');
+      const data: any[] = await response.json();
+
+      const batchUpdates: OperationEntry[] = [];
+
+      for (const item of data) {
+        const inn = String(item["ИНН"] || '').trim();
+        const rawName = String(item["НАИМЕНОВАНИЯ"] || '').trim();
+        const normName = normalizeName(rawName);
+
+        // Find company by INN or Fuzzy Name
+        const company = companies.find(c => {
+          if (inn && c.inn === inn) return true;
+          if (normalizeName(c.name) === normName) return true;
+          return false;
+        });
+
+        if (!company) continue;
+
+        const existingOp = operations.find(o => o.companyId === company.id && o.period === selectedPeriod);
+        let updatedTasks = [...(existingOp?.tasks || [])];
+        let hasChanges = false;
+
+        for (const [jsonKey, templateKey] of Object.entries(MAP_JSON_FIELD_TO_KEY)) {
+          const jsonValue = item[jsonKey];
+          if (jsonValue === undefined) continue;
+
+          const valStr = String(jsonValue).trim().toLowerCase();
+          let status: TaskStatus = 'new';
+
+          if (valStr === '+' || valStr === 'topshirildi') status = 'approved';
+          else if (valStr === '0' || valStr === 'not_required') status = 'not_required';
+          else if (valStr === 'kartoteka') status = 'blocked';
+          else if (valStr.includes('ariza') || valStr === 'in_progress') status = 'pending_review';
+          else if (valStr === 'rad etildi') status = 'rejected';
+          else if (valStr === '-') status = 'new';
+          else if (valStr === '?') status = 'new';
+
+          const existingTaskIndex = updatedTasks.findIndex(t => t.templateKey === templateKey);
+
+          if (existingTaskIndex >= 0) {
+            if (updatedTasks[existingTaskIndex].status !== status || updatedTasks[existingTaskIndex].jsonValue !== String(jsonValue)) {
+              updatedTasks[existingTaskIndex] = {
+                ...updatedTasks[existingTaskIndex],
+                status,
+                jsonValue: String(jsonValue)
+              };
+              hasChanges = true;
+            }
+          } else {
+            const tmpl = OPERATION_TEMPLATES.find(t => t.key === templateKey);
+            if (tmpl) {
+              updatedTasks.push({
+                id: generateUUID(),
+                companyId: company.id,
+                companyName: company.name,
+                templateKey: templateKey as any,
+                templateName: lang === 'uz' ? tmpl.nameUz : tmpl.nameRu,
+                assigneeName: company.accountantName || 'Tayinlanmagan',
+                controllerName: 'Nazorat',
+                period: selectedPeriod,
+                deadline: new Date().toISOString(),
+                status,
+                jsonValue: String(jsonValue)
+              });
+              hasChanges = true;
+            }
+          }
+        }
+
+        if (hasChanges) {
+          const newOp: OperationEntry = existingOp ? {
+            ...existingOp,
+            tasks: updatedTasks,
+            updatedAt: new Date().toISOString()
+          } : {
+            id: generateUUID(),
+            companyId: company.id,
+            period: selectedPeriod,
+            profitTaxStatus: '?' as any,
+            form1Status: '?' as any,
+            form2Status: '?' as any,
+            statsStatus: '?' as any,
+            tasks: updatedTasks,
+            updatedAt: new Date().toISOString(),
+            history: []
+          };
+          batchUpdates.push(newOp);
+        }
+      }
+
+      if (batchUpdates.length > 0) {
+        if (onBatchUpdate) {
+          await onBatchUpdate(batchUpdates);
+        } else {
+          for (const op of batchUpdates) {
+            await onUpdate(op);
+          }
+        }
+        if (!silent) toast.success(`${batchUpdates.length} ta firmaning operatsiyalari yangilandi`);
+      } else {
+        if (!silent) toast.info('Yangi o\'zgarishlar topilmadi');
+      }
+    } catch (e: any) {
+      console.error('Auto-sync error:', e);
+      if (!silent) toast.error('Sinxronizatsiyada xatolik: ' + e.message);
+    } finally {
+      if (!silent) setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor') {
+      const timer = setTimeout(() => {
+        handleSyncFromJson(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedPeriod, companies.length]);
+
   const handleTaskStatusChange = async (companyId: string, taskKey: string, newStatus: TaskStatus) => {
+    if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'supervisor') return;
+
     // Find the operation entry
     const operation = operations.find(o => o.companyId === companyId && o.period === selectedPeriod);
-    if (!operation) return;
+    let updatedTasks = [...(operation?.tasks || [])];
+    const existingIndex = updatedTasks.findIndex(t => t.templateKey === taskKey);
 
-    // Clone tasks
-    const updatedTasks = operation.tasks?.map(t => {
-      if (t.templateKey === taskKey) {
-        return {
-          ...t,
+    if (existingIndex >= 0) {
+      updatedTasks[existingIndex] = {
+        ...updatedTasks[existingIndex],
+        status: newStatus,
+        verifiedAt: newStatus === 'approved' ? new Date().toISOString() : undefined,
+        submittedAt: newStatus === 'submitted' ? new Date().toISOString() : updatedTasks[existingIndex].submittedAt
+      };
+    } else {
+      const tmpl = OPERATION_TEMPLATES.find(t => t.key === taskKey);
+      const company = companies.find(c => c.id === companyId);
+      if (tmpl && company) {
+        updatedTasks.push({
+          id: generateUUID(),
+          companyId: company.id,
+          companyName: company.name,
+          templateKey: taskKey as any,
+          templateName: lang === 'uz' ? tmpl.nameUz : tmpl.nameRu,
+          assigneeName: company.accountantName || 'Tayinlanmagan',
+          controllerName: 'Nazorat',
+          period: selectedPeriod,
+          deadline: new Date().toISOString(),
           status: newStatus,
-          verifiedAt: newStatus === 'approved' ? new Date().toISOString() : undefined,
-          submittedAt: newStatus === 'submitted' ? new Date().toISOString() : t.submittedAt
-        };
+          jsonValue: '-'
+        });
       }
-      return t;
-    }) || [];
+    }
 
-    // Create updated operation object
-    const updatedOp = {
+    const updatedOp: OperationEntry = operation ? {
       ...operation,
       tasks: updatedTasks,
       updatedAt: new Date().toISOString()
+    } : {
+      id: generateUUID(),
+      companyId,
+      period: selectedPeriod,
+      profitTaxStatus: '?' as any,
+      form1Status: '?' as any,
+      form2Status: '?' as any,
+      statsStatus: '?' as any,
+      tasks: updatedTasks,
+      updatedAt: new Date().toISOString(),
+      history: []
     };
 
-    // Optimistic update locally (parent should handle refresh, but for UI responsiveness)
-    // We rely on onUpdate to trigger data save and refresh
     try {
       await onUpdate(updatedOp);
-      toast.success(`Status o'zgartirildi: ${newStatus}`);
+      setActivePicker(null);
+      if (newStatus !== 'approved' || (activePicker)) {
+        toast.success(`Status o'zgartirildi: ${newStatus}`);
+      }
     } catch (e) {
       toast.error("Xatolik yuz berdi");
       console.error(e);
     }
+  };
+
+
+  const handleExportToExcel = () => {
+    // Basic CSV export that Excel can open (with BOM for UTF-8)
+    const header = ['Firma Nomi', 'INN', ...OPERATION_TEMPLATES.map(t => lang === 'uz' ? t.nameUz : t.nameRu)];
+    const rows = filteredData.map(({ company, tasks }) => {
+      const row = [company.name, company.inn];
+      OPERATION_TEMPLATES.forEach(tmpl => {
+        const task = tasks.find(t => t.templateKey === tmpl.key);
+        row.push(task ? task.status : '-');
+      });
+      return row;
+    });
+
+    const csvContent = [header, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `operatsiyalar_${selectedPeriod}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Excel (CSV) fayli tayyorlandi");
   };
 
   // --- Data Filtering ---
@@ -241,7 +448,7 @@ const OperationModule: React.FC<Props> = ({
   // --- Actions ---
 
   const openEditModal = (company: Company) => {
-    if (userRole !== 'admin' && userRole !== 'super_admin') {
+    if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'supervisor') {
       onCompanySelect(company);
       return;
     }
@@ -283,7 +490,7 @@ const OperationModule: React.FC<Props> = ({
         } else {
           // Create new task
           updatedTasks.push({
-            id: Math.random().toString(36).substr(2, 9),
+            id: generateUUID(),
             companyId: selectedCompanyForEdit.id,
             companyName: selectedCompanyForEdit.name,
             templateKey: tmpl.key,
@@ -313,7 +520,7 @@ const OperationModule: React.FC<Props> = ({
       updatedAt: new Date().toISOString()
     } : {
       // Create new operation entry if doesn't exist
-      id: Math.random().toString(36).substr(2, 9),
+      id: generateUUID(),
       companyId: selectedCompanyForEdit.id,
       period: selectedPeriod,
       profitTaxStatus: '?' as any,
@@ -411,75 +618,139 @@ const OperationModule: React.FC<Props> = ({
 
   // --- Render Views ---
 
+  // --- Sub-renderers ---
+  const renderStatusLegend = () => (
+    <div className="flex flex-wrap items-center gap-4 mb-4 px-5 py-3.5 bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-white/10 overflow-x-auto no-scrollbar shadow-sm">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mr-2 whitespace-nowrap">{t.legend}:</div>
+      {[
+        { s: 'approved', label: '+', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' },
+        { s: 'pending_review', label: 'ariza', color: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' },
+        { s: 'blocked', label: 'kartoteka', color: 'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400' },
+        { s: 'rejected', label: 'rad', color: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' },
+        { s: 'not_required', label: '0', color: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-500' },
+        { s: 'new', label: '-', color: 'bg-gray-50 text-gray-300 dark:bg-white/5 dark:text-gray-600' }
+      ].map(item => (
+        <div key={item.s} className="flex items-center gap-2 whitespace-nowrap group/legend cursor-default">
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform group-hover/legend:scale-110 ${item.color} shadow-sm border border-white/20`}>
+            {getStatusIcon(item.s as TaskStatus)}
+          </div>
+          <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 lowercase">{t[item.s as keyof typeof t] || item.s}</span>
+        </div>
+      ))}
+    </div>
+  );
+
   // 1. Matrix View (Admin/Supervisor)
   const renderMatrixView = () => (
-    <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm relative group">
-      {/* --- TOP SYNCHRONIZED SCROLLBAR --- */}
-      <div
-        ref={topScrollRef}
-        className="overflow-x-auto h-4 bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-gray-800 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
-      >
-        <div style={{ width: `${300 + (OPERATION_TEMPLATES.length * 100)}px`, height: '1px' }}></div>
-      </div>
+    <div className="flex flex-col gap-4">
+      {renderStatusLegend()}
+      <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] border border-gray-100 dark:border-gray-800 overflow-hidden shadow-2xl relative group ring-1 ring-black/5 dark:ring-white/5">
+        {/* --- TOP SYNCHRONIZED SCROLLBAR --- */}
+        <div
+          ref={topScrollRef}
+          className="overflow-x-auto h-4 bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-gray-800 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
+        >
+          <div style={{ width: `${300 + (OPERATION_TEMPLATES.length * 100)}px`, height: '1px' }}></div>
+        </div>
 
-      <div ref={bottomScrollRef} className="overflow-x-auto scrollbar-thin">
-        <table className="w-full text-sm text-left border-collapse min-w-[300px]">
-          <thead>
-            <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-gray-800">
-              <th className="p-4 font-black text-xs uppercase tracking-widest text-gray-500 sticky left-0 bg-gray-50 dark:bg-[#1C1C1E] z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] dark:shadow-none min-w-[200px]">
-                Firma Nomi
-              </th>
-              {OPERATION_TEMPLATES.map(tmpl => (
-                <th key={tmpl.key} className="p-4 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap text-center">
-                  <div className="flex flex-col items-center gap-1">
-                    <span>{lang === 'uz' ? tmpl.nameUz : tmpl.nameRu}</span>
-                    <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full text-gray-400">
-                      {tmpl.deadlineDay}-sana
-                    </span>
-                  </div>
+        <div ref={bottomScrollRef} className="overflow-x-auto scrollbar-thin">
+          <table className="w-full text-sm text-left border-collapse min-w-[300px]">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-gray-800">
+                <th className="p-4 font-black text-xs uppercase tracking-widest text-gray-500 sticky left-0 bg-gray-50 dark:bg-[#1C1C1E] z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] dark:shadow-none min-w-[200px]">
+                  Firma Nomi
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {filteredData.map(({ company, tasks }) => (
-              <tr key={company.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                <td className="p-4 font-medium sticky left-0 bg-white dark:bg-[#1C1C1E] group-hover:bg-gray-50 dark:group-hover:bg-[#2C2C2E] transition-colors z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] dark:shadow-none border-r border-transparent dark:border-gray-800">
-                  <div
-                    className="w-full truncate cursor-pointer hover:text-blue-500 transition-colors"
-                    onClick={() => openEditModal(company)}
-                  >
-                    {company.name}
-                  </div>
-                  <div className="text-xs text-gray-400 font-mono mt-0.5">{company.inn}</div>
-                </td>
-                {OPERATION_TEMPLATES.map(tmpl => {
-                  const task = tasks.find(t => t.templateKey === tmpl.key);
-                  const status = task ? task.status : 'new';
-
-                  return (
-                    <td
-                      key={tmpl.key}
-                      className={`p-2 text-center transition-all cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-500/10 group/cell`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (status === 'not_required') {
-                          handleQuickToggle(company.id, tmpl.key);
-                        } else {
-                          openEditModal(company);
-                        }
-                      }}
-                    >
-                      <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${getTaskStatusColor(status)} transition-transform group-hover/cell:scale-110 shadow-sm`} title={`${status} ${task?.comment ? '- ' + task.comment : ''}`}>
-                        {getStatusIcon(status)}
-                      </div>
-                    </td>
-                  );
-                })}
+                {OPERATION_TEMPLATES.map(tmpl => (
+                  <th key={tmpl.key} className="p-4 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <span>{lang === 'uz' ? tmpl.nameUz : tmpl.nameRu}</span>
+                      <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full text-gray-400">
+                        {tmpl.deadlineDay}-sana
+                      </span>
+                    </div>
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {filteredData.map(({ company, tasks }) => (
+                <tr key={company.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                  <td className="p-4 font-medium sticky left-0 bg-white dark:bg-[#1C1C1E] group-hover:bg-gray-50 dark:group-hover:bg-[#2C2C2E] transition-colors z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] dark:shadow-none border-r border-transparent dark:border-gray-800">
+                    <div
+                      className="w-full truncate cursor-pointer hover:text-blue-500 transition-colors"
+                      onClick={() => openEditModal(company)}
+                    >
+                      {company.name}
+                    </div>
+                    <div className="text-xs text-gray-400 font-mono mt-0.5">{company.inn}</div>
+                  </td>
+                  {OPERATION_TEMPLATES.map(tmpl => {
+                    const task = tasks.find(t => t.templateKey === tmpl.key);
+                    const status = task ? task.status : 'new';
+
+                    return (
+                      <td
+                        key={tmpl.key}
+                        className={`p-2 text-center transition-all cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-500/10 group/cell relative`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor') {
+                            setActivePicker(activePicker?.companyId === company.id && activePicker?.templateKey === tmpl.key ? null : { companyId: company.id, templateKey: tmpl.key });
+                          } else {
+                            openEditModal(company);
+                          }
+                        }}
+                      >
+                        {/* Click-away backdrop */}
+                        {activePicker?.companyId === company.id && activePicker?.templateKey === tmpl.key && (
+                          <div
+                            className="fixed inset-0 z-40 bg-transparent"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActivePicker(null);
+                            }}
+                          />
+                        )}
+
+                        <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${getTaskStatusColor(status)} transition-all duration-300 group-hover/cell:scale-110 shadow-sm border-2 border-transparent group-hover/cell:border-white/20 dark:group-hover/cell:border-white/10`} title={`${t[status as keyof typeof t] || status} ${task?.comment ? '- ' + task.comment : ''}`}>
+                          {getStatusIcon(status)}
+                        </div>
+
+                        {/* Status Picker Popover */}
+                        {
+                          activePicker?.companyId === company.id && activePicker?.templateKey === tmpl.key && (
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white dark:bg-[#2C2C2E] border border-gray-100 dark:border-gray-800 rounded-2xl shadow-2xl p-2 flex flex-col gap-1 min-w-[120px] animate-in fade-in zoom-in duration-200">
+                              {[
+                                { s: 'approved', label: '+', color: 'text-emerald-500' },
+                                { s: 'pending_review', label: 'ariza', color: 'text-amber-500' },
+                                { s: 'blocked', label: 'kartoteka', color: 'text-orange-500' },
+                                { s: 'rejected', label: 'rad', color: 'text-red-500' },
+                                { s: 'not_required', label: '0', color: 'text-gray-400' },
+                                { s: 'new', label: '-', color: 'text-gray-300' }
+                              ].map(item => (
+                                <button
+                                  key={item.s}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTaskStatusChange(company.id, tmpl.key, item.s as TaskStatus);
+                                  }}
+                                  className={`flex items-center justify-between px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-xs font-bold ${item.color}`}
+                                >
+                                  <span>{item.label}</span>
+                                  {status === item.s && <CheckCircle2 size={12} />}
+                                </button>
+                              ))}
+                            </div>
+                          )
+                        }
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -643,20 +914,7 @@ const OperationModule: React.FC<Props> = ({
 
         <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
           {/* Period Selector */}
-          {/* Period Selector */}
           <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-2xl w-full md:w-auto items-center">
-            {/* Previous Month */}
-            <button
-              onClick={() => {
-                // Logic to go to prev month
-                // Simple implementation: just text input or dropdown is better for now
-                // Or better: List all relevant options dynamically
-              }}
-              className="p-2 hover:bg-white dark:hover:bg-white/10 rounded-xl hidden"
-            >
-              <ChevronRight className="rotate-180" size={20} />
-            </button>
-
             <div className="flex overflow-x-auto scrollbar-none gap-1 max-w-[300px] md:max-w-none">
               {periods.map(p => (
                 <button
@@ -673,8 +931,16 @@ const OperationModule: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Search & Actions */}
           <div className="flex gap-3 w-full md:w-auto">
+            <button
+              onClick={handleExportToExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-white/5 border border-emerald-100 dark:border-emerald-800 rounded-xl text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-white/10 transition-all shadow-sm active:scale-95"
+              title="Excelga yuklab olish"
+            >
+              <Download size={18} />
+              <span className="hidden sm:inline">Excelga</span>
+            </button>
+
             {/* View Toggle for Admin */}
             {userRole !== 'accountant' && userRole !== 'supervisor' && (
               <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-xl">

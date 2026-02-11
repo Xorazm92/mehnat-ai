@@ -13,9 +13,7 @@ export const translations = {
     kpiReport: "Xodimlar unumdorligi (Svod)",
     annualProgress: "Yillik Progress",
     debtors: "Qarzdorlar",
-    blocked: "Kartoteka",
     accountant: "Buxgalter",
-    stats: "Statistika",
     total: "Jami",
     settings: "Sozlamalar",
     logout: "Chiqish",
@@ -73,7 +71,15 @@ export const translations = {
     quarter: "Chorak",
     deadline: "Oxirgi muddat",
     deadlineProfit: "Foyda muddati",
-    deadlineStats: "Stat muddati"
+    deadlineStats: "Stat muddati",
+    legend: "Belgilar ma'nosi",
+    approved: "Topshirildi",
+    pending_review: "Ariza berildi",
+    blocked: "Kartoteka",
+    rejected: "Rad etildi",
+    not_required: "Shart emas",
+    new: "Yangi/Topshirilmagan",
+    submitted: "Yuborildi"
   },
   ru: {
     dashboard: "Панель управления",
@@ -88,9 +94,7 @@ export const translations = {
     kpiReport: "Производительность (Свод)",
     annualProgress: "Годовой прогресс",
     debtors: "Должники",
-    blocked: "Картотека",
     accountant: "Бухгалтер",
-    stats: "Статистика",
     total: "Всего",
     settings: "Настройки",
     logout: "Выйти",
@@ -140,6 +144,14 @@ export const translations = {
     quarter: "Квартал",
     deadline: "Крайний срок",
     deadlineProfit: "Срок прибыли",
-    deadlineStats: "Срок стат"
+    deadlineStats: "Срок стат",
+    legend: "Значение символов",
+    approved: "Сдано",
+    pending_review: "Подана заявка",
+    blocked: "Картотека",
+    rejected: "Отклонено",
+    not_required: "Не требуется",
+    new: "Новый/Не сдано",
+    submitted: "Отправлено"
   }
 };

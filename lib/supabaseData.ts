@@ -678,15 +678,62 @@ export const upsertOperation = async (op: OperationEntry) => {
 
   try {
     const { error } = await supabase.from('operations').upsert(payload);
-    if (error && error.code === '42703') {
+    if (error && (error.code === '42703' || error.code === 'PGRST204')) {
       const fallbackPayload = { ...payload } as any;
       delete fallbackPayload.kpi;
       delete fallbackPayload.deadline_profit_tax;
       delete fallbackPayload.deadline_stats;
+      delete fallbackPayload.tasks;
       const { error: fErr } = await supabase.from('operations').upsert(fallbackPayload);
       if (fErr) throw fErr;
     } else if (error) throw error;
   } catch (e) { console.error(e); throw e; }
+};
+
+export const upsertOperationsBatch = async (ops: OperationEntry[]) => {
+  const payloads = ops.map(op => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let validId = op.id;
+    if (!validId || !uuidRegex.test(validId)) {
+      validId = crypto.randomUUID();
+    }
+    const kpiStore = op.kpi ? JSON.stringify({ kpi: op.kpi }) : (op.comment || '');
+
+    return {
+      id: validId,
+      company_id: op.companyId,
+      period: op.period,
+      profit_tax_status: toDbStatus(op.profitTaxStatus),
+      form1_status: toDbStatus(op.form1Status),
+      form2_status: toDbStatus(op.form2Status),
+      stats_status: toDbStatus(op.statsStatus),
+      deadline_profit_tax: op.profitTaxDeadline,
+      deadline_stats: op.statsDeadline,
+      comment: op.kpi ? kpiStore : op.comment,
+      kpi: op.kpi,
+      tasks: op.tasks
+    };
+  });
+
+  try {
+    const { error } = await supabase.from('operations').upsert(payloads);
+    if (error && (error.code === '42703' || error.code === 'PGRST204')) {
+      // Fallback: remove problematic columns from all items
+      const fallbackPayloads = payloads.map(p => {
+        const fb = { ...p } as any;
+        delete fb.kpi;
+        delete fb.deadline_profit_tax;
+        delete fb.deadline_stats;
+        delete fb.tasks;
+        return fb;
+      });
+      const { error: fErr } = await supabase.from('operations').upsert(fallbackPayloads);
+      if (fErr) throw fErr;
+    } else if (error) throw error;
+  } catch (e) {
+    console.error('Batch upsert failed:', e);
+    throw e;
+  }
 };
 
 export const deleteOperation = async (id: string) => {

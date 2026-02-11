@@ -241,7 +241,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          <div className="h-[300px]">
+          <div className="h-[300px] min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={50}>
               <AreaChart data={stats.financialTrends}>
 
@@ -270,7 +270,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="dashboard-card p-8 lg:col-span-1 bg-slate-900 text-white overflow-hidden relative">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
           <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-8">Hisobotlar Progressi</h4>
-          <div className="h-48 relative">
+          <div className="h-48 min-h-[192px] relative">
             <ResponsiveContainer width="100%" height="100%" minHeight={150} minWidth={0} debounce={50}>
               <PieChart>
 
@@ -351,7 +351,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">Jamoa Yoshi Tarkibi</h4>
             <div className="flex items-center gap-10">
               <div className="h-32 w-32 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minHeight={128}>
                   <PieChart>
                     <Pie data={stats.ageDistribution} innerRadius={40} outerRadius={55} paddingAngle={4} dataKey="value" stroke="none">
                       {stats.ageDistribution.map((entry, index) => (
