@@ -151,8 +151,8 @@ const AnalysisModule: React.FC<Props> = ({ companies, operations, selectedPeriod
             </h3>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8 ml-4">Segmentni bosing / Нажмите на сегмент</p>
 
-            <div className="h-72 min-h-[288px] mb-8 relative">
-              <ResponsiveContainer width="100%" height="100%" minHeight={288} debounce={50}>
+            <div className="h-72 min-h-[288px] mb-8 relative w-full overflow-hidden">
+              <ResponsiveContainer width="100%" height="100%" aspect={1.2} minHeight={288}>
                 <PieChart>
                   <Pie
                     data={stat.data}

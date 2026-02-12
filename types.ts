@@ -232,12 +232,12 @@ export interface KPIMetrics {
 
 export type OperationFieldKey =
   'aylanma_qqs' | 'daromad_soliq' | 'inps' | 'foyda_soliq' |
-  'moliyaviy_natija' | 'buxgalteriya_balansi' | 'yer_soliq' |
-  'mol_mulk_soliq' | 'suv_soliq' | 'statistika' | 'bonak' |
+  'moliyaviy_natija' | 'buxgalteriya_balansi' | 'yer_soligi' |
+  'mol_mulk_soligi' | 'suv_soligi' | 'statistika' | 'bonak' |
   'nds_bekor' | 'it_park' | 'one_c' | 'tovar_ostatka' |
   'didox' | 'xatlar' | 'avtokameral' | 'my_mehnat' | 'pul_oqimlari' |
-  'chiqadigan_soliqlar' | 'hisoblangan_oylik' | 'debitor_kreditor' | 'foyda_zarar' |
-  'bank_klient' | 'nds_bekor_qilish' | 'foyda_va_zarar' | 'yer_soliqi' | 'mol_mulk_soligi' | 'suv_soligi';
+  'chiqadigan_soliqlar' | 'hisoblangan_oylik' | 'debitor_kreditor' | 'foyda_va_zarar' |
+  'bank_klient' | 'nds_bekor_qilish';
 
 export type TaskStatus = 'new' | 'submitted' | 'pending_review' |
   'approved' | 'rejected' | 'overdue' | 'not_required' | 'blocked';
@@ -301,7 +301,7 @@ export interface OperationEntry {
   buxgalteriya_balansi?: string;
   statistika?: string;
   bonak?: string;
-  yer_soliqi?: string;
+  yer_soligi?: string;
   mol_mulk_soligi?: string;
   suv_soligi?: string;
 

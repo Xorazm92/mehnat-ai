@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Company, OperationEntry, Language } from '../types';
 import { translations } from '../lib/translations';
 import { Search, Download, ChevronDown, Info, RefreshCw, Filter } from 'lucide-react';
@@ -69,18 +70,42 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly }) =
   const [isOpen, setIsOpen] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
   const popoverRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
+
+    const updateCoords = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setCoords({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX + rect.width / 2,
+          width: rect.width
+        });
+      }
+    };
+
+    updateCoords();
+    window.addEventListener('scroll', updateCoords, true);
+    window.addEventListener('resize', updateCoords);
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setShowInput(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      window.removeEventListener('scroll', updateCoords, true);
+      window.removeEventListener('resize', updateCoords);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [isOpen]);
 
   const handleSelect = (statusValue: string) => {
@@ -103,8 +128,9 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly }) =
   };
 
   return (
-    <div className="relative flex items-center justify-center w-full h-full p-0.5" ref={popoverRef}>
+    <div className="flex items-center justify-center w-full h-full p-0.5">
       <button
+        ref={buttonRef}
         onClick={() => !readOnly && setIsOpen(!isOpen)}
         disabled={readOnly}
         className={`w-full h-7 min-w-[28px] px-1 rounded-md flex items-center justify-center text-[11px] font-bold transition-all duration-200 ${style.bg} ${style.text} hover:scale-[1.02] hover:shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ring-offset-1 focus:ring-2 ring-blue-500/30 outline-none overflow-hidden`}
@@ -113,8 +139,17 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly }) =
         <span className="truncate w-full text-center block">{style.icon}</span>
       </button>
 
-      {isOpen && (
-        <div className="absolute top-full mb-1 left-1/2 -translate-x-1/2 z-[100] min-w-[180px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 p-1.5 animate-in fade-in zoom-in-95 duration-100 origin-top">
+      {isOpen && createPortal(
+        <div
+          ref={popoverRef}
+          style={{
+            position: 'absolute',
+            top: coords.top + 5,
+            left: coords.left,
+            transform: 'translateX(-50%)'
+          }}
+          className="z-[9999] min-w-[180px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 p-1.5 animate-in fade-in zoom-in-95 duration-100 origin-top"
+        >
           {!showInput ? (
             <div className="grid grid-cols-1 gap-0.5">
               {AVAILABLE_STATUSES.map((status) => (
@@ -146,7 +181,8 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly }) =
             </form>
           )}
           <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-gray-800 border-t border-l border-gray-100 dark:border-gray-700 transform rotate-45 rounded-[1px]" />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -155,25 +191,26 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly }) =
 // ── Memoized Table Row ─────────────────────────────────────────
 const OperationRow = React.memo<{
   row: ReportRow;
+  idx: number;
   visibleColumns: typeof REPORT_COLUMNS;
   userRole: string;
   onCellUpdate: (companyId: string, colKey: string, newValue: string) => void;
-}>(({ row, visibleColumns, userRole, onCellUpdate }) => {
+}>(({ row, idx, visibleColumns, userRole, onCellUpdate }) => {
   return (
     <tr className="group hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-colors border-b border-gray-100 dark:border-gray-800/40">
-      <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-2 py-1.5 text-center text-[10px] font-mono text-gray-400 transition-colors">
-        {row.index}
+      <td className="sticky left-0 z-20 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-2 py-1.5 text-center text-[10px] font-mono text-gray-400 transition-colors w-10 min-w-[40px]">
+        {idx + 1}
       </td>
-      <td className="sticky left-8 z-10 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-2 py-1.5 transition-colors">
-        <div className="max-w-[200px] truncate text-[11px] font-semibold text-gray-900 dark:text-gray-100" title={row.name}>
+      <td className="sticky left-10 z-20 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-2 py-1.5 transition-colors w-48 min-w-[192px]">
+        <div className="max-w-[180px] truncate text-[11px] font-semibold text-gray-900 dark:text-gray-100" title={row.name}>
           {row.name}
         </div>
       </td>
-      <td className="sticky left-[220px] z-10 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-1 py-1.5 text-center text-[10px] font-mono text-gray-500 transition-colors">
+      <td className="sticky left-[232px] z-20 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-1 py-1.5 text-center text-[10px] font-mono text-gray-500 transition-colors w-20 min-w-[80px]">
         {row.inn || '—'}
       </td>
-      <td className="sticky left-[290px] z-10 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r-2 border-gray-200 dark:border-gray-700 px-1 py-1.5 transition-colors">
-        <div className="max-w-[75px] truncate text-[10px] font-medium text-gray-600 dark:text-gray-400" title={row.accountant}>
+      <td className="sticky left-[312px] z-20 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r-2 border-gray-200 dark:border-gray-700 px-1 py-1.5 transition-colors w-24 min-w-[96px]">
+        <div className="max-w-[90px] truncate text-[10px] font-medium text-gray-600 dark:text-gray-400" title={row.accountant}>
           {row.accountant || '—'}
         </div>
       </td>
@@ -295,36 +332,26 @@ const OperationModule: React.FC<Props> = ({
     }));
 
     try {
-      // 2. Persist to DB
-      const { error, count } = await supabase
+      // 2. Persist to DB using upsert (handles both insert and update)
+      const { error } = await supabase
         .from('company_monthly_reports')
-        .update({ [colKey]: newValue, updated_at: new Date().toISOString() })
-        .eq('company_id', companyId)
-        .eq('period', selectedPeriod)
-        .select();
+        .upsert({
+          company_id: companyId,
+          period: selectedPeriod,
+          [colKey]: newValue,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'company_id,period' });
 
       if (error) throw error;
 
-      // If no row updated (i.e. first time touch), insert full row
-      if (!count && count !== undefined) {
-        const payload: any = {
-          company_id: companyId,
-          period: selectedPeriod,
-          updated_at: new Date().toISOString(),
-          [colKey]: newValue
-        };
-
-        await supabase.from('company_monthly_reports').upsert(payload, { onConflict: 'company_id, period' });
-      }
-
-      // 3. Notify parent to refresh global state (for Dashboard, Analysis, etc.)
+      // 3. Notify parent to refresh global state
       await onUpdate({ companyId, period: selectedPeriod, [colKey]: newValue });
 
     } catch (e: any) {
       console.error('Update error:', e);
       toast.error('Saqlashda xatolik!');
     }
-  }, [selectedPeriod]);
+  }, [selectedPeriod, onUpdate]);
 
   // ── Computed data ────────────────────────────────────────────
   const accountants = useMemo(() => {
@@ -491,7 +518,7 @@ const OperationModule: React.FC<Props> = ({
       </div>
 
       {/* ── Matrix ──────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto relative border border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-gray-900 shadow-sm" style={{ maxHeight: 'calc(100vh - 280px)' }}>
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
@@ -507,11 +534,11 @@ const OperationModule: React.FC<Props> = ({
             </div>
           </div>
         ) : (
-          <table className="w-full border-collapse text-xs">
-            <thead className="sticky top-0 z-40 shadow-sm">
+          <table className="w-full border-separate border-spacing-0 text-xs">
+            <thead className="sticky top-0 z-[60] shadow-sm">
               {/* Group row */}
-              <tr>
-                <th colSpan={4} className="sticky top-0 left-0 z-50 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-sm border-b border-r-2 border-gray-200 dark:border-gray-700 px-2 py-1 text-left text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+              <tr className="h-6">
+                <th colSpan={4} className="sticky top-0 left-0 z-[80] bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-sm border-b border-r-2 border-gray-200 dark:border-gray-700 px-2 py-1 text-left text-[9px] font-bold text-gray-400 uppercase tracking-widest w-[408px] min-w-[408px]">
                   Korxona
                 </th>
                 {(() => {
@@ -524,16 +551,16 @@ const OperationModule: React.FC<Props> = ({
                   ));
                 })()}
               </tr>
-              {/* Column header row */}
-              <tr>
-                <th className="sticky top-[25px] left-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-center font-bold text-gray-500 w-8">#</th>
-                <th className="sticky top-[25px] left-8 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-left font-bold text-gray-700 dark:text-gray-300 min-w-[180px] max-w-[220px]">Korxona nomi</th>
-                <th className="sticky top-[25px] left-[220px] z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center font-bold text-gray-500 w-[70px]">INN</th>
-                <th className="sticky top-[25px] left-[290px] z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r-2 border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center font-bold text-gray-500 w-[80px]">Buxgalter</th>
+              {/* Column header row (24px height roughly for the first row) */}
+              <tr className="h-8">
+                <th className="sticky top-[24px] left-0 z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-center font-bold text-gray-500 w-10 min-w-[40px]">#</th>
+                <th className="sticky top-[24px] left-10 z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-left font-bold text-gray-700 dark:text-gray-300 w-48 min-w-[192px]">Korxona nomi</th>
+                <th className="sticky top-[24px] left-[232px] z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center font-bold text-gray-500 w-20 min-w-[80px]">INN</th>
+                <th className="sticky top-[24px] left-[312px] z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r-2 border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center font-bold text-gray-500 w-24 min-w-[96px]">Buxgalter</th>
                 {visibleColumns.map(col => (
                   <th
                     key={col.key}
-                    className="sticky top-[25px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-help group/header"
+                    className="sticky top-[24px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-help group/header"
                     title={col.label}
                   >
                     <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 tracking-tight group-hover/header:text-blue-600 dark:group-hover/header:text-blue-400 transition-colors">
@@ -544,10 +571,11 @@ const OperationModule: React.FC<Props> = ({
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row) => (
+              {filteredRows.map((row, idx) => (
                 <OperationRow
-                  key={`${row.index}-${row.inn}`}
+                  key={row.companyId}
                   row={row}
+                  idx={idx}
                   visibleColumns={visibleColumns}
                   userRole={userRole}
                   onCellUpdate={handleCellUpdate}

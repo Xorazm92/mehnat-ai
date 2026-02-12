@@ -50,7 +50,7 @@ export const OPERATION_TEMPLATES: OperationTemplate[] = [
         frequency: 'quarterly'
     },
     {
-        key: 'yer_soliq',
+        key: 'yer_soligi',
         nameUz: 'Yer Solig\'i',
         nameRu: 'Земельный налог',
         assignedRole: 'accountant',
@@ -58,7 +58,7 @@ export const OPERATION_TEMPLATES: OperationTemplate[] = [
         frequency: 'yearly'
     },
     {
-        key: 'mol_mulk_soliq',
+        key: 'mol_mulk_soligi',
         nameUz: 'Mol-mulk Solig\'i',
         nameRu: 'Налог на имущество',
         assignedRole: 'accountant',
@@ -66,7 +66,7 @@ export const OPERATION_TEMPLATES: OperationTemplate[] = [
         frequency: 'yearly'
     },
     {
-        key: 'suv_soliq',
+        key: 'suv_soligi',
         nameUz: 'Suv Solig\'i',
         nameRu: 'Налог на воду',
         assignedRole: 'accountant',
@@ -186,7 +186,7 @@ export const OPERATION_TEMPLATES: OperationTemplate[] = [
         frequency: 'monthly'
     },
     {
-        key: 'foyda_zarar',
+        key: 'foyda_va_zarar',
         nameUz: 'Foyda va Zarar Account',
         nameRu: 'Прибыль и убыток',
         assignedRole: 'accountant',
@@ -202,9 +202,9 @@ export const MAP_JSON_FIELD_TO_KEY: Record<string, OperationFieldKey> = {
     'Foyda soliq': 'foyda_soliq',
     'Moliyaviy natija': 'moliyaviy_natija',
     'Buxgalteriya balansi': 'buxgalteriya_balansi',
-    'Yer solig\'i ': 'yer_soliq',
-    'Mol mulk solig\'i ma\'lumotnoma': 'mol_mulk_soliq',
-    'Suv solig\'i ma\'lumotnoma': 'suv_soliq',
+    'Yer solig\'i ': 'yer_soligi',
+    'Mol mulk solig\'i ma\'lumotnoma': 'mol_mulk_soligi',
+    'Suv solig\'i ma\'lumotnoma': 'suv_soligi',
     'Statistika': 'statistika',
     'Bo\'nak': 'bonak',
     'NDSNI BEKOR QILISH': 'nds_bekor',
@@ -219,5 +219,5 @@ export const MAP_JSON_FIELD_TO_KEY: Record<string, OperationFieldKey> = {
     'Chiqadigan soliqlar': 'chiqadigan_soliqlar',
     'Hisoblangan oylik': 'hisoblangan_oylik',
     'Debitor kreditor': 'debitor_kreditor',
-    'Foyda va zarar': 'foyda_zarar'
+    'Foyda va zarar': 'foyda_va_zarar'
 };
