@@ -79,6 +79,7 @@ const App: React.FC = () => {
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [svodOperationFilter, setSvodOperationFilter] = useState<string>('all');
 
   const pendingReportsCount = useMemo(() => {
     // Only count for relevant roles (Supervisor/Admin) or show own pending actions for Accountants?
@@ -155,52 +156,7 @@ const App: React.FC = () => {
       fetchContractAssignments()
     ]);
 
-    // Derive correct staff roles from companies data
-    // DB has all as 'accountant' by default — fix using company references
-    const roleCountMap = new Map<string, { accountant: number; bank_manager: number; supervisor: number }>();
-    c.forEach(company => {
-      // By ID
-      if (company.accountantId) {
-        if (!roleCountMap.has(company.accountantId)) roleCountMap.set(company.accountantId, { accountant: 0, bank_manager: 0, supervisor: 0 });
-        roleCountMap.get(company.accountantId)!.accountant++;
-      }
-      if (company.bankClientId) {
-        if (!roleCountMap.has(company.bankClientId)) roleCountMap.set(company.bankClientId, { accountant: 0, bank_manager: 0, supervisor: 0 });
-        roleCountMap.get(company.bankClientId)!.bank_manager++;
-      }
-      if (company.supervisorId) {
-        if (!roleCountMap.has(company.supervisorId)) roleCountMap.set(company.supervisorId, { accountant: 0, bank_manager: 0, supervisor: 0 });
-        roleCountMap.get(company.supervisorId)!.supervisor++;
-      }
-      // By Name (for staff without IDs)
-      s.forEach(staff => {
-        const sn = staff.name.trim().toLowerCase();
-        if (!company.bankClientId && company.bankClientName?.trim().toLowerCase() === sn) {
-          if (!roleCountMap.has(staff.id)) roleCountMap.set(staff.id, { accountant: 0, bank_manager: 0, supervisor: 0 });
-          roleCountMap.get(staff.id)!.bank_manager++;
-        }
-        if (!company.supervisorId && company.supervisorName?.trim().toLowerCase() === sn) {
-          if (!roleCountMap.has(staff.id)) roleCountMap.set(staff.id, { accountant: 0, bank_manager: 0, supervisor: 0 });
-          roleCountMap.get(staff.id)!.supervisor++;
-        }
-      });
-    });
-
-    // Apply derived roles
-    s.forEach(staff => {
-      const counts = roleCountMap.get(staff.id);
-      if (counts) {
-        if (counts.bank_manager > counts.accountant && counts.bank_manager >= counts.supervisor) {
-          staff.role = 'bank_manager';
-        } else if (counts.supervisor > counts.accountant && counts.supervisor > counts.bank_manager) {
-          staff.role = 'supervisor';
-        }
-        // If accountant is highest or equal, keep 'accountant' (already default)
-      }
-      // Special: Yorqinoy is always chief
-      if (staff.name.trim().toLowerCase() === 'yorqinoy') staff.role = 'chief';
-    });
-
+    // Role sync is now managed in Staff module, removal of auto-guess logic
     setCompanies(c);
     setOperations(o);
     setStaff(s);
@@ -260,17 +216,34 @@ const App: React.FC = () => {
       const myOps = operations.filter(op => op.period === selectedPeriod && myCompanies.some(c => c.id === op.companyId));
 
       const total = myCompanies.length;
-      const annualCompleted = myOps.filter(op => op.profitTaxStatus === ReportStatus.ACCEPTED || op.profitTaxStatus === ReportStatus.NOT_REQUIRED).length;
-      const annualPending = myOps.filter(op => op.profitTaxStatus === ReportStatus.NOT_SUBMITTED || op.profitTaxStatus === ReportStatus.REJECTED).length;
-      const annualBlocked = myOps.filter(op => op.profitTaxStatus === ReportStatus.BLOCKED || op.form1Status === ReportStatus.BLOCKED).length;
+      let annualCompleted = 0;
+      let annualPending = 0;
+      let annualBlocked = 0;
+      let statsCompleted = 0;
 
-      const statsCompleted = myOps.filter(op => op.statsStatus === ReportStatus.ACCEPTED).length;
+      if (svodOperationFilter === 'all') {
+        annualCompleted = myOps.filter(op => op.profitTaxStatus === ReportStatus.ACCEPTED || op.profitTaxStatus === ReportStatus.NOT_REQUIRED).length;
+        annualPending = myOps.filter(op => op.profitTaxStatus === ReportStatus.NOT_SUBMITTED || op.profitTaxStatus === ReportStatus.REJECTED).length;
+        annualBlocked = myOps.filter(op => op.profitTaxStatus === ReportStatus.BLOCKED || op.form1Status === ReportStatus.BLOCKED).length;
+        statsCompleted = myOps.filter(op => op.statsStatus === ReportStatus.ACCEPTED).length;
+      } else {
+        // Filter by specific operation field
+        myOps.forEach(op => {
+          const val = String((op as any)[svodOperationFilter] || '').trim().toLowerCase();
+          if (val === '+' || val === 'topshirildi') annualCompleted++;
+          else if (val === '-' || val === 'rad etildi') annualPending++;
+          else if (val === 'kartoteka') annualBlocked++;
+          // Statistics is separate for legacy reasons but we can include it if svodOperationFilter === 'statistika'
+          if (svodOperationFilter === 'statistika' && val === '+') statsCompleted++;
+        });
+      }
 
       const annualProgress = total > 0 ? Math.round((annualCompleted / total) * 100) : 0;
       const statsProgress = total > 0 ? Math.round((statsCompleted / total) * 100) : 0;
 
       return {
         name: s.name,
+        role: s.role,
         totalCompanies: total,
         annualCompleted,
         annualPending,
@@ -281,7 +254,7 @@ const App: React.FC = () => {
         zone: annualProgress >= 90 ? 'green' : (annualProgress >= 60 ? 'yellow' : 'red')
       };
     }).sort((a, b) => b.annualProgress - a.annualProgress);
-  }, [staff, companies, operations, selectedPeriod]);
+  }, [staff, companies, operations, selectedPeriod, svodOperationFilter]);
 
   const selectedOperation = useMemo(() => {
     if (!selectedCompany) return null;
@@ -425,6 +398,8 @@ const App: React.FC = () => {
                       staff={staff}
                       lang={lang}
                       onStaffSelect={setSelectedStaff}
+                      selectedOperation={svodOperationFilter}
+                      onOperationChange={setSvodOperationFilter}
                     />
                   </>
                 )}
