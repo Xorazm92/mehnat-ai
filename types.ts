@@ -234,7 +234,10 @@ export type OperationFieldKey =
   'aylanma_qqs' | 'daromad_soliq' | 'inps' | 'foyda_soliq' |
   'moliyaviy_natija' | 'buxgalteriya_balansi' | 'yer_soliq' |
   'mol_mulk_soliq' | 'suv_soliq' | 'statistika' | 'bonak' |
-  'nds_bekor' | 'it_park' | '1c_baza';
+  'nds_bekor' | 'it_park' | 'one_c' | 'tovar_ostatka' |
+  'didox' | 'xatlar' | 'avtokameral' | 'my_mehnat' | 'pul_oqimlari' |
+  'chiqadigan_soliqlar' | 'hisoblangan_oylik' | 'debitor_kreditor' | 'foyda_zarar' |
+  'bank_klient' | 'nds_bekor_qilish' | 'foyda_va_zarar' | 'yer_soliqi' | 'mol_mulk_soligi' | 'suv_soligi';
 
 export type TaskStatus = 'new' | 'submitted' | 'pending_review' |
   'approved' | 'rejected' | 'overdue' | 'not_required' | 'blocked';
@@ -275,11 +278,40 @@ export interface OperationEntry {
   id: string;
   companyId: string;
   period: string;
-  profitTaxStatus: ReportStatus; // Legacy support
-  form1Status: ReportStatus;     // Legacy support
-  form2Status: ReportStatus;     // Legacy support
-  statsStatus: ReportStatus;     // Legacy support
-  comment: string;
+
+  // Specific Report Columns (from CSV)
+  bank_klient?: string;
+  didox?: string;
+  xatlar?: string;
+  avtokameral?: string;
+  my_mehnat?: string;
+  one_c?: string;
+  pul_oqimlari?: string;
+  chiqadigan_soliqlar?: string;
+  hisoblangan_oylik?: string;
+  debitor_kreditor?: string;
+  foyda_va_zarar?: string;
+  tovar_ostatka?: string;
+  nds_bekor_qilish?: string;
+  aylanma_qqs?: string;
+  daromad_soliq?: string;
+  inps?: string;
+  foyda_soliq?: string;
+  moliyaviy_natija?: string;
+  buxgalteriya_balansi?: string;
+  statistika?: string;
+  bonak?: string;
+  yer_soliqi?: string;
+  mol_mulk_soligi?: string;
+  suv_soligi?: string;
+
+  // Legacy fields (backward compatibility for Dashboard, Analysis, etc.)
+  profitTaxStatus?: ReportStatus;
+  form1Status?: ReportStatus;
+  form2Status?: ReportStatus;
+  statsStatus?: ReportStatus;
+
+  comment?: string;
   profitTaxDeadline?: string;
   statsDeadline?: string;
   updatedAt: string;
@@ -294,6 +326,8 @@ export interface Staff {
   id: string;
   name: string;
   username?: string; // New
+  email?: string; // Auth
+  password?: string; // Auth (only for creation)
   role: string;
   avatarColor: string;
   phone?: string;

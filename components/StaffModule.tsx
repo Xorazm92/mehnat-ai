@@ -65,6 +65,19 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
               />
               <input
                 className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-apple-darkBg focus:border-apple-accent outline-none"
+                placeholder="Email (Login uchun)"
+                value={form.email || ''}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+              />
+              <input
+                className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-apple-darkBg focus:border-apple-accent outline-none"
+                placeholder={form.id ? "Parol (o'zgartirish uchun)" : "Parol"}
+                type="password"
+                value={form.password || ''}
+                onChange={e => setForm({ ...form, password: e.target.value })}
+              />
+              <input
+                className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-apple-darkBg focus:border-apple-accent outline-none"
                 placeholder={t.phone}
                 value={form.phone || ''}
                 onChange={e => setForm({ ...form, phone: e.target.value })}

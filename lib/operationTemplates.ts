@@ -106,11 +106,91 @@ export const OPERATION_TEMPLATES: OperationTemplate[] = [
         frequency: 'quarterly'
     },
     {
-        key: '1c_baza',
+        key: 'one_c',
         nameUz: '1C Baza Kiritish',
         nameRu: 'Ввод базы 1С',
         assignedRole: 'accountant',
         deadlineDay: 25,
+        frequency: 'monthly'
+    },
+    {
+        key: 'tovar_ostatka',
+        nameUz: 'Tovar Qoldig\'i',
+        nameRu: 'Товарный остаток',
+        assignedRole: 'accountant',
+        deadlineDay: 10,
+        frequency: 'monthly'
+    },
+    {
+        key: 'didox',
+        nameUz: 'Didox (E-Aylanma)',
+        nameRu: 'Дидох',
+        assignedRole: 'accountant',
+        deadlineDay: 10,
+        frequency: 'monthly'
+    },
+    {
+        key: 'xatlar',
+        nameUz: 'Soliq Xatlari',
+        nameRu: 'Налоговые письма',
+        assignedRole: 'accountant',
+        deadlineDay: 5,
+        frequency: 'monthly'
+    },
+    {
+        key: 'avtokameral',
+        nameUz: 'Avtokameral Nazorat',
+        nameRu: 'Автокамерал',
+        assignedRole: 'accountant',
+        deadlineDay: 15,
+        frequency: 'monthly'
+    },
+    {
+        key: 'my_mehnat',
+        nameUz: 'My.Mehnat.uz Nazorati',
+        nameRu: 'my.mehnat.uz',
+        assignedRole: 'accountant',
+        deadlineDay: 10,
+        frequency: 'monthly'
+    },
+    {
+        key: 'pul_oqimlari',
+        nameUz: 'Pul Oqimlari (Cash Flow)',
+        nameRu: 'Движение денежных средств',
+        assignedRole: 'accountant',
+        deadlineDay: 30,
+        frequency: 'monthly'
+    },
+    {
+        key: 'chiqadigan_soliqlar',
+        nameUz: 'Chiqadigan Soliqlar',
+        nameRu: 'Исходящие налоги',
+        assignedRole: 'accountant',
+        deadlineDay: 20,
+        frequency: 'monthly'
+    },
+    {
+        key: 'hisoblangan_oylik',
+        nameUz: 'Hisoblangan Oylik',
+        nameRu: 'Начисленная зарплата',
+        assignedRole: 'accountant',
+        deadlineDay: 5,
+        frequency: 'monthly'
+    },
+    {
+        key: 'debitor_kreditor',
+        nameUz: 'Debitor va Kreditor',
+        nameRu: 'Дебиторы и кредиторы',
+        assignedRole: 'accountant',
+        deadlineDay: 25,
+        frequency: 'monthly'
+    },
+    {
+        key: 'foyda_zarar',
+        nameUz: 'Foyda va Zarar Account',
+        nameRu: 'Прибыль и убыток',
+        assignedRole: 'accountant',
+        deadlineDay: 30,
         frequency: 'monthly'
     }
 ];
@@ -129,5 +209,15 @@ export const MAP_JSON_FIELD_TO_KEY: Record<string, OperationFieldKey> = {
     'Bo\'nak': 'bonak',
     'NDSNI BEKOR QILISH': 'nds_bekor',
     'IT PARK Rezidenti': 'it_park',
-    '1c': '1c_baza'
+    '1c': 'one_c',
+    'Tovar ostatka': 'tovar_ostatka',
+    'Didox': 'didox',
+    'xatlar': 'xatlar',
+    'Avtokameral': 'avtokameral',
+    'my mehnat': 'my_mehnat',
+    'Pul oqimlari': 'pul_oqimlari',
+    'Chiqadigan soliqlar': 'chiqadigan_soliqlar',
+    'Hisoblangan oylik': 'hisoblangan_oylik',
+    'Debitor kreditor': 'debitor_kreditor',
+    'Foyda va zarar': 'foyda_zarar'
 };

@@ -1,10 +1,196 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Company, OperationEntry, OperationTask, TaskStatus, Language, OperationFieldKey } from '../types';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { Company, OperationEntry, Language } from '../types';
 import { translations } from '../lib/translations';
-import { OPERATION_TEMPLATES, MAP_JSON_FIELD_TO_KEY } from '../lib/operationTemplates';
-import { Search, Filter, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronRight, ShieldCheck, UserCheck, LayoutGrid, List, RefreshCw, Download } from 'lucide-react';
+import { Search, Download, ChevronDown, Info, RefreshCw, Filter } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '../lib/supabaseClient';
 
+
+// ── Report Column Definitions ──────────────────────────────────
+const REPORT_COLUMNS = [
+  { key: 'didox', csvHeader: 'Didox', label: 'Didox', short: 'DD', group: 'Kundalik' },
+  { key: 'xatlar', csvHeader: 'xatlar', label: 'Xatlar', short: 'XT', group: 'Kundalik' },
+  { key: 'avtokameral', csvHeader: 'Avtokameral', label: 'Avtokameral', short: 'AK', group: 'Kundalik' },
+  { key: 'my_mehnat', csvHeader: 'my mehnat', label: 'My Mehnat', short: 'MM', group: 'Kundalik' },
+  { key: 'one_c', csvHeader: '1c', label: '1C', short: '1C', group: 'Kundalik' },
+  { key: 'bank_klient', csvHeader: 'bank klient', label: 'Bank Klient', short: 'BK', group: 'Kundalik' },
+  { key: 'pul_oqimlari', csvHeader: 'Pul oqimlari', label: 'Pul Oqimlari', short: 'PO', group: 'Oylik' },
+  { key: 'chiqadigan_soliqlar', csvHeader: 'Chiqadigan soliqlar', label: 'Chiq. Soliqlar', short: 'CS', group: 'Oylik' },
+  { key: 'hisoblangan_oylik', csvHeader: 'Hisoblangan oylik', label: 'His. Oylik', short: 'HO', group: 'Oylik' },
+  { key: 'debitor_kreditor', csvHeader: 'Debitor kreditor', label: 'Deb/Kred', short: 'DK', group: 'Oylik' },
+  { key: 'foyda_va_zarar', csvHeader: 'Foyda va zarar', label: 'Foyda/Zarar', short: 'FZ', group: 'Oylik' },
+  { key: 'tovar_ostatka', csvHeader: 'Tovar ostatka', label: 'Tovar Ost.', short: 'TO', group: 'Oylik' },
+  { key: 'nds_bekor_qilish', csvHeader: 'NDSNI BEKOR QILISH', label: 'NDS Bekor', short: 'NB', group: 'Soliq' },
+  { key: 'aylanma_qqs', csvHeader: 'Aylanma/QQS', label: 'Aylanma/QQS', short: 'AQ', group: 'Soliq' },
+  { key: 'daromad_soliq', csvHeader: 'Daromad soliq', label: 'Daromad Soliq', short: 'DS', group: 'Soliq' },
+  { key: 'inps', csvHeader: 'INPS', label: 'INPS', short: 'IN', group: 'Soliq' },
+  { key: 'foyda_soliq', csvHeader: 'Foyda soliq', label: 'Foyda Soliq', short: 'FS', group: 'Soliq' },
+  { key: 'moliyaviy_natija', csvHeader: 'Moliyaviy natija', label: 'Mol. Natija', short: 'MN', group: 'Chorak' },
+  { key: 'buxgalteriya_balansi', csvHeader: 'Buxgalteriya balansi', label: 'Bux. Balansi', short: 'BB', group: 'Chorak' },
+  { key: 'statistika', csvHeader: 'Statistika', label: 'Statistika', short: 'ST', group: 'Chorak' },
+  { key: 'bonak', csvHeader: "Bo'nak", label: "Bo'nak", short: 'BN', group: 'Boshqa' },
+  { key: 'yer_soligi', csvHeader: "Yer solig'i", label: "Yer Solig'i", short: 'YS', group: 'Yillik' },
+  { key: 'mol_mulk_soligi', csvHeader: "Mol mulk solig'i ma'lumotnoma", label: "Mol-mulk Sol.", short: 'MS', group: 'Yillik' },
+  { key: 'suv_soligi', csvHeader: "Suv solig'i ma'lumotnoma", label: "Suv Solig'i", short: 'SS', group: 'Yillik' },
+] as const;
+
+type ReportColumnKey = typeof REPORT_COLUMNS[number]['key'];
+
+// ── Status Rendering ───────────────────────────────────────────
+const getStatusStyle = (value: string) => {
+  const v = String(value || '').trim().toLowerCase();
+
+  if (!v || v === '0') return { bg: 'bg-slate-100 dark:bg-slate-800/60', text: 'text-slate-400 dark:text-slate-500', icon: '—', tooltip: "Bo'sh" };
+  if (v === '+') return { bg: 'bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400', icon: '✓', tooltip: 'Bajarildi (+)' };
+  if (v === '-') return { bg: 'bg-rose-500/15', text: 'text-rose-600 dark:text-rose-400', icon: '✗', tooltip: 'Bajarilmadi (-)' };
+
+  if (v.includes('kartoteka')) return { bg: 'bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400', icon: 'Kartoteka', tooltip: 'Kartoteka' };
+
+  // Custom text for any other value -> Blue
+  return { bg: 'bg-blue-500/15', text: 'text-blue-700 dark:text-blue-300', icon: value, tooltip: value };
+};
+
+const AVAILABLE_STATUSES = [
+  { value: '+', label: 'Bajarildi (+)', icon: '✓', color: 'text-emerald-600' },
+  { value: '-', label: 'Bajarilmadi (-)', icon: '✗', color: 'text-rose-600' },
+  { value: 'kartoteka', label: 'Kartoteka', icon: '⚠', color: 'text-amber-600' },
+  { value: 'izoh', label: 'Matn yozish...', icon: '📝', color: 'text-blue-600' },
+  { value: '0', label: 'Tozalash', icon: '—', color: 'text-slate-400' },
+];
+
+interface StatusCellProps {
+  value: string;
+  onUpdate: (newValue: string) => void;
+  readOnly?: boolean;
+}
+
+const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly }) => {
+  const style = getStatusStyle(value);
+  const [isOpen, setIsOpen] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const popoverRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setShowInput(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const handleSelect = (statusValue: string) => {
+    if (statusValue === 'izoh') {
+      setInputValue(value === '0' || value === '+' || value === '-' ? '' : value);
+      setShowInput(true);
+      return;
+    }
+    onUpdate(statusValue);
+    setIsOpen(false);
+  };
+
+  const handleCustomSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputValue.trim()) {
+      onUpdate(inputValue.trim());
+    }
+    setIsOpen(false);
+    setShowInput(false);
+  };
+
+  return (
+    <div className="relative flex items-center justify-center w-full h-full p-0.5" ref={popoverRef}>
+      <button
+        onClick={() => !readOnly && setIsOpen(!isOpen)}
+        disabled={readOnly}
+        className={`w-full h-7 min-w-[28px] px-1 rounded-md flex items-center justify-center text-[11px] font-bold transition-all duration-200 ${style.bg} ${style.text} hover:scale-[1.02] hover:shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ring-offset-1 focus:ring-2 ring-blue-500/30 outline-none overflow-hidden`}
+        title={style.tooltip}
+      >
+        <span className="truncate w-full text-center block">{style.icon}</span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full mb-1 left-1/2 -translate-x-1/2 z-[100] min-w-[180px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 p-1.5 animate-in fade-in zoom-in-95 duration-100 origin-top">
+          {!showInput ? (
+            <div className="grid grid-cols-1 gap-0.5">
+              {AVAILABLE_STATUSES.map((status) => (
+                <button
+                  key={status.value}
+                  onClick={() => handleSelect(status.value)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left group"
+                >
+                  <span className={`font-black text-xs w-5 text-center ${status.color}`}>{status.icon}</span>
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">{status.label}</span>
+                  {value === status.value && <span className="ml-auto text-blue-500 text-[10px]">●</span>}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <form onSubmit={handleCustomSubmit} className="p-1">
+              <input
+                autoFocus
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Matn kiriting..."
+                className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-2"
+              />
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowInput(false)} className="flex-1 px-2 py-1.5 text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200">Bekor qilish</button>
+                <button type="submit" className="flex-1 px-2 py-1.5 text-[10px] font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm shadow-blue-500/30">Saqlash</button>
+              </div>
+            </form>
+          )}
+          <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-gray-800 border-t border-l border-gray-100 dark:border-gray-700 transform rotate-45 rounded-[1px]" />
+        </div>
+      )}
+    </div>
+  );
+}, (prev, next) => prev.value === next.value && prev.readOnly === next.readOnly);
+
+// ── Memoized Table Row ─────────────────────────────────────────
+const OperationRow = React.memo<{
+  row: ReportRow;
+  visibleColumns: typeof REPORT_COLUMNS;
+  userRole: string;
+  onCellUpdate: (companyId: string, colKey: string, newValue: string) => void;
+}>(({ row, visibleColumns, userRole, onCellUpdate }) => {
+  return (
+    <tr className="group hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-colors border-b border-gray-100 dark:border-gray-800/40">
+      <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-2 py-1.5 text-center text-[10px] font-mono text-gray-400 transition-colors">
+        {row.index}
+      </td>
+      <td className="sticky left-8 z-10 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-2 py-1.5 transition-colors">
+        <div className="max-w-[200px] truncate text-[11px] font-semibold text-gray-900 dark:text-gray-100" title={row.name}>
+          {row.name}
+        </div>
+      </td>
+      <td className="sticky left-[220px] z-10 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-1 py-1.5 text-center text-[10px] font-mono text-gray-500 transition-colors">
+        {row.inn || '—'}
+      </td>
+      <td className="sticky left-[290px] z-10 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r-2 border-gray-200 dark:border-gray-700 px-1 py-1.5 transition-colors">
+        <div className="max-w-[75px] truncate text-[10px] font-medium text-gray-600 dark:text-gray-400" title={row.accountant}>
+          {row.accountant || '—'}
+        </div>
+      </td>
+      {visibleColumns.map(col => (
+        <td key={col.key} className="border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8">
+          <StatusCell
+            value={String(row[col.key] || '')}
+            onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, col.key, newValue)}
+            readOnly={!row.companyId || (userRole !== 'super_admin' && userRole !== 'admin' && userRole !== 'supervisor' && userRole !== 'accountant')}
+          />
+        </td>
+      ))}
+    </tr>
+  );
+});
+
+// ── Props ──────────────────────────────────────────────────────
 interface Props {
   companies: Company[];
   operations: OperationEntry[];
@@ -19,6 +205,18 @@ interface Props {
   currentUserId?: string;
 }
 
+interface ReportRow {
+  index: number;
+  name: string;
+  inn: string;
+  accountant: string;
+  taxType: string;
+  login: string;
+  password: string;
+  [key: string]: string | number;
+}
+
+// ── Main Component ─────────────────────────────────────────────
 const OperationModule: React.FC<Props> = ({
   companies,
   operations,
@@ -34,962 +232,339 @@ const OperationModule: React.FC<Props> = ({
 }) => {
   const t = translations[lang];
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'matrix' | 'list'>('matrix'); // Admin can toggle
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCompanyForEdit, setSelectedCompanyForEdit] = useState<Company | null>(null);
-  const [editingTasks, setEditingTasks] = useState<string[]>([]); // List of active template keys
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [activePicker, setActivePicker] = useState<{ companyId: string, templateKey: string } | null>(null);
+  const [rows, setRows] = useState<ReportRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filterGroup, setFilterGroup] = useState<string>('all');
+  const [filterAccountant, setFilterAccountant] = useState<string>('all');
 
-  const normalizeName = (name: string) => {
-    return name.toLowerCase()
-      .replace(/["'“”«»]/g, '')
-      .replace(/mchj|xk|fx|ok|llc|oao|ooo|чп|хк|ок|мчж|латлар/gi, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  };
-
-  const generateUUID = () => {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  };
-
-  // --- Helper Functions ---
-  const getTaskStatusColor = (status: TaskStatus) => {
-    switch (status) {
-      case 'approved': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400';
-      case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400';
-      case 'submitted': return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400';
-      case 'pending_review': return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400';
-      case 'blocked': return 'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400';
-      case 'overdue': return 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400';
-      case 'not_required': return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500';
-      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
-    }
-  };
-
-  const getStatusIcon = (status: TaskStatus) => {
-    switch (status) {
-      case 'approved': return <span className="font-bold text-sm leading-none">+</span>;
-      case 'rejected': return <span className="font-bold text-[9px] uppercase tracking-tighter leading-none">rad</span>;
-      case 'submitted': return <span className="font-bold text-sm leading-none">✓</span>;
-      case 'pending_review': return <span className="text-[8px] font-bold uppercase leading-[0.8] tracking-tighter text-center px-0.5">ariza</span>;
-      case 'blocked': return <span className="text-[8px] font-bold uppercase leading-[0.8] tracking-tighter text-center px-0.5">karto<br />teka</span>;
-      case 'overdue': return <span className="font-bold text-sm leading-none">-</span>;
-      case 'not_required': return <span className="font-bold text-xs opacity-60">0</span>;
-      case 'new': return <span className="text-gray-400/50 font-bold">-</span>;
-      default: return <span className="text-gray-400/50 font-bold">-</span>;
-    }
-  }
-
-
-
-  // --- Actions ---
-  const handleQuickToggle = async (companyId: string, templateKey: string) => {
-    if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'supervisor') return;
-
-    const op = operations.find(o => o.companyId === companyId && o.period === selectedPeriod);
-    let updatedTasks = [...(op?.tasks || [])];
-    const existingIndex = updatedTasks.findIndex(t => t.templateKey === templateKey);
-
-    if (existingIndex >= 0) {
-      const currentStatus = updatedTasks[existingIndex].status;
-      // Toggle between 'new' and 'not_required'
-      updatedTasks[existingIndex] = {
-        ...updatedTasks[existingIndex],
-        status: currentStatus === 'not_required' ? 'new' : 'not_required'
-      };
-    } else {
-      // Create new task
-      const tmpl = OPERATION_TEMPLATES.find(t => t.key === templateKey);
-      const company = companies.find(c => c.id === companyId);
-      if (!tmpl || !company) return;
-
-      updatedTasks.push({
-        id: generateUUID(),
-        companyId: company.id,
-        companyName: company.name,
-        templateKey: tmpl.key,
-        templateName: lang === 'uz' ? tmpl.nameUz : tmpl.nameRu,
-        assigneeName: company.accountantName || 'Tayinlanmagan',
-        controllerName: 'Nazorat',
-        period: selectedPeriod,
-        deadline: new Date().toISOString(),
-        status: 'approved', // Default to approved when manually toggled on
-        jsonValue: '+'
-      });
-    }
-
-    const newOp: OperationEntry = op ? {
-      ...op,
-      tasks: updatedTasks,
-      updatedAt: new Date().toISOString()
-    } : {
-      id: generateUUID(),
-      companyId: companyId,
-      period: selectedPeriod,
-      profitTaxStatus: '?' as any,
-      form1Status: '?' as any,
-      form2Status: '?' as any,
-      statsStatus: '?' as any,
-      tasks: updatedTasks,
-      updatedAt: new Date().toISOString(),
-      history: []
-    };
-
-    try {
-      await onUpdate(newOp);
-      toast.success("Operatsiya holati yangilandi");
-    } catch (e) {
-      toast.error("Xatolik yuz berdi");
-    }
-  };
-
-  // --- Auto-Sync Logic ---
-  const handleSyncFromJson = async (silent = false) => {
-    if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'supervisor') return;
-
-    if (!silent) setIsSyncing(true);
-
-    try {
-      const response = await fetch('/Firma online.json');
-      if (!response.ok) throw new Error('JSON faylni yuklab bo\'lmadi');
-      const data: any[] = await response.json();
-
-      const batchUpdates: OperationEntry[] = [];
-
-      for (const item of data) {
-        const inn = String(item["ИНН"] || '').trim();
-        const rawName = String(item["НАИМЕНОВАНИЯ"] || '').trim();
-        const normName = normalizeName(rawName);
-
-        // Find company by INN or Fuzzy Name
-        const company = companies.find(c => {
-          if (inn && c.inn === inn) return true;
-          if (normalizeName(c.name) === normName) return true;
-          return false;
-        });
-
-        if (!company) continue;
-
-        const existingOp = operations.find(o => o.companyId === company.id && o.period === selectedPeriod);
-        let updatedTasks = [...(existingOp?.tasks || [])];
-        let hasChanges = false;
-
-        for (const [jsonKey, templateKey] of Object.entries(MAP_JSON_FIELD_TO_KEY)) {
-          const jsonValue = item[jsonKey];
-          if (jsonValue === undefined) continue;
-
-          const valStr = String(jsonValue).trim().toLowerCase();
-          let status: TaskStatus = 'new';
-
-          if (valStr === '+' || valStr === 'topshirildi') status = 'approved';
-          else if (valStr === '0' || valStr === 'not_required') status = 'not_required';
-          else if (valStr === 'kartoteka') status = 'blocked';
-          else if (valStr.includes('ariza') || valStr === 'in_progress') status = 'pending_review';
-          else if (valStr === 'rad etildi') status = 'rejected';
-          else if (valStr === '-') status = 'new';
-          else if (valStr === '?') status = 'new';
-
-          const existingTaskIndex = updatedTasks.findIndex(t => t.templateKey === templateKey);
-
-          if (existingTaskIndex >= 0) {
-            if (updatedTasks[existingTaskIndex].status !== status || updatedTasks[existingTaskIndex].jsonValue !== String(jsonValue)) {
-              updatedTasks[existingTaskIndex] = {
-                ...updatedTasks[existingTaskIndex],
-                status,
-                jsonValue: String(jsonValue)
-              };
-              hasChanges = true;
-            }
-          } else {
-            const tmpl = OPERATION_TEMPLATES.find(t => t.key === templateKey);
-            if (tmpl) {
-              updatedTasks.push({
-                id: generateUUID(),
-                companyId: company.id,
-                companyName: company.name,
-                templateKey: templateKey as any,
-                templateName: lang === 'uz' ? tmpl.nameUz : tmpl.nameRu,
-                assigneeName: company.accountantName || 'Tayinlanmagan',
-                controllerName: 'Nazorat',
-                period: selectedPeriod,
-                deadline: new Date().toISOString(),
-                status,
-                jsonValue: String(jsonValue)
-              });
-              hasChanges = true;
-            }
-          }
-        }
-
-        if (hasChanges) {
-          const newOp: OperationEntry = existingOp ? {
-            ...existingOp,
-            tasks: updatedTasks,
-            updatedAt: new Date().toISOString()
-          } : {
-            id: generateUUID(),
-            companyId: company.id,
-            period: selectedPeriod,
-            profitTaxStatus: '?' as any,
-            form1Status: '?' as any,
-            form2Status: '?' as any,
-            statsStatus: '?' as any,
-            tasks: updatedTasks,
-            updatedAt: new Date().toISOString(),
-            history: []
-          };
-          batchUpdates.push(newOp);
-        }
-      }
-
-      if (batchUpdates.length > 0) {
-        if (onBatchUpdate) {
-          await onBatchUpdate(batchUpdates);
-        } else {
-          for (const op of batchUpdates) {
-            await onUpdate(op);
-          }
-        }
-        if (!silent) toast.success(`${batchUpdates.length} ta firmaning operatsiyalari yangilandi`);
-      } else {
-        if (!silent) toast.info('Yangi o\'zgarishlar topilmadi');
-      }
-    } catch (e: any) {
-      console.error('Auto-sync error:', e);
-      if (!silent) toast.error('Sinxronizatsiyada xatolik: ' + e.message);
-    } finally {
-      if (!silent) setIsSyncing(false);
-    }
-  };
-
+  // ── Build Rows from DB Props (companies + operations) ──────────
+  // ── Build Rows from DB Props (companies + operations) ──────────
   useEffect(() => {
-    if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor') {
-      const timer = setTimeout(() => {
-        handleSyncFromJson(true);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedPeriod, companies.length]);
+    // Optimization: Create a map of current period's operations for O(1) lookup
+    const opsMap = new Map<string, OperationEntry>();
+    operations.forEach(op => {
+      if (op.period === selectedPeriod) {
+        opsMap.set(op.companyId, op);
+      }
+    });
 
-  const handleTaskStatusChange = async (companyId: string, taskKey: string, newStatus: TaskStatus) => {
-    if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'supervisor') return;
+    const newRows: ReportRow[] = companies.map((comp, index) => {
+      const op = opsMap.get(comp.id);
 
-    // Find the operation entry
-    const operation = operations.find(o => o.companyId === companyId && o.period === selectedPeriod);
-    let updatedTasks = [...(operation?.tasks || [])];
-    const existingIndex = updatedTasks.findIndex(t => t.templateKey === taskKey);
-
-    if (existingIndex >= 0) {
-      updatedTasks[existingIndex] = {
-        ...updatedTasks[existingIndex],
-        status: newStatus,
-        verifiedAt: newStatus === 'approved' ? new Date().toISOString() : undefined,
-        submittedAt: newStatus === 'submitted' ? new Date().toISOString() : updatedTasks[existingIndex].submittedAt
+      const row: ReportRow = {
+        index: index + 1,
+        name: comp.name,
+        inn: comp.inn,
+        accountant: comp.accountantName || '—',
+        taxType: comp.taxType || '',
+        login: comp.login || '',       // From DB company profile
+        password: comp.password || '', // From DB company profile
+        companyId: comp.id,
       };
-    } else {
-      const tmpl = OPERATION_TEMPLATES.find(t => t.key === taskKey);
-      const company = companies.find(c => c.id === companyId);
-      if (tmpl && company) {
-        updatedTasks.push({
-          id: generateUUID(),
-          companyId: company.id,
-          companyName: company.name,
-          templateKey: taskKey as any,
-          templateName: lang === 'uz' ? tmpl.nameUz : tmpl.nameRu,
-          assigneeName: company.accountantName || 'Tayinlanmagan',
-          controllerName: 'Nazorat',
-          period: selectedPeriod,
-          deadline: new Date().toISOString(),
-          status: newStatus,
-          jsonValue: '-'
-        });
+
+      // Fill columns from OperationEntry (or '0' / default)
+      for (const col of REPORT_COLUMNS) {
+        if (op && (op as any)[col.key] !== undefined && (op as any)[col.key] !== null) {
+          row[col.key] = String((op as any)[col.key]);
+        } else {
+          // Default values based on logic? Or just empty strings/0?
+          // If no operation entry exists, it means nothing happened yet.
+          // Show '0' or empty?
+          // Existing logic showed '0' for empty.
+          row[col.key] = ''; // Empty string lets StatusCell decide (it handles empty as '—')
+        }
       }
-    }
-
-    const updatedOp: OperationEntry = operation ? {
-      ...operation,
-      tasks: updatedTasks,
-      updatedAt: new Date().toISOString()
-    } : {
-      id: generateUUID(),
-      companyId,
-      period: selectedPeriod,
-      profitTaxStatus: '?' as any,
-      form1Status: '?' as any,
-      form2Status: '?' as any,
-      statsStatus: '?' as any,
-      tasks: updatedTasks,
-      updatedAt: new Date().toISOString(),
-      history: []
-    };
-
-    try {
-      await onUpdate(updatedOp);
-      setActivePicker(null);
-      if (newStatus !== 'approved' || (activePicker)) {
-        toast.success(`Status o'zgartirildi: ${newStatus}`);
-      }
-    } catch (e) {
-      toast.error("Xatolik yuz berdi");
-      console.error(e);
-    }
-  };
-
-
-  const handleExportToExcel = () => {
-    // Basic CSV export that Excel can open (with BOM for UTF-8)
-    const header = ['Firma Nomi', 'INN', ...OPERATION_TEMPLATES.map(t => lang === 'uz' ? t.nameUz : t.nameRu)];
-    const rows = filteredData.map(({ company, tasks }) => {
-      const row = [company.name, company.inn];
-      OPERATION_TEMPLATES.forEach(tmpl => {
-        const task = tasks.find(t => t.templateKey === tmpl.key);
-        row.push(task ? task.status : '-');
-      });
       return row;
     });
 
-    const csvContent = [header, ...rows].map(e => e.join(",")).join("\n");
-    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `operatsiyalar_${selectedPeriod}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Excel (CSV) fayli tayyorlandi");
-  };
+    setRows(newRows);
+    setIsLoading(false);
+  }, [companies, operations, selectedPeriod]);
 
-  // --- Data Filtering ---
-  const periods = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const list = [`${currentYear} Yillik`];
-    for (let i = 0; i < 12; i++) {
-      const month = String(i + 1).padStart(2, '0');
-      list.push(`${currentYear}-${month}`);
-    }
-    return list;
-  }, []);
+  // Removed data loading logic for obsolete formats.
 
-  const filteredData = useMemo(() => {
-    let filteredCompanies = companies;
 
-    if (search) {
-      const lowerSearch = search.toLowerCase();
-      filteredCompanies = filteredCompanies.filter(c =>
-        c.name.toLowerCase().includes(lowerSearch) ||
-        c.inn.includes(lowerSearch) ||
-        (c.accountantName && c.accountantName.toLowerCase().includes(lowerSearch))
-      );
-    }
-
-    // Role-based filtering
-    if (userRole === 'accountant' && currentUserId) {
-      // Staff only sees their own companies
-      filteredCompanies = filteredCompanies.filter(c => c.accountantId === currentUserId);
-    }
-    // Supervisors might see all or assigned ones - assuming all for now or handled by company.supervisorId
-    // If strict supervisor view needed:
-    // if (userRole === 'supervisor' && currentUserId) {
-    //    filteredCompanies = filteredCompanies.filter(c => c.supervisorId === currentUserId);
-    // }
-
-    // Pre-calculate operations map for O(1) lookup
-    const map = new Map<string, OperationEntry>();
-    operations.forEach(o => {
-      if (o.period === selectedPeriod) {
-        map.set(o.companyId, o);
+  // ── Handle Cell Update ───────────────────────────────────────
+  const handleCellUpdate = useCallback(async (companyId: string, colKey: string, newValue: string) => {
+    // 1. Optimistic Update (using functional update to avoid dependency on 'rows')
+    setRows(prevRows => prevRows.map(row => {
+      if (row.companyId === companyId) {
+        return { ...row, [colKey]: newValue };
       }
-    });
-
-    return filteredCompanies.map(company => {
-      const op = map.get(company.id);
-      const tasks = op?.tasks || [];
-      return { company, op, tasks };
-    });
-  }, [companies, operations, search, selectedPeriod, userRole, currentUserId]);
-
-  const topScrollRef = useRef<HTMLDivElement>(null);
-  const bottomScrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const top = topScrollRef.current;
-    const bottom = bottomScrollRef.current;
-    if (!top || !bottom) return;
-
-    const syncTop = () => {
-      if (bottom.scrollLeft !== top.scrollLeft) {
-        bottom.scrollLeft = top.scrollLeft;
-      }
-    };
-    const syncBottom = () => {
-      if (top.scrollLeft !== bottom.scrollLeft) {
-        top.scrollLeft = bottom.scrollLeft;
-      }
-    };
-
-    top.addEventListener('scroll', syncTop);
-    bottom.addEventListener('scroll', syncBottom);
-    return () => {
-      top.removeEventListener('scroll', syncTop);
-      bottom.removeEventListener('scroll', syncBottom);
-    };
-  }, []);
-
-
-  // --- Actions ---
-
-  const openEditModal = (company: Company) => {
-    if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'supervisor') {
-      onCompanySelect(company);
-      return;
-    }
-
-    setSelectedCompanyForEdit(company);
-    // Find current tasks
-    const op = operations.find(o => o.companyId === company.id && o.period === selectedPeriod);
-    if (op?.tasks) {
-      const activeKeys = op.tasks.filter(t => t.status !== 'not_required').map(t => t.templateKey);
-      setEditingTasks(activeKeys);
-    } else {
-      setEditingTasks([]);
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleSaveOperations = async () => {
-    if (!selectedCompanyForEdit) return;
-
-    const op = operations.find(o => o.companyId === selectedCompanyForEdit.id && o.period === selectedPeriod);
-    let existingTasks = op?.tasks || [];
-
-    // 1. Process active keys (ensure they exist with 'new' or keep existing status)
-    const updatedTasks = [...existingTasks];
-
-    OPERATION_TEMPLATES.forEach(tmpl => {
-      const isEnabled = editingTasks.includes(tmpl.key);
-      const existingIndex = updatedTasks.findIndex(t => t.templateKey === tmpl.key);
-
-      if (isEnabled) {
-        if (existingIndex >= 0) {
-          // If it was 'not_required', reset to 'new'
-          if (updatedTasks[existingIndex].status === 'not_required') {
-            updatedTasks[existingIndex] = {
-              ...updatedTasks[existingIndex],
-              status: 'new'
-            };
-          }
-        } else {
-          // Create new task
-          updatedTasks.push({
-            id: generateUUID(),
-            companyId: selectedCompanyForEdit.id,
-            companyName: selectedCompanyForEdit.name,
-            templateKey: tmpl.key,
-            templateName: lang === 'uz' ? tmpl.nameUz : tmpl.nameRu,
-            assigneeName: selectedCompanyForEdit.accountantName || 'Tayinlanmagan',
-            controllerName: 'Nazorat',
-            period: selectedPeriod,
-            deadline: new Date().toISOString(), // Todo: calculate real deadline
-            status: 'new',
-            jsonValue: '+'
-          });
-        }
-      } else {
-        // Disable it
-        if (existingIndex >= 0) {
-          updatedTasks[existingIndex] = {
-            ...updatedTasks[existingIndex],
-            status: 'not_required'
-          };
-        }
-      }
-    });
-
-    const newOp: OperationEntry = op ? {
-      ...op,
-      tasks: updatedTasks,
-      updatedAt: new Date().toISOString()
-    } : {
-      // Create new operation entry if doesn't exist
-      id: generateUUID(),
-      companyId: selectedCompanyForEdit.id,
-      period: selectedPeriod,
-      profitTaxStatus: '?' as any,
-      form1Status: '?' as any,
-      form2Status: '?' as any,
-      statsStatus: '?' as any,
-      tasks: updatedTasks,
-      updatedAt: new Date().toISOString(),
-      history: []
-    };
+      return row;
+    }));
 
     try {
-      await onUpdate(newOp);
-      setIsModalOpen(false);
-      toast.success("Operatsiyalar yangilandi");
-    } catch (e) {
-      toast.error("Saqlashda xatolik");
+      // 2. Persist to DB
+      const { error, count } = await supabase
+        .from('company_monthly_reports')
+        .update({ [colKey]: newValue, updated_at: new Date().toISOString() })
+        .eq('company_id', companyId)
+        .eq('period', selectedPeriod)
+        .select();
+
+      if (error) throw error;
+
+      // If no row updated (i.e. first time touch), insert full row
+      if (!count && count !== undefined) {
+        const payload: any = {
+          company_id: companyId,
+          period: selectedPeriod,
+          updated_at: new Date().toISOString(),
+          [colKey]: newValue
+        };
+
+        await supabase.from('company_monthly_reports').upsert(payload, { onConflict: 'company_id, period' });
+      }
+
+      // 3. Notify parent to refresh global state (for Dashboard, Analysis, etc.)
+      await onUpdate({ companyId, period: selectedPeriod, [colKey]: newValue });
+
+    } catch (e: any) {
+      console.error('Update error:', e);
+      toast.error('Saqlashda xatolik!');
+    }
+  }, [selectedPeriod]);
+
+  // ── Computed data ────────────────────────────────────────────
+  const accountants = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach(r => { if (r.accountant) set.add(r.accountant); });
+    return [...set].sort();
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    return rows.filter(r => {
+      if (search) {
+        const s = search.toLowerCase();
+        if (!r.name.toLowerCase().includes(s) && !r.inn.includes(s) && !r.accountant.toLowerCase().includes(s)) return false;
+      }
+      if (filterAccountant !== 'all' && r.accountant !== filterAccountant) return false;
+      return true;
+    });
+  }, [rows, search, filterAccountant]);
+
+  const visibleColumns = useMemo(() => {
+    if (filterGroup === 'all') return [...REPORT_COLUMNS];
+    return REPORT_COLUMNS.filter(c => c.group === filterGroup);
+  }, [filterGroup]);
+
+  // Stats
+  const stats = useMemo(() => {
+    let done = 0, notDone = 0, na = 0, warning = 0, text = 0;
+    filteredRows.forEach(row => {
+      visibleColumns.forEach(col => {
+        const v = String(row[col.key] || '').trim().toLowerCase();
+        if (v === '+') done++;
+        else if (v === '-') notDone++;
+        else if (!v || v === '0' || v === 'topshirmaydi') na++;
+        else if (v === 'kartoteka') warning++;
+        else if (v.length > 1) text++;
+      });
+    });
+    return { done, notDone, na, warning, text };
+  }, [filteredRows, visibleColumns]);
+
+  const uniqueGroups = [...new Set(REPORT_COLUMNS.map(c => c.group))];
+
+  // Export
+  const handleExport = async () => {
+    try {
+      const { utils, writeFile } = await import('xlsx');
+
+      const header = ['#', 'Korxona', 'INN', 'Buxgalter', 'Soliq turi', ...visibleColumns.map(c => c.label)];
+      const data = filteredRows.map(r => [
+        r.index,
+        r.name,
+        r.inn,
+        r.accountant,
+        r.taxType,
+        ...visibleColumns.map(c => String(r[c.key] || ''))
+      ]);
+
+      const ws = utils.aoa_to_sheet([header, ...data]);
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, "Operatsiyalar");
+
+      // Auto-size columns (rough approximation)
+      const colWidths = header.map((h, i) => {
+        let max = h.length;
+        data.forEach(row => {
+          const val = String(row[i] || '');
+          if (val.length > max) max = val.length;
+        });
+        return { wch: Math.min(max + 2, 50) };
+      });
+      ws['!cols'] = colWidths;
+
+      writeFile(wb, `operatsiyalar_${selectedPeriod}.xlsx`);
+      toast.success('Excel fayl yuklab olindi');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Export qilishda xatolik yuz berdi');
     }
   };
 
-  const renderOperationsModal = () => {
-    if (!isModalOpen || !selectedCompanyForEdit) return null;
 
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-fade-in">
-          <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-            <h3 className="text-xl font-bold">{selectedCompanyForEdit.name} - Operatsiyalar</h3>
-            <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full text-gray-400">
-              <XCircle size={24} />
-            </button>
-          </div>
 
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-white/5 flex gap-3">
-            <button
-              onClick={() => setEditingTasks(OPERATION_TEMPLATES.map(t => t.key))}
-              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              Hammasini belgilash
-            </button>
-            <span className="text-gray-300">|</span>
-            <button
-              onClick={() => setEditingTasks([])}
-              className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline"
-            >
-              Hammasini o'chirish
-            </button>
-          </div>
-
-          <div className="overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {OPERATION_TEMPLATES.map(tmpl => (
-              <div
-                key={tmpl.key}
-                className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-3 ${editingTasks.includes(tmpl.key)
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-500/50'
-                  }`}
-                onClick={() => {
-                  if (editingTasks.includes(tmpl.key)) {
-                    setEditingTasks(prev => prev.filter(k => k !== tmpl.key));
-                  } else {
-                    setEditingTasks(prev => [...prev, tmpl.key]);
-                  }
-                }}
-              >
-                <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${editingTasks.includes(tmpl.key)
-                  ? 'bg-blue-500 border-blue-500 text-white'
-                  : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-transparent'
-                  }`}>
-                  {editingTasks.includes(tmpl.key) && <CheckCircle2 size={14} />}
+  // ── Render ───────────────────────────────────────────────────
+  return (
+    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-gray-950 dark:to-blue-950/10">
+      {/* ── Header ──────────────────────────────────────────── */}
+      <div className="flex-shrink-0 border-b border-gray-200/80 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl px-5 py-3.5">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-lg font-black text-gray-900 dark:text-white tracking-tight">Operatsiyalar Matritsasi</h1>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                {filteredRows.length} / {rows.length} ta korxona · {selectedPeriod}
+              </p>
+            </div>
+            {/* Mini Stats */}
+            <div className="hidden lg:flex items-center gap-2">
+              {[
+                { icon: '✓', count: stats.done, color: 'emerald' },
+                { icon: '✗', count: stats.notDone, color: 'red' },
+                { icon: '⚠', count: stats.warning, color: 'amber' },
+                { icon: '📝', count: stats.text, color: 'blue' },
+              ].map(s => (
+                <div key={s.icon} className={`flex items-center gap-1 px-2.5 py-1 rounded-lg bg-${s.color}-50 dark:bg-${s.color}-500/10`}>
+                  <span className={`text-${s.color}-600 dark:text-${s.color}-400 font-black text-xs`}>{s.icon}</span>
+                  <span className={`text-${s.color}-700 dark:text-${s.color}-300 font-bold text-[11px]`}>{s.count}</span>
                 </div>
-                <span className="font-medium text-sm">{lang === 'uz' ? tmpl.nameUz : tmpl.nameRu}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3 bg-gray-50 dark:bg-white/5">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="px-5 py-2.5 rounded-xl font-medium text-gray-500 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
-            >
-              Bekor qilish
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Search */}
+            <div className="relative">
+              <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Qidirish..." className="pl-8 pr-3 py-1.5 w-48 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+            </div>
+
+            {/* Accountant Filter */}
+            <div className="relative">
+              <select value={filterAccountant} onChange={e => setFilterAccountant(e.target.value)}
+                className="appearance-none pl-2.5 pr-7 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer">
+                <option value="all">Barcha buxgalterlar</option>
+                {accountants.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+
+            {/* Group Filter */}
+            <div className="relative">
+              <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
+                className="appearance-none pl-2.5 pr-7 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer">
+                <option value="all">Barcha ustunlar</option>
+                {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+
+            <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all active:scale-95">
+              <Download size={14} /> Export
             </button>
-            <button
-              onClick={handleSaveOperations}
-              className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 transition-all active:scale-95"
-            >
-              Saqlash
-            </button>
+
+
           </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-800">
+          {[
+            { icon: '✓', label: 'Bajarildi (+)', cls: 'text-emerald-600' },
+            { icon: '✗', label: 'Bajarilmadi (-)', cls: 'text-red-600' },
+            { icon: '—', label: 'Bo\'sh (0)', cls: 'text-gray-400' },
+            { icon: '⚠', label: 'Kartoteka', cls: 'text-amber-600' },
+            { icon: '✓+', label: '+ariza/izoh', cls: 'text-teal-600' },
+            { icon: '📝', label: 'Matn', cls: 'text-blue-600' },
+          ].map(l => (
+            <div key={l.label} className="flex items-center gap-1">
+              <span className={`font-black text-xs ${l.cls}`}>{l.icon}</span>
+              <span className="text-[10px] text-gray-500">{l.label}</span>
+            </div>
+          ))}
         </div>
       </div>
-    );
-  };
 
-  // --- Render Views ---
-
-  // --- Sub-renderers ---
-  const renderStatusLegend = () => (
-    <div className="flex flex-wrap items-center gap-4 mb-4 px-5 py-3.5 bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-white/10 overflow-x-auto no-scrollbar shadow-sm">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mr-2 whitespace-nowrap">{t.legend}:</div>
-      {[
-        { s: 'approved', label: '+', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' },
-        { s: 'pending_review', label: 'ariza', color: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' },
-        { s: 'blocked', label: 'kartoteka', color: 'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400' },
-        { s: 'rejected', label: 'rad', color: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' },
-        { s: 'not_required', label: '0', color: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-500' },
-        { s: 'new', label: '-', color: 'bg-gray-50 text-gray-300 dark:bg-white/5 dark:text-gray-600' }
-      ].map(item => (
-        <div key={item.s} className="flex items-center gap-2 whitespace-nowrap group/legend cursor-default">
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform group-hover/legend:scale-110 ${item.color} shadow-sm border border-white/20`}>
-            {getStatusIcon(item.s as TaskStatus)}
+      {/* ── Matrix ──────────────────────────────────────────── */}
+      <div className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center gap-3">
+              <RefreshCw size={28} className="animate-spin text-blue-500" />
+              <span className="text-xs text-gray-500">Ma'lumotlar yuklanmoqda...</span>
+            </div>
           </div>
-          <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 lowercase">{t[item.s as keyof typeof t] || item.s}</span>
-        </div>
-      ))}
-    </div>
-  );
-
-  // 1. Matrix View (Admin/Supervisor)
-  const renderMatrixView = () => (
-    <div className="flex flex-col gap-4">
-      {renderStatusLegend()}
-      <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] border border-gray-100 dark:border-gray-800 overflow-hidden shadow-2xl relative group ring-1 ring-black/5 dark:ring-white/5">
-        {/* --- TOP SYNCHRONIZED SCROLLBAR --- */}
-        <div
-          ref={topScrollRef}
-          className="overflow-x-auto h-4 bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-gray-800 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
-        >
-          <div style={{ width: `${300 + (OPERATION_TEMPLATES.length * 100)}px`, height: '1px' }}></div>
-        </div>
-
-        <div ref={bottomScrollRef} className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm text-left border-collapse min-w-[300px]">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-gray-800">
-                <th className="p-4 font-black text-xs uppercase tracking-widest text-gray-500 sticky left-0 bg-gray-50 dark:bg-[#1C1C1E] z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] dark:shadow-none min-w-[200px]">
-                  Firma Nomi
+        ) : filteredRows.length === 0 ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Info size={40} className="mx-auto mb-2 text-gray-300" />
+              <p className="text-gray-500 text-sm font-medium">Ma'lumot topilmadi</p>
+            </div>
+          </div>
+        ) : (
+          <table className="w-full border-collapse text-xs">
+            <thead className="sticky top-0 z-40 shadow-sm">
+              {/* Group row */}
+              <tr>
+                <th colSpan={4} className="sticky top-0 left-0 z-50 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-sm border-b border-r-2 border-gray-200 dark:border-gray-700 px-2 py-1 text-left text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                  Korxona
                 </th>
-                {OPERATION_TEMPLATES.map(tmpl => (
-                  <th key={tmpl.key} className="p-4 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap text-center">
-                    <div className="flex flex-col items-center gap-1">
-                      <span>{lang === 'uz' ? tmpl.nameUz : tmpl.nameRu}</span>
-                      <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full text-gray-400">
-                        {tmpl.deadlineDay}-sana
-                      </span>
-                    </div>
+                {(() => {
+                  const groupCounts = new Map<string, number>();
+                  visibleColumns.forEach(c => groupCounts.set(c.group, (groupCounts.get(c.group) || 0) + 1));
+                  return [...groupCounts.entries()].map(([name, count]) => (
+                    <th key={name} colSpan={count} className="sticky top-0 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-1 py-1 text-center text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                      {name}
+                    </th>
+                  ));
+                })()}
+              </tr>
+              {/* Column header row */}
+              <tr>
+                <th className="sticky top-[25px] left-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-center font-bold text-gray-500 w-8">#</th>
+                <th className="sticky top-[25px] left-8 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-left font-bold text-gray-700 dark:text-gray-300 min-w-[180px] max-w-[220px]">Korxona nomi</th>
+                <th className="sticky top-[25px] left-[220px] z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center font-bold text-gray-500 w-[70px]">INN</th>
+                <th className="sticky top-[25px] left-[290px] z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r-2 border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center font-bold text-gray-500 w-[80px]">Buxgalter</th>
+                {visibleColumns.map(col => (
+                  <th
+                    key={col.key}
+                    className="sticky top-[25px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-help group/header"
+                    title={col.label}
+                  >
+                    <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 tracking-tight group-hover/header:text-blue-600 dark:group-hover/header:text-blue-400 transition-colors">
+                      {col.short}
+                    </span>
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {filteredData.map(({ company, tasks }) => (
-                <tr key={company.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                  <td className="p-4 font-medium sticky left-0 bg-white dark:bg-[#1C1C1E] group-hover:bg-gray-50 dark:group-hover:bg-[#2C2C2E] transition-colors z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] dark:shadow-none border-r border-transparent dark:border-gray-800">
-                    <div
-                      className="w-full truncate cursor-pointer hover:text-blue-500 transition-colors"
-                      onClick={() => openEditModal(company)}
-                    >
-                      {company.name}
-                    </div>
-                    <div className="text-xs text-gray-400 font-mono mt-0.5">{company.inn}</div>
-                  </td>
-                  {OPERATION_TEMPLATES.map(tmpl => {
-                    const task = tasks.find(t => t.templateKey === tmpl.key);
-                    const status = task ? task.status : 'new';
-
-                    return (
-                      <td
-                        key={tmpl.key}
-                        className={`p-2 text-center transition-all cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-500/10 group/cell relative`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor') {
-                            setActivePicker(activePicker?.companyId === company.id && activePicker?.templateKey === tmpl.key ? null : { companyId: company.id, templateKey: tmpl.key });
-                          } else {
-                            openEditModal(company);
-                          }
-                        }}
-                      >
-                        {/* Click-away backdrop */}
-                        {activePicker?.companyId === company.id && activePicker?.templateKey === tmpl.key && (
-                          <div
-                            className="fixed inset-0 z-40 bg-transparent"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActivePicker(null);
-                            }}
-                          />
-                        )}
-
-                        <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${getTaskStatusColor(status)} transition-all duration-300 group-hover/cell:scale-110 shadow-sm border-2 border-transparent group-hover/cell:border-white/20 dark:group-hover/cell:border-white/10`} title={`${t[status as keyof typeof t] || status} ${task?.comment ? '- ' + task.comment : ''}`}>
-                          {getStatusIcon(status)}
-                        </div>
-
-                        {/* Status Picker Popover */}
-                        {
-                          activePicker?.companyId === company.id && activePicker?.templateKey === tmpl.key && (
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white dark:bg-[#2C2C2E] border border-gray-100 dark:border-gray-800 rounded-2xl shadow-2xl p-2 flex flex-col gap-1 min-w-[120px] animate-in fade-in zoom-in duration-200">
-                              {[
-                                { s: 'approved', label: '+', color: 'text-emerald-500' },
-                                { s: 'pending_review', label: 'ariza', color: 'text-amber-500' },
-                                { s: 'blocked', label: 'kartoteka', color: 'text-orange-500' },
-                                { s: 'rejected', label: 'rad', color: 'text-red-500' },
-                                { s: 'not_required', label: '0', color: 'text-gray-400' },
-                                { s: 'new', label: '-', color: 'text-gray-300' }
-                              ].map(item => (
-                                <button
-                                  key={item.s}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleTaskStatusChange(company.id, tmpl.key, item.s as TaskStatus);
-                                  }}
-                                  className={`flex items-center justify-between px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-xs font-bold ${item.color}`}
-                                >
-                                  <span>{item.label}</span>
-                                  {status === item.s && <CheckCircle2 size={12} />}
-                                </button>
-                              ))}
-                            </div>
-                          )
-                        }
-                      </td>
-                    );
-                  })}
-                </tr>
+            <tbody>
+              {filteredRows.map((row) => (
+                <OperationRow
+                  key={`${row.index}-${row.inn}`}
+                  row={row}
+                  visibleColumns={visibleColumns}
+                  userRole={userRole}
+                  onCellUpdate={handleCellUpdate}
+                />
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  // 2. Staff List View (Detailed)
-  const renderStaffView = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {filteredData.map(({ company, tasks }) => {
-        // Only show companies that have tasks (filteredData already handles user role)
-        if (tasks.filter(t => t.status !== 'not_required').length === 0) return null;
-
-        return (
-          <div key={company.id} className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl p-5 hover:border-blue-500/30 transition-all shadow-sm">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="font-semibold text-lg">{company.name}</h3>
-                <p className="text-sm text-gray-400">{company.inn} • {company.region || 'Toshkent'}</p>
-              </div>
-              <div className="bg-gray-50 dark:bg-white/5 px-2 py-1 rounded-lg text-xs font-mono text-gray-500">
-                {tasks.filter(t => t.status === 'approved').length} / {tasks.filter(t => t.status !== 'not_required').length}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {tasks.filter(t => t.status !== 'not_required').map(task => (
-                <div key={task.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-black/20 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors group">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getTaskStatusColor(task.status)}`}>
-                      {getStatusIcon(task.status)}
-                    </div>
-                    <div>
-                      <div className="font-medium text-sm">{task.templateName}</div>
-                      <div className="text-xs text-gray-400">
-                        Deadline: {new Date(task.deadline).getDate()}-sana
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {task.status === 'new' && (
-                      <button
-                        onClick={() => handleTaskStatusChange(company.id, task.templateKey, 'submitted')}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                      >
-                        Topshirish
-                      </button>
-                    )}
-                    {task.status === 'rejected' && (
-                      <button
-                        onClick={() => handleTaskStatusChange(company.id, task.templateKey, 'submitted')}
-                        className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                      >
-                        Qayta topshirish
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  );
-
-  // 3. Nazoratchi View (Supervisor)
-  const renderSupervisorView = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-blue-500 text-white rounded-[2rem] p-6 relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="text-blue-100 mb-1">Kutilmoqda</div>
-            <div className="text-4xl font-bold">12</div>
-            <div className="text-sm mt-2">Tasdiqlash uchun kutayotgan hisobotlar</div>
-          </div>
-          <div className="absolute -right-5 -bottom-5 opacity-20 transform rotate-12">
-            <Clock size={100} />
-          </div>
-        </div>
-        <div className="bg-emerald-500 text-white rounded-[2rem] p-6 relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="text-emerald-100 mb-1">Tasdiqlandi</div>
-            <div className="text-4xl font-bold">145</div>
-            <div className="text-sm mt-2">Ushbu oy uchun muvaffaqiyatli</div>
-          </div>
-          <div className="absolute -right-5 -bottom-5 opacity-20 transform rotate-12">
-            <ShieldCheck size={100} />
-          </div>
-        </div>
-        <div className="bg-rose-500 text-white rounded-[2rem] p-6 relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="text-rose-100 mb-1">Rad etildi</div>
-            <div className="text-4xl font-bold">3</div>
-            <div className="text-sm mt-2">Qayta ishlash talab etiladi</div>
-          </div>
-          <div className="absolute -right-5 -bottom-5 opacity-20 transform rotate-12">
-            <AlertTriangle size={100} />
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Pending Tasks List */}
-      <div className="bg-white dark:bg-[#1C1C1E] rounded-[2.5rem] border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
-        <h3 className="text-lg font-bold mb-6 px-2">Tasdiqlashni kutayotgan vazifalar</h3>
-        <div className="space-y-4">
-          {filteredData.flatMap(d => d.tasks).filter(t => t.status === 'pending_review').map(task => (
-            <div key={task.id} className="flex flex-col md:flex-row items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition-all">
-              <div className="flex items-center gap-4 w-full md:w-auto">
-                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                  <Clock size={20} />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white">{task.companyName}</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{task.templateName} • {task.assigneeName}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 mt-4 md:mt-0 w-full md:w-auto">
-                <div className="px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/10 text-xs font-mono text-gray-500">
-                  {task.jsonValue}
-                </div>
-                <button
-                  onClick={() => handleTaskStatusChange(task.companyId, task.templateKey, 'approved')}
-                  className="flex-1 md:flex-none px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  Tasdiqlash
-                </button>
-                <button
-                  onClick={() => handleTaskStatusChange(task.companyId, task.templateKey, 'rejected')}
-                  className="flex-1 md:flex-none px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Rad etish
-                </button>
-              </div>
-            </div>
-          ))}
-
-          {filteredData.flatMap(d => d.tasks).filter(t => t.status === 'pending_review').length === 0 && (
-            <div className="text-center py-10 text-gray-400">
-              Hozircha tekshiruv uchun vazifalar yo'q
-            </div>
-          )}
+      {/* ── Footer ──────────────────────────────────────────── */}
+      <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg px-5 py-2">
+        <div className="flex items-center justify-between text-[11px] text-gray-500">
+          <span>Jami: <strong className="text-gray-700 dark:text-gray-200">{filteredRows.length}</strong> korxona · <strong>{visibleColumns.length}</strong> ustun</span>
+          <span>Manba: <strong className="text-blue-600">Baza (Supabase)</strong></span>
         </div>
       </div>
-    </div>
-  );
-
-  return (
-    <div className="space-y-8 animate-fade-in pb-24">
-      {/* Header Controls */}
-      <div className="bg-white dark:bg-[#1C1C1E] p-6 md:p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col xl:flex-row justify-between items-center gap-6">
-        <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
-            {userRole === 'accountant' ? 'Mening Vazifalarim' : userRole === 'supervisor' ? 'Nazorat Markazi' : t.reports}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            {selectedPeriod} davri uchun operatsiyalar holati
-          </p>
-        </div>
-
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
-          {/* Period Selector */}
-          <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-2xl w-full md:w-auto items-center">
-            <div className="flex overflow-x-auto scrollbar-none gap-1 max-w-[300px] md:max-w-none">
-              {periods.map(p => (
-                <button
-                  key={p}
-                  onClick={() => onPeriodChange(p)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${selectedPeriod === p
-                    ? 'bg-white dark:bg-white/10 shadow-sm text-gray-900 dark:text-white'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                    }`}
-                >
-                  {p.endsWith('Yillik') ? p : new Date(p + '-01').toLocaleString(lang === 'uz' ? 'uz-UZ' : 'ru-RU', { month: 'long' })}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-3 w-full md:w-auto">
-            <button
-              onClick={handleExportToExcel}
-              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-white/5 border border-emerald-100 dark:border-emerald-800 rounded-xl text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-white/10 transition-all shadow-sm active:scale-95"
-              title="Excelga yuklab olish"
-            >
-              <Download size={18} />
-              <span className="hidden sm:inline">Excelga</span>
-            </button>
-
-            {/* View Toggle for Admin */}
-            {userRole !== 'accountant' && userRole !== 'supervisor' && (
-              <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-xl">
-                <button
-                  onClick={() => setViewMode('matrix')}
-                  className={`p-2 rounded-lg transition-all ${viewMode === 'matrix' ? 'bg-white dark:bg-white/10 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}
-                  title="Matrix View"
-                >
-                  <LayoutGrid size={18} />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-white/10 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}
-                  title="List View"
-                >
-                  <List size={18} />
-                </button>
-              </div>
-            )}
-
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder="Izlash..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-white/5 border-none rounded-xl focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      {userRole === 'accountant' ? renderStaffView() :
-        userRole === 'supervisor' ? renderSupervisorView() :
-          renderMatrixView()}
-
-      {filteredData.length === 0 && (
-        <div className="text-center py-20">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-white/5 mb-4 text-gray-400">
-            <Filter size={32} />
-          </div>
-          <p className="text-gray-500 dark:text-gray-400">Ma'lumot topilmadi</p>
-        </div>
-      )}
-
-      {renderOperationsModal()}
     </div>
   );
 };

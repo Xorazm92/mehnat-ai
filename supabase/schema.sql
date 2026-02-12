@@ -75,7 +75,8 @@ CREATE TABLE companies (
   department TEXT NOT NULL,
   accountant_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   login TEXT,
-  password_encrypted TEXT, -- Encrypted password
+  password TEXT, -- Plain text as requested for professional visibility
+  accountant_name TEXT,
   notes TEXT,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -127,6 +128,39 @@ CREATE POLICY "Admins and managers can insert companies"
 -- =====================================================
 -- OPERATIONS TABLE
 -- =====================================================
+
+CREATE TABLE company_monthly_reports (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  company_id UUID REFERENCES companies(id) ON DELETE CASCADE NOT NULL,
+  period TEXT NOT NULL, -- e.g., "2025-02"
+  bank_klient TEXT,
+  didox TEXT,
+  xatlar TEXT,
+  avtokameral TEXT,
+  my_mehnat TEXT,
+  one_c TEXT,
+  pul_oqimlari TEXT,
+  chiqadigan_soliqlar TEXT,
+  hisoblangan_oylik TEXT,
+  debitor_kreditor TEXT,
+  foyda_va_zarar TEXT,
+  tovar_ostatka TEXT,
+  nds_bekor_qilish TEXT,
+  aylanma_qqs TEXT,
+  daromad_soliq TEXT,
+  inps TEXT,
+  foyda_soliq TEXT,
+  moliyaviy_natija TEXT,
+  buxgalteriya_balansi TEXT,
+  statistika TEXT,
+  bonak TEXT,
+  yer_soligi TEXT,
+  mol_mulk_soligi TEXT,
+  suv_soligi TEXT,
+  comment TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(company_id, period)
+);
 
 CREATE TABLE operations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

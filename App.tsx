@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import Dashboard from './components/Dashboard';
@@ -24,8 +25,12 @@ import {
   fetchProfile,
   fetchCompanies,
   fetchOperations,
+  fetchMonthlyReports,
   fetchStaff,
   fetchKpiMetrics,
+  fetchPayments,
+  fetchExpenses,
+  fetchContractAssignments,
   upsertCompany,
   deleteCompany,
   onboardCompany,
@@ -33,13 +38,10 @@ import {
   upsertOperationsBatch,
   upsertStaff,
   deleteStaff,
-  fetchPayments,
-  fetchExpenses,
   upsertPayment,
   upsertExpense,
   deletePayment,
   deleteExpense,
-  fetchContractAssignments
 } from './lib/supabaseData';
 import { seedFirmaData } from './lib/seedFirmaData';
 import type { Session } from '@supabase/supabase-js';
@@ -48,6 +50,7 @@ import { ALLOWED_VIEWS, ROLES, UserRole } from './lib/permissions';
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'uz');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark' ||
@@ -144,7 +147,7 @@ const App: React.FC = () => {
     setIsSyncing(true);
     const [c, o, s, kpi, p, e, ass] = await Promise.all([
       fetchCompanies(),
-      fetchOperations(),
+      fetchMonthlyReports(),
       fetchStaff(),
       fetchKpiMetrics(),
       fetchPayments(),
@@ -238,6 +241,8 @@ const App: React.FC = () => {
       setIsSyncing(false);
     }
   };
+
+
 
   const handleDashboardFilter = (filterId: string) => {
     setActiveFilter(filterId);
@@ -358,6 +363,8 @@ const App: React.FC = () => {
       <Sidebar
         activeView={activeView}
         isOpen={isMobileMenuOpen}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onClose={() => setIsMobileMenuOpen(false)}
         onViewChange={(view) => {
           setActiveView(view);
@@ -370,7 +377,7 @@ const App: React.FC = () => {
         pendingReportsCount={pendingReportsCount}
       />
 
-      <main className="flex-1 lg:pl-20 xl:pl-64 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-300">
+      <main className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'}`}>
         <TopBar
           isDarkMode={isDarkMode}
           onThemeToggle={toggleTheme}
@@ -457,7 +464,12 @@ const App: React.FC = () => {
                     selectedPeriod={selectedPeriod}
                     onPeriodChange={setSelectedPeriod}
                     lang={lang}
-                    onUpdate={async (op) => { await upsertOperation(op); refreshData(); }}
+                    onUpdate={async (op) => {
+                      if (op && op.id) {
+                        await upsertOperation(op);
+                      }
+                      await refreshData();
+                    }}
                     onBatchUpdate={async (ops) => { await upsertOperationsBatch(ops); refreshData(); }}
                     onCompanySelect={setSelectedCompany}
                     userRole={userRole}

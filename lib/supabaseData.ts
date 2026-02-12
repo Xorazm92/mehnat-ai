@@ -1,4 +1,6 @@
 import { supabase } from './supabaseClient';
+import { createClient } from '@supabase/supabase-js';
+import { toast } from 'sonner'; // Optional, but usually handled by caller
 import {
   Company,
   OperationEntry,
@@ -375,9 +377,8 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       hasWaterTax: c.has_water_tax ?? false,
       hasPropertyTax: c.has_property_tax ?? false,
       hasExciseTax: c.has_excise_tax ?? false,
-      hasAuctionTax: c.has_auction_tax ?? false,
-      oneCStatus: c.one_c_status,
       oneCLocation: c.one_c_location,
+      accountant_name: c.accountant_name,
       // Tab 5: SHARTNOMA fields
       contractNumber: c.contract_number,
       contractDate: c.contract_date,
@@ -460,7 +461,8 @@ export const upsertCompany = async (company: Company) => {
 
     accountant_id: company.accountantId,
     login: company.login,
-    password_encrypted: company.password,
+    password: company.password,
+    accountant_name: company.accountantName,
     notes: fallbackJson,
     internal_contractor: company.internalContractor,
     server_info: serverInfoEnum,
@@ -628,10 +630,6 @@ export const fetchOperations = async (): Promise<OperationEntry[]> => {
       id: o.id,
       companyId: o.company_id,
       period: o.period,
-      profitTaxStatus: fromDbStatus(o.profit_tax_status),
-      form1Status: fromDbStatus(o.form1_status),
-      form2Status: fromDbStatus(o.form2_status),
-      statsStatus: fromDbStatus(o.stats_status),
       comment: o.comment?.startsWith('{"kpi":') ? '' : (o.comment || ''),
       profitTaxDeadline: o.deadline_profit_tax,
       statsDeadline: o.deadline_stats,
@@ -665,10 +663,6 @@ export const upsertOperation = async (op: OperationEntry) => {
     id: validId,
     company_id: op.companyId,
     period: op.period,
-    profit_tax_status: toDbStatus(op.profitTaxStatus),
-    form1_status: toDbStatus(op.form1Status),
-    form2_status: toDbStatus(op.form2Status),
-    stats_status: toDbStatus(op.statsStatus),
     deadline_profit_tax: op.profitTaxDeadline,
     deadline_stats: op.statsDeadline,
     comment: op.kpi ? kpiStore : op.comment, // Store KPI in comment if column missing
@@ -703,10 +697,6 @@ export const upsertOperationsBatch = async (ops: OperationEntry[]) => {
       id: validId,
       company_id: op.companyId,
       period: op.period,
-      profit_tax_status: toDbStatus(op.profitTaxStatus),
-      form1_status: toDbStatus(op.form1Status),
-      form2_status: toDbStatus(op.form2Status),
-      stats_status: toDbStatus(op.statsStatus),
       deadline_profit_tax: op.profitTaxDeadline,
       deadline_stats: op.statsDeadline,
       comment: op.kpi ? kpiStore : op.comment,
@@ -738,6 +728,87 @@ export const upsertOperationsBatch = async (ops: OperationEntry[]) => {
 
 export const deleteOperation = async (id: string) => {
   const { error } = await supabase.from('operations').delete().eq('id', id);
+  if (error) throw error;
+};
+
+// --- Monthly Reports (CSV Based) ---
+export const fetchMonthlyReports = async (): Promise<OperationEntry[]> => {
+  const { data, error } = await supabase
+    .from('company_monthly_reports')
+    .select('*');
+
+  if (error) {
+    console.error('fetchMonthlyReports', error);
+    return [];
+  }
+
+  return data.map(r => ({
+    id: r.id,
+    companyId: r.company_id,
+    period: r.period,
+    bank_klient: r.bank_klient,
+    didox: r.didox,
+    xatlar: r.xatlar,
+    avtokameral: r.avtokameral,
+    my_mehnat: r.my_mehnat,
+    one_c: r.one_c,
+    pul_oqimlari: r.pul_oqimlari,
+    chiqadigan_soliqlar: r.chiqadigan_soliqlar,
+    hisoblangan_oylik: r.hisoblangan_oylik,
+    debitor_kreditor: r.debitor_kreditor,
+    foyda_va_zarar: r.foyda_va_zarar,
+    tovar_ostatka: r.tovar_ostatka,
+    nds_bekor_qilish: r.nds_bekor_qilish,
+    aylanma_qqs: r.aylanma_qqs,
+    daromad_soliq: r.daromad_soliq,
+    inps: r.inps,
+    foyda_soliq: r.foyda_soliq,
+    moliyaviy_natija: r.moliyaviy_natija,
+    buxgalteriya_balansi: r.buxgalteriya_balansi,
+    statistika: r.statistika,
+    bonak: r.bonak,
+    yer_soliqi: r.yer_soligi,
+    mol_mulk_soligi: r.mol_mulk_soligi,
+    suv_soligi: r.suv_soligi,
+    comment: r.comment || '',
+    updatedAt: r.updated_at,
+    history: []
+  })) as OperationEntry[];
+};
+
+export const upsertMonthlyReport = async (report: Partial<OperationEntry>) => {
+  const payload = {
+    company_id: report.companyId,
+    period: report.period,
+    bank_klient: report.bank_klient,
+    didox: report.didox,
+    xatlar: report.xatlar,
+    avtokameral: report.avtokameral,
+    my_mehnat: report.my_mehnat,
+    one_c: report.one_c,
+    pul_oqimlari: report.pul_oqimlari,
+    chiqadigan_soliqlar: report.chiqadigan_soliqlar,
+    hisoblangan_oylik: report.hisoblangan_oylik,
+    debitor_kreditor: report.debitor_kreditor,
+    foyda_va_zarar: report.foyda_va_zarar,
+    tovar_ostatka: report.tovar_ostatka,
+    nds_bekor_qilish: report.nds_bekor_qilish,
+    aylanma_qqs: report.aylanma_qqs,
+    daromad_soliq: report.daromad_soliq,
+    inps: report.inps,
+    foyda_soliq: report.foyda_soliq,
+    moliyaviy_natija: report.moliyaviy_natija,
+    buxgalteriya_balansi: report.buxgalteriya_balansi,
+    statistika: report.statistika,
+    bonak: report.bonak,
+    yer_soligi: report.yer_soliqi,
+    mol_mulk_soligi: report.mol_mulk_soligi,
+    suv_soligi: report.suv_soligi,
+    comment: report.comment,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase.from('company_monthly_reports').upsert(payload, { onConflict: 'company_id,period' });
   if (error) throw error;
 };
 
@@ -784,6 +855,48 @@ export const upsertStaff = async (staff: Staff) => {
   // UUID validation for safety
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let validId = staff.id;
+
+  // 1. Logic for NEW users or explicit auth creation
+  if (staff.email && staff.password && (!validId || !uuidRegex.test(validId))) {
+    try {
+      // Create a temporary client to avoid logging out the admin
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && supabaseAnonKey) {
+        const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+        });
+
+        const { data: authData, error: authError } = await tempClient.auth.signUp({
+          email: staff.email,
+          password: staff.password,
+          options: {
+            data: { full_name: staff.name, role: staff.role }
+          }
+        });
+
+        if (authError) {
+          console.error('Auth signup failed:', authError);
+          // If user already exists, we might want to fetch their ID?
+          // For now, proceed with error logging but try to continue or throw?
+          // If auth fails, we should probably stop.
+          if (!authError.message.includes('already registered')) {
+            throw authError;
+          }
+        }
+
+        if (authData.user && authData.user.id) {
+          validId = authData.user.id;
+        }
+      }
+    } catch (e) {
+      console.error('Auth handler error:', e);
+      // Fallback: If auth fails, generate random ID? No, better to fail or let the user know.
+    }
+  }
+
+  // Fallback ID generation if Auth didn't provide one
   if (!validId || !uuidRegex.test(validId)) {
     validId = crypto.randomUUID();
   }
@@ -797,7 +910,7 @@ export const upsertStaff = async (staff: Staff) => {
 
   const payload = {
     id: validId,
-    email: staff.username ? `${staff.username}@asos.uz` : `${staff.name.toLowerCase().replace(/\s/g, '.')}@asos.uz`,
+    email: staff.email || (staff.username ? `${staff.username}@asos.uz` : `${staff.name.toLowerCase().replace(/\s/g, '.')}@asos.uz`),
     full_name: staff.name,
     role: dbRole,
     avatar_color: staff.avatarColor || 'hsl(200, 50%, 50%)',

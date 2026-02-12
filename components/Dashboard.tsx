@@ -133,7 +133,15 @@ const Dashboard: React.FC<DashboardProps> = ({
     const netProfit = totalIncome - totalExpenses;
 
     // 6. REPORT PROGRESS (Global)
-    const statsTotal = companies.length * 4 || 1;
+    const REPORT_FIELDS = [
+      'bank_klient', 'didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c',
+      'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka',
+      'nds_bekor_qilish', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq',
+      'moliyaviy_natija', 'buxgalteriya_balansi', 'statistika',
+      'bonak', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi'
+    ] as const;
+
+    const statsTotal = companies.length * REPORT_FIELDS.length || 1;
     const reportStats = { done: 0, pending: 0, blocked: 0, total: statsTotal, itParkCount: 0 };
 
     companies.forEach(c => {
@@ -142,12 +150,16 @@ const Dashboard: React.FC<DashboardProps> = ({
       if (c.itParkResident) reportStats.itParkCount = (reportStats.itParkCount || 0) + 1;
 
       if (!op) {
-        reportStats.pending += 4;
+        reportStats.pending += REPORT_FIELDS.length;
       } else {
-        [op.profitTaxStatus, op.form1Status, op.form2Status, op.statsStatus].forEach(st => {
-          if (st === '+' || st === 'topshirildi') reportStats.done++;
-          else if (st === 'kartoteka') reportStats.blocked++;
-          else reportStats.pending++;
+        REPORT_FIELDS.forEach(field => {
+          // @ts-ignore - Index access
+          const val = String(op[field] || '').trim().toLowerCase();
+          if (val === '+' || val.startsWith('+')) reportStats.done++;
+          else if (val === 'kartoteka') reportStats.blocked++;
+          else if (!val || val === '0' || val === '-') reportStats.pending++; // Treat '-' as pending/not done
+          // Custom text logic can be refined if needed
+          else reportStats.done++; // Assume text means done/info
         });
       }
     });
