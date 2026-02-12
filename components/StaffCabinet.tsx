@@ -85,7 +85,9 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
                 <div className="text-center md:text-left flex-1">
                     <h2 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-none mb-3">Salom, {currentStaff.name}!</h2>
                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                        <span className="px-4 py-1.5 rounded-xl bg-blue-500/10 text-blue-600 text-[10px] font-black uppercase tracking-widest">{currentStaff.role}</span>
+                        <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${currentStaff.role === 'super_admin' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' : 'bg-blue-500/10 text-blue-600'}`}>
+                            {currentStaff.role === 'super_admin' ? 'Full Access Administrator' : currentStaff.role}
+                        </span>
                         <span className="px-4 py-1.5 rounded-xl bg-slate-100 dark:bg-apple-darkBg text-slate-500 text-[10px] font-black uppercase tracking-widest">ID: {currentStaff.id.slice(0, 8)}</span>
                     </div>
                 </div>
