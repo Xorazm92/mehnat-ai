@@ -149,7 +149,7 @@ export const deleteKPIRule = async (id: string) => {
 export const fetchMonthlyPerformance = async (month: string, companyId?: string, employeeId?: string): Promise<MonthlyPerformance[]> => {
   let query = supabase
     .from('monthly_performance')
-    .select('*, rule:kpi_rules(name, name_uz), company:companies(name), employee:profiles(full_name)')
+    .select('*, rule:kpi_rules(name, name_uz), company:companies(name), employee:profiles!employee_id(full_name)')
     .eq('month', month);
 
   if (companyId) query = query.eq('company_id', companyId);

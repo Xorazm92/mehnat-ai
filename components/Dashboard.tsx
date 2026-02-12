@@ -254,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div className="h-[300px] min-h-[300px] w-full relative overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%" aspect={2} minHeight={300}>
+            <ResponsiveContainer width="100%" height="100%" aspect={2} debounce={100}>
               <AreaChart data={stats.financialTrends}>
 
                 <defs>
@@ -283,7 +283,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
           <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-8">Hisobotlar Progressi</h4>
           <div className="h-48 min-h-[192px] w-full relative overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%" aspect={1} minHeight={192}>
+            <ResponsiveContainer width="100%" height="100%" aspect={1} debounce={100}>
               <PieChart>
 
                 <Pie data={stats.reportDonut} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">
