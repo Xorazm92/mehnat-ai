@@ -19,7 +19,8 @@ import {
   PayrollAdjustment,
   EmployeeSalarySummary,
   ClientHistory,
-  SalaryCalculationType
+  SalaryCalculationType,
+  AppNotification
 } from '../types';
 
 interface CompanyNotesFallback {
@@ -95,6 +96,68 @@ export const fetchProfile = async (userId: string) => {
 // =====================================================
 // AVTOMATIK KPI TIZIMI — DATA LAYER
 // =====================================================
+
+// --- NOTIFICATIONS ---
+const TABLES = {
+  profiles: 'profiles',
+  companies: 'companies',
+  operations: 'operations',
+  kpi_rules: 'kpi_rules',
+  monthly_performance: 'monthly_performance',
+  payroll_adjustments: 'payroll_adjustments',
+  company_monthly_reports: 'company_monthly_reports',
+  contract_assignments: 'contract_assignments',
+  notifications: 'notifications'
+} as const;
+
+export const fetchNotifications = async (userId: string): Promise<AppNotification[]> => {
+  const { data, error } = await supabase
+    .from(TABLES.notifications)
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error('Error fetching notifications:', error);
+    return [];
+  }
+  return data.map(n => ({
+    id: n.id,
+    userId: n.user_id,
+    type: n.type,
+    title: n.title,
+    message: n.message,
+    link: n.link,
+    isRead: n.is_read,
+    createdAt: n.created_at
+  }));
+};
+
+export const markNotificationAsRead = async (id: string) => {
+  await supabase
+    .from(TABLES.notifications)
+    .update({ is_read: true })
+    .eq('id', id);
+};
+
+export const createNotification = async (notif: Omit<AppNotification, 'id' | 'createdAt' | 'isRead'>) => {
+  const { error } = await supabase
+    .from(TABLES.notifications)
+    .insert({
+      user_id: notif.userId,
+      type: notif.type,
+      title: notif.title,
+      message: notif.message,
+      link: notif.link
+    });
+  if (error) console.error('Error creating notification:', error);
+};
+
+export const deleteNotification = async (id: string) => {
+  const { error } = await supabase.from(TABLES.notifications).delete().eq('id', id);
+  if (error) console.error('Error deleting notification:', error);
+};
 
 // 1. KPI Rules
 export const fetchKPIRules = async (): Promise<KPIRule[]> => {
@@ -259,7 +322,7 @@ export const calculateEmployeeSalary = async (employeeId: string, month: string)
   const { count } = await supabase
     .from('companies')
     .select('id', { count: 'exact', head: true })
-    .or(`accountant_id.eq.${employeeId},bank_client_id.eq.${employeeId},supervisor_id.eq.${employeeId}`)
+    .or(`accountant_id.eq.${ employeeId }, bank_client_id.eq.${ employeeId }, supervisor_id.eq.${ employeeId } `)
     .eq('is_active', true);
 
   // Fetch employee details
@@ -538,9 +601,9 @@ export const upsertCompany = async (company: Company) => {
 
     // Audit Log
     if (existing) {
-      logAuditAction(validId, 'update', 'company', validId, { before: existing, after: payload });
+      // logAuditAction(validId, 'update', 'company', validId, { before: existing, after: payload });
     } else {
-      logAuditAction(validId, 'create', 'company', validId, { data: payload });
+      // logAuditAction(validId, 'create', 'company', validId, { data: payload });
     }
   } catch (e) { console.error(e); throw e; }
 };
@@ -587,7 +650,7 @@ export const onboardCompany = async (company: Partial<Company>, assignments: any
         start_date: new Date().toISOString().split('T')[0]
       });
 
-      logAuditAction(companyId, 'assign_role', 'contract_assignment', companyId, ass);
+      // logAuditAction(companyId, 'assign_role', 'contract_assignment', companyId, ass);
     }
   }
 };
@@ -910,7 +973,7 @@ export const upsertStaff = async (staff: Staff) => {
 
   const payload = {
     id: validId,
-    email: staff.email || (staff.username ? `${staff.username}@asos.uz` : `${staff.name.toLowerCase().replace(/\s/g, '.')}@asos.uz`),
+    email: staff.email || (staff.username ? `${ staff.username } @asos.uz` : `${ staff.name.toLowerCase().replace(/\s/g, '.') } @asos.uz`),
     full_name: staff.name,
     role: dbRole,
     avatar_color: staff.avatarColor || 'hsl(200, 50%, 50%)',
@@ -1286,4 +1349,3 @@ export const logAuditAction = async (userId: string, action: string, entityType:
     console.error('logAuditAction exception', e);
   }
 };
-

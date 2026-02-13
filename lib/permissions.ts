@@ -3,6 +3,7 @@ import { ContractRole, AppView } from '../types';
 // Role Definitions (mirroring DB)
 export const ROLES = {
     SUPER_ADMIN: 'super_admin', // Yorkinoy
+    ADMIN: 'admin',             // Alias for existing systems
     SUPERVISOR: 'supervisor',   // Nazoratchi
     ACCOUNTANT: 'accountant',   // Buxgalter
     BANK_MANAGER: 'bank_manager' // Bank
@@ -23,6 +24,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Capability[]> = {
     [ROLES.SUPER_ADMIN]: [
         'view_all_companies', 'edit_contracts', 'manage_staff', 'view_salaries', 'approve_kpi', 'process_payments'
     ],
+    [ROLES.ADMIN]: [
+        'view_all_companies', 'edit_contracts', 'manage_staff', 'view_salaries', 'approve_kpi', 'process_payments'
+    ],
     [ROLES.SUPERVISOR]: [
         'view_all_companies', 'manage_staff', 'approve_kpi'
     ],
@@ -37,6 +41,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Capability[]> = {
 // View Access Control
 export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     [ROLES.SUPER_ADMIN]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll', 'audit_logs'],
+    [ROLES.ADMIN]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll', 'audit_logs'],
     [ROLES.SUPERVISOR]: ['dashboard', 'organizations', 'staff', 'reports', 'kpi', 'cabinet', 'payroll'],
     [ROLES.ACCOUNTANT]: ['dashboard', 'organizations', 'reports', 'cabinet'], // Filtered orgs
     [ROLES.BANK_MANAGER]: ['dashboard', 'kassa', 'expenses', 'cabinet']

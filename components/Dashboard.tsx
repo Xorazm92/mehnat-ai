@@ -134,9 +134,9 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     // 6. REPORT PROGRESS (Global)
     const REPORT_FIELDS = [
-      'bank_klient', 'didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c',
+      'didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c',
       'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka',
-      'nds_bekor_qilish', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq',
+      'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq',
       'moliyaviy_natija', 'buxgalteriya_balansi', 'statistika',
       'bonak', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi'
     ] as const;
@@ -192,7 +192,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         { label: 'IT PARK', value: reportStats.itParkCount, sub: 'Rezident Firmalar', color: 'bg-indigo-500', icon: '🚀' },
       ]
     };
-  }, [staff, companies, payments, expenses, operations]);
+  }, [staff, companies, payments, expenses, operations, selectedPeriod]);
 
   return (
     <div className="space-y-8 animate-macos pb-10 max-w-[1400px] mx-auto">
@@ -208,7 +208,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             onChange={(e) => onPeriodChange(e.target.value)}
             className="bg-transparent border-none text-xs font-black text-slate-700 dark:text-white outline-none px-4 py-2 cursor-pointer appearance-none"
           >
-            {['2024 Yillik', '2024 Q1', '2024 Q2', '2024 Q3', '2024 Q4', '2025 Yillik', '2025 Q1'].map(p => (
+            {['2024 Yillik', '2024 Q1', '2024 Q2', '2024 Q3', '2024 Q4', '2025 Yillik', '2025 Q1', '2026 Yillik'].map(p => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
@@ -254,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div className="h-[300px] min-h-[300px] w-full relative overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%" aspect={2} debounce={100}>
+            <ResponsiveContainer width="100%" height="100%" aspect={2} debounce={100} minWidth={0} minHeight={300}>
               <AreaChart data={stats.financialTrends}>
 
                 <defs>
@@ -283,7 +283,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
           <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-8">Hisobotlar Progressi</h4>
           <div className="h-48 min-h-[192px] w-full relative overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%" aspect={1} debounce={100}>
+            <ResponsiveContainer width="100%" height="100%" aspect={1} debounce={100} minWidth={0} minHeight={192}>
               <PieChart>
 
                 <Pie data={stats.reportDonut} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">

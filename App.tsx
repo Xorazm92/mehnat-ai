@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
@@ -19,7 +19,7 @@ import ExpenseModule from './components/ExpenseModule';
 import StaffCabinet from './components/StaffCabinet';
 import PayrollDrafts from './components/PayrollDrafts';
 import AuditLogModule from './components/AuditLogModule';
-import { AppView, Company, OperationEntry, Staff, AccountantKPI, ReportStatus, Language, Payment, Expense, EmployeeSalarySummary, ContractAssignment } from './types';
+import { AppView, Company, OperationEntry, Staff, AccountantKPI, ReportStatus, Language, Payment, Expense, EmployeeSalarySummary, ContractAssignment, AppNotification } from './types';
 import { supabase } from './lib/supabaseClient';
 import {
   fetchProfile,
@@ -42,6 +42,9 @@ import {
   upsertExpense,
   deletePayment,
   deleteExpense,
+  fetchNotifications,
+  markNotificationAsRead,
+  deleteNotification
 } from './lib/supabaseData';
 import { seedFirmaData } from './lib/seedFirmaData';
 import type { Session } from '@supabase/supabase-js';
@@ -80,6 +83,8 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [svodOperationFilter, setSvodOperationFilter] = useState<string>('all');
+  const [showPassword, setShowPassword] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const pendingReportsCount = useMemo(() => {
     // Only count for relevant roles (Supervisor/Admin) or show own pending actions for Accountants?
@@ -112,6 +117,28 @@ const App: React.FC = () => {
         await loadProfile(data.session.user.id);
         await refreshData();
       }
+      // Realtime Notifications
+      const channel = supabase
+        .channel('db-notifications')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' },
+          payload => {
+            const newNotif = payload.new as any;
+            if (newNotif.user_id === data.session?.user.id) {
+              setNotifications(prev => [{
+                id: newNotif.id,
+                userId: newNotif.user_id,
+                type: newNotif.type,
+                title: newNotif.title,
+                message: newNotif.message,
+                link: newNotif.link,
+                isRead: newNotif.is_read,
+                createdAt: newNotif.created_at
+              }, ...prev]);
+              toast.info(newNotif.title, { description: newNotif.message });
+            }
+          })
+        .subscribe();
+
       const { data: listener } = supabase.auth.onAuthStateChange(async (_event, s) => {
         setSession(s);
         if (s?.user) {
@@ -121,11 +148,13 @@ const App: React.FC = () => {
           setCompanies([]);
           setOperations([]);
           setStaff([]);
+          setNotifications([]);
         }
       });
       setIsLoading(false);
       return () => {
         listener.subscription.unsubscribe();
+        supabase.removeChannel(channel);
       };
     };
     init();
@@ -163,8 +192,22 @@ const App: React.FC = () => {
     setPayments(p);
     setExpenses(e);
     setAssignments(ass);
+    if (session?.user) {
+      const notifs = await fetchNotifications(session.user.id);
+      setNotifications(notifs);
+    }
     setLastSync(new Date().toLocaleString());
     setIsSyncing(false);
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    await markNotificationAsRead(id);
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    await deleteNotification(id);
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const toggleTheme = () => {
@@ -289,8 +332,8 @@ const App: React.FC = () => {
         <Toaster position="top-center" richColors />
         <form onSubmit={handleSignIn} className="w-full max-w-md bg-white dark:bg-apple-darkCard rounded-[2.5rem] shadow-2xl p-10 space-y-6 border border-slate-100 dark:border-apple-darkBorder animate-macos">
           <div className="text-center mb-8">
-            <div className="bg-apple-accent h-16 w-16 rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-blue-500/20 mx-auto mb-4">
-              <span className="font-black text-2xl italic">A</span>
+            <div className="h-16 w-16 mx-auto mb-4 drop-shadow-2xl">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Asos ERP</h1>
             <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Professional Accounting</p>
@@ -305,14 +348,24 @@ const App: React.FC = () => {
               className="w-full rounded-2xl border border-slate-100 dark:border-apple-darkBorder bg-slate-50 dark:bg-apple-darkBg px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all"
               required
             />
-            <input
-              type="password"
-              value={authPassword}
-              onChange={(e) => setAuthPassword(e.target.value)}
-              placeholder="Parol"
-              className="w-full rounded-2xl border border-slate-100 dark:border-apple-darkBorder bg-slate-50 dark:bg-apple-darkBg px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all"
-              required
-            />
+            <div className="relative group/pass">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                placeholder="Parol"
+                className="w-full rounded-2xl border border-slate-100 dark:border-apple-darkBorder bg-slate-50 dark:bg-apple-darkBg px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all pr-14"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-apple-accent transition-colors"
+                title={showPassword ? "Berkitish" : "Ko'rsatish"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           {authError && <p className="text-xs font-black text-rose-500 uppercase tracking-widest text-center">{authError}</p>}
@@ -357,13 +410,16 @@ const App: React.FC = () => {
           lang={lang}
           onLangToggle={toggleLang}
           lastSync={lastSync}
-          onSync={handleSync}
+          onSync={refreshData}
           isSyncing={isSyncing}
           onMenuToggle={() => setIsMobileMenuOpen(true)}
           userName={userName}
           userRole={userRole}
           onLogout={handleSignOut}
           onProfileClick={() => setActiveView('cabinet')}
+          notifications={notifications}
+          onMarkAsRead={handleMarkAsRead}
+          onDeleteNotification={handleDeleteNotification}
         />
 
         <div className="flex-1 overflow-y-auto scrollbar-thin overflow-x-hidden">
@@ -439,16 +495,15 @@ const App: React.FC = () => {
                     selectedPeriod={selectedPeriod}
                     onPeriodChange={setSelectedPeriod}
                     lang={lang}
-                    onUpdate={async (op) => {
-                      if (op && op.id) {
-                        await upsertOperation(op);
-                      }
+                    onUpdate={async () => {
                       await refreshData();
                     }}
+                    staff={staff}
                     onBatchUpdate={async (ops) => { await upsertOperationsBatch(ops); refreshData(); }}
                     onCompanySelect={setSelectedCompany}
                     userRole={userRole}
                     currentUserId={session?.user?.id}
+                    userName={userName}
                   />
                 )}
 
@@ -460,6 +515,7 @@ const App: React.FC = () => {
                     onPeriodChange={setSelectedPeriod}
                     lang={lang}
                     onFilterApply={handleAnalysisFilterApply}
+                    staff={staff}
                   />
                 )}
 

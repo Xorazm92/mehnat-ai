@@ -496,3 +496,13 @@ export interface Document {
   companyId?: string;
   staffId?: string;
 }
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: 'deadline' | 'status_change' | 'kpi_alert' | 'system' | 'approval_request';
+  title: string;
+  message: string;
+  link?: string;
+  isRead: boolean;
+  createdAt: string;
+}

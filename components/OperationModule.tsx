@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Company, OperationEntry, Language } from '../types';
+import { Company, OperationEntry, Language, Staff } from '../types';
+import { createNotification } from '../lib/supabaseData';
 import { translations } from '../lib/translations';
 import { Search, Download, ChevronDown, Info, RefreshCw, Filter } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,14 +15,12 @@ const REPORT_COLUMNS = [
   { key: 'avtokameral', csvHeader: 'Avtokameral', label: 'Avtokameral', short: 'AK', group: 'Kundalik' },
   { key: 'my_mehnat', csvHeader: 'my mehnat', label: 'My Mehnat', short: 'MM', group: 'Kundalik' },
   { key: 'one_c', csvHeader: '1c', label: '1C', short: '1C', group: 'Kundalik' },
-  { key: 'bank_klient', csvHeader: 'bank klient', label: 'Bank Klient', short: 'BK', group: 'Kundalik' },
   { key: 'pul_oqimlari', csvHeader: 'Pul oqimlari', label: 'Pul Oqimlari', short: 'PO', group: 'Oylik' },
   { key: 'chiqadigan_soliqlar', csvHeader: 'Chiqadigan soliqlar', label: 'Chiq. Soliqlar', short: 'CS', group: 'Oylik' },
   { key: 'hisoblangan_oylik', csvHeader: 'Hisoblangan oylik', label: 'His. Oylik', short: 'HO', group: 'Oylik' },
   { key: 'debitor_kreditor', csvHeader: 'Debitor kreditor', label: 'Deb/Kred', short: 'DK', group: 'Oylik' },
   { key: 'foyda_va_zarar', csvHeader: 'Foyda va zarar', label: 'Foyda/Zarar', short: 'FZ', group: 'Oylik' },
   { key: 'tovar_ostatka', csvHeader: 'Tovar ostatka', label: 'Tovar Ost.', short: 'TO', group: 'Oylik' },
-  { key: 'nds_bekor_qilish', csvHeader: 'NDSNI BEKOR QILISH', label: 'NDS Bekor', short: 'NB', group: 'Soliq' },
   { key: 'aylanma_qqs', csvHeader: 'Aylanma/QQS', label: 'Aylanma/QQS', short: 'AQ', group: 'Soliq' },
   { key: 'daromad_soliq', csvHeader: 'Daromad soliq', label: 'Daromad Soliq', short: 'DS', group: 'Soliq' },
   { key: 'inps', csvHeader: 'INPS', label: 'INPS', short: 'IN', group: 'Soliq' },
@@ -44,6 +43,7 @@ const getStatusStyle = (value: string) => {
   if (!v || v === '0') return { bg: 'bg-slate-100 dark:bg-slate-800/60', text: 'text-slate-400 dark:text-slate-500', icon: '—', tooltip: "Bo'sh" };
   if (v === '+') return { bg: 'bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400', icon: '✓', tooltip: 'Bajarildi (+)' };
   if (v === '-') return { bg: 'bg-rose-500/15', text: 'text-rose-600 dark:text-rose-400', icon: '✗', tooltip: 'Bajarilmadi (-)' };
+  if (v === 'topshirildi') return { bg: 'bg-blue-500/20 animate-pulse', text: 'text-blue-700 dark:text-blue-400', icon: '⏳', tooltip: 'Topshirildi (Kutilmoqda)' };
 
   if (v.includes('kartoteka')) return { bg: 'bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400', icon: 'Kartoteka', tooltip: 'Kartoteka' };
 
@@ -52,7 +52,8 @@ const getStatusStyle = (value: string) => {
 };
 
 const AVAILABLE_STATUSES = [
-  { value: '+', label: 'Bajarildi (+)', icon: '✓', color: 'text-emerald-600' },
+  { value: '+', label: 'Tasdiqlash (✓)', icon: '✓', color: 'text-emerald-600' },
+  { value: 'topshirildi', label: 'Topshirildi (⏳)', icon: '⏳', color: 'text-blue-600' },
   { value: '-', label: 'Bajarilmadi (-)', icon: '✗', color: 'text-rose-600' },
   { value: 'kartoteka', label: 'Kartoteka', icon: '⚠', color: 'text-amber-600' },
   { value: 'izoh', label: 'Matn yozish...', icon: '📝', color: 'text-blue-600' },
@@ -63,9 +64,10 @@ interface StatusCellProps {
   value: string;
   onUpdate: (newValue: string) => void;
   readOnly?: boolean;
+  userRole: string;
 }
 
-const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly }) => {
+const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, userRole }) => {
   const style = getStatusStyle(value);
   const [isOpen, setIsOpen] = useState(false);
   const [showInput, setShowInput] = useState(false);
@@ -114,7 +116,15 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly }) =
       setShowInput(true);
       return;
     }
-    onUpdate(statusValue);
+
+    let finalValue = statusValue;
+
+    // Role-based logic: Accountant cannot set "+" directly, it becomes "topshirildi"
+    if (userRole === 'accountant' && statusValue === '+') {
+      finalValue = 'topshirildi';
+    }
+
+    onUpdate(finalValue);
     setIsOpen(false);
   };
 
@@ -220,6 +230,7 @@ const OperationRow = React.memo<{
             value={String(row[col.key] || '')}
             onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, col.key, newValue)}
             readOnly={!row.companyId || (userRole !== 'super_admin' && userRole !== 'admin' && userRole !== 'supervisor' && userRole !== 'accountant')}
+            userRole={userRole}
           />
         </td>
       ))}
@@ -235,11 +246,13 @@ interface Props {
   selectedPeriod: string;
   onPeriodChange: (p: string) => void;
   lang: Language;
-  onUpdate: (op: OperationEntry) => void;
+  onUpdate: (data: any) => Promise<void>;
+  staff: Staff[];
   onBatchUpdate?: (ops: OperationEntry[]) => void;
   onCompanySelect: (c: Company) => void;
   userRole: string;
   currentUserId?: string;
+  userName?: string;
 }
 
 interface ReportRow {
@@ -257,15 +270,17 @@ interface ReportRow {
 const OperationModule: React.FC<Props> = ({
   companies,
   operations,
-  activeFilter = 'all',
   selectedPeriod,
-  onPeriodChange,
   lang,
   onUpdate,
+  staff = [],
+  activeFilter = 'all',
+  onPeriodChange,
   onBatchUpdate,
   onCompanySelect,
   userRole,
-  currentUserId
+  currentUserId,
+  userName
 }) => {
   const t = translations[lang];
   const [search, setSearch] = useState('');
@@ -347,11 +362,43 @@ const OperationModule: React.FC<Props> = ({
       // 3. Notify parent to refresh global state
       await onUpdate({ companyId, period: selectedPeriod, [colKey]: newValue });
 
+      // 4. Vertical Notification: Alert supervisors if an accountant made a change
+      const company = companies.find(c => c.id === companyId);
+      const activeUserName = userName || 'Buxgalter';
+      const colLabel = REPORT_COLUMNS.find(c => c.key === colKey)?.label || colKey;
+
+      // Find all supervisors/admins to notify
+      const supervisors = (staff || []).filter(s => s.role === 'supervisor' || s.role === 'super_admin');
+
+      for (const supervisor of supervisors) {
+        // Don't notify yourself if you are the one making the change
+        if (supervisor.id === currentUserId) continue;
+
+        let title = 'Yangi amal bajarildi';
+        let message = `${activeUserName} "${company?.name}" firmasining "${colLabel}" holatini "${newValue}" qilib o'zgartirdi.`;
+
+        if (newValue === 'topshirildi') {
+          title = 'Tasdiqlash kutilmoqda ⏳';
+          message = `${activeUserName} "${company?.name}" firmasining "${colLabel}" vazifasini topshirdi. Iltimos, tekshirib tasdiqlang.`;
+        } else if (newValue === '+') {
+          title = 'Vazifa tasdiqlandi ✅';
+          message = `${company?.name}: "${colLabel}" vazifasini ${activeUserName} tasdiqladi.`;
+        }
+
+        await createNotification({
+          userId: supervisor.id,
+          type: 'approval_request',
+          title: title,
+          message: message,
+          link: '/reports'
+        });
+      }
+
     } catch (e: any) {
       console.error('Update error:', e);
       toast.error('Saqlashda xatolik!');
     }
-  }, [selectedPeriod, onUpdate]);
+  }, [selectedPeriod, onUpdate, companies, staff]);
 
   // ── Computed data ────────────────────────────────────────────
   const accountants = useMemo(() => {
@@ -505,6 +552,7 @@ const OperationModule: React.FC<Props> = ({
             { icon: '✓', label: 'Bajarildi (+)', cls: 'text-emerald-600' },
             { icon: '✗', label: 'Bajarilmadi (-)', cls: 'text-red-600' },
             { icon: '—', label: 'Bo\'sh (0)', cls: 'text-gray-400' },
+            { icon: '⏳', label: 'Kutilmoqda', cls: 'text-blue-600 animate-pulse' },
             { icon: '⚠', label: 'Kartoteka', cls: 'text-amber-600' },
             { icon: '✓+', label: '+ariza/izoh', cls: 'text-teal-600' },
             { icon: '📝', label: 'Matn', cls: 'text-blue-600' },

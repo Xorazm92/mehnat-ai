@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { Search, Sun, Moon, RefreshCw, Languages, Menu, LogOut } from 'lucide-react';
-import { Language } from '../types';
+import { Search, Sun, Moon, RefreshCw, Languages, Menu, LogOut, Bell, Check, Trash2, Clock } from 'lucide-react';
+import { Language, AppNotification } from '../types';
 import { translations } from '../lib/translations';
 
 interface TopBarProps {
@@ -17,10 +16,27 @@ interface TopBarProps {
   userRole?: string;
   onLogout?: () => void;
   onProfileClick?: () => void;
+  notifications: AppNotification[];
+  onMarkAsRead: (id: string) => void;
+  onDeleteNotification: (id: string) => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLangToggle, lastSync, onSync, isSyncing, onMenuToggle, userName, userRole, onLogout, onProfileClick }) => {
+const TopBar: React.FC<TopBarProps> = ({
+  isDarkMode, onThemeToggle, lang, onLangToggle, lastSync, onSync,
+  isSyncing, onMenuToggle, userName, userRole, onLogout, onProfileClick,
+  notifications, onMarkAsRead, onDeleteNotification
+}) => {
   const t = translations[lang];
+  const [showNotifs, setShowNotifs] = React.useState(false);
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'approval_request': return <Clock size={14} />;
+      case 'deadline': return <Bell size={14} className="text-amber-500" />;
+      default: return <Bell size={14} />;
+    }
+  };
 
   return (
     <header className="h-16 md:h-20 bg-white/70 dark:bg-[#0B0F19]/70 backdrop-blur-2xl border-b border-slate-200/60 dark:border-white/[0.05] flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
@@ -60,6 +76,64 @@ const TopBar: React.FC<TopBarProps> = ({ isDarkMode, onThemeToggle, lang, onLang
           >
             <RefreshCw size={18} />
           </button>
+
+          {/* Notifications Bell */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifs(!showNotifs)}
+              className={`p-2 text-slate-500 hover:text-apple-accent hover:bg-white dark:hover:bg-apple-darkCard rounded-lg transition-all relative ${showNotifs ? 'text-apple-accent bg-white dark:bg-apple-darkCard' : ''}`}
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center bg-rose-500 text-white text-[9px] font-black rounded-full ring-2 ring-white dark:ring-apple-darkBg">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifs && (
+              <div className="absolute right-0 mt-3 w-80 md:w-96 bg-white dark:bg-apple-darkCard rounded-2xl shadow-2xl border border-slate-200/60 dark:border-white/[0.05] overflow-hidden animate-macos z-50">
+                <div className="p-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                  <h3 className="font-black text-sm uppercase tracking-widest text-slate-800 dark:text-white">Bildirishnomalar</h3>
+                  <span className="text-[10px] font-bold text-slate-400">{unreadCount} ta yangi</span>
+                </div>
+                <div className="max-h-[70vh] overflow-y-auto scrollbar-thin">
+                  {notifications.length === 0 ? (
+                    <div className="p-10 text-center">
+                      <p className="text-xs font-bold text-slate-400 italic">Xabarlar yo'q</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-50 dark:divide-white/5">
+                      {notifications.map(n => (
+                        <div key={n.id} className={`p-4 flex gap-3 group transition-colors ${n.isRead ? 'opacity-60' : 'bg-blue-50/30 dark:bg-blue-500/5'}`}>
+                          <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${n.isRead ? 'bg-slate-100 dark:bg-white/5' : 'bg-blue-500 text-white'}`}>
+                            {getIcon(n.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-black text-slate-800 dark:text-white truncate">{n.title}</p>
+                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">{n.message}</p>
+                            <p className="text-[9px] font-bold text-slate-400 mt-2 flex items-center gap-1">
+                              <Clock size={10} /> {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {!n.isRead && (
+                              <button onClick={() => onMarkAsRead(n.id)} className="p-1.5 hover:bg-emerald-500 hover:text-white text-emerald-500 rounded-md transition-all">
+                                <Check size={14} />
+                              </button>
+                            )}
+                            <button onClick={() => onDeleteNotification(n.id)} className="p-1.5 hover:bg-rose-500 hover:text-white text-rose-500 rounded-md transition-all">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-3 md:pl-6 md:border-l border-slate-200/50 dark:border-white/5">

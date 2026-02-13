@@ -44,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   // RBAC Filtering
-  const currentUserRole = (userRole as UserRole) || ROLES.ACCOUNTANT; // Default safe role
+  const currentUserRole = ((userRole || '').toLowerCase() as UserRole) || ROLES.ACCOUNTANT; // Default safe role
   const allowedViews = ALLOWED_VIEWS[currentUserRole] || ALLOWED_VIEWS[ROLES.ACCOUNTANT];
 
   const filteredItems = menuItems.filter(item => allowedViews.includes(item.id));
@@ -64,9 +64,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* Header / Logo */}
         <div className={`mb-6 px-4 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           <div className={`transition-all duration-300 ${isCollapsed ? 'scale-0 w-0 h-0 overflow-hidden' : 'scale-100 flex items-center gap-3'}`}>
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 p-2 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white">
-              <img src="/logo.png" alt="" className="w-full h-full object-contain brightness-0 invert" onError={(e) => e.currentTarget.style.display = 'none'} />
-              <span className="font-bold text-lg">A</span>
+            <div className="h-10 w-10 flex items-center justify-center">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className="font-black text-xl text-slate-800 dark:text-white tracking-tight leading-none">ASOS</h1>
@@ -76,7 +75,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Logo specific for collapsed state */}
           <div className={`absolute left-0 w-full flex justify-center transition-all duration-300 ${isCollapsed ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}>
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 p-2 flex items-center justify-center shadow-lg text-white font-black text-lg">A</div>
+            <div className="h-10 w-10 flex items-center justify-center">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            </div>
           </div>
         </div>
 
