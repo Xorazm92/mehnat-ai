@@ -322,7 +322,7 @@ export const calculateEmployeeSalary = async (employeeId: string, month: string)
   const { count } = await supabase
     .from('companies')
     .select('id', { count: 'exact', head: true })
-    .or(`accountant_id.eq.${ employeeId }, bank_client_id.eq.${ employeeId }, supervisor_id.eq.${ employeeId } `)
+    .or(`accountant_id.eq.${employeeId}, bank_client_id.eq.${employeeId}, supervisor_id.eq.${employeeId} `)
     .eq('is_active', true);
 
   // Fetch employee details
@@ -809,7 +809,7 @@ export const fetchMonthlyReports = async (): Promise<OperationEntry[]> => {
     id: r.id,
     companyId: r.company_id,
     period: r.period,
-    bank_klient: r.bank_klient,
+    // Oylik
     didox: r.didox,
     xatlar: r.xatlar,
     avtokameral: r.avtokameral,
@@ -821,18 +821,46 @@ export const fetchMonthlyReports = async (): Promise<OperationEntry[]> => {
     debitor_kreditor: r.debitor_kreditor,
     foyda_va_zarar: r.foyda_va_zarar,
     tovar_ostatka: r.tovar_ostatka,
-    nds_bekor_qilish: r.nds_bekor_qilish,
-    aylanma_qqs: r.aylanma_qqs,
-    daromad_soliq: r.daromad_soliq,
-    inps: r.inps,
-    foyda_soliq: r.foyda_soliq,
-    moliyaviy_natija: r.moliyaviy_natija,
-    buxgalteriya_balansi: r.buxgalteriya_balansi,
-    statistika: r.statistika,
-    bonak: r.bonak,
+    // Soliqlar (umumiy)
     yer_soligi: r.yer_soligi,
     mol_mulk_soligi: r.mol_mulk_soligi,
     suv_soligi: r.suv_soligi,
+    bonak: r.bonak,
+    aksiz_soligi: r.aksiz_soligi,
+    nedro_soligi: r.nedro_soligi,
+    norezident_foyda: r.norezident_foyda,
+    norezident_nds: r.norezident_nds,
+    // Soliqlar (hisobot + to'lov)
+    aylanma_qqs: r.aylanma_qqs,
+    aylanma_qqs_tolov: r.aylanma_qqs_tolov,
+    daromad_soliq: r.daromad_soliq,
+    daromad_soliq_tolov: r.daromad_soliq_tolov,
+    inps: r.inps,
+    inps_tolov: r.inps_tolov,
+    foyda_soliq: r.foyda_soliq,
+    foyda_soliq_tolov: r.foyda_soliq_tolov,
+    // Yillik
+    moliyaviy_natija: r.moliyaviy_natija,
+    buxgalteriya_balansi: r.buxgalteriya_balansi,
+    // Statistika
+    stat_1kb_yillik: r.stat_1kb_yillik,
+    stat_4kb_chorak: r.stat_4kb_chorak,
+    stat_1mehnat: r.stat_1mehnat,
+    stat_4mehnat_chorak: r.stat_4mehnat_chorak,
+    stat_1korxona: r.stat_1korxona,
+    stat_1moliya: r.stat_1moliya,
+    stat_4invest_xorijiy: r.stat_4invest_xorijiy,
+    stat_4invest_mahalliy: r.stat_4invest_mahalliy,
+    stat_1kx_yillik: r.stat_1kx_yillik,
+    stat_4kx_chorak: r.stat_4kx_chorak,
+    // IT Park
+    itpark_oylik: r.itpark_oylik,
+    itpark_chorak: r.itpark_chorak,
+    // Komunalka
+    kom_suv: r.kom_suv,
+    kom_gaz: r.kom_gaz,
+    kom_svet: r.kom_svet,
+    // Boshqa
     comment: r.comment || '',
     updatedAt: r.updated_at,
     history: []
@@ -973,7 +1001,7 @@ export const upsertStaff = async (staff: Staff) => {
 
   const payload = {
     id: validId,
-    email: staff.email || (staff.username ? `${ staff.username } @asos.uz` : `${ staff.name.toLowerCase().replace(/\s/g, '.') } @asos.uz`),
+    email: staff.email || (staff.username ? `${staff.username} @asos.uz` : `${staff.name.toLowerCase().replace(/\s/g, '.')} @asos.uz`),
     full_name: staff.name,
     role: dbRole,
     avatar_color: staff.avatarColor || 'hsl(200, 50%, 50%)',

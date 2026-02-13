@@ -9,29 +9,61 @@ import { supabase } from '../lib/supabaseClient';
 
 
 // ── Report Column Definitions ──────────────────────────────────
+// isSplit columns have a paired _tolov key for the payment column
 const REPORT_COLUMNS = [
-  { key: 'didox', csvHeader: 'Didox', label: 'Didox', short: 'DD', group: 'Kundalik' },
-  { key: 'xatlar', csvHeader: 'xatlar', label: 'Xatlar', short: 'XT', group: 'Kundalik' },
-  { key: 'avtokameral', csvHeader: 'Avtokameral', label: 'Avtokameral', short: 'AK', group: 'Kundalik' },
-  { key: 'my_mehnat', csvHeader: 'my mehnat', label: 'My Mehnat', short: 'MM', group: 'Kundalik' },
-  { key: 'one_c', csvHeader: '1c', label: '1C', short: '1C', group: 'Kundalik' },
-  { key: 'pul_oqimlari', csvHeader: 'Pul oqimlari', label: 'Pul Oqimlari', short: 'PO', group: 'Oylik' },
-  { key: 'chiqadigan_soliqlar', csvHeader: 'Chiqadigan soliqlar', label: 'Chiq. Soliqlar', short: 'CS', group: 'Oylik' },
-  { key: 'hisoblangan_oylik', csvHeader: 'Hisoblangan oylik', label: 'His. Oylik', short: 'HO', group: 'Oylik' },
-  { key: 'debitor_kreditor', csvHeader: 'Debitor kreditor', label: 'Deb/Kred', short: 'DK', group: 'Oylik' },
-  { key: 'foyda_va_zarar', csvHeader: 'Foyda va zarar', label: 'Foyda/Zarar', short: 'FZ', group: 'Oylik' },
-  { key: 'tovar_ostatka', csvHeader: 'Tovar ostatka', label: 'Tovar Ost.', short: 'TO', group: 'Oylik' },
-  { key: 'aylanma_qqs', csvHeader: 'Aylanma/QQS', label: 'Aylanma/QQS', short: 'AQ', group: 'Soliq' },
-  { key: 'daromad_soliq', csvHeader: 'Daromad soliq', label: 'Daromad Soliq', short: 'DS', group: 'Soliq' },
-  { key: 'inps', csvHeader: 'INPS', label: 'INPS', short: 'IN', group: 'Soliq' },
-  { key: 'foyda_soliq', csvHeader: 'Foyda soliq', label: 'Foyda Soliq', short: 'FS', group: 'Soliq' },
-  { key: 'moliyaviy_natija', csvHeader: 'Moliyaviy natija', label: 'Mol. Natija', short: 'MN', group: 'Chorak' },
-  { key: 'buxgalteriya_balansi', csvHeader: 'Buxgalteriya balansi', label: 'Bux. Balansi', short: 'BB', group: 'Chorak' },
-  { key: 'statistika', csvHeader: 'Statistika', label: 'Statistika', short: 'ST', group: 'Chorak' },
-  { key: 'bonak', csvHeader: "Bo'nak", label: "Bo'nak", short: 'BN', group: 'Boshqa' },
-  { key: 'yer_soligi', csvHeader: "Yer solig'i", label: "Yer Solig'i", short: 'YS', group: 'Yillik' },
-  { key: 'mol_mulk_soligi', csvHeader: "Mol mulk solig'i ma'lumotnoma", label: "Mol-mulk Sol.", short: 'MS', group: 'Yillik' },
-  { key: 'suv_soligi', csvHeader: "Suv solig'i ma'lumotnoma", label: "Suv Solig'i", short: 'SS', group: 'Yillik' },
+  // ═══ OYLIK ═══
+  { key: 'didox', label: 'Didox', short: 'DD', group: 'Oylik' },
+  { key: 'xatlar', label: 'Xatlar', short: 'XT', group: 'Oylik' },
+  { key: 'avtokameral', label: 'Avtokameral', short: 'AK', group: 'Oylik' },
+  { key: 'my_mehnat', label: 'My Mehnat', short: 'MM', group: 'Oylik' },
+  { key: 'one_c', label: '1C', short: '1C', group: 'Oylik' },
+  { key: 'pul_oqimlari', label: 'Pul Oqimlari', short: 'PO', group: 'Oylik' },
+  { key: 'chiqadigan_soliqlar', label: 'Chiq. Soliqlar', short: 'CS', group: 'Oylik' },
+  { key: 'hisoblangan_oylik', label: 'His. Oylik', short: 'HO', group: 'Oylik' },
+  { key: 'debitor_kreditor', label: 'Deb/Kred', short: 'DK', group: 'Oylik' },
+  { key: 'foyda_va_zarar', label: 'Foyda/Zarar', short: 'FZ', group: 'Oylik' },
+  { key: 'tovar_ostatka', label: 'Tovar Ost.', short: 'TO', group: 'Oylik' },
+
+  // ═══ SOLIQLAR (Umumiy) ═══
+  { key: 'yer_soligi', label: "Yer Solig'i", short: 'YS', group: 'Soliqlar' },
+  { key: 'mol_mulk_soligi', label: "Mol-mulk Sol.", short: 'MS', group: 'Soliqlar' },
+  { key: 'suv_soligi', label: "Suv Solig'i", short: 'SS', group: 'Soliqlar' },
+  { key: 'bonak', label: "Bo'nak", short: 'BN', group: 'Soliqlar' },
+  { key: 'aksiz_soligi', label: 'AKSIZ', short: 'AX', group: 'Soliqlar' },
+  { key: 'nedro_soligi', label: 'NEDRO', short: 'ND', group: 'Soliqlar' },
+  { key: 'norezident_foyda', label: 'Nor. Foyda', short: 'NF', group: 'Soliqlar' },
+  { key: 'norezident_nds', label: 'Nor. NDS', short: 'NN', group: 'Soliqlar' },
+
+  // ═══ SOLIQLAR (Hisobot + To'lov) ═══
+  { key: 'aylanma_qqs', label: 'AQ Hisobot', short: 'AQh', group: 'Soliq H/T', isSplit: true, payKey: 'aylanma_qqs_tolov', payShort: 'AQt' },
+  { key: 'daromad_soliq', label: 'DS Hisobot', short: 'DSh', group: 'Soliq H/T', isSplit: true, payKey: 'daromad_soliq_tolov', payShort: 'DSt' },
+  { key: 'inps', label: 'INPS Hisobot', short: 'INh', group: 'Soliq H/T', isSplit: true, payKey: 'inps_tolov', payShort: 'INt' },
+  { key: 'foyda_soliq', label: 'FS Hisobot', short: 'FSh', group: 'Soliq H/T', isSplit: true, payKey: 'foyda_soliq_tolov', payShort: 'FSt' },
+
+  // ═══ YILLIK ═══
+  { key: 'moliyaviy_natija', label: 'Mol. Natija', short: 'MN', group: 'Yillik' },
+  { key: 'buxgalteriya_balansi', label: 'Bux. Balansi', short: 'BB', group: 'Yillik' },
+
+  // ═══ STATISTIKA ═══
+  { key: 'stat_1kb_yillik', label: '1 KB Yillik', short: '1KY', group: 'Statistika' },
+  { key: 'stat_4kb_chorak', label: '4 KB Chorak', short: '4KC', group: 'Statistika' },
+  { key: 'stat_1mehnat', label: '1 Mehnat', short: '1M', group: 'Statistika' },
+  { key: 'stat_4mehnat_chorak', label: '4 Mehnat Ch.', short: '4MC', group: 'Statistika' },
+  { key: 'stat_1korxona', label: '1 Korxona', short: '1K', group: 'Statistika' },
+  { key: 'stat_1moliya', label: '1 Moliya', short: '1ML', group: 'Statistika' },
+  { key: 'stat_4invest_xorijiy', label: '4 Invest Xor.', short: '4IX', group: 'Statistika' },
+  { key: 'stat_4invest_mahalliy', label: '4 Invest Mah.', short: '4IM', group: 'Statistika' },
+  { key: 'stat_1kx_yillik', label: '1 KX Yillik', short: '1KX', group: 'Statistika' },
+  { key: 'stat_4kx_chorak', label: '4 KX Chorak', short: '4KX', group: 'Statistika' },
+
+  // ═══ IT PARK ═══
+  { key: 'itpark_oylik', label: 'IT Park Oylik', short: 'ITO', group: 'IT Park' },
+  { key: 'itpark_chorak', label: 'IT Park Chorak', short: 'ITC', group: 'IT Park' },
+
+  // ═══ KOMUNALKA ═══
+  { key: 'kom_suv', label: 'Suv', short: 'S💧', group: 'Komunalka' },
+  { key: 'kom_gaz', label: 'Gaz', short: 'G🔥', group: 'Komunalka' },
+  { key: 'kom_svet', label: 'Svet', short: 'E⚡', group: 'Komunalka' },
 ] as const;
 
 type ReportColumnKey = typeof REPORT_COLUMNS[number]['key'];
@@ -224,16 +256,44 @@ const OperationRow = React.memo<{
           {row.accountant || '—'}
         </div>
       </td>
-      {visibleColumns.map(col => (
-        <td key={col.key} className="border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8">
-          <StatusCell
-            value={String(row[col.key] || '')}
-            onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, col.key, newValue)}
-            readOnly={!row.companyId || (userRole !== 'super_admin' && userRole !== 'admin' && userRole !== 'supervisor' && userRole !== 'accountant')}
-            userRole={userRole}
-          />
-        </td>
-      ))}
+      {visibleColumns.map(col => {
+        const isReadOnly = !row.companyId || (userRole !== 'super_admin' && userRole !== 'admin' && userRole !== 'supervisor' && userRole !== 'accountant');
+
+        if ((col as any).isSplit) {
+          const payKey = (col as any).payKey as string;
+          return (
+            <React.Fragment key={col.key}>
+              <td className="border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8 bg-emerald-50/30 dark:bg-emerald-950/10">
+                <StatusCell
+                  value={String(row[col.key] || '')}
+                  onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, col.key, newValue)}
+                  readOnly={isReadOnly}
+                  userRole={userRole}
+                />
+              </td>
+              <td className="border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8 bg-amber-50/30 dark:bg-amber-950/10">
+                <StatusCell
+                  value={String(row[payKey] || '')}
+                  onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, payKey, newValue)}
+                  readOnly={isReadOnly}
+                  userRole={userRole}
+                />
+              </td>
+            </React.Fragment>
+          );
+        }
+
+        return (
+          <td key={col.key} className="border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8">
+            <StatusCell
+              value={String(row[col.key] || '')}
+              onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, col.key, newValue)}
+              readOnly={isReadOnly}
+              userRole={userRole}
+            />
+          </td>
+        );
+      })}
     </tr>
   );
 });
@@ -426,14 +486,21 @@ const OperationModule: React.FC<Props> = ({
   // Stats
   const stats = useMemo(() => {
     let done = 0, notDone = 0, na = 0, warning = 0, text = 0;
+    const countValue = (v: string) => {
+      const val = v.trim().toLowerCase();
+      if (val === '+') done++;
+      else if (val === '-') notDone++;
+      else if (!val || val === '0' || val === 'topshirmaydi') na++;
+      else if (val === 'kartoteka') warning++;
+      else if (val === 'topshirildi') done++; // count pending as done for stats
+      else if (val.length > 1) text++;
+    };
     filteredRows.forEach(row => {
       visibleColumns.forEach(col => {
-        const v = String(row[col.key] || '').trim().toLowerCase();
-        if (v === '+') done++;
-        else if (v === '-') notDone++;
-        else if (!v || v === '0' || v === 'topshirmaydi') na++;
-        else if (v === 'kartoteka') warning++;
-        else if (v.length > 1) text++;
+        countValue(String(row[col.key] || ''));
+        if ((col as any).isSplit) {
+          countValue(String(row[(col as any).payKey] || ''));
+        }
       });
     });
     return { done, notDone, na, warning, text };
@@ -446,15 +513,27 @@ const OperationModule: React.FC<Props> = ({
     try {
       const { utils, writeFile } = await import('xlsx');
 
-      const header = ['#', 'Korxona', 'INN', 'Buxgalter', 'Soliq turi', ...visibleColumns.map(c => c.label)];
-      const data = filteredRows.map(r => [
-        r.index,
-        r.name,
-        r.inn,
-        r.accountant,
-        r.taxType,
-        ...visibleColumns.map(c => String(r[c.key] || ''))
-      ]);
+      const headerCols: string[] = [];
+      visibleColumns.forEach(c => {
+        headerCols.push(c.label);
+        if ((c as any).isSplit) headerCols.push(`${c.label} To'lov`);
+      });
+      const header = ['#', 'Korxona', 'INN', 'Buxgalter', 'Soliq turi', ...headerCols];
+      const data = filteredRows.map(r => {
+        const vals: string[] = [];
+        visibleColumns.forEach(c => {
+          vals.push(String(r[c.key] || ''));
+          if ((c as any).isSplit) vals.push(String(r[(c as any).payKey] || ''));
+        });
+        return [
+          r.index,
+          r.name,
+          r.inn,
+          r.accountant,
+          r.taxType,
+          ...vals
+        ];
+      });
 
       const ws = utils.aoa_to_sheet([header, ...data]);
       const wb = utils.book_new();
@@ -554,8 +633,9 @@ const OperationModule: React.FC<Props> = ({
             { icon: '—', label: 'Bo\'sh (0)', cls: 'text-gray-400' },
             { icon: '⏳', label: 'Kutilmoqda', cls: 'text-blue-600 animate-pulse' },
             { icon: '⚠', label: 'Kartoteka', cls: 'text-amber-600' },
-            { icon: '✓+', label: '+ariza/izoh', cls: 'text-teal-600' },
             { icon: '📝', label: 'Matn', cls: 'text-blue-600' },
+            { icon: 'Xis.', label: 'Hisobot', cls: 'text-emerald-600 font-mono' },
+            { icon: 'To\'l', label: 'To\'lov', cls: 'text-amber-600 font-mono' },
           ].map(l => (
             <div key={l.label} className="flex items-center gap-1">
               <span className={`font-black text-xs ${l.cls}`}>{l.icon}</span>
@@ -591,9 +671,23 @@ const OperationModule: React.FC<Props> = ({
                 </th>
                 {(() => {
                   const groupCounts = new Map<string, number>();
-                  visibleColumns.forEach(c => groupCounts.set(c.group, (groupCounts.get(c.group) || 0) + 1));
+                  visibleColumns.forEach(c => {
+                    const visualCols = (c as any).isSplit ? 2 : 1;
+                    groupCounts.set(c.group, (groupCounts.get(c.group) || 0) + visualCols);
+                  });
+
+                  const groupColors: Record<string, string> = {
+                    'Oylik': 'bg-blue-50/95 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+                    'Soliqlar': 'bg-orange-50/95 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+                    'Soliq H/T': 'bg-purple-50/95 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
+                    'Yillik': 'bg-emerald-50/95 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
+                    'Statistika': 'bg-cyan-50/95 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300',
+                    'IT Park': 'bg-violet-50/95 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300',
+                    'Komunalka': 'bg-rose-50/95 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300',
+                  };
+
                   return [...groupCounts.entries()].map(([name, count]) => (
-                    <th key={name} colSpan={count} className="sticky top-0 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-1 py-1 text-center text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                    <th key={name} colSpan={count} className={`sticky top-0 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-1 py-1.5 text-center text-[9px] font-black uppercase tracking-wider ${groupColors[name] || 'bg-gray-50/95 text-gray-500'}`}>
                       {name}
                     </th>
                   ));
@@ -605,17 +699,39 @@ const OperationModule: React.FC<Props> = ({
                 <th className="sticky top-[24px] left-10 z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-left font-bold text-gray-700 dark:text-gray-300 w-48 min-w-[192px]">Korxona nomi</th>
                 <th className="sticky top-[24px] left-[232px] z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center font-bold text-gray-500 w-20 min-w-[80px]">INN</th>
                 <th className="sticky top-[24px] left-[312px] z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r-2 border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center font-bold text-gray-500 w-24 min-w-[96px]">Buxgalter</th>
-                {visibleColumns.map(col => (
-                  <th
-                    key={col.key}
-                    className="sticky top-[24px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-help group/header"
-                    title={col.label}
-                  >
-                    <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 tracking-tight group-hover/header:text-blue-600 dark:group-hover/header:text-blue-400 transition-colors">
-                      {col.short}
-                    </span>
-                  </th>
-                ))}
+                {visibleColumns.map(col => {
+                  if ((col as any).isSplit) {
+                    return (
+                      <React.Fragment key={col.key}>
+                        <th
+                          className="sticky top-[24px] bg-emerald-50/95 dark:bg-emerald-950/50 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 cursor-help"
+                          title={col.label}
+                        >
+                          <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-400 tracking-tight">{col.short}</span>
+                          <div className="text-[7px] font-bold text-emerald-500">Xis.</div>
+                        </th>
+                        <th
+                          className="sticky top-[24px] bg-amber-50/95 dark:bg-amber-950/50 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 cursor-help"
+                          title={`${col.label} to'lov`}
+                        >
+                          <span className="text-[9px] font-black text-amber-700 dark:text-amber-400 tracking-tight">{(col as any).payShort}</span>
+                          <div className="text-[7px] font-bold text-amber-500">To'l</div>
+                        </th>
+                      </React.Fragment>
+                    );
+                  }
+                  return (
+                    <th
+                      key={col.key}
+                      className="sticky top-[24px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-help group/header"
+                      title={col.label}
+                    >
+                      <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 tracking-tight group-hover/header:text-blue-600 dark:group-hover/header:text-blue-400 transition-colors">
+                        {col.short}
+                      </span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
