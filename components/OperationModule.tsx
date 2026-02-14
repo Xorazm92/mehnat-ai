@@ -80,12 +80,12 @@ type ReportColumnKey = typeof REPORT_COLUMNS[number]['key'];
 const getStatusStyle = (value: string) => {
   const v = String(value || '').trim().toLowerCase();
 
-  if (!v || v === '0') return { bg: 'bg-slate-100 dark:bg-slate-800/60', text: 'text-slate-400 dark:text-slate-500', icon: '—', tooltip: "Bo'sh" };
-  if (v === '+') return { bg: 'bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400', icon: '✓', tooltip: 'Bajarildi (+)' };
-  if (v === '-') return { bg: 'bg-rose-500/15', text: 'text-rose-600 dark:text-rose-400', icon: '✗', tooltip: 'Bajarilmadi (-)' };
-  if (v === 'topshirildi') return { bg: 'bg-blue-500/20 animate-pulse', text: 'text-blue-700 dark:text-blue-400', icon: '⏳', tooltip: 'Topshirildi (Kutilmoqda)' };
-
-  if (v.includes('kartoteka')) return { bg: 'bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400', icon: 'Kartoteka', tooltip: 'Kartoteka' };
+  if (!v || v === '0' || v === 'not_required') return { bg: 'bg-slate-100 dark:bg-slate-800/60', text: 'text-slate-400 dark:text-slate-500', icon: '—', tooltip: "Bo'sh" };
+  if (v === '+' || v === 'accepted') return { bg: 'bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400', icon: '✓', tooltip: 'Bajarildi (+)' };
+  if (v === '-' || v === 'not_submitted') return { bg: 'bg-rose-500/15', text: 'text-rose-600 dark:text-rose-400', icon: '✗', tooltip: 'Bajarilmadi (-)' };
+  if (v === 'topshirildi' || v === 'submitted') return { bg: 'bg-blue-500/20 animate-pulse', text: 'text-blue-700 dark:text-blue-400', icon: '⏳', tooltip: 'Topshirildi (Kutilmoqda)' };
+  if (v === 'kartoteka' || v === 'blocked') return { bg: 'bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400', icon: 'Kartoteka', tooltip: 'Kartoteka' };
+  if (v === 'error' || v === 'oshibka') return { bg: 'bg-rose-500/20', text: 'text-rose-700', icon: '!', tooltip: 'Xatolik' };
 
   // Custom text for any other value -> Blue
   return { bg: 'bg-blue-500/15', text: 'text-blue-700 dark:text-blue-300', icon: value, tooltip: value };
@@ -383,6 +383,7 @@ const OperationModule: React.FC<Props> = ({
   const staffRef = useRef(staff);
   const userNameRef = useRef(userName);
   const currentUserIdRef = useRef(currentUserId);
+  const skipNextSyncRef = useRef(false);
 
   useEffect(() => { companiesRef.current = companies; }, [companies]);
   useEffect(() => { staffRef.current = staff; }, [staff]);
@@ -392,6 +393,10 @@ const OperationModule: React.FC<Props> = ({
   // ── Build Rows from DB Props (companies + operations) ──────────
   // ── Build Rows from DB Props (companies + operations) ──────────
   useEffect(() => {
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
+    }
     // Optimization: Create a map of current period's operations for O(1) lookup
     const opsMap = new Map<string, OperationEntry>();
     operations.forEach(op => {
@@ -420,11 +425,7 @@ const OperationModule: React.FC<Props> = ({
         if (op && (op as any)[col.key] !== undefined && (op as any)[col.key] !== null) {
           row[col.key] = String((op as any)[col.key]);
         } else {
-          // Default values based on logic? Or just empty strings/0?
-          // If no operation entry exists, it means nothing happened yet.
-          // Show '0' or empty?
-          // Existing logic showed '0' for empty.
-          row[col.key] = ''; // Empty string lets StatusCell decide (it handles empty as '—')
+          row[col.key] = '';
         }
       }
       return row;
@@ -456,6 +457,7 @@ const OperationModule: React.FC<Props> = ({
     }));
 
     try {
+      skipNextSyncRef.current = true;
       const company = companiesRef.current.find(c => c.id === companyId);
       const { error } = await supabase
         .from('company_monthly_reports')
@@ -508,20 +510,21 @@ const OperationModule: React.FC<Props> = ({
 
   // ── Handle Column Clear (Superadmin only) ─────────────────────
   const handleClearColumn = useCallback(async (colKey: string) => {
+    if (userRole !== 'super_admin') return;
     const colLabel = REPORT_COLUMNS.find(c => c.key === colKey)?.label || colKey;
-    if (!confirm(`"${colLabel}" ustunidagi barcha ma'lumotlarni "${selectedPeriod}" oy uchun o'chirmoqchimisiz?`)) return;
+    if (!window.confirm(`Haqiqatdan ham "${colLabel}" ustunini "${selectedPeriod}" oy uchun tozalab tashlamoqchimisiz?`)) return;
 
     try {
+      skipNextSyncRef.current = true;
+      setRows(prev => prev.map(r => ({ ...r, [colKey]: '' })));
       await clearColumnForPeriod(selectedPeriod, colKey);
-      // Optimistic: clear locally
-      setRows(prev => prev.map(row => ({ ...row, [colKey]: '' })));
       await onUpdate({});
-      toast.success(`"${colLabel}" ustuni tozalandi!`);
+      toast.success('Ustun tozalandi');
     } catch (e) {
-      console.error('Clear column error:', e);
-      toast.error('Tozalashda xatolik!');
+      console.error(e);
+      toast.error('Xatolik yuz berdi');
     }
-  }, [selectedPeriod, onUpdate]);
+  }, [selectedPeriod, userRole, onUpdate]);
 
   // ── Computed data ────────────────────────────────────────────
   const accountants = useMemo(() => {
