@@ -1,24 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
-import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
-import Dashboard from './components/Dashboard';
-import OrganizationModule from './components/OrganizationModule';
-import OperationModule from './components/OperationModule';
-import AnalysisModule from './components/AnalysisModule';
-import StaffModule from './components/StaffModule';
-import StaffKPIReport from './components/StaffKPIReport';
-import StaffProfileDrawer from './components/StaffProfileDrawer';
-import CompanyDrawer from './components/CompanyDrawer';
-import DocumentsModule from './components/DocumentsModule';
-import SalaryKPIModule from './components/SalaryKPIModule';
-import KassaModule from './components/KassaModule';
-import ExpenseModule from './components/ExpenseModule';
-import StaffCabinet from './components/StaffCabinet';
-import PayrollDrafts from './components/PayrollDrafts';
-import AuditLogModule from './components/AuditLogModule';
+
+// Lazy load heavy modules
+const Dashboard = React.lazy(() => import('./components/Dashboard'));
+const OrganizationModule = React.lazy(() => import('./components/OrganizationModule'));
+const OperationModule = React.lazy(() => import('./components/OperationModule'));
+const AnalysisModule = React.lazy(() => import('./components/AnalysisModule'));
+const StaffModule = React.lazy(() => import('./components/StaffModule'));
+const StaffKPIReport = React.lazy(() => import('./components/StaffKPIReport'));
+const StaffProfileDrawer = React.lazy(() => import('./components/StaffProfileDrawer'));
+const CompanyDrawer = React.lazy(() => import('./components/CompanyDrawer'));
+const DocumentsModule = React.lazy(() => import('./components/DocumentsModule'));
+const SalaryKPIModule = React.lazy(() => import('./components/SalaryKPIModule'));
+const KassaModule = React.lazy(() => import('./components/KassaModule'));
+const ExpenseModule = React.lazy(() => import('./components/ExpenseModule'));
+const StaffCabinet = React.lazy(() => import('./components/StaffCabinet'));
+const PayrollDrafts = React.lazy(() => import('./components/PayrollDrafts'));
+const AuditLogModule = React.lazy(() => import('./components/AuditLogModule'));
 import { AppView, Company, OperationEntry, Staff, AccountantKPI, ReportStatus, Language, Payment, Expense, EmployeeSalarySummary, ContractAssignment, AppNotification } from './types';
 import { supabase } from './lib/supabaseClient';
 import {
@@ -109,19 +110,32 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      if (data.session?.user) {
-        await loadProfile(data.session.user.id);
-        await refreshData();
+      let currentUserId: string | undefined;
+
+      try {
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+
+        setSession(data.session);
+        if (data.session?.user) {
+          currentUserId = data.session.user.id;
+          await loadProfile(currentUserId);
+          await refreshData();
+        }
+      } catch (err: any) {
+        console.error('Session initialization error:', err);
+        if (err.message?.includes('Refresh Token Not Found')) {
+          await supabase.auth.signOut();
+        }
       }
+
       // Realtime Notifications
       const channel = supabase
         .channel('db-notifications')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' },
           payload => {
             const newNotif = payload.new as any;
-            if (newNotif.user_id === data.session?.user.id) {
+            if (newNotif.user_id === currentUserId) {
               setNotifications(prev => [{
                 id: newNotif.id,
                 userId: newNotif.user_id,
@@ -430,7 +444,14 @@ const App: React.FC = () => {
                 <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Sizda ushbu sahifani ko'rish huquqi yo'q.</p>
               </div>
             ) : (
-              <>
+              <React.Suspense fallback={
+                <div className="flex items-center justify-center py-20">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sahifa yuklanmoqda...</span>
+                  </div>
+                </div>
+              }>
                 {activeView === 'dashboard' && (
                   <>
                     <Dashboard
@@ -612,7 +633,7 @@ const App: React.FC = () => {
                   />
                 )}
 
-              </>
+              </React.Suspense>
             )}
           </div>
         </div>

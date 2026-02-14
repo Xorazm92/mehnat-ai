@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Company, OperationEntry, Language, Staff } from '../types';
 import { createNotification, clearColumnForPeriod } from '../lib/supabaseData';
@@ -349,7 +349,8 @@ interface ReportRow {
   taxType: string;
   login: string;
   password: string;
-  [key: string]: string | number;
+  activeServices: string[];
+  [key: string]: string | number | string[];
 }
 
 // ── Main Component ─────────────────────────────────────────────
@@ -368,12 +369,25 @@ const OperationModule: React.FC<Props> = ({
   currentUserId,
   userName
 }) => {
-  const t = translations[lang];
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [rows, setRows] = useState<ReportRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterGroup, setFilterGroup] = useState<string>('all');
   const [filterAccountant, setFilterAccountant] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 50;
+
+  // Stable refs for background logic to prevent callback churn
+  const companiesRef = useRef(companies);
+  const staffRef = useRef(staff);
+  const userNameRef = useRef(userName);
+  const currentUserIdRef = useRef(currentUserId);
+
+  useEffect(() => { companiesRef.current = companies; }, [companies]);
+  useEffect(() => { staffRef.current = staff; }, [staff]);
+  useEffect(() => { userNameRef.current = userName; }, [userName]);
+  useEffect(() => { currentUserIdRef.current = currentUserId; }, [currentUserId]);
 
   // ── Build Rows from DB Props (companies + operations) ──────────
   // ── Build Rows from DB Props (companies + operations) ──────────
@@ -398,6 +412,7 @@ const OperationModule: React.FC<Props> = ({
         login: comp.login || '',       // From DB company profile
         password: comp.password || '', // From DB company profile
         companyId: comp.id,
+        activeServices: comp.activeServices || [],
       };
 
       // Fill columns from OperationEntry (or '0' / default)
@@ -419,12 +434,20 @@ const OperationModule: React.FC<Props> = ({
     setIsLoading(false);
   }, [companies, operations, selectedPeriod]);
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   // Removed data loading logic for obsolete formats.
 
 
   // ── Handle Cell Update ───────────────────────────────────────
   const handleCellUpdate = useCallback(async (companyId: string, colKey: string, newValue: string) => {
-    // 1. Optimistic Update (using functional update to avoid dependency on 'rows')
+    // 1. Optimistic Update
     setRows(prevRows => prevRows.map(row => {
       if (row.companyId === companyId) {
         return { ...row, [colKey]: newValue };
@@ -433,9 +456,7 @@ const OperationModule: React.FC<Props> = ({
     }));
 
     try {
-      // 2. Persist to DB using upsert (handles both insert and update)
-      // Also stamp the current accountant name for this report
-      const company = companies.find(c => c.id === companyId);
+      const company = companiesRef.current.find(c => c.id === companyId);
       const { error } = await supabase
         .from('company_monthly_reports')
         .upsert({
@@ -443,25 +464,21 @@ const OperationModule: React.FC<Props> = ({
           period: selectedPeriod,
           [colKey]: newValue,
           assigned_accountant_id: company?.accountantId || null,
-          assigned_accountant_name: userName || company?.accountantName || null,
+          assigned_accountant_name: userNameRef.current || company?.accountantName || null,
           updated_at: new Date().toISOString()
         }, { onConflict: 'company_id,period' });
 
       if (error) throw error;
 
-      // 3. Notify parent to refresh global state
-      await onUpdate({ companyId, period: selectedPeriod, [colKey]: newValue });
+      onUpdate({ companyId, period: selectedPeriod, [colKey]: newValue });
 
-      // 4. Vertical Notification: Alert supervisors if an accountant made a change
-      const activeUserName = userName || 'Buxgalter';
+      // Notifications logic (non-blocking)
+      const activeUserName = userNameRef.current || 'Buxgalter';
       const colLabel = REPORT_COLUMNS.find(c => c.key === colKey)?.label || colKey;
-
-      // Find all supervisors/admins to notify
-      const supervisors = (staff || []).filter(s => s.role === 'supervisor' || s.role === 'super_admin');
+      const supervisors = (staffRef.current || []).filter(s => s.role === 'supervisor' || s.role === 'super_admin');
 
       for (const supervisor of supervisors) {
-        // Don't notify yourself if you are the one making the change
-        if (supervisor.id === currentUserId) continue;
+        if (supervisor.id === currentUserIdRef.current) continue;
 
         let title = 'Yangi amal bajarildi';
         let message = `${activeUserName} "${company?.name}" firmasining "${colLabel}" holatini "${newValue}" qilib o'zgartirdi.`;
@@ -474,7 +491,7 @@ const OperationModule: React.FC<Props> = ({
           message = `${company?.name}: "${colLabel}" vazifasini ${activeUserName} tasdiqladi.`;
         }
 
-        await createNotification({
+        createNotification({
           userId: supervisor.id,
           type: 'approval_request',
           title: title,
@@ -487,7 +504,7 @@ const OperationModule: React.FC<Props> = ({
       console.error('Update error:', e);
       toast.error('Saqlashda xatolik!');
     }
-  }, [selectedPeriod, onUpdate, companies, staff]);
+  }, [selectedPeriod, onUpdate]); // Minimal dependencies
 
   // ── Handle Column Clear (Superadmin only) ─────────────────────
   const handleClearColumn = useCallback(async (colKey: string) => {
@@ -515,14 +532,26 @@ const OperationModule: React.FC<Props> = ({
 
   const filteredRows = useMemo(() => {
     return rows.filter(r => {
-      if (search) {
-        const s = search.toLowerCase();
+      if (debouncedSearch) {
+        const s = debouncedSearch.toLowerCase();
         if (!r.name.toLowerCase().includes(s) && !r.inn.includes(s) && !r.accountant.toLowerCase().includes(s)) return false;
       }
       if (filterAccountant !== 'all' && r.accountant !== filterAccountant) return false;
       return true;
     });
-  }, [rows, search, filterAccountant]);
+  }, [rows, debouncedSearch, filterAccountant]);
+
+  const paginatedRows = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredRows.slice(start, start + rowsPerPage);
+  }, [filteredRows, currentPage]);
+
+  const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+
+  // Reset page on search/filter
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, filterAccountant, filterGroup]);
 
   const visibleColumns = useMemo(() => {
     if (filterGroup === 'all') return [...REPORT_COLUMNS];
@@ -795,14 +824,14 @@ const OperationModule: React.FC<Props> = ({
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row, idx) => (
+              {paginatedRows.map((row) => (
                 <OperationRow
                   key={row.companyId}
                   row={row}
-                  idx={idx}
+                  idx={row.index - 1}
                   visibleColumns={visibleColumns}
                   userRole={userRole}
-                  activeServices={companies.find(c => c.id === row.companyId)?.activeServices || []}
+                  activeServices={row.activeServices}
                   onCellUpdate={handleCellUpdate}
                 />
               ))}
@@ -813,9 +842,32 @@ const OperationModule: React.FC<Props> = ({
 
       {/* ── Footer ──────────────────────────────────────────── */}
       <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg px-5 py-2">
-        <div className="flex items-center justify-between text-[11px] text-gray-500">
-          <span>Jami: <strong className="text-gray-700 dark:text-gray-200">{filteredRows.length}</strong> korxona · <strong>{visibleColumns.length}</strong> ustun</span>
-          <span>Manba: <strong className="text-blue-600">Baza (Supabase)</strong></span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 text-[11px] text-gray-500">
+            <span>Jami: <strong className="text-gray-700 dark:text-gray-200">{filteredRows.length}</strong> korxona · <strong>{visibleColumns.length}</strong> ustun</span>
+            <div className="h-3 w-px bg-gray-300 dark:bg-gray-700"></div>
+            <span>Manba: <strong className="text-blue-600">Baza (Supabase)</strong></span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-2 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-50 transition-colors"
+            >
+              Oldingi
+            </button>
+            <span className="text-[10px] font-black text-gray-700 dark:text-gray-300">
+              {currentPage} / {totalPages || 1}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-2 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-50 transition-colors"
+            >
+              Keyingi
+            </button>
+          </div>
         </div>
       </div>
     </div>

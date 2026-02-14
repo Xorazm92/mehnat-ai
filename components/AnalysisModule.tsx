@@ -223,7 +223,7 @@ const AnalysisModule: React.FC<Props> = ({
             Hisobotlar Holati
           </h3>
           <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" debounce={50} minHeight={350}>
               <BarChart data={reportStatusData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12, fontWeight: 600 }} dy={10} />
@@ -249,7 +249,7 @@ const AnalysisModule: React.FC<Props> = ({
           </h3>
           <p className="text-xs text-slate-400 font-medium mb-6 pl-4">Eng ko'p topshirilgan hisobotlar</p>
           <div className="flex-1 w-full min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" debounce={50} minHeight={300}>
               <BarChart layout="vertical" data={stats2026Data} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#64748B', fontWeight: 700 }} axisLine={false} tickLine={false} />
@@ -265,7 +265,7 @@ const AnalysisModule: React.FC<Props> = ({
         <div className="bg-white dark:bg-apple-darkCard p-8 rounded-[2.5rem] border border-apple-border dark:border-apple-darkBorder">
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Soliq Rejimi Bo'yicha</h3>
           <div className="h-64 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" debounce={50} minHeight={256}>
               <PieChart>
                 <Pie
                   data={[
@@ -363,8 +363,8 @@ const MonthPicker: React.FC<{ selectedPeriod: string; onChange: (p: string) => v
                   key={month}
                   onClick={() => handleMonthSelect(month)}
                   className={`py-3 rounded-xl text-sm font-bold transition-all ${isSelected
-                      ? 'bg-slate-900 text-white shadow-lg scale-105'
-                      : 'bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                    ? 'bg-slate-900 text-white shadow-lg scale-105'
+                    : 'bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
                     }`}
                 >
                   {month}

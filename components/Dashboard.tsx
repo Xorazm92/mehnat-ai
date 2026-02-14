@@ -39,26 +39,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const t = translations[lang];
 
-  // Role-Based Routing
-  if (userRole === ROLES.ACCOUNTANT) {
-    const myCompanies = userId ? companies.filter(c => c.accountantId === userId) : [];
-    return <AccountantDashboard companies={myCompanies} operations={operations} selectedPeriod={selectedPeriod} lang={lang} />;
-  }
-
-  if (userRole === ROLES.SUPERVISOR) {
-    return <NazoratchiChecklist companies={companies} staff={staff} lang={lang} currentUserRole={userRole} currentUserId={userId} />;
-  }
-
-  if (userRole === ROLES.BANK_MANAGER) {
-    // Placeholder for Bank Manager
-    // Effectively an Accountant view but for Bank Clients?
-    // For now, return Admin View or Accountant View
-    // Let's use Accountant Dashboard logic but for Bank Clients
-    const myCompanies = userId ? companies.filter(c => c.bankClientId === userId) : [];
-    return <AccountantDashboard companies={myCompanies} operations={operations} selectedPeriod={selectedPeriod} lang={lang} />;
-  }
-
-  // --- PREMIUM ADMIN DASHBOARD ---
   const stats = useMemo(() => {
     // 1. AGE DISTRIBUTION
     const ageGroups = { young: 0, middle: 0, old: 0, unknown: 0 };
@@ -196,6 +176,21 @@ const Dashboard: React.FC<DashboardProps> = ({
     };
   }, [staff, companies, payments, expenses, operations, selectedPeriod]);
 
+  // Role-Based Routing (Moved after hooks)
+  if (userRole === ROLES.ACCOUNTANT) {
+    const myCompanies = userId ? companies.filter(c => c.accountantId === userId) : [];
+    return <AccountantDashboard companies={myCompanies} operations={operations} selectedPeriod={selectedPeriod} lang={lang} />;
+  }
+
+  if (userRole === ROLES.SUPERVISOR) {
+    return <NazoratchiChecklist companies={companies} staff={staff} lang={lang} currentUserRole={userRole} currentUserId={userId} />;
+  }
+
+  if (userRole === ROLES.BANK_MANAGER) {
+    const myCompanies = userId ? companies.filter(c => c.bankClientId === userId) : [];
+    return <AccountantDashboard companies={myCompanies} operations={operations} selectedPeriod={selectedPeriod} lang={lang} />;
+  }
+
   return (
     <div className="space-y-8 animate-macos pb-10 max-w-[1400px] mx-auto">
       {/* 🚀 ELITE HEADER STATS */}
@@ -252,7 +247,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div className="h-[300px] min-h-[300px] w-full relative overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%" aspect={2} debounce={100} minWidth={0} minHeight={300}>
+            <ResponsiveContainer width="100%" height="100%" debounce={50} minHeight={300}>
               <AreaChart data={stats.financialTrends}>
 
                 <defs>
@@ -281,7 +276,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
           <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-8">Hisobotlar Progressi</h4>
           <div className="h-48 min-h-[192px] w-full relative overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%" aspect={1} debounce={100} minWidth={0} minHeight={192}>
+            <ResponsiveContainer width="100%" height="100%" debounce={50} minHeight={192}>
               <PieChart>
 
                 <Pie data={stats.reportDonut} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">
