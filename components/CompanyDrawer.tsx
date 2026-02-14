@@ -677,7 +677,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                     <button
                       onClick={() => {
                         if (onSave) {
-                          const allKeys = ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_1kb_yillik', 'stat_4kb_chorak', 'stat_1mehnat', 'stat_4mehnat_chorak', 'stat_1korxona', 'stat_1moliya', 'stat_4invest_xorijiy', 'stat_4invest_mahalliy', 'stat_1kx_yillik', 'stat_4kx_chorak', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'];
+                          const allKeys = ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'];
                           onSave({ ...company, activeServices: allKeys });
                         }
                       }}
@@ -701,7 +701,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   { group: 'Soliqlar', keys: ['yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds'], color: 'orange' },
                   { group: 'Soliq H/T', keys: ['aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq'], color: 'purple' },
                   { group: 'Yillik', keys: ['moliyaviy_natija', 'buxgalteriya_balansi'], color: 'green' },
-                  { group: 'Statistika', keys: ['stat_1kb_yillik', 'stat_4kb_chorak', 'stat_1mehnat', 'stat_4mehnat_chorak', 'stat_1korxona', 'stat_1moliya', 'stat_4invest_xorijiy', 'stat_4invest_mahalliy', 'stat_1kx_yillik', 'stat_4kx_chorak'], color: 'cyan' },
+                  { group: 'Statistika', keys: ['stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt'], color: 'cyan' },
                   { group: 'IT Park', keys: ['itpark_oylik', 'itpark_chorak'], color: 'violet' },
                   { group: 'Komunalka', keys: ['kom_suv', 'kom_gaz', 'kom_svet'], color: 'rose' },
                 ].map(section => (
@@ -717,10 +717,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                           bonak: "Bo'nak", aksiz_soligi: 'AKSIZ', nedro_soligi: 'NEDRO', norezident_foyda: 'Nor. Foyda',
                           norezident_nds: 'Nor. NDS', aylanma_qqs: 'Aylanma/QQS', daromad_soliq: 'Daromad Soliq',
                           inps: 'INPS', foyda_soliq: 'Foyda Soliq', moliyaviy_natija: 'Mol. Natija',
-                          buxgalteriya_balansi: 'Bux. Balansi', stat_1kb_yillik: '1 KB Yillik', stat_4kb_chorak: '4 KB Chorak',
-                          stat_1mehnat: '1 Mehnat', stat_4mehnat_chorak: '4 Mehnat Ch.', stat_1korxona: '1 Korxona',
-                          stat_1moliya: '1 Moliya', stat_4invest_xorijiy: '4 Invest Xor.', stat_4invest_mahalliy: '4 Invest Mah.',
-                          stat_1kx_yillik: '1 KX Yillik', stat_4kx_chorak: '4 KX Chorak', itpark_oylik: 'IT Park Oylik',
+                          buxgalteriya_balansi: 'Bux. Balansi',
+                          stat_12_invest: '12-invest', stat_12_moliya: '12-moliya', stat_12_korxona: '12-korxona', stat_12_narx: '12-narx',
+                          stat_4_invest: '4-invest', stat_4_mehnat: '4-mehnat', stat_4_korxona_miz: '4-korxona(miz)', stat_4_kb_qur_sav_xiz: '4-kb (q/s/x)', stat_4_kb_sanoat: '4-kb sanoat',
+                          stat_1_invest: '1-invest', stat_1_ih: '1-ih', stat_1_energiya: '1-energiya', stat_1_korxona: '1-korxona', stat_1_korxona_tif: '1-korxona(tif)', stat_1_moliya: '1-moliya', stat_1_akt: '1-akt',
+                          itpark_oylik: 'IT Park Oylik',
                           itpark_chorak: 'IT Park Chorak', kom_suv: 'Suv 💧', kom_gaz: 'Gaz 🔥', kom_svet: 'Svet ⚡'
                         };
                         const currentServices = company.activeServices || [];
@@ -732,7 +733,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                               checked={isChecked}
                               onChange={() => {
                                 if (!onSave) return;
-                                let newServices = [...(currentServices.length === 0 ? ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_1kb_yillik', 'stat_4kb_chorak', 'stat_1mehnat', 'stat_4mehnat_chorak', 'stat_1korxona', 'stat_1moliya', 'stat_4invest_xorijiy', 'stat_4invest_mahalliy', 'stat_1kx_yillik', 'stat_4kx_chorak', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'] : currentServices)];
+                                let newServices = [...(currentServices.length === 0 ? ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'] : currentServices)];
                                 if (isChecked) {
                                   newServices = newServices.filter(k => k !== key);
                                 } else {

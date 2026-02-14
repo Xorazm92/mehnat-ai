@@ -24,7 +24,8 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
         serverInfo: 'CR1',
         kpiEnabled: true,
         statReports: [],
-        serviceScope: []
+        serviceScope: [],
+        activeServices: []
     });
 
     const [assignments, setAssignments] = useState<any[]>(initialAssignments || [
@@ -295,23 +296,81 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                             </div>
 
                             <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block ml-1">Xizmatlar Ko'lami (Service Scope)</label>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {Object.values(ServiceScope).map(scope => (
-                                        <label key={scope} className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-xl border border-apple-border dark:border-apple-darkBorder cursor-pointer hover:border-apple-accent transition-all">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 accent-apple-accent"
-                                                checked={formData.serviceScope?.includes(scope) || false}
-                                                onChange={e => {
-                                                    const current = formData.serviceScope || [];
-                                                    const next = e.target.checked ? [...current, scope] : current.filter(s => s !== scope);
-                                                    setFormData({ ...formData, serviceScope: next });
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block ml-1">Operatsiyalar (Aktiv Xizmatlar)</label>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-end gap-2 mb-2">
+                                            <button
+                                                onClick={() => {
+                                                    const allKeys = ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'];
+                                                    setFormData({ ...formData, activeServices: allKeys });
                                                 }}
-                                            />
-                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{scope}</span>
-                                        </label>
-                                    ))}
+                                                className="px-3 py-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-all uppercase"
+                                            >
+                                                Hammasini yoqish
+                                            </button>
+                                            <button
+                                                onClick={() => setFormData({ ...formData, activeServices: [] })}
+                                                className="px-3 py-1.5 text-[10px] font-black text-rose-500 bg-rose-50 rounded-lg hover:bg-rose-100 transition-all uppercase"
+                                            >
+                                                Hammasini o'chirish
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-slate-400 mb-4">Bo'sh ro'yxat = hammasi yoqilgan deb hisoblanadi.</p>
+                                        {[
+                                            { group: 'Oylik', keys: ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka'], color: 'blue' },
+                                            { group: 'Soliqlar', keys: ['yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds'], color: 'orange' },
+                                            { group: 'Soliq H/T', keys: ['aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq'], color: 'purple' },
+                                            { group: 'Yillik', keys: ['moliyaviy_natija', 'buxgalteriya_balansi'], color: 'green' },
+                                            { group: 'Statistika', keys: ['stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt'], color: 'cyan' },
+                                            { group: 'IT Park', keys: ['itpark_oylik', 'itpark_chorak'], color: 'violet' },
+                                            { group: 'Komunalka', keys: ['kom_suv', 'kom_gaz', 'kom_svet'], color: 'rose' },
+                                        ].map(section => (
+                                            <div key={section.group} className="mb-4">
+                                                <h5 className={`text-[10px] font-black uppercase tracking-widest mb-2 text-${section.color}-600`}>{section.group}</h5>
+                                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                                                    {section.keys.map(key => {
+                                                        const labels: Record<string, string> = {
+                                                            didox: 'Didox', xatlar: 'Xatlar', avtokameral: 'Avtokameral', my_mehnat: 'My Mehnat', one_c: '1C',
+                                                            pul_oqimlari: 'Pul Oqimlari', chiqadigan_soliqlar: 'Chiq. Soliqlar', hisoblangan_oylik: 'His. Oylik',
+                                                            debitor_kreditor: 'Deb/Kred', foyda_va_zarar: 'Foyda/Zarar', tovar_ostatka: 'Tovar Ost.',
+                                                            yer_soligi: "Yer Solig'i", mol_mulk_soligi: "Mol-mulk Sol.", suv_soligi: "Suv Solig'i",
+                                                            bonak: "Bo'nak", aksiz_soligi: 'AKSIZ', nedro_soligi: 'NEDRO', norezident_foyda: 'Nor. Foyda',
+                                                            norezident_nds: 'Nor. NDS', aylanma_qqs: 'Aylanma/QQS', daromad_soliq: 'Daromad Soliq',
+                                                            inps: 'INPS', foyda_soliq: 'Foyda Soliq', moliyaviy_natija: 'Mol. Natija',
+                                                            buxgalteriya_balansi: 'Bux. Balansi',
+                                                            stat_12_invest: '12-invest', stat_12_moliya: '12-moliya', stat_12_korxona: '12-korxona', stat_12_narx: '12-narx',
+                                                            stat_4_invest: '4-invest', stat_4_mehnat: '4-mehnat', stat_4_korxona_miz: '4-korxona(miz)', stat_4_kb_qur_sav_xiz: '4-kb (q/s/x)', stat_4_kb_sanoat: '4-kb sanoat',
+                                                            stat_1_invest: '1-invest', stat_1_ih: '1-ih', stat_1_energiya: '1-energiya', stat_1_korxona: '1-korxona', stat_1_korxona_tif: '1-korxona(tif)', stat_1_moliya: '1-moliya', stat_1_akt: '1-akt',
+                                                            itpark_oylik: 'IT Park Oylik',
+                                                            itpark_chorak: 'IT Park Chorak', kom_suv: 'Suv 💧', kom_gaz: 'Gaz 🔥', kom_svet: 'Svet ⚡'
+                                                        };
+                                                        const currentServices = formData.activeServices || [];
+                                                        const isChecked = currentServices.length === 0 || currentServices.includes(key);
+                                                        return (
+                                                            <label key={key} className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all ${isChecked ? `bg-${section.color}-50 dark:bg-${section.color}-950/20 border-${section.color}-200 dark:border-${section.color}-800` : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-50'}`}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isChecked}
+                                                                    onChange={() => {
+                                                                        let newServices = [...(currentServices.length === 0 ? ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'] : currentServices)];
+                                                                        if (isChecked) {
+                                                                            newServices = newServices.filter(k => k !== key);
+                                                                        } else {
+                                                                            newServices.push(key);
+                                                                        }
+                                                                        setFormData({ ...formData, activeServices: newServices });
+                                                                    }}
+                                                                    className="rounded accent-blue-600 w-4 h-4"
+                                                                />
+                                                                <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate">{labels[key] || key}</span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>

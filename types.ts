@@ -233,14 +233,15 @@ export interface KPIMetrics {
   pnl: boolean;                 // ±0.2%
 }
 
-export type OperationFieldKey =
-  'aylanma_qqs' | 'daromad_soliq' | 'inps' | 'foyda_soliq' |
-  'moliyaviy_natija' | 'buxgalteriya_balansi' | 'yer_soligi' |
-  'mol_mulk_soligi' | 'suv_soligi' | 'statistika' | 'bonak' |
-  'nds_bekor' | 'it_park' | 'one_c' | 'tovar_ostatka' |
-  'didox' | 'xatlar' | 'avtokameral' | 'my_mehnat' | 'pul_oqimlari' |
-  'chiqadigan_soliqlar' | 'hisoblangan_oylik' | 'debitor_kreditor' | 'foyda_va_zarar' |
-  'bank_klient' | 'nds_bekor_qilish';
+export type OperationFieldKey = 'didox' | 'xatlar' | 'avtokameral' | 'my_mehnat' | 'one_c' |
+  'pul_oqimlari' | 'chiqadigan_soliqlar' | 'hisoblangan_oylik' | 'debitor_kreditor' |
+  'foyda_va_zarar' | 'tovar_ostatka' | 'aylanma_qqs' | 'daromad_soliq' | 'inps' | 'foyda_soliq' |
+  'bonak' | 'yer_soligi' | 'mol_mulk_soligi' | 'suv_soligi' | 'moliyaviy_natija' | 'buxgalteriya_balansi' |
+  'statistika' | 'itpark_oylik' | 'itpark_chorak' | 'kom_suv' | 'kom_gaz' | 'kom_svet' |
+  'bank_klient' | 'nds_bekor_qilish' |
+  'stat_12_invest' | 'stat_12_moliya' | 'stat_12_korxona' | 'stat_12_narx' |
+  'stat_4_invest' | 'stat_4_mehnat' | 'stat_4_korxona_miz' | 'stat_4_kb_qur_sav_xiz' | 'stat_4_kb_sanoat' |
+  'stat_1_invest' | 'stat_1_ih' | 'stat_1_energiya' | 'stat_1_korxona' | 'stat_1_korxona_tif' | 'stat_1_moliya' | 'stat_1_akt';
 
 export type TaskStatus = 'new' | 'submitted' | 'pending_review' |
   'approved' | 'rejected' | 'overdue' | 'not_required' | 'blocked';
@@ -308,6 +309,24 @@ export interface OperationEntry {
   mol_mulk_soligi?: string;
   suv_soligi?: string;
 
+  // Statistika 2026
+  stat_12_invest?: string;
+  stat_12_moliya?: string;
+  stat_12_korxona?: string;
+  stat_12_narx?: string;
+  stat_4_invest?: string;
+  stat_4_mehnat?: string;
+  stat_4_korxona_miz?: string;
+  stat_4_kb_qur_sav_xiz?: string;
+  stat_4_kb_sanoat?: string;
+  stat_1_invest?: string;
+  stat_1_ih?: string;
+  stat_1_energiya?: string;
+  stat_1_korxona?: string;
+  stat_1_korxona_tif?: string;
+  stat_1_moliya?: string;
+  stat_1_akt?: string;
+
   // Legacy fields (backward compatibility for Dashboard, Analysis, etc.)
   profitTaxStatus?: ReportStatus;
   form1Status?: ReportStatus;
@@ -318,6 +337,8 @@ export interface OperationEntry {
   profitTaxDeadline?: string;
   statsDeadline?: string;
   updatedAt: string;
+  assigned_accountant_id?: string;
+  assigned_accountant_name?: string;
   history: HistoryLog[];
   kpi?: KPIMetrics;
   tasks?: OperationTask[];       // NEW: List of all dynamic tasks

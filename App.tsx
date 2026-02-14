@@ -49,6 +49,7 @@ import {
 import { seedFirmaData } from './lib/seedFirmaData';
 import type { Session } from '@supabase/supabase-js';
 import { ALLOWED_VIEWS, ROLES, UserRole } from './lib/permissions';
+import { getCurrentPeriod } from './lib/periods';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>('dashboard');
@@ -67,10 +68,7 @@ const App: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [assignments, setAssignments] = useState<ContractAssignment[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
-  const [selectedPeriod, setSelectedPeriod] = useState(() => {
-    const year = new Date().getFullYear();
-    return `${year} Yillik`;
-  });
+  const [selectedPeriod, setSelectedPeriod] = useState(() => getCurrentPeriod());
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState('');
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);

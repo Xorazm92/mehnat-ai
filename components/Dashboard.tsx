@@ -5,6 +5,8 @@ import { translations } from '../lib/translations';
 import { ROLES } from '../lib/permissions';
 import AccountantDashboard from './AccountantDashboard';
 import NazoratchiChecklist from './NazoratchiChecklist';
+import { AVAILABLE_PERIODS } from '../lib/periods';
+import { MonthPicker } from './ui/MonthPicker';
 
 interface DashboardProps {
   companies: Company[];
@@ -203,15 +205,11 @@ const Dashboard: React.FC<DashboardProps> = ({
           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{selectedPeriod}</p>
         </div>
         <div className="flex bg-white dark:bg-apple-darkCard p-2 rounded-2xl border border-apple-border dark:border-apple-darkBorder shadow-sm">
-          <select
-            value={selectedPeriod}
-            onChange={(e) => onPeriodChange(e.target.value)}
-            className="bg-transparent border-none text-xs font-black text-slate-700 dark:text-white outline-none px-4 py-2 cursor-pointer appearance-none"
-          >
-            {['2024 Yillik', '2024 Q1', '2024 Q2', '2024 Q3', '2024 Q4', '2025 Yillik', '2025 Q1', '2026 Yillik'].map(p => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
+          <MonthPicker
+            selectedPeriod={selectedPeriod}
+            onChange={onPeriodChange}
+            className="border-none shadow-none bg-transparent hover:bg-slate-50 dark:hover:bg-white/5 active:scale-100 p-0"
+          />
         </div>
       </div>
 

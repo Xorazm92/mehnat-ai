@@ -3,7 +3,9 @@ import { createPortal } from 'react-dom';
 import { Company, OperationEntry, Language, Staff } from '../types';
 import { createNotification, clearColumnForPeriod } from '../lib/supabaseData';
 import { translations } from '../lib/translations';
-import { Search, Download, ChevronDown, Info, RefreshCw, Filter } from 'lucide-react';
+import { ChevronDown, ChevronsUpDown, Download, Search, Filter, RefreshCw, Calendar, Loader2, Info } from 'lucide-react';
+import { MonthPicker } from './ui/MonthPicker';
+import { AVAILABLE_PERIODS } from '../lib/periods';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabaseClient';
 
@@ -45,16 +47,22 @@ const REPORT_COLUMNS = [
   { key: 'buxgalteriya_balansi', label: 'Bux. Balansi', short: 'BB', group: 'Yillik' },
 
   // ═══ STATISTIKA ═══
-  { key: 'stat_1kb_yillik', label: '1 KB Yillik', short: '1KY', group: 'Statistika' },
-  { key: 'stat_4kb_chorak', label: '4 KB Chorak', short: '4KC', group: 'Statistika' },
-  { key: 'stat_1mehnat', label: '1 Mehnat', short: '1M', group: 'Statistika' },
-  { key: 'stat_4mehnat_chorak', label: '4 Mehnat Ch.', short: '4MC', group: 'Statistika' },
-  { key: 'stat_1korxona', label: '1 Korxona', short: '1K', group: 'Statistika' },
-  { key: 'stat_1moliya', label: '1 Moliya', short: '1ML', group: 'Statistika' },
-  { key: 'stat_4invest_xorijiy', label: '4 Invest Xor.', short: '4IX', group: 'Statistika' },
-  { key: 'stat_4invest_mahalliy', label: '4 Invest Mah.', short: '4IM', group: 'Statistika' },
-  { key: 'stat_1kx_yillik', label: '1 KX Yillik', short: '1KX', group: 'Statistika' },
-  { key: 'stat_4kx_chorak', label: '4 KX Chorak', short: '4KX', group: 'Statistika' },
+  { key: 'stat_12_invest', label: '12-invest', short: '12I', group: 'Statistika' },
+  { key: 'stat_12_moliya', label: '12-moliya', short: '12M', group: 'Statistika' },
+  { key: 'stat_12_korxona', label: '12-korxona', short: '12K', group: 'Statistika' },
+  { key: 'stat_12_narx', label: '12-narx', short: '12N', group: 'Statistika' },
+  { key: 'stat_4_invest', label: '4-invest', short: '4I', group: 'Statistika' },
+  { key: 'stat_4_mehnat', label: '4-mehnat', short: '4M', group: 'Statistika' },
+  { key: 'stat_4_korxona_miz', label: '4-korxona(miz)', short: '4KM', group: 'Statistika' },
+  { key: 'stat_4_kb_qur_sav_xiz', label: '4-kb (q/s/x)', short: '4KB', group: 'Statistika' },
+  { key: 'stat_4_kb_sanoat', label: '4-kb sanoat', short: '4KS', group: 'Statistika' },
+  { key: 'stat_1_invest', label: '1-invest', short: '1I', group: 'Statistika' },
+  { key: 'stat_1_ih', label: '1-ih', short: '1IH', group: 'Statistika' },
+  { key: 'stat_1_energiya', label: '1-energiya', short: '1E', group: 'Statistika' },
+  { key: 'stat_1_korxona', label: '1-korxona', short: '1KR', group: 'Statistika' },
+  { key: 'stat_1_korxona_tif', label: '1-korxona(tif)', short: '1KT', group: 'Statistika' },
+  { key: 'stat_1_moliya', label: '1-moliya', short: '1ML', group: 'Statistika' },
+  { key: 'stat_1_akt', label: '1-akt', short: '1AK', group: 'Statistika' },
 
   // ═══ IT PARK ═══
   { key: 'itpark_oylik', label: 'IT Park Oylik', short: 'ITO', group: 'IT Park' },
@@ -654,6 +662,14 @@ const OperationModule: React.FC<Props> = ({
               </select>
               <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
+
+            {/* Period Selector */}
+            {/* Period Selector */}
+            <MonthPicker
+              selectedPeriod={selectedPeriod}
+              onChange={(p) => onPeriodChange?.(p)}
+              className="z-20"
+            />
 
             <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all active:scale-95">
               <Download size={14} /> Export
