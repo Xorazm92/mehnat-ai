@@ -17,29 +17,42 @@ interface Props {
 const AnalysisModule: React.FC<Props> = ({ companies, operations, selectedPeriod, onPeriodChange, lang, onFilterApply }) => {
   const t = translations[lang];
 
-  const handleExport = () => {
-    const headers = ['Firma Nomi', 'INN', 'Soliq Rejimi', 'Foyda Solig\'i', 'Balans (F1)', 'Moliya (F2)', 'Statistika'];
-    const rows = companies.map(c => {
-      const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
-      return [
-        c.name,
-        c.inn,
-        c.taxType,
-        op?.profitTaxStatus || '-',
-        op?.form1Status || '-',
-        op?.form2Status || '-',
-        op?.statsStatus || '-'
-      ].join(',');
-    });
+  const handleExport = async () => {
+    try {
+      const { utils, writeFile } = await import('xlsx');
+      const headers = ['Firma Nomi', 'INN', 'Soliq Rejimi', 'Foyda Solig\'i', 'Balans (F1)', 'Moliya (F2)', 'Statistika'];
+      const rows = companies.map(c => {
+        const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
+        return [
+          c.name,
+          c.inn,
+          c.taxType,
+          op?.profitTaxStatus || '-',
+          op?.form1Status || '-',
+          op?.form2Status || '-',
+          op?.statsStatus || '-'
+        ];
+      });
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `hisobot_${selectedPeriod.replace(' ', '_')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const ws = utils.aoa_to_sheet([headers, ...rows]);
+
+      // Auto-width
+      const wscols = headers.map((h, i) => {
+        let max = h.length;
+        rows.forEach(r => {
+          const val = String(r[i] || '');
+          if (val.length > max) max = val.length;
+        });
+        return { wch: max + 2 };
+      });
+      ws['!cols'] = wscols;
+
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, "Tahlil");
+      writeFile(wb, `tahlil_hisobot_${selectedPeriod}.xlsx`);
+    } catch (error) {
+      console.error('Export error:', error);
+    }
   };
 
   // Status colors - macOS style

@@ -3,6 +3,7 @@ import { Company, Staff, TaxType, StatsType, Language, CompanyStatus, RiskLevel 
 import { supabase } from '../lib/supabaseClient';
 import { translations } from '../lib/translations';
 import { Plus, Search, Edit3, Trash2, X, Check, LayoutGrid, List, Eye, EyeOff, ChevronLeft, ChevronRight, Download, Filter, AlertTriangle, Building2, Server, Calculator, Users } from 'lucide-react';
+import { toast } from 'sonner';
 import OnboardingWizard from './OnboardingWizard';
 
 interface Props {
@@ -100,25 +101,41 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleExport = () => {
-    const headers = ['Nomi', 'INN', 'Buxgalter', 'Rejim', 'Login', 'Parol', 'Ega'];
-    const rows = filtered.map(c => [
-      c.name,
-      c.inn,
-      c.accountantName,
-      c.taxRegime,
-      c.login || '',
-      c.password || '',
-      c.ownerName || ''
-    ]);
-    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', 'organizations.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExport = async () => {
+    try {
+      const { utils, writeFile } = await import('xlsx');
+      const headers = ['Nomi', 'INN', 'Buxgalter', 'Rejim', 'Login', 'Parol', 'Ega'];
+      const rows = filtered.map(c => [
+        c.name,
+        c.inn,
+        c.accountantName,
+        c.taxRegime,
+        c.login || '',
+        c.password || '',
+        c.ownerName || ''
+      ]);
+
+      const ws = utils.aoa_to_sheet([headers, ...rows]);
+
+      // Auto-width
+      const wscols = headers.map((h, i) => {
+        let max = h.length;
+        rows.forEach(r => {
+          const val = String(r[i] || '');
+          if (val.length > max) max = val.length;
+        });
+        return { wch: max + 2 };
+      });
+      ws['!cols'] = wscols;
+
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, "Tashkilotlar");
+      writeFile(wb, `tashkilotlar_export.xlsx`);
+      toast.success('Excel fayl yuklab olindi');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Export qilishda xatolik');
+    }
   };
 
   const startEdit = async (c: Company) => {

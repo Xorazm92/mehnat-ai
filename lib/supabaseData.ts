@@ -453,7 +453,8 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       riskLevel: c.risk_level ?? 'low',
       riskNotes: c.risk_notes,
       statReports: c.stat_reports || extra.stats,
-      serviceScope: c.service_scope || extra.scope
+      serviceScope: c.service_scope || extra.scope,
+      activeServices: c.active_services || []
     };
   }) as Company[];
 };
@@ -569,6 +570,7 @@ export const upsertCompany = async (company: Company) => {
     company_status: company.companyStatus,
     risk_level: company.riskLevel,
     risk_notes: company.riskNotes,
+    active_services: company.activeServices || [],
   };
 
   try {
@@ -863,8 +865,20 @@ export const fetchMonthlyReports = async (): Promise<OperationEntry[]> => {
     // Boshqa
     comment: r.comment || '',
     updatedAt: r.updated_at,
-    history: []
+    history: [],
+    // Buxgalter tarixi
+    assigned_accountant_id: r.assigned_accountant_id,
+    assigned_accountant_name: r.assigned_accountant_name,
   })) as OperationEntry[];
+};
+
+// Clear all values for a specific column in a specific period (Superadmin only)
+export const clearColumnForPeriod = async (period: string, columnKey: string) => {
+  const { error } = await supabase
+    .from('company_monthly_reports')
+    .update({ [columnKey]: null, updated_at: new Date().toISOString() })
+    .eq('period', period);
+  if (error) throw error;
 };
 
 export const upsertMonthlyReport = async (report: Partial<OperationEntry>) => {

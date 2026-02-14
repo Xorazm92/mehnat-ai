@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Company, OperationEntry, Language, Staff } from '../types';
-import { createNotification } from '../lib/supabaseData';
+import { createNotification, clearColumnForPeriod } from '../lib/supabaseData';
 import { translations } from '../lib/translations';
 import { Search, Download, ChevronDown, Info, RefreshCw, Filter } from 'lucide-react';
 import { toast } from 'sonner';
@@ -236,8 +236,12 @@ const OperationRow = React.memo<{
   idx: number;
   visibleColumns: typeof REPORT_COLUMNS;
   userRole: string;
+  activeServices: string[];
   onCellUpdate: (companyId: string, colKey: string, newValue: string) => void;
-}>(({ row, idx, visibleColumns, userRole, onCellUpdate }) => {
+}>(({ row, idx, visibleColumns, userRole, activeServices, onCellUpdate }) => {
+  // If activeServices is non-empty, only those keys are enabled
+  const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
+
   return (
     <tr className="group hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-colors border-b border-gray-100 dark:border-gray-800/40">
       <td className="sticky left-0 z-20 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-2 py-1.5 text-center text-[10px] font-mono text-gray-400 transition-colors w-10 min-w-[40px]">
@@ -258,39 +262,53 @@ const OperationRow = React.memo<{
       </td>
       {visibleColumns.map(col => {
         const isReadOnly = !row.companyId || (userRole !== 'super_admin' && userRole !== 'admin' && userRole !== 'supervisor' && userRole !== 'accountant');
+        const serviceDisabled = !isServiceEnabled(col.key);
 
         if ((col as any).isSplit) {
           const payKey = (col as any).payKey as string;
+          const payDisabled = !isServiceEnabled(payKey);
           return (
             <React.Fragment key={col.key}>
-              <td className="border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8 bg-emerald-50/30 dark:bg-emerald-950/10">
-                <StatusCell
-                  value={String(row[col.key] || '')}
-                  onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, col.key, newValue)}
-                  readOnly={isReadOnly}
-                  userRole={userRole}
-                />
+              <td className={`border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : 'bg-emerald-50/30 dark:bg-emerald-950/10'}`}>
+                {serviceDisabled ? (
+                  <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
+                ) : (
+                  <StatusCell
+                    value={String(row[col.key] || '')}
+                    onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, col.key, newValue)}
+                    readOnly={isReadOnly}
+                    userRole={userRole}
+                  />
+                )}
               </td>
-              <td className="border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8 bg-amber-50/30 dark:bg-amber-950/10">
-                <StatusCell
-                  value={String(row[payKey] || '')}
-                  onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, payKey, newValue)}
-                  readOnly={isReadOnly}
-                  userRole={userRole}
-                />
+              <td className={`border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8 ${payDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : 'bg-amber-50/30 dark:bg-amber-950/10'}`}>
+                {payDisabled ? (
+                  <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
+                ) : (
+                  <StatusCell
+                    value={String(row[payKey] || '')}
+                    onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, payKey, newValue)}
+                    readOnly={isReadOnly}
+                    userRole={userRole}
+                  />
+                )}
               </td>
             </React.Fragment>
           );
         }
 
         return (
-          <td key={col.key} className="border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8">
-            <StatusCell
-              value={String(row[col.key] || '')}
-              onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, col.key, newValue)}
-              readOnly={isReadOnly}
-              userRole={userRole}
-            />
+          <td key={col.key} className={`border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : ''}`}>
+            {serviceDisabled ? (
+              <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
+            ) : (
+              <StatusCell
+                value={String(row[col.key] || '')}
+                onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId, col.key, newValue)}
+                readOnly={isReadOnly}
+                userRole={userRole}
+              />
+            )}
           </td>
         );
       })}
@@ -408,12 +426,16 @@ const OperationModule: React.FC<Props> = ({
 
     try {
       // 2. Persist to DB using upsert (handles both insert and update)
+      // Also stamp the current accountant name for this report
+      const company = companies.find(c => c.id === companyId);
       const { error } = await supabase
         .from('company_monthly_reports')
         .upsert({
           company_id: companyId,
           period: selectedPeriod,
           [colKey]: newValue,
+          assigned_accountant_id: company?.accountantId || null,
+          assigned_accountant_name: userName || company?.accountantName || null,
           updated_at: new Date().toISOString()
         }, { onConflict: 'company_id,period' });
 
@@ -423,7 +445,6 @@ const OperationModule: React.FC<Props> = ({
       await onUpdate({ companyId, period: selectedPeriod, [colKey]: newValue });
 
       // 4. Vertical Notification: Alert supervisors if an accountant made a change
-      const company = companies.find(c => c.id === companyId);
       const activeUserName = userName || 'Buxgalter';
       const colLabel = REPORT_COLUMNS.find(c => c.key === colKey)?.label || colKey;
 
@@ -459,6 +480,23 @@ const OperationModule: React.FC<Props> = ({
       toast.error('Saqlashda xatolik!');
     }
   }, [selectedPeriod, onUpdate, companies, staff]);
+
+  // ── Handle Column Clear (Superadmin only) ─────────────────────
+  const handleClearColumn = useCallback(async (colKey: string) => {
+    const colLabel = REPORT_COLUMNS.find(c => c.key === colKey)?.label || colKey;
+    if (!confirm(`"${colLabel}" ustunidagi barcha ma'lumotlarni "${selectedPeriod}" oy uchun o'chirmoqchimisiz?`)) return;
+
+    try {
+      await clearColumnForPeriod(selectedPeriod, colKey);
+      // Optimistic: clear locally
+      setRows(prev => prev.map(row => ({ ...row, [colKey]: '' })));
+      await onUpdate({});
+      toast.success(`"${colLabel}" ustuni tozalandi!`);
+    } catch (e) {
+      console.error('Clear column error:', e);
+      toast.error('Tozalashda xatolik!');
+    }
+  }, [selectedPeriod, onUpdate]);
 
   // ── Computed data ────────────────────────────────────────────
   const accountants = useMemo(() => {
@@ -724,7 +762,13 @@ const OperationModule: React.FC<Props> = ({
                     <th
                       key={col.key}
                       className="sticky top-[24px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-help group/header"
-                      title={col.label}
+                      title={col.label + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
+                      onContextMenu={(e) => {
+                        if (userRole === 'super_admin' || userRole === 'admin') {
+                          e.preventDefault();
+                          handleClearColumn(col.key);
+                        }
+                      }}
                     >
                       <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 tracking-tight group-hover/header:text-blue-600 dark:group-hover/header:text-blue-400 transition-colors">
                         {col.short}
@@ -742,6 +786,7 @@ const OperationModule: React.FC<Props> = ({
                   idx={idx}
                   visibleColumns={visibleColumns}
                   userRole={userRole}
+                  activeServices={companies.find(c => c.id === row.companyId)?.activeServices || []}
                   onCellUpdate={handleCellUpdate}
                 />
               ))}

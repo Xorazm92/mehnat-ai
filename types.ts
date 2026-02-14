@@ -204,6 +204,9 @@ export interface Company {
   companyStatus?: CompanyStatus;
   riskLevel?: RiskLevel;
   riskNotes?: string;
+
+  // Xizmatlar nazorati
+  activeServices?: string[]; // REPORT_COLUMNS keys that are enabled for this company
 }
 
 export interface KPIMetrics {

@@ -91,7 +91,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
         )}
 
         {staff.map(person => {
-          const myCompanies = companies.filter(c => c.accountantName === person.name);
+          const myCompanies = companies.filter(c => c.accountantId === person.id || c.accountantName === person.name);
           return (
             <div
               key={person.id}

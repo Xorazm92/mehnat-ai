@@ -17,7 +17,7 @@ interface DrawerProps {
   onSave?: (company: Company) => void;
 }
 
-type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xavf';
+type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xavf' | 'xizmatlar';
 
 const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, staff = [], lang, userId, onClose, onSave }) => {
   const t = translations[lang];
@@ -93,6 +93,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
     { id: 'jamoa', label: '👥 Jamoa', icon: <Users size={16} /> },
     { id: 'shartnoma', label: '💰 Shartnoma', icon: <DollarSign size={16} /> },
     { id: 'xavf', label: '⚠️ Xavf', icon: <AlertTriangle size={16} /> },
+    { id: 'xizmatlar', label: '🛠️ Xizmatlar', icon: <Check size={16} /> },
   ];
 
   return (
@@ -660,6 +661,94 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                     <p className="text-sm font-medium opacity-70">AI xavf darajasi</p>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'xizmatlar' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Check size={16} className="text-apple-accent" />
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Aktiv Xizmatlar</h4>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        if (onSave) {
+                          const allKeys = ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_1kb_yillik', 'stat_4kb_chorak', 'stat_1mehnat', 'stat_4mehnat_chorak', 'stat_1korxona', 'stat_1moliya', 'stat_4invest_xorijiy', 'stat_4invest_mahalliy', 'stat_1kx_yillik', 'stat_4kx_chorak', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'];
+                          onSave({ ...company, activeServices: allKeys });
+                        }
+                      }}
+                      className="px-3 py-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-all uppercase"
+                    >
+                      Hammasini yoqish
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (onSave) onSave({ ...company, activeServices: [] });
+                      }}
+                      className="px-3 py-1.5 text-[10px] font-black text-rose-500 bg-rose-50 rounded-lg hover:bg-rose-100 transition-all uppercase"
+                    >
+                      Hammasini o'chirish
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400 mb-4">Yoqilmagan xizmatlar Operatsiyalar jadvalida kulrang (bloklangan) bo'lib ko'rsatiladi. Bo'sh ro'yxat = hammasi yoqilgan.</p>
+                {[
+                  { group: 'Oylik', keys: ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka'], color: 'blue' },
+                  { group: 'Soliqlar', keys: ['yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds'], color: 'orange' },
+                  { group: 'Soliq H/T', keys: ['aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq'], color: 'purple' },
+                  { group: 'Yillik', keys: ['moliyaviy_natija', 'buxgalteriya_balansi'], color: 'green' },
+                  { group: 'Statistika', keys: ['stat_1kb_yillik', 'stat_4kb_chorak', 'stat_1mehnat', 'stat_4mehnat_chorak', 'stat_1korxona', 'stat_1moliya', 'stat_4invest_xorijiy', 'stat_4invest_mahalliy', 'stat_1kx_yillik', 'stat_4kx_chorak'], color: 'cyan' },
+                  { group: 'IT Park', keys: ['itpark_oylik', 'itpark_chorak'], color: 'violet' },
+                  { group: 'Komunalka', keys: ['kom_suv', 'kom_gaz', 'kom_svet'], color: 'rose' },
+                ].map(section => (
+                  <div key={section.group} className="mb-4">
+                    <h5 className={`text-[10px] font-black uppercase tracking-widest mb-2 text-${section.color}-600`}>{section.group}</h5>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {section.keys.map(key => {
+                        const labels: Record<string, string> = {
+                          didox: 'Didox', xatlar: 'Xatlar', avtokameral: 'Avtokameral', my_mehnat: 'My Mehnat', one_c: '1C',
+                          pul_oqimlari: 'Pul Oqimlari', chiqadigan_soliqlar: 'Chiq. Soliqlar', hisoblangan_oylik: 'His. Oylik',
+                          debitor_kreditor: 'Deb/Kred', foyda_va_zarar: 'Foyda/Zarar', tovar_ostatka: 'Tovar Ost.',
+                          yer_soligi: "Yer Solig'i", mol_mulk_soligi: "Mol-mulk Sol.", suv_soligi: "Suv Solig'i",
+                          bonak: "Bo'nak", aksiz_soligi: 'AKSIZ', nedro_soligi: 'NEDRO', norezident_foyda: 'Nor. Foyda',
+                          norezident_nds: 'Nor. NDS', aylanma_qqs: 'Aylanma/QQS', daromad_soliq: 'Daromad Soliq',
+                          inps: 'INPS', foyda_soliq: 'Foyda Soliq', moliyaviy_natija: 'Mol. Natija',
+                          buxgalteriya_balansi: 'Bux. Balansi', stat_1kb_yillik: '1 KB Yillik', stat_4kb_chorak: '4 KB Chorak',
+                          stat_1mehnat: '1 Mehnat', stat_4mehnat_chorak: '4 Mehnat Ch.', stat_1korxona: '1 Korxona',
+                          stat_1moliya: '1 Moliya', stat_4invest_xorijiy: '4 Invest Xor.', stat_4invest_mahalliy: '4 Invest Mah.',
+                          stat_1kx_yillik: '1 KX Yillik', stat_4kx_chorak: '4 KX Chorak', itpark_oylik: 'IT Park Oylik',
+                          itpark_chorak: 'IT Park Chorak', kom_suv: 'Suv 💧', kom_gaz: 'Gaz 🔥', kom_svet: 'Svet ⚡'
+                        };
+                        const currentServices = company.activeServices || [];
+                        const isChecked = currentServices.length === 0 || currentServices.includes(key);
+                        return (
+                          <label key={key} className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all ${isChecked ? `bg-${section.color}-50 dark:bg-${section.color}-950/20 border-${section.color}-200 dark:border-${section.color}-800` : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-50'}`}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                if (!onSave) return;
+                                let newServices = [...(currentServices.length === 0 ? ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_1kb_yillik', 'stat_4kb_chorak', 'stat_1mehnat', 'stat_4mehnat_chorak', 'stat_1korxona', 'stat_1moliya', 'stat_4invest_xorijiy', 'stat_4invest_mahalliy', 'stat_1kx_yillik', 'stat_4kx_chorak', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'] : currentServices)];
+                                if (isChecked) {
+                                  newServices = newServices.filter(k => k !== key);
+                                } else {
+                                  newServices.push(key);
+                                }
+                                onSave({ ...company, activeServices: newServices });
+                              }}
+                              className="rounded accent-blue-600"
+                            />
+                            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate">{labels[key] || key}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
