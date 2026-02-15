@@ -160,22 +160,27 @@ const AnalysisModule: React.FC<Props> = ({
     }).sort((a, b) => b.value - a.value);
   }, [currentOps, companies.length]);
 
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   return (
     <div className="space-y-8 animate-fade-in pb-20">
 
       {/* --- Header & Period Selector --- */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-white dark:bg-apple-darkCard p-6 rounded-[2rem] shadow-sm border border-apple-border dark:border-apple-darkBorder">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-white dark:bg-apple-darkCard p-6 rounded-2xl shadow-sm border border-apple-border dark:border-apple-darkBorder">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{t.analysis}</h2>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Mukammal tahlil va statistika markazi</p>
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-tight">{t.analysis}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Mukammal tahlil va statistika markazi</p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <MonthPicker selectedPeriod={selectedPeriod} onChange={onPeriodChange} />
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <MonthPicker selectedPeriod={selectedPeriod} onChange={onPeriodChange} className="w-full sm:w-auto" />
 
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-slate-900/20"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-slate-900/20"
           >
             <Download size={16} />
             <span>Excel</span>
@@ -184,7 +189,7 @@ const AnalysisModule: React.FC<Props> = ({
       </div>
 
       {/* --- KPI Cards --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <KPICard
           title="Jami Firmalar"
           value={metrics.total}
@@ -223,22 +228,24 @@ const AnalysisModule: React.FC<Props> = ({
             Hisobotlar Holati
           </h3>
           <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%" debounce={50} minHeight={350}>
-              <BarChart data={reportStatusData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12, fontWeight: 600 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
-                <Tooltip
-                  cursor={{ fill: '#F1F5F9', opacity: 0.4 }}
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)' }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                <Bar dataKey="Bajarildi" stackId="a" fill="#10B981" radius={[0, 0, 4, 4]} barSize={40} />
-                <Bar dataKey="Rad etildi" stackId="a" fill="#EF4444" radius={[0, 0, 0, 0]} barSize={40} />
-                <Bar dataKey="Muammo" stackId="a" fill="#F59E0B" radius={[0, 0, 0, 0]} barSize={40} />
-                <Bar dataKey="Kutilmoqda" stackId="a" fill="#CBD5E1" radius={[4, 4, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+            {hasMounted && (
+              <ResponsiveContainer width="100%" height="100%" minHeight={350} minWidth={0}>
+                <BarChart data={reportStatusData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12, fontWeight: 600 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
+                  <Tooltip
+                    cursor={{ fill: '#F1F5F9', opacity: 0.4 }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                  <Bar dataKey="Bajarildi" stackId="a" fill="#10B981" radius={[0, 0, 4, 4]} barSize={40} />
+                  <Bar dataKey="Rad etildi" stackId="a" fill="#EF4444" radius={[0, 0, 0, 0]} barSize={40} />
+                  <Bar dataKey="Muammo" stackId="a" fill="#F59E0B" radius={[0, 0, 0, 0]} barSize={40} />
+                  <Bar dataKey="Kutilmoqda" stackId="a" fill="#CBD5E1" radius={[4, 4, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -249,14 +256,16 @@ const AnalysisModule: React.FC<Props> = ({
           </h3>
           <p className="text-xs text-slate-400 font-medium mb-6 pl-4">Eng ko'p topshirilgan hisobotlar</p>
           <div className="flex-1 w-full min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%" debounce={50} minHeight={300}>
-              <BarChart layout="vertical" data={stats2026Data} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#64748B', fontWeight: 700 }} axisLine={false} tickLine={false} />
-                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px' }} />
-                <Bar dataKey="value" fill="#EC4899" radius={[0, 8, 8, 0]} barSize={20} background={{ fill: '#F1F5F9', radius: [0, 8, 8, 0] }} />
-              </BarChart>
-            </ResponsiveContainer>
+            {hasMounted && (
+              <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0}>
+                <BarChart layout="vertical" data={stats2026Data} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#64748B', fontWeight: 700 }} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px' }} />
+                  <Bar dataKey="value" fill="#EC4899" radius={[0, 8, 8, 0]} barSize={20} background={{ fill: '#F1F5F9', radius: [0, 8, 8, 0] }} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>
@@ -265,27 +274,29 @@ const AnalysisModule: React.FC<Props> = ({
         <div className="bg-white dark:bg-apple-darkCard p-8 rounded-[2.5rem] border border-apple-border dark:border-apple-darkBorder">
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Soliq Rejimi Bo'yicha</h3>
           <div className="h-64 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%" debounce={50} minHeight={256}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'QQS', value: companies.filter(c => c.taxType === 'nds_profit' || c.taxType === 'vat').length, color: '#6366F1' },
-                    { name: 'Aylanma', value: companies.filter(c => c.taxType === 'turnover').length, color: '#10B981' },
-                    { name: 'Qat\'iy', value: companies.filter(c => c.taxType === 'fixed').length, color: '#F59E0B' }
-                  ]}
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  <Cell fill="#6366F1" />
-                  <Cell fill="#10B981" />
-                  <Cell fill="#F59E0B" />
-                </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" height={36} />
-              </PieChart>
-            </ResponsiveContainer>
+            {hasMounted && (
+              <ResponsiveContainer width="100%" height="100%" minHeight={256} minWidth={0}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'QQS', value: companies.filter(c => c.taxType === 'nds_profit' || c.taxType === 'vat').length, color: '#6366F1' },
+                      { name: 'Aylanma', value: companies.filter(c => c.taxType === 'turnover').length, color: '#10B981' },
+                      { name: 'Qat\'iy', value: companies.filter(c => c.taxType === 'fixed').length, color: '#F59E0B' }
+                    ]}
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    <Cell fill="#6366F1" />
+                    <Cell fill="#10B981" />
+                    <Cell fill="#F59E0B" />
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={36} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 

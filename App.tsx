@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import Sidebar from './components/Sidebar';
@@ -72,6 +72,7 @@ const App: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedPeriod, setSelectedPeriod] = useState(() => getCurrentPeriod());
   const [isSyncing, setIsSyncing] = useState(false);
+  const initialized = useRef(false);
   const [lastSync, setLastSync] = useState('');
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
@@ -111,6 +112,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
+      if (initialized.current) return;
+      initialized.current = true;
+
       let currentUserId: string | undefined;
 
       try {
@@ -152,11 +156,18 @@ const App: React.FC = () => {
           })
         .subscribe();
 
-      const { data: listener } = supabase.auth.onAuthStateChange(async (_event, s) => {
+      const { data: listener } = supabase.auth.onAuthStateChange(async (event, s) => {
+        if (event === 'SIGNED_OUT') {
+          initialized.current = false;
+        }
+
         setSession(s);
         if (s?.user) {
           await loadProfile(s.user.id);
-          await refreshData();
+          // Only refresh if not just initialized
+          if (event !== 'INITIAL_SESSION') {
+            await refreshData();
+          }
         } else {
           setCompanies([]);
           setOperations([]);
@@ -448,7 +459,7 @@ const App: React.FC = () => {
         />
 
         <div className="flex-1 overflow-y-auto scrollbar-thin overflow-x-hidden">
-          <div className="max-w-[1600px] mx-auto p-4 md:p-10 animate-macos min-h-full">
+          <div className="w-full p-3 sm:p-6 md:p-8 animate-macos min-h-full group/main">
             {/* Access Control for Main Content */}
             {(!((ALLOWED_VIEWS[(userRole as UserRole) || ROLES.ACCOUNTANT] || ALLOWED_VIEWS[ROLES.ACCOUNTANT]).includes(activeView))) ? (
               <div className="flex flex-col items-center justify-center py-20 text-center opacity-80">

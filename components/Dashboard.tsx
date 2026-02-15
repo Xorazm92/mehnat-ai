@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Company, OperationEntry, ReportStatus, Language, Staff, Payment, Expense } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
 import { translations } from '../lib/translations';
@@ -176,6 +176,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     };
   }, [staff, companies, payments, expenses, operations, selectedPeriod]);
 
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   // Role-Based Routing (Moved after hooks)
   if (userRole === ROLES.ACCOUNTANT) {
     const myCompanies = userId ? companies.filter(c => c.accountantId === userId) : [];
@@ -208,7 +213,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
         {stats.headerMetrics.map((stat, i) => (
           <div key={i} className="relative dashboard-card p-6 overflow-hidden group hover:-translate-y-1 transition-all duration-300">
             <div className={`absolute top-0 left-0 w-1.5 h-full ${stat.color}`}></div>
@@ -234,7 +239,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 📊 FINANCIAL FLOW (WORLD-CLASS CHART) */}
-        <div className="dashboard-card p-8 lg:col-span-2">
+        <div className="dashboard-card p-6 sm:p-8 lg:col-span-2">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h4 className="text-sm font-black text-slate-800 dark:text-white tracking-tight">Moliya Dinamikasi & Trendlar</h4>
@@ -247,46 +252,50 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div className="h-[300px] min-h-[300px] w-full relative overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%" debounce={50} minHeight={300}>
-              <AreaChart data={stats.financialTrends}>
+            {hasMounted && (
+              <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0}>
+                <AreaChart data={stats.financialTrends}>
 
-                <defs>
-                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#F43F5E" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8', fontWeight: 700 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8', fontWeight: 700 }} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}M`} />
-                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} />
-                <Area type="monotone" dataKey="income" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
-                <Area type="monotone" dataKey="expense" stroke="#F43F5E" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
-              </AreaChart>
-            </ResponsiveContainer>
+                  <defs>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#F43F5E" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8', fontWeight: 700 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8', fontWeight: 700 }} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}M`} />
+                  <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} />
+                  <Area type="monotone" dataKey="income" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                  <Area type="monotone" dataKey="expense" stroke="#F43F5E" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
         {/* 📉 PERFORMANCE SCORECARD */}
-        <div className="dashboard-card p-8 lg:col-span-1 bg-slate-900 text-white overflow-hidden relative">
+        <div className="dashboard-card p-6 sm:p-8 lg:col-span-1 bg-slate-900 text-white overflow-hidden relative">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
           <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-8">Hisobotlar Progressi</h4>
           <div className="h-48 min-h-[192px] w-full relative overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%" debounce={50} minHeight={192}>
-              <PieChart>
+            {hasMounted && (
+              <ResponsiveContainer width="100%" height="100%" minHeight={192} minWidth={0}>
+                <PieChart>
 
-                <Pie data={stats.reportDonut} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">
-                  {stats.reportDonut.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+                  <Pie data={stats.reportDonut} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">
+                    {stats.reportDonut.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-black">{((stats.reportDonut.find(p => p.name === 'Bajarildi')?.value || 0) / (stats.reportDonut.reduce((a, b) => a + b.value, 0) || 1) * 100).toFixed(0)}%</span>
               <span className="text-[10px] text-indigo-400 font-bold tracking-widest">SAMARADORLIK</span>

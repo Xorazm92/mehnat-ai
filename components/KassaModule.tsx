@@ -59,8 +59,8 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
     return (
         <div className="space-y-6">
             {/* Header & Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-blue-500/20 flex flex-col justify-between">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-2xl shadow-blue-500/20 flex flex-col justify-between">
                     <div className="flex justify-between items-start">
                         <div>
                             <h2 className="text-3xl font-black tracking-tight">{t.kassa || 'Kassa'}</h2>
@@ -68,7 +68,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                         </div>
                         <Wallet className="opacity-20" size={64} />
                     </div>
-                    <div className="mt-8 grid grid-cols-2 gap-8">
+                    <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
                         <div>
                             <span className="text-blue-100/60 font-black text-[10px] uppercase tracking-[0.2em]">{t.totalExpected || 'Kutilayotgan'}</span>
                             <div className="text-3xl font-black mt-1">

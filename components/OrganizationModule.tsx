@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Company, Staff, TaxType, StatsType, Language, CompanyStatus, RiskLevel, OperationEntry } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { translations } from '../lib/translations';
@@ -32,6 +32,27 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const [sortField, setSortField] = useState<keyof Company>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [filterActive, setFilterActive] = useState<boolean | null>(true);
+
+  // Dual Scroll Logic
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const top = topScrollRef.current;
+    const bottom = bottomScrollRef.current;
+    if (!viewMode || viewMode !== 'table' || !top || !bottom) return;
+
+    const syncTop = () => { if (bottom.scrollLeft !== top.scrollLeft) bottom.scrollLeft = top.scrollLeft; };
+    const syncBottom = () => { if (top.scrollLeft !== bottom.scrollLeft) top.scrollLeft = bottom.scrollLeft; };
+
+    top.addEventListener('scroll', syncTop);
+    bottom.addEventListener('scroll', syncBottom);
+
+    return () => {
+      top.removeEventListener('scroll', syncTop);
+      bottom.removeEventListener('scroll', syncBottom);
+    };
+  }, [viewMode]);
 
   // Smart Filters
   const [filterTaxType, setFilterTaxType] = useState<string>('all');
@@ -186,8 +207,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   };
 
   return (
-    <div className="space-y-8 md:space-y-10 animate-fade-in pb-20">
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-apple-darkCard p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-apple-border dark:border-apple-darkBorder gap-8">
+    <div className="space-y-4 md:space-y-8 animate-fade-in pb-20">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-apple-darkCard p-5 md:p-8 rounded-2xl md:rounded-[2.5rem] shadow-sm border border-apple-border dark:border-apple-darkBorder gap-6">
         <div className="flex-1">
           <h2 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-tight mb-2 premium-text-gradient">{t.organizations}</h2>
           <p className="text-sm md:text-base font-semibold text-slate-400">
@@ -257,9 +278,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
           <button
             onClick={() => { setIsAdding(true); setForm({ id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString(), isActive: true }); }}
-            className="flex-1 md:flex-none grow bg-apple-accent text-white px-8 py-4.5 rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20 hover:bg-blue-600 transition-all active:scale-95"
+            className="flex-1 md:flex-none grow bg-apple-accent text-white px-5 sm:px-8 py-3.5 sm:py-4.5 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 sm:gap-3 shadow-xl shadow-blue-500/20 hover:bg-blue-600 transition-all active:scale-95"
           >
-            <Plus size={20} /> <span className="hidden sm:inline">{t.addCompany}</span>
+            <Plus size={20} /> <span className="inline">{t.addCompany}</span>
           </button>
         </div>
       </div>
@@ -488,33 +509,38 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             })}
           </div>
         ) : (
-          <div className="bg-white dark:bg-apple-darkCard rounded-[2.5rem] border border-apple-border dark:border-apple-darkBorder overflow-hidden shadow-xl">
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-left border-collapse min-w-[1000px]">
+          <div className="bg-white dark:bg-apple-darkCard rounded-[2rem] border border-apple-border dark:border-apple-darkBorder overflow-hidden shadow-xl">
+            {/* Top Scrollbar */}
+            <div ref={topScrollRef} className="overflow-x-auto scrollbar-thin border-b dark:border-apple-darkBorder bg-slate-50/50 dark:bg-white/5">
+              <div style={{ width: '1300px', height: '1px' }}></div>
+            </div>
+
+            <div ref={bottomScrollRef} className="overflow-x-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse min-w-[1300px] table-fixed">
                 <thead>
-                  <tr className="bg-slate-50 dark:bg-white/10 text-[11px] font-black uppercase tracking-widest text-slate-400 border-b dark:border-apple-darkBorder">
-                    <th className="px-4 py-6 w-10 text-center">№</th>
-                    <th className="px-4 py-6 w-10 text-center">Xavf</th>
+                  <tr className="bg-slate-50 dark:bg-white/10 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b dark:border-apple-darkBorder">
+                    <th className="px-3 py-6 w-[45px] text-center">№</th>
+                    <th className="px-3 py-6 w-[45px] text-center">Xavf</th>
                     <th
-                      className="px-6 py-6 sticky left-0 bg-slate-50 dark:bg-apple-darkCard z-20 shadow-sm cursor-pointer hover:text-apple-accent transition-colors"
+                      className="px-4 py-6 w-[240px] sticky left-0 bg-slate-50 dark:bg-apple-darkCard z-20 shadow-sm cursor-pointer hover:text-apple-accent transition-colors"
                       onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       {t.companyName} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </th>
                     <th
-                      className="px-4 py-6 cursor-pointer hover:text-apple-accent transition-colors"
+                      className="px-3 py-6 w-[100px] cursor-pointer hover:text-apple-accent transition-colors"
                       onClick={() => { setSortField('inn'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="px-4 py-6 text-apple-accent">Shartnoma summasi</th>
-                    <th className="px-4 py-6">{t.regime}</th>
-                    <th className="px-4 py-6">Buxgalter</th>
-                    <th className="px-4 py-6">Nazoratchi</th>
-                    <th className="px-4 py-6">Server</th>
-                    <th className="px-4 py-6">Bank Klient</th>
-                    <th className="px-4 py-6">Holat</th>
-                    <th className="px-6 py-6 text-right">{t.actions}</th>
+                    <th className="px-3 py-6 w-[130px] text-apple-accent">Shartnoma</th>
+                    <th className="px-3 py-6 w-[90px]">{t.regime}</th>
+                    <th className="px-3 py-6 w-[130px]">Buxgalter</th>
+                    <th className="px-3 py-6 w-[110px]">Nazoratchi</th>
+                    <th className="px-3 py-6 w-[130px]">Server</th>
+                    <th className="px-3 py-6 w-[100px]">Bank K.</th>
+                    <th className="px-3 py-6 w-[120px]">Holat</th>
+                    <th className="px-5 py-6 w-[130px] text-right">{t.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-apple-border dark:divide-apple-darkBorder">
@@ -530,76 +556,75 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
                     return (
                       <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all group">
-                        <td className="px-4 py-5 text-center">
+                        <td className="px-3 py-5 text-center">
                           <span className="text-[10px] font-bold text-slate-300 font-mono">{c.originalIndex || '-'}</span>
                         </td>
-                        <td className="px-4 py-5 text-center">
+                        <td className="px-3 py-5 text-center">
                           <span className={`text-lg ${risk.color}`} title={c.riskLevel || 'low'}>{risk.emoji}</span>
                         </td>
                         <td
-                          className="px-6 py-5 sticky left-0 bg-white dark:bg-apple-darkCard group-hover:bg-slate-50 dark:group-hover:bg-apple-darkBg/90 z-20 shadow-sm transition-colors cursor-pointer"
+                          className="px-4 py-5 sticky left-0 bg-white dark:bg-apple-darkCard group-hover:bg-slate-50 dark:group-hover:bg-apple-darkBg/90 z-20 shadow-sm transition-colors cursor-pointer overflow-hidden"
                           onClick={() => onCompanySelect(c)}
                         >
-                          <div className="font-extrabold text-slate-800 dark:text-white text-sm tracking-tight hover:text-apple-accent transition-colors premium-text-gradient">{c.name}</div>
-                          {c.brandName && <div className="text-[10px] text-slate-400 font-medium">{c.brandName}</div>}
+                          <div className="font-extrabold text-slate-800 dark:text-white text-[13px] tracking-tight hover:text-apple-accent transition-colors premium-text-gradient truncate w-full" title={c.name}>{c.name}</div>
+                          {c.brandName && <div className="text-[9px] text-slate-400 font-medium truncate">{c.brandName}</div>}
                         </td>
-                        <td className="px-4 py-5">
-                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 font-mono tabular-nums">{c.inn}</span>
+                        <td className="px-3 py-5">
+                          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 font-mono tabular-nums">{c.inn}</span>
                         </td>
-                        <td className="px-4 py-5 font-black text-slate-800 dark:text-white tabular-nums text-xs">
+                        <td className="px-3 py-5 font-black text-slate-800 dark:text-white tabular-nums text-[10px]">
                           {displayAmount?.toLocaleString() || '-'}
                         </td>
-                        <td className="px-4 py-5">
-                          <span className={`px-2 py-1 ${c.taxType?.includes('nds') ? 'bg-rose-500/10 text-rose-500' : 'bg-apple-accent/10 text-apple-accent'} text-[10px] font-black uppercase rounded-lg`}>
+                        <td className="px-3 py-5">
+                          <span className={`px-2 py-0.5 ${c.taxType?.includes('nds') ? 'bg-rose-500/10 text-rose-500' : 'bg-apple-accent/10 text-apple-accent'} text-[9px] font-black uppercase rounded-md`}>
                             {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'Aylanma' : (c.taxType || 'Fix'))}
                           </span>
                         </td>
-                        <td className="px-4 py-5">
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-200">{displayAccountant || '—'}</p>
+                        <td className="px-3 py-5">
+                          <p className="text-[11px] font-black text-slate-700 dark:text-slate-200 truncate">{displayAccountant || '—'}</p>
                           {c.accountantPerc ? <span className="text-[9px] font-bold text-slate-400">{c.accountantPerc}%</span> : null}
                         </td>
-                        <td className="px-4 py-5">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{displaySupervisor || '—'}</span>
+                        <td className="px-3 py-5">
+                          <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{displaySupervisor || '—'}</span>
                         </td>
-                        <td className="px-4 py-5">
-                          <div className="flex flex-col gap-0.5 min-w-[100px]">
-                            {c.serverInfo && <span className="text-[9px] font-black text-apple-accent">{c.serverInfo}</span>}
-                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 truncate" title={c.serverName}>{c.serverName || '—'}</span>
+                        <td className="px-3 py-5">
+                          <div className="flex flex-col gap-0.5 overflow-hidden">
+                            {c.serverInfo && <span className="text-[8px] font-black text-apple-accent uppercase">{c.serverInfo}</span>}
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 truncate w-full" title={c.serverName}>{c.serverName || '—'}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-5">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{displayBankManager || '—'}</span>
-                            {c.bankClientPerc ? <span className="text-[9px] text-slate-400 font-bold">{c.bankClientPerc}%</span> : (c.bankClientSum ? <span className="text-[9px] text-slate-400 font-bold">{c.bankClientSum.toLocaleString()}</span> : null)}
+                        <td className="px-3 py-5">
+                          <div className="flex flex-col truncate">
+                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{displayBankManager || '—'}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-5">
-                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${risk.bg} ${risk.color}`}>
-                            {c.companyStatus === 'active' || !c.companyStatus ? 'FAOL' : c.companyStatus === 'suspended' ? "TO'XTATILGAN" : c.companyStatus === 'debtor' ? 'QARZDOR' : c.companyStatus === 'problem' ? 'MUAMMOLI' : 'BANKROT'}
+                        <td className="px-3 py-5">
+                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase inline-block truncate max-w-full ${risk.bg} ${risk.color}`}>
+                            {c.companyStatus === 'active' || !c.companyStatus ? 'FAOL' : c.companyStatus === 'suspended' ? "TO'XTAT" : c.companyStatus === 'debtor' ? 'QARZDOR' : c.companyStatus === 'problem' ? 'MUAMMOLI' : 'BANKROT'}
                           </span>
                         </td>
-                        <td className="px-6 py-5 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-5 py-5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }}
-                              className="p-2.5 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-xl hover:bg-apple-accent hover:text-white transition-all shadow-sm"
+                              className="p-2 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-lg hover:bg-apple-accent hover:text-white transition-all shadow-sm"
                               title="Details"
                             >
-                              <Eye size={16} />
+                              <Eye size={14} />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); startEdit(c); }}
-                              className="p-2.5 bg-apple-accent/10 text-apple-accent rounded-xl hover:bg-apple-accent hover:text-white transition-all shadow-sm"
+                              className="p-2 bg-apple-accent/10 text-apple-accent rounded-lg hover:bg-apple-accent hover:text-white transition-all shadow-sm"
                               title="Edit"
                             >
-                              <Edit3 size={16} />
+                              <Edit3 size={14} />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }}
-                              className="p-2.5 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                              className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all shadow-sm"
                               title="Delete"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={14} />
                             </button>
                           </div>
                         </td>

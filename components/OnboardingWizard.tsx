@@ -147,6 +147,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     <option value="TASTIFY">TASTIFY</option>
                                     <option value="Toolstrek Ca">Toolstrek Ca</option>
                                     <option value="MOLIYA AI">MOLIYA AI</option>
+                                    <option value="Plastik">Plastik</option>
                                 </select>
                             </div>
                             <div className="space-y-2">
