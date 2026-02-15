@@ -640,7 +640,10 @@ export const onboardCompany = async (company: Partial<Company>, assignments: any
   // 1. Save Company
   await upsertCompany({ ...company, id: companyId } as Company);
 
-  // 2. Save Assignments
+  // 2. Clear existing assignments if it's an edit
+  await supabase.from('contract_assignments').delete().eq('client_id', companyId);
+
+  // 3. Save New Assignments
   for (const ass of assignments) {
     if (ass.userId && uuidRegex.test(ass.userId)) {
       await supabase.from('contract_assignments').insert({
@@ -651,8 +654,6 @@ export const onboardCompany = async (company: Partial<Company>, assignments: any
         salary_value: ass.salaryValue || 20,
         start_date: new Date().toISOString().split('T')[0]
       });
-
-      // logAuditAction(companyId, 'assign_role', 'contract_assignment', companyId, ass);
     }
   }
 };
@@ -701,7 +702,14 @@ export const fetchOperations = async (): Promise<OperationEntry[]> => {
       updatedAt: o.updated_at,
       history: [],
       kpi: kpiData,
-      tasks: o.tasks || [] // Include tasks
+      tasks: o.tasks || [], // Include tasks
+      assigned_supervisor_id: o.assigned_supervisor_id,
+      assigned_supervisor_name: o.assigned_supervisor_name,
+      assigned_bank_manager_id: o.assigned_bank_manager_id,
+      assigned_bank_manager_name: o.assigned_bank_manager_name,
+      contract_amount: o.contract_amount,
+      assigned_accountant_id: o.assigned_accountant_id,
+      assigned_accountant_name: o.assigned_accountant_name
     };
   }) as OperationEntry[];
 };
@@ -732,7 +740,14 @@ export const upsertOperation = async (op: OperationEntry) => {
     deadline_stats: op.statsDeadline,
     comment: op.kpi ? kpiStore : op.comment, // Store KPI in comment if column missing
     kpi: op.kpi, // Try real column
-    tasks: op.tasks // Add tasks field
+    tasks: op.tasks, // Add tasks field
+    assigned_accountant_id: op.assigned_accountant_id,
+    assigned_accountant_name: op.assigned_accountant_name,
+    assigned_supervisor_id: op.assigned_supervisor_id,
+    assigned_supervisor_name: op.assigned_supervisor_name,
+    assigned_bank_manager_id: op.assigned_bank_manager_id,
+    assigned_bank_manager_name: op.assigned_bank_manager_name,
+    contract_amount: op.contract_amount
   };
 
   try {
@@ -743,6 +758,11 @@ export const upsertOperation = async (op: OperationEntry) => {
       delete fallbackPayload.deadline_profit_tax;
       delete fallbackPayload.deadline_stats;
       delete fallbackPayload.tasks;
+      delete fallbackPayload.assigned_supervisor_id;
+      delete fallbackPayload.assigned_supervisor_name;
+      delete fallbackPayload.assigned_bank_manager_id;
+      delete fallbackPayload.assigned_bank_manager_name;
+      delete fallbackPayload.contract_amount;
       const { error: fErr } = await supabase.from('operations').upsert(fallbackPayload);
       if (fErr) throw fErr;
     } else if (error) throw error;
@@ -875,6 +895,11 @@ export const fetchMonthlyReports = async (): Promise<OperationEntry[]> => {
     // Buxgalter tarixi
     assigned_accountant_id: r.assigned_accountant_id,
     assigned_accountant_name: r.assigned_accountant_name,
+    assigned_supervisor_id: r.assigned_supervisor_id,
+    assigned_supervisor_name: r.assigned_supervisor_name,
+    assigned_bank_manager_id: r.assigned_bank_manager_id,
+    assigned_bank_manager_name: r.assigned_bank_manager_name,
+    contract_amount: r.contract_amount
   })) as OperationEntry[];
 };
 
@@ -944,11 +969,33 @@ export const upsertMonthlyReport = async (report: Partial<OperationEntry>) => {
     stat_1_akt: report.stat_1_akt,
     assigned_accountant_id: report.assigned_accountant_id,
     assigned_accountant_name: report.assigned_accountant_name,
+    assigned_supervisor_id: report.assigned_supervisor_id,
+    assigned_supervisor_name: report.assigned_supervisor_name,
+    assigned_bank_manager_id: report.assigned_bank_manager_id,
+    assigned_bank_manager_name: report.assigned_bank_manager_name,
+    contract_amount: report.contract_amount,
     updated_at: new Date().toISOString()
   };
 
   const { error } = await supabase.from('company_monthly_reports').upsert(payload, { onConflict: 'company_id,period' });
   if (error) throw error;
+};
+
+// Create a snapshot of company's current state (staff + contract) into a monthly report
+export const ensureOperationSnapshot = async (company: Company, period: string) => {
+  const payload: Partial<OperationEntry> = {
+    companyId: company.id,
+    period: period,
+    assigned_accountant_id: company.accountantId,
+    assigned_accountant_name: company.accountantName,
+    assigned_supervisor_id: company.supervisorId,
+    assigned_supervisor_name: company.supervisorName,
+    assigned_bank_manager_id: company.bankClientId,
+    assigned_bank_manager_name: company.bankClientName,
+    contract_amount: company.contractAmount
+  };
+
+  await upsertMonthlyReport(payload);
 };
 
 // Staff

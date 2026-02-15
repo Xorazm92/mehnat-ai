@@ -304,10 +304,18 @@ export interface OperationEntry {
   moliyaviy_natija?: string;
   buxgalteriya_balansi?: string;
   statistika?: string;
-  bonak?: string;
   yer_soligi?: string;
   mol_mulk_soligi?: string;
   suv_soligi?: string;
+  bonak?: string;
+  aksiz_soligi?: string;
+  nedro_soligi?: string;
+  norezident_foyda?: string;
+  norezident_nds?: string;
+  aylanma_qqs_tolov?: string;
+  daromad_soliq_tolov?: string;
+  inps_tolov?: string;
+  foyda_soliq_tolov?: string;
 
   // Statistika 2026
   stat_12_invest?: string;
@@ -339,6 +347,11 @@ export interface OperationEntry {
   updatedAt: string;
   assigned_accountant_id?: string;
   assigned_accountant_name?: string;
+  assigned_supervisor_id?: string;
+  assigned_supervisor_name?: string;
+  assigned_bank_manager_id?: string;
+  assigned_bank_manager_name?: string;
+  contract_amount?: number;
   history: HistoryLog[];
   kpi?: KPIMetrics;
   tasks?: OperationTask[];       // NEW: List of all dynamic tasks

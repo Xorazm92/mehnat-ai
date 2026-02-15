@@ -36,6 +36,7 @@ import {
   deleteCompany,
   onboardCompany,
   upsertOperation,
+  ensureOperationSnapshot,
   upsertOperationsBatch,
   upsertStaff,
   deleteStaff,
@@ -187,8 +188,9 @@ const App: React.FC = () => {
 
   const refreshData = async () => {
     setIsSyncing(true);
-    const [c, o, s, kpi, p, e, ass] = await Promise.all([
+    const [c, ops, reports, s, kpi, p, e, ass] = await Promise.all([
       fetchCompanies(),
+      fetchOperations(),
       fetchMonthlyReports(),
       fetchStaff(),
       fetchKpiMetrics(),
@@ -197,9 +199,20 @@ const App: React.FC = () => {
       fetchContractAssignments()
     ]);
 
-    // Role sync is now managed in Staff module, removal of auto-guess logic
+    // Merge operations (tasks/kpi) with monthly reports (historical snapshots/columns)
+    const unifiedOps: OperationEntry[] = [...reports];
+
+    ops.forEach(op => {
+      const existingIdx = unifiedOps.findIndex(r => r.companyId === op.companyId && r.period === op.period);
+      if (existingIdx !== -1) {
+        unifiedOps[existingIdx] = { ...unifiedOps[existingIdx], ...op };
+      } else {
+        unifiedOps.push(op);
+      }
+    });
+
     setCompanies(c);
-    setOperations(o);
+    setOperations(unifiedOps);
     setStaff(s);
     setPayments(p);
     setExpenses(e);
@@ -484,12 +497,17 @@ const App: React.FC = () => {
                     companies={companies}
                     staff={staff}
                     lang={lang}
+                    selectedPeriod={selectedPeriod}
+                    operations={operations}
+                    onPeriodChange={setSelectedPeriod}
                     onSave={async (c, assignments) => {
                       if (assignments) {
                         await onboardCompany(c, assignments);
                       } else {
                         await upsertCompany(c as Company);
                       }
+                      // Snapshot for the selected period to track historical state
+                      await ensureOperationSnapshot(c as Company, selectedPeriod);
                       refreshData();
                     }}
                     onDelete={async (id) => {
@@ -633,31 +651,34 @@ const App: React.FC = () => {
                   />
                 )}
 
+                {selectedStaff && (
+                  <StaffProfileDrawer
+                    staff={selectedStaff}
+                    companies={companies}
+                    assignments={assignments.filter(a => a.userId === selectedStaff.id)}
+                    operations={operations}
+                    lang={lang}
+                    onClose={() => setSelectedStaff(null)}
+                  />
+                )}
+
+                {selectedCompany && (
+                  <CompanyDrawer
+                    company={selectedCompany}
+                    operation={selectedOperation}
+                    payments={payments}
+                    lang={lang}
+                    onClose={() => setSelectedCompany(null)}
+                    onSave={async (c) => {
+                      await upsertCompany(c);
+                      refreshData();
+                    }}
+                  />
+                )}
               </React.Suspense>
             )}
           </div>
         </div>
-
-        {selectedStaff && (
-          <StaffProfileDrawer
-            staff={selectedStaff}
-            companies={companies}
-            assignments={assignments.filter(a => a.userId === selectedStaff.id)}
-            operations={operations}
-            lang={lang}
-            onClose={() => setSelectedStaff(null)}
-          />
-        )}
-
-        {selectedCompany && (
-          <CompanyDrawer
-            company={selectedCompany}
-            operation={selectedOperation}
-            payments={payments}
-            lang={lang}
-            onClose={() => setSelectedCompany(null)}
-          />
-        )}
       </main>
     </div>
   );

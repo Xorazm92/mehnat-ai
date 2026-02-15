@@ -1,21 +1,25 @@
 import React, { useState, useMemo } from 'react';
-import { Company, Staff, TaxType, StatsType, Language, CompanyStatus, RiskLevel } from '../types';
+import { Company, Staff, TaxType, StatsType, Language, CompanyStatus, RiskLevel, OperationEntry } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { translations } from '../lib/translations';
 import { Plus, Search, Edit3, Trash2, X, Check, LayoutGrid, List, Eye, EyeOff, ChevronLeft, ChevronRight, Download, Filter, AlertTriangle, Building2, Server, Calculator, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import OnboardingWizard from './OnboardingWizard';
+import { MonthPicker } from './ui/MonthPicker';
 
 interface Props {
   companies: Company[];
   staff: Staff[];
   lang: Language;
+  selectedPeriod: string;
+  operations: OperationEntry[];
+  onPeriodChange: (p: string) => void;
   onSave: (company: Partial<Company>, assignments?: any[]) => void;
   onDelete: (id: string) => void;
   onCompanySelect: (c: Company) => void;
 }
 
-const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, onDelete, onCompanySelect }) => {
+const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect }) => {
   const t = translations[lang];
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,7 +43,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
   const [filterKpi, setFilterKpi] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 100;
 
   // Risk indicator helper
   const getRiskIndicator = (company: Company) => {
@@ -229,6 +233,11 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
               <List size={20} />
             </button>
           </div>
+
+          <MonthPicker
+            selectedPeriod={selectedPeriod}
+            onChange={onPeriodChange}
+          />
 
           <button
             onClick={handleExport}
@@ -498,6 +507,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                     >
                       {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </th>
+                    <th className="px-4 py-6 text-apple-accent">Shartnoma summasi</th>
                     <th className="px-4 py-6">{t.regime}</th>
                     <th className="px-4 py-6">Raxbar / Ega</th>
                     <th className="px-4 py-6">Buxgalter</th>
@@ -511,6 +521,14 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                 <tbody className="divide-y divide-apple-border dark:divide-apple-darkBorder">
                   {paginated.map(c => {
                     const risk = getRiskIndicator(c);
+                    const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
+
+                    // Historical fallbacks
+                    const displayAmount = op?.contract_amount ?? c.contractAmount;
+                    const displayAccountant = op?.assigned_accountant_name ?? c.accountantName;
+                    const displaySupervisor = op?.assigned_supervisor_name ?? c.supervisorName;
+                    const displayBankManager = op?.assigned_bank_manager_name ?? c.bankClientName;
+
                     return (
                       <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all group">
                         <td className="px-4 py-5 text-center">
@@ -529,6 +547,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                         <td className="px-4 py-5">
                           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 font-mono tabular-nums">{c.inn}</span>
                         </td>
+                        <td className="px-4 py-5 font-black text-slate-800 dark:text-white tabular-nums text-xs">
+                          {displayAmount?.toLocaleString() || '-'}
+                        </td>
                         <td className="px-4 py-5">
                           <span className={`px-2 py-1 ${c.taxType?.includes('nds') ? 'bg-rose-500/10 text-rose-500' : 'bg-apple-accent/10 text-apple-accent'} text-[10px] font-black uppercase rounded-lg`}>
                             {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'Aylanma' : (c.taxType || 'Fix'))}
@@ -539,11 +560,11 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                           {c.directorPhone && <div className="text-[10px] text-slate-400 font-mono">{c.directorPhone}</div>}
                         </td>
                         <td className="px-4 py-5">
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-200">{c.accountantName || '—'}</p>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-200">{displayAccountant || '—'}</p>
                           {c.accountantPerc ? <span className="text-[9px] font-bold text-slate-400">{c.accountantPerc}%</span> : null}
                         </td>
                         <td className="px-4 py-5">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{c.supervisorName || '—'}</span>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{displaySupervisor || '—'}</span>
                         </td>
                         <td className="px-4 py-5">
                           <div className="flex flex-col gap-0.5 min-w-[100px]">
@@ -553,7 +574,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, onSave, o
                         </td>
                         <td className="px-4 py-5">
                           <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{c.bankClientName || '—'}</span>
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{displayBankManager || '—'}</span>
                             {c.bankClientPerc ? <span className="text-[9px] text-slate-400 font-bold">{c.bankClientPerc}%</span> : (c.bankClientSum ? <span className="text-[9px] text-slate-400 font-bold">{c.bankClientSum.toLocaleString()}</span> : null)}
                           </div>
                         </td>
