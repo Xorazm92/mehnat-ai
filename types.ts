@@ -35,9 +35,9 @@ export enum TaxType {
   FIXED = 'fixed'
 }
 
-export type ServerInfo = 'CR1' | 'CR2' | 'CR3';
+export type ServerInfo = 'CR1' | 'CR2' | 'CR3' | 'srv1c1' | 'srv1c2' | 'srv1c3' | 'srv2';
 export type SalaryCalculationType = 'percent' | 'fixed';
-export type ContractRole = 'accountant' | 'controller' | 'bank_manager';
+export type ContractRole = 'accountant' | 'controller' | 'bank_manager' | 'chief';
 
 export enum ReportStatus {
   ACCEPTED = '+',
@@ -205,8 +205,8 @@ export interface Company {
   riskLevel?: RiskLevel;
   riskNotes?: string;
 
-  // Xizmatlar nazorati
   activeServices?: string[]; // REPORT_COLUMNS keys that are enabled for this company
+  notes?: string; // Metadata storage or raw notes
 }
 
 export interface KPIMetrics {

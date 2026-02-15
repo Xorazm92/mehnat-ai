@@ -165,27 +165,43 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   };
 
   const startEdit = async (c: Company) => {
-    setForm(c);
-    setEditingId(c.id);
+    try {
+      setForm(c);
+      setEditingId(c.id);
 
-    // Fetch current assignments for this company to pass to the wizard
-    const { data: assRes } = await supabase.from('contract_assignments').select('*').eq('client_id', c.id);
-    const existingAssignments = (assRes || []).map(a => ({
-      role: a.role,
-      userId: a.user_id,
-      salaryType: a.salary_type,
-      salaryValue: a.salary_value
-    }));
+      // Fetch current assignments for this company to pass to the wizard
+      // We add a short timeout here to prevent the UI from locking up
+      const { data: assRes, error: assErr } = await Promise.race([
+        supabase.from('contract_assignments').select('*').eq('client_id', c.id),
+        new Promise<any>((_, reject) => setTimeout(() => reject(new Error('Assignments fetch timeout')), 5000))
+      ]);
 
-    // If we have existing assignments, use them; otherwise, provide defaults
-    const finalAssignments = existingAssignments.length > 0 ? existingAssignments : [
-      { role: 'accountant', userId: '', salaryType: 'percent', salaryValue: 70 },
-      { role: 'controller', userId: '', salaryType: 'fixed', salaryValue: 50000 },
-      { role: 'bank_manager', userId: '', salaryType: 'fixed', salaryValue: 50000 }
-    ];
+      if (assErr) {
+        console.warn('[OrganizationModule] Failed to fetch assignments:', assErr);
+        toast.error('Mas\'ullar ro\'yxatini yuklashda xatolik, ammo tahrirlashni davom ettirishingiz mumkin');
+      }
 
-    setEditingAssignments(finalAssignments);
-    setIsAdding(true);
+      const existingAssignments = (assRes || []).map((a: any) => ({
+        role: a.role,
+        userId: a.user_id,
+        salaryType: a.salary_type,
+        salaryValue: a.salary_value
+      }));
+
+      // If we have existing assignments, use them; otherwise, provide defaults
+      const finalAssignments = existingAssignments.length > 0 ? existingAssignments : [
+        { role: 'accountant', userId: '', salaryType: 'percent', salaryValue: 70 },
+        { role: 'controller', userId: '', salaryType: 'fixed', salaryValue: 50000 },
+        { role: 'bank_manager', userId: '', salaryType: 'fixed', salaryValue: 50000 }
+      ];
+
+      setEditingAssignments(finalAssignments);
+      setIsAdding(true);
+    } catch (err: any) {
+      console.error('[OrganizationModule] startEdit failed:', err);
+      // Even if fetch fails, let user open the wizard
+      setIsAdding(true);
+    }
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -204,16 +220,20 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
     if (finalData.name && finalData.inn) {
       setIsSaving(true);
       try {
+        console.log('[OrganizationModule] handleSave starting onSave...');
         await onSave({ ...finalData, id: editingId || finalData.id }, assignments);
+        console.log('[OrganizationModule] handleSave onSave resolved');
+
         setEditingId(null);
         setIsAdding(false);
         setForm({});
         setEditingAssignments(undefined);
         toast.success(editingId ? 'Firma tahrirlandi' : 'Yangi firma qo\'shildi');
       } catch (error: any) {
-        console.error('Save error:', error);
+        console.error('[OrganizationModule] handleSave error:', error);
         toast.error(error.message || 'Saqlashda xatolik yuz berdi');
       } finally {
+        console.log('[OrganizationModule] handleSave finally - setting isSaving to false');
         setIsSaving(false);
       }
     } else {

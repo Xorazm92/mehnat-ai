@@ -178,7 +178,8 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => {
-    setHasMounted(true);
+    const timer = setTimeout(() => setHasMounted(true), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Role-Based Routing (Moved after hooks)
@@ -251,11 +252,10 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          <div className="h-[300px] min-h-[300px] w-full relative overflow-hidden">
-            {hasMounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0}>
+          <div className="h-[300px] min-h-[300px] w-full relative overflow-hidden flex items-center justify-center">
+            {hasMounted ? (
+              <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={stats.financialTrends}>
-
                   <defs>
                     <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10B981" stopOpacity={0.1} />
@@ -274,6 +274,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <Area type="monotone" dataKey="expense" stroke="#F43F5E" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
                 </AreaChart>
               </ResponsiveContainer>
+            ) : (
+              <div className="w-12 h-12 border-4 border-slate-200 border-t-apple-accent rounded-full animate-spin"></div>
             )}
           </div>
         </div>
@@ -282,9 +284,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="dashboard-card p-6 sm:p-8 lg:col-span-1 bg-slate-900 text-white overflow-hidden relative">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
           <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-8">Hisobotlar Progressi</h4>
-          <div className="h-48 min-h-[192px] w-full relative overflow-hidden">
-            {hasMounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={192} minWidth={0}>
+          <div className="h-48 min-h-[192px] w-full relative overflow-hidden flex items-center justify-center">
+            {hasMounted ? (
+              <ResponsiveContainer width="100%" height={192}>
                 <PieChart>
 
                   <Pie data={stats.reportDonut} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">
@@ -295,7 +297,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
-            )}
+            ) : null}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-black">{((stats.reportDonut.find(p => p.name === 'Bajarildi')?.value || 0) / (stats.reportDonut.reduce((a, b) => a + b.value, 0) || 1) * 100).toFixed(0)}%</span>
               <span className="text-[10px] text-indigo-400 font-bold tracking-widest">SAMARADORLIK</span>
@@ -365,15 +367,17 @@ const Dashboard: React.FC<DashboardProps> = ({
             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">Jamoa Yoshi Tarkibi</h4>
             <div className="flex items-center gap-10">
               <div className="h-32 w-32 shrink-0">
-                <ResponsiveContainer width="100%" height="100%" minHeight={128}>
-                  <PieChart>
-                    <Pie data={stats.ageDistribution} innerRadius={40} outerRadius={55} paddingAngle={4} dataKey="value" stroke="none">
-                      {stats.ageDistribution.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+                {hasMounted && (
+                  <ResponsiveContainer width="100%" height="100%" minHeight={128}>
+                    <PieChart>
+                      <Pie data={stats.ageDistribution} innerRadius={40} outerRadius={55} paddingAngle={4} dataKey="value" stroke="none">
+                        {stats.ageDistribution.map((entry, index) => (
+                          <Cell key={index} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
               </div>
               <div className="grid grid-cols-1 gap-4 w-full">
                 {stats.ageDistribution.map((item, i) => (

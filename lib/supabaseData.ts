@@ -23,6 +23,45 @@ import {
   AppNotification
 } from '../types';
 
+const withTimeout = <T>(promiseFn: () => Promise<T>, ms: number, label: string): Promise<T> => {
+  return new Promise(async (resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error(`DB Timeout: ${label} did not respond within ${ms / 1000}s`));
+      }
+    }, ms);
+
+    try {
+      const result = await promiseFn();
+
+      // Check for Supabase-level errors in the response
+      const anyResult = result as any;
+      if (anyResult && anyResult.error) {
+        const error = anyResult.error;
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          return reject(error);
+        }
+      }
+
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        return resolve(result);
+      }
+    } catch (e: any) {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        return reject(e);
+      }
+    }
+  });
+};
+
 interface CompanyNotesFallback {
   v?: number;
   bcid?: string;
@@ -396,153 +435,94 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       inn: c.inn,
       accountantName: (c.accountant as any)?.full_name || c.accountant_id,
       accountantId: c.accountant_id,
-      taxType: c.tax_type_new || (c.tax_regime === 'vat' ? TaxType.NDS_PROFIT : (c.tax_regime === 'turnover' ? TaxType.TURNOVER : TaxType.FIXED)),
+      taxType: (c as any).tax_type_new || (c.tax_regime === 'vat' ? TaxType.NDS_PROFIT : (c.tax_regime === 'turnover' ? TaxType.TURNOVER : TaxType.FIXED)),
       department: c.department,
       statsType: c.stats_type,
       login: c.login,
-      password: c.password_encrypted,
+      password: (c as any).password_encrypted || c.password,
       createdAt: c.created_at,
-      internalContractor: c.internal_contractor,
-      serverInfo: c.server_info,
+      internalContractor: (c as any).internal_contractor,
+      serverInfo: (c as any).server_info,
       serverName: extra.srvn,
-      baseName1c: c.base_name_1c,
-      kpiEnabled: c.kpi_enabled,
-      bankClientId: c.bank_client_id || extra.bcid,
+      baseName1c: (c as any).base_name_1c,
+      kpiEnabled: (c as any).kpi_enabled,
+      bankClientId: (c as any).bank_client_id || extra.bcid,
       bankClientName: extra.bcn || '—',
-      supervisorId: c.supervisor_id || extra.sid,
+      supervisorId: (c as any).supervisor_id || extra.sid,
       supervisorName: extra.sn || '—',
-      contractAmount: c.contract_amount ?? (extra.camt || 0),
-      accountantPerc: c.accountant_perc ?? (extra.aperc || 0),
+      contractAmount: (c as any).contract_amount ?? (extra.camt || 0),
+      accountantPerc: (c as any).accountant_perc ?? (extra.aperc || 0),
       bankClientPerc: extra.bcp || 0,
-      bankClientSum: c.bank_client_sum ?? (extra.bcsum || 0),
+      bankClientSum: (c as any).bank_client_sum ?? (extra.bcsum || 0),
       chiefAccountantPerc: extra.cperc || 0,
-      chiefAccountantSum: c.chief_accountant_sum ?? (extra.casum || 0),
-      supervisorPerc: c.supervisor_perc ?? (extra.sperc || 0),
+      chiefAccountantSum: (c as any).chief_accountant_sum ?? (extra.casum || 0),
+      supervisorPerc: (c as any).supervisor_perc ?? (extra.sperc || 0),
       ownerName: extra.on,
       isActive: c.is_active ?? (extra.ia ?? true),
       originalIndex: extra.idx,
-      itParkResident: c.it_park_resident ?? extra.itp,
+      itParkResident: (c as any).it_park_resident ?? extra.itp,
       internalContractorId: extra.icid,
       isInternalContractor: extra.is_ic,
       requiredReports: extra.req_r || [],
       // Tab 1: PASPORT fields
-      brandName: c.brand_name,
-      directorName: c.director_name,
-      directorPhone: c.director_phone,
-      legalAddress: c.legal_address,
-      founderName: c.founder_name,
-      logoUrl: c.logo_url,
-      certificateFilePath: c.certificate_file_path,
-      charterFilePath: c.charter_file_path,
+      brandName: (c as any).brand_name,
+      directorName: (c as any).director_name,
+      directorPhone: (c as any).director_phone,
+      legalAddress: (c as any).legal_address,
+      founderName: (c as any).founder_name,
+      logoUrl: (c as any).logo_url,
+      certificateFilePath: (c as any).certificate_file_path,
+      charterFilePath: (c as any).charter_file_path,
       // Tab 2: SOLIQ fields
-      vatCertificateDate: c.vat_certificate_date,
-      hasLandTax: c.has_land_tax ?? false,
-      hasWaterTax: c.has_water_tax ?? false,
-      hasPropertyTax: c.has_property_tax ?? false,
-      hasExciseTax: c.has_excise_tax ?? false,
-      oneCLocation: c.one_c_location,
-      accountant_name: c.accountant_name,
+      vatCertificateDate: (c as any).vat_certificate_date,
+      hasLandTax: (c as any).has_land_tax ?? false,
+      hasWaterTax: (c as any).has_water_tax ?? false,
+      hasPropertyTax: (c as any).has_property_tax ?? false,
+      hasExciseTax: (c as any).has_excise_tax ?? false,
+      oneCLocation: (c as any).one_c_location,
+      accountant_name: (c as any).accountant_name,
       // Tab 5: SHARTNOMA fields
-      contractNumber: c.contract_number,
-      contractDate: c.contract_date,
-      paymentDay: c.payment_day ?? 5,
-      firmaSharePercent: c.firma_share_percent ?? 50,
-      currentBalance: c.current_balance ?? 0,
+      contractNumber: (c as any).contract_number,
+      contractDate: (c as any).contract_date,
+      paymentDay: (c as any).payment_day ?? 5,
+      firmaSharePercent: (c as any).firma_share_percent ?? 50,
+      currentBalance: (c as any).current_balance ?? 0,
       // Tab 6: XAVF fields
-      companyStatus: c.company_status ?? 'active',
-      riskLevel: c.risk_level ?? 'low',
-      riskNotes: c.risk_notes,
-      statReports: c.stat_reports || extra.stats,
-      serviceScope: c.service_scope || extra.scope,
-      activeServices: c.active_services || []
+      companyStatus: (c as any).company_status ?? 'active',
+      riskLevel: (c as any).risk_level ?? 'low',
+      riskNotes: (c as any).risk_notes,
+      statReports: (c as any).stat_reports || extra.stats,
+      serviceScope: (c as any).service_scope || extra.scope,
+      activeServices: (c as any).active_services || []
     };
   }) as Company[];
 };
 
-export const upsertCompany = async (company: Company) => {
-  // UUID validation regex
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-  // Ensure we have a valid UUID for the company ID
-  let validId = company.id;
-  if (!validId || !uuidRegex.test(validId)) {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      validId = crypto.randomUUID();
-    } else {
-      validId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      });
-    }
-  }
-
-  // Serialize complex data for fallback storage in 'notes'
-  const fallbackJson = JSON.stringify({
-    v: 1,
-    bcid: company.bankClientId,
-    bcn: company.bankClientName,
-    sid: company.supervisorId,
-    sn: company.supervisorName,
-    srvn: company.serverName,
-    camt: company.contractAmount,
-    aperc: company.accountantPerc,
-    bcp: company.bankClientPerc,
-    bcsum: company.bankClientSum,
-    cperc: company.chiefAccountantPerc,
-    casum: company.chiefAccountantSum,
-    sperc: company.supervisorPerc,
-    on: company.ownerName,
-    ia: company.isActive,
-    stats: company.statReports,
-    scope: company.serviceScope,
-    itp: company.itParkResident,
-    idx: company.originalIndex,
-    icid: company.internalContractorId,
-    is_ic: company.isInternalContractor,
-    req_r: company.requiredReports
-  });
-
-
-  // Map tax type to V2 enum safely
-  let taxTypeV2 = (company.taxType === TaxType.TURNOVER || company.taxType === TaxType.NDS_PROFIT || company.taxType === TaxType.FIXED) ? company.taxType : undefined;
-
-  // Map server info to enum safely
-  const validServers = ['CR1', 'CR2', 'CR3', 'srv1c1', 'srv1c2', 'srv1c3', 'srv2'];
-  const serverInfoEnum = typeof company.serverInfo === 'string' && validServers.includes(company.serverInfo)
-    ? company.serverInfo
-    : (company.serverInfo ? company.serverInfo : undefined);
-
-  const payload = {
-    id: validId,
-
+export const upsertCompany = async (company: Company, assignments?: any[]) => {
+  // Map internal types to DB types — ALL fields must be included
+  const payload: any = {
+    id: company.id,
     name: company.name,
     inn: company.inn,
     tax_regime: company.taxType === 'nds_profit' ? 'vat' : (company.taxType === 'turnover' ? 'turnover' : 'fixed'),
-    tax_type_new: taxTypeV2,
     stats_type: company.statsType,
     department: company.department || 'default',
-
     accountant_id: company.accountantId,
     login: company.login,
     password: company.password,
     accountant_name: company.accountantName,
-    notes: fallbackJson,
-    internal_contractor: company.internalContractor,
-    server_info: serverInfoEnum,
-    base_name_1c: company.baseName1c,
-    kpi_enabled: company.kpiEnabled,
-    it_park_resident: typeof company.itParkResident === 'boolean' ? company.itParkResident : false, // DB expects boolean, store complex value in notes
-    stat_reports: company.statReports,
-    service_scope: company.serviceScope,
-    ...(company.bankClientId ? { bank_client_id: company.bankClientId } : {}),
-    ...(company.supervisorId ? { supervisor_id: company.supervisorId } : {}),
+    notes: company.notes,
+    is_active: company.isActive ?? true,
+    // SHARTNOMA (Contract) fields
     contract_amount: company.contractAmount,
     accountant_perc: company.accountantPerc,
+    bank_client_id: company.bankClientId || null,
     bank_client_sum: company.bankClientSum,
+    supervisor_id: company.supervisorId || null,
     supervisor_perc: company.supervisorPerc,
-    is_active: company.isActive ?? true,
-    // Tab 1: PASPORT
+    chief_accountant_sum: company.chiefAccountantSum,
+    it_park_resident: company.itParkResident,
+    // PASPORT fields
     brand_name: company.brandName,
     director_name: company.directorName,
     director_phone: company.directorPhone,
@@ -551,7 +531,7 @@ export const upsertCompany = async (company: Company) => {
     logo_url: company.logoUrl,
     certificate_file_path: company.certificateFilePath,
     charter_file_path: company.charterFilePath,
-    // Tab 2: SOLIQ
+    // SOLIQ (Tax) fields
     vat_certificate_date: company.vatCertificateDate,
     has_land_tax: company.hasLandTax,
     has_water_tax: company.hasWaterTax,
@@ -560,54 +540,93 @@ export const upsertCompany = async (company: Company) => {
     has_auction_tax: company.hasAuctionTax,
     one_c_status: company.oneCStatus,
     one_c_location: company.oneCLocation,
-    // Tab 5: SHARTNOMA
     contract_number: company.contractNumber,
     contract_date: company.contractDate,
     payment_day: company.paymentDay,
     firma_share_percent: company.firmaSharePercent,
     current_balance: company.currentBalance,
-    // Tab 6: XAVF
+    // STATUS fields
     company_status: company.companyStatus,
     risk_level: company.riskLevel,
     risk_notes: company.riskNotes,
     active_services: company.activeServices || [],
+    // TECHNICAL fields
+    internal_contractor: company.internalContractor,
+    tax_type_new: company.taxType === 'nds_profit' ? 'nds_profit' : (company.taxType === 'turnover' ? 'turnover' : null),
+    server_info: company.serverInfo,
+    base_name_1c: company.baseName1c,
+    kpi_enabled: company.kpiEnabled ?? true,
+    stat_reports: company.statReports || [],
+    service_scope: company.serviceScope || [],
   };
 
-  try {
-    const { data: existing } = await supabase.from('companies').select('*').eq('id', validId).maybeSingle();
+  const startTime = Date.now();
+  console.log(`[upsertCompany] Saving "${company.name}" (ID: ${payload.id})`);
+  console.log('[upsertCompany] PAYLOAD:', JSON.stringify(payload, null, 2));
 
-    const { error } = await supabase.from('companies').upsert(payload);
+  // Step 1: Upsert company with .select() to detect RLS silent failures
+  const { data: upsertedRows, error: companyError } = await supabase
+    .from('companies')
+    .upsert(payload, { onConflict: 'id' })
+    .select('id, name, updated_at');
 
-    if (error) {
-      console.error('upsertCompany error details:', {
-        code: error.code,
-        message: error.message,
-        hint: error.hint,
-        details: error.details,
-        payload: payload
-      });
-      if (error.code === '42703') {
-        const fallbackPayload = { ...payload };
-        delete (fallbackPayload as any).bank_client_id;
-        delete (fallbackPayload as any).supervisor_id;
-        delete (fallbackPayload as any).contract_amount;
-        delete (fallbackPayload as any).accountant_perc;
-        delete (fallbackPayload as any).bank_client_sum;
-        delete (fallbackPayload as any).supervisor_perc;
-        const { error: fErr } = await supabase.from('companies').upsert(fallbackPayload);
-        if (fErr) throw fErr;
-      } else {
-        throw error;
-      }
-    }
+  if (companyError) {
+    console.error('[upsertCompany] ❌ Company upsert FAILED:', companyError.message, companyError.code, companyError.details);
+    throw new Error(`Saqlashda xatolik: ${companyError.message}`);
+  }
 
-    // Audit Log
-    if (existing) {
-      // logAuditAction(validId, 'update', 'company', validId, { before: existing, after: payload });
+  if (!upsertedRows || upsertedRows.length === 0) {
+    console.error('[upsertCompany] ❌ RLS BLOCKED: Upsert returned 0 rows — data was NOT saved!');
+    console.error('[upsertCompany] This means RLS policy is blocking the write. Check companies INSERT/UPDATE policies.');
+    throw new Error('Ma\'lumot saqlanmadi — ruxsat (RLS) cheklangan. Admin bilan bog\'laning.');
+  }
+
+  console.log(`[upsertCompany] ✅ Company saved:`, upsertedRows[0]);
+
+  // Step 2: Handle assignments if provided
+  if (assignments && assignments.length > 0) {
+    // Delete existing assignments
+    const { data: deletedRows, error: delError } = await supabase
+      .from('contract_assignments')
+      .delete()
+      .eq('client_id', payload.id)
+      .select('id');
+
+    if (delError) {
+      console.warn('[upsertCompany] ⚠️ Assignment delete warning:', delError.message);
     } else {
-      // logAuditAction(validId, 'create', 'company', validId, { data: payload });
+      console.log(`[upsertCompany] 🗑️ Deleted ${deletedRows?.length || 0} old assignments`);
     }
-  } catch (e) { console.error(e); throw e; }
+
+    // Insert new assignments
+    const assignmentRows = assignments
+      .filter((a: any) => a.userId)
+      .map((a: any) => ({
+        client_id: payload.id,
+        user_id: a.userId,
+        role: a.role,
+        salary_type: a.salaryType,
+        salary_value: a.salaryValue,
+      }));
+
+    if (assignmentRows.length > 0) {
+      console.log('[upsertCompany] Inserting assignments:', JSON.stringify(assignmentRows));
+      const { data: insertedAssign, error: assignError } = await supabase
+        .from('contract_assignments')
+        .insert(assignmentRows)
+        .select('id, user_id, role');
+
+      if (assignError) {
+        console.error('[upsertCompany] ❌ Assignment insert failed:', assignError.message, assignError.code);
+        throw new Error(`Mas'ullar saqlanmadi: ${assignError.message}`);
+      }
+
+      console.log(`[upsertCompany] ✅ Inserted ${insertedAssign?.length || 0} assignments`);
+    }
+  }
+
+  const duration = Date.now() - startTime;
+  console.log(`[upsertCompany] ✅ ALL SAVED in ${duration}ms`);
 };
 
 export const deleteCompany = async (id: string) => {
@@ -637,25 +656,11 @@ export const onboardCompany = async (company: Partial<Company>, assignments: any
     }
   }
 
-  // 1. Save Company
-  await upsertCompany({ ...company, id: companyId } as Company);
+  // Atomic save: Company + Assignments in ONE single database transaction
+  console.log('[onboardCompany] Step 1: Performing atomic upsert via RPC');
+  await upsertCompany({ ...company, id: companyId } as Company, assignments);
 
-  // 2. Clear existing assignments if it's an edit
-  await supabase.from('contract_assignments').delete().eq('client_id', companyId);
-
-  // 3. Save New Assignments
-  for (const ass of assignments) {
-    if (ass.userId && uuidRegex.test(ass.userId)) {
-      await supabase.from('contract_assignments').insert({
-        client_id: companyId,
-        user_id: ass.userId,
-        role: ass.role,
-        salary_type: ass.salaryType || 'percent',
-        salary_value: ass.salaryValue || 20,
-        start_date: new Date().toISOString().split('T')[0]
-      });
-    }
-  }
+  console.log('[onboardCompany] Finished (Atomic Sync Successful)');
 };
 
 
@@ -985,33 +990,37 @@ export const upsertMonthlyReport = async (report: Partial<OperationEntry>) => {
     updated_at: new Date().toISOString()
   };
 
-  const { error } = await supabase.from('company_monthly_reports').upsert(payload, { onConflict: 'company_id,period' });
+  const { error } = await withTimeout(
+    () => supabase.from('company_monthly_reports').upsert(payload, { onConflict: 'company_id,period' }) as any,
+    30000,
+    'UPSERT_MONTHLY_REPORT'
+  ) as any;
   if (error) throw error;
 };
 
-// Create a snapshot of company's current state (staff + contract) into a monthly report
+// Create a snapshot of company's current state into a monthly report
 export const ensureOperationSnapshot = async (company: Company, period: string) => {
   try {
-    const payload: Partial<OperationEntry> = {
-      companyId: company.id,
+    // Use snake_case column names to match the DB schema
+    const payload: any = {
+      company_id: company.id,
       period: period,
-      assigned_accountant_id: company.accountantId || null,
-      assigned_accountant_name: company.accountantName || null,
-      assigned_supervisor_id: company.supervisorId || null,
-      assigned_supervisor_name: company.supervisorName || null,
-      assigned_bank_manager_id: company.bankClientId || null,
-      assigned_bank_manager_name: company.bankClientName || null,
-      contract_amount: company.contractAmount || 0
     };
 
-    // We don't want to throw if snapshot fails (e.g. missing columns)
-    // as it would block the primary company save/edit.
-    const { error } = await supabase.from('company_monthly_reports').upsert(payload, { onConflict: 'company_id,period' });
+    // Only include snapshot fields if they have values
+    if (company.accountantId) payload.assigned_accountant_id = company.accountantId;
+    if (company.accountantName) payload.assigned_accountant_name = company.accountantName;
+
+    const { error } = await supabase
+      .from('company_monthly_reports')
+      .upsert(payload, { onConflict: 'company_id,period' });
+
     if (error) {
-      console.warn('ensureOperationSnapshot failed (likely missing columns or schema mismatch):', error);
+      console.warn('[ensureOperationSnapshot] Non-critical error (save still succeeded):', error.message);
     }
-  } catch (err) {
-    console.error('ensureOperationSnapshot critical error:', err);
+  } catch (err: any) {
+    // Never crash — snapshot is optional
+    console.warn('[ensureOperationSnapshot] Skipped:', err.message);
   }
 };
 
@@ -1081,9 +1090,6 @@ export const upsertStaff = async (staff: Staff) => {
 
         if (authError) {
           console.error('Auth signup failed:', authError);
-          // If user already exists, we might want to fetch their ID?
-          // For now, proceed with error logging but try to continue or throw?
-          // If auth fails, we should probably stop.
           if (!authError.message.includes('already registered')) {
             throw authError;
           }

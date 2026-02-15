@@ -162,7 +162,8 @@ const AnalysisModule: React.FC<Props> = ({
 
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => {
-    setHasMounted(true);
+    const timer = setTimeout(() => setHasMounted(true), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -227,9 +228,9 @@ const AnalysisModule: React.FC<Props> = ({
             <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
             Hisobotlar Holati
           </h3>
-          <div className="h-[350px] w-full">
-            {hasMounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={350} minWidth={0}>
+          <div className="h-[350px] min-h-[350px] w-full relative overflow-hidden flex items-center justify-center">
+            {hasMounted ? (
+              <ResponsiveContainer width="100%" height={350}>
                 <BarChart data={reportStatusData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12, fontWeight: 600 }} dy={10} />
@@ -245,6 +246,8 @@ const AnalysisModule: React.FC<Props> = ({
                   <Bar dataKey="Kutilmoqda" stackId="a" fill="#CBD5E1" radius={[4, 4, 0, 0]} barSize={40} />
                 </BarChart>
               </ResponsiveContainer>
+            ) : (
+              <div className="w-12 h-12 border-4 border-slate-200 border-t-indigo-500 rounded-full animate-spin"></div>
             )}
           </div>
         </div>
@@ -255,9 +258,9 @@ const AnalysisModule: React.FC<Props> = ({
             2026 Statistika (Top 6)
           </h3>
           <p className="text-xs text-slate-400 font-medium mb-6 pl-4">Eng ko'p topshirilgan hisobotlar</p>
-          <div className="flex-1 w-full min-h-[300px]">
-            {hasMounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0}>
+          <div className="flex-1 w-full min-h-[300px] flex items-center justify-center">
+            {hasMounted ? (
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart layout="vertical" data={stats2026Data} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                   <XAxis type="number" hide />
                   <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#64748B', fontWeight: 700 }} axisLine={false} tickLine={false} />
@@ -265,7 +268,7 @@ const AnalysisModule: React.FC<Props> = ({
                   <Bar dataKey="value" fill="#EC4899" radius={[0, 8, 8, 0]} barSize={20} background={{ fill: '#F1F5F9', radius: [0, 8, 8, 0] }} />
                 </BarChart>
               </ResponsiveContainer>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -273,9 +276,9 @@ const AnalysisModule: React.FC<Props> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="bg-white dark:bg-apple-darkCard p-8 rounded-[2.5rem] border border-apple-border dark:border-apple-darkBorder">
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Soliq Rejimi Bo'yicha</h3>
-          <div className="h-64 flex items-center justify-center">
-            {hasMounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={256} minWidth={0}>
+          <div className="h-64 flex items-center justify-center relative overflow-hidden">
+            {hasMounted ? (
+              <ResponsiveContainer width="100%" height={256}>
                 <PieChart>
                   <Pie
                     data={[
@@ -296,6 +299,8 @@ const AnalysisModule: React.FC<Props> = ({
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
+            ) : (
+              <div className="w-10 h-10 border-4 border-slate-100 border-t-indigo-500 rounded-full animate-spin"></div>
             )}
           </div>
         </div>
