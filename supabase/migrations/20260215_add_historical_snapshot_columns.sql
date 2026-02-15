@@ -4,6 +4,10 @@ ALTER TABLE company_monthly_reports ADD COLUMN IF NOT EXISTS assigned_supervisor
 ALTER TABLE company_monthly_reports ADD COLUMN IF NOT EXISTS assigned_bank_manager_id UUID REFERENCES profiles(id);
 ALTER TABLE company_monthly_reports ADD COLUMN IF NOT EXISTS assigned_bank_manager_name TEXT;
 ALTER TABLE company_monthly_reports ADD COLUMN IF NOT EXISTS contract_amount NUMERIC;
+ALTER TABLE company_monthly_reports ADD COLUMN IF NOT EXISTS assigned_accountant_id UUID REFERENCES profiles(id);
+ALTER TABLE company_monthly_reports ADD COLUMN IF NOT EXISTS assigned_accountant_name TEXT;
 
--- Ensure operations table (usually an alias or same structure) also has these if it's separate
--- In some environments they might be the same table.
+-- Indexing for performance
+CREATE INDEX IF NOT EXISTS idx_monthly_reports_accountant ON company_monthly_reports(assigned_accountant_id);
+CREATE INDEX IF NOT EXISTS idx_monthly_reports_supervisor ON company_monthly_reports(assigned_supervisor_id);
+CREATE INDEX IF NOT EXISTS idx_monthly_reports_bank ON company_monthly_reports(assigned_bank_manager_id);

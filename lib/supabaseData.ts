@@ -774,7 +774,15 @@ export const upsertOperationsBatch = async (ops: OperationEntry[]) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     let validId = op.id;
     if (!validId || !uuidRegex.test(validId)) {
-      validId = crypto.randomUUID();
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        validId = crypto.randomUUID();
+      } else {
+        validId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      }
     }
     const kpiStore = op.kpi ? JSON.stringify({ kpi: op.kpi }) : (op.comment || '');
 
@@ -983,19 +991,28 @@ export const upsertMonthlyReport = async (report: Partial<OperationEntry>) => {
 
 // Create a snapshot of company's current state (staff + contract) into a monthly report
 export const ensureOperationSnapshot = async (company: Company, period: string) => {
-  const payload: Partial<OperationEntry> = {
-    companyId: company.id,
-    period: period,
-    assigned_accountant_id: company.accountantId,
-    assigned_accountant_name: company.accountantName,
-    assigned_supervisor_id: company.supervisorId,
-    assigned_supervisor_name: company.supervisorName,
-    assigned_bank_manager_id: company.bankClientId,
-    assigned_bank_manager_name: company.bankClientName,
-    contract_amount: company.contractAmount
-  };
+  try {
+    const payload: Partial<OperationEntry> = {
+      companyId: company.id,
+      period: period,
+      assigned_accountant_id: company.accountantId || null,
+      assigned_accountant_name: company.accountantName || null,
+      assigned_supervisor_id: company.supervisorId || null,
+      assigned_supervisor_name: company.supervisorName || null,
+      assigned_bank_manager_id: company.bankClientId || null,
+      assigned_bank_manager_name: company.bankClientName || null,
+      contract_amount: company.contractAmount || 0
+    };
 
-  await upsertMonthlyReport(payload);
+    // We don't want to throw if snapshot fails (e.g. missing columns)
+    // as it would block the primary company save/edit.
+    const { error } = await supabase.from('company_monthly_reports').upsert(payload, { onConflict: 'company_id,period' });
+    if (error) {
+      console.warn('ensureOperationSnapshot failed (likely missing columns or schema mismatch):', error);
+    }
+  } catch (err) {
+    console.error('ensureOperationSnapshot critical error:', err);
+  }
 };
 
 // Staff
@@ -1084,7 +1101,15 @@ export const upsertStaff = async (staff: Staff) => {
 
   // Fallback ID generation if Auth didn't provide one
   if (!validId || !uuidRegex.test(validId)) {
-    validId = crypto.randomUUID();
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      validId = crypto.randomUUID();
+    } else {
+      validId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
   }
 
   // Map roles to DB enum: 'super_admin', 'manager', 'accountant', 'auditor'
