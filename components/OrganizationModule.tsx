@@ -509,7 +509,6 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                     </th>
                     <th className="px-4 py-6 text-apple-accent">Shartnoma summasi</th>
                     <th className="px-4 py-6">{t.regime}</th>
-                    <th className="px-4 py-6">Raxbar / Ega</th>
                     <th className="px-4 py-6">Buxgalter</th>
                     <th className="px-4 py-6">Nazoratchi</th>
                     <th className="px-4 py-6">Server</th>
@@ -554,10 +553,6 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                           <span className={`px-2 py-1 ${c.taxType?.includes('nds') ? 'bg-rose-500/10 text-rose-500' : 'bg-apple-accent/10 text-apple-accent'} text-[10px] font-black uppercase rounded-lg`}>
                             {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'Aylanma' : (c.taxType || 'Fix'))}
                           </span>
-                        </td>
-                        <td className="px-4 py-5">
-                          <div className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">{c.directorName || c.ownerName || '—'}</div>
-                          {c.directorPhone && <div className="text-[10px] text-slate-400 font-mono">{c.directorPhone}</div>}
                         </td>
                         <td className="px-4 py-5">
                           <p className="text-xs font-black text-slate-700 dark:text-slate-200">{displayAccountant || '—'}</p>
