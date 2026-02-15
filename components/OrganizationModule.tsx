@@ -25,6 +25,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingAssignments, setEditingAssignments] = useState<any[] | undefined>(undefined);
   const [isAdding, setIsAdding] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<Partial<Company>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
@@ -193,12 +194,30 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
     }
   };
 
-  const handleSave = () => {
-    if (form.name && form.inn) {
-      onSave(form as Company);
-      setEditingId(null);
-      setIsAdding(false);
-      setForm({});
+  const handleSave = async (data?: Partial<Company>, assignments?: any[]) => {
+    if (isSaving) return;
+
+    // If called from OnboardingWizard, it passes data and assignments
+    // If called from legacy handleSave (line 196), it uses state 'form'
+    const finalData = data || form;
+
+    if (finalData.name && finalData.inn) {
+      setIsSaving(true);
+      try {
+        await onSave({ ...finalData, id: editingId || finalData.id }, assignments);
+        setEditingId(null);
+        setIsAdding(false);
+        setForm({});
+        setEditingAssignments(undefined);
+        toast.success(editingId ? 'Firma tahrirlandi' : 'Yangi firma qo\'shildi');
+      } catch (error: any) {
+        console.error('Save error:', error);
+        toast.error(error.message || 'Saqlashda xatolik yuz berdi');
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      toast.error('Iltimos, barcha majburiy maydonlarni to\'ldiring');
     }
   };
 
@@ -426,20 +445,20 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 staff={staff}
                 initialData={form}
                 initialAssignments={editingAssignments}
-                onSave={(data, assignments) => {
-                  onSave({ ...data, id: editingId || data.id }, assignments);
-                  setIsAdding(false);
-                  setEditingId(null);
-                  setForm({});
-                  setEditingAssignments(undefined);
-                }}
+                onSave={handleSave}
                 onCancel={() => {
+                  if (isSaving) return;
                   setIsAdding(false);
                   setEditingId(null);
                   setForm({});
                   setEditingAssignments(undefined);
                 }}
               />
+              {isSaving && (
+                <div className="absolute inset-0 z-[110] flex items-center justify-center bg-white/50 dark:bg-black/50 rounded-[2.5rem]">
+                  <div className="w-12 h-12 border-4 border-apple-accent border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
             </div>
           </div>
         )}

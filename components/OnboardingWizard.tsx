@@ -192,6 +192,9 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     value={formData.serverInfo}
                                     onChange={e => setFormData({ ...formData, serverInfo: e.target.value as ServerInfo })}
                                 >
+                                    <option value="CR1">CR1</option>
+                                    <option value="CR2">CR2</option>
+                                    <option value="CR3">CR3</option>
                                     <option value="srv1c1">srv1c1 (Server 1)</option>
                                     <option value="srv1c2">srv1c2 (Server 2)</option>
                                     <option value="srv1c3">srv1c3 (Server 3)</option>

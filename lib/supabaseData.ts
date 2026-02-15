@@ -396,7 +396,7 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       inn: c.inn,
       accountantName: (c.accountant as any)?.full_name || c.accountant_id,
       accountantId: c.accountant_id,
-      taxType: c.tax_type_new || c.tax_regime,
+      taxType: c.tax_type_new || (c.tax_regime === 'vat' ? TaxType.NDS_PROFIT : (c.tax_regime === 'turnover' ? TaxType.TURNOVER : TaxType.FIXED)),
       department: c.department,
       statsType: c.stats_type,
       login: c.login,
@@ -505,13 +505,13 @@ export const upsertCompany = async (company: Company) => {
 
 
   // Map tax type to V2 enum safely
-  let taxTypeV2 = (company.taxType === 'turnover' || company.taxType === 'nds_profit') ? company.taxType : undefined;
+  let taxTypeV2 = (company.taxType === TaxType.TURNOVER || company.taxType === TaxType.NDS_PROFIT || company.taxType === TaxType.FIXED) ? company.taxType : undefined;
 
   // Map server info to enum safely
-  const validServers = ['CR1', 'CR2', 'CR3'];
+  const validServers = ['CR1', 'CR2', 'CR3', 'srv1c1', 'srv1c2', 'srv1c3', 'srv2'];
   const serverInfoEnum = typeof company.serverInfo === 'string' && validServers.includes(company.serverInfo)
     ? company.serverInfo
-    : undefined;
+    : (company.serverInfo ? company.serverInfo : undefined);
 
   const payload = {
     id: validId,
