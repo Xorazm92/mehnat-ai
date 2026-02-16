@@ -291,10 +291,12 @@ const App: React.FC = () => {
 
   const kpis: AccountantKPI[] = useMemo(() => {
     return staff.map(s => {
-      const myCompanies = companies.filter(c => c.accountantId === s.id);
-      const myOps = operations.filter(op => op.period === selectedPeriod && myCompanies.some(c => c.id === op.companyId));
+      const myOps = operations.filter(op =>
+        op.period === selectedPeriod &&
+        op.assigned_accountant_id === s.id
+      );
 
-      const total = myCompanies.length;
+      const total = myOps.length;
       let annualCompleted = 0;
       let annualPending = 0;
       let annualBlocked = 0;
@@ -312,7 +314,7 @@ const App: React.FC = () => {
           if (val === '+' || val === 'topshirildi') annualCompleted++;
           else if (val === '-' || val === 'rad etildi') annualPending++;
           else if (val === 'kartoteka') annualBlocked++;
-          // Statistics is separate for legacy reasons but we can include it if svodOperationFilter === 'statistika'
+
           if (svodOperationFilter === 'statistika' && val === '+') statsCompleted++;
         });
       }

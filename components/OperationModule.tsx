@@ -412,7 +412,7 @@ const OperationModule: React.FC<Props> = ({
         index: index + 1,
         name: comp.name,
         inn: comp.inn,
-        accountant: comp.accountantName || '—',
+        accountant: op?.assigned_accountant_name || comp.accountantName || '—',
         taxType: comp.taxType || '',
         login: comp.login || '',       // From DB company profile
         password: comp.password || '', // From DB company profile

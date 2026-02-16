@@ -98,8 +98,10 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         // Status filter
         const matchesStatus = filterStatus === 'all' || (c.companyStatus || 'active') === filterStatus;
 
-        // Employee filter (accountant)
-        const matchesEmployee = filterEmployee === 'all' || c.accountantId === filterEmployee;
+        // Employee filter (accountant) - Use historical assignment for the selected period if available
+        const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
+        const currentAccountantId = op?.assigned_accountant_id || c.accountantId;
+        const matchesEmployee = filterEmployee === 'all' || currentAccountantId === filterEmployee;
 
         // Risk filter
         const matchesRisk = filterRisk === 'all' || (c.riskLevel || 'low') === filterRisk;
@@ -122,7 +124,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [companies, search, sortField, sortOrder, filterActive, filterTaxType, filterStatus, filterEmployee, filterRisk]);
+  }, [companies, search, sortField, sortOrder, filterActive, filterTaxType, filterStatus, filterEmployee, filterRisk, filterServer, filterItPark, filterKpi, operations, selectedPeriod]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);

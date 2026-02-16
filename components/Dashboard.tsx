@@ -123,27 +123,21 @@ const Dashboard: React.FC<DashboardProps> = ({
       'bonak', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi'
     ] as const;
 
-    const statsTotal = companies.length * REPORT_FIELDS.length || 1;
+    const opsForPeriod = operations.filter(o => o.period === selectedPeriod);
+    const statsTotal = (opsForPeriod.length * REPORT_FIELDS.length) || 1;
     const reportStats = { done: 0, pending: 0, blocked: 0, total: statsTotal, itParkCount: 0 };
 
-    companies.forEach(c => {
-      const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
-      // Count IT Park residents
-      if (c.itParkResident) reportStats.itParkCount = (reportStats.itParkCount || 0) + 1;
+    opsForPeriod.forEach(op => {
+      const company = companies.find(c => c.id === op.companyId);
+      if (company?.itParkResident) reportStats.itParkCount++;
 
-      if (!op) {
-        reportStats.pending += REPORT_FIELDS.length;
-      } else {
-        REPORT_FIELDS.forEach(field => {
-          // @ts-ignore - Index access
-          const val = String(op[field] || '').trim().toLowerCase();
-          if (val === '+' || val.startsWith('+')) reportStats.done++;
-          else if (val === 'kartoteka') reportStats.blocked++;
-          else if (!val || val === '0' || val === '-') reportStats.pending++; // Treat '-' as pending/not done
-          // Custom text logic can be refined if needed
-          else reportStats.done++; // Assume text means done/info
-        });
-      }
+      REPORT_FIELDS.forEach(field => {
+        const val = String((op as any)[field] || '').trim().toLowerCase();
+        if (val === '+' || val.startsWith('+')) reportStats.done++;
+        else if (val === 'kartoteka') reportStats.blocked++;
+        else if (!val || val === '0' || val === '-') reportStats.pending++;
+        else reportStats.done++;
+      });
     });
 
     const completionRate = (reportStats.done / statsTotal) * 100;
@@ -184,7 +178,8 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   // Role-Based Routing (Moved after hooks)
   if (userRole === ROLES.ACCOUNTANT) {
-    const myCompanies = userId ? companies.filter(c => c.accountantId === userId) : [];
+    const myOps = userId ? operations.filter(op => op.period === selectedPeriod && op.assigned_accountant_id === userId) : [];
+    const myCompanies = companies.filter(c => myOps.some(op => op.companyId === c.id));
     return <AccountantDashboard companies={myCompanies} operations={operations} selectedPeriod={selectedPeriod} lang={lang} />;
   }
 
@@ -193,7 +188,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   }
 
   if (userRole === ROLES.BANK_MANAGER) {
-    const myCompanies = userId ? companies.filter(c => c.bankClientId === userId) : [];
+    const myOps = userId ? operations.filter(op => op.period === selectedPeriod && op.assigned_bank_manager_id === userId) : [];
+    const myCompanies = companies.filter(c => myOps.some(op => op.companyId === c.id));
     return <AccountantDashboard companies={myCompanies} operations={operations} selectedPeriod={selectedPeriod} lang={lang} />;
   }
 

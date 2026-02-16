@@ -12,7 +12,7 @@ export const generatePeriods = () => {
 
     for (let year = startYear; year <= endYear; year++) {
         // User requested removing Yearly and Quarterly options.
-        // periods.push(`${year} Yillik`);
+        periods.push(`${year} Yillik`);
         // periods.push(`${year} Q1`);
         // periods.push(`${year} Q2`);
         // periods.push(`${year} Q3`);
