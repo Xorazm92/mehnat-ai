@@ -4,7 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { translations } from '../lib/translations';
 import { ROLES } from '../lib/permissions';
 import AccountantDashboard from './AccountantDashboard';
-import NazoratchiChecklist from './NazoratchiChecklist';
+import SupervisorDashboard from './SupervisorDashboard';
 import { AVAILABLE_PERIODS } from '../lib/periods';
 import { MonthPicker } from './ui/MonthPicker';
 
@@ -176,7 +176,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Role-Based Routing (Moved after hooks)
+  // Role-Based Routing (DISPATCHER REMOVED - REVERTING TO GLOBAL VIEW)
+  /*
   if (userRole === ROLES.ACCOUNTANT) {
     const myOps = userId ? operations.filter(op => op.period === selectedPeriod && op.assigned_accountant_id === userId) : [];
     const myCompanies = companies.filter(c => myOps.some(op => op.companyId === c.id));
@@ -184,7 +185,20 @@ const Dashboard: React.FC<DashboardProps> = ({
   }
 
   if (userRole === ROLES.SUPERVISOR) {
-    return <NazoratchiChecklist companies={companies} staff={staff} lang={lang} currentUserRole={userRole} currentUserId={userId} />;
+    return (
+      <SupervisorDashboard
+        companies={companies}
+        operations={operations}
+        staff={staff}
+        payments={payments}
+        expenses={expenses}
+        selectedPeriod={selectedPeriod}
+        onPeriodChange={onPeriodChange}
+        lang={lang}
+        currentUserId={userId}
+        currentUserName={staff.find(s => s.id === userId)?.name}
+      />
+    );
   }
 
   if (userRole === ROLES.BANK_MANAGER) {
@@ -192,6 +206,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     const myCompanies = companies.filter(c => myOps.some(op => op.companyId === c.id));
     return <AccountantDashboard companies={myCompanies} operations={operations} selectedPeriod={selectedPeriod} lang={lang} />;
   }
+  */
 
   return (
     <div className="space-y-8 animate-macos pb-10 max-w-[1400px] mx-auto">

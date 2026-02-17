@@ -37,7 +37,7 @@ export enum TaxType {
 
 export type ServerInfo = 'CR1' | 'CR2' | 'CR3' | 'srv1c1' | 'srv1c2' | 'srv1c3' | 'srv2';
 export type SalaryCalculationType = 'percent' | 'fixed';
-export type ContractRole = 'accountant' | 'controller' | 'bank_manager' | 'chief';
+export type ContractRole = 'accountant' | 'controller' | 'bank_manager' | 'chief' | 'chief_accountant';
 
 export enum ReportStatus {
   ACCEPTED = '+',

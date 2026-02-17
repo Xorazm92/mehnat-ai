@@ -129,6 +129,11 @@ export const fetchProfile = async (userId: string) => {
     console.error('fetchProfile', error);
     return null;
   }
+  // Normalize roles for frontend
+  if (data) {
+    if (data.role === 'manager') data.role = 'supervisor';
+    if (data.full_name === 'Super Admin' && data.role === 'supervisor') data.role = 'chief_accountant';
+  }
   return data;
 };
 
@@ -454,7 +459,7 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       accountantPerc: (c as any).accountant_perc ?? (extra.aperc || 0),
       bankClientPerc: extra.bcp || 0,
       bankClientSum: (c as any).bank_client_sum ?? (extra.bcsum || 0),
-      chiefAccountantPerc: extra.cperc || 0,
+      chiefAccountantPerc: extra.cperc ?? 7,
       chiefAccountantSum: (c as any).chief_accountant_sum ?? (extra.casum || 0),
       supervisorPerc: (c as any).supervisor_perc ?? (extra.sperc || 0),
       ownerName: extra.on,
@@ -1043,24 +1048,36 @@ export const fetchStaff = async (): Promise<Staff[]> => {
       return [];
     }
 
-    return minData.map((p) => ({
-      id: p.id,
-      name: p.full_name,
-      role: p.role,
-      avatarColor: 'hsl(200,50%,50%)',
-      phone: '',
-      is_active: true
-    })) as Staff[];
+    return minData.map((p) => {
+      let role = p.role;
+      if (role === 'manager') role = 'supervisor';
+      if (p.full_name === 'Super Admin' && role === 'supervisor') role = 'chief_accountant';
+
+      return {
+        id: p.id,
+        name: p.full_name,
+        role: role,
+        avatarColor: 'hsl(200,50%,50%)',
+        phone: '',
+        is_active: true
+      };
+    }) as Staff[];
   }
 
-  return data.map((p) => ({
-    id: p.id,
-    name: p.full_name,
-    role: p.role,
-    avatarColor: p.avatar_color || 'hsl(200,50%,50%)',
-    phone: p.phone,
-    is_active: p.is_active ?? true
-  })) as Staff[];
+  return data.map((p) => {
+    let role = p.role;
+    if (role === 'manager') role = 'supervisor';
+    if (p.full_name === 'Super Admin' && role === 'supervisor') role = 'chief_accountant';
+
+    return {
+      id: p.id,
+      name: p.full_name,
+      role: role,
+      avatarColor: p.avatar_color || 'hsl(200,50%,50%)',
+      phone: p.phone || '',
+      is_active: p.is_active ?? true
+    };
+  }) as Staff[];
 };
 
 export const upsertStaff = async (staff: Staff) => {
@@ -1118,12 +1135,12 @@ export const upsertStaff = async (staff: Staff) => {
     }
   }
 
-  // Map roles to DB enum: 'super_admin', 'manager', 'accountant', 'auditor'
-  let dbRole = 'accountant';
-  const r = staff.role?.toLowerCase() || '';
-  if (r.includes('admin') || r.includes('chief')) dbRole = 'super_admin';
-  else if (r.includes('manager') || r.includes('supervisor') || r.includes('controller')) dbRole = 'manager';
-  else if (r.includes('audit')) dbRole = 'auditor';
+  // Map roles to DB enum strictly: 'super_admin', 'chief_accountant', 'supervisor', 'bank_manager', 'accountant', 'auditor'
+  let dbRole = staff.role?.toLowerCase() || 'accountant';
+
+  // Normalize known legacy mappings if needed
+  if (dbRole === 'admin') dbRole = 'super_admin';
+  if (dbRole === 'manager') dbRole = 'supervisor';
 
   const payload = {
     id: validId,

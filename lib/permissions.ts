@@ -2,10 +2,11 @@ import { ContractRole, AppView } from '../types';
 
 // Role Definitions (mirroring DB)
 export const ROLES = {
-    SUPER_ADMIN: 'super_admin', // Yorkinoy
-    ADMIN: 'admin',             // Alias for existing systems
-    SUPERVISOR: 'supervisor',   // Nazoratchi
-    ACCOUNTANT: 'accountant',   // Buxgalter
+    SUPER_ADMIN: 'super_admin', // Yorkinoy (Main admin)
+    ADMIN: 'admin',             // Alias
+    CHIEF_ACCOUNTANT: 'chief_accountant', // Yorqinoy
+    SUPERVISOR: 'supervisor',   // Go'zaloy
+    ACCOUNTANT: 'accountant',   // Staff
     BANK_MANAGER: 'bank_manager' // Bank
 } as const;
 
@@ -27,8 +28,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Capability[]> = {
     [ROLES.ADMIN]: [
         'view_all_companies', 'edit_contracts', 'manage_staff', 'view_salaries', 'approve_kpi', 'process_payments'
     ],
+    [ROLES.CHIEF_ACCOUNTANT]: [
+        'view_all_companies', 'manage_staff', 'view_salaries', 'approve_kpi'
+    ],
     [ROLES.SUPERVISOR]: [
-        'view_all_companies', 'manage_staff', 'approve_kpi'
+        'view_all_companies', 'manage_staff', 'approve_kpi', 'view_salaries'
     ],
     [ROLES.ACCOUNTANT]: [
         // Limited access
@@ -42,7 +46,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Capability[]> = {
 export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     [ROLES.SUPER_ADMIN]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll', 'audit_logs'],
     [ROLES.ADMIN]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll', 'audit_logs'],
-    [ROLES.SUPERVISOR]: ['dashboard', 'organizations', 'staff', 'reports', 'kpi', 'cabinet', 'payroll'],
+    [ROLES.CHIEF_ACCOUNTANT]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll'],
+    [ROLES.SUPERVISOR]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll'],
     [ROLES.ACCOUNTANT]: ['dashboard', 'organizations', 'reports', 'cabinet'], // Filtered orgs
     [ROLES.BANK_MANAGER]: ['dashboard', 'kassa', 'expenses', 'cabinet']
 };

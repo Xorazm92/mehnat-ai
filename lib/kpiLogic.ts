@@ -116,8 +116,13 @@ export const calculateCompanySalaries = (
     calculateForRole('bank_manager', company.bankClientId, company.bankClientName, company.bankClientPerc, company.bankClientSum);
 
     // chief_accountant
-    if (company.chiefAccountantPerc || company.chiefAccountantSum) {
-        calculateForRole('chief_accountant', undefined, 'Chief Accountant', company.chiefAccountantPerc, company.chiefAccountantSum);
+    // Yorqinoy (admin@asos.uz) always gets 7% of every company if she is the Chief Accountant
+    const CHIEF_ID = 'a67f17ee-42a2-40d0-8a08-3f98fa5692ac';
+    const chiefPerc = company.chiefAccountantPerc ?? 7; // Default to 7% as per global standard
+    const chiefSum = company.chiefAccountantSum || 0;
+
+    if (chiefPerc > 0 || chiefSum > 0) {
+        calculateForRole('chief_accountant', CHIEF_ID, 'Yorqinoy (Bosh Buxgalter)', chiefPerc, chiefSum);
     }
 
     // supervisor

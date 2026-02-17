@@ -1,0 +1,162 @@
+[
+  {
+    "id": "a67f17ee-42a2-40d0-8a08-3f98fa5692ac",
+    "full_name": "Super Admin",
+    "role": "super_admin"
+  },
+  {
+    "id": "e41971bf-a0df-48da-b844-dca0ee2dfb49",
+    "full_name": "Otabek",
+    "role": "accountant"
+  },
+  {
+    "id": "7dcd6c86-f6ba-4015-a90e-d20d2127aa46",
+    "full_name": "Ruslan",
+    "role": "accountant"
+  },
+  {
+    "id": "75e39e2f-bdea-40c0-b104-085f8bc982cb",
+    "full_name": "Abrorbek",
+    "role": "accountant"
+  },
+  {
+    "id": "d45bc42d-bb90-4a12-93b3-b288a30d1cfa",
+    "full_name": "Maxmuda",
+    "role": "accountant"
+  },
+  {
+    "id": "769575bf-6f19-405d-bd21-e7a8a153994a",
+    "full_name": "Mirabbos",
+    "role": "accountant"
+  },
+  {
+    "id": "d49a8021-824d-45f6-b07e-e3f2c1acc889",
+    "full_name": "Axmadjon",
+    "role": "accountant"
+  },
+  {
+    "id": "199cfdda-bc8e-4a43-afda-85fdfa0c7bf3",
+    "full_name": "Humora",
+    "role": "accountant"
+  },
+  {
+    "id": "b717137c-607f-4f16-91ba-01ec093c3288",
+    "full_name": "Zamira",
+    "role": "accountant"
+  },
+  {
+    "id": "7eb13423-bc35-4047-9a9b-9f44b3b56285",
+    "full_name": "Javohir",
+    "role": "accountant"
+  },
+  {
+    "id": "dd2afdb7-907b-4a9d-8c57-7a7b5cefdb35",
+    "full_name": "Dilhush",
+    "role": "accountant"
+  },
+  {
+    "id": "5a8b91a6-f2e8-46bf-9092-5fceeef54fa1",
+    "full_name": "Abdug'ani",
+    "role": "accountant"
+  },
+  {
+    "id": "95ce70ea-c2c5-49e7-9648-b2650f5a12dd",
+    "full_name": "Hasan",
+    "role": "accountant"
+  },
+  {
+    "id": "bc418d67-5282-40e2-8681-60a939ef57bf",
+    "full_name": "Ilhom",
+    "role": "accountant"
+  },
+  {
+    "id": "5b13eedb-c0e9-4ba2-9fca-d387b99cd2e8",
+    "full_name": "Mirahmad",
+    "role": "accountant"
+  },
+  {
+    "id": "bbfc61b7-d4b7-4546-8977-f9270ee80423",
+    "full_name": "Adham",
+    "role": "accountant"
+  },
+  {
+    "id": "44a76788-11ff-4c88-8b8a-4a93df6907ac",
+    "full_name": "Kamron",
+    "role": "accountant"
+  },
+  {
+    "id": "af3dd5c3-1d10-4866-b609-4804e52f9bc7",
+    "full_name": "Elbek",
+    "role": "accountant"
+  },
+  {
+    "id": "f9d34596-45b9-4240-baf5-c652646d249d",
+    "full_name": "Sevara",
+    "role": "accountant"
+  },
+  {
+    "id": "629c37a1-a01f-43d6-84dd-75ec7de32d05",
+    "full_name": "Azizbek",
+    "role": "accountant"
+  },
+  {
+    "id": "d6dcb976-cc53-49da-a1bc-219317a10394",
+    "full_name": "Mohirbek",
+    "role": "accountant"
+  },
+  {
+    "id": "657913b3-5902-4cd9-97ae-70cf37192212",
+    "full_name": "Abdugani",
+    "role": "accountant"
+  },
+  {
+    "id": "bf31d133-b96e-49a1-af7a-9cbece25a88b",
+    "full_name": "Alisher",
+    "role": "accountant"
+  },
+  {
+    "id": "f046e511-aac8-4a39-811f-a94b41883d02",
+    "full_name": "Aziz shogird",
+    "role": "accountant"
+  },
+  {
+    "id": "ffa54f71-8e52-4f06-a81d-5daaecf7b8ea",
+    "full_name": "Bekzod",
+    "role": "accountant"
+  },
+  {
+    "id": "9d153da9-2adc-45a7-9ce9-80339b6b9fda",
+    "full_name": "Olloshukur",
+    "role": "accountant"
+  },
+  {
+    "id": "5e03386d-74cc-44b9-859f-afb8409178a3",
+    "full_name": "Sherzod",
+    "role": "accountant"
+  },
+  {
+    "id": "f6f88196-4556-4032-92b8-ee86c2a71a94",
+    "full_name": "Adxam",
+    "role": "accountant"
+  },
+  {
+    "id": "7673f6cc-2248-4e10-ae05-d7da943b9d81",
+    "full_name": "Abdulaziz",
+    "role": "accountant"
+  },
+  {
+    "id": "99f728be-7822-46dd-958a-440ee76aa577",
+    "full_name": "Muslimbek",
+    "role": "super_admin"
+  },
+  {
+    "id": "83130d2d-1f2a-4a15-95df-c9048a278405",
+    "full_name": "Musobek",
+    "role": "super_admin"
+  },
+  {
+    "id": "afb104a8-0032-476f-9042-d23ed5fe98b9",
+    "full_name": "Go'zaloy",
+    "role": "super_admin"
+  }
+]

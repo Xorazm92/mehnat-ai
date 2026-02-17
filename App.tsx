@@ -660,6 +660,7 @@ const App: React.FC = () => {
                     currentStaff={staff.find(s => s.id === session.user.id) || { id: session.user.id, name: userName, role: userRole, avatarColor: '#3b82f6' }}
                     companies={companies}
                     operations={operations}
+                    staff={staff}
                     lang={lang}
                   />
                 )}

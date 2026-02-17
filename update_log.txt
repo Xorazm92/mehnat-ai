@@ -1,0 +1,21 @@
+Fetching all profiles...
+No match for Go'zaloy
+No match for Yorqinoy
+Updating Muslimbek (99f728be-7822-46dd-958a-440ee76aa577) from supervisor to supervisor...
+Successfully updated to supervisor.
+Updating Musobek (83130d2d-1f2a-4a15-95df-c9048a278405) from supervisor to supervisor...
+Successfully updated to supervisor.
+Final State: [
+  {
+    "full_name": "Go'zaloy",
+    "role": "supervisor"
+  },
+  {
+    "full_name": "Muslimbek",
+    "role": "supervisor"
+  },
+  {
+    "full_name": "Musobek",
+    "role": "supervisor"
+  }
+]

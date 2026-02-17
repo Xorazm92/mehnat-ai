@@ -45,8 +45,13 @@ export default {
       },
       animation: {
         'shimmer': 'shimmer 2s infinite linear',
+        'macos': 'macos 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)',
       },
       keyframes: {
+        macos: {
+          '0%': { opacity: 0, transform: 'scale(0.96) translateY(10px)' },
+          '100%': { opacity: 1, transform: 'scale(1) translateY(0)' },
+        },
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
