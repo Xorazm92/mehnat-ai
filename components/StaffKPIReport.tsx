@@ -57,6 +57,12 @@ const StaffKPIReport: React.FC<Props> = ({ kpis, staff, lang, onStaffSelect, sel
     }
   };
 
+  const staffKey = (k: AccountantKPI, index: number) => {
+    const found = staff.find(s => s.name === k.name);
+    // Make key stable and unique even if staff has duplicate names or kpis contains duplicates
+    return [found?.id || 'no-id', k.name || 'no-name', String(index)].join('::');
+  };
+
   return (
     <div className="bg-[#1C1C1E] dark:bg-[#1C1C1E] rounded-[2.5rem] border border-[#2C2C2E] shadow-2xl overflow-hidden mb-12 md:mb-20 animate-macos">
       <div className="p-8 md:p-12 border-b border-[#2C2C2E] flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 bg-[#2C2C2E]/30">
@@ -111,9 +117,9 @@ const StaffKPIReport: React.FC<Props> = ({ kpis, staff, lang, onStaffSelect, sel
             </tr>
           </thead>
           <tbody className="divide-y divide-[#2C2C2E]">
-            {kpis.map((k) => (
+            {kpis.map((k, idx) => (
               <tr
-                key={k.name}
+                key={staffKey(k, idx)}
                 className="hover:bg-white/[0.03] transition-all group cursor-pointer"
                 onClick={() => handleStaffClick(k.name)}
               >

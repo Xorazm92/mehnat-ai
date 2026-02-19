@@ -49,12 +49,14 @@ CREATE INDEX IF NOT EXISTS idx_kpi_rules_active ON kpi_rules(is_active);
 -- RLS
 ALTER TABLE kpi_rules ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Everyone can view active KPI rules" ON kpi_rules;
 CREATE POLICY "Everyone can view active KPI rules"
     ON kpi_rules FOR SELECT
     USING (is_active = true OR EXISTS (
         SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'manager')
     ));
 
+DROP POLICY IF EXISTS "Only admins can manage KPI rules" ON kpi_rules;
 CREATE POLICY "Only admins can manage KPI rules"
     ON kpi_rules FOR ALL
     USING (EXISTS (
@@ -101,6 +103,7 @@ CREATE INDEX IF NOT EXISTS idx_monthly_perf_rule ON monthly_performance(rule_id)
 -- RLS
 ALTER TABLE monthly_performance ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view performance of their companies" ON monthly_performance;
 CREATE POLICY "Users can view performance of their companies"
     ON monthly_performance FOR SELECT
     USING (
@@ -119,6 +122,7 @@ CREATE POLICY "Users can view performance of their companies"
         )
     );
 
+DROP POLICY IF EXISTS "Supervisors and admins can record performance" ON monthly_performance;
 CREATE POLICY "Supervisors and admins can record performance"
     ON monthly_performance FOR INSERT
     WITH CHECK (
@@ -134,6 +138,7 @@ CREATE POLICY "Supervisors and admins can record performance"
         )
     );
 
+DROP POLICY IF EXISTS "Supervisors and admins can update performance" ON monthly_performance;
 CREATE POLICY "Supervisors and admins can update performance"
     ON monthly_performance FOR UPDATE
     USING (
@@ -181,6 +186,7 @@ CREATE INDEX IF NOT EXISTS idx_payroll_adj_type ON payroll_adjustments(adjustmen
 -- RLS
 ALTER TABLE payroll_adjustments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Employees can view their own adjustments" ON payroll_adjustments;
 CREATE POLICY "Employees can view their own adjustments"
     ON payroll_adjustments FOR SELECT
     USING (
@@ -190,6 +196,7 @@ CREATE POLICY "Employees can view their own adjustments"
         )
     );
 
+DROP POLICY IF EXISTS "Only admins can manage adjustments" ON payroll_adjustments;
 CREATE POLICY "Only admins can manage adjustments"
     ON payroll_adjustments FOR ALL
     USING (EXISTS (
@@ -220,6 +227,7 @@ CREATE INDEX IF NOT EXISTS idx_perf_change_log ON performance_change_log(perform
 -- RLS
 ALTER TABLE performance_change_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admins can view change logs" ON performance_change_log;
 CREATE POLICY "Admins can view change logs"
     ON performance_change_log FOR SELECT
     USING (EXISTS (
@@ -289,6 +297,7 @@ CREATE TRIGGER trigger_calculate_score
 -- G. FUNCTION: Calculate total salary for employee
 -- =====================================================
 
+DROP FUNCTION IF EXISTS calculate_employee_salary(uuid,date);
 CREATE OR REPLACE FUNCTION calculate_employee_salary(
     p_employee_id UUID,
     p_month DATE
@@ -349,27 +358,32 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 INSERT INTO kpi_rules (name, name_uz, role, reward_percent, penalty_percent, input_type, category, sort_order) VALUES
 -- Bank Klient qoidalari
-('bank_attendance', 'Ishga kelish/ketish', 'bank_client', 1.00, -1.00, 'checkbox', 'attendance', 1),
-('bank_telegram_ok', 'Telegramda javob berish', 'bank_client', 1.00, 0, 'checkbox', 'telegram', 2),
-('bank_telegram_missed', 'Telegram kechikish', 'bank_client', 0, -0.50, 'counter', 'telegram', 3),
+('bank_attendance', 'Ishga kelish/ketish', 'bank_client', 1.00, -1.00, 'checkbox', 'manual', 1),
+('bank_telegram_ok', 'Telegramda javob berish', 'bank_client', 1.00, 0, 'checkbox', 'manual', 2),
+('bank_telegram_missed', 'Telegram kechikish', 'bank_client', 0, -0.50, 'counter', 'manual', 3),
 
 -- Nazoratchi qoidalari
-('supervisor_attendance', 'Ishga kelish/ketish', 'supervisor', 0.50, -0.50, 'checkbox', 'attendance', 10),
+('supervisor_attendance', 'Ishga kelish/ketish', 'supervisor', 0.50, -0.50, 'checkbox', 'manual', 10),
 
 -- Buxgalter qoidalari
-('acc_telegram_ok', 'Telegramda javob berish', 'accountant', 1.00, 0, 'checkbox', 'telegram', 20),
-('acc_telegram_missed', 'Telegram kechikish (soni)', 'accountant', 0, -0.50, 'counter', 'telegram', 21),
-('acc_1c_base', '1C Baza yuritish', 'accountant', 1.00, 0, 'checkbox', 'reports', 22),
-('acc_didox', 'Didox nazorati', 'accountant', 0.25, -0.25, 'checkbox', 'reports', 23),
-('acc_letters', 'E-imzo (Xatlar)', 'accountant', 0.25, -0.25, 'checkbox', 'reports', 24),
-('acc_my_mehnat', 'my.mehnat.uz', 'accountant', 0.25, -0.25, 'checkbox', 'reports', 25),
-('acc_auto_cameral', 'Avtokameral', 'accountant', 0.25, -0.25, 'checkbox', 'reports', 26),
-('acc_cashflow', 'Pul oqimi (Cashflow)', 'accountant', 0.20, -0.20, 'checkbox', 'reports', 27),
-('acc_tax_info', 'Soliq ma''lumoti', 'accountant', 0.20, -0.20, 'checkbox', 'reports', 28),
-('acc_payroll', 'Oylik hisoboti', 'accountant', 0.20, -0.20, 'checkbox', 'reports', 29),
-('acc_debt', 'Debitorlar nazorati', 'accountant', 0.20, -0.20, 'checkbox', 'reports', 30),
-('acc_pnl', 'Moliyaviy natija (F&Z)', 'accountant', 0.20, -0.20, 'checkbox', 'reports', 31)
+('acc_attendance', 'Ishga kelish/ketish', 'accountant', 1.00, -1.00, 'checkbox', 'manual', 19),
+('acc_telegram_ok', 'Telegramda javob berish', 'accountant', 1.00, 0, 'checkbox', 'manual', 20),
+('acc_telegram_missed', 'Telegram kechikish (soni)', 'accountant', 0, -0.50, 'counter', 'manual', 21),
+('acc_1c_base', '1C Baza yuritish', 'accountant', 1.00, 0, 'checkbox', 'automation', 22),
+('acc_didox', 'Didox nazorati', 'accountant', 0.25, -0.25, 'checkbox', 'automation', 23),
+('acc_letters', 'E-imzo (Xatlar)', 'accountant', 0.25, -0.25, 'checkbox', 'automation', 24),
+('acc_my_mehnat', 'my.mehnat.uz', 'accountant', 0.25, -0.25, 'checkbox', 'automation', 25),
+('acc_auto_cameral', 'Avtokameral', 'accountant', 0.25, -0.25, 'checkbox', 'automation', 26),
+('acc_cashflow', 'Pul oqimi (Cashflow)', 'accountant', 0.20, -0.20, 'checkbox', 'automation', 27),
+('acc_tax_info', 'Soliq ma''lumoti', 'accountant', 0.20, -0.20, 'checkbox', 'automation', 28),
+('acc_payroll', 'Oylik hisoboti', 'accountant', 0.20, -0.20, 'checkbox', 'automation', 29),
+('acc_debt', 'Debitorlar nazorati', 'accountant', 0.20, -0.20, 'checkbox', 'automation', 30),
+('acc_pnl', 'Moliyaviy natija (F&Z)', 'accountant', 0.20, -0.20, 'checkbox', 'automation', 31)
 ON CONFLICT DO NOTHING;
+
+-- Update categories for existing rules to match new structure
+UPDATE kpi_rules SET category = 'manual' WHERE name IN ('bank_attendance', 'bank_telegram_ok', 'bank_telegram_missed', 'supervisor_attendance', 'acc_telegram_ok', 'acc_telegram_missed');
+UPDATE kpi_rules SET category = 'automation' WHERE name IN ('acc_1c_base', 'acc_didox', 'acc_letters', 'acc_my_mehnat', 'acc_auto_cameral', 'acc_cashflow', 'acc_tax_info', 'acc_payroll', 'acc_debt', 'acc_pnl');
 
 -- =====================================================
 -- COMMENTS

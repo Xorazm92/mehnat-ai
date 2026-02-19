@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Company, KPIRule, MonthlyPerformance, Staff, Language } from '../types';
-import { fetchKPIRules, fetchMonthlyPerformance, upsertMonthlyPerformance } from '../lib/supabaseData';
+import { Company, KPIRule, MonthlyPerformance, Staff, Language, CompanyKPIRule } from '../types';
+import { fetchKPIRules, fetchMonthlyPerformance, upsertMonthlyPerformance, fetchCompanyKPIRules } from '../lib/supabaseData';
 import { CheckCircle2, XCircle, Search, AlertCircle, Save } from 'lucide-react';
 import { translations } from '../lib/translations';
 
@@ -16,10 +16,73 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     const t = translations[lang];
     const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
     const [rules, setRules] = useState<KPIRule[]>([]);
+    const [companyRules, setCompanyRules] = useState<CompanyKPIRule[]>([]);
     const [performances, setPerformances] = useState<MonthlyPerformance[]>([]);
     const [search, setSearch] = useState('');
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [loading, setLoading] = useState(false);
+
+    const canEditPercents = currentUserRole === 'super_admin' || currentUserRole === 'chief_accountant';
+
+    const formatError = (error: any) => {
+        if (!error) return 'Unknown error';
+        if (typeof error === 'string') return error;
+        const parts = [
+            error.message,
+            error.code ? `code=${error.code}` : null,
+            error.details ? `details=${error.details}` : null,
+            error.hint ? `hint=${error.hint}` : null
+        ].filter(Boolean);
+        if (parts.length) return parts.join('\n');
+        try {
+            return JSON.stringify(error);
+        } catch {
+            return String(error);
+        }
+    };
+
+    const savePercentOverride = async (rule: KPIRule, company: Company, employeeId: string, reward?: number, penalty?: number) => {
+        if (!company?.id) {
+            alert('Company not selected');
+            return;
+        }
+        if (!employeeId) {
+            alert("Xodim biriktirilmagan (employeeId bo'sh). Avval firmaga xodim biriktiring.");
+            return;
+        }
+        if (!currentUserId) {
+            alert('User not found (currentUserId is missing)');
+            return;
+        }
+
+        const existing = performances.find(p => p.companyId === company.id && p.employeeId === employeeId && p.ruleId === rule.id);
+        if (!existing) {
+            alert("Avval KPI ni belgilang (✓ yoki ✗). Keyin foizni o'zgartiring.");
+            return;
+        }
+        try {
+            await upsertMonthlyPerformance({
+                id: existing.id,
+                month: `${month}-01`,
+                companyId: company.id,
+                employeeId: employeeId,
+                ruleId: rule.id,
+                value: existing.value,
+                rewardPercentOverride: reward,
+                penaltyPercentOverride: penalty,
+                source: existing.source || 'chief',
+                status: existing.status || 'approved',
+                approvedBy: currentUserId,
+                approvedAt: new Date().toISOString(),
+                recordedBy: currentUserId
+            });
+            await loadData();
+        } catch (error) {
+            console.error('Error saving KPI percents', error);
+            alert(formatError(error));
+            await loadData();
+        }
+    };
 
     // Load Rules and Initial Data
     useEffect(() => {
@@ -27,12 +90,16 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     }, [month]);
 
     const loadData = async () => {
-        setLoading(true);
         const [rulesData, perfData] = await Promise.all([
             fetchKPIRules(),
             fetchMonthlyPerformance(`${month}-01`) // Start of month
         ]);
-        setRules(rulesData.filter(r => r.role === 'accountant' || r.role === 'bank_client'));
+        // Filter to only show manual/attendance rules (exclude automation)
+        const manualRules = rulesData.filter(r =>
+            (r.role === 'accountant' || r.role === 'bank_client' || r.role === 'supervisor' || r.role === 'all') &&
+            r.category !== 'automation'
+        );
+        setRules(manualRules);
         setPerformances(perfData);
         setLoading(false);
     };
@@ -49,12 +116,112 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
         companies.find(c => c.id === selectedCompanyId),
         [companies, selectedCompanyId]);
 
+    // Fetch company-specific rules when company changes
+    useEffect(() => {
+        if (selectedCompanyId) {
+            fetchCompanyKPIRules(selectedCompanyId).then(setCompanyRules);
+        } else {
+            setCompanyRules([]);
+        }
+    }, [selectedCompanyId]);
+
+    const getEffectiveRule = (rule: KPIRule) => {
+        const override = companyRules.find(r => r.ruleId === rule.id);
+        return {
+            ...rule,
+            rewardPercent: override?.rewardPercent ?? rule.rewardPercent,
+            penaltyPercent: override?.penaltyPercent ?? rule.penaltyPercent
+        };
+    };
+
+    const handleApprove = async (perf: MonthlyPerformance) => {
+        try {
+            if (!currentUserId) {
+                alert('User not found (currentUserId is missing)');
+                return;
+            }
+            await upsertMonthlyPerformance({
+                id: perf.id,
+                month: perf.month,
+                companyId: perf.companyId,
+                employeeId: perf.employeeId,
+                ruleId: perf.ruleId,
+                value: perf.value,
+                source: perf.source || 'employee',
+                status: 'approved',
+                approvedBy: currentUserId,
+                approvedAt: new Date().toISOString(),
+                rejectedReason: null as any,
+                recordedBy: currentUserId
+            });
+            await loadData();
+        } catch (error) {
+            console.error('Error approving KPI', error);
+            alert(formatError(error) || 'Error approving KPI');
+            await loadData();
+        }
+    };
+
+    const handleReject = async (perf: MonthlyPerformance) => {
+        const reason = window.prompt(lang === 'uz' ? 'Rad etish sababi:' : 'Причина отказа:');
+        if (!reason) return;
+        try {
+            if (!currentUserId) {
+                alert('User not found (currentUserId is missing)');
+                return;
+            }
+            await upsertMonthlyPerformance({
+                id: perf.id,
+                month: perf.month,
+                companyId: perf.companyId,
+                employeeId: perf.employeeId,
+                ruleId: perf.ruleId,
+                value: perf.value,
+                source: perf.source || 'employee',
+                status: 'rejected',
+                approvedBy: currentUserId,
+                approvedAt: new Date().toISOString(),
+                rejectedReason: reason,
+                recordedBy: currentUserId
+            });
+            await loadData();
+        } catch (error) {
+            console.error('Error rejecting KPI', error);
+            alert(formatError(error) || 'Error rejecting KPI');
+            await loadData();
+        }
+    };
+
     const handleToggle = async (rule: KPIRule, company: Company, employeeId: string, currentValue: number) => {
+        if (!company?.id) {
+            alert('Company not selected');
+            return;
+        }
+        if (!employeeId) {
+            alert("Xodim biriktirilmagan (employeeId bo'sh). Avval firmaga xodim biriktiring.");
+            return;
+        }
+        if (!currentUserId) {
+            alert('User not found (currentUserId is missing)');
+            return;
+        }
+
         // Cycle: 0 -> 1 -> -1 -> 0
         let newValue = 0;
         if (currentValue === 0) newValue = 1;
         else if (currentValue === 1) newValue = -1;
         else newValue = 0;
+
+        const effectiveRule = getEffectiveRule(rule);
+        const optimisticExisting = performances.find(p => p.companyId === company.id && p.employeeId === employeeId && p.ruleId === rule.id);
+        const optimisticReward = optimisticExisting?.rewardPercentOverride ?? effectiveRule.rewardPercent ?? 0;
+        const optimisticPenalty = optimisticExisting?.penaltyPercentOverride ?? effectiveRule.penaltyPercent ?? 0;
+        const optimisticScore =
+            newValue > 0
+                ? Number(optimisticReward) * Number(newValue)
+                : newValue < 0
+                    ? -1 * Math.abs(Number(optimisticPenalty)) * Math.abs(Number(newValue))
+                    : 0;
 
         // Optimistic update
         const tempId = Math.random().toString();
@@ -65,30 +232,48 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
             employeeId: employeeId,
             ruleId: rule.id,
             value: newValue,
-            calculatedScore: 0
+            rewardPercentOverride: optimisticExisting?.rewardPercentOverride,
+            penaltyPercentOverride: optimisticExisting?.penaltyPercentOverride,
+            calculatedScore: optimisticScore
         };
 
         setPerformances(prev => {
-            const existing = prev.find(p => p.companyId === company.id && p.ruleId === rule.id);
+            const existing = prev.find(p => p.companyId === company.id && p.employeeId === employeeId && p.ruleId === rule.id);
             if (existing) {
-                return prev.map(p => p.id === existing.id ? { ...p, value: newValue } : p);
+                return prev.map(p => p.id === existing.id ? {
+                    ...p,
+                    value: newValue,
+                    rewardPercentOverride: optimisticExisting?.rewardPercentOverride,
+                    penaltyPercentOverride: optimisticExisting?.penaltyPercentOverride,
+                    calculatedScore: optimisticScore
+                } : p);
             }
             return [...prev, newPerf];
         });
 
         try {
+            const isChiefControlled = rule.category === 'manual';
+
+            const existing = performances.find(p => p.companyId === company.id && p.employeeId === employeeId && p.ruleId === rule.id);
             await upsertMonthlyPerformance({
                 month: `${month}-01`,
                 companyId: company.id,
                 employeeId: employeeId,
                 ruleId: rule.id,
                 value: newValue,
+                rewardPercentOverride: existing?.rewardPercentOverride,
+                penaltyPercentOverride: existing?.penaltyPercentOverride,
+                source: isChiefControlled ? 'chief' : 'supervisor',
+                status: 'approved',
+                approvedBy: currentUserId,
+                approvedAt: new Date().toISOString(),
                 recordedBy: currentUserId
             });
-            // Refresh to get real ID and score
-            // await loadData(); 
+            // Refresh to get real ID and calculated_score from DB trigger
+            await loadData();
         } catch (error) {
             console.error('Error updating KPI', error);
+            alert(formatError(error) || 'Error updating KPI');
             // Revert on error
             loadData();
         }
@@ -116,9 +301,8 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin">
                     {filteredCompanies.map(c => {
-                        // Calculate progress for this company
                         const companyPerf = performances.filter(p => p.companyId === c.id);
-                        const progress = companyPerf.length > 0 ? (companyPerf.filter(p => p.value > 0).length / rules.length) * 100 : 0;
+                        const totalPercent = companyPerf.reduce((sum, p) => sum + (Number(p.calculatedScore) || 0), 0);
 
                         return (
                             <div
@@ -133,9 +317,9 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                     <h4 className={`font-black ${selectedCompanyId === c.id ? 'text-apple-accent' : 'text-slate-700 dark:text-slate-200'}`}>
                                         {c.name}
                                     </h4>
-                                    {progress > 0 && (
-                                        <span className="text-[10px] font-black px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-full">
-                                            {Math.round(progress)}%
+                                    {companyPerf.length > 0 && (
+                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${totalPercent > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                                            {totalPercent > 0 ? '+' : ''}{Number(totalPercent.toFixed(2))}%
                                         </span>
                                     )}
                                 </div>
@@ -191,14 +375,19 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                     <span className="w-6 h-[2px] bg-slate-300"></span> {lang === 'uz' ? 'Buxgalter Vazifalari (KPI)' : 'Задачи Бухгалтера (KPI)'}
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {rules.filter(r => r.role === 'accountant').map(rule => {
-                                        const perf = performances.find(p => p.companyId === selectedCompany.id && p.ruleId === rule.id);
+                                    {rules.filter(r => r.role === 'accountant' || r.role === 'all').map(rawRule => {
+                                        const rule = getEffectiveRule(rawRule);
+                                        const perf = performances.find(p => p.companyId === selectedCompany.id && p.employeeId === (selectedCompany.accountantId || '') && p.ruleId === rule.id);
+                                        const needsApproval = perf?.source === 'employee' && perf?.status === 'submitted';
                                         const isDone = perf?.value === 1;
 
                                         return (
                                             <div
                                                 key={rule.id}
-                                                onClick={() => handleToggle(rule, selectedCompany, selectedCompany.accountantId || '', perf?.value || 0)}
+                                                onClick={() => {
+                                                    if (needsApproval) return;
+                                                    handleToggle(rule, selectedCompany, selectedCompany.accountantId || '', perf?.value || 0);
+                                                }}
                                                 className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group active:scale-95 ${perf?.value === 1 ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500/20' :
                                                     perf?.value === -1 ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-500/20' :
                                                         'bg-white dark:bg-apple-darkBg border-slate-100 dark:border-white/5 hover:border-apple-accent/50'
@@ -217,14 +406,72 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                         </p>
                                                         <div className="flex items-center gap-2 mt-0.5">
                                                             <p className="text-[10px] font-black text-slate-400">
-                                                                {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
-                                                                {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
+                                                                {((perf?.rewardPercentOverride ?? rule.rewardPercent) > 0) ? `+${(perf?.rewardPercentOverride ?? rule.rewardPercent)}%` : ''}
+                                                                {((perf?.penaltyPercentOverride ?? rule.penaltyPercent) < 0) ? ` / ${(perf?.penaltyPercentOverride ?? rule.penaltyPercent)}%` : ''}
                                                             </p>
                                                             {perf?.value === 1 && <span className="text-[9px] font-black text-emerald-500 uppercase tracking-tight">Mukofot</span>}
                                                             {perf?.value === -1 && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tight">Jarima</span>}
+                                                            {needsApproval && (
+                                                                <span className="text-[9px] font-black text-amber-600 uppercase tracking-tight">Tasdiq kutilmoqda</span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                {canEditPercents && (
+                                                    <div
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            className="w-20 px-2 py-1 rounded-lg border border-slate-200 text-[11px] font-bold text-emerald-600 bg-white"
+                                                            defaultValue={perf?.rewardPercentOverride ?? rule.rewardPercent}
+                                                            onBlur={(e) => {
+                                                                const v = e.target.value;
+                                                                const reward = v === '' ? undefined : Number(v);
+                                                                const penalty = perf?.penaltyPercentOverride ?? rule.penaltyPercent;
+                                                                savePercentOverride(rule, selectedCompany, selectedCompany.accountantId || '', reward, penalty);
+                                                            }}
+                                                        />
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            className="w-20 px-2 py-1 rounded-lg border border-slate-200 text-[11px] font-bold text-rose-600 bg-white"
+                                                            defaultValue={perf?.penaltyPercentOverride ?? rule.penaltyPercent}
+                                                            onBlur={(e) => {
+                                                                const v = e.target.value;
+                                                                const penalty = v === '' ? undefined : Number(v);
+                                                                const reward = perf?.rewardPercentOverride ?? rule.rewardPercent;
+                                                                savePercentOverride(rule, selectedCompany, selectedCompany.accountantId || '', reward, penalty);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {needsApproval && perf && (
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleApprove(perf);
+                                                            }}
+                                                            className="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700"
+                                                        >
+                                                            Approve
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleReject(perf);
+                                                            }}
+                                                            className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-black hover:bg-rose-700"
+                                                        >
+                                                            Reject
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
@@ -238,13 +485,18 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                         <span className="w-6 h-[2px] bg-slate-300"></span> {lang === 'uz' ? 'Bank Klient Vazifalari' : 'Задачи Банк-Клиента'}
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {rules.filter(r => r.role === 'bank_client').map(rule => {
-                                            const perf = performances.find(p => p.companyId === selectedCompany.id && p.ruleId === rule.id);
+                                        {rules.filter(r => r.role === 'bank_client' || r.role === 'all').map(rawRule => {
+                                            const rule = getEffectiveRule(rawRule);
+                                            const perf = performances.find(p => p.companyId === selectedCompany.id && p.employeeId === (selectedCompany.bankClientId || '') && p.ruleId === rule.id);
+                                            const needsApproval = perf?.source === 'employee' && perf?.status === 'submitted';
 
                                             return (
                                                 <div
                                                     key={rule.id}
-                                                    onClick={() => handleToggle(rule, selectedCompany, selectedCompany.bankClientId || '', perf?.value || 0)}
+                                                    onClick={() => {
+                                                        if (needsApproval) return;
+                                                        handleToggle(rule, selectedCompany, selectedCompany.bankClientId || '', perf?.value || 0);
+                                                    }}
                                                     className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group active:scale-95 ${perf?.value === 1 ? 'bg-purple-50 dark:bg-purple-500/10 border-purple-500/20' :
                                                         perf?.value === -1 ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-500/20' :
                                                             'bg-white dark:bg-apple-darkBg border-slate-100 dark:border-white/5 hover:border-purple-500/50'
@@ -268,9 +520,113 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                                 </p>
                                                                 {perf?.value === 1 && <span className="text-[9px] font-black text-purple-500 uppercase tracking-tight">Mukofot</span>}
                                                                 {perf?.value === -1 && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tight">Jarima</span>}
+                                                                {needsApproval && (
+                                                                    <span className="text-[9px] font-black text-amber-600 uppercase tracking-tight">Tasdiq kutilmoqda</span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
+
+                                                    {needsApproval && perf && (
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleApprove(perf);
+                                                                }}
+                                                                className="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700"
+                                                            >
+                                                                Approve
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleReject(perf);
+                                                                }}
+                                                                className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-black hover:bg-rose-700"
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Supervisor Tasks */}
+                            {selectedCompany.supervisorId && (
+                                <div className="mt-10">
+                                    <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <span className="w-6 h-[2px] bg-slate-300"></span> {lang === 'uz' ? 'Nazoratchi Vazifalari' : 'Задачи Контролёра'}
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {rules.filter(r => r.role === 'supervisor' || r.role === 'all').map(rawRule => {
+                                            const rule = getEffectiveRule(rawRule);
+                                            const perf = performances.find(p => p.companyId === selectedCompany.id && p.employeeId === (selectedCompany.supervisorId || '') && p.ruleId === rule.id);
+                                            const needsApproval = perf?.source === 'employee' && perf?.status === 'submitted';
+
+                                            return (
+                                                <div
+                                                    key={rule.id}
+                                                    onClick={() => {
+                                                        if (needsApproval) return;
+                                                        handleToggle(rule, selectedCompany, selectedCompany.supervisorId || '', perf?.value || 0);
+                                                    }}
+                                                    className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group active:scale-95 ${perf?.value === 1 ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500/20' :
+                                                        perf?.value === -1 ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-500/20' :
+                                                            'bg-white dark:bg-apple-darkBg border-slate-100 dark:border-white/5 hover:border-indigo-500/50'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${perf?.value === 1 ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' :
+                                                            perf?.value === -1 ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' :
+                                                                'bg-slate-100 dark:bg-white/10 text-slate-300'
+                                                            }`}>
+                                                            {perf?.value === -1 ? <XCircle size={20} strokeWidth={3} /> : <CheckCircle2 size={perf?.value === 1 ? 20 : 18} strokeWidth={3} />}
+                                                        </div>
+                                                        <div>
+                                                            <p className={`font-bold text-sm ${perf?.value !== 0 ? 'text-slate-800 dark:text-white' : 'text-slate-500'}`}>
+                                                                {lang === 'uz' ? rule.nameUz : rule.name}
+                                                            </p>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <p className="text-[10px] font-black text-slate-400">
+                                                                    {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
+                                                                    {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
+                                                                </p>
+                                                                {perf?.value === 1 && <span className="text-[9px] font-black text-indigo-500 uppercase tracking-tight">Mukofot</span>}
+                                                                {perf?.value === -1 && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tight">Jarima</span>}
+                                                                {needsApproval && (
+                                                                    <span className="text-[9px] font-black text-amber-600 uppercase tracking-tight">Tasdiq kutilmoqda</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {needsApproval && perf && (
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleApprove(perf);
+                                                                }}
+                                                                className="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700"
+                                                            >
+                                                                Approve
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleReject(perf);
+                                                                }}
+                                                                className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-black hover:bg-rose-700"
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}

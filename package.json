@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "import:firms": "node scripts/import-firms.js",
-    "import:kpi": "node scripts/import-kpi.js"
+    "import:kpi": "node scripts/import-kpi.js",
+    "seed:yorqinoy": "node scripts/seed_yorqinoy.js",
+    "seed:kpi-rules": "node scripts/seed_kpi_rules_from_json.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",

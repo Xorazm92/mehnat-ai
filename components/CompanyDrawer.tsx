@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Company, OperationEntry, Payment, PaymentStatus, Language, ClientCredential, ClientHistory, Staff, TaxType, CompanyStatus, RiskLevel } from '../types';
+import { Company, OperationEntry, Payment, PaymentStatus, Language, ClientCredential, ClientHistory, Staff, TaxType, CompanyStatus, RiskLevel, KPIRule } from '../types';
 import { translations } from '../lib/translations';
 import StatusBadge from './StatusBadge';
-import { fetchDocuments, fetchCredentials, fetchClientHistory, logCredentialAccess } from '../lib/supabaseData';
+import { fetchDocuments, fetchCredentials, fetchClientHistory, logCredentialAccess, fetchKPIRules, fetchCompanyKPIRules, upsertCompanyKPIRule } from '../lib/supabaseData';
 import { supabase } from '../lib/supabaseClient';
 import { X, Shield, History, FileText, Lock, Globe, Building, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Send, Check, Calculator, Trash2, Plus, ChevronRight, ArrowRight } from 'lucide-react';
 
@@ -17,7 +17,7 @@ interface DrawerProps {
   onSave?: (company: Company) => void;
 }
 
-type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xavf' | 'xizmatlar';
+type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xavf' | 'xizmatlar' | 'kpi';
 
 const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, staff = [], lang, userId, onClose, onSave }) => {
   const t = translations[lang];
@@ -33,6 +33,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
   const [newCred, setNewCred] = useState({ serviceName: '', loginId: '', password: '', notes: '' });
   const [tempLogin, setTempLogin] = useState(company.login || '');
   const [tempPassword, setTempPassword] = useState(company.password || '');
+  const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
+  const [companyKpiRules, setCompanyKpiRules] = useState<any[]>([]);
+  const [isSavingKpi, setIsSavingKpi] = useState<string | null>(null); // ruleId of saving item
+  const [isLoadingKpi, setIsLoadingKpi] = useState(false);
+
 
   useEffect(() => {
     if (company) {
@@ -49,6 +54,18 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
         setAssignments(assRes.data || []);
         setIsLoadingDocs(false);
       });
+
+      // Fetch KPI Data
+      setIsLoadingKpi(true);
+      Promise.all([
+        fetchKPIRules(),
+        fetchCompanyKPIRules(company.id)
+      ]).then(([rules, compRules]) => {
+        setKpiRules(rules);
+        setCompanyKpiRules(compRules);
+        setIsLoadingKpi(false);
+      });
+
     }
   }, [company]);
 
@@ -94,6 +111,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
     { id: 'shartnoma', label: '💰 Shartnoma', icon: <DollarSign size={16} /> },
     { id: 'xavf', label: '⚠️ Xavf', icon: <AlertTriangle size={16} /> },
     { id: 'xizmatlar', label: '🛠️ Xizmatlar', icon: <Check size={16} /> },
+    { id: 'kpi', label: '📊 KPI', icon: <Calculator size={16} /> },
   ];
 
   return (
@@ -586,7 +604,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
               <div className="p-6 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder overflow-hidden relative">
                 <div className="absolute -right-6 -top-6 h-24 w-24 bg-apple-accent/5 rounded-full" />
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Moliyaviy Holat</h4>
+                <h4 className="text-xs font-black text-slate-400 upper tracking-widest mb-6">Moliyaviy Holat</h4>
                 <div className="grid grid-cols-2 gap-8">
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Xizmat Narxi</p>
@@ -605,10 +623,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   <div className="space-y-3">
                     {/* Calculation: Head 7%, Controller 5%, Bank 5%, Accountant 20% */}
                     {[
-                      { label: 'Bosh Buxgalter (Yorqinoy)', perc: company.chiefAccountantPerc || 7, sum: company.chiefAccountantSum, type: 'head' },
-                      { label: 'Nazoratchi', perc: company.supervisorPerc || 5, type: 'sup' },
-                      { label: 'Bank Klient', perc: company.bankClientPerc || 5, sum: company.bankClientSum, type: 'bank' },
-                      { label: 'Buxgalter', perc: company.accountantPerc || 20, type: 'acc' }
+                      { label: 'Bosh Buxgalter (Yorqinoy)', perc: company.chiefAccountantPerc || 0, sum: company.chiefAccountantSum, type: 'head' },
+                      { label: 'Nazoratchi', perc: company.supervisorPerc || 0, type: 'sup' },
+                      { label: 'Bank Klient', perc: company.bankClientPerc || 0, sum: company.bankClientSum, type: 'bank' },
+                      { label: 'Buxgalter', perc: company.accountantPerc || 0, type: 'acc' }
                     ].map((item, i) => {
                       const amount = company.contractAmount || 0;
                       const val = item.sum || (amount * (item.perc / 100));
@@ -626,10 +644,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                       <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Kompaniya Qoldig'i</span>
                       <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
                         {((company.contractAmount || 0) - (
-                          (company.chiefAccountantSum || ((company.contractAmount || 0) * (company.chiefAccountantPerc || 7) / 100)) +
+                          (company.chiefAccountantSum || ((company.contractAmount || 0) * (company.chiefAccountantPerc || 0) / 100)) +
                           (company.supervisorPerc ? (company.contractAmount || 0) * company.supervisorPerc / 100 : 0) +
-                          (company.bankClientSum || ((company.contractAmount || 0) * (company.bankClientPerc || 5) / 100)) +
-                          ((company.contractAmount || 0) * (company.accountantPerc || 20) / 100)
+                          (company.bankClientSum || ((company.contractAmount || 0) * (company.bankClientPerc || 0) / 100)) +
+                          ((company.contractAmount || 0) * (company.accountantPerc || 0) / 100)
                         )).toLocaleString()} so'm
                       </span>
                     </div>
@@ -753,8 +771,177 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
               </div>
             </div>
           )}
-        </div >
-      </div >
+
+
+          {activeTab === 'kpi' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                <div className="flex items-center gap-3 mb-6">
+                  <Calculator size={16} className="text-apple-accent" />
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">KPI Sozlamalari (Kompaniya uchun maxsus)</h4>
+                </div>
+
+                <div className="space-y-4">
+                  {isLoadingKpi ? (
+                    <div className="flex flex-col items-center justify-center py-10 opacity-50">
+                      <div className="w-8 h-8 border-4 border-apple-accent border-t-transparent rounded-full animate-spin mb-4"></div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Yuklanmoqda...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-8">
+                      {['automation', 'manual'].map(category => (
+                        <div key={category} className="space-y-4">
+                          <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <span className="w-4 h-[1px] bg-apple-accent"></span>
+                            {category === 'automation' ? "Operatsiyalar (Avtomatik)" : "Nazoratchi Vazifalari (Qo'lda)"}
+                          </h5>
+                          {kpiRules.filter(r => r.category === category).map(rule => {
+                            const compRule = companyKpiRules.find(r => r.ruleId === rule.id);
+                            const currentReward = compRule?.rewardPercent ?? '';
+                            const currentPenalty = compRule?.penaltyPercent ?? '';
+                            const hasOverride = compRule && (compRule.rewardPercent !== null || compRule.penaltyPercent !== null);
+
+                            return (
+                              <div key={rule.id} className={`p-4 rounded-xl border transition-all ${hasOverride ? 'bg-apple-accent/5 border-apple-accent/20' : 'bg-slate-50 dark:bg-white/5 border-apple-border dark:border-apple-darkBorder'}`}>
+                                <div className="flex items-center justify-between mb-3">
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-black text-slate-800 dark:text-white">{rule.nameUz}</p>
+                                      {isSavingKpi === rule.id && <div className="w-2 h-2 bg-apple-accent rounded-full animate-pulse"></div>}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 uppercase font-black">{rule.role}</p>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <div className="text-right">
+                                      <p className="text-[10px] text-slate-400 font-bold">Global Standart</p>
+                                      <div className="flex gap-2 justify-end">
+                                        <span className="text-xs font-bold text-emerald-500">+{rule.rewardPercent}%</span>
+                                        <span className="text-xs font-bold text-rose-500">{rule.penaltyPercent}%</span>
+                                      </div>
+                                    </div>
+                                    {hasOverride && (
+                                      <button
+                                        onClick={async () => {
+                                          if (!window.confirm('Haqiqatan ham ushbu qoidani standart qiymatga qaytarmoqchimisiz?')) return;
+                                          setIsSavingKpi(rule.id);
+                                          try {
+                                            await upsertCompanyKPIRule({
+                                              id: compRule.id,
+                                              companyId: company.id,
+                                              ruleId: rule.id,
+                                              rewardPercent: null,
+                                              penaltyPercent: null,
+                                              isActive: true
+                                            });
+                                            setCompanyKpiRules(prev => prev.filter(r => r.ruleId !== rule.id));
+                                          } finally {
+                                            setIsSavingKpi(null);
+                                          }
+                                        }}
+                                        className="p-2 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-colors"
+                                        title="Standartga qaytarish"
+                                      >
+                                        <History size={14} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="text-[10px] font-black text-emerald-600 uppercase mb-1 block">Bonus (%)</label>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      placeholder={`Global: ${rule.rewardPercent}`}
+                                      className="w-full bg-white dark:bg-apple-darkBg p-2 rounded-lg border border-apple-border dark:border-apple-darkBorder font-mono font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
+                                      value={currentReward}
+                                      onBlur={async (e) => {
+                                        const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                        if (val === currentReward) return;
+
+                                        setIsSavingKpi(rule.id);
+                                        try {
+                                          await upsertCompanyKPIRule({
+                                            id: compRule?.id,
+                                            companyId: company.id,
+                                            ruleId: rule.id,
+                                            rewardPercent: val,
+                                            penaltyPercent: compRule?.penaltyPercent ?? null,
+                                            isActive: true
+                                          });
+                                          const freshRules = await fetchCompanyKPIRules(company.id);
+                                          setCompanyKpiRules(freshRules);
+                                        } finally {
+                                          setIsSavingKpi(null);
+                                        }
+                                      }}
+                                      onChange={(e) => {
+                                        const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                        setCompanyKpiRules(prev => {
+                                          const copy = [...prev];
+                                          const idx = copy.findIndex(r => r.ruleId === rule.id);
+                                          if (idx >= 0) copy[idx] = { ...copy[idx], rewardPercent: val };
+                                          else copy.push({ companyId: company.id, ruleId: rule.id, rewardPercent: val });
+                                          return copy;
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-black text-rose-500 uppercase mb-1 block">Jarima (%)</label>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      placeholder={`Global: ${rule.penaltyPercent}`}
+                                      className="w-full bg-white dark:bg-apple-darkBg p-2 rounded-lg border border-apple-border dark:border-apple-darkBorder font-mono font-bold text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
+                                      value={currentPenalty}
+                                      onBlur={async (e) => {
+                                        const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                        if (val === currentPenalty) return;
+
+                                        setIsSavingKpi(rule.id);
+                                        try {
+                                          await upsertCompanyKPIRule({
+                                            id: compRule?.id,
+                                            companyId: company.id,
+                                            ruleId: rule.id,
+                                            rewardPercent: compRule?.rewardPercent ?? null,
+                                            penaltyPercent: val,
+                                            isActive: true
+                                          });
+                                          const freshRules = await fetchCompanyKPIRules(company.id);
+                                          setCompanyKpiRules(freshRules);
+                                        } finally {
+                                          setIsSavingKpi(null);
+                                        }
+                                      }}
+                                      onChange={(e) => {
+                                        const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                        setCompanyKpiRules(prev => {
+                                          const copy = [...prev];
+                                          const idx = copy.findIndex(r => r.ruleId === rule.id);
+                                          if (idx >= 0) copy[idx] = { ...copy[idx], penaltyPercent: val };
+                                          else copy.push({ companyId: company.id, ruleId: rule.id, penaltyPercent: val });
+                                          return copy;
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </>
   );
 };

@@ -66,15 +66,15 @@ BEGIN
       AND ca.start_date <= (date_trunc('month', p_month) + interval '1 month' - interval '1 day')::DATE
       AND (ca.end_date IS NULL OR ca.end_date >= date_trunc('month', p_month)::DATE);
 
-    -- B. Calculate KPI Bonuses/Penalties (3-State Logic Integration)
-    -- We assume monthly_performance.value is -1, 0, or 1.
-    -- calculated_score = value * reward_percent (if +1) or value * abs(penalty_percent) (if -1)
+    -- B. Calculate KPI Bonuses/Penalties (Convert percents to money, only approved KPI)
+    -- calculated_score is stored as percent, convert to monetary value
     SELECT 
-        COALESCE(SUM(CASE WHEN mp.calculated_score > 0 THEN mp.calculated_score ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN mp.calculated_score < 0 THEN mp.calculated_score ELSE 0 END), 0)
+        COALESCE(SUM(CASE WHEN mp.calculated_score > 0 THEN v_base_salary * (mp.calculated_score / 100) ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN mp.calculated_score < 0 THEN v_base_salary * (mp.calculated_score / 100) ELSE 0 END), 0)
     INTO v_kpi_bonus, v_kpi_penalty
     FROM monthly_performance mp
-    WHERE mp.employee_id = p_employee_id AND mp.month = date_trunc('month', p_month)::DATE;
+    WHERE mp.employee_id = p_employee_id AND mp.month = date_trunc('month', p_month)::DATE
+      AND mp.status = 'approved';
 
     -- C. Adjustments (Manual Bonus/Fine)
     SELECT COALESCE(SUM(amount), 0)

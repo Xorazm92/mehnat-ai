@@ -199,41 +199,73 @@ const App: React.FC = () => {
 
   const refreshData = async () => {
     setIsSyncing(true);
-    const [c, ops, reports, s, kpi, p, e, ass] = await Promise.all([
-      fetchCompanies(),
-      fetchOperations(),
-      fetchMonthlyReports(),
-      fetchStaff(),
-      fetchKpiMetrics(),
-      fetchPayments(),
-      fetchExpenses(),
-      fetchContractAssignments()
-    ]);
+    try {
+      const [c, ops, reports, s, kpi, p, e, ass] = await Promise.all([
+        fetchCompanies(),
+        fetchOperations(),
+        fetchMonthlyReports(),
+        fetchStaff(),
+        fetchKpiMetrics(),
+        fetchPayments(),
+        fetchExpenses(),
+        fetchContractAssignments()
+      ]);
 
-    // Merge operations (tasks/kpi) with monthly reports (historical snapshots/columns)
-    const unifiedOps: OperationEntry[] = [...reports];
+      const isUUID = (str?: string) => str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-    ops.forEach(op => {
-      const existingIdx = unifiedOps.findIndex(r => r.companyId === op.companyId && r.period === op.period);
-      if (existingIdx !== -1) {
-        unifiedOps[existingIdx] = { ...unifiedOps[existingIdx], ...op };
-      } else {
-        unifiedOps.push(op);
+      // Helper to resolve name from staff list
+      const resolveName = (id?: string) => {
+        if (!id) return '';
+        return s.find(staff => staff.id === id)?.name || '';
+      };
+
+      // Enrich Companies
+      const enrichedCompanies = c.map(comp => ({
+        ...comp,
+        accountantName: (comp.accountantName && !isUUID(comp.accountantName)) ? comp.accountantName : resolveName(comp.accountantId),
+        supervisorName: (comp.supervisorName && !isUUID(comp.supervisorName)) ? comp.supervisorName : resolveName(comp.supervisorId),
+        bankClientName: (comp.bankClientName && !isUUID(comp.bankClientName)) ? comp.bankClientName : resolveName(comp.bankClientId),
+        chiefAccountantName: (comp.chiefAccountantName && !isUUID(comp.chiefAccountantName)) ? comp.chiefAccountantName : resolveName(comp.chiefAccountantId),
+      }));
+
+      // Merge operations (tasks/kpi) with monthly reports (historical snapshots/columns)
+      const unifiedOps: OperationEntry[] = [...reports];
+
+      ops.forEach(op => {
+        const existingIdx = unifiedOps.findIndex(r => r.companyId === op.companyId && r.period === op.period);
+        if (existingIdx !== -1) {
+          unifiedOps[existingIdx] = { ...unifiedOps[existingIdx], ...op };
+        } else {
+          unifiedOps.push(op);
+        }
+      });
+
+      // Enrich Operations with names
+      const enrichedOps = unifiedOps.map(op => ({
+        ...op,
+        assigned_accountant_name: (op.assigned_accountant_name && !isUUID(op.assigned_accountant_name)) ? op.assigned_accountant_name : resolveName(op.assigned_accountant_id),
+        assigned_supervisor_name: (op.assigned_supervisor_name && !isUUID(op.assigned_supervisor_name)) ? op.assigned_supervisor_name : resolveName(op.assigned_supervisor_id),
+        assigned_bank_manager_name: (op.assigned_bank_manager_name && !isUUID(op.assigned_bank_manager_name)) ? op.assigned_bank_manager_name : resolveName(op.assigned_bank_manager_id),
+      }));
+
+      setCompanies(enrichedCompanies);
+      setOperations(enrichedOps);
+      setStaff(s);
+      setPayments(p);
+      setExpenses(e);
+      setAssignments(ass);
+      if (session?.user) {
+        const notifs = await fetchNotifications(session.user.id);
+        setNotifications(notifs);
       }
-    });
-
-    setCompanies(c);
-    setOperations(unifiedOps);
-    setStaff(s);
-    setPayments(p);
-    setExpenses(e);
-    setAssignments(ass);
-    if (session?.user) {
-      const notifs = await fetchNotifications(session.user.id);
-      setNotifications(notifs);
+      setLastSync(new Date().toLocaleString());
+    } catch (err: any) {
+      console.error('[refreshData] failed', err);
+      const msg = err?.message || 'Supabase bilan ulanishda xatolik';
+      toast.error(msg);
+    } finally {
+      setIsSyncing(false);
     }
-    setLastSync(new Date().toLocaleString());
-    setIsSyncing(false);
   };
 
   const handleMarkAsRead = async (id: string) => {

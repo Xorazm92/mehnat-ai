@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Company, Staff, TaxType, ServerInfo, ContractRole, SalaryCalculationType, StatsType, ServiceScope } from '../types';
+import React, { useEffect, useState } from 'react';
+import { Company, Staff, TaxType, ServerInfo, ContractRole, SalaryCalculationType, ServiceScope } from '../types';
 import { ChevronRight, ChevronLeft, Check, X, Building2, Server, Calculator, Users } from 'lucide-react';
 
 interface Props {
@@ -29,11 +29,29 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
     });
 
     const [assignments, setAssignments] = useState<any[]>(initialAssignments || [
-        { role: 'accountant', userId: '', salaryType: 'percent', salaryValue: 20 },
-        { role: 'chief', userId: 'b717137c-607f-4f16-91ba-01ec093c3288', salaryType: 'percent', salaryValue: 7 }, // Yorqinoy focus
-        { role: 'controller', userId: '', salaryType: 'percent', salaryValue: 5 },
-        { role: 'bank_manager', userId: '', salaryType: 'percent', salaryValue: 5 }
+        { role: 'accountant', userId: '', salaryType: 'percent', salaryValue: 0 },
+        { role: 'chief', userId: '', salaryType: 'percent', salaryValue: 0 },
+        { role: 'controller', userId: '', salaryType: 'percent', salaryValue: 0 },
+        { role: 'bank_manager', userId: '', salaryType: 'percent', salaryValue: 0 }
     ]);
+
+    useEffect(() => {
+        if (initialAssignments) return;
+        if (!staff?.length) return;
+
+        setAssignments(prev => {
+            const chiefIdx = prev.findIndex(a => a.role === 'chief');
+            if (chiefIdx === -1) return prev;
+            if (prev[chiefIdx]?.userId) return prev;
+
+            const yorqinoy = staff.find(s => (s.name || '').trim().toLowerCase().includes('yorqinoy'));
+            if (!yorqinoy) return prev;
+
+            const next = [...prev];
+            next[chiefIdx] = { ...next[chiefIdx], userId: yorqinoy.id };
+            return next;
+        });
+    }, [staff, initialAssignments]);
 
     const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
     const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
@@ -253,48 +271,6 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                             </div>
                                             <span className="font-bold text-slate-800 dark:text-white">{tax.label}</span>
                                         </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block ml-1">Majburiy Hisobotlar (Required)</label>
-                                <div className="grid grid-cols-2 gap-4">
-                                    {['1-KB', '1-Mehnat', 'QQS', 'Aylanma', 'Foyda', 'Suv', 'Yer', 'Mulk'].map(rep => (
-                                        <label key={rep} className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-xl border border-apple-border dark:border-apple-darkBorder cursor-pointer hover:border-apple-accent transition-all">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 accent-apple-accent"
-                                                checked={formData.requiredReports?.includes(rep) || false}
-                                                onChange={e => {
-                                                    const current = formData.requiredReports || [];
-                                                    const next = e.target.checked ? [...current, rep] : current.filter(r => r !== rep);
-                                                    setFormData({ ...formData, requiredReports: next });
-                                                }}
-                                            />
-                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{rep}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block ml-1">Statistika Hisobotlari</label>
-                                <div className="grid grid-cols-3 gap-4">
-                                    {Object.values(StatsType).map(stat => (
-                                        <label key={stat} className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-xl border border-apple-border dark:border-apple-darkBorder cursor-pointer hover:border-apple-accent transition-all">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 accent-apple-accent"
-                                                checked={formData.statReports?.includes(stat) || false}
-                                                onChange={e => {
-                                                    const current = formData.statReports || [];
-                                                    const next = e.target.checked ? [...current, stat] : current.filter(s => s !== stat);
-                                                    setFormData({ ...formData, statReports: next });
-                                                }}
-                                            />
-                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{stat}</span>
-                                        </label>
                                     ))}
                                 </div>
                             </div>

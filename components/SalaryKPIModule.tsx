@@ -23,6 +23,8 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
     // Default tab based on role could be set here
     const [activeTab, setActiveTab] = useState<'nazoratchi' | 'employee' | 'payroll' | 'rules'>('nazoratchi');
 
+    const normalizedRole = (currentUserRole || '').toLowerCase();
+
     const tabs = [
         {
             id: 'nazoratchi',
@@ -35,7 +37,7 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
                 currentUserId={currentUserId}
                 currentUserRole={currentUserRole}
             />,
-            allowedRoles: ['manager', 'supervisor', 'admin']
+            allowedRoles: ['manager', 'supervisor', 'admin', 'chief_accountant', 'super_admin']
         },
         {
             id: 'employee',
@@ -47,7 +49,7 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
                 operations={operations}
                 lang={lang}
             />,
-            allowedRoles: ['staff', 'accountant', 'bank_client', 'manager', 'admin']
+            allowedRoles: ['staff', 'accountant', 'bank_client', 'bank_manager', 'manager', 'admin', 'chief_accountant', 'super_admin']
         },
         {
             id: 'payroll',
@@ -58,20 +60,34 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
                 companies={companies}
                 operations={operations}
                 lang={lang}
+                currentUserId={currentUserId}
                 currentUserRole={currentUserRole}
             />,
-            allowedRoles: ['manager', 'admin', 'director']
+            allowedRoles: ['manager', 'admin', 'director', 'chief_accountant', 'super_admin']
         },
         {
             id: 'rules',
             label: 'Qoidalar',
             icon: Settings,
             component: <KPIRulesManager lang={lang} />,
-            allowedRoles: ['manager', 'admin']
+            allowedRoles: ['manager', 'admin', 'chief_accountant', 'super_admin']
         }
     ] as const;
 
-    const visibleTabs = tabs;
+    const visibleTabs = tabs.filter(tab => {
+        if (!normalizedRole) return true;
+        return tab.allowedRoles.includes(normalizedRole as any);
+    });
+
+    const activeComponent = visibleTabs.find(t => t.id === activeTab)?.component ?? visibleTabs[0]?.component;
+
+    if (visibleTabs.length === 0) {
+        return (
+            <div className="p-10 text-center text-slate-400">
+                Sizda bu bo'limni ko'rish huquqi yo'q.
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -96,7 +112,7 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
 
             {/* Content Area */}
             <div className="min-h-[600px]">
-                {tabs.find(t => t.id === activeTab)?.component}
+                {activeComponent}
             </div>
         </div>
     );

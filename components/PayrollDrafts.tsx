@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Staff, Company, Language, EmployeeSalarySummary, OperationEntry, MonthlyPerformance } from '../types';
-import { fetchMonthlyPerformance } from '../lib/supabaseData';
+import { Staff, Company, Language, EmployeeSalarySummary, OperationEntry, MonthlyPerformance, KPIRule, CompanyKPIRule } from '../types';
+import { fetchMonthlyPerformance, fetchKPIRules, fetchAllCompanyKPIRules } from '../lib/supabaseData';
 import { calculateCompanySalaries } from '../lib/kpiLogic';
 import { translations } from '../lib/translations';
 import { DollarSign, CheckCircle2, AlertCircle, FileText, ChevronRight } from 'lucide-react';
@@ -18,6 +18,8 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
     const t = translations[lang];
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
     const [performanceList, setPerformanceList] = useState<MonthlyPerformance[]>([]);
+    const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
+    const [companyOverrides, setCompanyOverrides] = useState<CompanyKPIRule[]>([]);
     const [loading, setLoading] = useState(false);
 
     const superAdminCommission = useMemo(() => {
@@ -47,7 +49,21 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
 
             myCompanies.forEach(c => {
                 const op = operations.find(o => o.companyId === c.id && o.period === checkMonth);
-                const roleResults = calculateCompanySalaries(c, op, performanceList);
+
+                // Merge rules with company-specific overrides
+                const mergedRules = kpiRules.map(r => {
+                    const override = companyOverrides.find(o => o.companyId === c.id && o.ruleId === r.id);
+                    if (override) {
+                        return {
+                            ...r,
+                            rewardPercent: override.rewardPercent ?? r.rewardPercent,
+                            penaltyPercent: override.penaltyPercent ?? r.penaltyPercent
+                        };
+                    }
+                    return r;
+                });
+
+                const roleResults = calculateCompanySalaries(c, op, performanceList, mergedRules);
 
                 roleResults.filter(r =>
                     r.staffId === s.id ||
@@ -77,13 +93,19 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
             };
         });
         return results;
-    }, [staff, companies, operations, month, performanceList]);
+    }, [staff, companies, operations, month, performanceList, kpiRules, companyOverrides]);
 
     const loadPerformance = async () => {
         setLoading(true);
         try {
-            const data = await fetchMonthlyPerformance(`${month}-01`);
-            setPerformanceList(data);
+            const [perf, rules, overrides] = await Promise.all([
+                fetchMonthlyPerformance(`${month}-01`),
+                fetchKPIRules(),
+                fetchAllCompanyKPIRules()
+            ]);
+            setPerformanceList(perf);
+            setKpiRules(rules);
+            setCompanyOverrides(overrides);
         } catch (e) {
             console.error(e);
         }

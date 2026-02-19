@@ -159,6 +159,8 @@ export interface Company {
   bankClientName?: string; // New from JSON: "bank klient"
   supervisorId?: string;
   supervisorName?: string;
+  chiefAccountantId?: string;
+  chiefAccountantName?: string;
   accountantPerc?: number;
   bankClientPerc?: number; // New from JSON: "% банк клиент"
   bankClientSum?: number;
@@ -404,7 +406,7 @@ export interface Config {
 export type KPIInputType = 'checkbox' | 'counter' | 'number' | 'rating';
 
 // KPI Role Type
-export type KPIRoleType = 'accountant' | 'bank_client' | 'supervisor';
+export type KPIRoleType = 'accountant' | 'bank_client' | 'supervisor' | 'all';
 
 // KPI Rule (Dinamik qoida)
 export interface KPIRule {
@@ -421,6 +423,15 @@ export interface KPIRule {
   sortOrder: number;
 }
 
+export interface CompanyKPIRule {
+  id: string; // company_kpi_rules ID
+  companyId: string;
+  ruleId: string;
+  rewardPercent?: number;  // Override
+  penaltyPercent?: number; // Override
+  isActive: boolean;
+}
+
 // Monthly Performance Entry (Oylik natija)
 export interface MonthlyPerformance {
   id: string;
@@ -432,8 +443,20 @@ export interface MonthlyPerformance {
   ruleId: string;
   ruleName?: string;
   ruleNameUz?: string;
+  ruleRole?: KPIRoleType;
+  ruleRewardPercent?: number;
+  rulePenaltyPercent?: number;
+  rewardPercentOverride?: number;
+  penaltyPercentOverride?: number;
   value: number;                   // 1=Ha, 0=Yo'q, 5=5 ta kechikish
   calculatedScore: number;         // Avtomat hisoblangan foiz
+  source?: 'employee' | 'supervisor' | 'chief' | 'system';
+  status?: 'draft' | 'submitted' | 'approved' | 'rejected';
+  submittedBy?: string;
+  submittedAt?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectedReason?: string;
   notes?: string;
   changeReason?: string;
   recordedBy?: string;

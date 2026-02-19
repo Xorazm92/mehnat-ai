@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Staff, EmployeeSalarySummary, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance } from '../types';
-import { upsertPayrollAdjustment, fetchPayrollAdjustments, fetchMonthlyPerformance } from '../lib/supabaseData';
+import { Staff, EmployeeSalarySummary, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance, KPIRule, CompanyKPIRule } from '../types';
+import { upsertPayrollAdjustment, fetchPayrollAdjustments, fetchMonthlyPerformance, fetchKPIRules, fetchAllCompanyKPIRules } from '../lib/supabaseData';
 import { calculateCompanySalaries } from '../lib/kpiLogic';
 import { translations } from '../lib/translations';
 import { Wallet, MinusCircle, PlusCircle, Save } from 'lucide-react';
@@ -10,24 +10,31 @@ interface Props {
     companies: Company[];
     operations: OperationEntry[];
     lang: Language;
+    currentUserId?: string;
     currentUserRole?: string;
 }
 
-const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, currentUserRole }) => {
+const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, currentUserId, currentUserRole }) => {
     const t = translations[lang];
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [editingAdj, setEditingAdj] = useState<{ empId: string, type: 'bonus' | 'jarima' | 'avans', amount: number, reason: string } | null>(null);
     const [adjustmentsList, setAdjustmentsList] = useState<PayrollAdjustment[]>([]);
     const [performanceList, setPerformanceList] = useState<MonthlyPerformance[]>([]);
+    const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
+    const [companyOverrides, setCompanyOverrides] = useState<CompanyKPIRule[]>([]);
 
     const loadMonthlyData = async () => {
         try {
-            const [adj, perf] = await Promise.all([
+            const [adj, perf, rules, overrides] = await Promise.all([
                 fetchPayrollAdjustments(month + '-01'),
-                fetchMonthlyPerformance(month + '-01')
+                fetchMonthlyPerformance(month + '-01'),
+                fetchKPIRules(),
+                fetchAllCompanyKPIRules()
             ]);
             setAdjustmentsList(adj);
             setPerformanceList(perf);
+            setKpiRules(rules);
+            setCompanyOverrides(overrides);
         } catch (e) {
             console.error("Error loading monthly data:", e);
         }
@@ -58,7 +65,21 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
 
             myCompanies.forEach(c => {
                 const op = operations.find(o => o.companyId === c.id && o.period === checkMonth);
-                const results = calculateCompanySalaries(c, op, performanceList);
+
+                // Merge rules with company-specific overrides
+                const mergedRules = kpiRules.map(r => {
+                    const override = companyOverrides.find(o => o.companyId === c.id && o.ruleId === r.id);
+                    if (override) {
+                        return {
+                            ...r,
+                            rewardPercent: override.rewardPercent ?? r.rewardPercent,
+                            penaltyPercent: override.penaltyPercent ?? r.penaltyPercent
+                        };
+                    }
+                    return r;
+                });
+
+                const results = calculateCompanySalaries(c, op, performanceList, mergedRules);
 
                 // Match by ID first, then by name as fallback
                 results.filter(r =>
@@ -93,7 +114,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
                 performanceDetails: []
             } as EmployeeSalarySummary;
         }).filter(s => s.companyCount > 0);
-    }, [staff, companies, operations, month, adjustmentsList, performanceList]);
+    }, [staff, companies, operations, month, adjustmentsList, performanceList, kpiRules, companyOverrides]);
 
     const handleAddAdjustment = async () => {
         if (!editingAdj) return;
@@ -105,13 +126,16 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
                 adjustmentType: editingAdj.type,
                 amount: editingAdj.type === 'jarima' || editingAdj.type === 'avans' ? -Math.abs(editingAdj.amount) : Math.abs(editingAdj.amount),
                 reason: editingAdj.reason,
-                isApproved: true
+                isApproved: true,
+                approvedBy: currentUserId,
+                approvedAt: new Date().toISOString(),
+                createdBy: currentUserId
             });
             setEditingAdj(null);
             loadMonthlyData();
         } catch (e) {
             console.error(e);
-            alert('Xatolik yuz berdi');
+            alert((e as any)?.message || 'Xatolik yuz berdi');
         }
     };
 

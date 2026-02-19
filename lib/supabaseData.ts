@@ -15,6 +15,7 @@ import {
   ContractAssignment,
   ContractRole,
   KPIRule,
+  CompanyKPIRule,
   MonthlyPerformance,
   PayrollAdjustment,
   EmployeeSalarySummary,
@@ -66,6 +67,8 @@ interface CompanyNotesFallback {
   v?: number;
   bcid?: string;
   bcn?: string;
+  cid?: string;
+  cn?: string;
   sid?: string;
   sn?: string;
   srvn?: string; // serverName
@@ -235,6 +238,9 @@ export const upsertKPIRule = async (rule: Partial<KPIRule>) => {
     id: rule.id,
     name: rule.name,
     name_uz: rule.nameUz,
+    role: rule.role,
+    reward_percent: rule.rewardPercent ?? null,
+    penalty_percent: rule.penaltyPercent ?? null,
     input_type: rule.inputType,
     category: rule.category,
     description: rule.description,
@@ -244,19 +250,82 @@ export const upsertKPIRule = async (rule: Partial<KPIRule>) => {
   };
 
   const { error } = await supabase.from('kpi_rules').upsert(payload);
-  if (error) throw error;
+  if (error) {
+    console.error('upsertKPIRule error:', error);
+    throw error;
+  }
 };
+
 
 export const deleteKPIRule = async (id: string) => {
   const { error } = await supabase.from('kpi_rules').delete().eq('id', id);
   if (error) throw error;
 };
 
+export const fetchCompanyKPIRules = async (companyId: string): Promise<CompanyKPIRule[]> => {
+  const { data, error } = await supabase
+    .from('company_kpi_rules')
+    .select('*')
+    .eq('company_id', companyId);
+
+  if (error) {
+    console.error('fetchCompanyKPIRules error:', error);
+    return [];
+  }
+
+  return data.map(r => ({
+    id: r.id,
+    companyId: r.company_id,
+    ruleId: r.rule_id,
+    rewardPercent: r.reward_percent,
+    penaltyPercent: r.penalty_percent,
+    isActive: r.is_active
+  }));
+};
+
+export const fetchAllCompanyKPIRules = async (): Promise<CompanyKPIRule[]> => {
+  const { data, error } = await supabase
+    .from('company_kpi_rules')
+    .select('*');
+
+  if (error) {
+    console.error('fetchAllCompanyKPIRules error:', error);
+    return [];
+  }
+
+  return data.map(r => ({
+    id: r.id,
+    companyId: r.company_id,
+    ruleId: r.rule_id,
+    rewardPercent: r.reward_percent,
+    penaltyPercent: r.penalty_percent,
+    isActive: r.is_active
+  }));
+};
+
+export const upsertCompanyKPIRule = async (rule: Partial<any>) => {
+  const payload = {
+    id: rule.id,
+    company_id: rule.companyId,
+    rule_id: rule.ruleId,
+    reward_percent: rule.rewardPercent,
+    penalty_percent: rule.penaltyPercent,
+    is_active: rule.isActive,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase.from('company_kpi_rules').upsert(payload, { onConflict: 'company_id, rule_id' });
+  if (error) {
+    console.error('upsertCompanyKPIRule error:', error);
+    throw error;
+  }
+};
+
 // 2. Monthly Performance
 export const fetchMonthlyPerformance = async (month: string, companyId?: string, employeeId?: string): Promise<MonthlyPerformance[]> => {
   let query = supabase
     .from('monthly_performance')
-    .select('*, rule:kpi_rules(name, name_uz), company:companies(name), employee:profiles!employee_id(full_name)')
+    .select('*, rule:kpi_rules(name, name_uz, role, reward_percent, penalty_percent), company:companies(name), employee:profiles!employee_id(full_name)')
     .eq('month', month);
 
   if (companyId) query = query.eq('company_id', companyId);
@@ -269,23 +338,47 @@ export const fetchMonthlyPerformance = async (month: string, companyId?: string,
     return [];
   }
 
-  return data.map(p => ({
-    id: p.id,
-    month: p.month,
-    companyId: p.company_id,
-    companyName: p.company?.name,
-    employeeId: p.employee_id,
-    employeeName: p.employee?.full_name,
-    ruleId: p.rule_id,
-    ruleName: p.rule?.name,
-    ruleNameUz: p.rule?.name_uz,
-    value: p.value,
-    calculatedScore: p.calculated_score,
-    notes: p.notes,
-    changeReason: p.change_reason,
-    recordedBy: p.recorded_by,
-    recordedAt: p.recorded_at
-  }));
+  // Fetch company-level overrides for these companies
+  const companyIds = Array.from(new Set(data.map(p => p.company_id)));
+  const { data: overrides } = await supabase
+    .from('company_kpi_rules')
+    .select('*')
+    .in('company_id', companyIds);
+
+  return data.map(p => {
+    const override = overrides?.find(o => o.company_id === p.company_id && o.rule_id === p.rule_id);
+
+    return {
+      id: p.id,
+      month: p.month,
+      companyId: p.company_id,
+      companyName: p.company?.name,
+      employeeId: p.employee_id,
+      employeeName: p.employee?.full_name,
+      ruleId: p.rule_id,
+      ruleName: p.rule?.name,
+      ruleNameUz: p.rule?.name_uz,
+      ruleRole: p.rule?.role,
+      // Effectively fall back: Override -> Global
+      ruleRewardPercent: override?.reward_percent ?? p.rule?.reward_percent,
+      rulePenaltyPercent: override?.penalty_percent ?? p.rule?.penalty_percent,
+      rewardPercentOverride: (p as any).reward_percent_override,
+      penaltyPercentOverride: (p as any).penalty_percent_override,
+      value: p.value,
+      calculatedScore: p.calculated_score,
+      source: p.source,
+      status: p.status,
+      submittedBy: p.submitted_by,
+      submittedAt: p.submitted_at,
+      approvedBy: p.approved_by,
+      approvedAt: p.approved_at,
+      rejectedReason: p.rejected_reason,
+      notes: p.notes,
+      changeReason: p.change_reason,
+      recordedBy: p.recorded_by,
+      recordedAt: p.recorded_at
+    };
+  });
 };
 
 export const upsertMonthlyPerformance = async (perf: Partial<MonthlyPerformance>) => {
@@ -296,13 +389,109 @@ export const upsertMonthlyPerformance = async (perf: Partial<MonthlyPerformance>
     employee_id: perf.employeeId,
     rule_id: perf.ruleId,
     value: perf.value,
+    reward_percent_override: perf.rewardPercentOverride,
+    penalty_percent_override: perf.penaltyPercentOverride,
+    source: perf.source,
+    status: perf.status,
+    submitted_by: perf.submittedBy,
+    submitted_at: perf.submittedAt,
+    approved_by: perf.approvedBy,
+    approved_at: perf.approvedAt,
+    rejected_reason: perf.rejectedReason,
     notes: perf.notes,
+    recorded_by: perf.recordedBy,
     recorded_at: new Date().toISOString()
   };
 
   // Note: calculated_score is handled by DB trigger
-  const { error } = await supabase.from('monthly_performance').upsert(payload);
-  if (error) throw error;
+  try {
+    const { error } = await supabase
+      .from('monthly_performance')
+      .upsert(payload, {
+        onConflict: 'month,company_id,employee_id,rule_id'
+      });
+    if (error) {
+      console.error('upsertMonthlyPerformance error:', error);
+
+      // If the DB schema is missing workflow columns (schema cache stale / migration not applied),
+      // retry with minimal payload to avoid hard-blocking the UI.
+      const message = String(error.message || '');
+      const details = String(error.details || '');
+      const hint = String(error.hint || '');
+      const combined = `${message} ${details} ${hint}`.toLowerCase();
+
+      const tryingToWriteOverrides =
+        perf.rewardPercentOverride !== undefined ||
+        perf.penaltyPercentOverride !== undefined;
+
+      if (
+        error.code === 'PGRST204' ||
+        error.code === '42703' ||
+        combined.includes('could not find') ||
+        combined.includes('column') && combined.includes('does not exist')
+      ) {
+        if (tryingToWriteOverrides && (combined.includes('reward_percent_override') || combined.includes('penalty_percent_override'))) {
+          throw new Error(
+            "DB schema eski: monthly_performance jadvalida reward_percent_override / penalty_percent_override ustunlari yo'q. Supabase'da 20260218_kpi_percent_overrides.sql migration'ni RUN qiling, so'ng qayta urinib ko'ring."
+          );
+        }
+        const minimalPayload = {
+          id: perf.id,
+          month: perf.month,
+          company_id: perf.companyId,
+          employee_id: perf.employeeId,
+          rule_id: perf.ruleId,
+          value: perf.value,
+          notes: perf.notes,
+          recorded_by: perf.recordedBy,
+          recorded_at: new Date().toISOString()
+        };
+
+        const { error: retryError } = await supabase
+          .from('monthly_performance')
+          .upsert(minimalPayload, { onConflict: 'month,company_id,employee_id,rule_id' });
+
+        if (retryError) {
+          console.error('upsertMonthlyPerformance retryError:', retryError);
+          throw retryError;
+        }
+        return;
+      }
+
+      throw error;
+    }
+  } catch (e: any) {
+    // If DB schema doesn't have workflow columns yet (approved_by/source/status...), PostgREST can return
+    // PGRST204 / 42703 or a message like "Could not find the 'approved_by' column ... in the schema cache".
+    const msg = String(e?.message || '');
+    const code = String(e?.code || '');
+    const isMissingColumn =
+      code === 'PGRST204' ||
+      code === '42703' ||
+      msg.includes("Could not find the '") ||
+      msg.toLowerCase().includes('schema cache');
+
+    if (!isMissingColumn) throw e;
+
+    const minimalPayload = {
+      id: perf.id,
+      month: perf.month,
+      company_id: perf.companyId,
+      employee_id: perf.employeeId,
+      rule_id: perf.ruleId,
+      value: perf.value,
+      notes: perf.notes,
+      recorded_by: perf.recordedBy,
+      recorded_at: new Date().toISOString()
+    };
+
+    const { error: e2 } = await supabase
+      .from('monthly_performance')
+      .upsert(minimalPayload, {
+        onConflict: 'month,company_id,employee_id,rule_id'
+      });
+    if (e2) throw e2;
+  }
 };
 
 // 3. Payroll Adjustments
@@ -342,7 +531,10 @@ export const upsertPayrollAdjustment = async (adj: Partial<PayrollAdjustment>) =
     adjustment_type: adj.adjustmentType,
     amount: adj.amount,
     reason: adj.reason,
-    is_approved: adj.isApproved
+    approved_by: adj.approvedBy,
+    approved_at: adj.approvedAt,
+    is_approved: adj.isApproved,
+    created_by: adj.createdBy
   };
 
   const { error } = await supabase.from('payroll_adjustments').upsert(payload);
@@ -400,6 +592,8 @@ interface CompanyNotesFallback {
   v?: number;
   bcid?: string;
   bcn?: string;
+  cid?: string;
+  cn?: string;
   sid?: string;
   sn?: string; // supervisorName
   srvn?: string; // serverName (NEW)
@@ -419,26 +613,35 @@ interface CompanyNotesFallback {
 
 // Companies
 export const fetchCompanies = async (): Promise<Company[]> => {
+  // NOTE: Some deployments don't have FK relationships between companies and profiles
+  // in PostgREST schema cache, causing PGRST200/400 errors for embedded selects.
+  // Fetch plain companies rows and rely on stored names / notes fallback.
   const { data, error } = await supabase
     .from('companies')
-    .select('*, accountant:profiles!companies_accountant_id_fkey(full_name)')
+    .select('*')
     .order('created_at', { ascending: false });
+
   if (error) {
     console.error('fetchCompanies', error);
-    return [];
+    throw error;
   }
-  return data.map((c) => {
+
+  return (data || []).map((c: any) => {
     // Smart Fallback Parser
     let extra: CompanyNotesFallback = {};
     if (c.notes?.startsWith('{')) {
       try { extra = JSON.parse(c.notes); } catch (e) { }
     }
 
+    const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    const rawAccName = (c as any).accountant_name || c.accountant_id;
+    const cleanAccName = (rawAccName && isUUID(rawAccName)) ? '' : (rawAccName || '');
+
     return {
       id: c.id,
       name: c.name,
       inn: c.inn,
-      accountantName: (c.accountant as any)?.full_name || c.accountant_id,
+      accountantName: cleanAccName,
       accountantId: c.accountant_id,
       taxType: (c as any).tax_type_new || (c.tax_regime === 'vat' ? TaxType.NDS_PROFIT : (c.tax_regime === 'turnover' ? TaxType.TURNOVER : TaxType.FIXED)),
       department: c.department,
@@ -452,14 +655,16 @@ export const fetchCompanies = async (): Promise<Company[]> => {
       baseName1c: (c as any).base_name_1c,
       kpiEnabled: (c as any).kpi_enabled,
       bankClientId: (c as any).bank_client_id || extra.bcid,
-      bankClientName: extra.bcn || '—',
+      bankClientName: (extra.bcn && !isUUID(extra.bcn)) ? extra.bcn : '—',
       supervisorId: (c as any).supervisor_id || extra.sid,
-      supervisorName: extra.sn || '—',
+      supervisorName: (extra.sn && !isUUID(extra.sn)) ? extra.sn : '—',
+      chiefAccountantId: (c as any).chief_accountant_id || extra.cid,
+      chiefAccountantName: (c as any).chief_accountant_name || ((extra.cn && !isUUID(extra.cn)) ? extra.cn : '—'),
       contractAmount: (c as any).contract_amount ?? (extra.camt || 0),
       accountantPerc: (c as any).accountant_perc ?? (extra.aperc || 0),
       bankClientPerc: extra.bcp || 0,
       bankClientSum: (c as any).bank_client_sum ?? (extra.bcsum || 0),
-      chiefAccountantPerc: extra.cperc ?? 7,
+      chiefAccountantPerc: extra.cperc ?? 0,
       chiefAccountantSum: (c as any).chief_accountant_sum ?? (extra.casum || 0),
       supervisorPerc: (c as any).supervisor_perc ?? (extra.sperc || 0),
       ownerName: extra.on,
@@ -515,7 +720,7 @@ export const upsertCompany = async (company: Company, assignments?: any[]) => {
     accountant_id: company.accountantId,
     login: company.login,
     password: company.password,
-    accountant_name: company.accountantName,
+    accountant_name: (company.accountantName && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(company.accountantName)) ? '' : company.accountantName,
     notes: company.notes,
     is_active: company.isActive ?? true,
     // SHARTNOMA (Contract) fields
@@ -525,6 +730,7 @@ export const upsertCompany = async (company: Company, assignments?: any[]) => {
     bank_client_sum: company.bankClientSum,
     supervisor_id: company.supervisorId || null,
     supervisor_perc: company.supervisorPerc,
+    chief_accountant_id: company.chiefAccountantId || null,
     chief_accountant_sum: company.chiefAccountantSum,
     it_park_resident: company.itParkResident,
     // PASPORT fields
@@ -703,6 +909,7 @@ export const fetchOperations = async (): Promise<OperationEntry[]> => {
     }
 
     return {
+      ...o, // Spread all database fields (didox, xatlar, one_c, etc.)
       id: o.id,
       companyId: o.company_id,
       period: o.period,
@@ -712,7 +919,7 @@ export const fetchOperations = async (): Promise<OperationEntry[]> => {
       updatedAt: o.updated_at,
       history: [],
       kpi: kpiData,
-      tasks: o.tasks || [], // Include tasks
+      tasks: o.tasks || [],
       assigned_supervisor_id: o.assigned_supervisor_id,
       assigned_supervisor_name: o.assigned_supervisor_name,
       assigned_bank_manager_id: o.assigned_bank_manager_id,
@@ -1031,6 +1238,7 @@ export const ensureOperationSnapshot = async (company: Company, period: string) 
 
 // Staff
 export const fetchStaff = async (): Promise<Staff[]> => {
+  const YORQINOY_ID = 'b717137c-607f-4f16-91ba-01ec093c3288';
   // First attempt with all columns
   const { data, error } = await supabase
     .from('profiles')
@@ -1048,7 +1256,7 @@ export const fetchStaff = async (): Promise<Staff[]> => {
       return [];
     }
 
-    return minData.map((p) => {
+    const staff = minData.map((p) => {
       let role = p.role;
       if (role === 'manager') role = 'supervisor';
       if (p.full_name === 'Super Admin' && role === 'supervisor') role = 'chief_accountant';
@@ -1062,9 +1270,22 @@ export const fetchStaff = async (): Promise<Staff[]> => {
         is_active: true
       };
     }) as Staff[];
+
+    if (!staff.some(s => s.id === YORQINOY_ID)) {
+      staff.push({
+        id: YORQINOY_ID,
+        name: 'Yorqinoy',
+        role: 'chief_accountant',
+        avatarColor: 'hsl(280,60%,55%)',
+        phone: '',
+        is_active: true
+      });
+    }
+
+    return staff;
   }
 
-  return data.map((p) => {
+  const staff = data.map((p) => {
     let role = p.role;
     if (role === 'manager') role = 'supervisor';
     if (p.full_name === 'Super Admin' && role === 'supervisor') role = 'chief_accountant';
@@ -1078,6 +1299,19 @@ export const fetchStaff = async (): Promise<Staff[]> => {
       is_active: p.is_active ?? true
     };
   }) as Staff[];
+
+  if (!staff.some(s => s.id === YORQINOY_ID)) {
+    staff.push({
+      id: YORQINOY_ID,
+      name: 'Yorqinoy',
+      role: 'chief_accountant',
+      avatarColor: 'hsl(280,60%,55%)',
+      phone: '',
+      is_active: true
+    });
+  }
+
+  return staff;
 };
 
 export const upsertStaff = async (staff: Staff) => {

@@ -34,7 +34,7 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
             loadRules();
         } catch (e) {
             console.error(e);
-            alert('Error saving rule');
+            alert((e as any)?.message || 'Error saving rule');
         }
     };
 
@@ -75,55 +75,74 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
             </div>
 
             <div className="bg-white dark:bg-apple-darkCard rounded-[2.5rem] border border-apple-border dark:border-apple-darkBorder overflow-hidden shadow-xl p-8">
-                <div className="grid grid-cols-1 gap-4">
-                    {rules.length === 0 && !loading && (
-                        <p className="text-center text-slate-400 py-10">Qoidalar mavjud emas</p>
-                    )}
+                <div className="space-y-8">
+                    {['automation', 'manual'].map(category => (
+                        <div key={category} className="space-y-4">
+                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <span className="w-8 h-[2px] bg-apple-accent"></span>
+                                {category === 'automation' ? "Avtomatik Operatsiyalar (Operatsiyalar bo'limidan)" : "Qo'lda baholash (Nazoratchi tomonidan)"}
+                            </h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                {rules.filter(r => r.category === category && r.isActive).map(rule => (
+                                    <div key={rule.id} className="flex flex-col md:flex-row items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-2xl gap-4 border border-transparent hover:border-apple-border/50 transition-colors">
+                                        <div className="flex items-center gap-4 flex-1">
+                                            <div onClick={() => toggleActive(rule)} className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${rule.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                                                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${rule.isActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                            </div>
 
-                    {rules.map(rule => (
-                        <div key={rule.id} className="flex flex-col md:flex-row items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-2xl gap-4 border border-transparent hover:border-apple-border/50 transition-colors">
-                            <div className="flex items-center gap-4 flex-1">
-                                <div onClick={() => toggleActive(rule)} className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${rule.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${rule.isActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                                </div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-800 dark:text-white">{rule.nameUz} <span className="text-xs font-normal text-slate-400 ml-2">({rule.name})</span></h4>
+                                                <div className="flex gap-2 mt-1">
+                                                    <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-slate-200 dark:bg-white/10 rounded-md text-slate-500">{rule.role}</span>
+                                                    <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-blue-100 dark:bg-blue-500/20 text-blue-500 rounded-md">{rule.inputType}</span>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                <div>
-                                    <h4 className="font-bold text-slate-800 dark:text-white">{rule.nameUz} <span className="text-xs font-normal text-slate-400 ml-2">({rule.name})</span></h4>
-                                    <div className="flex gap-2 mt-1">
-                                        <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-slate-200 dark:bg-white/10 rounded-md text-slate-500">{rule.role}</span>
-                                        <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-slate-200 dark:bg-white/10 rounded-md text-slate-500">{rule.category}</span>
-                                        <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-blue-100 dark:bg-blue-500/20 text-blue-500 rounded-md">{rule.inputType}</span>
+                                        <div className="flex items-center gap-6">
+                                            <div className="text-right">
+                                                <p className="text-xs font-black uppercase text-slate-400">Bonus / Jarima</p>
+                                                <p className="font-mono font-bold">
+                                                    <span className="text-emerald-500">+{rule.rewardPercent}%</span>
+                                                    <span className="text-slate-300 mx-2">/</span>
+                                                    <span className="text-rose-500">{rule.penaltyPercent}%</span>
+                                                </p>
+                                            </div>
+
+                                            <button
+                                                onClick={() => setEditingRule(rule)}
+                                                className="p-3 bg-slate-100 dark:bg-white/10 text-slate-400 hover:text-apple-accent hover:bg-apple-accent/10 rounded-xl transition-all"
+                                                title="Tahrirlash"
+                                            >
+                                                <Edit3 size={18} />
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-6">
-                                <div className="text-right">
-                                    <p className="text-xs font-black uppercase text-slate-400">Bonus / Jarima</p>
-                                    <p className="font-mono font-bold">
-                                        <span className="text-emerald-500">+{rule.rewardPercent}%</span>
-                                        <span className="text-slate-300 mx-2">/</span>
-                                        <span className="text-rose-500">{rule.penaltyPercent}%</span>
-                                    </p>
-                                </div>
-
-                                <button
-                                    onClick={() => setEditingRule(rule)}
-                                    className="p-3 bg-slate-100 dark:bg-white/10 text-slate-400 hover:text-apple-accent hover:bg-apple-accent/10 rounded-xl transition-all"
-                                    title="Tahrirlash"
-                                >
-                                    <Edit3 size={18} />
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(rule.id, rule.nameUz)}
-                                    className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all"
-                                    title="O'chirish"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                                ))}
                             </div>
                         </div>
                     ))}
+
+                    {rules.filter(r => !r.isActive).length > 0 && (
+                        <div className="pt-8 border-t border-apple-border dark:border-apple-darkBorder">
+                            <details className="group">
+                                <summary className="text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-600 transition-colors mb-4">
+                                    Arxivlangan / Faol bo'lmagan qoidalar ({rules.filter(r => !r.isActive).length})
+                                </summary>
+                                <div className="grid grid-cols-1 gap-2 p-4 bg-slate-50/50 dark:bg-white/5 rounded-2xl">
+                                    {rules.filter(r => !r.isActive).map(rule => (
+                                        <div key={rule.id} className="flex items-center justify-between p-2 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+                                            <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{rule.nameUz} ({rule.name})</span>
+                                            <div className="flex items-center gap-4">
+                                                <button onClick={() => toggleActive(rule)} className="text-[10px] font-black uppercase text-emerald-500">Faollashtirish</button>
+                                                <button onClick={() => handleDelete(rule.id, rule.nameUz)} className="p-2 text-rose-500"><Trash2 size={14} /></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </details>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -184,8 +203,14 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
                                     <input
                                         type="number" step="0.01"
                                         className="w-full bg-slate-50 border p-3 rounded-xl font-bold text-emerald-600"
-                                        value={editingRule.rewardPercent}
-                                        onChange={e => setEditingRule({ ...editingRule, rewardPercent: parseFloat(e.target.value) })}
+                                        value={editingRule.rewardPercent ?? ''}
+                                        onChange={e => {
+                                            const v = e.target.value;
+                                            setEditingRule({
+                                                ...editingRule,
+                                                rewardPercent: v === '' ? undefined : Number(v)
+                                            });
+                                        }}
                                     />
                                 </div>
                                 <div>
@@ -193,8 +218,14 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
                                     <input
                                         type="number" step="0.01"
                                         className="w-full bg-slate-50 border p-3 rounded-xl font-bold text-rose-600"
-                                        value={editingRule.penaltyPercent}
-                                        onChange={e => setEditingRule({ ...editingRule, penaltyPercent: parseFloat(e.target.value) })}
+                                        value={editingRule.penaltyPercent ?? ''}
+                                        onChange={e => {
+                                            const v = e.target.value;
+                                            setEditingRule({
+                                                ...editingRule,
+                                                penaltyPercent: v === '' ? undefined : Number(v)
+                                            });
+                                        }}
                                     />
                                 </div>
                                 <div>
@@ -213,7 +244,7 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
                                     <input
                                         type="checkbox"
                                         id="isActive"
-                                        checked={editingRule.isActive}
+                                        checked={!!editingRule.isActive}
                                         onChange={e => setEditingRule({ ...editingRule, isActive: e.target.checked })}
                                         className="w-5 h-5"
                                     />

@@ -1,34 +1,32 @@
 
-import { Company, OperationEntry, ReportStatus, ContractRole, MonthlyPerformance } from '../types';
+import { Company, OperationEntry, ReportStatus, ContractRole, MonthlyPerformance, KPIRule } from '../types';
 
 export interface SalaryResult {
     role: ContractRole | 'chief_accountant' | 'supervisor';
     staffId?: string;
     staffName?: string;
     baseAmount: number;
-    kpiScore: number; // -1, 0, 1
+    kpiScore: number; // percent sum (e.g. +0.5 means +0.5%)
     finalAmount: number;
     details: string[];
 }
 
+// getReportScore removed as it is redundant with getReportStatusMultiplier below.
+
 /**
- * Calculates the KPI score (-1, 0, 1) for a specific report/operation status.
+ * Maps operation report status to a multiplier (1, 0, -1).
  */
-export const getReportScore = (status: ReportStatus): number => {
-    switch (status) {
-        case ReportStatus.ACCEPTED:
-        case ReportStatus.NOT_REQUIRED:
-            return 1;
-        case ReportStatus.SUBMITTED:
-        case ReportStatus.IN_PROGRESS:
-            return 0; // Hold
-        case ReportStatus.NOT_SUBMITTED:
-        case ReportStatus.REJECTED:
-        case ReportStatus.BLOCKED:
-            return -1; // Penalty
-        default:
-            return 0;
-    }
+export const getReportStatusMultiplier = (status?: string): number => {
+    if (!status) return 0;
+    const s = status.toLowerCase();
+
+    // Reward shorthands or full DB strings
+    if (s === '+' || s === 'accepted' || s === 'topshirildi' || s === 'submitted') return 1;
+
+    // Penalties
+    if (s === '-' || s === 'not_submitted' || s === 'rejected' || s === 'rad etildi' || s === 'error' || s === 'oshibka' || s === 'blocked' || s === 'kartoteka') return -1;
+
+    return 0; // Neutral (Not Required, Unknown)
 };
 
 /**
@@ -37,12 +35,18 @@ export const getReportScore = (status: ReportStatus): number => {
 export const calculateCompanySalaries = (
     company: Company,
     operation?: OperationEntry,
-    performances: MonthlyPerformance[] = []
+    performances: MonthlyPerformance[] = [],
+    rules: KPIRule[] = []
 ): SalaryResult[] => {
     const results: SalaryResult[] = [];
-    const contract = company.contractAmount || 0;
+    const contract = (operation as any)?.contract_amount || company.contractAmount || (company as any).contract_amount || 0;
 
-    const companyPerf = performances.filter(p => p.companyId === company.id);
+    const companyPerf = performances.filter(p => {
+        if (p.companyId !== company.id) return false;
+        // Only approved KPI affects payroll. Backward compatible: if status is missing, assume approved.
+        if (!p.status) return true;
+        return p.status === 'approved';
+    });
 
     const calculateForRole = (
         role: SalaryResult['role'],
@@ -66,46 +70,103 @@ export const calculateCompanySalaries = (
 
         if (base === 0 && !staffId) return;
 
-        // KPI Calculation
-        let score = 1; // Default to full pay
+        // KPI Calculation (percent-based)
+        let sumPercent = 0;
 
-        // 1. Report Status Impact (Accountant only for now)
-        if (role === 'accountant' && operation) {
-            const profitScore = getReportScore(operation.profitTaxStatus);
-            const statsScore = getReportScore(operation.statsStatus);
-
-            if (profitScore === -1 || statsScore === -1) {
-                score = -1;
-                details.push('Penalty: Late or Rejected reports');
-            } else if (profitScore === 0 || statsScore === 0) {
-                score = 0;
-                details.push('Hold: Reports in progress');
-            }
-        }
-
-        // 2. Manual Performance Impact (From NazoratchiChecklist)
+        // 1) Manual KPI rules impact
         if (staffId) {
             const myRolePerf = companyPerf.filter(p => p.employeeId === staffId);
-            const penaltyCount = myRolePerf.filter(p => p.value === -1).length;
-            const holdCount = myRolePerf.filter(p => p.value === 0).length;
+            const typedRole =
+                role === 'accountant'
+                    ? 'accountant'
+                    : role === 'bank_manager'
+                        ? 'bank_client'
+                        : role === 'supervisor'
+                            ? 'supervisor'
+                            : role === 'chief_accountant'
+                                ? 'chief_accountant'
+                                : (role as any);
 
-            if (penaltyCount > 0) {
-                score = -1;
-                details.push(`Penalty: ${penaltyCount} negative KPI marks`);
-            } else if (holdCount > 0 && score === 1) {
-                score = 0;
-                details.push(`Hold: ${holdCount} pending KPI marks`);
+            const myRolePerfFiltered = myRolePerf.filter(p => {
+                // If ruleRole is missing (old data), or explicitly 'all' - apply it.
+                if (!p.ruleRole || p.ruleRole === 'all') return true;
+                // Don't apply accountant/bank_client/supervisor rules to chief_accountant.
+                if (typedRole === 'chief_accountant') return false;
+                // Standard role match
+                return p.ruleRole === typedRole;
+            });
+
+            for (const p of myRolePerfFiltered) {
+                if (p.value === 1) {
+                    const inc = Number((p.rewardPercentOverride ?? p.ruleRewardPercent) ?? 0);
+                    if (inc !== 0) {
+                        sumPercent += inc;
+                        details.push(`KPI +${inc}%: ${p.ruleNameUz || p.ruleName || p.ruleId}`);
+                    }
+                } else if (p.value === -1) {
+                    const dec = Number((p.penaltyPercentOverride ?? p.rulePenaltyPercent) ?? 0);
+                    if (dec !== 0) {
+                        sumPercent -= Math.abs(dec);
+                        details.push(`KPI -${Math.abs(dec)}%: ${p.ruleNameUz || p.ruleName || p.ruleId}`);
+                    }
+                }
             }
         }
+
+        // 2) Report Status Impact (Oylar/Operations) - NOW DYNAMIC
+        if (operation) {
+            // Find all automation rules
+            const autoRules = rules.filter(r => r.category === 'automation');
+
+            for (const rule of autoRules) {
+                const key = rule.name as keyof OperationEntry;
+                const status = operation[key];
+
+                if (typeof status === 'string') {
+                    const multiplier = getReportStatusMultiplier(status);
+
+                    // Priority: Performance Override -> Global Rule (which might be overridden per-company in performace list, 
+                    // but for automation we usually don't have performance records yet unless it's handled like manual tasks.
+                    // Wait, automation rules are linked to OperationEntry fields. 
+                    // Let's check if there's a company-specific override in the performance list or a separate override table.
+                    // The calculateCompanySalaries in PayrollDrafts/Table only gets rules via fetchKPIRules.
+                    // We need to ensure rules passed here are already merged with company overrides.
+
+                    const weight = multiplier === 1 ? (rule.rewardPercent || 0) : (rule.penaltyPercent || 0);
+                    const score = multiplier * Math.abs(weight);
+
+                    if (score !== 0) {
+                        // Apply to accountant
+                        if (role === 'accountant' && rule.role === 'accountant') {
+                            sumPercent += score;
+                            details.push(`Auto KPI ${score > 0 ? '+' : ''}${score}%: ${rule.nameUz || rule.name} (${status})`);
+                        }
+                        // Apply to bank_manager if it's bank_klient
+                        if (role === 'bank_manager' && rule.name === 'bank_klient') {
+                            sumPercent += score;
+                            details.push(`Auto KPI ${score > 0 ? '+' : ''}${score}%: ${rule.nameUz || rule.name} (${status})`);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Calculation: Salary = Base + (Contract * KPI% / 100)
+        // This ensures KPI depends on total contract value, not the person's share.
+        const kpiBonus = (contract * sumPercent) / 100;
+        const finalAmount = Math.max(0, base + kpiBonus);
 
         results.push({
             role,
             staffId,
             staffName: staffName || 'Unassigned',
             baseAmount: base,
-            kpiScore: score,
-            finalAmount: score === 1 ? base : (score === 0 ? base * 0.5 : 0),
-            details
+            kpiScore: sumPercent,
+            finalAmount,
+            details: [
+                ...details,
+                `KPI Bonus: ${kpiBonus.toLocaleString()} so'm (${sumPercent.toFixed(2)}% of Contract)`
+            ]
         });
     };
 
@@ -116,13 +177,11 @@ export const calculateCompanySalaries = (
     calculateForRole('bank_manager', company.bankClientId, company.bankClientName, company.bankClientPerc, company.bankClientSum);
 
     // chief_accountant
-    // Yorqinoy (admin@asos.uz) always gets 7% of every company if she is the Chief Accountant
-    const CHIEF_ID = 'a67f17ee-42a2-40d0-8a08-3f98fa5692ac';
-    const chiefPerc = company.chiefAccountantPerc ?? 7; // Default to 7% as per global standard
+    const chiefPerc = company.chiefAccountantPerc || 0; // Removed default 7%, must be manual
     const chiefSum = company.chiefAccountantSum || 0;
 
     if (chiefPerc > 0 || chiefSum > 0) {
-        calculateForRole('chief_accountant', CHIEF_ID, 'Yorqinoy (Bosh Buxgalter)', chiefPerc, chiefSum);
+        calculateForRole('chief_accountant', company.chiefAccountantId, company.chiefAccountantName || 'Bosh Buxgalter', chiefPerc, chiefSum);
     }
 
     // supervisor
