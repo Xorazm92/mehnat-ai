@@ -1,28 +1,52 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Company, KPIRule, MonthlyPerformance, Staff, Language, CompanyKPIRule } from '../types';
+import { Company, KPIRule, MonthlyPerformance, Staff, Language, CompanyKPIRule, OperationEntry } from '../types';
 import { fetchKPIRules, fetchMonthlyPerformance, upsertMonthlyPerformance, fetchCompanyKPIRules } from '../lib/supabaseData';
 import { CheckCircle2, XCircle, Search, AlertCircle, Save } from 'lucide-react';
 import { translations } from '../lib/translations';
+import { getReportStatusMultiplier } from '../lib/kpiLogic';
 
 interface Props {
     companies: Company[];
+    operations: OperationEntry[];
     staff: Staff[];
     lang: Language;
     currentUserRole?: string;
     currentUserId?: string;
 }
 
-const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentUserRole, currentUserId }) => {
+const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, lang, currentUserRole, currentUserId }) => {
     const t = translations[lang];
     const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
     const [rules, setRules] = useState<KPIRule[]>([]);
     const [companyRules, setCompanyRules] = useState<CompanyKPIRule[]>([]);
     const [performances, setPerformances] = useState<MonthlyPerformance[]>([]);
+    const [percentInputs, setPercentInputs] = useState<Record<string, string>>({});
     const [search, setSearch] = useState('');
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [loading, setLoading] = useState(false);
 
     const canEditPercents = currentUserRole === 'super_admin' || currentUserRole === 'chief_accountant';
+
+    const resolveAutomationKey = (rule: KPIRule): keyof OperationEntry | null => {
+        const name = String(rule.name || '').trim().toLowerCase();
+        if (!name) return null;
+
+        const map: Record<string, keyof OperationEntry> = {
+            acc_didox: 'didox',
+            acc_letters: 'xatlar',
+            acc_auto_cameral: 'avtokameral',
+            acc_my_mehnat: 'my_mehnat',
+            acc_1c_base: 'one_c',
+            acc_cashflow: 'pul_oqimlari',
+            acc_tax_info: 'chiqadigan_soliqlar',
+            acc_payroll: 'hisoblangan_oylik',
+            acc_debt: 'debitor_kreditor',
+            acc_pnl: 'foyda_va_zarar',
+            bank_klient: 'bank_klient'
+        };
+
+        return map[name] || (rule.name as keyof OperationEntry) || null;
+    };
 
     const formatError = (error: any) => {
         if (!error) return 'Unknown error';
@@ -41,7 +65,11 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
         }
     };
 
-    const savePercentOverride = async (rule: KPIRule, company: Company, employeeId: string, reward?: number, penalty?: number) => {
+    const getPercentKey = (companyId: string, employeeId: string, ruleId: string, kind: 'reward' | 'penalty') => {
+        return `${companyId}:${employeeId}:${ruleId}:${kind}`;
+    };
+
+    const savePercentOverride = async (rule: KPIRule, company: Company, employeeId: string, reward?: number | null, penalty?: number | null) => {
         if (!company?.id) {
             alert('Company not selected');
             return;
@@ -56,22 +84,18 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
         }
 
         const existing = performances.find(p => p.companyId === company.id && p.employeeId === employeeId && p.ruleId === rule.id);
-        if (!existing) {
-            alert("Avval KPI ni belgilang (✓ yoki ✗). Keyin foizni o'zgartiring.");
-            return;
-        }
         try {
             await upsertMonthlyPerformance({
-                id: existing.id,
+                id: existing?.id,
                 month: `${month}-01`,
                 companyId: company.id,
                 employeeId: employeeId,
                 ruleId: rule.id,
-                value: existing.value,
+                value: existing?.value ?? 0,
                 rewardPercentOverride: reward,
                 penaltyPercentOverride: penalty,
-                source: existing.source || 'chief',
-                status: existing.status || 'approved',
+                source: existing?.source || 'chief',
+                status: existing?.status || 'approved',
                 approvedBy: currentUserId,
                 approvedAt: new Date().toISOString(),
                 recordedBy: currentUserId
@@ -94,12 +118,10 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
             fetchKPIRules(),
             fetchMonthlyPerformance(`${month}-01`) // Start of month
         ]);
-        // Filter to only show manual/attendance rules (exclude automation)
-        const manualRules = rulesData.filter(r =>
-            (r.role === 'accountant' || r.role === 'bank_client' || r.role === 'supervisor' || r.role === 'all') &&
-            r.category !== 'automation'
+        const filteredRules = rulesData.filter(r =>
+            (r.role === 'accountant' || r.role === 'bank_client' || r.role === 'supervisor' || r.role === 'all')
         );
-        setRules(manualRules);
+        setRules(filteredRules);
         setPerformances(perfData);
         setLoading(false);
     };
@@ -115,6 +137,34 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     const selectedCompany = useMemo(() =>
         companies.find(c => c.id === selectedCompanyId),
         [companies, selectedCompanyId]);
+
+    const selectedOperation = useMemo(() => {
+        if (!selectedCompany?.id) return null;
+        return operations.find(o => o.companyId === selectedCompany.id && o.period === month) || null;
+    }, [operations, selectedCompany?.id, month]);
+
+    const calcAutomationPercentForCompany = (companyId: string) => {
+        const op = operations.find(o => o.companyId === companyId && o.period === month);
+        if (!op) return 0;
+
+        const autoRules = rules.filter(r => r.category === 'automation');
+        let sum = 0;
+
+        for (const r of autoRules) {
+            if (r.role !== 'accountant' && r.role !== 'bank_client' && r.role !== 'all') continue;
+            const key = resolveAutomationKey(r);
+            if (!key) continue;
+            const status = (op as any)[key];
+            if (typeof status !== 'string') continue;
+            const mult = getReportStatusMultiplier(status);
+            if (mult === 0) continue;
+            const weight = mult === 1 ? Number(r.rewardPercent || 0) : Number(r.penaltyPercent || 0);
+            const score = mult * Math.abs(weight);
+            sum += score;
+        }
+
+        return sum;
+    };
 
     // Fetch company-specific rules when company changes
     useEffect(() => {
@@ -302,7 +352,9 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin">
                     {filteredCompanies.map(c => {
                         const companyPerf = performances.filter(p => p.companyId === c.id);
-                        const totalPercent = companyPerf.reduce((sum, p) => sum + (Number(p.calculatedScore) || 0), 0);
+                        const manualPercent = companyPerf.reduce((sum, p) => sum + (Number(p.calculatedScore) || 0), 0);
+                        const autoPercent = calcAutomationPercentForCompany(c.id);
+                        const totalPercent = manualPercent + autoPercent;
 
                         return (
                             <div
@@ -317,7 +369,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                     <h4 className={`font-black ${selectedCompanyId === c.id ? 'text-apple-accent' : 'text-slate-700 dark:text-slate-200'}`}>
                                         {c.name}
                                     </h4>
-                                    {companyPerf.length > 0 && (
+                                    {totalPercent !== 0 && (
                                         <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${totalPercent > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
                                             {totalPercent > 0 ? '+' : ''}{Number(totalPercent.toFixed(2))}%
                                         </span>
@@ -369,13 +421,59 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-8 scrollbar-thin">
+                            {selectedOperation && (
+                                <div className="mb-10">
+                                    <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <span className="w-6 h-[2px] bg-slate-300"></span> {lang === 'uz' ? 'Operatsiyalar (Avtomatik KPI)' : 'Операции (Авто KPI)'}
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {rules.filter(r => r.category === 'automation' && (r.role === 'accountant' || r.role === 'all')).map(rule => {
+                                            const key = resolveAutomationKey(rule);
+                                            if (!key) return null;
+                                            const status = (selectedOperation as any)[key];
+                                            const mult = typeof status === 'string' ? getReportStatusMultiplier(status) : 0;
+                                            const weight = mult === 1 ? Number(rule.rewardPercent || 0) : Number(rule.penaltyPercent || 0);
+                                            const score = mult * Math.abs(weight);
+
+                                            return (
+                                                <div
+                                                    key={rule.id}
+                                                    className={`p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${score > 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500/20' : score < 0 ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-500/20' : 'bg-white dark:bg-apple-darkBg border-slate-100 dark:border-white/5'}`}
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${score > 0 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : score < 0 ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'bg-slate-100 dark:bg-white/10 text-slate-300'}`}>
+                                                            {score < 0 ? <XCircle size={20} strokeWidth={3} /> : <CheckCircle2 size={score > 0 ? 20 : 18} strokeWidth={3} />}
+                                                        </div>
+                                                        <div>
+                                                            <p className={`font-bold text-sm ${score !== 0 ? 'text-slate-800 dark:text-white' : 'text-slate-500'}`}>
+                                                                {lang === 'uz' ? rule.nameUz : rule.name}
+                                                            </p>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <p className="text-[10px] font-black text-slate-400">
+                                                                    {Number(rule.rewardPercent || 0) > 0 ? `+${Number(rule.rewardPercent || 0)}%` : ''}
+                                                                    {Number(rule.penaltyPercent || 0) < 0 ? ` / ${Number(rule.penaltyPercent || 0)}%` : ''}
+                                                                </p>
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">{typeof status === 'string' ? status : '—'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className={`text-[11px] font-black ${score > 0 ? 'text-emerald-600' : score < 0 ? 'text-rose-600' : 'text-slate-300'}`}>
+                                                        {score > 0 ? '+' : ''}{Number(score.toFixed(2))}%
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Accountant Tasks */}
                             <div className="mb-8">
                                 <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                     <span className="w-6 h-[2px] bg-slate-300"></span> {lang === 'uz' ? 'Buxgalter Vazifalari (KPI)' : 'Задачи Бухгалтера (KPI)'}
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {rules.filter(r => r.role === 'accountant' || r.role === 'all').map(rawRule => {
+                                    {rules.filter(r => (r.role === 'accountant' || r.role === 'all') && r.category !== 'automation').map(rawRule => {
                                         const rule = getEffectiveRule(rawRule);
                                         const perf = performances.find(p => p.companyId === selectedCompany.id && p.employeeId === (selectedCompany.accountantId || '') && p.ruleId === rule.id);
                                         const needsApproval = perf?.source === 'employee' && perf?.status === 'submitted';
@@ -427,11 +525,22 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                             type="number"
                                                             step="0.01"
                                                             className="w-20 px-2 py-1 rounded-lg border border-slate-200 text-[11px] font-bold text-emerald-600 bg-white"
-                                                            defaultValue={perf?.rewardPercentOverride ?? rule.rewardPercent}
+                                                            placeholder={String(rule.rewardPercent ?? '')}
+                                                            value={percentInputs[getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'reward')] ?? (perf?.rewardPercentOverride ?? perf?.rewardPercentOverride === 0 ? String(perf.rewardPercentOverride) : '')}
+                                                            onChange={(e) => {
+                                                                const key = getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'reward');
+                                                                setPercentInputs(prev => ({ ...prev, [key]: e.target.value }));
+                                                            }}
                                                             onBlur={(e) => {
                                                                 const v = e.target.value;
-                                                                const reward = v === '' ? undefined : Number(v);
-                                                                const penalty = perf?.penaltyPercentOverride ?? rule.penaltyPercent;
+                                                                const reward = v.trim() === '' ? null : Number(v);
+                                                                if (v.trim() !== '' && !Number.isFinite(reward)) {
+                                                                    alert("Noto'g'ri raqam format");
+                                                                    return;
+                                                                }
+                                                                const penalty = (perf?.penaltyPercentOverride ?? perf?.penaltyPercentOverride === 0)
+                                                                    ? perf.penaltyPercentOverride
+                                                                    : null;
                                                                 savePercentOverride(rule, selectedCompany, selectedCompany.accountantId || '', reward, penalty);
                                                             }}
                                                         />
@@ -439,11 +548,22 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                             type="number"
                                                             step="0.01"
                                                             className="w-20 px-2 py-1 rounded-lg border border-slate-200 text-[11px] font-bold text-rose-600 bg-white"
-                                                            defaultValue={perf?.penaltyPercentOverride ?? rule.penaltyPercent}
+                                                            placeholder={String(rule.penaltyPercent ?? '')}
+                                                            value={percentInputs[getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'penalty')] ?? (perf?.penaltyPercentOverride ?? perf?.penaltyPercentOverride === 0 ? String(perf.penaltyPercentOverride) : '')}
+                                                            onChange={(e) => {
+                                                                const key = getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'penalty');
+                                                                setPercentInputs(prev => ({ ...prev, [key]: e.target.value }));
+                                                            }}
                                                             onBlur={(e) => {
                                                                 const v = e.target.value;
-                                                                const penalty = v === '' ? undefined : Number(v);
-                                                                const reward = perf?.rewardPercentOverride ?? rule.rewardPercent;
+                                                                const penalty = v.trim() === '' ? null : Number(v);
+                                                                if (v.trim() !== '' && !Number.isFinite(penalty)) {
+                                                                    alert("Noto'g'ri raqam format");
+                                                                    return;
+                                                                }
+                                                                const reward = (perf?.rewardPercentOverride ?? perf?.rewardPercentOverride === 0)
+                                                                    ? perf.rewardPercentOverride
+                                                                    : null;
                                                                 savePercentOverride(rule, selectedCompany, selectedCompany.accountantId || '', reward, penalty);
                                                             }}
                                                         />
@@ -485,7 +605,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                         <span className="w-6 h-[2px] bg-slate-300"></span> {lang === 'uz' ? 'Bank Klient Vazifalari' : 'Задачи Банк-Клиента'}
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {rules.filter(r => r.role === 'bank_client' || r.role === 'all').map(rawRule => {
+                                        {rules.filter(r => (r.role === 'bank_client' || r.role === 'all') && r.category !== 'automation').map(rawRule => {
                                             const rule = getEffectiveRule(rawRule);
                                             const perf = performances.find(p => p.companyId === selectedCompany.id && p.employeeId === (selectedCompany.bankClientId || '') && p.ruleId === rule.id);
                                             const needsApproval = perf?.source === 'employee' && perf?.status === 'submitted';

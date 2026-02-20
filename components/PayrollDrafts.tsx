@@ -5,6 +5,7 @@ import { fetchMonthlyPerformance, fetchKPIRules, fetchAllCompanyKPIRules } from 
 import { calculateCompanySalaries } from '../lib/kpiLogic';
 import { translations } from '../lib/translations';
 import { DollarSign, CheckCircle2, AlertCircle, FileText, ChevronRight } from 'lucide-react';
+import { periodsEqual } from '../lib/periods';
 
 interface Props {
     staff: Staff[];
@@ -39,16 +40,28 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
 
             const sNameLower = s.name.trim().toLowerCase();
 
+            const myCompanyIdsFromOps = new Set(
+                operations
+                    .filter(op => periodsEqual(op.period, checkMonth))
+                    .filter(op =>
+                        op.assigned_accountant_id === s.id ||
+                        op.assigned_bank_manager_id === s.id ||
+                        op.assigned_supervisor_id === s.id
+                    )
+                    .map(op => op.companyId)
+            );
+
             const myCompanies = companies.filter(c =>
                 c.accountantId === s.id ||
                 c.bankClientId === s.id ||
                 c.supervisorId === s.id ||
+                myCompanyIdsFromOps.has(c.id) ||
                 (!c.bankClientId && c.bankClientName && c.bankClientName.trim().toLowerCase() === sNameLower) ||
                 (!c.supervisorId && c.supervisorName && c.supervisorName.trim().toLowerCase() === sNameLower)
             );
 
             myCompanies.forEach(c => {
-                const op = operations.find(o => o.companyId === c.id && o.period === checkMonth);
+                const op = operations.find(o => o.companyId === c.id && periodsEqual(o.period, checkMonth));
 
                 // Merge rules with company-specific overrides
                 const mergedRules = kpiRules.map(r => {

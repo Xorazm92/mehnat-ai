@@ -348,6 +348,19 @@ export const fetchMonthlyPerformance = async (month: string, companyId?: string,
   return data.map(p => {
     const override = overrides?.find(o => o.company_id === p.company_id && o.rule_id === p.rule_id);
 
+    const rewardOverride = (p as any).reward_percent_override;
+    const penaltyOverride = (p as any).penalty_percent_override;
+    const normalizedCalculatedScore = (() => {
+      const v = Number(p.value) || 0;
+      if (v > 0) {
+        return rewardOverride === null || rewardOverride === undefined ? 0 : Number(p.calculated_score) || 0;
+      }
+      if (v < 0) {
+        return penaltyOverride === null || penaltyOverride === undefined ? 0 : Number(p.calculated_score) || 0;
+      }
+      return 0;
+    })();
+
     return {
       id: p.id,
       month: p.month,
@@ -362,10 +375,10 @@ export const fetchMonthlyPerformance = async (month: string, companyId?: string,
       // Effectively fall back: Override -> Global
       ruleRewardPercent: override?.reward_percent ?? p.rule?.reward_percent,
       rulePenaltyPercent: override?.penalty_percent ?? p.rule?.penalty_percent,
-      rewardPercentOverride: (p as any).reward_percent_override,
-      penaltyPercentOverride: (p as any).penalty_percent_override,
+      rewardPercentOverride: rewardOverride,
+      penaltyPercentOverride: penaltyOverride,
       value: p.value,
-      calculatedScore: p.calculated_score,
+      calculatedScore: normalizedCalculatedScore,
       source: p.source,
       status: p.status,
       submittedBy: p.submitted_by,

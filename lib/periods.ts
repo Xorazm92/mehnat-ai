@@ -4,6 +4,34 @@ export const MONTHS_UZ = [
     'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'
 ];
 
+export const toYearMonthKey = (period: string) => {
+    const raw = String(period || '').trim();
+    if (!raw) return '';
+
+    const isoMatch = raw.match(/^\d{4}-(0[1-9]|1[0-2])$/);
+    if (isoMatch) return raw;
+
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return '';
+
+    const year = parts[0];
+    if (!/^\d{4}$/.test(year)) return '';
+
+    const monthName = parts.slice(1).join(' ');
+    const idx = MONTHS_UZ.findIndex(m => m.toLowerCase() === monthName.toLowerCase());
+    if (idx < 0) return '';
+
+    const month = String(idx + 1).padStart(2, '0');
+    return `${year}-${month}`;
+};
+
+export const periodsEqual = (a: string, b: string) => {
+    const ak = toYearMonthKey(a);
+    const bk = toYearMonthKey(b);
+    if (ak && bk) return ak === bk;
+    return String(a || '').trim() === String(b || '').trim();
+};
+
 export const generatePeriods = () => {
     const periods: string[] = [];
     const startYear = 2024;

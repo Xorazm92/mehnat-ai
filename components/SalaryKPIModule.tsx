@@ -32,6 +32,7 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
             icon: CheckSquare,
             component: <NazoratchiChecklist
                 companies={companies}
+                operations={operations}
                 staff={staff}
                 lang={lang}
                 currentUserId={currentUserId}

@@ -29,6 +29,47 @@ export const getReportStatusMultiplier = (status?: string): number => {
     return 0; // Neutral (Not Required, Unknown)
 };
 
+const resolveOperationFieldKey = (rule: KPIRule): keyof OperationEntry | null => {
+    const name = String(rule.name || '').trim();
+    if (!name) return null;
+
+    // Direct match (preferred)
+    const direct = name as keyof OperationEntry;
+    // We can't reliably check keys at runtime, but this keeps backward compatibility
+    // with rules that are already named exactly like OperationEntry fields.
+    if (direct) return direct;
+
+    return null;
+};
+
+const resolveAutomationKey = (rule: KPIRule): keyof OperationEntry | null => {
+    const name = String(rule.name || '').trim().toLowerCase();
+    if (!name) return null;
+
+    // Newer KPI rules were created with internal names like acc_didox, acc_letters...
+    // Those must map to OperationEntry column names.
+    const map: Record<string, keyof OperationEntry> = {
+        acc_didox: 'didox',
+        acc_letters: 'xatlar',
+        acc_auto_cameral: 'avtokameral',
+        acc_my_mehnat: 'my_mehnat',
+        acc_1c_base: 'one_c',
+        acc_cashflow: 'pul_oqimlari',
+        acc_tax_info: 'chiqadigan_soliqlar',
+        acc_payroll: 'hisoblangan_oylik',
+        acc_debt: 'debitor_kreditor',
+        acc_pnl: 'foyda_va_zarar',
+
+        // Bank client column in operations
+        bank_klient: 'bank_klient'
+    };
+
+    if (map[name]) return map[name];
+
+    // Fallback: rule might already be exactly the OperationEntry key
+    return resolveOperationFieldKey(rule);
+};
+
 /**
  * Calculates salaries for all roles in a company based on the operation period and manual performances.
  */
@@ -98,13 +139,13 @@ export const calculateCompanySalaries = (
 
             for (const p of myRolePerfFiltered) {
                 if (p.value === 1) {
-                    const inc = Number((p.rewardPercentOverride ?? p.ruleRewardPercent) ?? 0);
+                    const inc = Number(p.rewardPercentOverride ?? 0);
                     if (inc !== 0) {
                         sumPercent += inc;
                         details.push(`KPI +${inc}%: ${p.ruleNameUz || p.ruleName || p.ruleId}`);
                     }
                 } else if (p.value === -1) {
-                    const dec = Number((p.penaltyPercentOverride ?? p.rulePenaltyPercent) ?? 0);
+                    const dec = Number(p.penaltyPercentOverride ?? 0);
                     if (dec !== 0) {
                         sumPercent -= Math.abs(dec);
                         details.push(`KPI -${Math.abs(dec)}%: ${p.ruleNameUz || p.ruleName || p.ruleId}`);
@@ -119,7 +160,8 @@ export const calculateCompanySalaries = (
             const autoRules = rules.filter(r => r.category === 'automation');
 
             for (const rule of autoRules) {
-                const key = rule.name as keyof OperationEntry;
+                const key = resolveAutomationKey(rule);
+                if (!key) continue;
                 const status = operation[key];
 
                 if (typeof status === 'string') {
@@ -142,7 +184,7 @@ export const calculateCompanySalaries = (
                             details.push(`Auto KPI ${score > 0 ? '+' : ''}${score}%: ${rule.nameUz || rule.name} (${status})`);
                         }
                         // Apply to bank_manager if it's bank_klient
-                        if (role === 'bank_manager' && rule.name === 'bank_klient') {
+                        if (role === 'bank_manager' && key === 'bank_klient') {
                             sumPercent += score;
                             details.push(`Auto KPI ${score > 0 ? '+' : ''}${score}%: ${rule.nameUz || rule.name} (${status})`);
                         }
