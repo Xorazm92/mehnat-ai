@@ -4,6 +4,7 @@ import { fetchKPIRules, fetchMonthlyPerformance, upsertMonthlyPerformance, fetch
 import { CheckCircle2, XCircle, Search, AlertCircle, Save } from 'lucide-react';
 import { translations } from '../lib/translations';
 import { getReportStatusMultiplier } from '../lib/kpiLogic';
+import { periodsEqual } from '../lib/periods';
 
 interface Props {
     companies: Company[];
@@ -140,11 +141,11 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
 
     const selectedOperation = useMemo(() => {
         if (!selectedCompany?.id) return null;
-        return operations.find(o => o.companyId === selectedCompany.id && o.period === month) || null;
+        return operations.find(o => o.companyId === selectedCompany.id && periodsEqual(o.period, month)) || null;
     }, [operations, selectedCompany?.id, month]);
 
     const calcAutomationPercentForCompany = (companyId: string) => {
-        const op = operations.find(o => o.companyId === companyId && o.period === month);
+        const op = operations.find(o => o.companyId === companyId && periodsEqual(o.period, month));
         if (!op) return 0;
 
         const autoRules = rules.filter(r => r.category === 'automation');

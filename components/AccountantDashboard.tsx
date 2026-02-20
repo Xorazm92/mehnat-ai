@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Company, OperationEntry, ReportStatus, Language } from '../types';
 import { translations } from '../lib/translations';
+import { periodsEqual } from '../lib/periods';
 
 interface AccountantDashboardProps {
     companies: Company[];
@@ -20,7 +21,7 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ companies, op
         // O(1) Lookup
         const opMap = new Map<string, OperationEntry>();
         operations.forEach(o => {
-            if (o.period === selectedPeriod) opMap.set(o.companyId, o);
+            if (periodsEqual(o.period, selectedPeriod)) opMap.set(o.companyId, o);
         });
 
         companies.forEach(c => {

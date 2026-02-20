@@ -262,6 +262,20 @@ export const deleteKPIRule = async (id: string) => {
   if (error) throw error;
 };
 
+const isMissingTableError = (error: any, tableName: string) => {
+  const msg = String(error?.message || '');
+  const hint = String(error?.hint || '');
+  const details = String(error?.details || '');
+  const code = String(error?.code || '');
+  return (
+    code === 'PGRST205' ||
+    msg.includes(`Could not find the table 'public.${tableName}'`) ||
+    hint.includes(`public.${tableName}`) ||
+    details.includes(`public.${tableName}`) ||
+    msg.toLowerCase().includes('not found')
+  );
+};
+
 export const fetchCompanyKPIRules = async (companyId: string): Promise<CompanyKPIRule[]> => {
   const { data, error } = await supabase
     .from('company_kpi_rules')
@@ -269,6 +283,7 @@ export const fetchCompanyKPIRules = async (companyId: string): Promise<CompanyKP
     .eq('company_id', companyId);
 
   if (error) {
+    if (isMissingTableError(error, 'company_kpi_rules')) return [];
     console.error('fetchCompanyKPIRules error:', error);
     return [];
   }
@@ -289,6 +304,7 @@ export const fetchAllCompanyKPIRules = async (): Promise<CompanyKPIRule[]> => {
     .select('*');
 
   if (error) {
+    if (isMissingTableError(error, 'company_kpi_rules')) return [];
     console.error('fetchAllCompanyKPIRules error:', error);
     return [];
   }
@@ -316,6 +332,9 @@ export const upsertCompanyKPIRule = async (rule: Partial<any>) => {
 
   const { error } = await supabase.from('company_kpi_rules').upsert(payload, { onConflict: 'company_id, rule_id' });
   if (error) {
+    if (isMissingTableError(error, 'company_kpi_rules')) {
+      throw new Error("company_kpi_rules jadvali mavjud emas. Company bo'yicha KPI override ishlashi uchun migratsiya kerak.");
+    }
     console.error('upsertCompanyKPIRule error:', error);
     throw error;
   }
@@ -340,10 +359,21 @@ export const fetchMonthlyPerformance = async (month: string, companyId?: string,
 
   // Fetch company-level overrides for these companies
   const companyIds = Array.from(new Set(data.map(p => p.company_id)));
-  const { data: overrides } = await supabase
-    .from('company_kpi_rules')
-    .select('*')
-    .in('company_id', companyIds);
+  let overrides: any[] | null = null;
+  if (companyIds.length > 0) {
+    const { data: oData, error: oErr } = await supabase
+      .from('company_kpi_rules')
+      .select('*')
+      .in('company_id', companyIds);
+    if (oErr) {
+      if (!isMissingTableError(oErr, 'company_kpi_rules')) {
+        console.error('fetchMonthlyPerformance overrides error:', oErr);
+      }
+      overrides = null;
+    } else {
+      overrides = oData || null;
+    }
+  }
 
   return data.map(p => {
     const override = overrides?.find(o => o.company_id === p.company_id && o.rule_id === p.rule_id);

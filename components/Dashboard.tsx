@@ -5,7 +5,7 @@ import { translations } from '../lib/translations';
 import { ROLES } from '../lib/permissions';
 import AccountantDashboard from './AccountantDashboard';
 import SupervisorDashboard from './SupervisorDashboard';
-import { AVAILABLE_PERIODS } from '../lib/periods';
+import { AVAILABLE_PERIODS, periodsEqual } from '../lib/periods';
 import { MonthPicker } from './ui/MonthPicker';
 
 interface DashboardProps {
@@ -123,7 +123,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       'bonak', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi'
     ] as const;
 
-    const opsForPeriod = operations.filter(o => o.period === selectedPeriod);
+    const opsForPeriod = operations.filter(o => periodsEqual(o.period, selectedPeriod));
     const statsTotal = (opsForPeriod.length * REPORT_FIELDS.length) || 1;
     const reportStats = { done: 0, pending: 0, blocked: 0, total: statsTotal, itParkCount: 0 };
 

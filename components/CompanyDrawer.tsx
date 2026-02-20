@@ -25,6 +25,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
   const [credentials, setCredentials] = useState<ClientCredential[]>([]);
   const [clientHistory, setClientHistory] = useState<ClientHistory[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabId>('pasport');
@@ -41,33 +42,89 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
   useEffect(() => {
     if (company) {
+      setTempLogin(company.login || '');
+      setTempPassword(company.password || '');
       setIsLoadingDocs(true);
-      Promise.all([
-        fetchDocuments(company.id),
-        fetchCredentials(company.id),
-        fetchClientHistory(company.id),
-        supabase.from('contract_assignments').select('*').eq('client_id', company.id)
-      ]).then(([docs, creds, history, assRes]) => {
-        setDocuments(docs);
-        setCredentials(creds);
-        setClientHistory(history);
-        setAssignments(assRes.data || []);
-        setIsLoadingDocs(false);
-      });
+      setAssignmentsError(null);
+      (async () => {
+        try {
+          const [docsRes, credsRes, historyRes, assRes] = await Promise.allSettled([
+            fetchDocuments(company.id),
+            fetchCredentials(company.id),
+            fetchClientHistory(company.id),
+            supabase.from('contract_assignments').select('*').eq('client_id', company.id)
+          ]);
+
+          if (docsRes.status === 'fulfilled') setDocuments(docsRes.value);
+          else console.warn('[CompanyDrawer] fetchDocuments failed:', docsRes.reason);
+
+          if (credsRes.status === 'fulfilled') setCredentials(credsRes.value);
+          else console.warn('[CompanyDrawer] fetchCredentials failed:', credsRes.reason);
+
+          if (historyRes.status === 'fulfilled') setClientHistory(historyRes.value);
+          else console.warn('[CompanyDrawer] fetchClientHistory failed:', historyRes.reason);
+
+          if (assRes.status === 'fulfilled') {
+            const resp = assRes.value as any;
+            if (resp?.error) {
+              setAssignmentsError(resp.error.message || 'contract_assignments o‘qishda xatolik');
+              setAssignments([]);
+            } else {
+              setAssignments(resp?.data || []);
+            }
+          } else {
+            console.warn('[CompanyDrawer] fetch contract_assignments failed:', assRes.reason);
+            setAssignmentsError(String((assRes as any)?.reason?.message || assRes.reason || 'contract_assignments o‘qishda xatolik'));
+            setAssignments([]);
+          }
+        } finally {
+          setIsLoadingDocs(false);
+        }
+      })();
 
       // Fetch KPI Data
       setIsLoadingKpi(true);
-      Promise.all([
-        fetchKPIRules(),
-        fetchCompanyKPIRules(company.id)
-      ]).then(([rules, compRules]) => {
-        setKpiRules(rules);
-        setCompanyKpiRules(compRules);
-        setIsLoadingKpi(false);
-      });
+      (async () => {
+        try {
+          const [rulesRes, compRulesRes] = await Promise.allSettled([
+            fetchKPIRules(),
+            fetchCompanyKPIRules(company.id)
+          ]);
+
+          if (rulesRes.status === 'fulfilled') setKpiRules(rulesRes.value);
+          else console.warn('[CompanyDrawer] fetchKPIRules failed:', rulesRes.reason);
+
+          if (compRulesRes.status === 'fulfilled') setCompanyKpiRules(compRulesRes.value);
+          else console.warn('[CompanyDrawer] fetchCompanyKPIRules failed:', compRulesRes.reason);
+        } finally {
+          setIsLoadingKpi(false);
+        }
+      })();
 
     }
   }, [company]);
+
+  const teamFallbackAssignments = () => {
+    const res: any[] = [];
+    if (!company) return res;
+
+    const push = (role: string, userIdValue?: string, salary_type?: string, salary_value?: any) => {
+      if (!userIdValue) return;
+      res.push({
+        id: `fallback-${role}-${userIdValue}`,
+        role,
+        user_id: userIdValue,
+        salary_type,
+        salary_value
+      });
+    };
+
+    push('accountant', company.accountantId, 'percent', company.accountantPerc);
+    push('controller', company.supervisorId, 'percent', company.supervisorPerc);
+    push('bank_manager', company.bankClientId, 'fixed', company.bankClientSum);
+    push('chief_accountant', company.chiefAccountantId, 'fixed', company.chiefAccountantSum);
+    return res;
+  };
 
   if (!company) return null;
 
@@ -517,8 +574,16 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
             <div className="space-y-6 animate-fade-in">
               <div>
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Amaldagi Jamoa</h4>
+                {assignmentsError && (
+                  <div className="mb-4 p-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-600">
+                    <p className="text-xs font-black uppercase tracking-widest">contract_assignments xatoligi</p>
+                    <p className="text-xs font-bold mt-1 break-words">{assignmentsError}</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {assignments.length > 0 ? assignments.map(asgn => {
+                  {(() => {
+                    const displayedAssignments = assignments.length > 0 ? assignments : teamFallbackAssignments();
+                    return displayedAssignments.length > 0 ? displayedAssignments.map(asgn => {
                     const member = staff.find(s => s.id === asgn.user_id);
                     return (
                       <div key={asgn.id} className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder relative overflow-hidden group">
@@ -545,12 +610,13 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                         )}
                       </div>
                     );
-                  }) : (
+                    }) : (
                     <div className="col-span-2 p-10 text-center bg-white dark:bg-apple-darkCard rounded-2xl border border-dashed border-apple-border dark:border-apple-darkBorder">
                       <Users size={32} className="mx-auto mb-3 text-slate-300" />
                       <p className="text-sm font-bold text-slate-400">Jamoa a'zolari tayinlanmagan</p>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
 

@@ -51,7 +51,7 @@ import {
 import { seedFirmaData } from './lib/seedFirmaData';
 import type { Session } from '@supabase/supabase-js';
 import { ALLOWED_VIEWS, ROLES, UserRole } from './lib/permissions';
-import { getCurrentPeriod } from './lib/periods';
+import { getCurrentPeriod, periodsEqual } from './lib/periods';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>('dashboard');
@@ -97,7 +97,7 @@ const App: React.FC = () => {
     }
 
     return operations
-      .filter(op => op.period === selectedPeriod)
+      .filter(op => periodsEqual(op.period, selectedPeriod))
       .flatMap(op => op.tasks || [])
       .filter(t => t.status === 'pending_review')
       .length;
@@ -358,26 +358,35 @@ const App: React.FC = () => {
 
   const kpis: AccountantKPI[] = useMemo(() => {
     return staff.map(s => {
-      const myOps = operations.filter(op =>
-        op.period === selectedPeriod &&
-        op.assigned_accountant_id === s.id
-      );
+      const assignedIdsFromAssignmentsArr: string[] = assignments
+        .filter(a => a.role === 'accountant' && a.userId === s.id)
+        .map(a => String(a.clientId));
+      const assignedCompanyIdsFromAssignments = new Set<string>(assignedIdsFromAssignmentsArr);
 
-      const total = myOps.length;
+      const assignedIdsFromCompaniesArr: string[] = companies
+        .filter(c => c.accountantId === s.id)
+        .map(c => String(c.id));
+      const assignedCompanyIdsFromCompanies = new Set<string>(assignedIdsFromCompaniesArr);
+
+      const assignedCompanyIds = new Set<string>([
+        ...Array.from(assignedCompanyIdsFromAssignments),
+        ...Array.from(assignedCompanyIdsFromCompanies)
+      ]);
+
+      const assignedCompanies = companies.filter(c => assignedCompanyIds.has(c.id));
+
       let annualCompleted = 0;
       let annualPending = 0;
       let annualBlocked = 0;
       let statsCompleted = 0;
+      const totalCompanies = assignedCompanies.length;
+      const total = assignedCompanies.length;
 
-      if (svodOperationFilter === 'all') {
-        annualCompleted = myOps.filter(op => op.profitTaxStatus === ReportStatus.ACCEPTED || op.profitTaxStatus === ReportStatus.NOT_REQUIRED).length;
-        annualPending = myOps.filter(op => op.profitTaxStatus === ReportStatus.NOT_SUBMITTED || op.profitTaxStatus === ReportStatus.REJECTED).length;
-        annualBlocked = myOps.filter(op => op.profitTaxStatus === ReportStatus.BLOCKED || op.form1Status === ReportStatus.BLOCKED).length;
-        statsCompleted = myOps.filter(op => op.statsStatus === ReportStatus.ACCEPTED).length;
-      } else {
+      if (svodOperationFilter !== 'all') {
         // Filter by specific operation field
-        myOps.forEach(op => {
-          const val = String((op as any)[svodOperationFilter] || '').trim().toLowerCase();
+        assignedCompanies.forEach(company => {
+          const op = operations.find(o => o.companyId === company.id && periodsEqual(o.period, selectedPeriod));
+          const val = String((op as any)?.[svodOperationFilter] || '').trim().toLowerCase();
           if (val === '+' || val === 'topshirildi') annualCompleted++;
           else if (val === '-' || val === 'rad etildi') annualPending++;
           else if (val === 'kartoteka') annualBlocked++;
@@ -392,7 +401,7 @@ const App: React.FC = () => {
       return {
         name: s.name,
         role: s.role,
-        totalCompanies: total,
+        totalCompanies,
         annualCompleted,
         annualPending,
         annualBlocked,
@@ -402,11 +411,11 @@ const App: React.FC = () => {
         zone: annualProgress >= 90 ? 'green' : (annualProgress >= 60 ? 'yellow' : 'red')
       };
     }).sort((a, b) => b.annualProgress - a.annualProgress);
-  }, [staff, companies, operations, selectedPeriod, svodOperationFilter]);
+  }, [staff, assignments, companies, operations, selectedPeriod, svodOperationFilter]);
 
   const selectedOperation = useMemo(() => {
     if (!selectedCompany) return null;
-    return operations.find(o => o.companyId === selectedCompany.id && o.period === selectedPeriod) || null;
+    return operations.find(o => o.companyId === selectedCompany.id && periodsEqual(o.period, selectedPeriod)) || null;
   }, [selectedCompany, operations, selectedPeriod]);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -748,7 +757,9 @@ const App: React.FC = () => {
                     company={selectedCompany}
                     operation={selectedOperation}
                     payments={payments}
+                    staff={staff}
                     lang={lang}
+                    userId={session?.user?.id}
                     onClose={() => setSelectedCompany(null)}
                     onSave={async (c) => {
                       await upsertCompany(c);

@@ -1,6 +1,8 @@
 -- Create table for company-specific KPI rule overrides
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE IF NOT EXISTS public.company_kpi_rules (
-    id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     company_id UUID REFERENCES public.companies(id) ON DELETE CASCADE,
     rule_id UUID REFERENCES public.kpi_rules(id) ON DELETE CASCADE,
     reward_percent NUMERIC, -- Override value (can be null if only penalty is overridden, but usually set both)
@@ -18,7 +20,15 @@ CREATE POLICY "Enable read access for all authenticated users" ON public.company
     FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Enable insert/update/delete for admins and chief accountants" ON public.company_kpi_rules
-    FOR ALL USING (
+    FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role IN ('super_admin', 'chief_accountant', 'admin')
+        )
+    )
+    WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE profiles.id = auth.uid()

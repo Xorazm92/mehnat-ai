@@ -6,6 +6,7 @@ import { Plus, Search, Edit3, Trash2, X, Check, LayoutGrid, List, Eye, EyeOff, C
 import { toast } from 'sonner';
 import OnboardingWizard from './OnboardingWizard';
 import { MonthPicker } from './ui/MonthPicker';
+import { periodsEqual } from '../lib/periods';
 
 interface Props {
   companies: Company[];
@@ -99,7 +100,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         const matchesStatus = filterStatus === 'all' || (c.companyStatus || 'active') === filterStatus;
 
         // Employee filter (accountant) - Use historical assignment for the selected period if available
-        const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
+        const op = operations.find(o => o.companyId === c.id && periodsEqual(o.period, selectedPeriod));
         const currentAccountantId = op?.assigned_accountant_id || c.accountantId;
         const matchesEmployee = filterEmployee === 'all' || currentAccountantId === filterEmployee;
 
@@ -587,7 +588,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 <tbody className="divide-y divide-apple-border dark:divide-apple-darkBorder">
                   {paginated.map(c => {
                     const risk = getRiskIndicator(c);
-                    const op = operations.find(o => o.companyId === c.id && o.period === selectedPeriod);
+                    const op = operations.find(o => o.companyId === c.id && periodsEqual(o.period, selectedPeriod));
 
                     // Historical fallbacks
                     const displayAmount = op?.contract_amount ?? c.contractAmount;

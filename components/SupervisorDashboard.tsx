@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Company, OperationEntry, Staff, Language, Payment, Expense } from '../types';
 import { translations } from '../lib/translations';
+import { periodsEqual } from '../lib/periods';
 import { MonthPicker } from './ui/MonthPicker';
 import {
     Building2, Users, Search, DollarSign, TrendingUp,
@@ -128,7 +129,7 @@ const SupervisorDashboard: React.FC<Props> = ({
 
     // Period operations
     const periodOps = useMemo(() =>
-        operations.filter(o => o.period === selectedPeriod),
+        operations.filter(o => periodsEqual(o.period, selectedPeriod)),
         [operations, selectedPeriod]
     );
 

@@ -5,7 +5,7 @@ import { createNotification, clearColumnForPeriod } from '../lib/supabaseData';
 import { translations } from '../lib/translations';
 import { ChevronDown, ChevronsUpDown, Download, Search, Filter, RefreshCw, Calendar, Loader2, Info } from 'lucide-react';
 import { MonthPicker } from './ui/MonthPicker';
-import { AVAILABLE_PERIODS } from '../lib/periods';
+import { AVAILABLE_PERIODS, periodsEqual } from '../lib/periods';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabaseClient';
 
@@ -37,7 +37,7 @@ const REPORT_COLUMNS = [
   { key: 'norezident_nds', label: 'Nor. NDS', short: 'NN', group: 'Soliqlar' },
 
   // ═══ SOLIQLAR (Hisobot + To'lov) ═══
-  { key: 'aylanma_qqs', label: 'AQ Hisobot', short: 'AQh', group: 'Soliq H/T', isSplit: true, payKey: 'aylanma_qqs_tolov', payShort: 'AQt' },
+  { key: 'aylanma_qqs', label: 'Aylanma Hisobot', short: 'AQh', group: 'Soliq H/T', isSplit: true, payKey: 'aylanma_qqs_tolov', payShort: 'AQt' },
   { key: 'daromad_soliq', label: 'DS Hisobot', short: 'DSh', group: 'Soliq H/T', isSplit: true, payKey: 'daromad_soliq_tolov', payShort: 'DSt' },
   { key: 'inps', label: 'INPS Hisobot', short: 'INh', group: 'Soliq H/T', isSplit: true, payKey: 'inps_tolov', payShort: 'INt' },
   { key: 'foyda_soliq', label: 'FS Hisobot', short: 'FSh', group: 'Soliq H/T', isSplit: true, payKey: 'foyda_soliq_tolov', payShort: 'FSt' },
@@ -400,7 +400,7 @@ const OperationModule: React.FC<Props> = ({
     // Optimization: Create a map of current period's operations for O(1) lookup
     const opsMap = new Map<string, OperationEntry>();
     operations.forEach(op => {
-      if (op.period === selectedPeriod) {
+      if (periodsEqual(op.period, selectedPeriod)) {
         opsMap.set(op.companyId, op);
       }
     });

@@ -7,7 +7,7 @@ import {
   PieChart, Pie, Cell, Sector
 } from 'recharts';
 import { Download, Calendar as CalendarIcon, TrendingUp, AlertCircle, CheckCircle2, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { MONTHS_UZ } from '../lib/periods';
+import { MONTHS_UZ, periodsEqual } from '../lib/periods';
 
 interface Props {
   companies: Company[];
@@ -32,7 +32,7 @@ const AnalysisModule: React.FC<Props> = ({
 
   // --- 1. Data Processing ---
   const currentOps = useMemo(() => {
-    return operations.filter(op => op.period === selectedPeriod);
+    return operations.filter(op => periodsEqual(op.period, selectedPeriod));
   }, [operations, selectedPeriod]);
 
   // KPI Calculations
