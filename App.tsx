@@ -115,6 +115,28 @@ const App: React.FC = () => {
       if (initialized.current) return;
       initialized.current = true;
 
+      const clearAuthStorage = () => {
+        if (typeof window === 'undefined') return;
+
+        const keys: string[] = [];
+        try {
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const k = window.localStorage.key(i);
+            if (k) keys.push(k);
+          }
+        } catch { }
+
+        for (const k of keys) {
+          const lk = k.toLowerCase();
+          if (
+            (lk.startsWith('sb-') && lk.includes('auth-token')) ||
+            lk.includes('supabase.auth.token')
+          ) {
+            try { window.localStorage.removeItem(k); } catch { }
+          }
+        }
+      };
+
       let currentUserId: string | undefined;
 
       try {
@@ -129,8 +151,21 @@ const App: React.FC = () => {
         }
       } catch (err: any) {
         console.error('Session initialization error:', err);
-        if (err.message?.includes('Refresh Token Not Found')) {
-          await supabase.auth.signOut();
+        const msg = String(err?.message || '');
+        if (
+          msg.includes('Refresh Token Not Found') ||
+          msg.includes('Invalid Refresh Token')
+        ) {
+          try { await supabase.auth.signOut(); } catch { }
+          try { clearAuthStorage(); } catch { }
+          setSession(null);
+          setCompanies([]);
+          setOperations([]);
+          setStaff([]);
+          setNotifications([]);
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
         }
       }
 
