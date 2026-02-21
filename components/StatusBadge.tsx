@@ -10,22 +10,22 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const getStyles = () => {
     switch (status) {
       case ReportStatus.ACCEPTED:
-        return 'bg-[#34C759]/15 text-[#34C759] dark:bg-[#32D74B]/20 dark:text-[#32D74B] border-transparent';
+        return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-glass-emerald';
       case ReportStatus.NOT_SUBMITTED:
-        return 'bg-[#FF3B30]/15 text-[#FF3B30] dark:bg-[#FF453A]/20 dark:text-[#FF453A] border-transparent';
+        return 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-glass-rose';
       case ReportStatus.NOT_REQUIRED:
-        return 'bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-slate-500 border-transparent';
+        return 'bg-slate-500/5 text-slate-400 border-white/10 opacity-50';
       case ReportStatus.BLOCKED:
-        return 'bg-[#FF9500]/15 text-[#FF9500] dark:bg-[#FF9F0A]/20 dark:text-[#FF9F0A] border-transparent animate-pulse';
+        return 'bg-amber-500/15 text-amber-500 border-amber-500/30 shadow-glass-amber animate-pulse';
       case ReportStatus.IN_PROGRESS:
-        return 'bg-[#5856D6]/15 text-[#5856D6] dark:bg-[#5E5CE6]/20 dark:text-[#5E5CE6] border-transparent';
+        return 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20 shadow-glass-indigo';
       default:
-        return 'bg-slate-50 text-slate-400 dark:bg-white/5 dark:text-slate-600 border-transparent';
+        return 'bg-slate-500/5 text-slate-500 border-white/5';
     }
   };
 
   return (
-    <span className={`px-4 py-1.5 rounded-xl text-tiny md:text-xs font-extrabold border uppercase tracking-widest ${getStyles()} shadow-sm inline-flex items-center justify-center min-w-[50px]`}>
+    <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black border uppercase tracking-[0.2em] ${getStyles()} backdrop-blur-md transition-all duration-500 inline-flex items-center justify-center min-w-[64px] shadow-sm`}>
       {status === ReportStatus.BLOCKED ? 'KARTOTEKA' : status}
     </span>
   );

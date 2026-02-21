@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, TrendingUp } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -357,6 +357,14 @@ const App: React.FC = () => {
   };
 
   const kpis: AccountantKPI[] = useMemo(() => {
+    const REPORT_FIELDS = [
+      'didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c',
+      'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka',
+      'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq',
+      'moliyaviy_natija', 'buxgalteriya_balansi', 'statistika',
+      'bonak', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi'
+    ] as const;
+
     return staff.map(s => {
       const assignedIdsFromAssignmentsArr: string[] = assignments
         .filter(a => a.role === 'accountant' && a.userId === s.id)
@@ -379,24 +387,39 @@ const App: React.FC = () => {
       let annualPending = 0;
       let annualBlocked = 0;
       let statsCompleted = 0;
+      let totalPoints = 0;
       const totalCompanies = assignedCompanies.length;
-      const total = assignedCompanies.length;
 
-      if (svodOperationFilter !== 'all') {
-        // Filter by specific operation field
-        assignedCompanies.forEach(company => {
-          const op = operations.find(o => o.companyId === company.id && periodsEqual(o.period, selectedPeriod));
+      assignedCompanies.forEach(company => {
+        const op = operations.find(o => o.companyId === company.id && periodsEqual(o.period, selectedPeriod));
+
+        if (svodOperationFilter !== 'all') {
+          totalPoints++;
           const val = String((op as any)?.[svodOperationFilter] || '').trim().toLowerCase();
-          if (val === '+' || val === 'topshirildi') annualCompleted++;
-          else if (val === '-' || val === 'rad etildi') annualPending++;
+          if (val === '+' || val === 'topshirildi' || val.startsWith('+')) annualCompleted++;
           else if (val === 'kartoteka') annualBlocked++;
+          else if (val === '-' || val === 'rad etildi' || !val || val === '0') annualPending++;
+          else annualCompleted++; // Catch-all for other non-negative values
 
-          if (svodOperationFilter === 'statistika' && val === '+') statsCompleted++;
-        });
-      }
+          if (svodOperationFilter === 'statistika' && (val === '+' || val.startsWith('+'))) statsCompleted++;
+        } else {
+          // Aggregate across all fields
+          REPORT_FIELDS.forEach(field => {
+            totalPoints++;
+            const val = String((op as any)?.[field] || '').trim().toLowerCase();
+            if (val === '+' || val === 'topshirildi' || val.startsWith('+')) annualCompleted++;
+            else if (val === 'kartoteka') annualBlocked++;
+            else if (val === '-' || val === 'rad etildi' || !val || val === '0') annualPending++;
+            else annualCompleted++;
+          });
 
-      const annualProgress = total > 0 ? Math.round((annualCompleted / total) * 100) : 0;
-      const statsProgress = total > 0 ? Math.round((statsCompleted / total) * 100) : 0;
+          const statVal = String((op as any)?.statistika || '').trim().toLowerCase();
+          if (statVal === '+' || statVal.startsWith('+')) statsCompleted++;
+        }
+      });
+
+      const annualProgress = totalPoints > 0 ? Math.round((annualCompleted / totalPoints) * 100) : 0;
+      const statsProgress = totalCompanies > 0 ? Math.round((statsCompleted / totalCompanies) * 100) : 0;
 
       return {
         name: s.name,
@@ -434,72 +457,157 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500 font-bold uppercase tracking-widest bg-slate-50 dark:bg-apple-darkBg">
-        Yuklanmoqda...
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
+        {/* Iridescent Background Effects */}
+        <div className="absolute top-0 left-0 w-full h-full">
+          <div className="absolute top-[10%] left-[10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse-slow"></div>
+          <div className="absolute bottom-[10%] right-[10%] w-[40%] h-[40%] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse-slow-reverse"></div>
+        </div>
+
+        <div className="liquid-glass-card p-16 rounded-[3rem] flex flex-col items-center gap-8 border border-white/20 shadow-glass-2xl relative z-10 animate-macos">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl backdrop-blur-sm border border-indigo-500/20 shadow-glass flex items-center justify-center">
+                <div className="w-4 h-4 bg-indigo-500 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-widest uppercase mb-2">ASOS Intelligence</h1>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] animate-pulse">Initializing Neural Core...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-apple-darkBg p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-[#020617] relative overflow-hidden">
+        {/* Dynamic Background Mesh (Handled by CSS body V2, but adding local glows for extra depth) */}
+        <div className="absolute inset-0 z-0 opacity-40">
+          <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-indigo-500/10 rounded-full blur-[180px]"></div>
+          <div className="absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] bg-blue-500/10 rounded-full blur-[180px]"></div>
+        </div>
+
         <Toaster position="top-center" richColors />
-        <form onSubmit={handleSignIn} className="w-full max-w-md bg-white dark:bg-apple-darkCard rounded-[2.5rem] shadow-2xl p-10 space-y-6 border border-slate-100 dark:border-apple-darkBorder animate-macos">
-          <div className="text-center mb-8">
-            <div className="h-16 w-16 mx-auto mb-4 drop-shadow-2xl">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+
+        <div className="w-full max-w-xl relative z-10 animate-macos">
+          {/* Top Branding Section */}
+          <div className="text-center mb-16">
+            <div className="relative inline-block group">
+              <div className="absolute inset-0 bg-indigo-500/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+              <div className="w-28 h-28 mx-auto mb-10 liquid-glass-card rounded-[2.5rem] flex items-center justify-center p-0 border border-white/40 shadow-glass-2xl group-hover:scale-110 transition-transform duration-700">
+                <div className="glass-reflection"></div>
+                <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain relative z-10 drop-shadow-2xl" />
+              </div>
             </div>
-            <h1 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Asos ERP</h1>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Professional Accounting</p>
+            <h1 className="text-6xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none mb-4 premium-text-gradient drop-shadow-sm">ASOS Intelligence</h1>
+            <p className="text-[12px] font-black text-slate-400 dark:text-indigo-400/50 uppercase tracking-[0.5em] opacity-80">Integrated Enterprise Neural Network</p>
           </div>
 
-          <div className="space-y-4">
-            <input
-              type="email"
-              value={authEmail}
-              onChange={(e) => setAuthEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full rounded-2xl border border-slate-100 dark:border-apple-darkBorder bg-slate-50 dark:bg-apple-darkBg px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all"
-              required
-            />
-            <div className="relative group/pass">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={authPassword}
-                onChange={(e) => setAuthPassword(e.target.value)}
-                placeholder="Parol"
-                className="w-full rounded-2xl border border-slate-100 dark:border-apple-darkBorder bg-slate-50 dark:bg-apple-darkBg px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all pr-14"
-                required
-              />
+          <form onSubmit={handleSignIn} className="liquid-glass-card p-12 md:p-20 border border-white/30 dark:border-white/10 group/form">
+            <div className="glass-reflection"></div>
+
+            <div className="space-y-10 relative z-10">
+              <div className="group">
+                <div className="flex justify-between items-center mb-5">
+                  <label className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 group-focus-within:text-indigo-500 transition-colors">Access Identifier</label>
+                </div>
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="neural@asos.uz"
+                    className="w-full bg-white/10 dark:bg-white/[0.03] border border-white/20 dark:border-white/5 rounded-3xl px-10 py-6 font-bold text-lg outline-none focus:bg-white/20 dark:focus:bg-white/10 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400/50"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="group">
+                <div className="flex justify-between items-center mb-5">
+                  <label className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 group-focus-within:text-indigo-500 transition-colors">Security Hashcode</label>
+                  <span className="text-[9px] font-black text-slate-400/40 uppercase hover:text-indigo-500 cursor-pointer transition-colors">Emergency Protocol?</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full bg-white/10 dark:bg-white/[0.03] border border-white/20 dark:border-white/5 rounded-3xl px-10 py-7 font-bold text-lg outline-none focus:bg-white/20 dark:focus:bg-white/10 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400/50 pr-20"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-8 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={28} strokeWidth={2.5} /> : <Eye size={28} strokeWidth={2.5} />}
+                  </button>
+                </div>
+              </div>
+
+              {authError && (
+                <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-3xl flex items-center gap-5 text-rose-500 animate-shake">
+                  <AlertCircle size={24} strokeWidth={3} />
+                  <p className="text-[12px] font-black uppercase tracking-widest">{authError}</p>
+                </div>
+              )}
+
               <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-apple-accent transition-colors"
-                title={showPassword ? "Berkitish" : "Ko'rsatish"}
+                type="submit"
+                className="w-full h-24 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-[13px] uppercase tracking-[0.4em] rounded-[2rem] hover:scale-[1.03] active:scale-[0.97] transition-all shadow-glass-indigo relative overflow-hidden group/btn"
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-white/20 to-indigo-500/0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
+                <span className="relative z-10 flex items-center justify-center gap-4">
+                  Authorize Transmission <TrendingUp size={24} strokeWidth={3} />
+                </span>
               </button>
             </div>
+          </form>
+
+          <div className="mt-16 text-center space-y-2 opacity-50">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Global Security Verification Key: ASOS-UX-V2-PERFECT</p>
+            <div className="flex justify-center gap-6 mt-4">
+              <div className="h-1 w-12 bg-indigo-500/20 rounded-full"></div>
+              <div className="h-1 w-12 bg-emerald-500/10 rounded-full"></div>
+            </div>
           </div>
-
-          {authError && <p className="text-xs font-black text-rose-500 uppercase tracking-widest text-center">{authError}</p>}
-
-          <button
-            type="submit"
-            className="w-full bg-apple-accent text-white font-black py-5 rounded-2xl hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/20 active:scale-[0.98]"
-          >
-            Tizimga Kirish
-          </button>
-        </form>
+        </div>
       </div>
     );
   }
 
-
-
   return (
-    <div className="h-screen flex selection:bg-apple-accent/30 overflow-hidden bg-slate-50 dark:bg-apple-darkBg">
-      <Toaster position="top-center" richColors />
+    <div className="h-screen flex selection:bg-indigo-500/30 overflow-hidden bg-slate-50 dark:bg-[#050505] text-slate-900 dark:text-white">
+      {/* Global Background Glows */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/[0.03] rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/[0.02] rounded-full blur-[120px]"></div>
+      </div>
+
+      <Toaster
+        position="top-center"
+        richColors
+        toastOptions={{
+          style: {
+            background: 'rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '24px',
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            fontSize: '11px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.1)'
+          }
+        }}
+      />
+
       <Sidebar
         activeView={activeView}
         isOpen={isMobileMenuOpen}
@@ -517,7 +625,7 @@ const App: React.FC = () => {
         pendingReportsCount={pendingReportsCount}
       />
 
-      <main className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'}`}>
+      <main className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-500 ease-in-out relative z-10`}>
         <TopBar
           isDarkMode={isDarkMode}
           onThemeToggle={toggleTheme}
@@ -532,18 +640,27 @@ const App: React.FC = () => {
           onLogout={handleSignOut}
           onProfileClick={() => setActiveView('cabinet')}
           notifications={notifications}
-          onMarkAsRead={handleMarkAsRead}
           onDeleteNotification={handleDeleteNotification}
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={setSelectedPeriod}
         />
 
-        <div className="flex-1 overflow-y-auto scrollbar-thin overflow-x-hidden">
-          <div className="w-full p-3 sm:p-6 md:p-8 animate-macos min-h-full group/main">
+        <div className="flex-1 overflow-y-auto scrollbar-none overflow-x-hidden">
+          <div className="w-full p-4 sm:p-6 md:p-8 lg:p-6 animate-macos min-h-full group/main">
             {/* Access Control for Main Content */}
             {(!((ALLOWED_VIEWS[(userRole as UserRole) || ROLES.ACCOUNTANT] || ALLOWED_VIEWS[ROLES.ACCOUNTANT]).includes(activeView))) ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center opacity-80">
-                <AlertCircle size={64} className="text-rose-500 mb-6 drop-shadow-xl" />
-                <h2 className="text-4xl font-black text-slate-800 dark:text-white mb-3 tracking-tight">Access Denied</h2>
-                <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Sizda ushbu sahifani ko'rish huquqi yo'q.</p>
+              <div className="flex flex-col items-center justify-center py-32 text-center">
+                <div className="w-32 h-32 rounded-[3rem] bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-10 shadow-glass-rose">
+                  <AlertCircle size={64} className="text-rose-500 drop-shadow-xl" />
+                </div>
+                <h2 className="text-5xl font-black text-slate-800 dark:text-white mb-4 tracking-tighter uppercase leading-none">Access Restricted</h2>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-[0.4em]">Integrated Security Protocol Active — Authorization Level Insufficient</p>
+                <button
+                  onClick={() => setActiveView('dashboard')}
+                  className="mt-12 px-10 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:scale-105 transition-all shadow-glass"
+                >
+                  Return to Safe Zone
+                </button>
               </div>
             ) : (
               <React.Suspense fallback={
@@ -577,6 +694,7 @@ const App: React.FC = () => {
                       onStaffSelect={setSelectedStaff}
                       selectedOperation={svodOperationFilter}
                       onOperationChange={setSvodOperationFilter}
+                      selectedPeriod={selectedPeriod}
                     />
                   </>
                 )}
@@ -692,6 +810,10 @@ const App: React.FC = () => {
                     lang={lang}
                     userRole={userRole}
                   />
+                )}
+
+                {activeView === 'audit_logs' && (
+                  <AuditLogModule lang={lang} />
                 )}
 
                 {activeView === 'kassa' && (

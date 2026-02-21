@@ -198,39 +198,39 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
             left: coords.left,
             transform: 'translateX(-50%)'
           }}
-          className="z-[9999] min-w-[180px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 p-1.5 animate-in fade-in zoom-in-95 duration-100 origin-top"
+          className="z-[9999] min-w-[200px] liquid-glass-card p-2 animate-in fade-in zoom-in-95 duration-200 origin-top shadow-glass-lg"
         >
           {!showInput ? (
-            <div className="grid grid-cols-1 gap-0.5">
+            <div className="grid grid-cols-1 gap-1">
               {AVAILABLE_STATUSES.map((status) => (
                 <button
                   key={status.value}
                   onClick={() => handleSelect(status.value)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left group"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/40 dark:hover:bg-white/10 transition-all w-full text-left group"
                 >
-                  <span className={`font-black text-xs w-5 text-center ${status.color}`}>{status.icon}</span>
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">{status.label}</span>
-                  {value === status.value && <span className="ml-auto text-blue-500 text-[10px]">●</span>}
+                  <span className={`font-black text-xs w-6 h-6 flex items-center justify-center rounded-lg bg-white/50 dark:bg-white/5 border border-white/20 shadow-sm ${status.color}`}>{status.icon}</span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-apple-accent">{status.label}</span>
+                  {value === status.value && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-apple-accent shadow-[0_0_10px_rgba(0,122,255,0.5)]"></div>}
                 </button>
               ))}
             </div>
           ) : (
-            <form onSubmit={handleCustomSubmit} className="p-1">
+            <form onSubmit={handleCustomSubmit} className="p-2">
               <input
                 autoFocus
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Matn kiriting..."
-                className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-2"
+                className="liquid-glass-input w-full text-xs px-4 py-3 rounded-xl mb-3 outline-none"
               />
               <div className="flex gap-2">
-                <button type="button" onClick={() => setShowInput(false)} className="flex-1 px-2 py-1.5 text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200">Bekor qilish</button>
-                <button type="submit" className="flex-1 px-2 py-1.5 text-[10px] font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm shadow-blue-500/30">Saqlash</button>
+                <button type="button" onClick={() => setShowInput(false)} className="flex-1 px-3 py-2 text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 transition-all font-inter">Bekor qilish</button>
+                <button type="submit" className="flex-1 px-3 py-2 text-[11px] font-bold text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl hover:shadow-lg transition-all font-inter">Saqlash</button>
               </div>
             </form>
           )}
-          <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-gray-800 border-t border-l border-gray-100 dark:border-gray-700 transform rotate-45 rounded-[1px]" />
+          <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-slate-900 border-t border-l border-white/20 dark:border-white/10 transform rotate-45 rounded-[1px] backdrop-blur-3xl" />
         </div>,
         document.body
       )}
@@ -251,20 +251,20 @@ const OperationRow = React.memo<{
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
 
   return (
-    <tr className="group hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-colors border-b border-gray-100 dark:border-gray-800/40">
-      <td className="sticky left-0 z-20 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-2 py-1.5 text-center text-[10px] font-mono text-gray-400 transition-colors w-10 min-w-[40px]">
+    <tr className="group hover:bg-white/40 dark:hover:bg-white/5 transition-all border-b border-white/20 dark:border-white/5">
+      <td className="sticky left-0 z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r border-white/20 dark:border-white/10 px-2 py-1.5 text-center text-[10px] font-mono text-slate-400 transition-colors w-10 min-w-[40px]">
         {idx + 1}
       </td>
-      <td className="sticky left-10 z-20 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-2 py-1.5 transition-colors w-48 min-w-[192px]">
-        <div className="max-w-[180px] truncate text-[11px] font-semibold text-gray-900 dark:text-gray-100" title={row.name}>
+      <td className="sticky left-10 z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r border-white/20 dark:border-white/10 px-2 py-1.5 transition-colors w-48 min-w-[192px]">
+        <div className="max-w-[180px] truncate text-[11px] font-bold text-slate-800 dark:text-slate-200" title={row.name}>
           {row.name}
         </div>
       </td>
-      <td className="sticky left-[232px] z-20 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r border-gray-200 dark:border-gray-700 px-1 py-1.5 text-center text-[10px] font-mono text-gray-500 transition-colors w-20 min-w-[80px]">
+      <td className="md:sticky md:left-[232px] z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r border-white/20 dark:border-white/10 px-1 py-1.5 text-center text-[10px] font-mono text-slate-500 transition-colors w-20 min-w-[80px]">
         {row.inn || '—'}
       </td>
-      <td className="sticky left-[312px] z-20 bg-white dark:bg-gray-900 group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/30 border-r-2 border-gray-200 dark:border-gray-700 px-1 py-1.5 transition-colors w-24 min-w-[96px]">
-        <div className="max-w-[90px] truncate text-[10px] font-medium text-gray-600 dark:text-gray-400" title={row.accountant}>
+      <td className="md:sticky md:left-[312px] z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r-2 border-white/30 dark:border-white/10 px-1 py-1.5 transition-colors w-24 min-w-[96px]">
+        <div className="max-w-[90px] truncate text-[10px] font-semibold text-slate-600 dark:text-slate-400" title={row.accountant}>
           {row.accountant || '—'}
         </div>
       </td>
@@ -277,7 +277,7 @@ const OperationRow = React.memo<{
           const payDisabled = !isServiceEnabled(payKey);
           return (
             <React.Fragment key={col.key}>
-              <td className={`border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : 'bg-emerald-50/30 dark:bg-emerald-950/10'}`}>
+              <td className={`border-r border-gray-100 dark:border-white/10/30 px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : 'bg-emerald-50/30 dark:bg-emerald-950/10'}`}>
                 {serviceDisabled ? (
                   <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
                 ) : (
@@ -289,7 +289,7 @@ const OperationRow = React.memo<{
                   />
                 )}
               </td>
-              <td className={`border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8 ${payDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : 'bg-amber-50/30 dark:bg-amber-950/10'}`}>
+              <td className={`border-r border-gray-100 dark:border-white/10/30 px-0.5 py-0.5 text-center h-8 ${payDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : 'bg-amber-50/30 dark:bg-amber-950/10'}`}>
                 {payDisabled ? (
                   <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
                 ) : (
@@ -306,7 +306,7 @@ const OperationRow = React.memo<{
         }
 
         return (
-          <td key={col.key} className={`border-r border-gray-100 dark:border-gray-800/30 px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : ''}`}>
+          <td key={col.key} className={`border-r border-gray-100 dark:border-white/10/30 px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : ''}`}>
             {serviceDisabled ? (
               <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
             ) : (
@@ -369,6 +369,7 @@ const OperationModule: React.FC<Props> = ({
   currentUserId,
   userName
 }) => {
+  const t = translations[lang as keyof typeof translations];
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [rows, setRows] = useState<ReportRow[]>([]);
@@ -640,15 +641,15 @@ const OperationModule: React.FC<Props> = ({
 
   // ── Render ───────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-gray-950 dark:to-blue-950/10">
+    <div className="flex flex-col h-full">
       {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 border-b border-gray-200/80 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl px-5 py-3.5">
+      <div className="flex-shrink-0 liquid-glass-topbar px-5 py-3.5 z-40">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-lg font-black text-gray-900 dark:text-white tracking-tight">Operatsiyalar Matritsasi</h1>
+              <h1 className="text-lg font-black text-gray-900 dark:text-white tracking-tight">{t.matrixTitle}</h1>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                {filteredRows.length} / {rows.length} ta korxona · {selectedPeriod}
+                {filteredRows.length} / {rows.length} {t.taKorxona} · {selectedPeriod}
               </p>
             </div>
             {/* Mini Stats */}
@@ -672,14 +673,14 @@ const OperationModule: React.FC<Props> = ({
             <div className="relative">
               <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Qidirish..." className="pl-8 pr-3 py-1.5 w-48 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+                placeholder={t.searchPlaceholder} className="pl-8 pr-3 py-1.5 w-48 bg-white/30 dark:bg-gray-800 border border-white/20 dark:border-white/10 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
             </div>
 
             {/* Accountant Filter */}
             <div className="relative">
               <select value={filterAccountant} onChange={e => setFilterAccountant(e.target.value)}
-                className="appearance-none pl-2.5 pr-7 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer">
-                <option value="all">Barcha buxgalterlar</option>
+                className="appearance-none pl-2.5 pr-7 py-1.5 bg-white/30 dark:bg-gray-800 border border-white/20 dark:border-white/10 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer">
+                <option value="all">{t.allAccountants}</option>
                 {accountants.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
               <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -688,8 +689,8 @@ const OperationModule: React.FC<Props> = ({
             {/* Group Filter */}
             <div className="relative">
               <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
-                className="appearance-none pl-2.5 pr-7 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer">
-                <option value="all">Barcha ustunlar</option>
+                className="appearance-none pl-2.5 pr-7 py-1.5 bg-white/30 dark:bg-gray-800 border border-white/20 dark:border-white/10 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer">
+                <option value="all">{t.allColumns}</option>
                 {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
               <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -703,7 +704,7 @@ const OperationModule: React.FC<Props> = ({
               className="z-20"
             />
 
-            <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all active:scale-95">
+            <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-white/20 dark:border-white/10 rounded-lg text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-white/30 dark:hover:bg-gray-700 transition-all active:scale-95">
               <Download size={14} /> Export
             </button>
 
@@ -712,39 +713,39 @@ const OperationModule: React.FC<Props> = ({
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/20 dark:border-white/10 overflow-x-auto scrollbar-hide">
           {[
-            { icon: '✓', label: 'Bajarildi (+)', cls: 'text-emerald-600' },
-            { icon: '✗', label: 'Bajarilmadi (-)', cls: 'text-red-600' },
-            { icon: '—', label: 'Bo\'sh (0)', cls: 'text-gray-400' },
-            { icon: '⏳', label: 'Kutilmoqda', cls: 'text-blue-600 animate-pulse' },
-            { icon: '⚠', label: 'Kartoteka', cls: 'text-amber-600' },
-            { icon: '📝', label: 'Matn', cls: 'text-blue-600' },
-            { icon: 'Xis.', label: 'Hisobot', cls: 'text-emerald-600 font-mono' },
-            { icon: 'To\'l', label: 'To\'lov', cls: 'text-amber-600 font-mono' },
+            { icon: '✓', label: `${t.approved} (+)` },
+            { icon: '✗', label: `${t.rejected} (-)` },
+            { icon: '—', label: `${t.not_required} (0)` },
+            { icon: '⏳', label: t.pending, cls: 'animate-pulse' },
+            { icon: '⚠', label: t.blocked },
+            { icon: '📝', label: t.comment },
+            { icon: 'Xis.', label: t.reportLegend },
+            { icon: 'To\'l', label: t.paymentLegend },
           ].map(l => (
-            <div key={l.label} className="flex items-center gap-1">
-              <span className={`font-black text-xs ${l.cls}`}>{l.icon}</span>
-              <span className="text-[10px] text-gray-500">{l.label}</span>
+            <div key={l.label} className="flex items-center gap-1.5 shrink-0">
+              <span className={`font-black text-[11px] w-5 h-5 flex items-center justify-center rounded-md bg-white/30 dark:bg-white/5 border border-white/20 ${l.cls || 'text-slate-400'}`}>{l.icon}</span>
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{l.label}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* ── Matrix ──────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto relative border border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-gray-900 shadow-sm" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+      <div className="flex-1 overflow-auto relative liquid-glass-card rounded-[2rem] mx-4 mb-4 shadow-glass-lg" style={{ maxHeight: 'calc(100vh - 240px)' }}>
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
               <RefreshCw size={28} className="animate-spin text-blue-500" />
-              <span className="text-xs text-gray-500">Ma'lumotlar yuklanmoqda...</span>
+              <span className="text-xs text-gray-500">{t.loading}</span>
             </div>
           </div>
         ) : filteredRows.length === 0 ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <Info size={40} className="mx-auto mb-2 text-gray-300" />
-              <p className="text-gray-500 text-sm font-medium">Ma'lumot topilmadi</p>
+              <p className="text-gray-500 text-sm font-medium">{t.noData}</p>
             </div>
           </div>
         ) : (
@@ -752,8 +753,8 @@ const OperationModule: React.FC<Props> = ({
             <thead className="sticky top-0 z-[60] shadow-sm">
               {/* Group row */}
               <tr className="h-6">
-                <th colSpan={4} className="sticky top-0 left-0 z-[80] bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-sm border-b border-r-2 border-gray-200 dark:border-gray-700 px-2 py-1 text-left text-[9px] font-bold text-gray-400 uppercase tracking-widest w-[408px] min-w-[408px]">
-                  Korxona
+                <th colSpan={4} className="sticky top-0 left-0 z-[80] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r-2 border-white/20 dark:border-white/10 px-2 py-1 text-left text-[9px] font-bold text-gray-400 uppercase tracking-widest w-[408px] min-w-[408px]">
+                  {t.firmTable}
                 </th>
                 {(() => {
                   const groupCounts = new Map<string, number>();
@@ -773,7 +774,7 @@ const OperationModule: React.FC<Props> = ({
                   };
 
                   return [...groupCounts.entries()].map(([name, count]) => (
-                    <th key={name} colSpan={count} className={`sticky top-0 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-1 py-1.5 text-center text-[9px] font-black uppercase tracking-wider ${groupColors[name] || 'bg-gray-50/95 text-gray-500'}`}>
+                    <th key={name} colSpan={count} className={`sticky top-0 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-1 py-1.5 text-center text-[9px] font-black uppercase tracking-wider ${groupColors[name] || 'bg-white/80 text-gray-500'}`}>
                       {name}
                     </th>
                   ));
@@ -781,23 +782,23 @@ const OperationModule: React.FC<Props> = ({
               </tr>
               {/* Column header row (24px height roughly for the first row) */}
               <tr className="h-8">
-                <th className="sticky top-[24px] left-0 z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-center font-bold text-gray-500 w-10 min-w-[40px]">#</th>
-                <th className="sticky top-[24px] left-10 z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-left font-bold text-gray-700 dark:text-gray-300 w-48 min-w-[192px]">Korxona nomi</th>
-                <th className="sticky top-[24px] left-[232px] z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center font-bold text-gray-500 w-20 min-w-[80px]">INN</th>
-                <th className="sticky top-[24px] left-[312px] z-[70] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r-2 border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center font-bold text-gray-500 w-24 min-w-[96px]">Buxgalter</th>
+                <th className="sticky top-[24px] left-0 z-[70] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-2 py-2 text-center font-bold text-gray-500 w-10 min-w-[40px]">#</th>
+                <th className="sticky top-[24px] left-10 z-[70] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-2 py-2 text-left font-bold text-gray-700 dark:text-gray-300 w-48 min-w-[192px]">{t.companyName}</th>
+                <th className="md:sticky md:top-[24px] md:left-[232px] z-[70] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-1.5 py-2 text-center font-bold text-gray-500 w-20 min-w-[80px]">{t.inn}</th>
+                <th className="md:sticky md:top-[24px] md:left-[312px] z-[70] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r-2 border-white/20 dark:border-white/10 px-1.5 py-2 text-center font-bold text-gray-500 w-24 min-w-[96px]">{t.accountant}</th>
                 {visibleColumns.map(col => {
                   if ((col as any).isSplit) {
                     return (
                       <React.Fragment key={col.key}>
                         <th
-                          className="sticky top-[24px] bg-emerald-50/95 dark:bg-emerald-950/50 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 cursor-help"
+                          className="sticky top-[24px] bg-emerald-50/95 dark:bg-emerald-950/50 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-0.5 py-2 text-center w-10 cursor-help"
                           title={col.label}
                         >
                           <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-400 tracking-tight">{col.short}</span>
                           <div className="text-[7px] font-bold text-emerald-500">Xis.</div>
                         </th>
                         <th
-                          className="sticky top-[24px] bg-amber-50/95 dark:bg-amber-950/50 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 cursor-help"
+                          className="sticky top-[24px] bg-amber-50/95 dark:bg-amber-950/50 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-0.5 py-2 text-center w-10 cursor-help"
                           title={`${col.label} to'lov`}
                         >
                           <span className="text-[9px] font-black text-amber-700 dark:text-amber-400 tracking-tight">{(col as any).payShort}</span>
@@ -809,7 +810,7 @@ const OperationModule: React.FC<Props> = ({
                   return (
                     <th
                       key={col.key}
-                      className="sticky top-[24px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-r border-gray-200 dark:border-gray-700 px-0.5 py-2 text-center w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-help group/header"
+                      className="sticky top-[24px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-0.5 py-2 text-center w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-help group/header"
                       title={col.label + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
                       onContextMenu={(e) => {
                         if (userRole === 'super_admin' || userRole === 'admin') {
@@ -844,21 +845,21 @@ const OperationModule: React.FC<Props> = ({
       </div>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg px-5 py-2">
+      <div className="flex-shrink-0 border-t border-white/20 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg px-5 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 text-[11px] text-gray-500">
-            <span>Jami: <strong className="text-gray-700 dark:text-gray-200">{filteredRows.length}</strong> korxona · <strong>{visibleColumns.length}</strong> ustun</span>
+            <span>{t.totalFirms}: <strong className="text-gray-700 dark:text-gray-200">{filteredRows.length}</strong> · <strong>{visibleColumns.length}</strong> {t.reports.toLowerCase()}</span>
             <div className="h-3 w-px bg-gray-300 dark:bg-gray-700"></div>
-            <span>Manba: <strong className="text-blue-600">Baza (Supabase)</strong></span>
+            <span>{t.source}: <strong className="text-blue-600">{t.database}</strong></span>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-2 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-50 transition-colors"
+              className="px-2 py-1 rounded bg-white dark:bg-gray-800 border border-white/20 dark:border-white/10 text-[10px] font-bold text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-white/30 transition-colors"
             >
-              Oldingi
+              {t.prev}
             </button>
             <span className="text-[10px] font-black text-gray-700 dark:text-gray-300">
               {currentPage} / {totalPages || 1}
@@ -866,9 +867,9 @@ const OperationModule: React.FC<Props> = ({
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages || totalPages === 0}
-              className="px-2 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-50 transition-colors"
+              className="px-2 py-1 rounded bg-white dark:bg-gray-800 border border-white/20 dark:border-white/10 text-[10px] font-bold text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-white/30 transition-colors"
             >
-              Keyingi
+              {t.next}
             </button>
           </div>
         </div>

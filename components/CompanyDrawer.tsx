@@ -173,33 +173,34 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
   return (
     <>
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] transition-opacity animate-fade-in" onClick={onClose}></div>
-      <div className="fixed right-0 top-0 h-full w-full max-w-3xl bg-slate-50 dark:bg-apple-darkBg shadow-[-20px_0_50px_rgba(0,0,0,0.2)] z-[101] overflow-y-auto scrollbar-thin overflow-x-hidden" style={{ animation: 'slideLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-        <div className="bg-white dark:bg-apple-darkCard border-b border-apple-border dark:border-apple-darkBorder sticky top-0 z-10">
+      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] transition-opacity animate-fade-in" onClick={onClose}></div>
+      <div className="fixed right-0 top-0 h-full w-full max-w-3xl liquid-glass-sidebar shadow-glass-lg z-[101] overflow-y-auto scrollbar-hide overflow-x-hidden border-l border-white/20 dark:border-white/10" style={{ animation: 'slideLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+        <div className="sticky top-0 z-20 liquid-glass-topbar border-b border-white/20 dark:border-white/10">
           <div className="p-6 md:p-8 flex justify-between items-start">
-            <div className="flex items-center gap-5">
-              <div className="h-16 w-16 bg-apple-accent rounded-2xl flex items-center justify-center text-2xl text-white font-black shadow-lg">
+            <div className="flex items-center gap-6">
+              <div className="h-16 w-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[1.5rem] flex items-center justify-center text-2xl text-white font-black shadow-lg shadow-blue-500/20">
                 {company.name.charAt(0)}
               </div>
               <div>
-                <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight leading-none mb-2">{company.name}</h2>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-1 bg-slate-100 dark:bg-white/5 rounded-lg text-[10px] font-black text-slate-500 font-mono">INN: {company.inn}</span>
-                  <span className="px-2.5 py-1 bg-apple-accent/10 rounded-lg text-[10px] font-black text-apple-accent uppercase">{company.taxType}</span>
+                <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight leading-none mb-3 premium-text-gradient">{company.name}</h2>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="px-3 py-1 bg-white/40 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-xl text-[10px] font-black text-slate-500 font-mono tracking-wider italic">INN: {company.inn}</span>
+                  <span className="px-3 py-1 bg-apple-accent/20 border border-apple-accent/20 rounded-xl text-[10px] font-black text-apple-accent uppercase tracking-widest">{company.taxType}</span>
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="p-3 bg-slate-50 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-500 rounded-xl text-slate-400 transition-all">
+            <button onClick={onClose} className="p-4 bg-white/40 dark:bg-white/5 border border-white/20 dark:border-white/10 hover:bg-rose-500/20 hover:text-rose-600 rounded-2xl text-slate-400 transition-all active:scale-95 shadow-glass">
               <X size={20} strokeWidth={3} />
             </button>
           </div>
-          <div className="flex px-6 overflow-x-auto scrollbar-none border-t border-apple-border dark:border-apple-darkBorder">
+          <div className="flex px-6 overflow-x-auto scrollbar-hide border-t border-white/10">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-all font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${activeTab === tab.id ? 'border-apple-accent text-apple-accent' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                className={`flex items-center gap-2 px-6 py-5 border-b-2 transition-all font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${activeTab === tab.id ? 'border-apple-accent text-apple-accent bg-apple-accent/5' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
               >
+                <span className={activeTab === tab.id ? 'text-apple-accent' : 'text-slate-400 opacity-50'}>{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
@@ -208,27 +209,31 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
         <div className="p-6 md:p-8 space-y-6">
           {activeTab === 'pasport' && (
-            <div className="space-y-6 animate-fade-in">
-              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
-                <div className="flex items-center gap-3 mb-4">
-                  <User size={16} className="text-apple-accent" />
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Direktor</h4>
+            <div className="space-y-6 animate-macos">
+              <div className="p-6 liquid-glass-card rounded-[2rem]">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20">
+                    <User size={20} strokeWidth={3} />
+                  </div>
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Direktor</h4>
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-lg font-black text-slate-800 dark:text-white">{company.directorName || '—'}</p>
-                    <p className="text-sm font-bold text-slate-400">{company.directorPhone || 'Telefon ko\'rsatilmagan'}</p>
+                    <p className="text-xl font-black text-slate-800 dark:text-white tracking-tight">{company.directorName || '—'}</p>
+                    <p className="text-sm font-bold text-slate-400 mt-1">{company.directorPhone || 'Telefon ko\'rsatilmagan'}</p>
                   </div>
                 </div>
               </div>
-              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
-                <div className="flex items-center gap-3 mb-4">
-                  <MapPin size={16} className="text-apple-accent" />
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Yuridik Manzil</h4>
+              <div className="p-6 liquid-glass-card rounded-[2rem]">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+                    <MapPin size={20} strokeWidth={3} />
+                  </div>
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Yuridik Manzil</h4>
                 </div>
-                <p className="text-base font-bold text-slate-700 dark:text-slate-200">{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
+                <p className="text-base font-bold text-slate-700 dark:text-slate-200 leading-relaxed">{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
               </div>
-              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+              <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <FileText size={16} className="text-apple-accent" />
@@ -255,7 +260,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
               </div>
 
               {/* Service Scope in Passport */}
-              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+              <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                 <div className="flex items-center gap-3 mb-4">
                   <Check size={16} className="text-apple-accent" />
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Xizmatlar Ko'lami</h4>
@@ -274,7 +279,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
           {activeTab === 'soliq' && (
             <div className="space-y-6 animate-fade-in">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">1C Server & Baza</h4>
                   <div className="space-y-2">
                     <p className="text-sm font-black text-slate-700 dark:text-white">Server ID: <span className="text-apple-accent">{company.serverInfo || '—'}</span></p>
@@ -291,7 +296,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Statistika Hisobotlari</h4>
                   <div className="flex flex-wrap gap-2">
                     {company.statReports?.length ? company.statReports.map(s => (
@@ -300,7 +305,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   </div>
                 </div>
 
-                <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Majburiy Hisobotlar</h4>
                   <div className="flex flex-wrap gap-2">
                     {company.requiredReports?.length ? company.requiredReports.map(r => (
@@ -309,7 +314,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   </div>
                 </div>
 
-                <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder col-span-1 md:col-span-2">
+                <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder col-span-1 md:col-span-2">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Xizmatlar Ko'lami (Scope)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {company.serviceScope?.length ? company.serviceScope.map(s => (
@@ -326,7 +331,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                 </div>
               </div>
 
-              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+              <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                 <div className="flex items-center gap-3 mb-4">
                   <Database size={16} className="text-apple-accent" />
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">1C Holati</h4>
@@ -344,7 +349,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
           {activeTab === 'loginlar' && (
             <div className="space-y-6 animate-fade-in">
-              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+              <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <Globe size={16} className="text-apple-accent" />
@@ -519,7 +524,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {credentials.map((cred) => (
-                    <div key={cred.id} className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder group relative hover:border-apple-accent/30 transition-all">
+                    <div key={cred.id} className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder group relative hover:border-apple-accent/30 transition-all">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
                           <Key size={16} className="text-apple-accent" />
@@ -584,37 +589,37 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   {(() => {
                     const displayedAssignments = assignments.length > 0 ? assignments : teamFallbackAssignments();
                     return displayedAssignments.length > 0 ? displayedAssignments.map(asgn => {
-                    const member = staff.find(s => s.id === asgn.user_id);
-                    return (
-                      <div key={asgn.id} className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                          <Users size={40} />
+                      const member = staff.find(s => s.id === asgn.user_id);
+                      return (
+                        <div key={asgn.id} className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Users size={40} />
+                          </div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{asgn.role.toUpperCase().replace('_', ' ')}</p>
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-apple-accent font-black">
+                              {member?.name?.charAt(0) || '?'}
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-slate-800 dark:text-white">{member?.name || 'Mavjud emas'}</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                {asgn.salary_type === 'percent' ? `${asgn.salary_value}%` : `${asgn.salary_value?.toLocaleString()} so'm`}
+                              </p>
+                            </div>
+                          </div>
+                          {asgn.start_date && (
+                            <div className="mt-4 pt-4 border-t border-apple-border dark:border-apple-darkBorder flex items-center justify-between">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase">Tayinlangan sana:</span>
+                              <span className="text-[9px] font-black text-slate-500">{new Date(asgn.start_date).toLocaleDateString()}</span>
+                            </div>
+                          )}
                         </div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{asgn.role.toUpperCase().replace('_', ' ')}</p>
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-apple-accent font-black">
-                            {member?.name?.charAt(0) || '?'}
-                          </div>
-                          <div>
-                            <p className="text-sm font-black text-slate-800 dark:text-white">{member?.name || 'Mavjud emas'}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">
-                              {asgn.salary_type === 'percent' ? `${asgn.salary_value}%` : `${asgn.salary_value?.toLocaleString()} so'm`}
-                            </p>
-                          </div>
-                        </div>
-                        {asgn.start_date && (
-                          <div className="mt-4 pt-4 border-t border-apple-border dark:border-apple-darkBorder flex items-center justify-between">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">Tayinlangan sana:</span>
-                            <span className="text-[9px] font-black text-slate-500">{new Date(asgn.start_date).toLocaleDateString()}</span>
-                          </div>
-                        )}
-                      </div>
-                    );
+                      );
                     }) : (
-                    <div className="col-span-2 p-10 text-center bg-white dark:bg-apple-darkCard rounded-2xl border border-dashed border-apple-border dark:border-apple-darkBorder">
-                      <Users size={32} className="mx-auto mb-3 text-slate-300" />
-                      <p className="text-sm font-bold text-slate-400">Jamoa a'zolari tayinlanmagan</p>
-                    </div>
+                      <div className="col-span-2 p-10 text-center liquid-glass-card rounded-2xl border border-dashed border-apple-border dark:border-apple-darkBorder">
+                        <Users size={32} className="mx-auto mb-3 text-slate-300" />
+                        <p className="text-sm font-bold text-slate-400">Jamoa a'zolari tayinlanmagan</p>
+                      </div>
                     );
                   })()}
                 </div>
@@ -625,7 +630,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Tayinlovlar Tarixi</h4>
                   <div className="space-y-3">
                     {clientHistory.filter(h => h.changeType === 'assign_role' || h.changeType === 'remove_role').map((h, i) => (
-                      <div key={i} className="flex items-center gap-4 p-4 bg-white dark:bg-apple-darkCard rounded-xl border border-apple-border dark:border-apple-darkBorder">
+                      <div key={i} className="flex items-center gap-4 p-4 liquid-glass-card rounded-xl border border-apple-border dark:border-apple-darkBorder">
                         <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${h.changeType === 'assign_role' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                           {h.changeType === 'assign_role' ? <Check size={14} /> : <X size={14} />}
                         </div>
@@ -658,17 +663,17 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   </div>
                 )}
 
-                <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Shartnoma Raqami</p>
                   <p className="text-sm font-black text-slate-800 dark:text-white">{company.contractNumber || '—'}</p>
                 </div>
-                <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+                <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Sana</p>
                   <p className="text-sm font-black text-slate-800 dark:text-white">{company.contractDate || '—'}</p>
                 </div>
               </div>
 
-              <div className="p-6 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder overflow-hidden relative">
+              <div className="p-6 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder overflow-hidden relative">
                 <div className="absolute -right-6 -top-6 h-24 w-24 bg-apple-accent/5 rounded-full" />
                 <h4 className="text-xs font-black text-slate-400 upper tracking-widest mb-6">Moliyaviy Holat</h4>
                 <div className="grid grid-cols-2 gap-8">
@@ -727,7 +732,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
           {activeTab === 'xavf' && operation && (
             <div className="space-y-6 animate-fade-in">
-              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+              <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Kompaniya Holati</h4>
                 <div className="flex flex-wrap gap-3">
                   {Object.values(CompanyStatus).map(status => (
@@ -751,7 +756,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
           {activeTab === 'xizmatlar' && (
             <div className="space-y-6 animate-fade-in">
-              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+              <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <Check size={16} className="text-apple-accent" />
@@ -841,7 +846,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
           {activeTab === 'kpi' && (
             <div className="space-y-6 animate-fade-in">
-              <div className="p-5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder">
+              <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                 <div className="flex items-center gap-3 mb-6">
                   <Calculator size={16} className="text-apple-accent" />
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">KPI Sozlamalari (Kompaniya uchun maxsus)</h4>

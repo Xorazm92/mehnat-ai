@@ -7,8 +7,10 @@ import {
     Building2, Users, Search, DollarSign, TrendingUp,
     ChevronRight, ChevronDown, Briefcase, CheckCircle2, AlertCircle,
     XCircle, Eye, Wallet, BarChart3, ArrowUpRight, X, Crown, Star,
-    Shield, UserCheck, Network, Download
+    Shield, UserCheck, Network, Download, Activity, Clock, TrendingUp as TrendingUpIcon,
+    PieChart as PieChartIcon, CheckCircle, ArrowRight, User, LogOut
 } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import * as XLSX from 'xlsx';
 
 interface Props {
@@ -286,8 +288,8 @@ const SupervisorDashboard: React.FC<Props> = ({
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
                         className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === tab.key
-                                ? 'bg-white dark:bg-apple-darkCard shadow-lg text-slate-800 dark:text-white'
-                                : 'text-slate-400 hover:text-slate-600'
+                            ? 'liquid-glass-card shadow-lg text-slate-800 dark:text-white'
+                            : 'text-slate-400 hover:text-slate-600'
                             }`}
                     >
                         {tab.icon} {tab.label}
@@ -402,7 +404,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                             const sortedAcc = Object.entries(accDist).sort((a, b) => b[1] - a[1]);
 
                             return (
-                                <div key={sup.id} className="bg-white dark:bg-apple-darkCard rounded-[1.5rem] border border-apple-border dark:border-apple-darkBorder p-5 shadow-sm">
+                                <div key={sup.id} className="liquid-glass-card rounded-[1.5rem] border border-apple-border dark:border-apple-darkBorder p-5 shadow-sm">
                                     <h4 className={`text-xs font-black uppercase tracking-widest ${textColor} mb-4 flex items-center gap-2`}>
                                         <Shield size={14} /> NAZORAT: {sup.name} ({sup.companiesCount} firma)
                                     </h4>
@@ -431,7 +433,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                     </div>
 
                     {/* ── MY ACCOUNTANTS FINANCIAL TABLE ── */}
-                    <div className="bg-white dark:bg-apple-darkCard rounded-[1.5rem] border border-apple-border dark:border-apple-darkBorder overflow-hidden shadow-sm">
+                    <div className="liquid-glass-card rounded-[1.5rem] border border-apple-border dark:border-apple-darkBorder overflow-hidden shadow-sm">
                         <div className="p-5 border-b border-apple-border dark:border-apple-darkBorder bg-slate-50 dark:bg-white/5">
                             <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-2">
                                 <UserCheck size={16} className="text-amber-500" />
@@ -440,39 +442,38 @@ const SupervisorDashboard: React.FC<Props> = ({
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-5">
                             {myAccountants.map((acc) => (
-                                <div key={acc.id} className="bg-slate-50 dark:bg-white/5 rounded-2xl p-4 border border-slate-100 dark:border-white/5 hover:shadow-md transition-shadow">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-lg shadow-blue-500/20">
+                                <div key={acc.id} className="bg-white/40 dark:bg-white/5 rounded-2xl p-6 border border-white/20 dark:border-white/10 hover:shadow-glass transition-all group">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-[1.2rem] bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-glass-lg border border-white/20 group-hover:scale-110 transition-transform">
                                                 {acc.name[0]}
                                             </div>
                                             <div>
-                                                <h4 className="font-black text-sm text-slate-800 dark:text-white">{acc.name}</h4>
-                                                <p className="text-[10px] font-bold text-slate-400">{acc.companiesCount} ta firma</p>
+                                                <h4 className="font-black text-base text-slate-800 dark:text-white leading-tight">{acc.name}</h4>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{acc.companiesCount} ta firma</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{fmtMoney(acc.totalContract)}</p>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase">Shartnoma</p>
+                                            <p className="text-sm font-black text-emerald-500">{fmtMoney(acc.totalContract)}</p>
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Shartnoma</p>
                                         </div>
                                     </div>
 
                                     {/* Company list under this accountant */}
-                                    <div className="space-y-1.5 max-h-32 overflow-y-auto scrollbar-thin">
-                                        {acc.companies.slice(0, 5).map(c => {
+                                    <div className="space-y-2 mt-6 pt-4 border-t border-white/5 max-h-40 overflow-y-auto scrollbar-thin pr-2">
+                                        {acc.companies.map(c => {
                                             const prog = getCompanyProgress(c.id);
                                             return (
-                                                <div key={c.id} className="flex items-center gap-2 text-[10px]">
-                                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${prog.percent >= 80 ? 'bg-emerald-500' : prog.percent >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} />
-                                                    <span className="font-bold text-slate-600 dark:text-slate-300 truncate flex-1">{c.name}</span>
-                                                    <span className="font-black tabular-nums text-slate-400">{fmtMoney(c.contractAmount || 0)}</span>
-                                                    <span className={`font-black tabular-nums w-8 text-right ${prog.percent >= 80 ? 'text-emerald-500' : prog.percent >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>{prog.percent}%</span>
+                                                <div key={c.id} className="flex items-center gap-3 bg-white/30 dark:bg-white/5 p-3 rounded-xl border border-white/10 group/row hover:bg-white/50 transition-colors">
+                                                    <div className={`w-2 h-2 rounded-full shrink-0 ${prog.percent >= 80 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : prog.percent >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                                                    <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 truncate flex-1">{c.name}</span>
+                                                    <span className="font-black tabular-nums text-[10px] text-slate-500">{fmtMoney(c.contractAmount || 0)}</span>
+                                                    <div className="w-10 h-1 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden ml-2">
+                                                        <div className={`h-full rounded-full ${prog.percent >= 80 ? 'bg-emerald-500' : prog.percent >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${prog.percent}%` }} />
+                                                    </div>
                                                 </div>
                                             );
                                         })}
-                                        {acc.companies.length > 5 && (
-                                            <p className="text-[9px] font-bold text-slate-400 text-center">+{acc.companies.length - 5} firma</p>
-                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -581,7 +582,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                             <input
                                 type="text"
                                 placeholder="Firma qidirish (nomi yoki INN)..."
-                                className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder outline-none font-bold text-sm focus:ring-2 focus:ring-apple-accent/20 transition-all shadow-sm"
+                                className="w-full pl-12 pr-4 py-3.5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder outline-none font-bold text-sm focus:ring-2 focus:ring-apple-accent/20 transition-all shadow-sm"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
@@ -589,7 +590,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                         <select
                             value={filterAccountant}
                             onChange={e => setFilterAccountant(e.target.value)}
-                            className="px-4 py-3.5 bg-white dark:bg-apple-darkCard rounded-2xl border border-apple-border dark:border-apple-darkBorder font-bold text-sm outline-none cursor-pointer shadow-sm min-w-[160px]"
+                            className="px-4 py-3.5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder font-bold text-sm outline-none cursor-pointer shadow-sm min-w-[160px]"
                         >
                             <option value="all">Barcha buxgalterlar</option>
                             {myAccountants.map(acc => (
@@ -612,8 +613,8 @@ const SupervisorDashboard: React.FC<Props> = ({
                                             key={c.id}
                                             onClick={() => setSelectedCompanyId(isSelected ? null : c.id)}
                                             className={`relative p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all duration-300 group hover:-translate-y-0.5 ${isSelected
-                                                    ? 'bg-apple-accent/5 border-apple-accent shadow-lg shadow-apple-accent/10'
-                                                    : 'bg-white dark:bg-apple-darkCard border-slate-100 dark:border-white/5 hover:border-apple-accent/30 hover:shadow-md'
+                                                ? 'bg-apple-accent/5 border-apple-accent shadow-lg shadow-apple-accent/10'
+                                                : 'liquid-glass-card border-slate-100 dark:border-white/5 hover:border-apple-accent/30 hover:shadow-md'
                                                 }`}
                                         >
                                             <div className="flex items-start justify-between mb-3">
@@ -664,7 +665,7 @@ const SupervisorDashboard: React.FC<Props> = ({
 
                         {/* Detail Panel */}
                         {selectedCompany && (
-                            <div className="w-full lg:w-2/5 bg-white dark:bg-apple-darkCard rounded-[2rem] border border-apple-border dark:border-apple-darkBorder shadow-xl overflow-hidden flex flex-col max-h-[calc(100vh-240px)] sticky top-6">
+                            <div className="w-full lg:w-2/5 liquid-glass-card rounded-[2rem] border border-apple-border dark:border-apple-darkBorder shadow-xl overflow-hidden flex flex-col max-h-[calc(100vh-240px)] sticky top-6">
                                 <div className="p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white relative">
                                     <button onClick={() => setSelectedCompanyId(null)} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition-colors">
                                         <X size={18} />
@@ -753,8 +754,8 @@ const SupervisorDashboard: React.FC<Props> = ({
                                                     const isBlocked = lower === 'kartoteka';
                                                     return (
                                                         <div key={field} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold ${isDone ? 'bg-emerald-50 dark:bg-emerald-500/5 text-emerald-600' :
-                                                                isBlocked ? 'bg-rose-50 dark:bg-rose-500/5 text-rose-600' :
-                                                                    'bg-slate-50 dark:bg-white/5 text-slate-400'
+                                                            isBlocked ? 'bg-rose-50 dark:bg-rose-500/5 text-rose-600' :
+                                                                'bg-slate-50 dark:bg-white/5 text-slate-400'
                                                             }`}>
                                                             {isDone ? <CheckCircle2 size={12} strokeWidth={3} /> : isBlocked ? <XCircle size={12} strokeWidth={3} /> : <AlertCircle size={12} strokeWidth={3} />}
                                                             <span className="truncate capitalize">{field.replace(/_/g, ' ')}</span>

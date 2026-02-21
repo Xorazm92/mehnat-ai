@@ -52,6 +52,23 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     [ROLES.BANK_MANAGER]: ['dashboard', 'kassa', 'expenses', 'cabinet']
 };
 
+const normalizeViewId = (viewId: string): AppView | null => {
+    const v = String(viewId || '').trim();
+    if (!v) return null;
+
+    if (v === 'companies') return 'organizations';
+    if (v === 'operations') return 'reports';
+    if (v === 'settings') return 'cabinet';
+
+    return v as AppView;
+};
+
+export const canSeeView = (role: UserRole, viewId: string): boolean => {
+    const normalized = normalizeViewId(viewId);
+    if (!normalized) return false;
+    return ALLOWED_VIEWS[role]?.includes(normalized) || false;
+};
+
 export const hasPermission = (role: UserRole, capability: Capability): boolean => {
     return ROLE_PERMISSIONS[role]?.includes(capability) || false;
 };

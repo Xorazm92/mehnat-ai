@@ -170,63 +170,63 @@ const AnalysisModule: React.FC<Props> = ({
     <div className="space-y-8 animate-fade-in pb-20">
 
       {/* --- Header & Period Selector --- */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-white dark:bg-apple-darkCard p-6 rounded-2xl shadow-sm border border-apple-border dark:border-apple-darkBorder">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 liquid-glass-card p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] shadow-glass border border-white/10">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-tight">{t.analysis}</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Mukammal tahlil va statistika markazi</p>
+          <h2 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white tracking-tighter leading-tight premium-text-gradient">{t.analysis}</h2>
+          <p className="text-[10px] md:text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">{t.analyticalCenterSub}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <MonthPicker selectedPeriod={selectedPeriod} onChange={onPeriodChange} className="w-full sm:w-auto" />
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+          <MonthPicker selectedPeriod={selectedPeriod} onChange={onPeriodChange} />
 
           <button
             onClick={handleExport}
-            className="flex-1 sm:flex-none justify-center flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-slate-900/20"
+            className="w-full sm:w-auto justify-center flex items-center gap-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-4 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-[0.2em] hover:opacity-90 transition-all active:scale-95 shadow-glass-lg border border-transparent dark:border-white/20"
           >
-            <Download size={16} />
-            <span>Excel</span>
+            <Download size={18} />
+            <span>{t.excelExport}</span>
           </button>
         </div>
       </div>
 
       {/* --- KPI Cards --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
         <KPICard
-          title="Jami Firmalar"
+          title={t.totalFirmsShort}
           value={metrics.total}
           icon={<BriefcaseIcon className="text-blue-500" />}
-          trend="+2 oyiga nisbatan"
+          trend="+2"
           color="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
         />
         <KPICard
-          title="Bajarilish Foizi"
+          title={t.completionRate}
           value={`${completionRate}%`}
           icon={<TrendingUp className="text-emerald-500" />}
-          subtitle={`${metrics.completed} ta firma to'liq yopildi`}
+          subtitle={`${metrics.completed} ta firma yopildi`}
           color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400"
         />
         <KPICard
-          title="Muammoli Holatlar"
+          title={t.problematic}
           value={metrics.issues}
           icon={<AlertCircle className="text-rose-500" />}
-          subtitle="Kartoteka yoki xatolik"
+          subtitle="Kartoteka / Xatolik"
           color="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400"
         />
         <KPICard
-          title="Kutilayotgan"
+          title={t.pending}
           value={metrics.pending}
           icon={<Clock className="text-amber-500" />}
-          subtitle="Topshirilmagan yoki rad etilgan"
+          subtitle="Topshirilmagan"
           color="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400"
         />
       </div>
 
       {/* --- Charts Section --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white dark:bg-apple-darkCard p-8 rounded-[2.5rem] shadow-sm border border-apple-border dark:border-apple-darkBorder">
-          <h3 className="text-xl font-black text-slate-800 dark:text-white mb-6 flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
-            Hisobotlar Holati
+        <div className="lg:col-span-2 liquid-glass-card p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] shadow-glass border border-white/10">
+          <h3 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white mb-8 flex items-center gap-3">
+            <div className="w-1.5 h-6 md:h-8 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
+            {t.reportStatus}
           </h3>
           <div className="h-[350px] min-h-[350px] w-full relative overflow-hidden flex items-center justify-center">
             {hasMounted ? (
@@ -252,12 +252,12 @@ const AnalysisModule: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-apple-darkCard p-8 rounded-[2.5rem] shadow-sm border border-apple-border dark:border-apple-darkBorder flex flex-col">
-          <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2 flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-pink-500 rounded-full"></div>
-            2026 Statistika (Top 6)
+        <div className="liquid-glass-card p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] flex flex-col shadow-glass border border-white/10">
+          <h3 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white mb-2 flex items-center gap-3">
+            <div className="w-1.5 h-6 md:h-8 bg-pink-500 rounded-full shadow-[0_0_15px_rgba(236,72,153,0.5)]"></div>
+            Top 6 Statistika
           </h3>
-          <p className="text-xs text-slate-400 font-medium mb-6 pl-4">Eng ko'p topshirilgan hisobotlar</p>
+          <p className="text-[10px] md:text-xs text-slate-400 font-black uppercase tracking-widest mb-8 pl-4 opacity-60">Eng ko'p topshirilganlar</p>
           <div className="flex-1 w-full min-h-[300px] flex items-center justify-center">
             {hasMounted ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -274,8 +274,8 @@ const AnalysisModule: React.FC<Props> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white dark:bg-apple-darkCard p-8 rounded-[2.5rem] border border-apple-border dark:border-apple-darkBorder">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Soliq Rejimi Bo'yicha</h3>
+        <div className="liquid-glass-card p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] shadow-glass border border-white/10">
+          <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-white mb-8 uppercase tracking-tight">{t.taxRegime}</h3>
           <div className="h-64 flex items-center justify-center relative overflow-hidden">
             {hasMounted ? (
               <ResponsiveContainer width="100%" height={256}>
@@ -305,7 +305,7 @@ const AnalysisModule: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-apple-darkCard p-8 rounded-[2.5rem] border border-apple-border dark:border-apple-darkBorder flex flex-col justify-center items-center text-center">
+        <div className="liquid-glass-card p-8 rounded-[2.5rem] flex flex-col justify-center items-center text-center">
           <div className="bg-gradient-to-br from-indigo-500 to-purple-600 w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-indigo-500/30">
             <CheckCircle2 className="text-white w-10 h-10" />
           </div>
@@ -347,10 +347,10 @@ const MonthPicker: React.FC<{ selectedPeriod: string; onChange: (p: string) => v
     <div className="relative" ref={ref}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-3 font-black text-slate-800 dark:text-white hover:bg-slate-50 dark:hover:bg-white/10 transition-all shadow-sm active:scale-95 min-w-[180px] justify-center"
+        className="flex items-center gap-3 w-full sm:w-auto bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[1.2rem] md:rounded-2xl px-6 md:px-8 py-4 md:py-4.5 font-black text-slate-800 dark:text-white hover:bg-slate-50 dark:hover:bg-white/10 transition-all shadow-sm active:scale-95 min-w-[200px] justify-center"
       >
-        <span className="text-lg">{selectedPeriod}</span>
-        <CalendarIcon size={18} className="text-slate-400" />
+        <span className="text-base md:text-lg">{selectedPeriod}</span>
+        <CalendarIcon size={18} className="text-slate-400 md:w-5 md:h-5" />
       </button>
 
       {isOpen && (
@@ -395,16 +395,20 @@ const MonthPicker: React.FC<{ selectedPeriod: string; onChange: (p: string) => v
 };
 
 const KPICard = ({ title, value, icon, trend, subtitle, color }: any) => (
-  <div className="bg-white dark:bg-apple-darkCard p-6 rounded-[2rem] border border-apple-border dark:border-apple-darkBorder hover:shadow-xl transition-shadow duration-300 group">
-    <div className="flex justify-between items-start mb-4">
-      <div className={`p-3 rounded-2xl ${color} transition-colors`}>
-        {icon}
+  <div className="liquid-glass-card p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] group shadow-glass border border-white/10 hover:shadow-glass-lg transition-all duration-500 hover:-translate-y-1">
+    <div className="flex justify-between items-start mb-6">
+      <div className={`p-4 rounded-2xl ${color} transition-colors shadow-sm`}>
+        {React.cloneElement(icon, { size: 24, className: icon.props.className + " md:w-7 md:h-7" })}
       </div>
-      {trend && <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-lg uppercase">{trend}</span>}
+      {trend && (
+        <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 text-[10px] font-black rounded-lg uppercase tracking-widest border border-emerald-500/10">
+          {trend} <span className="opacity-60 text-[8px] ml-0.5">⬆</span>
+        </span>
+      )}
     </div>
-    <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{title}</p>
-    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2">{value}</h3>
-    {subtitle && <p className="text-xs text-slate-400 font-medium">{subtitle}</p>}
+    <p className="text-slate-400 text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] mb-2">{title}</p>
+    <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-2 tracking-tighter">{value}</h3>
+    {subtitle && <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60 leading-relaxed">{subtitle}</p>}
   </div>
 );
 

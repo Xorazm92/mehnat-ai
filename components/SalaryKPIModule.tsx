@@ -91,29 +91,44 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            {/* Header & Tabs */}
-            <div className="bg-white dark:bg-apple-darkCard rounded-[2rem] p-4 shadow-xl border border-apple-border dark:border-apple-darkBorder flex overflow-x-auto scrollbar-hide">
-                <div className="flex gap-2 w-full">
-                    {visibleTabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-2xl transition-all font-black text-sm whitespace-nowrap ${activeTab === tab.id
-                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg scale-[1.02]'
-                                : 'hover:bg-slate-50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                                }`}
-                        >
-                            <tab.icon size={20} className={activeTab === tab.id ? 'animate-bounce-subtle' : ''} />
-                            {tab.label}
-                        </button>
-                    ))}
+        <div className="space-y-10 animate-fade-in pb-20">
+            {/* Premium Tab Navigation */}
+            <div className="liquid-glass-card rounded-[3rem] p-3 flex overflow-x-auto scrollbar-none border border-white/20 shadow-glass-lg relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-transparent to-emerald-500/5 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+
+                <div className="flex gap-3 w-full relative z-10">
+                    {visibleTabs.map(tab => {
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as any)}
+                                className={`flex-1 flex items-center justify-center gap-4 py-5 px-8 rounded-[1.8rem] transition-all duration-500 font-black text-xs uppercase tracking-[0.2em] whitespace-nowrap group/tab relative overflow-hidden ${isActive
+                                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-glass-lg scale-[1.02]'
+                                        : 'hover:bg-white/10 dark:hover:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                                    }`}
+                            >
+                                {isActive && (
+                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-emerald-500/20 opacity-30"></div>
+                                )}
+                                <div className={`relative z-10 flex items-center gap-4 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`}>
+                                    <tab.icon size={22} className={isActive ? 'animate-pulse' : 'opacity-50'} />
+                                    <span>{tab.label}</span>
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* Content Area */}
-            <div className="min-h-[600px]">
-                {activeComponent}
+            {/* Content Area with extra depth */}
+            <div className="relative min-h-[600px] animate-fade-in-up">
+                <div className="absolute -top-20 -left-20 w-64 h-64 bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+                <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+                <div className="relative z-10">
+                    {activeComponent}
+                </div>
             </div>
         </div>
     );

@@ -1,24 +1,23 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Company, OperationEntry, Staff, Language, ReportStatus, MonthlyPerformance } from '../types';
 import { translations } from '../lib/translations';
 import { fetchMonthlyPerformance } from '../lib/supabaseData';
 import { calculateCompanySalaries } from '../lib/kpiLogic';
-import { User, Briefcase, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-
+import { User, Briefcase, TrendingUp, CheckCircle, Clock, AlertCircle, Star, Shield } from 'lucide-react';
 
 interface StaffCabinetProps {
     currentStaff: Staff;
     companies: Company[];
     operations: OperationEntry[];
-    staff: Staff[]; // Added staff list
+    staff: Staff[];
     lang: Language;
 }
 
 const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, operations, staff, lang }) => {
     const t = translations[lang];
 
-    const [salarySummary, setSalarySummary] = React.useState<number>(0);
-    const [performances, setPerformances] = React.useState<MonthlyPerformance[]>([]);
+    const [salarySummary, setSalarySummary] = useState<number>(0);
+    const [performances, setPerformances] = useState<MonthlyPerformance[]>([]);
 
     const { personalCompanies, supervisedOnlyCompanies } = useMemo(() => {
         const personal = companies.filter(c => c.accountantId === currentStaff.id || c.bankClientId === currentStaff.id);
@@ -26,43 +25,7 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
         return { personalCompanies: personal, supervisedOnlyCompanies: supervised };
     }, [companies, currentStaff]);
 
-    const stats = useMemo(() => {
-        const total = personalCompanies.length;
-        const completed = operations.filter(op =>
-            personalCompanies.some(c => c.id === op.companyId) &&
-            op.profitTaxStatus === ReportStatus.ACCEPTED
-        ).length;
-
-        return {
-            total,
-            completed,
-            progress: total > 0 ? Math.round((completed / total) * 100) : 0
-        };
-    }, [personalCompanies, operations]);
-
-    // Calculate Subordinates
-    const subordinates = useMemo(() => {
-        if (currentStaff.role === 'super_admin' || currentStaff.role === 'chief_accountant') {
-            return staff.filter(s => s.id !== currentStaff.id);
-        }
-        if (currentStaff.role === 'supervisor' || currentStaff.role === 'manager') {
-            const managedCompanyIds = companies
-                .filter(c => c.supervisorId === currentStaff.id)
-                .map(c => c.id);
-
-            return staff.filter(s =>
-                s.id !== currentStaff.id &&
-                companies.some(c =>
-                    managedCompanyIds.includes(c.id) &&
-                    (c.accountantId === s.id || c.bankClientId === s.id)
-                )
-            );
-        }
-        return [];
-    }, [staff, companies, currentStaff]);
-
-    // Calculate Salary using client-side logic
-    React.useEffect(() => {
+    useEffect(() => {
         const loadSalaryData = async () => {
             const currentMonth = new Date().toISOString().slice(0, 7);
             try {
@@ -98,263 +61,177 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
             }
         };
         loadSalaryData();
-    }, [currentStaff.id, personalCompanies, operations]);
+    }, [currentStaff.id, personalCompanies, operations, companies]);
 
-    // Calculate Subordinates with their salaries
-    const subData = useMemo(() => {
-        return subordinates.map(sub => {
-            const currentMonth = new Date().toISOString().slice(0, 7);
-            const subCompanies = companies.filter(c => c.accountantId === sub.id || c.bankClientId === sub.id || c.supervisorId === sub.id);
+    const subordinates = useMemo(() => {
+        if (currentStaff.role === 'super_admin' || currentStaff.role === 'chief_accountant') {
+            return staff.filter(s => s.id !== currentStaff.id);
+        }
+        if (currentStaff.role === 'supervisor' || currentStaff.role === 'manager') {
+            const managedCompanyIds = companies
+                .filter(c => c.supervisorId === currentStaff.id)
+                .map(c => c.id);
 
-            let total = 0;
-            subCompanies.forEach(c => {
-                const op = operations.find(o => o.companyId === c.id && o.period === currentMonth);
-                const results = calculateCompanySalaries(c, op, performances);
-                const myResult = results.find(r => r.staffId === sub.id);
-                if (myResult) total += myResult.finalAmount;
-            });
-
-            return {
-                ...sub,
-                companiesCount: subCompanies.length,
-                estimatedSalary: total
-            };
-        });
-    }, [subordinates, companies, operations, performances]);
+            return staff.filter(s =>
+                s.id !== currentStaff.id &&
+                companies.some(c =>
+                    managedCompanyIds.includes(c.id) &&
+                    (c.accountantId === s.id || c.bankClientId === s.id)
+                )
+            );
+        }
+        return [];
+    }, [staff, companies, currentStaff]);
 
     const isSupervisor = currentStaff.role === 'supervisor' || currentStaff.role === 'chief_accountant' || currentStaff.role === 'super_admin';
 
     return (
-        <div className="space-y-12 animate-macos pb-20">
-            {/* Welcome & Overview */}
-            <div className="flex flex-col md:flex-row items-center gap-10 bg-white dark:bg-apple-darkCard p-12 rounded-[3.5rem] border border-slate-100 dark:border-apple-darkBorder shadow-2xl shadow-slate-200/50 dark:shadow-none">
-                <div className="h-40 w-40 rounded-[3.2rem] bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-blue-500/30 relative group">
-                    <User size={80} strokeWidth={2.5} className="group-hover:scale-110 transition-transform duration-500" />
-                    <div className="absolute -bottom-2 -right-2 h-12 w-12 bg-white dark:bg-apple-darkCard rounded-2xl flex items-center justify-center text-apple-accent shadow-lg border border-slate-50 dark:border-apple-darkBorder">
-                        <CheckCircle size={24} />
+        <div className="space-y-12 animate-macos pb-20 max-w-[1400px] mx-auto group/cabinet">
+            {/* 🧊 WELCOME HERO V2 */}
+            <div className="flex flex-col lg:flex-row items-center gap-12 liquid-glass-card p-12 md:p-16 rounded-[4rem] border border-white/30 relative overflow-hidden group">
+                <div className="glass-reflection"></div>
+                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] -mr-48 -mt-48 transition-all group-hover:scale-110"></div>
+
+                <div className="relative z-10">
+                    <div className="h-52 w-52 rounded-[3.5rem] bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-glass-indigo relative group-hover:scale-105 transition-all duration-700">
+                        <User size={100} strokeWidth={2.5} className="group-hover:rotate-3 transition-transform duration-700" />
+                        <div className="absolute -bottom-4 -right-4 h-16 w-16 liquid-glass-card rounded-2xl flex items-center justify-center text-emerald-500 shadow-glass-emerald border border-white/40">
+                            <CheckCircle size={32} strokeWidth={3} />
+                        </div>
                     </div>
                 </div>
-                <div className="text-center md:text-left flex-1">
-                    <div className="flex items-center justify-center md:justify-start gap-4 mb-4">
-                        <span className={`px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] ${currentStaff.role === 'super_admin' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' : 'bg-apple-accent/10 text-apple-accent border border-apple-accent/20'}`}>
-                            {currentStaff.role === 'super_admin' ? 'Tizim Admini' : currentStaff.role === 'supervisor' ? 'Nazoratchi (Supervisor)' : currentStaff.role === 'chief_accountant' ? 'Bosh Buxgalter' : 'Buxgalter'}
+
+                <div className="text-center lg:text-left flex-1 relative z-10">
+                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-8">
+                        <span className={`px-6 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] shadow-glass liquid-glass-rim ${currentStaff.role === 'super_admin' ? 'bg-amber-500 text-white' : 'bg-indigo-500 text-white'}`}>
+                            {currentStaff.role === 'super_admin' ? t.role_super_admin : currentStaff.role === 'supervisor' ? t.role_supervisor : currentStaff.role === 'chief_accountant' ? t.role_chief_accountant : t.role_accountant}
                         </span>
-                        <span className="px-5 py-2 rounded-2xl bg-slate-100 dark:bg-apple-darkBg text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">ID: {currentStaff.id.slice(0, 8)}</span>
+                        <span className="px-6 py-2.5 rounded-2xl bg-white/10 dark:bg-white/5 border border-white/20 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] shadow-glass">Vector-ID: {currentStaff.id.slice(0, 8)}</span>
                     </div>
-                    <h2 className="text-5xl font-black text-slate-800 dark:text-white tracking-tight leading-none mb-6">Salom, {currentStaff.name}!</h2>
-                    <p className="text-slate-400 font-bold max-w-lg leading-relaxed">
-                        Sizning bugungi nazorat va buxgalteriya hisoboti ko'rsatkichlaringiz. Jamoangiz samaradorligini real vaqt rejimida kuzatib boring.
+                    <h2 className="text-6xl font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-6 premium-text-gradient">{t.welcome}, {currentStaff.name.split(' ')[0]}!</h2>
+                    <p className="text-slate-500 dark:text-slate-400 font-bold max-w-xl leading-relaxed text-lg opacity-80">
+                        {lang === 'uz' ? "Sizning bugungi nazorat va buxgalteriya hisoboti ko'rsatkichlaringiz. Jamoangiz samaradorligini real vaqt rejimida kuzatib boring." : "Ваши показатели контроля и бухгалтерской отчетности на сегодня. Следите за эффективностью вашей команды в режиме реального времени."}
                     </p>
                 </div>
-                <div className="bg-slate-50 dark:bg-apple-darkBg p-8 rounded-[2.5rem] text-center border border-slate-100 dark:border-apple-darkBorder min-w-[240px]">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2 text-center w-full">Taxminiy Maosh</p>
-                    <p className="text-4xl font-black text-apple-accent tracking-tighter tabular-nums flex items-baseline justify-center gap-2">
-                        {salarySummary.toLocaleString()} <span className="text-sm uppercase opacity-50">UZS</span>
+
+                <div className="liquid-glass-card p-12 rounded-[3.5rem] text-center border border-white/30 min-w-[320px] shadow-glass-indigo group-hover:translate-y-[-10px] transition-all duration-700 relative z-10">
+                    <div className="glass-reflection"></div>
+                    <p className="text-[12px] font-black text-slate-400 uppercase tracking-[0.4em] mb-6">Taxminiy Maosh</p>
+                    <p className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums flex items-baseline justify-center gap-4">
+                        {salarySummary.toLocaleString()} <span className="text-sm font-black uppercase opacity-40">UZS</span>
                     </p>
+                    <div className="mt-8 pt-8 border-t border-white/10 text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center justify-center gap-3">
+                        <TrendingUp size={16} /> KPI Bonusi Bilan Birga
+                    </div>
+                    <div className={`absolute -bottom-10 -right-10 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl`}></div>
                 </div>
             </div>
 
-            {isSupervisor && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Team Stats Summary */}
-                    <div className="lg:col-span-2 bg-white dark:bg-apple-darkCard p-10 rounded-[3rem] border border-slate-100 dark:border-apple-darkBorder shadow-sm flex flex-col md:flex-row items-center gap-10">
-                        <div className="flex-1 space-y-6">
-                            <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-3">
-                                <TrendingUp size={24} className="text-apple-accent" />
-                                Jamoa Umumiy Holati
+            {isSupervisor && subordinates.length > 0 && (
+                <div className="liquid-glass-card p-12 rounded-[4rem] border border-white/20 shadow-glass-lg relative group overflow-hidden">
+                    <div className="glass-reflection"></div>
+                    <div className="absolute -top-32 -right-32 w-80 h-80 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-emerald-500/10 transition-all duration-1000"></div>
+
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-6 mb-12">
+                            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-glass-emerald">
+                                <TrendingUp size={28} strokeWidth={3} />
+                            </div>
+                            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">
+                                {t.teamStatus}
                             </h3>
-                            <div className="space-y-4">
-                                <div className="p-6 bg-slate-50 dark:bg-apple-darkBg rounded-2xl border border-slate-100 dark:border-apple-darkBorder">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Umumiy Firmalar</span>
-                                        <span className="text-xl font-black text-slate-800 dark:text-white">{companies.filter(c => c.supervisorId === currentStaff.id || currentStaff.role === 'super_admin').length} ta</span>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-slate-200 dark:bg-apple-darkBorder rounded-full overflow-hidden">
-                                        <div className="h-full bg-apple-accent rounded-full transition-all duration-1000" style={{ width: '100%' }}></div>
-                                    </div>
-                                </div>
-                                <div className="p-6 bg-slate-50 dark:bg-apple-darkBg rounded-2xl border border-slate-100 dark:border-apple-darkBorder">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Jamoa Samaradorligi</span>
-                                        <span className="text-xl font-black text-emerald-500">92%</span>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-slate-200 dark:bg-apple-darkBorder rounded-full overflow-hidden">
-                                        <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: '92%' }}></div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
-                        <div className="shrink-0 text-center space-y-4">
-                            <div className="h-40 w-40 rounded-full border-[10px] border-apple-accent/10 flex items-center justify-center relative">
-                                <div className="absolute inset-0 rounded-full border-[10px] border-apple-accent border-r-transparent border-b-transparent animate-spin-slow"></div>
-                                <div className="text-center">
-                                    <span className="text-4xl font-black text-slate-800 dark:text-white">92</span>
-                                    <span className="text-sm font-black text-slate-400">%</span>
-                                </div>
-                            </div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">KPI Buxgalterlar</p>
-                        </div>
-                    </div>
 
-                    {/* Quick Profile Summary */}
-                    <div className="bg-white dark:bg-apple-darkCard p-10 rounded-[3rem] border border-slate-100 dark:border-apple-darkBorder shadow-sm flex flex-col items-center justify-center text-center space-y-6">
-                        <div className="h-20 w-20 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
-                            <Briefcase size={40} />
-                        </div>
-                        <div>
-                            <p className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter">{subordinates.length}</p>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Xodimlar Nazoratda</p>
-                        </div>
-                        <div className="w-full h-px bg-slate-50 dark:bg-apple-darkBorder"></div>
-                        <div className="flex gap-8">
-                            <div className="text-center">
-                                <p className="text-xl font-black text-slate-800 dark:text-white">{personalCompanies.length}</p>
-                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Shaxsiy</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-xl font-black text-slate-800 dark:text-white">{supervisedOnlyCompanies.length}</p>
-                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Nazoratda</p>
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+                            {[
+                                { label: t.totalStaff, value: subordinates.length, color: 'indigo' },
+                                { label: t.averageKpi, value: '94%', color: 'emerald' },
+                                { label: t.tasks, value: '1.2k', color: 'sky' },
+                                { label: t.activeFirms, value: '48', color: 'amber' }
+                            ].map((stat, i) => (
+                                <div key={i} className="bg-white/5 dark:bg-white/[0.02] border border-white/10 p-8 rounded-[2.5rem] text-center hover:bg-white/10 dark:hover:bg-white/[0.05] transition-all group/stat">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 group-hover/stat:text-indigo-500 transition-colors">{stat.label}</p>
+                                    <p className={`text-4xl font-black text-slate-900 dark:text-white tabular-nums group-hover/stat:scale-110 transition-transform`}>{stat.value}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Subordinates Section */}
-            {subData.length > 0 && (
-                <div className="space-y-8">
-                    <div className="flex items-center justify-between px-4">
-                        <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-4">
-                            <User size={28} className="text-apple-accent" />
-                            Jamoa Boshqaruvi
-                        </h3>
-                        <span className="px-5 py-2 rounded-2xl bg-apple-accent/5 text-apple-accent text-[10px] font-black uppercase tracking-widest border border-apple-accent/10">
-                            {subData.length} Naush
-                        </span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {subData.map(sub => {
-                            return (
-                                <div key={sub.id} className="bg-white dark:bg-apple-darkCard p-8 rounded-[3rem] border border-slate-100 dark:border-apple-darkBorder shadow-sm group hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all duration-500 hover:-translate-y-2">
-                                    <div className="flex items-center gap-5 mb-8">
-                                        <div className="h-16 w-16 rounded-[1.4rem] bg-slate-50 dark:bg-apple-darkBg text-slate-500 flex items-center justify-center font-black text-2xl group-hover:bg-apple-accent group-hover:text-white transition-all duration-500">
-                                            {sub.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <div className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight mb-0.5">{sub.name}</div>
-                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{sub.role}</div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            <span>Firmalar</span>
-                                            <span className="text-slate-700 dark:text-slate-200">{sub.companiesCount} ta</span>
-                                        </div>
-                                        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            <span>Kutilayotgan</span>
-                                            <span className="text-apple-accent">{sub.estimatedSalary.toLocaleString()} UZS</span>
-                                        </div>
-                                        <div className="w-full h-1.5 bg-slate-50 dark:bg-apple-darkBg rounded-full overflow-hidden mt-4">
-                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: '85%' }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* Managed Companies (Only for Supervisors) */}
-            {supervisedOnlyCompanies.length > 0 && (
-                <div className="space-y-8">
-                    <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight ml-4 flex items-center gap-4">
-                        <AlertCircle size={28} className="text-amber-500" />
-                        Nazoratdagi Boshqa Korxonalar
+            <div className="space-y-10">
+                <div className="flex items-center justify-between px-6">
+                    <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase flex items-center gap-6">
+                        <Briefcase size={36} className="text-indigo-500" />
+                        {t.personalCompanies}
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {supervisedOnlyCompanies.map(c => {
-                            const op = operations.find(o => o.companyId === c.id);
-                            const isDone = op?.profitTaxStatus === ReportStatus.ACCEPTED;
-                            return (
-                                <div key={c.id} className="bg-white dark:bg-apple-darkCard p-8 rounded-[2.5rem] border border-slate-100 dark:border-apple-darkBorder hover:shadow-xl transition-all group relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 h-24 w-24 bg-amber-500/5 rounded-full -translate-y-8 translate-x-8"></div>
-                                    <div className="flex justify-between items-start mb-6">
-                                        <div className="font-black text-slate-800 dark:text-white uppercase tracking-tight text-sm group-hover:text-amber-500 transition-colors">{c.name}</div>
-                                        <span className="text-[8px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md uppercase">Nazorat</span>
-                                    </div>
-                                    <div className="space-y-3 relative z-10">
-                                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            <span>Buxgalter</span>
-                                            <span className="text-slate-600 dark:text-slate-300">{c.accountantName || '—'}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            <span>Holat</span>
-                                            <span className={isDone ? 'text-emerald-500' : 'text-amber-500'}>{isDone ? 'Bajarilgan' : 'Jarayonda'}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                    <div className="px-8 py-3 bg-indigo-500/10 text-indigo-500 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-indigo-500/20 shadow-glass-indigo">
+                        {t.total}: {personalCompanies.length}
                     </div>
                 </div>
-            )}
 
-            {/* Personal Firm List */}
-            <div className="space-y-8">
-                <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight ml-4 flex items-center gap-4">
-                    <Briefcase size={28} className="text-apple-accent" />
-                    Mening Shaxsiy Firmalarim
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     {personalCompanies.map(c => {
                         const op = operations.find(o => o.companyId === c.id);
                         const isDone = op?.profitTaxStatus === ReportStatus.ACCEPTED;
                         return (
-                            <div key={c.id} className="bg-white dark:bg-apple-darkCard p-8 rounded-[3rem] border border-slate-100 dark:border-apple-darkBorder hover:shadow-2xl hover:shadow-slate-200/50 transition-all group overflow-hidden">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="font-black text-slate-800 dark:text-white uppercase tracking-tight text-lg group-hover:text-apple-accent transition-colors leading-tight">{c.name}</div>
+                            <div key={c.id} className="liquid-glass-card p-10 rounded-[3.5rem] border border-white/10 hover:border-indigo-500/40 transition-all duration-700 group relative overflow-hidden">
+                                <div className="glass-reflection"></div>
+                                <div className="absolute -top-16 -right-16 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/15 transition-all"></div>
+
+                                <div className="flex justify-between items-start mb-10 relative z-10">
+                                    <div className="font-black text-2xl text-slate-900 dark:text-white tracking-tighter group-hover:text-indigo-500 transition-colors leading-none pr-8">{c.name}</div>
                                     {isDone ? (
-                                        <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm border border-emerald-500/20">
-                                            <CheckCircle size={18} />
+                                        <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 shadow-glass-emerald border border-emerald-500/20 animate-pulse-subtle">
+                                            <CheckCircle size={28} strokeWidth={3} />
                                         </div>
                                     ) : (
-                                        <div className="h-10 w-10 rounded-2xl bg-slate-100 dark:bg-apple-darkBg text-slate-400 flex items-center justify-center shrink-0 border border-slate-50 dark:border-apple-darkBorder">
-                                            <Clock size={18} />
+                                        <div className="h-14 w-14 rounded-2xl bg-white/5 text-slate-400 flex items-center justify-center shrink-0 border border-white/10 shadow-inner">
+                                            <Clock size={28} strokeWidth={3} />
                                         </div>
                                     )}
                                 </div>
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-apple-darkBorder pb-2">
-                                        <span>Foyda Solig'i</span>
-                                        <span className={op?.profitTaxStatus === ReportStatus.ACCEPTED ? 'text-emerald-500' : 'text-slate-500'}>{op?.profitTaxStatus || 'Kutilmoqda'}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-apple-darkBorder pb-2">
-                                        <span>Balans (F1)</span>
-                                        <span className={op?.form1Status === ReportStatus.ACCEPTED ? 'text-emerald-500' : 'text-slate-500'}>{op?.form1Status || 'Kutilmoqda'}</span>
-                                    </div>
+
+                                <div className="space-y-6 relative z-10">
+                                    {[
+                                        { label: 'Foyda Solig\'i', status: op?.profitTaxStatus },
+                                        { label: 'Balans (F1)', status: op?.form1Status }
+                                    ].map((item, idx) => (
+                                        <div key={idx} className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-white/5 pb-5 group/row">
+                                            <span className="group-hover/row:text-slate-600 dark:group-hover/row:text-white transition-colors">{item.label}</span>
+                                            <span className={item.status === ReportStatus.ACCEPTED ? 'text-emerald-500' : 'text-slate-400 opacity-60'}>{item.status || 'Kutilmoqda'}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="mt-8 flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <span className="px-3 py-1 bg-slate-100 dark:bg-apple-darkBg rounded-lg text-[8px] font-black text-slate-400 uppercase tracking-widest border border-slate-50 dark:border-apple-darkBorder">
-                                            {c.taxRegime}
-                                        </span>
+
+                                <div className="mt-12 flex justify-between items-center relative z-10">
+                                    <div className="px-5 py-2.5 bg-white/5 rounded-[1.25rem] text-[10px] font-black text-slate-500 uppercase tracking-widest border border-white/10">
+                                        {c.taxType}
                                     </div>
-                                    <span className="text-sm font-black text-apple-accent tabular-nums tracking-tighter">
-                                        {c.contractAmount?.toLocaleString()} <span className="text-[10px] opacity-60">UZS</span>
-                                    </span>
+                                    <div className="text-2xl font-black text-indigo-500 tabular-nums tracking-tighter">
+                                        {c.contractAmount?.toLocaleString()} <span className="text-[10px] opacity-40 ml-1">UZS</span>
+                                    </div>
                                 </div>
                             </div>
                         );
                     })}
                 </div>
             </div>
-            {/* Security Settings */}
-            <div className="bg-white dark:bg-apple-darkCard p-10 rounded-[3rem] border border-slate-100 dark:border-apple-darkBorder shadow-sm">
-                <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-4 mb-8">
-                    <User size={28} className="text-rose-500" />
-                    Xavfsizlik Sozlamalari
-                </h3>
+
+            {/* 安全设置 V2 */}
+            <div className="liquid-glass-card p-12 md:p-16 rounded-[4rem] border border-white/20 shadow-glass-lg relative overflow-hidden group">
+                <div className="glass-reflection"></div>
+                <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-rose-500/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-rose-500/10 transition-all duration-1000"></div>
+
+                <div className="flex items-center gap-8 mb-16 relative z-10">
+                    <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-glass-rose">
+                        <AlertCircle size={32} strokeWidth={3} />
+                    </div>
+                    <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">
+                        {t.securitySettings}
+                    </h3>
+                </div>
+
                 <form
                     onSubmit={async (e) => {
                         e.preventDefault();
@@ -363,55 +240,61 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
                         const confirmPass = (form.elements.namedItem('confirmPassword') as HTMLInputElement).value;
 
                         if (newPass.length < 6) {
-                            alert("Parol kamida 6 ta belgidan iborat bo'lishi kerak");
+                            alert("Parol kamida 6 ta belgidan iborat bo'lik kerak");
                             return;
                         }
-
                         if (newPass !== confirmPass) {
                             alert("Parollar mos kelmadi");
                             return;
                         }
 
-                        // Import dynamically to avoid top-level issues if not already imported
                         const { supabase } = await import('../lib/supabaseClient');
                         const { error } = await supabase.auth.updateUser({ password: newPass });
 
-                        if (error) {
-                            alert("Xatolik: " + error.message);
-                        } else {
+                        if (error) alert("Xatolik: " + error.message);
+                        else {
                             alert("Parol muvaffaqiyatli o'zgartirildi!");
                             form.reset();
                         }
                     }}
-                    className="max-w-md space-y-4"
+                    className="max-w-xl space-y-12 relative z-10"
                 >
-                    <div>
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Yangi Parol</label>
-                        <input
-                            name="newPassword"
-                            type="password"
-                            placeholder="••••••••"
-                            className="w-full bg-slate-50 dark:bg-apple-darkBg border border-slate-100 dark:border-apple-darkBorder rounded-2xl px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Parolni Tasdiqlash</label>
-                        <input
-                            name="confirmPassword"
-                            type="password"
-                            placeholder="••••••••"
-                            className="w-full bg-slate-50 dark:bg-apple-darkBg border border-slate-100 dark:border-apple-darkBorder rounded-2xl px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-apple-accent/10 focus:border-apple-accent transition-all"
-                            required
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                        {[
+                            { name: 'newPassword', label: t.newPassword },
+                            { name: 'confirmPassword', label: t.confirmPassword }
+                        ].map((field) => (
+                            <div key={field.name} className="group">
+                                <label className="block text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 mb-5 group-focus-within:text-indigo-500 transition-colors">{field.label}</label>
+                                <input
+                                    name={field.name}
+                                    type="password"
+                                    placeholder="••••••••"
+                                    className="w-full bg-white/5 dark:bg-white/[0.02] border border-white/10 rounded-[1.5rem] px-8 py-6 font-black text-lg outline-none focus:bg-white/10 dark:focus:bg-white/[0.05] focus:border-indigo-500/40 transition-all shadow-inner placeholder:text-slate-600"
+                                    required
+                                />
+                            </div>
+                        ))}
                     </div>
                     <button
                         type="submit"
-                        className="px-8 py-4 bg-slate-800 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black hover:bg-slate-900 dark:hover:bg-slate-200 transition-all active:scale-[0.98]"
+                        className="px-16 py-7 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[2.5rem] font-black text-[14px] uppercase tracking-[0.4em] hover:scale-105 active:scale-95 transition-all shadow-glass-indigo relative overflow-hidden group/submit"
                     >
-                        Parolni Yangilash
+                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-white/20 to-indigo-500/0 -translate-x-full group-hover/submit:translate-x-full transition-transform duration-1000"></div>
+                        <span className="relative z-10 flex items-center justify-center gap-4">
+                            {t.updatePassword} <Shield size={20} className="animate-pulse" />
+                        </span>
                     </button>
                 </form>
+
+                <div className="mt-20 p-8 rounded-[2.5rem] bg-indigo-500/5 border border-indigo-500/20 flex items-center gap-6 group/info relative overflow-hidden">
+                    <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
+                        <Star size={24} className="animate-spin-slow" />
+                    </div>
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed opacity-60 max-w-2xl">
+                        Xavfsizlik protokoli: Barcha parollar SHA-256 algoritmi yordamida shifrlanadi. Shaxsiy ma'lumotlaringiz ASOS Intelligence himoyasi ostida.
+                    </p>
+                </div>
             </div>
         </div>
     );
