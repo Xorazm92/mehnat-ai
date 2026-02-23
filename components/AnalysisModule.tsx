@@ -228,9 +228,9 @@ const AnalysisModule: React.FC<Props> = ({
             <div className="w-1.5 h-6 md:h-8 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
             {t.reportStatus}
           </h3>
-          <div className="h-[350px] min-h-[350px] w-full relative overflow-hidden flex items-center justify-center">
+          <div className="h-[350px] min-h-[350px] w-full relative overflow-hidden flex items-center justify-center min-h-[350px]">
             {hasMounted ? (
-              <ResponsiveContainer width="100%" height={350}>
+              <ResponsiveContainer id="report-status-chart" width="100%" height={350} minWidth={300} minHeight={350}>
                 <BarChart data={reportStatusData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12, fontWeight: 600 }} dy={10} />
@@ -258,9 +258,9 @@ const AnalysisModule: React.FC<Props> = ({
             Top 6 Statistika
           </h3>
           <p className="text-[10px] md:text-xs text-slate-400 font-black uppercase tracking-widest mb-8 pl-4 opacity-60">Eng ko'p topshirilganlar</p>
-          <div className="flex-1 w-full min-h-[300px] flex items-center justify-center">
+          <div className="flex-1 w-full min-h-[300px] flex items-center justify-center min-h-[300px]">
             {hasMounted ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer id="stats-bar-chart" width="100%" height={300} minWidth={200} minHeight={300}>
                 <BarChart layout="vertical" data={stats2026Data} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                   <XAxis type="number" hide />
                   <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#64748B', fontWeight: 700 }} axisLine={false} tickLine={false} />
@@ -276,9 +276,9 @@ const AnalysisModule: React.FC<Props> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="liquid-glass-card p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] shadow-glass border border-white/10">
           <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-white mb-8 uppercase tracking-tight">{t.taxRegime}</h3>
-          <div className="h-64 flex items-center justify-center relative overflow-hidden">
+          <div className="h-64 flex items-center justify-center relative overflow-hidden min-h-[256px]">
             {hasMounted ? (
-              <ResponsiveContainer width="100%" height={256}>
+              <ResponsiveContainer id="tax-regime-pie" width="100%" height={256} minWidth={200} minHeight={256}>
                 <PieChart>
                   <Pie
                     data={[

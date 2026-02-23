@@ -41,20 +41,44 @@ const withTimeout = <T>(promiseFn: () => Promise<T>, ms: number, label: string):
       const anyResult = result as any;
       if (anyResult && anyResult.error) {
         const error = anyResult.error;
-        if (!settled) {
+        // Ignore AbortError from token rotation
+        if (error?.name === 'AbortError' || error?.message?.includes('AbortError')) {
+          if (!settled) {
+            settled = true;
+            clearTimeout(timer);
+            // Retry the request instead of failing
+            try {
+              const retryResult = await promiseFn();
+              resolve(retryResult);
+            } catch (retryErr) {
+              reject(retryErr);
+            }
+          }
+        } else if (!settled) {
           settled = true;
           clearTimeout(timer);
           return reject(error);
         }
-      }
-
-      if (!settled) {
+      } else if (!settled) {
         settled = true;
         clearTimeout(timer);
         return resolve(result);
       }
     } catch (e: any) {
-      if (!settled) {
+      // Ignore AbortError from token rotation
+      if (e?.name === 'AbortError' || e?.message?.includes('AbortError')) {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          // Retry the request instead of failing
+          try {
+            const retryResult = await promiseFn();
+            resolve(retryResult);
+          } catch (retryErr) {
+            reject(retryErr);
+          }
+        }
+      } else if (!settled) {
         settled = true;
         clearTimeout(timer);
         return reject(e);

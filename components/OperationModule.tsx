@@ -246,7 +246,8 @@ const OperationRow = React.memo<{
   userRole: string;
   activeServices: string[];
   onCellUpdate: (companyId: string, colKey: string, newValue: string) => void;
-}>(({ row, idx, visibleColumns, userRole, activeServices, onCellUpdate }) => {
+  onCompanySelect: (companyId: string) => void;
+}>(({ row, idx, visibleColumns, userRole, activeServices, onCellUpdate, onCompanySelect }) => {
   // If activeServices is non-empty, only those keys are enabled
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
 
@@ -255,8 +256,11 @@ const OperationRow = React.memo<{
       <td className="sticky left-0 z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r border-white/20 dark:border-white/10 px-2 py-1.5 text-center text-[10px] font-mono text-slate-400 transition-colors w-10 min-w-[40px]">
         {idx + 1}
       </td>
-      <td className="sticky left-10 z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r border-white/20 dark:border-white/10 px-2 py-1.5 transition-colors w-48 min-w-[192px]">
-        <div className="max-w-[180px] truncate text-[11px] font-bold text-slate-800 dark:text-slate-200" title={row.name}>
+      <td
+        className="sticky left-10 z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r border-white/20 dark:border-white/10 px-2 py-1.5 transition-colors w-48 min-w-[192px] cursor-pointer"
+        onClick={() => row.companyId && onCompanySelect(row.companyId as string)}
+      >
+        <div className="max-w-[180px] truncate text-[11px] font-bold text-slate-800 dark:text-slate-200 hover:text-blue-600 transition-colors" title={row.name}>
           {row.name}
         </div>
       </td>
@@ -837,6 +841,10 @@ const OperationModule: React.FC<Props> = ({
                   userRole={userRole}
                   activeServices={row.activeServices}
                   onCellUpdate={handleCellUpdate}
+                  onCompanySelect={(id) => {
+                    const comp = companies.find(c => c.id === id);
+                    if (comp) onCompanySelect(comp);
+                  }}
                 />
               ))}
             </tbody>

@@ -17,24 +17,25 @@
   text-rendering: optimizeLegibility;
 
   /* 🧊 Glass Tokens — Light Mode */
-  --glass-bg: rgba(255, 255, 255, 0.45);
-  --glass-bg-solid: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.5);
-  --glass-border-subtle: rgba(0, 0, 0, 0.04);
-  --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
-  --glass-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.08), 0 2px 12px rgba(0, 0, 0, 0.04);
-  --glass-shadow-hover: 0 20px 56px rgba(0, 0, 0, 0.1), 0 6px 20px rgba(0, 0, 0, 0.06);
-  --glass-blur: 20px;
-  --glass-blur-heavy: 32px;
-  --glass-noise-opacity: 0.02;
-  --glass-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 60%);
-  --glass-iridescent: linear-gradient(135deg, rgba(120, 119, 198, 0.05) 0%, rgba(59, 130, 246, 0.04) 30%, rgba(16, 185, 129, 0.04) 60%, rgba(139, 92, 246, 0.05) 100%);
+  --glass-bg: rgba(255, 255, 255, 0.4);
+  --glass-bg-solid: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-border-subtle: rgba(0, 0, 0, 0.03);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.01);
+  --glass-shadow-lg: 0 16px 56px rgba(0, 0, 0, 0.08), 0 2px 14px rgba(0, 0, 0, 0.03);
+  --glass-shadow-hover: 0 28px 72px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --glass-blur: 24px;
+  --glass-blur-heavy: 40px;
+  --glass-noise-opacity: 0.015;
+  --glass-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 60%);
+  --glass-iridescent: linear-gradient(135deg, rgba(120, 119, 198, 0.06) 0%, rgba(59, 130, 246, 0.05) 30%, rgba(16, 185, 129, 0.05) 60%, rgba(139, 92, 246, 0.06) 100%);
 
   /* Accent Colors */
   --accent-blue: #007AFF;
   --accent-indigo: #6366F1;
   --accent-purple: #A855F7;
   --accent-teal: #14B8A6;
+  --accent-emerald: #10B981;
 
   /* Layout Constants */
   --container-max-width: 1720px;
@@ -48,16 +49,16 @@
   color-scheme: dark;
 
   /* 🧊 Glass Tokens — Dark Mode */
-  --glass-bg: rgba(9, 12, 22, 0.4);
-  --glass-bg-solid: rgba(13, 17, 30, 0.8);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-border-subtle: rgba(255, 255, 255, 0.02);
-  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.01);
-  --glass-shadow-lg: 0 20px 72px rgba(0, 0, 0, 0.4), inset 0 0 32px rgba(255, 255, 255, 0.02);
-  --glass-shadow-hover: 0 28px 88px rgba(0, 0, 0, 0.5), inset 0 0 48px rgba(255, 255, 255, 0.03);
-  --glass-noise-opacity: 0.1;
-  --glass-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.01) 100%);
-  --glass-iridescent: linear-gradient(135deg, rgba(120, 119, 198, 0.1) 0%, rgba(59, 130, 246, 0.08) 30%, rgba(16, 185, 129, 0.07) 60%, rgba(139, 92, 246, 0.1) 100%);
+  --glass-bg: rgba(7, 10, 19, 0.45);
+  --glass-bg-solid: rgba(10, 14, 26, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-subtle: rgba(255, 255, 255, 0.03);
+  --glass-shadow: 0 4px 32px rgba(0, 0, 0, 0.4), inset 0 0 24px rgba(255, 255, 255, 0.01);
+  --glass-shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(255, 255, 255, 0.02);
+  --glass-shadow-hover: 0 32px 96px rgba(0, 0, 0, 0.6), inset 0 0 56px rgba(255, 255, 255, 0.03);
+  --glass-noise-opacity: 0.12;
+  --glass-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.02) 100%);
+  --glass-iridescent: linear-gradient(135deg, rgba(120, 119, 198, 0.12) 0%, rgba(59, 130, 246, 0.1) 30%, rgba(16, 185, 129, 0.09) 60%, rgba(139, 92, 246, 0.12) 100%);
 
   --bg-mesh: fixed;
 }
@@ -382,13 +383,23 @@ body::before {
 }
 
 .premium-text-gradient {
-  @apply bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent;
+}
+
+.premium-text-gradient-indigo {
+  @apply bg-gradient-to-r from-indigo-600 via-blue-500 to-teal-400 dark:from-indigo-400 dark:via-blue-300 dark:to-emerald-400 bg-clip-text text-transparent;
 }
 
 .ai-button-glow {
   background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%);
   @apply relative overflow-hidden shadow-lg shadow-purple-500/30 font-black text-white px-4 py-2.5 rounded-xl flex items-center gap-2;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ai-button-glow:hover {
+  @apply scale-105 shadow-purple-500/50;
+  transform: translateY(-2px);
 }
 
 .ai-button-glow::before {

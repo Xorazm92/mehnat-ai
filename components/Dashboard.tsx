@@ -103,6 +103,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     };
   }, [payments, expenses, operations, selectedPeriod, staff, companies]);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <div className="premium-container animate-macos pb-16">
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none"></div>
@@ -140,8 +145,8 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
 
               <div className="w-24 h-12 relative -mb-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={stat.data}>
+                {mounted && (
+                  <AreaChart width={96} height={48} data={stat.data}>
                     <defs>
                       <linearGradient id={`gradient-${i}`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={stat.isUp ? '#10B981' : '#F43F5E'} stopOpacity={0.4} />
@@ -157,7 +162,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       isAnimationActive={true}
                     />
                   </AreaChart>
-                </ResponsiveContainer>
+                )}
               </div>
             </div>
           </div>

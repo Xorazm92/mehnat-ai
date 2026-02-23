@@ -250,6 +250,13 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
   return (
     <div className="space-y-6 md:space-y-10 animate-fade-in pb-24">
+      {companies.length === 0 && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-[2rem] p-8 text-center">
+          <p className="text-amber-700 dark:text-amber-300 font-black text-sm uppercase tracking-widest">
+            ⚠️ Hech qanday firma yuklanmadi. Iltimos, sahifani yangilang yoki administratorga murojaat qiling.
+          </p>
+        </div>
+      )}
       {/* Header Section */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center liquid-glass-card p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] gap-8 shadow-glass border border-white/10 relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-[100px] -mr-48 -mt-48 group-hover:bg-indigo-500/10 transition-colors duration-700"></div>
@@ -460,10 +467,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 >
                   <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
 
-                  {/* Risk & Status Badge */}
-                  <div className={`absolute top-6 right-8 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${risk.bg} ${risk.color} border border-current/10 backdrop-blur-md shadow-sm`}>
-                    {risk.emoji} {c.companyStatus === 'active' || !c.companyStatus ? 'Faol' : c.companyStatus}
-                  </div>
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
 
                   <div className="flex gap-6 mb-10">
                     <div className="h-20 w-20 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-[2rem] flex items-center justify-center text-3xl font-black text-white shadow-glass-lg transition-all duration-700 group-hover:rotate-6 group-hover:scale-110">
@@ -526,33 +530,31 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             <div ref={bottomScrollRef} className="overflow-x-auto scrollbar-thin">
               <table className="w-full text-left border-collapse min-w-[1500px] table-fixed">
                 <thead>
-                  <tr className="bg-slate-100/80 dark:bg-white/5 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-white/10">
-                    <th className="px-6 py-8 w-[60px] text-center">№</th>
-                    <th className="px-6 py-8 w-[60px] text-center">Xavf</th>
+                  <tr className="bg-slate-100/80 dark:bg-white/5 backdrop-blur-md text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-white/10">
+                    <th className="px-6 py-8 w-[50px] text-center">№</th>
                     <th
-                      className="px-4 md:px-8 py-8 w-[150px] md:w-[300px] sticky left-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl z-20 shadow-[10px_0_20px_-10px_rgba(0,0,0,0.1)] cursor-pointer hover:text-indigo-600 transition-colors"
+                      className="px-4 md:px-8 py-8 w-[250px] md:w-[400px] sticky left-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl z-20 shadow-[10px_0_20px_-10px_rgba(0,0,0,0.1)] cursor-pointer hover:text-indigo-600 transition-colors"
                       onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
-                      <div className="flex items-center gap-2">
-                        <Building2 size={14} />
+                      <div className="flex items-center gap-3">
+                        <Building2 size={12} className="text-slate-400" />
                         {t.companyName} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
                       </div>
                     </th>
                     <th
-                      className="px-6 py-8 w-[120px] cursor-pointer hover:text-indigo-600 transition-colors"
+                      className="px-6 py-8 w-[130px] cursor-pointer hover:text-indigo-600 transition-colors"
                       onClick={() => { setSortField('inn'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="px-6 py-8 w-[160px] text-indigo-500 flex items-center gap-2">
-                      <DollarSign size={14} /> Shartnoma
+                    <th className="px-6 py-8 w-[180px] text-indigo-500 flex items-center gap-2">
+                      <DollarSign size={12} /> SHARTNOMA
                     </th>
-                    <th className="px-6 py-8 w-[120px]">{t.regime}</th>
-                    <th className="px-6 py-8 w-[180px]">Buxgalter</th>
-                    <th className="px-6 py-8 w-[150px]">Nazoratchi</th>
-                    <th className="px-6 py-8 w-[150px]">1C Server</th>
-                    <th className="px-6 py-8 w-[150px]">Holat</th>
-                    <th className="px-10 py-8 w-[180px] text-right">{t.actions}</th>
+                    <th className="px-6 py-8 w-[140px]">REJIM</th>
+                    <th className="px-6 py-8 w-[200px]">BUXGALTER</th>
+                    <th className="px-6 py-8 w-[180px]">NAZORATCHI</th>
+                    <th className="px-6 py-8 w-[180px]">1C SERVER</th>
+                    <th className="px-10 py-8 w-[150px] text-right">{t.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -565,30 +567,28 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                     const displaySupervisor = op?.assigned_supervisor_name ?? c.supervisorName;
 
                     return (
-                      <tr key={c.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-all group/row">
+                      <tr
+                        key={c.id}
+                        className="hover:bg-white/60 dark:hover:bg-white/10 transition-all group/row cursor-pointer"
+                        onClick={() => onCompanySelect(c)}
+                      >
                         <td className="px-6 py-6 text-center">
                           <span className="text-[11px] font-black text-slate-300 font-mono italic">{c.originalIndex || '-'}</span>
                         </td>
-                        <td className="px-6 py-6 text-center">
-                          <div className={`w-8 h-8 rounded-xl ${risk.bg} flex items-center justify-center text-lg border border-current/10 mx-auto transition-transform group-hover/row:scale-110`}>
-                            {risk.emoji}
-                          </div>
-                        </td>
                         <td
-                          className="px-4 md:px-8 py-6 sticky left-0 bg-white dark:bg-slate-900 group-hover/row:bg-slate-50 dark:group-hover/row:bg-indigo-600/10 z-20 shadow-[10px_0_20px_-10px_rgba(0,0,0,0.05)] transition-colors cursor-pointer"
-                          onClick={() => onCompanySelect(c)}
+                          className="px-4 md:px-8 py-6 sticky left-0 bg-white dark:bg-slate-900 group-hover/row:bg-slate-50 dark:group-hover/row:bg-indigo-600/10 z-20 shadow-[10px_0_20px_-10px_rgba(0,0,0,0.05)] transition-colors"
                         >
                           <div className="font-black text-slate-800 dark:text-white text-[14px] tracking-tight group-hover/row:text-indigo-600 dark:group-hover/row:text-indigo-400 transition-colors truncate" title={c.name}>{c.name}</div>
                           {c.brandName && <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1 opacity-60 truncate">{c.brandName}</div>}
                         </td>
-                        <td className="px-6 py-6 font-mono text-[11px] font-black text-slate-500 dark:text-slate-400 tabular-nums">
+                        <td className="px-6 py-6 font-mono text-[10px] font-black text-slate-400 tabular-nums">
                           {c.inn}
                         </td>
                         <td className="px-6 py-6">
-                          <span className="font-black text-slate-800 dark:text-white tabular-nums text-sm">
+                          <span className="font-black text-slate-800 dark:text-white tabular-nums text-[13px] tracking-tight">
                             {displayAmount?.toLocaleString() || '0'}
                           </span>
-                          <span className="text-[9px] font-black ml-1 text-slate-400">UZS</span>
+                          <span className="text-[8px] font-black ml-1.5 text-slate-400 uppercase opacity-60">UZS</span>
                         </td>
                         <td className="px-6 py-6">
                           <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${c.taxType?.includes('nds') ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20'}`}>
@@ -600,23 +600,17 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                             <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-black text-[10px] border border-indigo-500/20">
                               {displayAccountant?.[0] || '?'}
                             </div>
-                            <p className="text-[12px] font-black text-slate-700 dark:text-slate-200 truncate">{displayAccountant || '—'}</p>
+                            <p className="text-[11px] font-black text-slate-700 dark:text-slate-200 truncate">{displayAccountant || '—'}</p>
                           </div>
                         </td>
                         <td className="px-6 py-6">
-                          <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 truncate">{displaySupervisor || '—'}</p>
+                          <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-tight truncate">{displaySupervisor || '—'}</p>
                         </td>
                         <td className="px-6 py-6">
                           <div className="flex flex-col gap-1">
                             {c.serverInfo && <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{c.serverInfo}</span>}
                             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 truncate opacity-70" title={c.serverName}>{c.serverName || '—'}</span>
                           </div>
-                        </td>
-                        <td className="px-6 py-6">
-                          <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] shadow-sm flex items-center gap-2 w-fit ${risk.bg} ${risk.color} border border-current/10`}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
-                            {c.companyStatus === 'active' || !c.companyStatus ? 'FAOL' : c.companyStatus === 'suspended' ? "TO'XTAT" : c.companyStatus === 'debtor' ? 'QARZDOR' : c.companyStatus === 'problem' ? 'MUAMMOLI' : 'BANKROT'}
-                          </span>
                         </td>
                         <td className="px-10 py-6 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2">

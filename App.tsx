@@ -3,6 +3,7 @@ import { AlertCircle, Eye, EyeOff, TrendingUp } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load heavy modules
 const Dashboard = React.lazy(() => import('./components/Dashboard'));
@@ -138,6 +139,7 @@ const App: React.FC = () => {
       };
 
       let currentUserId: string | undefined;
+      let sessionExists = false;
 
       try {
         const { data, error: sessionError } = await supabase.auth.getSession();
@@ -146,6 +148,7 @@ const App: React.FC = () => {
         setSession(data.session);
         if (data.session?.user) {
           currentUserId = data.session.user.id;
+          sessionExists = true;
           await loadProfile(currentUserId);
           await refreshData();
         }
@@ -167,6 +170,13 @@ const App: React.FC = () => {
             window.location.reload();
           }
         }
+      }
+
+      // Start token rotation for active sessions
+      if (sessionExists) {
+        import('./lib/auth').then(({ startTokenRotation }) => {
+          startTokenRotation();
+        }).catch(err => console.error('Failed to start token rotation:', err));
       }
 
       // Realtime Notifications
@@ -246,6 +256,10 @@ const App: React.FC = () => {
         fetchContractAssignments()
       ]);
 
+      console.log('[refreshData] Companies fetched:', c.length);
+      console.log('[refreshData] Staff fetched:', s.length);
+      console.log('[refreshData] Operations fetched:', ops.length);
+
       const isUUID = (str?: string) => str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
       // Helper to resolve name from staff list
@@ -298,6 +312,14 @@ const App: React.FC = () => {
       console.error('[refreshData] failed', err);
       const msg = err?.message || 'Supabase bilan ulanishda xatolik';
       toast.error(msg);
+      // Log the specific error for debugging
+      console.error('[refreshData] error details:', {
+        message: err?.message,
+        code: err?.code,
+        status: err?.status,
+        hint: err?.hint,
+        details: err?.details
+      });
     } finally {
       setIsSyncing(false);
     }
@@ -583,318 +605,323 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex selection:bg-indigo-500/30 overflow-hidden bg-slate-50 dark:bg-[#050505] text-slate-900 dark:text-white">
-      {/* Global Background Glows */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/[0.03] rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/[0.02] rounded-full blur-[120px]"></div>
-      </div>
+    <ErrorBoundary>
+      <div className="h-screen flex selection:bg-indigo-500/30 overflow-hidden bg-slate-50 dark:bg-[#050505] text-slate-900 dark:text-white">
+        {/* Global Background Glows */}
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+          <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/[0.03] rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/[0.02] rounded-full blur-[120px]"></div>
+        </div>
 
-      <Toaster
-        position="top-center"
-        richColors
-        toastOptions={{
-          style: {
-            background: 'rgba(255, 255, 255, 0.8)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '24px',
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            fontSize: '11px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.1)'
-          }
-        }}
-      />
-
-      <Sidebar
-        activeView={activeView}
-        isOpen={isMobileMenuOpen}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        onClose={() => setIsMobileMenuOpen(false)}
-        onViewChange={(view) => {
-          setActiveView(view);
-          setActiveFilter('all');
-          setIsMobileMenuOpen(false);
-          setSelectedCompany(null);
-        }}
-        lang={lang}
-        userRole={userRole}
-        pendingReportsCount={pendingReportsCount}
-      />
-
-      <main className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-500 ease-in-out relative z-10`}>
-        <TopBar
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-          lang={lang}
-          onLangToggle={toggleLang}
-          lastSync={lastSync}
-          onSync={refreshData}
-          isSyncing={isSyncing}
-          onMenuToggle={() => setIsMobileMenuOpen(true)}
-          userName={userName}
-          userRole={userRole}
-          onLogout={handleSignOut}
-          onProfileClick={() => setActiveView('cabinet')}
-          notifications={notifications}
-          onDeleteNotification={handleDeleteNotification}
-          selectedPeriod={selectedPeriod}
-          onPeriodChange={setSelectedPeriod}
+        <Toaster
+          position="top-center"
+          richColors
+          toastOptions={{
+            style: {
+              background: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '24px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              fontSize: '11px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.1)'
+            }
+          }}
         />
 
-        <div className="flex-1 overflow-y-auto scrollbar-none overflow-x-hidden">
-          <div className="w-full p-4 sm:p-6 md:p-8 lg:p-6 animate-macos min-h-full group/main">
-            {/* Access Control for Main Content */}
-            {(!((ALLOWED_VIEWS[(userRole as UserRole) || ROLES.ACCOUNTANT] || ALLOWED_VIEWS[ROLES.ACCOUNTANT]).includes(activeView))) ? (
-              <div className="flex flex-col items-center justify-center py-32 text-center">
-                <div className="w-32 h-32 rounded-[3rem] bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-10 shadow-glass-rose">
-                  <AlertCircle size={64} className="text-rose-500 drop-shadow-xl" />
-                </div>
-                <h2 className="text-5xl font-black text-slate-800 dark:text-white mb-4 tracking-tighter uppercase leading-none">Access Restricted</h2>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-[0.4em]">Integrated Security Protocol Active — Authorization Level Insufficient</p>
-                <button
-                  onClick={() => setActiveView('dashboard')}
-                  className="mt-12 px-10 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:scale-105 transition-all shadow-glass"
-                >
-                  Return to Safe Zone
-                </button>
-              </div>
-            ) : (
-              <React.Suspense fallback={
-                <div className="flex items-center justify-center py-20">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sahifa yuklanmoqda...</span>
+        <Sidebar
+          activeView={activeView}
+          isOpen={isMobileMenuOpen}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          onClose={() => setIsMobileMenuOpen(false)}
+          onViewChange={(view) => {
+            setActiveView(view);
+            setActiveFilter('all');
+            setIsMobileMenuOpen(false);
+            setSelectedCompany(null);
+          }}
+          lang={lang}
+          userRole={userRole}
+          pendingReportsCount={pendingReportsCount}
+        />
+
+        <main className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-500 ease-in-out relative z-10`}>
+          <TopBar
+            isDarkMode={isDarkMode}
+            onThemeToggle={toggleTheme}
+            lang={lang}
+            onLangToggle={toggleLang}
+            lastSync={lastSync}
+            onSync={refreshData}
+            isSyncing={isSyncing}
+            onMenuToggle={() => setIsMobileMenuOpen(true)}
+            userName={userName}
+            userRole={userRole}
+            onLogout={handleSignOut}
+            onProfileClick={() => setActiveView('cabinet')}
+            notifications={notifications}
+            onDeleteNotification={handleDeleteNotification}
+            selectedPeriod={selectedPeriod}
+            onPeriodChange={setSelectedPeriod}
+          />
+
+          <div className="flex-1 overflow-y-auto scrollbar-none overflow-x-hidden">
+            <div className="w-full p-4 sm:p-6 md:p-8 lg:p-6 animate-macos min-h-full group/main">
+              {/* Access Control for Main Content */}
+              {(!((ALLOWED_VIEWS[(userRole as UserRole) || ROLES.ACCOUNTANT] || ALLOWED_VIEWS[ROLES.ACCOUNTANT]).includes(activeView))) ? (
+                <div className="flex flex-col items-center justify-center py-32 text-center">
+                  <div className="w-32 h-32 rounded-[3rem] bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-10 shadow-glass-rose">
+                    <AlertCircle size={64} className="text-rose-500 drop-shadow-xl" />
                   </div>
+                  <h2 className="text-5xl font-black text-slate-800 dark:text-white mb-4 tracking-tighter uppercase leading-none">Access Restricted</h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-[0.4em]">Integrated Security Protocol Active — Authorization Level Insufficient</p>
+                  <button
+                    onClick={() => setActiveView('dashboard')}
+                    className="mt-12 px-10 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:scale-105 transition-all shadow-glass"
+                  >
+                    Return to Safe Zone
+                  </button>
                 </div>
-              }>
-                {activeView === 'dashboard' && (
-                  <>
-                    <Dashboard
+              ) : (
+                <React.Suspense fallback={
+                  <div className="flex items-center justify-center py-20">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sahifa yuklanmoqda...</span>
+                    </div>
+                  </div>
+                }>
+                  {activeView === 'dashboard' && (
+                    <>
+                      <Dashboard
+                        companies={companies}
+                        operations={operations}
+                        staff={staff}
+                        payments={payments}
+                        expenses={expenses}
+                        activeFilter={'none'}
+                        selectedPeriod={selectedPeriod}
+                        onPeriodChange={setSelectedPeriod}
+                        onFilterChange={handleDashboardFilter}
+                        lang={lang}
+                        userRole={userRole}
+                        userId={session?.user?.id}
+                      />
+                      <StaffKPIReport
+                        kpis={kpis}
+                        staff={staff}
+                        lang={lang}
+                        onStaffSelect={setSelectedStaff}
+                        selectedOperation={svodOperationFilter}
+                        onOperationChange={setSvodOperationFilter}
+                        selectedPeriod={selectedPeriod}
+                      />
+                    </>
+                  )}
+
+                  {activeView === 'organizations' && (
+                    <OrganizationModule
+                      companies={companies}
+                      staff={staff}
+                      lang={lang}
+                      selectedPeriod={selectedPeriod}
+                      operations={operations}
+                      onPeriodChange={setSelectedPeriod}
+                      onSave={async (c, assignments) => {
+                        if (assignments) {
+                          await onboardCompany(c, assignments);
+                        } else {
+                          await upsertCompany(c as Company);
+                        }
+                        // Snapshot for the selected period to track historical state
+                        await ensureOperationSnapshot(c as Company, selectedPeriod);
+                        refreshData();
+                      }}
+                      onDelete={async (id) => {
+                        try {
+                          await deleteCompany(id);
+                          toast.success('Firma muvaffaqiyatli o\'chirildi');
+                          refreshData();
+                        } catch (e) {
+                          console.error(e);
+                          toast.error('O\'chirishda xatolik yuz berdi. Balki ushbu firmaga bog\'liq hujjatlar mavjuddir?');
+                        }
+                      }}
+                      onCompanySelect={setSelectedCompany}
+                    />
+                  )}
+
+                  {activeView === 'reports' && (
+                    <OperationModule
+                      companies={companies}
+                      operations={operations}
+                      activeFilter={activeFilter}
+                      selectedPeriod={selectedPeriod}
+                      onPeriodChange={setSelectedPeriod}
+                      lang={lang}
+                      onUpdate={async () => {
+                        await refreshData();
+                      }}
+                      staff={staff}
+                      onBatchUpdate={async (ops) => { await upsertOperationsBatch(ops); refreshData(); }}
+                      onCompanySelect={setSelectedCompany}
+                      userRole={userRole}
+                      currentUserId={session?.user?.id}
+                      userName={userName}
+                    />
+                  )}
+
+                  {activeView === 'analysis' && (
+                    <AnalysisModule
+                      companies={companies}
+                      operations={operations}
+                      selectedPeriod={selectedPeriod}
+                      onPeriodChange={setSelectedPeriod}
+                      lang={lang}
+                      onFilterApply={handleAnalysisFilterApply}
+                      staff={staff}
+                    />
+                  )}
+
+                  {activeView === 'staff' && (
+                    <StaffModule
+                      staff={staff}
+                      companies={companies}
+                      operations={operations}
+                      lang={lang}
+                      onSave={async (s) => { await upsertStaff(s); refreshData(); }}
+                      onDelete={async (id) => {
+                        try {
+                          await deleteStaff(id);
+                          toast.success('Xodim muvaffaqiyatli o\'chirildi');
+                          refreshData();
+                        } catch (e) {
+                          console.error(e);
+                          toast.error('Xodimni o\'chirish imkonsiz. Unga bog\'liq ma\'lumotlar bo\'lishi mumkin.');
+                        }
+                      }}
+                      onStaffSelect={setSelectedStaff}
+                    />
+                  )}
+
+                  {activeView === 'documents' && (
+                    <DocumentsModule
+                      companies={companies}
+                      lang={lang}
+                    />
+                  )}
+
+                  {activeView === 'kpi' && (
+                    <SalaryKPIModule
                       companies={companies}
                       operations={operations}
                       staff={staff}
-                      payments={payments}
-                      expenses={expenses}
-                      activeFilter={'none'}
-                      selectedPeriod={selectedPeriod}
-                      onPeriodChange={setSelectedPeriod}
-                      onFilterChange={handleDashboardFilter}
+                      lang={lang}
+                      currentUserId={session?.user?.id}
+                      currentUserRole={userRole}
+                    />
+                  )}
+
+                  {activeView === 'payroll' && (
+                    <PayrollDrafts
+                      staff={staff}
+                      companies={companies}
+                      operations={operations}
                       lang={lang}
                       userRole={userRole}
-                      userId={session?.user?.id}
                     />
-                    <StaffKPIReport
-                      kpis={kpis}
+                  )}
+
+                  {activeView === 'audit_logs' && (
+                    <AuditLogModule lang={lang} />
+                  )}
+
+                  {activeView === 'kassa' && (
+                    <KassaModule
+                      companies={companies}
+                      payments={payments}
+                      lang={lang}
+                      onSavePayment={async (p) => { await upsertPayment(p); refreshData(); }}
+                      onDeletePayment={async (id) => {
+                        try {
+                          await deletePayment(id);
+                          toast.success('To\'lov o\'chirildi');
+                          refreshData();
+                        } catch (e) {
+                          console.error(e);
+                          toast.error('O\'chirishda xatolik.');
+                        }
+                      }}
+                    />
+                  )}
+
+                  {activeView === 'expenses' && (
+                    <ExpenseModule
+                      expenses={expenses}
+                      lang={lang}
+                      onSaveExpense={async (e) => { await upsertExpense(e); refreshData(); }}
+                      onDeleteExpense={async (id) => {
+                        try {
+                          await deleteExpense(id);
+                          toast.success('Xarajat o\'chirildi');
+                          refreshData();
+                        } catch (e) {
+                          console.error(e);
+                          toast.error('O\'chirishda xatolik.');
+                        }
+                      }}
+                    />
+                  )}
+
+                  {activeView === 'cabinet' && session?.user && (
+                    <StaffCabinet
+                      currentStaff={staff.find(s => s.id === session.user.id) || { id: session.user.id, name: userName, role: userRole, avatarColor: '#3b82f6' }}
+                      companies={companies}
+                      operations={operations}
                       staff={staff}
                       lang={lang}
-                      onStaffSelect={setSelectedStaff}
-                      selectedOperation={svodOperationFilter}
-                      onOperationChange={setSvodOperationFilter}
-                      selectedPeriod={selectedPeriod}
                     />
-                  </>
-                )}
-
-                {activeView === 'organizations' && (
-                  <OrganizationModule
-                    companies={companies}
-                    staff={staff}
-                    lang={lang}
-                    selectedPeriod={selectedPeriod}
-                    operations={operations}
-                    onPeriodChange={setSelectedPeriod}
-                    onSave={async (c, assignments) => {
-                      if (assignments) {
-                        await onboardCompany(c, assignments);
-                      } else {
-                        await upsertCompany(c as Company);
-                      }
-                      // Snapshot for the selected period to track historical state
-                      await ensureOperationSnapshot(c as Company, selectedPeriod);
-                      refreshData();
-                    }}
-                    onDelete={async (id) => {
-                      try {
-                        await deleteCompany(id);
-                        toast.success('Firma muvaffaqiyatli o\'chirildi');
-                        refreshData();
-                      } catch (e) {
-                        console.error(e);
-                        toast.error('O\'chirishda xatolik yuz berdi. Balki ushbu firmaga bog\'liq hujjatlar mavjuddir?');
-                      }
-                    }}
-                    onCompanySelect={setSelectedCompany}
-                  />
-                )}
-
-                {activeView === 'reports' && (
-                  <OperationModule
-                    companies={companies}
-                    operations={operations}
-                    activeFilter={activeFilter}
-                    selectedPeriod={selectedPeriod}
-                    onPeriodChange={setSelectedPeriod}
-                    lang={lang}
-                    onUpdate={async () => {
-                      await refreshData();
-                    }}
-                    staff={staff}
-                    onBatchUpdate={async (ops) => { await upsertOperationsBatch(ops); refreshData(); }}
-                    onCompanySelect={setSelectedCompany}
-                    userRole={userRole}
-                    currentUserId={session?.user?.id}
-                    userName={userName}
-                  />
-                )}
-
-                {activeView === 'analysis' && (
-                  <AnalysisModule
-                    companies={companies}
-                    operations={operations}
-                    selectedPeriod={selectedPeriod}
-                    onPeriodChange={setSelectedPeriod}
-                    lang={lang}
-                    onFilterApply={handleAnalysisFilterApply}
-                    staff={staff}
-                  />
-                )}
-
-                {activeView === 'staff' && (
-                  <StaffModule
-                    staff={staff}
-                    companies={companies}
-                    operations={operations}
-                    lang={lang}
-                    onSave={async (s) => { await upsertStaff(s); refreshData(); }}
-                    onDelete={async (id) => {
-                      try {
-                        await deleteStaff(id);
-                        toast.success('Xodim muvaffaqiyatli o\'chirildi');
-                        refreshData();
-                      } catch (e) {
-                        console.error(e);
-                        toast.error('Xodimni o\'chirish imkonsiz. Unga bog\'liq ma\'lumotlar bo\'lishi mumkin.');
-                      }
-                    }}
-                    onStaffSelect={setSelectedStaff}
-                  />
-                )}
-
-                {activeView === 'documents' && (
-                  <DocumentsModule
-                    companies={companies}
-                    lang={lang}
-                  />
-                )}
-
-                {activeView === 'kpi' && (
-                  <SalaryKPIModule
-                    companies={companies}
-                    operations={operations}
-                    staff={staff}
-                    lang={lang}
-                    currentUserId={session?.user?.id}
-                    currentUserRole={userRole}
-                  />
-                )}
-
-                {activeView === 'payroll' && (
-                  <PayrollDrafts
-                    staff={staff}
-                    companies={companies}
-                    operations={operations}
-                    lang={lang}
-                    userRole={userRole}
-                  />
-                )}
-
-                {activeView === 'audit_logs' && (
-                  <AuditLogModule lang={lang} />
-                )}
-
-                {activeView === 'kassa' && (
-                  <KassaModule
-                    companies={companies}
-                    payments={payments}
-                    lang={lang}
-                    onSavePayment={async (p) => { await upsertPayment(p); refreshData(); }}
-                    onDeletePayment={async (id) => {
-                      try {
-                        await deletePayment(id);
-                        toast.success('To\'lov o\'chirildi');
-                        refreshData();
-                      } catch (e) {
-                        console.error(e);
-                        toast.error('O\'chirishda xatolik.');
-                      }
-                    }}
-                  />
-                )}
-
-                {activeView === 'expenses' && (
-                  <ExpenseModule
-                    expenses={expenses}
-                    lang={lang}
-                    onSaveExpense={async (e) => { await upsertExpense(e); refreshData(); }}
-                    onDeleteExpense={async (id) => {
-                      try {
-                        await deleteExpense(id);
-                        toast.success('Xarajat o\'chirildi');
-                        refreshData();
-                      } catch (e) {
-                        console.error(e);
-                        toast.error('O\'chirishda xatolik.');
-                      }
-                    }}
-                  />
-                )}
-
-                {activeView === 'cabinet' && session?.user && (
-                  <StaffCabinet
-                    currentStaff={staff.find(s => s.id === session.user.id) || { id: session.user.id, name: userName, role: userRole, avatarColor: '#3b82f6' }}
-                    companies={companies}
-                    operations={operations}
-                    staff={staff}
-                    lang={lang}
-                  />
-                )}
-
-                {selectedStaff && (
-                  <StaffProfileDrawer
-                    staff={selectedStaff}
-                    companies={companies}
-                    assignments={assignments.filter(a => a.userId === selectedStaff.id)}
-                    operations={operations}
-                    lang={lang}
-                    onClose={() => setSelectedStaff(null)}
-                  />
-                )}
-
-                {selectedCompany && (
-                  <CompanyDrawer
-                    company={selectedCompany}
-                    operation={selectedOperation}
-                    payments={payments}
-                    staff={staff}
-                    lang={lang}
-                    userId={session?.user?.id}
-                    onClose={() => setSelectedCompany(null)}
-                    onSave={async (c) => {
-                      await upsertCompany(c);
-                      refreshData();
-                    }}
-                  />
-                )}
-              </React.Suspense>
-            )}
+                  )}
+                </React.Suspense>
+              )}
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+
+        {/* Global Overlays (Outside of transformed/scrolled containers) */}
+        <React.Suspense fallback={null}>
+          {selectedStaff && (
+            <StaffProfileDrawer
+              staff={selectedStaff}
+              companies={companies}
+              assignments={assignments.filter(a => a.userId === selectedStaff.id)}
+              operations={operations}
+              lang={lang}
+              onClose={() => setSelectedStaff(null)}
+            />
+          )}
+
+          {selectedCompany && (
+            <CompanyDrawer
+              company={selectedCompany}
+              operation={selectedOperation}
+              payments={payments}
+              staff={staff}
+              lang={lang}
+              userId={session?.user?.id}
+              onClose={() => setSelectedCompany(null)}
+              onSave={async (c) => {
+                await upsertCompany(c);
+                refreshData();
+              }}
+            />
+          )}
+        </React.Suspense>
+      </div>
+    </ErrorBoundary>
   );
 };
 

@@ -79,15 +79,15 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     {isDone ? <Check size={22} strokeWidth={3} /> : <Icon size={22} />}
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isActive ? 'text-apple-accent' : 'text-slate-400 opacity-60'}`}>{step.title}</span>
-                                    <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">{idx + 1}-QADAM</span>
+                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>{step.title}</span>
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{idx + 1}-QADAM</span>
                                 </div>
-                                {idx < steps.length - 1 && <div className="mx-4 w-12 h-0.5 bg-gradient-to-r from-slate-200 to-transparent dark:from-white/10" />}
+                                {idx < steps.length - 1 && <div className="mx-4 w-12 h-0.5 bg-slate-200 dark:bg-white/10" />}
                             </div>
                         );
                     })}
                 </div>
-                <button onClick={onCancel} className="p-4 bg-white/40 dark:bg-white/5 border border-white/20 dark:border-white/10 hover:bg-rose-500/20 hover:text-rose-600 rounded-[1.2rem] text-slate-400 transition-all active:scale-90">
+                <button onClick={onCancel} className="p-4 bg-white/60 dark:bg-white/10 border border-slate-200 dark:border-white/20 hover:bg-rose-500 hover:text-white rounded-[1.2rem] text-slate-500 transition-all active:scale-90 shadow-sm">
                     <X size={20} strokeWidth={3} />
                 </button>
             </div>
@@ -99,7 +99,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white">Asosiy ma'lumotlar</h3>
                         <div className="grid grid-cols-2 gap-8">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Firma Nomi</label>
+                                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Firma Nomi</label>
                                 <input
                                     autoFocus
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
@@ -109,7 +109,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">INN (9 ta raqam)</label>
+                                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">INN (9 ta raqam)</label>
                                 <input
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold font-mono"
                                     placeholder="123456789"
@@ -118,7 +118,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Brend Nomi (Brand Name)</label>
+                                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Brend Nomi (Brand Name)</label>
                                 <input
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
                                     placeholder="Masalan: MONTAJ"
@@ -127,7 +127,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Direktor Ism-Sharifi</label>
+                                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Direktor Ism-Sharifi</label>
                                 <input
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
                                     placeholder="Masalan: Sobirov Ali"
@@ -136,7 +136,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Direktor Telefoni</label>
+                                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Direktor Telefoni</label>
                                 <input
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
                                     placeholder="+998 90 123 45 67"
@@ -145,7 +145,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-2 col-span-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Yuridik Manzil</label>
+                                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Yuridik Manzil</label>
                                 <input
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
                                     placeholder="Masalan: Toshkent sh., Chilonzor tumani..."
@@ -154,7 +154,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ichki Shartnoma Tomoni</label>
+                                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Ichki Shartnoma Tomoni</label>
                                 <select
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold appearance-none"
                                     value={formData.internalContractor || ''}
@@ -174,7 +174,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 </select>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Shartnoma Summasi</label>
+                                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Shartnoma Summasi</label>
                                 <input
                                     type="number"
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
@@ -183,7 +183,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Shartnoma №</label>
+                                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Shartnoma №</label>
                                 <input
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
                                     placeholder="Masalan: 12-A"
@@ -192,7 +192,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Shartnoma Sanasi</label>
+                                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Shartnoma Sanasi</label>
                                 <input
                                     type="date"
                                     className="w-full p-4.5 rounded-2xl bg-slate-50 dark:bg-apple-darkBg border border-apple-border dark:border-apple-darkBorder outline-none focus:ring-4 focus:ring-apple-accent/10 font-bold"
@@ -463,11 +463,11 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
             </div>
 
             {/* Footer / Buttons */}
-            <div className="p-10 liquid-glass-topbar border-t border-white/20 dark:border-white/10 flex items-center justify-between">
+            <div className="p-10 liquid-glass-topbar border-t border-slate-200 dark:border-white/10 flex items-center justify-between">
                 <button
                     onClick={prevStep}
                     disabled={currentStep === 0}
-                    className="px-10 py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 text-slate-400 hover:text-slate-600 hover:bg-white/40 dark:hover:bg-white/5 disabled:opacity-0 transition-all duration-300"
+                    className="px-10 py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/5 disabled:opacity-0 transition-all duration-300"
                 >
                     <ChevronLeft size={18} strokeWidth={3} /> Orqaga
                 </button>
@@ -475,7 +475,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                 {currentStep < steps.length - 1 ? (
                     <button
                         onClick={nextStep}
-                        className="px-12 py-5 liquid-glass-button bg-apple-accent text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 shadow-glass-lg hover:scale-105 active:scale-95 transition-all duration-300"
+                        className="px-12 py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.2em] flex items-center gap-3 shadow-glass-indigo hover:scale-105 active:scale-95 transition-all duration-300"
                     >
                         Keyingisi <ChevronRight size={18} strokeWidth={3} />
                     </button>

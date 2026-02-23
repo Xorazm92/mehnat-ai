@@ -32,8 +32,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
   const [isEditingMainLogin, setIsEditingMainLogin] = useState(false);
   const [isAddingCredential, setIsAddingCredential] = useState(false);
   const [newCred, setNewCred] = useState({ serviceName: '', loginId: '', password: '', notes: '' });
-  const [tempLogin, setTempLogin] = useState(company.login || '');
-  const [tempPassword, setTempPassword] = useState(company.password || '');
+  const [tempLogin, setTempLogin] = useState(company?.login || '');
+  const [tempPassword, setTempPassword] = useState(company?.password || '');
   const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
   const [companyKpiRules, setCompanyKpiRules] = useState<any[]>([]);
   const [isSavingKpi, setIsSavingKpi] = useState<string | null>(null); // ruleId of saving item
@@ -161,14 +161,14 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
   const nazoratchiShare = (company.supervisorPerc || 2.5) / 100 * contractAmount;
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: 'pasport', label: '📄 Pasport', icon: <Building size={16} /> },
-    { id: 'soliq', label: '⚖️ Soliq', icon: <Briefcase size={16} /> },
-    { id: 'loginlar', label: '🔐 Loginlar', icon: <Lock size={16} /> },
-    { id: 'jamoa', label: '👥 Jamoa', icon: <Users size={16} /> },
-    { id: 'shartnoma', label: '💰 Shartnoma', icon: <DollarSign size={16} /> },
-    { id: 'xavf', label: '⚠️ Xavf', icon: <AlertTriangle size={16} /> },
-    { id: 'xizmatlar', label: '🛠️ Xizmatlar', icon: <Check size={16} /> },
-    { id: 'kpi', label: '📊 KPI', icon: <Calculator size={16} /> },
+    { id: 'pasport', label: 'Pasport', icon: <FileText size={14} /> },
+    { id: 'soliq', label: 'Soliq', icon: <Briefcase size={14} /> },
+    { id: 'loginlar', label: 'Loginlar', icon: <Lock size={14} /> },
+    { id: 'jamoa', label: 'Jamoa', icon: <Users size={14} /> },
+    { id: 'shartnoma', label: 'Shartnoma', icon: <DollarSign size={14} /> },
+    { id: 'xavf', label: 'Xavf', icon: <AlertTriangle size={14} /> },
+    { id: 'xizmatlar', label: 'Xizmatlar', icon: <Check size={14} /> },
+    { id: 'kpi', label: 'KPI', icon: <Calculator size={14} /> },
   ];
 
   return (
@@ -198,9 +198,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-5 border-b-2 transition-all font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${activeTab === tab.id ? 'border-apple-accent text-apple-accent bg-apple-accent/5' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                className={`flex items-center gap-2 px-3.5 py-4 border-b-2 transition-all font-black text-[9px] uppercase tracking-wider whitespace-nowrap ${activeTab === tab.id ? 'border-apple-accent text-apple-accent bg-apple-accent/5' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
               >
-                <span className={activeTab === tab.id ? 'text-apple-accent' : 'text-slate-400 opacity-50'}>{tab.icon}</span>
+                <span className={activeTab === tab.id ? 'text-apple-accent' : 'text-slate-400 opacity-60'}>{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
@@ -242,7 +242,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   <span className="text-[10px] font-black text-slate-300">{documents.length} fayl</span>
                 </div>
                 {isLoadingDocs ? (
-                  <p className="text-sm text-slate-400 animate-pulse">Yuklanmoqda...</p>
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full"></div>
+                    <p className="text-sm text-slate-400">Hujjatlar yuklanmoqda...</p>
+                  </div>
                 ) : documents.length > 0 ? (
                   <div className="space-y-2">
                     {documents.slice(0, 5).map((doc, i) => (
@@ -255,7 +258,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-300">Hujjatlar mavjud emas</p>
+                  <div className="p-4 bg-amber-100 border border-amber-300 rounded-xl text-amber-700 text-sm font-bold">
+                    📄 Hujjatlar topilmadi
+                  </div>
                 )}
               </div>
 
@@ -263,15 +268,26 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
               <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                 <div className="flex items-center gap-3 mb-4">
                   <Check size={16} className="text-apple-accent" />
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Xizmatlar Ko'lami</h4>
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Xizmatlar & Operatsiyalar</h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {company.serviceScope?.length ? company.serviceScope.map(s => (
-                    <span key={s} className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 text-[10px] font-black rounded-lg uppercase border border-emerald-500/10">{s}</span>
+                    <span key={s} className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 text-[9px] font-black rounded-lg uppercase border border-emerald-500/10 tracking-tight">{s}</span>
+                  )) : company.activeServices?.length ? company.activeServices.slice(0, 8).map(s => (
+                    <span key={s} className="px-2.5 py-1 bg-indigo-500/10 text-indigo-600 text-[8px] font-black rounded-lg uppercase border border-indigo-500/10 tracking-tight">{s.replace('_', ' ')}</span>
                   )) : (
                     <p className="text-xs font-bold text-slate-300">Xizmatlar tanlanmagan</p>
                   )}
+                  {company.activeServices && company.activeServices.length > 8 && (
+                    <span className="text-[8px] font-black text-slate-400 flex items-center px-2">+{company.activeServices.length - 8} yana</span>
+                  )}
                 </div>
+                <button
+                  onClick={() => setActiveTab('xizmatlar')}
+                  className="mt-4 w-full py-2 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl text-[9px] font-black text-slate-400 uppercase tracking-widest hover:bg-apple-accent/10 hover:text-apple-accent transition-all"
+                >
+                  Barchasini ko'rish
+                </button>
               </div>
             </div>
           )}
@@ -280,7 +296,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
             <div className="space-y-6 animate-fade-in">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">1C Server & Baza</h4>
+                  <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">1C Server & Baza</h4>
                   <div className="space-y-2">
                     <p className="text-sm font-black text-slate-700 dark:text-white">Server ID: <span className="text-apple-accent">{company.serverInfo || '—'}</span></p>
                     {company.serverName && (
@@ -315,7 +331,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                 </div>
 
                 <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder col-span-1 md:col-span-2">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Xizmatlar Ko'lami (Scope)</h4>
+                  <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Xizmatlar Ko'lami (Scope)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {company.serviceScope?.length ? company.serviceScope.map(s => (
                       <div key={s} className="flex items-center gap-2 px-3 py-2 bg-apple-accent/5 border border-apple-accent/10 text-apple-accent rounded-xl">
@@ -625,7 +641,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                 </div>
               </div>
 
-              {clientHistory.length > 0 && (
+              {clientHistory.length > 0 ? (
                 <div>
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Tayinlovlar Tarixi</h4>
                   <div className="space-y-3">
@@ -645,6 +661,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                       </div>
                     ))}
                   </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-amber-100 border border-amber-300 rounded-xl text-amber-700 text-sm font-bold">
+                  📋 Tayinlovlar tarixi topilmadi
                 </div>
               )}
             </div>
@@ -849,7 +869,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
               <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
                 <div className="flex items-center gap-3 mb-6">
                   <Calculator size={16} className="text-apple-accent" />
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">KPI Sozlamalari (Kompaniya uchun maxsus)</h4>
+                  <h4 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">KPI Sozlamalari (Kompaniya uchun maxsus)</h4>
                 </div>
 
                 <div className="space-y-4">
@@ -862,7 +882,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                     <div className="space-y-8">
                       {['automation', 'manual'].map(category => (
                         <div key={category} className="space-y-4">
-                          <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                          <h5 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
                             <span className="w-4 h-[1px] bg-apple-accent"></span>
                             {category === 'automation' ? "Operatsiyalar (Avtomatik)" : "Nazoratchi Vazifalari (Qo'lda)"}
                           </h5>
