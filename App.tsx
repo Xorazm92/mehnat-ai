@@ -668,8 +668,8 @@ const App: React.FC = () => {
             onPeriodChange={setSelectedPeriod}
           />
 
-          <div className="flex-1 overflow-y-auto scrollbar-none overflow-x-hidden">
-            <div className="w-full p-4 sm:p-6 md:p-8 lg:p-6 animate-macos min-h-full group/main">
+          <div className={`flex-1 ${activeView === 'reports' ? 'overflow-hidden relative' : 'overflow-y-auto scrollbar-none overflow-x-hidden'}`}>
+            <div className={`${activeView === 'reports' ? 'absolute inset-0 flex flex-col' : 'w-full min-h-full'} p-4 sm:p-6 md:p-8 lg:p-6 animate-macos group/main`}>
               {/* Access Control for Main Content */}
               {(!((ALLOWED_VIEWS[(userRole as UserRole) || ROLES.ACCOUNTANT] || ALLOWED_VIEWS[ROLES.ACCOUNTANT]).includes(activeView))) ? (
                 <div className="flex flex-col items-center justify-center py-32 text-center">

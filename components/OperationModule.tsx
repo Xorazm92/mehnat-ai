@@ -381,7 +381,7 @@ const OperationModule: React.FC<Props> = ({
   const [filterGroup, setFilterGroup] = useState<string>('all');
   const [filterAccountant, setFilterAccountant] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 50;
+  const rowsPerPage = 100;
 
   // Stable refs for background logic to prevent callback churn
   const companiesRef = useRef(companies);
@@ -559,7 +559,7 @@ const OperationModule: React.FC<Props> = ({
   // Reset page on search/filter
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, filterAccountant, filterGroup]);
+  }, [debouncedSearch, filterAccountant, filterGroup, selectedPeriod]);
 
   const visibleColumns = useMemo(() => {
     if (filterGroup === 'all') return [...REPORT_COLUMNS];
@@ -737,7 +737,7 @@ const OperationModule: React.FC<Props> = ({
       </div>
 
       {/* ── Matrix ──────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto relative liquid-glass-card rounded-[2rem] mx-4 mb-4 shadow-glass-lg" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+      <div className="flex-1 overflow-auto relative rounded-3xl mx-4 mb-2 shadow-sm border border-white/10 dark:border-white/5 bg-white/20 dark:bg-slate-950/20 backdrop-blur-md">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
@@ -853,31 +853,57 @@ const OperationModule: React.FC<Props> = ({
       </div>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 border-t border-white/20 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg px-5 py-2">
+      <div className="flex-shrink-0 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl px-6 py-3.5 mt-auto">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-[11px] text-gray-500">
-            <span>{t.totalFirms}: <strong className="text-gray-700 dark:text-gray-200">{filteredRows.length}</strong> · <strong>{visibleColumns.length}</strong> {t.reports.toLowerCase()}</span>
-            <div className="h-3 w-px bg-gray-300 dark:bg-gray-700"></div>
-            <span>{t.source}: <strong className="text-blue-600">{t.database}</strong></span>
+          <div className="flex items-center gap-6 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50"></span>
+              <span>{t.totalFirms}: <strong className="text-slate-900 dark:text-white">{filteredRows.length}</strong></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/50"></span>
+              <span><strong>{visibleColumns.length}</strong> {t.reports.toLowerCase()}</span>
+            </div>
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800"></div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-tighter opacity-70">{t.source}:</span>
+              <strong className="text-blue-600 dark:text-blue-400 uppercase tracking-widest">{t.database}</strong>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              onClick={() => {
+                setCurrentPage(p => Math.max(1, p - 1));
+                const matrix = document.querySelector('.overflow-auto');
+                if (matrix) matrix.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               disabled={currentPage === 1}
-              className="px-2 py-1 rounded bg-white dark:bg-gray-800 border border-white/20 dark:border-white/10 text-[10px] font-bold text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-white/30 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 disabled:opacity-20 hover:scale-105 hover:bg-white dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm"
             >
-              {t.prev}
+              <span className="text-xs">←</span> {t.prev}
             </button>
-            <span className="text-[10px] font-black text-gray-700 dark:text-gray-300">
-              {currentPage} / {totalPages || 1}
-            </span>
+
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/5 dark:bg-white/5 border border-white/10">
+              <span className="text-[11px] font-black text-slate-900 dark:text-white tracking-widest">
+                {currentPage}
+              </span>
+              <span className="text-[10px] font-bold text-slate-400">/</span>
+              <span className="text-[11px] font-black text-slate-400 tracking-widest">
+                {totalPages || 1}
+              </span>
+            </div>
+
             <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              onClick={() => {
+                setCurrentPage(p => Math.min(totalPages, p + 1));
+                const matrix = document.querySelector('.overflow-auto');
+                if (matrix) matrix.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               disabled={currentPage === totalPages || totalPages === 0}
-              className="px-2 py-1 rounded bg-white dark:bg-gray-800 border border-white/20 dark:border-white/10 text-[10px] font-bold text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-white/30 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white border border-indigo-500/30 text-[10px] font-black uppercase tracking-[0.2em] disabled:opacity-20 hover:scale-105 hover:bg-indigo-500 transition-all active:scale-95 shadow-glass-indigo"
             >
-              {t.next}
+              {t.next} <span className="text-xs">→</span>
             </button>
           </div>
         </div>
