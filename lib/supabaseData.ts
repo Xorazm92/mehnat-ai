@@ -561,6 +561,41 @@ export const upsertMonthlyPerformance = async (perf: Partial<MonthlyPerformance>
   }
 };
 
+export const upsertGlobalEmployeePerformance = async (perf: Partial<MonthlyPerformance>) => {
+  if (!perf.employeeId || !perf.month || !perf.ruleId) {
+    throw new Error('Missing required fields for global performance');
+  }
+
+  // 1. Fetch all companies where this employee is assigned
+  // We use direct ID matching for all possible roles
+  const { data: companies, error: fetchError } = await supabase
+    .from('companies')
+    .select('id')
+    .or(`accountant_id.eq.${perf.employeeId},bank_client_id.eq.${perf.employeeId},supervisor_id.eq.${perf.employeeId},chief_accountant_id.eq.${perf.employeeId}`);
+
+  if (fetchError) {
+    console.error('upsertGlobalEmployeePerformance fetch companies error:', fetchError);
+    throw fetchError;
+  }
+
+  const companyList = companies || [];
+
+  if (companyList.length === 0) {
+    console.warn('Employee has no assigned companies, skipping global KPI broadcast.');
+    return;
+  }
+
+  // 2. Broadcast the performance record to all companies
+  const promises = companyList.map(c =>
+    upsertMonthlyPerformance({
+      ...perf,
+      companyId: c.id
+    })
+  );
+
+  await Promise.all(promises);
+};
+
 // 3. Payroll Adjustments
 export const fetchPayrollAdjustments = async (month: string, employeeId?: string): Promise<PayrollAdjustment[]> => {
   let query = supabase
