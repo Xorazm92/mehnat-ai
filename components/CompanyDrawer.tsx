@@ -4,7 +4,7 @@ import { translations } from '../lib/translations';
 import StatusBadge from './StatusBadge';
 import { fetchDocuments, fetchCredentials, fetchClientHistory, logCredentialAccess, fetchKPIRules, fetchCompanyKPIRules, upsertCompanyKPIRule } from '../lib/supabaseData';
 import { supabase } from '../lib/supabaseClient';
-import { X, Shield, History, FileText, Lock, Globe, Building, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Send, Check, Calculator, Trash2, Plus, ChevronRight, ArrowRight } from 'lucide-react';
+import { X, Shield, History, FileText, Lock, Globe, Building, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Send, Check, Calculator, Trash2, Plus, ChevronRight, ArrowRight, Pencil, Save, Loader2 } from 'lucide-react';
 
 interface DrawerProps {
   company: Company | null;
@@ -14,10 +14,10 @@ interface DrawerProps {
   lang: Language;
   userId?: string;
   onClose: () => void;
-  onSave?: (company: Company) => void;
+  onSave?: (company: Company, assignments?: any[]) => void;
 }
 
-type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xavf' | 'xizmatlar' | 'kpi';
+type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xizmatlar' | 'kpi';
 
 const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, staff = [], lang, userId, onClose, onSave }) => {
   const t = translations[lang];
@@ -38,6 +38,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
   const [companyKpiRules, setCompanyKpiRules] = useState<any[]>([]);
   const [isSavingKpi, setIsSavingKpi] = useState<string | null>(null); // ruleId of saving item
   const [isLoadingKpi, setIsLoadingKpi] = useState(false);
+  const [isEditingJamoa, setIsEditingJamoa] = useState(false);
+  const [editAssignments, setEditAssignments] = useState<any[]>([]);
+  const [isSavingJamoa, setIsSavingJamoa] = useState(false);
 
 
   useEffect(() => {
@@ -166,7 +169,6 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
     { id: 'loginlar', label: 'Loginlar', icon: <Lock size={14} /> },
     { id: 'jamoa', label: 'Jamoa', icon: <Users size={14} /> },
     { id: 'shartnoma', label: 'Shartnoma', icon: <DollarSign size={14} /> },
-    { id: 'xavf', label: 'Xavf', icon: <AlertTriangle size={14} /> },
     { id: 'xizmatlar', label: 'Xizmatlar', icon: <Check size={14} /> },
     { id: 'kpi', label: 'KPI', icon: <Calculator size={14} /> },
   ];
@@ -594,51 +596,172 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
           {activeTab === 'jamoa' && (
             <div className="space-y-6 animate-fade-in">
               <div>
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Amaldagi Jamoa</h4>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Amaldagi Jamoa</h4>
+                  {onSave && !isEditingJamoa && (
+                    <button
+                      onClick={() => {
+                        const source = assignments.length > 0 ? assignments : teamFallbackAssignments();
+                        setEditAssignments(source.map((a: any) => ({
+                          role: a.role,
+                          userId: a.user_id,
+                          salaryType: a.salary_type || 'percent',
+                          salaryValue: a.salary_value ?? 0
+                        })));
+                        setIsEditingJamoa(true);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 text-[11px] font-black uppercase tracking-widest transition-all border border-indigo-500/20"
+                    >
+                      <Pencil size={12} /> Tahrirlash
+                    </button>
+                  )}
+                  {isEditingJamoa && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setIsEditingJamoa(false)}
+                        className="px-4 py-2 rounded-xl bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 text-[11px] font-black uppercase tracking-widest transition-all border border-slate-500/20"
+                      >
+                        Bekor
+                      </button>
+                      <button
+                        disabled={isSavingJamoa}
+                        onClick={async () => {
+                          if (!company || !onSave) return;
+                          setIsSavingJamoa(true);
+                          try {
+                            await onSave(company, editAssignments);
+                            // Refresh displayed assignments from edited state
+                            setAssignments(editAssignments.map((a, i) => ({
+                              id: `edited-${i}`,
+                              role: a.role,
+                              user_id: a.userId,
+                              salary_type: a.salaryType,
+                              salary_value: a.salaryValue
+                            })));
+                            setIsEditingJamoa(false);
+                          } catch (e: any) {
+                            console.error('Jamoa saqlashda xatolik:', e);
+                          } finally {
+                            setIsSavingJamoa(false);
+                          }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-500 text-[11px] font-black uppercase tracking-widest transition-all border border-emerald-500/30 disabled:opacity-50"
+                      >
+                        {isSavingJamoa ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Saqlash
+                      </button>
+                    </div>
+                  )}
+                </div>
                 {assignmentsError && (
                   <div className="mb-4 p-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-600">
                     <p className="text-xs font-black uppercase tracking-widest">contract_assignments xatoligi</p>
                     <p className="text-xs font-bold mt-1 break-words">{assignmentsError}</p>
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(() => {
-                    const displayedAssignments = assignments.length > 0 ? assignments : teamFallbackAssignments();
-                    return displayedAssignments.length > 0 ? displayedAssignments.map(asgn => {
-                      const member = staff.find(s => s.id === asgn.user_id);
-                      return (
-                        <div key={asgn.id} className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder relative overflow-hidden group">
-                          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Users size={40} />
+
+                {/* ── VIEW MODE ── */}
+                {!isEditingJamoa && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(() => {
+                      const displayedAssignments = assignments.length > 0 ? assignments : teamFallbackAssignments();
+                      return displayedAssignments.length > 0 ? displayedAssignments.map((asgn: any) => {
+                        const member = staff.find(s => s.id === asgn.user_id);
+                        return (
+                          <div key={asgn.id} className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                              <Users size={40} />
+                            </div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{asgn.role.toUpperCase().replace(/_/g, ' ')}</p>
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-apple-accent font-black">
+                                {member?.name?.charAt(0) || '?'}
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-slate-800 dark:text-white">{member?.name || 'Mavjud emas'}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                  {asgn.salary_type === 'percent' ? `${asgn.salary_value}%` : `${asgn.salary_value?.toLocaleString()} so'm`}
+                                </p>
+                              </div>
+                            </div>
+                            {asgn.start_date && (
+                              <div className="mt-4 pt-4 border-t border-apple-border dark:border-apple-darkBorder flex items-center justify-between">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">Tayinlangan sana:</span>
+                                <span className="text-[9px] font-black text-slate-500">{new Date(asgn.start_date).toLocaleDateString()}</span>
+                              </div>
+                            )}
                           </div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{asgn.role.toUpperCase().replace('_', ' ')}</p>
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-apple-accent font-black">
-                              {member?.name?.charAt(0) || '?'}
-                            </div>
-                            <div>
-                              <p className="text-sm font-black text-slate-800 dark:text-white">{member?.name || 'Mavjud emas'}</p>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase">
-                                {asgn.salary_type === 'percent' ? `${asgn.salary_value}%` : `${asgn.salary_value?.toLocaleString()} so'm`}
-                              </p>
-                            </div>
-                          </div>
-                          {asgn.start_date && (
-                            <div className="mt-4 pt-4 border-t border-apple-border dark:border-apple-darkBorder flex items-center justify-between">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase">Tayinlangan sana:</span>
-                              <span className="text-[9px] font-black text-slate-500">{new Date(asgn.start_date).toLocaleDateString()}</span>
-                            </div>
-                          )}
+                        );
+                      }) : (
+                        <div className="col-span-2 p-10 text-center liquid-glass-card rounded-2xl border border-dashed border-apple-border dark:border-apple-darkBorder">
+                          <Users size={32} className="mx-auto mb-3 text-slate-300" />
+                          <p className="text-sm font-bold text-slate-400">Jamoa a'zolari tayinlanmagan</p>
                         </div>
                       );
-                    }) : (
-                      <div className="col-span-2 p-10 text-center liquid-glass-card rounded-2xl border border-dashed border-apple-border dark:border-apple-darkBorder">
-                        <Users size={32} className="mx-auto mb-3 text-slate-300" />
-                        <p className="text-sm font-bold text-slate-400">Jamoa a'zolari tayinlanmagan</p>
-                      </div>
-                    );
-                  })()}
-                </div>
+                    })()}
+                  </div>
+                )}
+
+                {/* ── EDIT MODE ── */}
+                {isEditingJamoa && (
+                  <div className="space-y-3">
+                    {editAssignments.map((asgn, idx) => {
+                      const roleLabels: Record<string, string> = {
+                        accountant: 'Buxgalter',
+                        controller: 'Nazoratchi',
+                        bank_manager: 'Bank Menejer',
+                        chief_accountant: 'Bosh Buxgalter'
+                      };
+                      return (
+                        <div key={asgn.role} className="p-5 liquid-glass-card rounded-2xl border border-indigo-500/20 bg-indigo-500/5 space-y-3">
+                          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{roleLabels[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {/* Staff selector */}
+                            <div className="sm:col-span-2">
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Xodim</label>
+                              <select
+                                value={asgn.userId || ''}
+                                onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, userId: e.target.value } : a))}
+                                className="w-full bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+                              >
+                                <option value="">— Tanlanmagan —</option>
+                                {staff.map(s => (
+                                  <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            {/* Salary value */}
+                            <div>
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">
+                                {asgn.salaryType === 'percent' ? 'Foiz (%)' : 'Summa (so\u02bcm)'}
+                              </label>
+                              <input
+                                type="number"
+                                value={asgn.salaryValue}
+                                onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, salaryValue: Number(e.target.value) } : a))}
+                                className="w-full bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+                              />
+                            </div>
+                          </div>
+                          {/* Salary type toggle */}
+                          <div className="flex gap-2">
+                            {['percent', 'fixed'].map(t => (
+                              <button
+                                key={t}
+                                onClick={() => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, salaryType: t } : a))}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${asgn.salaryType === t
+                                    ? 'bg-indigo-500 text-white shadow-sm'
+                                    : 'bg-white/10 dark:bg-white/5 text-slate-400 hover:bg-white/20'
+                                  }`}
+                              >
+                                {t === 'percent' ? 'Foizli' : 'Belgilangan'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {clientHistory.length > 0 ? (
@@ -747,30 +870,6 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
               </div>
 
 
-            </div>
-          )}
-
-          {activeTab === 'xavf' && operation && (
-            <div className="space-y-6 animate-fade-in">
-              <div className="p-5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Kompaniya Holati</h4>
-                <div className="flex flex-wrap gap-3">
-                  {Object.values(CompanyStatus).map(status => (
-                    <div key={status} className={`px-4 py-2 rounded-xl font-black text-xs uppercase ${(company.companyStatus || 'active') === status ? 'bg-apple-accent text-white shadow-lg' : 'bg-slate-100 dark:bg-white/5 text-slate-400'}`}>
-                      {status}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className={`p-6 rounded-2xl border ${riskBadge.color}`}>
-                <div className="flex items-center gap-4">
-                  <span className="text-4xl">{riskBadge.emoji}</span>
-                  <div>
-                    <h4 className="text-lg font-black">{riskBadge.text}</h4>
-                    <p className="text-sm font-medium opacity-70">AI xavf darajasi</p>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 

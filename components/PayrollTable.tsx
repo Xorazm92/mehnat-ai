@@ -3,7 +3,7 @@ import { Staff, EmployeeSalarySummary, Language, Company, OperationEntry, Payrol
 import { upsertPayrollAdjustment, fetchPayrollAdjustments, fetchMonthlyPerformance, fetchKPIRules, fetchAllCompanyKPIRules } from '../lib/supabaseData';
 import { calculateCompanySalaries } from '../lib/kpiLogic';
 import { translations } from '../lib/translations';
-import { Wallet, MinusCircle, PlusCircle, Save } from 'lucide-react';
+import { Wallet, MinusCircle, PlusCircle, Save, HandCoins, CheckCircle2 } from 'lucide-react';
 import { periodsEqual } from '../lib/periods';
 
 interface Props {
@@ -18,7 +18,7 @@ interface Props {
 const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, currentUserId, currentUserRole }) => {
     const t = translations[lang];
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-    const [editingAdj, setEditingAdj] = useState<{ empId: string, type: 'bonus' | 'jarima' | 'avans', amount: number, reason: string } | null>(null);
+    const [editingAdj, setEditingAdj] = useState<{ empId: string, type: 'bonus' | 'jarima' | 'avans' | 'payment', amount: number, reason: string } | null>(null);
     const [adjustmentsList, setAdjustmentsList] = useState<PayrollAdjustment[]>([]);
     const [performanceList, setPerformanceList] = useState<MonthlyPerformance[]>([]);
     const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
@@ -26,12 +26,14 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
 
     const loadMonthlyData = async () => {
         try {
-            const [adj, perf, rules, overrides] = await Promise.all([
-                fetchPayrollAdjustments(month + '-01'),
-                fetchMonthlyPerformance(month + '-01'),
+            const adj = await fetchPayrollAdjustments(month + '-01');
+            const perf = await fetchMonthlyPerformance(month + '-01');
+
+            const [rules, overrides] = await Promise.all([
                 fetchKPIRules(),
                 fetchAllCompanyKPIRules()
             ]);
+
             setAdjustmentsList(adj);
             setPerformanceList(perf);
             setKpiRules(rules);
@@ -46,86 +48,156 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
     }, [month]);
 
     const summaries = useMemo(() => {
-        return staff.map(s => {
-            const checkMonth = month; // Filter operations by this month if needed
+        const checkMonth = month;
 
+        // 1. Indexing & Pre-filtering (O(N))
+        const opsByCompany = new Map<string, OperationEntry>();
+        const staffInOps = new Map<string, Set<string>>();
+
+        operations.forEach(op => {
+            if (periodsEqual(op.period, checkMonth)) {
+                opsByCompany.set(op.companyId, op);
+                const sids = new Set<string>();
+                if (op.assigned_accountant_id) sids.add(op.assigned_accountant_id);
+                if (op.assigned_bank_manager_id) sids.add(op.assigned_bank_manager_id);
+                if (op.assigned_supervisor_id) sids.add(op.assigned_supervisor_id);
+                staffInOps.set(op.companyId, sids);
+            }
+        });
+
+        const perfsByCompany = new Map<string, MonthlyPerformance[]>();
+        performanceList.forEach(p => {
+            if (!p.status || p.status === 'approved') {
+                const arr = perfsByCompany.get(p.companyId) || [];
+                arr.push(p);
+                perfsByCompany.set(p.companyId, arr);
+            }
+        });
+
+        const overridesByCompany = new Map<string, CompanyKPIRule[]>();
+        companyOverrides.forEach(o => {
+            const arr = overridesByCompany.get(o.companyId) || [];
+            arr.push(o);
+            overridesByCompany.set(o.companyId, arr);
+        });
+
+        const adjustmentsByStaff = new Map<string, PayrollAdjustment[]>();
+        adjustmentsList.forEach(a => {
+            if (a.month.startsWith(month)) {
+                const arr = adjustmentsByStaff.get(a.employeeId) || [];
+                arr.push(a);
+                adjustmentsByStaff.set(a.employeeId, arr);
+            }
+        });
+
+        const staffCompaniesMap = new Map<string, Company[]>();
+        const staffNameMap = new Map<string, Company[]>();
+
+        companies.forEach(c => {
+            const ids = [c.accountantId, c.bankClientId, c.supervisorId].filter(Boolean) as string[];
+            ids.forEach(id => {
+                const arr = staffCompaniesMap.get(id) || [];
+                arr.push(c);
+                staffCompaniesMap.set(id, arr);
+            });
+            if (c.bankClientName) {
+                const name = c.bankClientName.trim().toLowerCase();
+                const arr = staffNameMap.get(name) || [];
+                arr.push(c);
+                staffNameMap.set(name, arr);
+            }
+            if (c.supervisorName) {
+                const name = c.supervisorName.trim().toLowerCase();
+                const arr = staffNameMap.get(name) || [];
+                arr.push(c);
+                staffNameMap.set(name, arr);
+            }
+        });
+
+        // 2. Optimized Calculation Loop
+        return staff.map(s => {
             let totalBase = 0;
             let totalKpiBonus = 0;
             let totalKpiPenalty = 0;
-
             const sNameLower = s.name.trim().toLowerCase();
 
-            const myCompanyIdsFromOps = new Set(
-                operations
-                    .filter(op => periodsEqual(op.period, checkMonth))
-                    .filter(op =>
-                        op.assigned_accountant_id === s.id ||
-                        op.assigned_bank_manager_id === s.id ||
-                        op.assigned_supervisor_id === s.id
-                    )
-                    .map(op => op.companyId)
-            );
+            const myCompaniesSet = new Set<Company>();
+            (staffCompaniesMap.get(s.id) || []).forEach(c => myCompaniesSet.add(c));
+            (staffNameMap.get(sNameLower) || []).forEach(c => {
+                if ((!c.bankClientId && c.bankClientName?.trim().toLowerCase() === sNameLower) ||
+                    (!c.supervisorId && c.supervisorName?.trim().toLowerCase() === sNameLower)) {
+                    myCompaniesSet.add(c);
+                }
+            });
 
-            const myCompanies = companies.filter(c =>
-                c.accountantId === s.id ||
-                c.bankClientId === s.id ||
-                c.supervisorId === s.id ||
-                myCompanyIdsFromOps.has(c.id) ||
-                // Name-based fallback for staff without profile IDs
-                (!c.bankClientId && c.bankClientName && c.bankClientName.trim().toLowerCase() === sNameLower) ||
-                (!c.supervisorId && c.supervisorName && c.supervisorName.trim().toLowerCase() === sNameLower)
-            );
+            opsByCompany.forEach((op, cid) => {
+                if (staffInOps.get(cid)?.has(s.id)) {
+                    const comp = companies.find(c => c.id === cid);
+                    if (comp) myCompaniesSet.add(comp);
+                }
+            });
 
-            myCompanies.forEach(c => {
-                const op = operations.find(o => o.companyId === c.id && periodsEqual(o.period, checkMonth));
+            myCompaniesSet.forEach(c => {
+                const op = opsByCompany.get(c.id);
+                const perf = perfsByCompany.get(c.id) || [];
+                const cOverrides = overridesByCompany.get(c.id) || [];
 
-                // Merge rules with company-specific overrides
                 const mergedRules = kpiRules.map(r => {
-                    const override = companyOverrides.find(o => o.companyId === c.id && o.ruleId === r.id);
+                    const override = cOverrides.find(ov => ov.ruleId === r.id);
                     if (override) {
-                        return {
-                            ...r,
-                            rewardPercent: override.rewardPercent ?? r.rewardPercent,
-                            penaltyPercent: override.penaltyPercent ?? r.penaltyPercent
-                        };
+                        return { ...r, rewardPercent: override.rewardPercent ?? r.rewardPercent, penaltyPercent: override.penaltyPercent ?? r.penaltyPercent };
                     }
                     return r;
                 });
 
-                const results = calculateCompanySalaries(c, op, performanceList, mergedRules);
+                const results = calculateCompanySalaries(c, op, perf, mergedRules);
 
-                // Match by ID first, then by name as fallback
                 results.filter(r =>
-                    r.staffId === s.id ||
-                    (r.staffName && r.staffName.trim().toLowerCase() === sNameLower)
+                    r.staffId === s.id || (r.staffName && r.staffName.trim().toLowerCase() === sNameLower)
                 ).forEach(res => {
                     totalBase += res.baseAmount;
-
                     if (res.finalAmount < res.baseAmount) {
-                        const diff = res.baseAmount - res.finalAmount;
-                        totalKpiPenalty += diff;
+                        totalKpiPenalty += (res.baseAmount - res.finalAmount);
                     } else if (res.finalAmount > res.baseAmount) {
                         totalKpiBonus += (res.finalAmount - res.baseAmount);
                     }
                 });
             });
 
-            // Adjustments logic
-            const myAdj = adjustmentsList.filter(a => a.employeeId === s.id && a.month.startsWith(month)).reduce((sum, a) => sum + a.amount, 0);
+            const employeeAdjustments = adjustmentsByStaff.get(s.id) || [];
+
+            const totalReceived = employeeAdjustments
+                .filter(a => a.adjustmentType === 'avans' || a.adjustmentType === 'jarima')
+                .reduce((sum, a) => sum + a.amount, 0);
+
+            const totalPaid = employeeAdjustments
+                .filter(a => a.adjustmentType === 'payment')
+                .reduce((sum, a) => sum + a.amount, 0);
+
+            const manualBonuses = employeeAdjustments
+                .filter(a => a.adjustmentType === 'bonus')
+                .reduce((sum, a) => sum + a.amount, 0);
+
+            const kpiSalary = totalBase - totalKpiPenalty + totalKpiBonus + manualBonuses;
+            const remainingBalance = kpiSalary + totalReceived + totalPaid;
 
             return {
                 employeeId: s.id,
                 employeeName: s.name,
                 employeeRole: s.role,
                 month,
-                companyCount: myCompanies.length,
+                companyCount: myCompaniesSet.size,
                 baseSalary: totalBase,
                 kpiBonus: totalKpiBonus,
                 kpiPenalty: -totalKpiPenalty,
-                adjustments: myAdj,
-                totalSalary: totalBase - totalKpiPenalty + totalKpiBonus + myAdj,
+                adjustments: totalReceived + manualBonuses,
+                totalSalary: kpiSalary,
+                remainingBalance: remainingBalance,
+                totalPaid: totalPaid,
+                totalReceived: totalReceived,
+                manualBonuses: manualBonuses,
                 performanceDetails: []
-            } as EmployeeSalarySummary;
+            } as any;
         }).filter(s => s.companyCount > 0);
     }, [staff, companies, operations, month, adjustmentsList, performanceList, kpiRules, companyOverrides]);
 
@@ -137,7 +209,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
                 month: `${month}-01`,
                 employeeId: editingAdj.empId,
                 adjustmentType: editingAdj.type,
-                amount: editingAdj.type === 'jarima' || editingAdj.type === 'avans' ? -Math.abs(editingAdj.amount) : Math.abs(editingAdj.amount),
+                amount: editingAdj.type === 'jarima' || editingAdj.type === 'avans' || editingAdj.type === 'payment' ? -Math.abs(editingAdj.amount) : Math.abs(editingAdj.amount),
                 reason: editingAdj.reason,
                 isApproved: true,
                 approvedBy: currentUserId,
@@ -163,18 +235,18 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
                 </div>
 
                 <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-10">
-                    <div>
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-glass">
-                                <Wallet className="text-white" size={32} />
-                            </div>
-                            <h2 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight premium-text-gradient">
-                                Oylik Hisobot <span className="text-white/30">(Payroll)</span>
-                            </h2>
+                    <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 rounded-[1.8rem] bg-white/10 backdrop-blur-xl flex items-center justify-center border border-white/20 shadow-glass shrink-0">
+                            <Wallet className="text-white" size={36} />
                         </div>
-                        <p className="text-sm font-black text-white/40 uppercase tracking-[0.3em]">
-                            Financial Oversight & Salary Distribution
-                        </p>
+                        <div>
+                            <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none mb-2">
+                                Oylik Hisobot
+                            </h2>
+                            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">
+                                FINANCIAL OVERSIGHT & SALARY
+                            </p>
+                        </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-6 items-center w-full xl:w-auto">
@@ -207,7 +279,8 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
                                 <th className="px-6 py-10 text-center border-l border-white/5 text-emerald-500 backdrop-blur-md">KPI Bonus</th>
                                 <th className="px-6 py-10 text-center border-l border-white/5 text-rose-500 backdrop-blur-md">Jarima</th>
                                 <th className="px-6 py-10 text-center border-l border-white/5 text-indigo-500 backdrop-blur-md">Qo'shimcha</th>
-                                <th className="px-10 py-10 text-center border-l border-white/5 backdrop-blur-md">Jami To'lanadigan</th>
+                                <th className="px-6 py-10 text-center border-l border-white/5 text-amber-500 backdrop-blur-md">Avans</th>
+                                <th className="px-10 py-10 text-center border-l border-white/5 text-emerald-400 backdrop-blur-md">Qolgan Summa</th>
                                 <th className="px-8 py-10 text-right backdrop-blur-md">Amallar</th>
                             </tr>
                         </thead>
@@ -235,30 +308,37 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
                                         <span className="font-black text-2xl text-rose-500 tabular-nums">{s.kpiPenalty.toLocaleString()}</span>
                                     </td>
                                     <td className="px-6 py-10 text-center border-l border-white/5">
-                                        <span className={`font-black text-xl tabular-nums ${s.adjustments >= 0 ? 'text-indigo-500' : 'text-amber-500'}`}>
-                                            {s.adjustments > 0 ? '+' : ''}{s.adjustments.toLocaleString()}
+                                        <span className="font-black text-xl text-indigo-500 tabular-nums">
+                                            {s.manualBonuses > 0 ? '+' : ''}{s.manualBonuses.toLocaleString()}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-10 text-center border-l border-white/5">
+                                        <span className="font-black text-xl text-amber-500 tabular-nums">
+                                            {s.totalReceived.toLocaleString()}
                                         </span>
                                     </td>
                                     <td className="px-10 py-10 border-l border-white/5 text-center">
-                                        <div className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.5rem] inline-block font-black text-2xl tabular-nums shadow-glass-indigo dark:shadow-glass group-hover/row:scale-105 transition-transform duration-500">
-                                            {s.totalSalary.toLocaleString()}
+                                        <div className={`px-8 py-4 ${s.remainingBalance <= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'} rounded-[1.5rem] inline-block font-black text-2xl tabular-nums shadow-glass-indigo dark:shadow-glass group-hover/row:scale-105 transition-transform duration-500`}>
+                                            {s.remainingBalance.toLocaleString()}
                                         </div>
                                     </td>
                                     <td className="px-8 py-10 text-right">
                                         <div className="flex gap-4 justify-end">
                                             <button
-                                                onClick={() => setEditingAdj({ empId: s.employeeId, type: 'bonus', amount: 0, reason: '' })}
-                                                className="w-12 h-12 flex items-center justify-center bg-emerald-500/10 text-emerald-500 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-sm border border-emerald-500/20 group/btn"
-                                                title="Bonus qo'shish"
+                                                onClick={() => setEditingAdj({ empId: s.employeeId, type: 'avans', amount: 0, reason: '' })}
+                                                className="px-5 h-12 flex items-center justify-center gap-2 bg-amber-500/10 text-amber-500 rounded-xl hover:bg-amber-500 hover:text-white transition-all shadow-sm border border-amber-500/20 group/btn"
+                                                title="Avans berish"
                                             >
-                                                <PlusCircle size={22} className="group-hover/btn:rotate-90 transition-transform" />
+                                                <HandCoins size={20} className="group-hover/btn:scale-110 transition-transform" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Avans</span>
                                             </button>
                                             <button
-                                                onClick={() => setEditingAdj({ empId: s.employeeId, type: 'jarima', amount: 0, reason: '' })}
-                                                className="w-12 h-12 flex items-center justify-center bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-500/20 group/btn"
-                                                title="Jarima yozish"
+                                                onClick={() => setEditingAdj({ empId: s.employeeId, type: 'payment', amount: s.remainingBalance, reason: 'Maosh to\'lovi' })}
+                                                className="px-5 h-12 flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-500 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-sm border border-emerald-500/20 group/btn"
+                                                title="Maosh to'lash"
                                             >
-                                                <MinusCircle size={22} className="group-hover/btn:-rotate-90 transition-transform" />
+                                                <CheckCircle2 size={20} className="group-hover/btn:scale-110 transition-transform" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">To'lash</span>
                                             </button>
                                         </div>
                                     </td>
@@ -271,13 +351,15 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
 
             {/* Manual Adjustment Modal */}
             {editingAdj && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xl z-[100] flex items-center justify-center p-8 animate-fade-in">
-                    <div className="liquid-glass-card w-full max-w-xl rounded-[3.5rem] p-12 shadow-glass-2xl border border-white/20 relative overflow-hidden">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xl z-[100] flex items-start justify-center p-8 pt-20 overflow-y-auto animate-fade-in" onClick={() => setEditingAdj(null)}>
+                    <div className="liquid-glass-card w-full max-w-xl rounded-[3.5rem] p-12 shadow-glass-2xl border border-white/20 relative overflow-hidden my-10" onClick={e => e.stopPropagation()}>
                         <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl"></div>
 
                         <div className="relative z-10">
                             <h3 className="text-3xl font-black mb-10 tracking-tighter premium-text-gradient uppercase">
-                                {editingAdj.type === 'bonus' ? 'Bonus belgilash' : editingAdj.type === 'jarima' ? 'Jarima yozish' : 'Avans berish'}
+                                {editingAdj.type === 'bonus' ? 'Bonus belgilash' :
+                                    editingAdj.type === 'jarima' ? 'Jarima yozish' :
+                                        editingAdj.type === 'avans' ? 'Avans berish' : 'Maosh to\'lovi'}
                             </h3>
 
                             <div className="space-y-8">

@@ -2,7 +2,8 @@
 import React, { useState, useMemo } from 'react';
 import { Company, Payment, PaymentStatus, Language } from '../types';
 import { translations } from '../lib/translations';
-import { Wallet, Search, Plus, Filter, CheckCircle2, Clock, AlertTriangle, Trash2, MoreVertical, CreditCard } from 'lucide-react';
+import { Wallet, Search, Plus, Filter, CheckCircle2, Clock, AlertTriangle, Trash2, MoreVertical, CreditCard, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface KassaModuleProps {
     companies: Company[];
@@ -18,6 +19,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
     const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPayment, setEditingPayment] = useState<Partial<Payment> | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const filteredData = useMemo(() => {
         return companies.map(c => {
@@ -49,10 +51,19 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (editingPayment) {
-            await onSavePayment(editingPayment);
-            setIsModalOpen(false);
-            setEditingPayment(null);
+        if (editingPayment && !isSaving) {
+            setIsSaving(true);
+            try {
+                await onSavePayment(editingPayment);
+                toast.success(lang === 'uz' ? 'To\'lov saqlandi' : 'Платеж сохранен');
+                setIsModalOpen(false);
+                setEditingPayment(null);
+            } catch (error: any) {
+                console.error('Payment save error:', error);
+                toast.error(lang === 'uz' ? 'Xatolik: ' + (error.message || 'Saqlab bo\'lmadi') : 'Ошибка: ' + (error.message || 'Не удалось сохранить'));
+            } finally {
+                setIsSaving(false);
+            }
         }
     };
 
@@ -322,9 +333,17 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-10 py-6 rounded-[1.8rem] font-black text-[11px] uppercase tracking-[0.2em] text-white bg-indigo-600 hover:bg-indigo-700 shadow-glass-lg transition-all active:scale-95 transform hover:-translate-y-1"
+                                    disabled={isSaving}
+                                    className="flex-1 px-10 py-6 rounded-[1.8rem] font-black text-[11px] uppercase tracking-[0.2em] text-white bg-indigo-600 hover:bg-indigo-700 shadow-glass-lg transition-all active:scale-95 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
-                                    TASDIQLASH
+                                    {isSaving ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" />
+                                            SAQLANMOQDA...
+                                        </>
+                                    ) : (
+                                        'TASDIQLASH'
+                                    )}
                                 </button>
                             </div>
                         </form>

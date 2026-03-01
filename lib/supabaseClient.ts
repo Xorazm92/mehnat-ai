@@ -12,7 +12,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: true,
+    autoRefreshToken: false, // Moved to manual handle in auth.ts to avoid navigatorLock AbortError
     persistSession: true,
     detectSessionInUrl: true,
   },

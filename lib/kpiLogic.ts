@@ -61,7 +61,15 @@ const resolveAutomationKey = (rule: KPIRule): keyof OperationEntry | null => {
         acc_pnl: 'foyda_va_zarar',
 
         // Bank client column in operations
-        bank_klient: 'bank_klient'
+        bank_klient: 'bank_klient',
+
+        // --- NEW SIMPLIFIED RULES ---
+        automation_1c: 'one_c',
+        automation_didox: 'didox',
+        // Mapping broad report rules to representative columns for checking status
+        reports_tax: 'daromad_soliq', // Use one of the main tax reports as representative
+        reports_stat: 'stat_12_invest', // Use 12-invest as representative stat report
+        reports_finance: 'moliyaviy_natija'
     };
 
     if (map[name]) return map[name];
@@ -156,8 +164,8 @@ export const calculateCompanySalaries = (
 
         // 2) Report Status Impact (Oylar/Operations) - NOW DYNAMIC
         if (operation) {
-            // Find all automation rules
-            const autoRules = rules.filter(r => r.category === 'automation');
+            // Find all automation rules (including reports)
+            const autoRules = rules.filter(r => r.category === 'automation' || r.category === 'reports');
 
             for (const rule of autoRules) {
                 const key = resolveAutomationKey(rule);

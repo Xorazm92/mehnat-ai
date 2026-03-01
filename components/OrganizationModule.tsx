@@ -249,7 +249,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   };
 
   return (
-    <div className="space-y-6 md:space-y-10 animate-fade-in pb-24">
+    <div className="w-full space-y-6 md:space-y-10 animate-fade-in pb-24 min-w-0">
       {companies.length === 0 && (
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-[2rem] p-8 text-center">
           <p className="text-amber-700 dark:text-amber-300 font-black text-sm uppercase tracking-widest">
@@ -456,7 +456,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         )}
 
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-10">
             {paginated.map(c => {
               const risk = getRiskIndicator(c);
               return (
@@ -524,37 +524,37 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             })}
           </div>
         ) : (
-          <div className="liquid-glass-card rounded-[3rem] shadow-glass-lg border border-white/10 overflow-hidden relative">
+          <div className="w-full liquid-glass-card rounded-[2rem] md:rounded-[3rem] shadow-glass-lg border border-white/10 overflow-hidden relative">
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
 
-            <div ref={bottomScrollRef} className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-left border-collapse min-w-[1500px] table-fixed">
+            <div ref={bottomScrollRef} className="w-full overflow-x-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse min-w-[960px]">
                 <thead>
                   <tr className="bg-slate-100/80 dark:bg-white/5 backdrop-blur-md text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-white/10">
-                    <th className="px-6 py-8 w-[50px] text-center">№</th>
+                    <th className="px-4 py-6 w-[44px] text-center">№</th>
                     <th
-                      className="px-4 md:px-8 py-8 w-[250px] md:w-[400px] sticky left-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl z-20 shadow-[10px_0_20px_-10px_rgba(0,0,0,0.1)] cursor-pointer hover:text-indigo-600 transition-colors"
+                      className="px-4 py-6 w-[220px] sticky left-0 bg-slate-100 dark:bg-slate-900 backdrop-blur-xl z-20 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.15)] cursor-pointer hover:text-indigo-600 transition-colors"
                       onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
-                      <div className="flex items-center gap-3">
-                        <Building2 size={12} className="text-slate-400" />
-                        {t.companyName} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      <div className="flex items-center gap-2">
+                        <Building2 size={12} className="text-slate-400 shrink-0" />
+                        <span>{t.companyName} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
                       </div>
                     </th>
                     <th
-                      className="px-6 py-8 w-[130px] cursor-pointer hover:text-indigo-600 transition-colors"
+                      className="px-4 py-6 w-[110px] cursor-pointer hover:text-indigo-600 transition-colors"
                       onClick={() => { setSortField('inn'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="px-6 py-8 w-[180px] text-indigo-500 flex items-center gap-2">
-                      <DollarSign size={12} /> SHARTNOMA
+                    <th className="px-4 py-6 w-[150px] text-indigo-500">
+                      <div className="flex items-center gap-1"><DollarSign size={11} /> SHARTNOMA</div>
                     </th>
-                    <th className="px-6 py-8 w-[140px]">REJIM</th>
-                    <th className="px-6 py-8 w-[200px]">BUXGALTER</th>
-                    <th className="px-6 py-8 w-[180px]">NAZORATCHI</th>
-                    <th className="px-6 py-8 w-[180px]">1C SERVER</th>
-                    <th className="px-10 py-8 w-[150px] text-right">{t.actions}</th>
+                    <th className="px-4 py-6 w-[110px]">REJIM</th>
+                    <th className="px-4 py-6 w-[150px]">BUXGALTER</th>
+                    <th className="px-4 py-6 w-[140px]">NAZORATCHI</th>
+                    <th className="px-4 py-6 w-[160px]">1C SERVER</th>
+                    <th className="px-4 py-6 w-[110px] text-right">{t.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -572,47 +572,47 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                         className="hover:bg-white/60 dark:hover:bg-white/10 transition-all group/row cursor-pointer"
                         onClick={() => onCompanySelect(c)}
                       >
-                        <td className="px-6 py-6 text-center">
+                        <td className="px-4 py-5 text-center">
                           <span className="text-[11px] font-black text-slate-300 font-mono italic">{c.originalIndex || '-'}</span>
                         </td>
                         <td
-                          className="px-4 md:px-8 py-6 sticky left-0 bg-white dark:bg-slate-900 group-hover/row:bg-slate-50 dark:group-hover/row:bg-indigo-600/10 z-20 shadow-[10px_0_20px_-10px_rgba(0,0,0,0.05)] transition-colors"
+                          className="px-4 py-5 sticky left-0 bg-white dark:bg-slate-900 group-hover/row:bg-slate-50 dark:group-hover/row:bg-slate-800 z-10 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors max-w-[220px]"
                         >
-                          <div className="font-black text-slate-800 dark:text-white text-[14px] tracking-tight group-hover/row:text-indigo-600 dark:group-hover/row:text-indigo-400 transition-colors truncate" title={c.name}>{c.name}</div>
-                          {c.brandName && <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1 opacity-60 truncate">{c.brandName}</div>}
+                          <div className="font-black text-slate-800 dark:text-white text-[13px] tracking-tight group-hover/row:text-indigo-600 dark:group-hover/row:text-indigo-400 transition-colors truncate" title={c.name}>{c.name}</div>
+                          {c.brandName && <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5 opacity-60 truncate">{c.brandName}</div>}
                         </td>
-                        <td className="px-6 py-6 font-mono text-[10px] font-black text-slate-400 tabular-nums">
+                        <td className="px-4 py-5 font-mono text-[10px] font-black text-slate-400 tabular-nums">
                           {c.inn}
                         </td>
-                        <td className="px-6 py-6">
-                          <span className="font-black text-slate-800 dark:text-white tabular-nums text-[13px] tracking-tight">
+                        <td className="px-4 py-5">
+                          <span className="font-black text-slate-800 dark:text-white tabular-nums text-[12px] tracking-tight">
                             {displayAmount?.toLocaleString() || '0'}
                           </span>
-                          <span className="text-[8px] font-black ml-1.5 text-slate-400 uppercase opacity-60">UZS</span>
+                          <span className="text-[8px] font-black ml-1 text-slate-400 uppercase opacity-60">UZS</span>
                         </td>
-                        <td className="px-6 py-6">
-                          <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${c.taxType?.includes('nds') ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20'}`}>
+                        <td className="px-4 py-5">
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${c.taxType?.includes('nds') ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20'}`}>
                             {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'Aylanma' : (c.taxType || 'Fix'))}
                           </span>
                         </td>
-                        <td className="px-6 py-6">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-black text-[10px] border border-indigo-500/20">
+                        <td className="px-4 py-5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-black text-[10px] border border-indigo-500/20 shrink-0">
                               {displayAccountant?.[0] || '?'}
                             </div>
                             <p className="text-[11px] font-black text-slate-700 dark:text-slate-200 truncate">{displayAccountant || '—'}</p>
                           </div>
                         </td>
-                        <td className="px-6 py-6">
+                        <td className="px-4 py-5">
                           <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-tight truncate">{displaySupervisor || '—'}</p>
                         </td>
-                        <td className="px-6 py-6">
-                          <div className="flex flex-col gap-1">
+                        <td className="px-4 py-5">
+                          <div className="flex flex-col gap-0.5">
                             {c.serverInfo && <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{c.serverInfo}</span>}
-                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 truncate opacity-70" title={c.serverName}>{c.serverName || '—'}</span>
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 truncate opacity-70" title={c.serverName}>{c.serverName || '—'}</span>
                           </div>
                         </td>
-                        <td className="px-10 py-6 text-right whitespace-nowrap">
+                        <td className="px-4 py-5 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }}

@@ -186,21 +186,19 @@ export const startTokenRotation = () => {
     try {
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Token rotation timeout')), 10000)
+        setTimeout(() => reject(new Error('Token rotation timeout')), 60000) // Increased to 60s
       );
 
       const rotationPromise = supabase.auth.refreshSession();
 
-      await Promise.race([rotationPromise, timeoutPromise]);
+      const result = await Promise.race([rotationPromise, timeoutPromise]);
       console.log('[Auth] Token rotated successfully');
     } catch (err: any) {
-      // Don't abort other requests on token rotation failure
-      const errMsg = err?.message || String(err);
-      if (!errMsg.includes('AbortError')) {
-        console.warn('[Auth] Token rotation failed (non-critical):', err);
+      if (err?.message?.includes('Token rotation timeout')) {
+        console.info('[Auth] Token rotation timed out, will retry later.');
+      } else if (!err?.message?.includes('AbortError')) {
+        console.warn('[Auth] Token rotation failed (non-critical):', err.message || err);
       }
-      // Don't redirect to login on token rotation error
-      // Only redirect if user explicitly logs out
     }
   };
 

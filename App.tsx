@@ -14,7 +14,6 @@ const StaffModule = React.lazy(() => import('./components/StaffModule'));
 const StaffKPIReport = React.lazy(() => import('./components/StaffKPIReport'));
 const StaffProfileDrawer = React.lazy(() => import('./components/StaffProfileDrawer'));
 const CompanyDrawer = React.lazy(() => import('./components/CompanyDrawer'));
-const DocumentsModule = React.lazy(() => import('./components/DocumentsModule'));
 const SalaryKPIModule = React.lazy(() => import('./components/SalaryKPIModule'));
 const KassaModule = React.lazy(() => import('./components/KassaModule'));
 const ExpenseModule = React.lazy(() => import('./components/ExpenseModule'));
@@ -245,11 +244,20 @@ const App: React.FC = () => {
   const refreshData = async () => {
     setIsSyncing(true);
     try {
-      const [c, ops, reports, s, kpi, p, e, ass] = await Promise.all([
+      // Batch #1: Core dimensions
+      const [c, s] = await Promise.all([
         fetchCompanies(),
+        fetchStaff()
+      ]);
+
+      // Batch #2: Heavy transaction dimensions
+      const [ops, reports] = await Promise.all([
         fetchOperations(),
-        fetchMonthlyReports(),
-        fetchStaff(),
+        fetchMonthlyReports()
+      ]);
+
+      // Batch #3: Financials and metrics
+      const [kpi, p, e, ass] = await Promise.all([
         fetchKpiMetrics(),
         fetchPayments(),
         fetchExpenses(),
@@ -792,7 +800,16 @@ const App: React.FC = () => {
                       companies={companies}
                       operations={operations}
                       lang={lang}
-                      onSave={async (s) => { await upsertStaff(s); refreshData(); }}
+                      onSave={async (s) => {
+                        try {
+                          await upsertStaff(s);
+                          toast.success('Xodim muvaffaqiyatli saqlandi');
+                          refreshData();
+                        } catch (e: any) {
+                          console.error(e);
+                          toast.error(e.message || 'Xodimni saqlashda xatolik yuz berdi');
+                        }
+                      }}
                       onDelete={async (id) => {
                         try {
                           await deleteStaff(id);
@@ -804,13 +821,6 @@ const App: React.FC = () => {
                         }
                       }}
                       onStaffSelect={setSelectedStaff}
-                    />
-                  )}
-
-                  {activeView === 'documents' && (
-                    <DocumentsModule
-                      companies={companies}
-                      lang={lang}
                     />
                   )}
 
@@ -844,15 +854,23 @@ const App: React.FC = () => {
                       companies={companies}
                       payments={payments}
                       lang={lang}
-                      onSavePayment={async (p) => { await upsertPayment(p); refreshData(); }}
+                      onSavePayment={async (p) => {
+                        try {
+                          await upsertPayment(p);
+                          refreshData();
+                        } catch (e: any) {
+                          console.error('Kassa save error:', e);
+                          throw e; // KassaModule will catch this and show toast
+                        }
+                      }}
                       onDeletePayment={async (id) => {
                         try {
                           await deletePayment(id);
-                          toast.success('To\'lov o\'chirildi');
+                          toast.success(lang === 'uz' ? 'To\'lov o\'chirildi' : 'Платеж удален');
                           refreshData();
                         } catch (e) {
                           console.error(e);
-                          toast.error('O\'chirishda xatolik.');
+                          toast.error(lang === 'uz' ? 'O\'chirishda xatolik.' : 'Ошибка при удалении.');
                         }
                       }}
                     />
@@ -913,8 +931,13 @@ const App: React.FC = () => {
               lang={lang}
               userId={session?.user?.id}
               onClose={() => setSelectedCompany(null)}
-              onSave={async (c) => {
-                await upsertCompany(c);
+              onSave={async (c, assignments) => {
+                if (assignments && assignments.length > 0) {
+                  // Full atomic save via the RPC (same as wizard)
+                  await onboardCompany(c, assignments);
+                } else {
+                  await upsertCompany(c);
+                }
                 refreshData();
               }}
             />

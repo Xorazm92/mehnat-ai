@@ -464,7 +464,7 @@ export interface MonthlyPerformance {
 }
 
 // Payroll Adjustment Type
-export type PayrollAdjustmentType = 'bonus' | 'avans' | 'jarima' | 'manual' | 'other';
+export type PayrollAdjustmentType = 'bonus' | 'avans' | 'jarima' | 'payment' | 'manual' | 'other';
 
 // Payroll Adjustment (Qo'lda to'lovlar)
 export interface PayrollAdjustment {
@@ -507,6 +507,31 @@ export interface EmployeeSalarySummary {
 }
 
 // Performance Change Log (O'zgarishlar tarixi)
+export interface CompanyBreakdown {
+  companyId: string;
+  companyName: string;
+  contractAmount: number;
+  role: string;
+  baseAmount: number;
+  kpiBonus: number;
+  kpiPenalty: number;
+  details: string[];
+}
+
+export interface EmployeeSalary {
+  id: string;
+  employeeId: string;
+  month: string;
+  baseSalary: number;
+  kpiBonus: number;
+  kpiPenalty: number;
+  totalSalary: number;
+  breakdown: CompanyBreakdown[];
+  isApproved: boolean;
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
 export interface PerformanceChangeLog {
   id: string;
   performanceId: string;

@@ -35,7 +35,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'reports', label: 'Operatsiyalar', icon: <Database size={22} /> },
     { id: 'kassa', label: 'Kassa', icon: <Wallet size={22} /> },
     { id: 'expenses', label: 'Xarajatlar', icon: <Receipt size={22} /> },
-    { id: 'documents', label: 'Hujjatlar', icon: <FileSearch size={22} /> },
     { id: 'kpi', label: 'Samaradorlik', icon: <Gauge size={22} /> },
     { id: 'payroll', label: 'Oyliklar', icon: <Calendar size={22} /> },
     { id: 'analysis', label: 'Tahlillar', icon: <BarChart3 size={22} /> },

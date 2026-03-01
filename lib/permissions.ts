@@ -44,10 +44,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Capability[]> = {
 
 // View Access Control
 export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
-    [ROLES.SUPER_ADMIN]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll', 'audit_logs'],
-    [ROLES.ADMIN]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll', 'audit_logs'],
-    [ROLES.CHIEF_ACCOUNTANT]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll'],
-    [ROLES.SUPERVISOR]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'documents', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll'],
+    [ROLES.SUPER_ADMIN]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll', 'audit_logs'],
+    [ROLES.ADMIN]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll', 'audit_logs'],
+    [ROLES.CHIEF_ACCOUNTANT]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll'],
+    [ROLES.SUPERVISOR]: ['dashboard', 'organizations', 'staff', 'reports', 'analysis', 'kpi', 'kassa', 'expenses', 'cabinet', 'payroll'],
     [ROLES.ACCOUNTANT]: ['dashboard', 'organizations', 'reports', 'cabinet'], // Filtered orgs
     [ROLES.BANK_MANAGER]: ['dashboard', 'kassa', 'expenses', 'cabinet']
 };

@@ -117,31 +117,31 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div key={i} className="liquid-glass-card p-5 group relative border border-white/20 hover:border-indigo-500/30 transition-all flex flex-col justify-between min-h-[140px]">
             <div className="glass-reflection"></div>
 
-            <div className="flex justify-between items-start relative z-10 mb-4">
-              <div className="flex flex-col">
-                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 group-hover:text-indigo-500 transition-colors flex items-center gap-2">
-                  <span className={`p-1.5 rounded-lg bg-white/5 border border-white/10 ${stat.color}`}>
+            <div className="flex flex-col sm:flex-row justify-between items-start relative z-10 mb-4 gap-3">
+              <div className="flex flex-col w-full sm:w-auto">
+                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 group-hover:text-indigo-500 transition-colors flex items-center gap-2 flex-wrap">
+                  <span className={`p-1.5 rounded-lg bg-white/5 border border-white/10 shrink-0 ${stat.color}`}>
                     {stat.icon}
                   </span>
-                  {stat.label}
+                  <span className="whitespace-normal leading-tight">{stat.label}</span>
                 </p>
               </div>
-              <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-black ${stat.isUp ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10'} border border-current/10`}>
+              <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-black shrink-0 ${stat.isUp ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10'} border border-current/10 self-start`}>
                 {stat.isUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
                 {stat.trend}
               </div>
             </div>
 
-            <div className="relative z-10 flex items-end justify-between gap-4">
+            <div className="relative z-10 flex flex-col xl:flex-row xl:items-end justify-between gap-4 mt-auto">
               <div className="flex flex-col">
-                <div className="flex items-baseline gap-1.5">
-                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums leading-none">
+                <div className="flex items-baseline gap-1.5 flex-wrap">
+                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums leading-none break-all">
                     {typeof stat.value === 'number' && i !== 5 ? stat.value.toLocaleString() : stat.value}
                     {i === 5 && '%'}
                   </h3>
-                  {(i < 3) && <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-50">uzs</span>}
+                  {(i < 3) && <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-50 shrink-0">uzs</span>}
                 </div>
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mt-2 opacity-60">{stat.sub}</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-normal mt-2 opacity-60 break-words">{stat.sub}</span>
               </div>
 
               <div className="w-24 h-12 relative -mb-1 opacity-60 group-hover:opacity-100 transition-opacity">
