@@ -9,7 +9,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 const Dashboard = React.lazy(() => import('./components/Dashboard'));
 const OrganizationModule = React.lazy(() => import('./components/OrganizationModule'));
 const OperationModule = React.lazy(() => import('./components/OperationModule'));
-const AnalysisModule = React.lazy(() => import('./components/AnalysisModule'));
 const StaffModule = React.lazy(() => import('./components/StaffModule'));
 const StaffKPIReport = React.lazy(() => import('./components/StaffKPIReport'));
 const StaffProfileDrawer = React.lazy(() => import('./components/StaffProfileDrawer'));
@@ -52,6 +51,7 @@ import { seedFirmaData } from './lib/seedFirmaData';
 import type { Session } from '@supabase/supabase-js';
 import { ALLOWED_VIEWS, ROLES, UserRole } from './lib/permissions';
 import { getCurrentPeriod, periodsEqual } from './lib/periods';
+import { translations } from './lib/translations';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>('dashboard');
@@ -380,12 +380,6 @@ const App: React.FC = () => {
     setActiveFilter(filterId);
     setActiveView('reports');
   };
-
-  const handleAnalysisFilterApply = (filterStr: string) => {
-    setActiveFilter(filterStr);
-    setActiveView('reports');
-  };
-
   const kpis: AccountantKPI[] = useMemo(() => {
     const REPORT_FIELDS = [
       'didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c',
@@ -504,8 +498,9 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="text-center">
+            <img src="/logo.png" alt="Logo" className="w-20 h-20 object-contain mb-8 drop-shadow-2xl animate-pulse" />
             <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-widest uppercase mb-2">ASOS Intelligence</h1>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] animate-pulse">Initializing Neural Core...</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] animate-pulse">{translations[lang].initializing}</p>
           </div>
         </div>
       </div>
@@ -534,7 +529,7 @@ const App: React.FC = () => {
               </div>
             </div>
             <h1 className="text-6xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none mb-4 premium-text-gradient drop-shadow-sm">ASOS Intelligence</h1>
-            <p className="text-[12px] font-black text-slate-400 dark:text-indigo-400/50 uppercase tracking-[0.5em] opacity-80">Integrated Enterprise Neural Network</p>
+            <p className="text-[12px] font-black text-slate-400 dark:text-indigo-400/50 uppercase tracking-[0.5em] opacity-80">{translations[lang].integratedNeuralNetwork}</p>
           </div>
 
           <form onSubmit={handleSignIn} className="liquid-glass-card p-12 md:p-20 border border-white/30 dark:border-white/10 group/form">
@@ -543,7 +538,7 @@ const App: React.FC = () => {
             <div className="space-y-10 relative z-10">
               <div className="group">
                 <div className="flex justify-between items-center mb-5">
-                  <label className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 group-focus-within:text-indigo-500 transition-colors">Access Identifier</label>
+                  <label className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 group-focus-within:text-indigo-500 transition-colors">{translations[lang].accessIdentifier}</label>
                 </div>
                 <div className="relative">
                   <input
@@ -559,8 +554,8 @@ const App: React.FC = () => {
 
               <div className="group">
                 <div className="flex justify-between items-center mb-5">
-                  <label className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 group-focus-within:text-indigo-500 transition-colors">Security Hashcode</label>
-                  <span className="text-[9px] font-black text-slate-400/40 uppercase hover:text-indigo-500 cursor-pointer transition-colors">Emergency Protocol?</span>
+                  <label className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 group-focus-within:text-indigo-500 transition-colors">{translations[lang].securityHashcode}</label>
+                  <span className="text-[9px] font-black text-slate-400/40 uppercase hover:text-indigo-500 cursor-pointer transition-colors">{translations[lang].emergencyProtocol}</span>
                 </div>
                 <div className="relative">
                   <input
@@ -594,14 +589,14 @@ const App: React.FC = () => {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-white/20 to-indigo-500/0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
                 <span className="relative z-10 flex items-center justify-center gap-4">
-                  Authorize Transmission <TrendingUp size={24} strokeWidth={3} />
+                  {translations[lang].authorizeTransmission} <TrendingUp size={24} strokeWidth={3} />
                 </span>
               </button>
             </div>
           </form>
 
           <div className="mt-16 text-center space-y-2 opacity-50">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Global Security Verification Key: ASOS-UX-V2-PERFECT</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">{translations[lang].globalSecurityKey}: ASOS-UX-V2-PERFECT</p>
             <div className="flex justify-center gap-6 mt-4">
               <div className="h-1 w-12 bg-indigo-500/20 rounded-full"></div>
               <div className="h-1 w-12 bg-emerald-500/10 rounded-full"></div>
@@ -779,18 +774,6 @@ const App: React.FC = () => {
                       userRole={userRole}
                       currentUserId={session?.user?.id}
                       userName={userName}
-                    />
-                  )}
-
-                  {activeView === 'analysis' && (
-                    <AnalysisModule
-                      companies={companies}
-                      operations={operations}
-                      selectedPeriod={selectedPeriod}
-                      onPeriodChange={setSelectedPeriod}
-                      lang={lang}
-                      onFilterApply={handleAnalysisFilterApply}
-                      staff={staff}
                     />
                   )}
 

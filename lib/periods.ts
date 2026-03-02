@@ -69,3 +69,32 @@ export const getCurrentPeriod = () => {
     }
     return `2025 Dekabr`; // Fallback if out of range
 };
+
+/**
+ * Returns the ISO-like key (YYYY-MM) for the month preceding the given key.
+ */
+export const getPreviousPeriodKey = (key: string) => {
+    if (!key || !/^\d{4}-\d{2}$/.test(key)) return '';
+    const [year, month] = key.split('-').map(Number);
+    let prevMonth = month - 1;
+    let prevYear = year;
+    if (prevMonth === 0) {
+        prevMonth = 12;
+        prevYear -= 1;
+    }
+    return `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+};
+
+/**
+ * Returns an array of the last N ISO-like keys (YYYY-MM) ending with the given key.
+ */
+export const getHistoricalPeriods = (endKey: string, count: number = 6) => {
+    const historical: string[] = [];
+    let current = endKey;
+    for (let i = 0; i < count; i++) {
+        if (!current) break;
+        historical.unshift(current);
+        current = getPreviousPeriodKey(current);
+    }
+    return historical;
+};

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, LogOut, TrendingUp, Star, LayoutDashboard, Database, Users, Shield, FileText, Calendar, BarChart3, Settings, Wallet, Receipt, FileSearch, Gauge, Building2, ClipboardList } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, TrendingUp, Star, LayoutDashboard, Database, Users, Shield, FileText, Calendar, Settings, Wallet, Receipt, FileSearch, Gauge, Building2, ClipboardList } from 'lucide-react';
 import { translations } from '../lib/translations';
 import { UserRole, ROLES, canSeeView } from '../lib/permissions';
 import { Language, AppView } from '../types';
@@ -30,17 +30,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   const t = translations[lang];
 
   const navItems = [
-    { id: 'dashboard', label: `${t.dashboard} / Boshqaruv`, icon: <LayoutDashboard size={22} /> },
-    { id: 'organizations', label: 'Korxonalar', icon: <Building2 size={22} /> },
-    { id: 'reports', label: 'Operatsiyalar', icon: <Database size={22} /> },
-    { id: 'kassa', label: 'Kassa', icon: <Wallet size={22} /> },
-    { id: 'expenses', label: 'Xarajatlar', icon: <Receipt size={22} /> },
-    { id: 'kpi', label: 'Samaradorlik', icon: <Gauge size={22} /> },
-    { id: 'payroll', label: 'Oyliklar', icon: <Calendar size={22} /> },
-    { id: 'analysis', label: 'Tahlillar', icon: <BarChart3 size={22} /> },
-    { id: 'staff', label: 'Jamoa', icon: <Users size={22} /> },
-    { id: 'audit_logs', label: 'AuditLog', icon: <ClipboardList size={22} /> },
-    { id: 'settings', label: 'Sozlamalar', icon: <Settings size={22} /> },
+    { id: 'dashboard', label: t.dashboard, icon: <LayoutDashboard size={22} /> },
+    { id: 'organizations', label: t.organizations, icon: <Building2 size={22} /> },
+    { id: 'reports', label: t.reports, icon: <Database size={22} /> },
+    { id: 'kassa', label: t.kassa, icon: <Wallet size={22} /> },
+    { id: 'expenses', label: t.expenses, icon: <Receipt size={22} /> },
+    { id: 'kpi', label: t.kpi, icon: <Gauge size={22} /> },
+    { id: 'payroll', label: t.payroll, icon: <Calendar size={22} /> },
+    { id: 'staff', label: t.staff, icon: <Users size={22} /> },
+    { id: 'audit_logs', label: t.auditLogs, icon: <ClipboardList size={22} /> },
+    { id: 'settings', label: t.settings, icon: <Settings size={22} /> },
   ];
 
   return (
@@ -63,10 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className={`mb-8 px-6 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} relative`}>
             <div className={`transition-all duration-700 ${isCollapsed ? 'scale-0 w-0 h-0 overflow-hidden opacity-0' : 'scale-100 flex items-center gap-5'}`}>
               <div className="h-12 w-12 flex items-center justify-center bg-white/10 dark:bg-white/[0.03] rounded-2xl border border-white/20 shadow-glass-lg liquid-glass-rim group/logo">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:rotate-12 transition-all duration-500 drop-shadow-xl">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white" fillOpacity="0.9" />
-                  <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <img src="/logo.png" alt="ASOS" className="w-8 h-8 object-contain group-hover:rotate-12 transition-all duration-500 drop-shadow-xl relative z-10" />
               </div>
               <div>
                 <h1 className="font-black text-2xl text-slate-800 dark:text-white tracking-tighter leading-none mb-1 premium-text-gradient">ASOS</h1>

@@ -29,7 +29,8 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
         const myCompanies = companies.filter(c =>
             c.accountantId === currentUserId ||
             c.bankClientId === currentUserId ||
-            c.supervisorId === currentUserId
+            c.supervisorId === currentUserId ||
+            c.chiefAccountantId === currentUserId
         );
 
         myCompanies.forEach(c => {
@@ -96,7 +97,8 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
     const myCompanies = useMemo(() => {
         return companies.filter(c =>
             c.accountantId === currentUserId ||
-            c.bankClientId === currentUserId
+            c.bankClientId === currentUserId ||
+            c.chiefAccountantId === currentUserId
         );
     }, [companies, currentUserId]);
 

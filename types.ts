@@ -1,5 +1,5 @@
 
-export type AppView = 'dashboard' | 'organizations' | 'staff' | 'reports' | 'analysis' | 'documents' | 'kpi' | 'kassa' | 'expenses' | 'cabinet' | 'payroll' | 'audit_logs';
+export type AppView = 'dashboard' | 'organizations' | 'staff' | 'reports' | 'documents' | 'kpi' | 'kassa' | 'expenses' | 'cabinet' | 'payroll' | 'audit_logs';
 export type Language = 'uz' | 'ru';
 
 export enum PaymentStatus {

@@ -94,7 +94,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
         const staffNameMap = new Map<string, Company[]>();
 
         companies.forEach(c => {
-            const ids = [c.accountantId, c.bankClientId, c.supervisorId].filter(Boolean) as string[];
+            const ids = [c.accountantId, c.bankClientId, c.supervisorId, c.chiefAccountantId].filter(Boolean) as string[];
             ids.forEach(id => {
                 const arr = staffCompaniesMap.get(id) || [];
                 arr.push(c);

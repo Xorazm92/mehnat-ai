@@ -1512,8 +1512,12 @@ export const upsertStaff = async (staff: Staff) => {
           upsertSuccess = true;
           console.log('[supabaseData] Staff upserted via Local Admin Proxy');
         } else {
-          const errData = await proxyRes.json();
-          console.warn('[supabaseData] Local upsert proxy failed:', errData);
+          try {
+            const errData = await proxyRes.json();
+            console.warn('[supabaseData] Local upsert proxy failed:', errData);
+          } catch (e) {
+            console.warn('[supabaseData] Local upsert proxy failed with non-JSON response');
+          }
         }
       } catch (e) {
         console.warn('[supabaseData] Local upsert proxy unreachable.');

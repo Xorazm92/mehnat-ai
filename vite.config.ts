@@ -7,7 +7,7 @@ const adminProxyPlugin = (env: Record<string, string>) => ({
   name: 'supabase-admin-proxy',
   configureServer(server: any) {
     server.middlewares.use(async (req: any, res: any, next: any) => {
-      if (req.url === '/api/admin/create-user' && req.method === 'POST') {
+      if ((req.url === '/api/admin/create-user' || req.url === '/api/admin/upsert-staff') && req.method === 'POST') {
         let body = '';
         req.on('data', (chunk: any) => body += chunk);
         req.on('end', async () => {

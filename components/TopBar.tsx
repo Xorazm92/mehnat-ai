@@ -118,8 +118,8 @@ const TopBar: React.FC<TopBarProps> = ({
             {showNotifs && (
               <div className="absolute right-0 mt-6 w-[calc(100vw-2rem)] sm:w-96 liquid-glass-card rounded-[2.5rem] overflow-hidden animate-macos z-50 border border-white/20 shadow-glass-2xl">
                 <div className="p-8 border-b border-white/10 flex items-center justify-between bg-white/5">
-                  <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-slate-800 dark:text-white">Bildirishnomalar</h3>
-                  <span className="px-3 py-1 bg-indigo-500/10 text-indigo-500 text-[9px] font-black rounded-lg border border-indigo-500/20">{unreadCount} YANGI</span>
+                  <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-slate-800 dark:text-white">{t.notifications}</h3>
+                  <span className="px-3 py-1 bg-indigo-500/10 text-indigo-500 text-[9px] font-black rounded-lg border border-indigo-500/20">{unreadCount} {t.newLabel}</span>
                 </div>
                 <div className="max-h-[70vh] overflow-y-auto scrollbar-none">
                   {notifications.length === 0 ? (
@@ -127,7 +127,7 @@ const TopBar: React.FC<TopBarProps> = ({
                       <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6 text-slate-300">
                         <Bell size={32} strokeWidth={1.5} className="opacity-40" />
                       </div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Hozircha xabarlar yo'q</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{t.noMessages}</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-white/5">
@@ -175,8 +175,8 @@ const TopBar: React.FC<TopBarProps> = ({
               {userName ? userName.charAt(0).toUpperCase() : 'A'}
             </div>
             <div className="text-left pr-4 hidden lg:block">
-              <p className="text-[13px] font-black text-slate-800 dark:text-white leading-none mb-1 premium-text-gradient uppercase tracking-tight">{userName || 'Administrator'}</p>
-              <p className="text-[9px] text-indigo-500 dark:text-indigo-400 font-black uppercase tracking-[0.2em]">{userRole || 'Super Admin'}</p>
+              <p className="text-[13px] font-black text-slate-800 dark:text-white leading-none mb-1 premium-text-gradient uppercase tracking-tight">{userName || t.administrator}</p>
+              <p className="text-[9px] text-indigo-500 dark:text-indigo-400 font-black uppercase tracking-[0.2em]">{(translations[lang] as any)[`role_${userRole}`] || userRole || t.role_super_admin}</p>
             </div>
           </button>
 
