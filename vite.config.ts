@@ -78,6 +78,34 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       }
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            // Bundle all lucide-react icons together — prevents dozens of tiny icon chunks
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            // Bundle Recharts together
+            if (id.includes('recharts') || id.includes('d3-') || id.includes('victory-vendor')) {
+              return 'vendor-charts';
+            }
+            // Bundle Supabase together
+            if (id.includes('@supabase')) {
+              return 'vendor-supabase';
+            }
+            // Bundle XLSX together
+            if (id.includes('xlsx')) {
+              return 'vendor-xlsx';
+            }
+            // Bundle remaining large node_modules
+            if (id.includes('node_modules')) {
+              return 'vendor';
+            }
+          }
+        }
+      }
     }
   };
 });

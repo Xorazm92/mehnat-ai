@@ -174,9 +174,19 @@ const App: React.FC = () => {
 
       // Start token rotation for active sessions
       if (sessionExists) {
-        import('./lib/auth').then(({ startTokenRotation }) => {
-          startTokenRotation();
-        }).catch(err => console.error('Failed to start token rotation:', err));
+        const loadAuth = async (retries = 2): Promise<void> => {
+          try {
+            const { startTokenRotation } = await import('./lib/auth');
+            startTokenRotation();
+          } catch (err) {
+            if (retries > 0) {
+              await new Promise(r => setTimeout(r, 1000));
+              return loadAuth(retries - 1);
+            }
+            console.error('Failed to start token rotation after retries:', err);
+          }
+        };
+        loadAuth();
       }
 
       // Realtime Notifications
