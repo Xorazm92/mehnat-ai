@@ -334,9 +334,9 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             {/* Sparkline - Full Width Absolute Bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-24 opacity-40 group-hover:opacity-70 transition-all duration-700 pointer-events-none">
+            <div className="absolute bottom-0 left-0 right-0 h-24 opacity-40 group-hover:opacity-70 transition-all duration-700 pointer-events-none min-h-[100px]">
               {mounted && (
-                <ResponsiveContainer width="100%" height="100%" minHeight={100}>
+                <ResponsiveContainer width="100%" height="100%" minHeight={100} minWidth={0}>
                   <AreaChart data={stat.data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id={`grad-lush-${i}`} x1="0" y1="0" x2="0" y2="1">
@@ -371,9 +371,9 @@ const Dashboard: React.FC<DashboardProps> = ({
               Hisobotlar holati
             </h3>
           </div>
-          <div className="h-[350px] w-full relative z-10">
+          <div className="h-[350px] w-full relative z-10 min-h-[350px]">
             {mounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={350}>
+              <ResponsiveContainer width="100%" height="100%" minHeight={350} minWidth={0}>
                 <BarChart data={stats.reportStatusData} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#64748B" opacity={0.15} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11, fontWeight: 900 }} dy={15} />
@@ -402,7 +402,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-6 sm:mb-8 pl-4 opacity-70 relative z-10">Turlari bo'yicha</p>
           <div className="flex-1 w-full min-h-[300px] flex items-center justify-center relative z-10">
             {mounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+              <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0}>
                 <BarChart data={stats.taxStatusData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 10, fontWeight: 900 }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 10, fontWeight: 700 }} />
@@ -427,7 +427,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </h3>
           <div className="flex-1 flex items-center justify-center min-h-[250px] relative z-10">
             {mounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={250}>
+              <ResponsiveContainer width="100%" height="100%" minHeight={250} minWidth={0}>
                 <PieChart>
                   <Pie
                     data={stats.taxRegimeData}

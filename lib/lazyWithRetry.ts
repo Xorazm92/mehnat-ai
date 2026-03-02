@@ -10,18 +10,17 @@ export function lazyWithRetry<T extends ComponentType<any>>(
     interval = 1000
 ): React.LazyExoticComponent<T> {
     return lazy(async () => {
-        try {
-            return await componentImport();
-        } catch (error: any) {
-            if (retriesLeft > 0) {
-                await new Promise((resolve) => setTimeout(resolve, interval));
-                return lazyWithRetry(componentImport, retriesLeft - 1, interval * 2)._payload._result();
+        for (let i = 0; i <= retriesLeft; i++) {
+            try {
+                return await componentImport();
+            } catch (error: any) {
+                if (i === retriesLeft) throw error;
+                // Exponential backoff
+                await new Promise((resolve) => setTimeout(resolve, interval * Math.pow(2, i)));
             }
-
-            // If we're out of retries, throw the error so ErrorBoundary can catch it
-            throw error;
         }
-    }) as any;
+        throw new Error('Unreachable');
+    });
 }
 
 export default lazyWithRetry;
