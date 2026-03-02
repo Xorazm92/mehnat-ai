@@ -4,21 +4,22 @@ import { Toaster, toast } from 'sonner';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import ErrorBoundary from './components/ErrorBoundary';
+import { lazyWithRetry } from './lib/lazyWithRetry';
 
-// Lazy load heavy modules
-const Dashboard = React.lazy(() => import('./components/Dashboard'));
-const OrganizationModule = React.lazy(() => import('./components/OrganizationModule'));
-const OperationModule = React.lazy(() => import('./components/OperationModule'));
-const StaffModule = React.lazy(() => import('./components/StaffModule'));
-const StaffKPIReport = React.lazy(() => import('./components/StaffKPIReport'));
-const StaffProfileDrawer = React.lazy(() => import('./components/StaffProfileDrawer'));
-const CompanyDrawer = React.lazy(() => import('./components/CompanyDrawer'));
-const SalaryKPIModule = React.lazy(() => import('./components/SalaryKPIModule'));
-const KassaModule = React.lazy(() => import('./components/KassaModule'));
-const ExpenseModule = React.lazy(() => import('./components/ExpenseModule'));
-const StaffCabinet = React.lazy(() => import('./components/StaffCabinet'));
-const PayrollDrafts = React.lazy(() => import('./components/PayrollDrafts'));
-const AuditLogModule = React.lazy(() => import('./components/AuditLogModule'));
+// Lazy load heavy modules with retry logic
+const Dashboard = lazyWithRetry(() => import('./components/Dashboard'));
+const OrganizationModule = lazyWithRetry(() => import('./components/OrganizationModule'));
+const OperationModule = lazyWithRetry(() => import('./components/OperationModule'));
+const StaffModule = lazyWithRetry(() => import('./components/StaffModule'));
+const StaffKPIReport = lazyWithRetry(() => import('./components/StaffKPIReport'));
+const StaffProfileDrawer = lazyWithRetry(() => import('./components/StaffProfileDrawer'));
+const CompanyDrawer = lazyWithRetry(() => import('./components/CompanyDrawer'));
+const SalaryKPIModule = lazyWithRetry(() => import('./components/SalaryKPIModule'));
+const KassaModule = lazyWithRetry(() => import('./components/KassaModule'));
+const ExpenseModule = lazyWithRetry(() => import('./components/ExpenseModule'));
+const StaffCabinet = lazyWithRetry(() => import('./components/StaffCabinet'));
+const PayrollDrafts = lazyWithRetry(() => import('./components/PayrollDrafts'));
+const AuditLogModule = lazyWithRetry(() => import('./components/AuditLogModule'));
 import { AppView, Company, OperationEntry, Staff, AccountantKPI, ReportStatus, Language, Payment, Expense, EmployeeSalarySummary, ContractAssignment, AppNotification } from './types';
 import { supabase } from './lib/supabaseClient';
 import {

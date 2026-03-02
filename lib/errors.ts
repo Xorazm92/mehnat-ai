@@ -145,6 +145,20 @@ export const isAppError = (error: any): error is AppError => {
 };
 
 /**
+ * Check if error is a chunk load error (dynamic import failure)
+ */
+export const isChunkLoadError = (error: any): boolean => {
+  if (!error) return false;
+  const message = error.message || String(error);
+  return (
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('Loading chunk') ||
+    message.includes('unexpected token <') || // Often happens when index.html is served instead of a JS chunk
+    message.includes('NetworkError')
+  );
+};
+
+/**
  * Get user-friendly error message
  */
 export const getErrorMessage = (error: any): string => {
