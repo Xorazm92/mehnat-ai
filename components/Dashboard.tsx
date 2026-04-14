@@ -268,11 +268,11 @@ const Dashboard: React.FC<DashboardProps> = ({
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-white/20 p-3 rounded-2xl shadow-2xl backdrop-blur-2xl">
-          <p className="text-xs font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-widest">{payload[0].payload.name}</p>
-          <p className="text-sm font-black text-slate-900 dark:text-white flex items-baseline gap-1">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 p-2 rounded shadow-md">
+          <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">{payload[0].payload.name}</p>
+          <p className="text-[13px] font-bold text-gray-800 dark:text-white">
             {payload[0].value.toLocaleString()}
-            <span className="text-[10px] font-black opacity-50 uppercase tracking-tighter">uzs</span>
+            <span className="text-[10px] text-gray-400 ml-1">uzs</span>
           </p>
         </div>
       );
@@ -281,170 +281,163 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="premium-container animate-macos pb-16">
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none"></div>
-
+    <div className="premium-container animate-macos pb-8">
       {/* Header Actions */}
-      <div className="flex justify-between items-center mb-0 mt-4 px-2">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight uppercase opacity-90 flex items-center gap-4">
-            <LayoutDashboard className="text-indigo-500" size={28} />
-            {t.dashboard}
-          </h2>
+      <div className="flex justify-between items-center mb-4 mt-2">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded bg-yellow-400 dark:bg-yellow-600 flex items-center justify-center">
+            <LayoutDashboard className="text-gray-900 dark:text-yellow-100" size={18} />
+          </div>
+          <h2 className="text-[16px] font-bold text-gray-800 dark:text-white">{t.dashboard}</h2>
         </div>
         <button
           onClick={handleExport}
-          className="flex items-center gap-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-xl border border-transparent dark:border-white/10 group"
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded font-semibold text-[12px] hover:bg-blue-700 transition-colors active:bg-blue-800"
         >
-          <Download size={18} className="group-hover:translate-y-0.5 transition-transform" />
-          <span>{t.excelExport}</span>
+          <Download size={14} />
+          {t.excelExport}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 sm:gap-8 mb-12 sm:mb-16 mt-8 sm:mt-10">
-        {stats.headerMetrics.map((stat, i) => (
-          <div key={i} className="liquid-glass-card p-6 group relative border border-white/10 hover:border-indigo-500/30 transition-all flex flex-col justify-between min-h-[180px] overflow-hidden">
-            <div className="glass-reflection"></div>
-
-            {/* Header Area */}
-            <div className="flex justify-between items-start relative z-10">
-              <div className={`p-2.5 rounded-xl bg-white/5 border border-white/10 ${stat.color} shadow-lg shadow-black/20`}>
-                {stat.icon}
+      {/* Metric Cards — 1C Style */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+        {stats.headerMetrics.map((stat, i) => {
+          const borderColors = ['border-l-green-500', 'border-l-blue-600', 'border-l-red-500', 'border-l-blue-400', 'border-l-purple-500', 'border-l-amber-500'];
+          return (
+            <div key={i} className={`bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md p-4 ${borderColors[i]} border-l-4 hover:shadow-md transition-shadow`}>
+              {/* Header */}
+              <div className="flex justify-between items-start mb-3">
+                <div className={`p-1.5 rounded bg-gray-50 dark:bg-gray-800 ${stat.color}`}>
+                  {stat.icon}
+                </div>
+                <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${stat.isUp ? 'text-green-600 bg-green-50 dark:bg-green-900/20' : 'text-red-500 bg-red-50 dark:bg-red-900/20'}`}>
+                  {stat.isUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+                  {stat.trend}
+                </div>
               </div>
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black tracking-wider ${stat.isUp ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10'} border border-current/20 shadow-sm`}>
-                {stat.isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                {stat.trend}
-              </div>
-            </div>
 
-            {/* Value Area */}
-            <div className="relative z-10 mt-8 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-400 mb-2.5">{stat.label}</p>
-              <div className="flex items-baseline gap-2">
-                <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums leading-none">
+              {/* Value */}
+              <div>
+                <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">{stat.label}</p>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white tabular-nums leading-none">
                   {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
                   {i === 5 && '%'}
                 </h3>
-                {i < 3 && <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest opacity-60">uzs</span>}
+                {i < 3 && <span className="text-[10px] text-gray-400 font-medium">uzs</span>}
               </div>
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-500 mt-4 opacity-70 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2.5">
-                <Info size={14} className="text-indigo-500/80" />
-                {stat.sub}
-              </p>
-            </div>
 
-            {/* Sparkline - Full Width Absolute Bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-24 opacity-40 group-hover:opacity-70 transition-all duration-700 pointer-events-none min-h-[100px]">
-              {mounted && (
-                <ResponsiveContainer width="100%" height="100%" minHeight={100} minWidth={0}>
-                  <AreaChart data={stat.data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id={`grad-lush-${i}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={stat.isUp ? '#10B981' : '#F43F5E'} stopOpacity={0.4} />
-                        <stop offset="100%" stopColor={stat.isUp ? '#10B981' : '#F43F5E'} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke={stat.isUp ? '#10B981' : '#F43F5E'}
-                      strokeWidth={2.5}
-                      fill={`url(#grad-lush-${i})`}
-                      isAnimationActive={true}
-                      animationDuration={1500}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
+              {/* Sparkline */}
+              <div className="mt-2 h-10 opacity-60">
+                {mounted && (
+                  <ResponsiveContainer width="100%" height="100%" minHeight={40} minWidth={0}>
+                    <AreaChart data={stat.data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id={`grad-1c-${i}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={stat.isUp ? '#339933' : '#CC3333'} stopOpacity={0.3} />
+                          <stop offset="100%" stopColor={stat.isUp ? '#339933' : '#CC3333'} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke={stat.isUp ? '#339933' : '#CC3333'}
+                        strokeWidth={1.5}
+                        fill={`url(#grad-1c-${i})`}
+                        isAnimationActive={true}
+                        animationDuration={800}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Detailed Analytics Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 mt-12">
+      {/* Analytics Grid — 1C Style */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 mt-6">
         {/* Report Status Bar Chart */}
-        <div className="xl:col-span-2 liquid-glass-card p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 relative overflow-hidden">
-          <div className="flex justify-between items-center mb-8 relative z-10">
-            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-3">
-              <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
-              Hisobotlar holati
-            </h3>
+        <div className="xl:col-span-2 bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+          <div className="c1-section-header flex items-center gap-2">
+            <div className="w-1 h-4 bg-blue-600 rounded-sm"></div>
+            Hisobotlar holati
           </div>
-          <div className="h-[350px] w-full relative z-10 min-h-[350px]">
-            {mounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={350} minWidth={0}>
-                <BarChart data={stats.reportStatusData} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#64748B" opacity={0.15} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11, fontWeight: 900 }} dy={15} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11, fontWeight: 700 }} />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
-                    contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '16px', fontSize: '11px', color: '#fff', fontWeight: 800, padding: '12px' }}
-                  />
-                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '30px', fontSize: '11px', textTransform: 'uppercase', fontWeight: 900, opacity: 0.8 }} />
-                  <Bar dataKey="Bajarildi" stackId="a" fill="#10B981" radius={[0, 0, 6, 6]} barSize={45} />
-                  <Bar dataKey="Rad etildi" stackId="a" fill="#EF4444" barSize={45} />
-                  <Bar dataKey="Muammo" stackId="a" fill="#F59E0B" barSize={45} />
-                  <Bar dataKey="Kutilmoqda" stackId="a" fill="rgba(148, 163, 184, 0.3)" radius={[6, 6, 0, 0]} barSize={45} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Soliq Tahlili Bar Chart */}
-        <div className="liquid-glass-card p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 relative overflow-hidden flex flex-col">
-          <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight mb-2 flex items-center gap-3 relative z-10">
-            <div className="w-1.5 h-6 bg-pink-500 rounded-full"></div>
-            Soliq Tahlili
-          </h3>
-          <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-6 sm:mb-8 pl-4 opacity-70 relative z-10">Turlari bo'yicha</p>
-          <div className="flex-1 w-full min-h-[300px] flex items-center justify-center relative z-10">
+          <div className="p-4 h-[320px] w-full">
             {mounted && (
               <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0}>
-                <BarChart data={stats.taxStatusData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 10, fontWeight: 900 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 10, fontWeight: 700 }} />
+                <BarChart data={stats.reportStatusData} margin={{ top: 15, right: 20, left: 5, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#DEE2E6" opacity={0.6} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 11, fontWeight: 600 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 600 }} />
                   <Tooltip
-                    cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
-                    contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '16px', fontSize: '11px', color: '#fff', fontWeight: 800, padding: '12px' }}
+                    cursor={{ fill: 'rgba(51, 102, 204, 0.06)' }}
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #E0E3E8', borderRadius: '4px', fontSize: '12px', fontWeight: 600, padding: '8px 12px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', textTransform: 'uppercase', fontWeight: 900, opacity: 0.8 }} />
-                  <Bar dataKey="Bajarildi" stackId="a" fill="#10B981" barSize={25} radius={[0, 0, 4, 4]} />
-                  <Bar dataKey="Kutilmoqda" stackId="a" fill="rgba(148, 163, 184, 0.2)" barSize={25} radius={[4, 4, 0, 0]} />
+                  <Legend iconType="square" wrapperStyle={{ paddingTop: '16px', fontSize: '11px', fontWeight: 600 }} />
+                  <Bar dataKey="Bajarildi" stackId="a" fill="#339933" radius={[0, 0, 2, 2]} barSize={35} />
+                  <Bar dataKey="Rad etildi" stackId="a" fill="#CC3333" barSize={35} />
+                  <Bar dataKey="Muammo" stackId="a" fill="#FFB800" barSize={35} />
+                  <Bar dataKey="Kutilmoqda" stackId="a" fill="#D1D5DB" radius={[2, 2, 0, 0]} barSize={35} />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
         </div>
 
-        {/* Tax Regime Pie Chart */}
-        <div className="liquid-glass-card p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 relative overflow-hidden flex flex-col">
-          <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight mb-8 flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-            Soliq rejimi
-          </h3>
-          <div className="flex-1 flex items-center justify-center min-h-[250px] relative z-10">
+        {/* Soliq Tahlili */}
+        <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden flex flex-col">
+          <div className="c1-section-header flex items-center gap-2">
+            <div className="w-1 h-4 bg-red-500 rounded-sm"></div>
+            Soliq Tahlili
+          </div>
+          <p className="text-[11px] text-gray-400 font-medium px-4 pt-2">Turlari bo'yicha</p>
+          <div className="flex-1 w-full min-h-[260px] p-4">
             {mounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={250} minWidth={0}>
+              <ResponsiveContainer width="100%" height="100%" minHeight={260} minWidth={0}>
+                <BarChart data={stats.taxStatusData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 10, fontWeight: 600 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 10, fontWeight: 600 }} />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(51, 102, 204, 0.06)' }}
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #E0E3E8', borderRadius: '4px', fontSize: '12px', fontWeight: 600, padding: '8px 12px' }}
+                  />
+                  <Legend iconType="square" wrapperStyle={{ paddingTop: '12px', fontSize: '10px', fontWeight: 600 }} />
+                  <Bar dataKey="Bajarildi" stackId="a" fill="#339933" barSize={20} radius={[0, 0, 2, 2]} />
+                  <Bar dataKey="Kutilmoqda" stackId="a" fill="#D1D5DB" barSize={20} radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Tax Regime Pie */}
+        <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden flex flex-col">
+          <div className="c1-section-header flex items-center gap-2">
+            <div className="w-1 h-4 bg-green-600 rounded-sm"></div>
+            Soliq rejimi
+          </div>
+          <div className="flex-1 flex items-center justify-center min-h-[260px] p-4">
+            {mounted && (
+              <ResponsiveContainer width="100%" height="100%" minHeight={260} minWidth={0}>
                 <PieChart>
                   <Pie
                     data={stats.taxRegimeData}
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={8}
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={4}
                     dataKey="value"
-                    stroke="none"
+                    stroke="#fff"
+                    strokeWidth={2}
                   >
                     {stats.taxRegimeData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '16px', fontSize: '11px', padding: '12px' }}
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #E0E3E8', borderRadius: '4px', fontSize: '12px', padding: '8px 12px' }}
                   />
-                  <Legend verticalAlign="bottom" height={40} wrapperStyle={{ fontSize: '11px', fontWeight: 900, opacity: 0.8, paddingTop: '10px' }} />
+                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 600, paddingTop: '8px' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}

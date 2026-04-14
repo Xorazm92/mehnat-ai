@@ -273,156 +273,128 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
     };
 
     return (
-        <div className="space-y-10 animate-fade-in pb-20">
+        <div className="space-y-6 animate-fade-in p-6 bg-gray-50 dark:bg-[#1A1D23] min-h-screen">
             {/* Drafts Header */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-indigo-950 rounded-[3.5rem] p-12 text-white shadow-glass-lg group">
-                <div className="absolute -top-10 -right-10 w-80 h-80 bg-emerald-500/10 rounded-full blur-[100px] animate-pulse"></div>
-                <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px]"></div>
-                <div className="absolute top-0 right-0 p-12 opacity-[0.05] group-hover:scale-110 group-hover:rotate-12 transition-all duration-700 pointer-events-none">
-                    <DollarSign size={200} />
+            <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 p-4 rounded shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center border border-indigo-100 dark:border-indigo-800 text-indigo-600 shrink-0">
+                        <DollarSign size={20} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight uppercase">
+                            Oylik Xomcho't
+                        </h2>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                            Qoralamalar (Drafts)
+                        </p>
+                    </div>
                 </div>
 
-                <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-10">
-                    <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-[1.8rem] bg-white/10 backdrop-blur-xl flex items-center justify-center border border-white/20 shadow-glass shrink-0">
-                            <DollarSign className="text-white" size={36} />
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                    {userRole === 'admin' && (
+                        <div className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded border border-emerald-200 dark:border-emerald-800 flex flex-col items-start min-w-[140px]">
+                            <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5">Super Admin (7%)</p>
+                            <p className="text-sm font-bold tabular-nums leading-none">{superAdminCommission.toLocaleString()} <span className="text-[10px]">UZS</span></p>
                         </div>
-                        <div>
-                            <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none mb-2">
-                                Oylik Xomcho't
-                            </h2>
-                            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em]">
-                                DRAFTS & PREPARATIONS
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-6 items-center w-full xl:w-auto">
-                        {userRole === 'admin' && (
-                            <div className="w-full sm:w-auto px-8 py-5 bg-emerald-500/10 backdrop-blur-md border border-emerald-500/20 rounded-[1.8rem] flex flex-col items-center sm:items-start group/comm">
-                                <p className="text-[10px] font-black text-emerald-400/70 uppercase tracking-widest mb-1">Super Admin (7%)</p>
-                                <p className="text-2xl font-black text-emerald-400 tabular-nums group-hover:scale-105 transition-transform">{superAdminCommission.toLocaleString()} <span className="text-xs opacity-50">UZS</span></p>
-                            </div>
-                        )}
-                        <div className="relative w-full sm:w-auto">
-                            <input
-                                type="month"
-                                value={month}
-                                onChange={(e) => setMonth(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-[1.8rem] px-8 py-5 font-black text-white outline-none focus:bg-white/10 focus:border-white/20 transition-all appearance-none shadow-inner"
-                            />
-                        </div>
+                    )}
+                    <div className="bg-gray-50 dark:bg-[#1e2025] px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700">
+                        <input
+                            type="month"
+                            value={month}
+                            onChange={(e) => setMonth(e.target.value)}
+                            className="bg-transparent border-none font-bold text-sm text-gray-700 dark:text-gray-300 focus:ring-0 cursor-pointer p-0"
+                        />
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {staff.map(s => {
                     const draft = drafts[s.id];
                     if (!draft || draft.companyCount === 0) return null;
                     const isApproved = approvedSalaries.some(a => a.employeeId === s.id);
 
                     return (
-                        <div key={s.id} className={`liquid-glass-card p-10 rounded-[3.5rem] hover:shadow-glass-lg transition-all group border ${isApproved ? 'border-emerald-500/20' : 'border-white/10'} overflow-hidden relative`}>
-                            <div className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors duration-700"></div>
-
-                            <div className="flex items-center justify-between mb-10">
-                                <div className="flex items-center gap-5">
-                                    <div className="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white font-black text-2xl shadow-glass transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
-                                        {s.name[0]}
-                                    </div>
-                                    <div>
-                                        <h4 className="font-black text-xl text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{s.name}</h4>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">{s.role}</p>
-                                    </div>
+                        <div key={s.id} className={`bg-white dark:bg-[#22252B] rounded border ${isApproved ? 'border-emerald-500 dark:border-emerald-600' : 'border-gray-200 dark:border-gray-700'} shadow-sm flex flex-col`}>
+                            <div className={`p-4 border-b ${isApproved ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800' : 'bg-gray-50 dark:bg-[#1e2025] border-gray-200 dark:border-gray-700'} flex items-center justify-between`}>
+                                <div className="flex flex-col">
+                                    <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100">{s.name}</h4>
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">{s.role}</p>
                                 </div>
-                                <div className="text-right">
+                                <div>
                                     {isApproved ? (
-                                        <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1.5">
-                                            <CheckCircle2 size={12} className="shrink-0" />
-                                            Tasdiqlangan
+                                        <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded text-[9px] font-bold uppercase flex items-center gap-1">
+                                            <CheckCircle2 size={10} /> Tasdiqlandi
                                         </span>
                                     ) : (
-                                        <span className="px-4 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+                                        <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded text-[9px] font-bold uppercase">
                                             Draft
                                         </span>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                {/* Asosiy Oylik — clickable */}
+                            <div className="p-4 flex-1 space-y-2">
+                                {/* Asosiy Oylik */}
                                 <button
                                     onClick={() => setDetailModal({ type: 'base', employeeId: s.id, employeeName: s.name })}
-                                    className="w-full flex justify-between items-center p-5 bg-slate-50 dark:bg-white/5 rounded-[1.8rem] border border-transparent hover:border-indigo-500/20 hover:bg-indigo-500/5 transition-all cursor-pointer group/row active:scale-[0.98]"
+                                    className="w-full flex justify-between items-center px-3 py-2 bg-gray-50 dark:bg-[#1e2025] border border-gray-200 dark:border-gray-700 rounded hover:border-indigo-400 transition-colors text-sm"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/10 flex items-center justify-center text-slate-400">
-                                            <FileText size={16} />
-                                        </div>
-                                        <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Asosiy Oylik</span>
+                                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                                        <FileText size={14} />
+                                        <span className="text-xs font-bold uppercase">Asosiy</span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-black text-slate-800 dark:text-white tabular-nums">{draft.baseSalary.toLocaleString()} <span className="text-[10px] opacity-40 ml-1">UZS</span></span>
-                                        <ChevronRight size={16} className="text-slate-300 group-hover/row:text-indigo-500 group-hover/row:translate-x-1 transition-all" />
-                                    </div>
+                                    <span className="font-bold text-gray-900 dark:text-white tabular-nums">{draft.baseSalary.toLocaleString()}</span>
                                 </button>
 
-                                {/* KPI Bonus — clickable */}
+                                {/* KPI Bonus */}
                                 <button
                                     onClick={() => setDetailModal({ type: 'bonus', employeeId: s.id, employeeName: s.name })}
-                                    className="w-full flex justify-between items-center p-5 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-[1.8rem] border border-transparent hover:border-emerald-500/20 transition-all cursor-pointer group/row active:scale-[0.98]"
+                                    className="w-full flex justify-between items-center px-3 py-2 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/30 rounded hover:border-emerald-400 transition-colors text-sm"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/10 flex items-center justify-center text-emerald-500">
-                                            <CheckCircle2 size={16} />
-                                        </div>
-                                        <span className="text-xs font-black text-slate-500 uppercase tracking-widest">KPI Bonus</span>
+                                    <div className="flex items-center gap-2 text-emerald-600">
+                                        <TrendingUp size={14} />
+                                        <span className="text-xs font-bold uppercase">Bonus</span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-black text-emerald-500 tabular-nums">+{draft.kpiBonus.toLocaleString()} <span className="text-[10px] opacity-40 ml-1">UZS</span></span>
-                                        <ChevronRight size={16} className="text-emerald-300 group-hover/row:text-emerald-500 group-hover/row:translate-x-1 transition-all" />
-                                    </div>
+                                    <span className="font-bold text-emerald-600 tabular-nums">+{draft.kpiBonus.toLocaleString()}</span>
                                 </button>
 
-                                {/* KPI Jarima — clickable */}
+                                {/* KPI Jarima */}
                                 <button
                                     onClick={() => setDetailModal({ type: 'penalty', employeeId: s.id, employeeName: s.name })}
-                                    className="w-full flex justify-between items-center p-5 bg-rose-500/5 dark:bg-rose-500/10 rounded-[1.8rem] border border-transparent hover:border-rose-500/20 transition-all cursor-pointer group/row active:scale-[0.98]"
+                                    className="w-full flex justify-between items-center px-3 py-2 bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 rounded hover:border-rose-400 transition-colors text-sm"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/10 flex items-center justify-center text-rose-500">
-                                            <AlertCircle size={16} />
-                                        </div>
-                                        <span className="text-xs font-black text-slate-500 uppercase tracking-widest">KPI Jarima</span>
+                                    <div className="flex items-center gap-2 text-rose-600">
+                                        <TrendingDown size={14} />
+                                        <span className="text-xs font-bold uppercase">Jarima</span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-black text-rose-500 tabular-nums">{draft.kpiPenalty.toLocaleString()} <span className="text-[10px] opacity-40 ml-1">UZS</span></span>
-                                        <ChevronRight size={16} className="text-rose-300 group-hover/row:text-rose-500 group-hover/row:translate-x-1 transition-all" />
-                                    </div>
+                                    <span className="font-bold text-rose-600 tabular-nums">{draft.kpiPenalty.toLocaleString()}</span>
                                 </button>
+                            </div>
 
-                                <div className="pt-8 mt-6 border-t border-slate-100 dark:border-white/5 flex justify-between items-end">
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Jami To'lov</p>
-                                        <h3 className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter tabular-nums">{draft.totalSalary.toLocaleString()} <span className="text-sm font-black text-slate-400 ml-1">UZS</span></h3>
-                                    </div>
-                                    {isApproved ? (
-                                        <div className="px-8 py-5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest flex items-center gap-2 pointer-events-none">
-                                            <CheckCircle2 size={16} className="shrink-0" />
-                                            Saqlangan
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => handleApprove(s.id)}
-                                            disabled={savingId === s.id}
-                                            className="px-8 py-5 bg-slate-900 dark:bg-white/10 text-white rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 dark:hover:bg-indigo-600 transition-all shadow-glass-lg active:scale-95 transform hover:-translate-y-1 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
-                                        >
-                                            {savingId === s.id && <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin shrink-0"></div>}
-                                            {savingId === s.id ? 'Saqlanmoqda...' : 'Tasdiqlash'}
-                                        </button>
-                                    )}
+                            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2025] flex justify-between items-center">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase">Jami To'lov</span>
+                                    <span className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">{draft.totalSalary.toLocaleString()}</span>
                                 </div>
+                                {isApproved ? (
+                                    <div className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded font-bold text-[10px] uppercase border border-gray-300 dark:border-gray-600 cursor-not-allowed">
+                                        Saqlangan
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => handleApprove(s.id)}
+                                        disabled={savingId === s.id}
+                                        className="px-3 py-1.5 bg-indigo-600 text-white rounded font-bold text-[10px] uppercase hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 shadow-sm"
+                                    >
+                                        {savingId === s.id ? '...' : (
+                                            <>
+                                                <DollarSign size={12} />
+                                                Tasdiqlash
+                                            </>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     );
@@ -430,181 +402,154 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
             </div>
 
             {loading && (
-                <div className="flex flex-col items-center justify-center py-20 gap-4">
-                    <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] animate-pulse">Hisob-kitob amalga oshirilmoqda...</p>
+                <div className="flex flex-col items-center justify-center py-10 gap-3">
+                    <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest animate-pulse">Yuklanmoqda...</p>
                 </div>
             )}
 
             {/* ── Detail Modal ── */}
             {detailModal && modalData && (
                 <>
-                    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[200] animate-fade-in" onClick={() => setDetailModal(null)}></div>
-                    <div className="fixed inset-0 z-[201] flex items-start justify-center p-4 md:p-10 pt-20 overflow-y-auto scrollbar-hide" onClick={() => setDetailModal(null)}>
+                    <div className="fixed inset-0 bg-black/60 z-[200] animate-fade-in" onClick={() => setDetailModal(null)}></div>
+                    <div className="fixed inset-0 z-[201] flex items-center justify-center p-4" onClick={() => setDetailModal(null)}>
                         <div
-                            className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-white/10 overflow-hidden mb-10"
+                            className="w-full max-w-2xl bg-white dark:bg-[#22252B] rounded shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]"
                             onClick={e => e.stopPropagation()}
-                            style={{ animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}
                         >
                             {/* Modal Header */}
-                            <div className={`p-8 md:p-10 border-b border-white/10 relative overflow-hidden ${detailModal.type === 'base' ? 'bg-gradient-to-br from-slate-800 to-indigo-900' :
-                                detailModal.type === 'bonus' ? 'bg-gradient-to-br from-emerald-800 to-emerald-950' :
-                                    'bg-gradient-to-br from-rose-800 to-rose-950'
-                                }`}>
-                                <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
-                                <div className="flex justify-between items-center relative z-10">
-                                    <div>
-                                        <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
-                                            {detailModal.type === 'base' && '📋 Asosiy Oylik Tafsiloti'}
-                                            {detailModal.type === 'bonus' && '✅ KPI Bonus Tafsiloti'}
-                                            {detailModal.type === 'penalty' && '⚠️ KPI Jarima Tafsiloti'}
-                                        </h3>
-                                        <p className="text-white/50 text-sm font-black uppercase tracking-widest">
-                                            {detailModal.employeeName} • {month}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => setDetailModal(null)}
-                                        className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all active:scale-95"
-                                    >
-                                        <X size={20} />
-                                    </button>
+                            <div className={`p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-start ${detailModal.type === 'base' ? 'bg-indigo-50 dark:bg-indigo-900/10' : detailModal.type === 'bonus' ? 'bg-emerald-50 dark:bg-emerald-900/10' : 'bg-rose-50 dark:bg-rose-900/10'}`}>
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
+                                        {detailModal.type === 'base' && <FileText size={18} className="text-indigo-600" />}
+                                        {detailModal.type === 'bonus' && <TrendingUp size={18} className="text-emerald-600" />}
+                                        {detailModal.type === 'penalty' && <TrendingDown size={18} className="text-rose-600" />}
+                                        {detailModal.type === 'base' && 'Asosiy Oylik Tafsiloti'}
+                                        {detailModal.type === 'bonus' && 'KPI Bonus Tafsiloti'}
+                                        {detailModal.type === 'penalty' && 'KPI Jarima Tafsiloti'}
+                                    </h3>
+                                    <p className="text-gray-500 text-[10px] font-bold uppercase mt-1">
+                                        {detailModal.employeeName} • {month}
+                                    </p>
                                 </div>
+                                <button onClick={() => setDetailModal(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
 
-                                {/* Total summary */}
-                                <div className="mt-6 flex items-baseline gap-3 relative z-10">
-                                    <span className="text-4xl font-black text-white tabular-nums">
+                            {/* Total summary */}
+                            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2025]">
+                                <div className="flex items-baseline gap-2">
+                                    <span className={`text-2xl font-bold tabular-nums ${detailModal.type === 'base' ? 'text-gray-900 dark:text-white' : detailModal.type === 'bonus' ? 'text-emerald-600' : 'text-rose-600'}`}>
                                         {detailModal.type === 'base' && drafts[detailModal.employeeId]?.baseSalary.toLocaleString()}
                                         {detailModal.type === 'bonus' && `+${drafts[detailModal.employeeId]?.kpiBonus.toLocaleString()}`}
                                         {detailModal.type === 'penalty' && drafts[detailModal.employeeId]?.kpiPenalty.toLocaleString()}
                                     </span>
-                                    <span className="text-white/40 text-sm font-black uppercase">UZS</span>
+                                    <span className="text-gray-500 text-[10px] font-bold uppercase">UZS (Jami)</span>
                                 </div>
                             </div>
 
                             {/* Modal Body */}
-                            <div className="p-6 md:p-10 max-h-[60vh] overflow-y-auto scrollbar-hide">
+                            <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-[#22252B]">
                                 {detailModal.type === 'base' && (
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-12 gap-3 px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-white/5">
-                                            <div className="col-span-5">Korxona</div>
-                                            <div className="col-span-2">Rol</div>
-                                            <div className="col-span-2 text-right">Shartnoma</div>
-                                            <div className="col-span-3 text-right">Asosiy Oylik</div>
-                                        </div>
-                                        {modalData.filter(b => b.baseAmount > 0).map((b, i) => (
-                                            <div key={i} className="grid grid-cols-12 gap-3 items-center px-4 py-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group/item">
-                                                <div className="col-span-5 flex items-center gap-3 min-w-0">
-                                                    <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 font-black text-[10px] shrink-0">
-                                                        <Building2 size={14} />
-                                                    </div>
-                                                    <span className="text-sm font-bold text-slate-700 dark:text-white truncate" title={b.companyName}>{b.companyName}</span>
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase px-2 py-1 bg-slate-100 dark:bg-white/5 rounded-lg">{b.role}</span>
-                                                </div>
-                                                <div className="col-span-2 text-right">
-                                                    <span className="text-xs font-bold text-slate-400 tabular-nums">{b.contractAmount.toLocaleString()}</span>
-                                                </div>
-                                                <div className="col-span-3 text-right">
-                                                    <span className="text-sm font-black text-slate-800 dark:text-white tabular-nums">{b.baseAmount.toLocaleString()}</span>
-                                                    <span className="text-[9px] text-slate-400 ml-1">UZS</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {modalData.filter(b => b.baseAmount > 0).length === 0 && (
-                                            <div className="text-center py-12 text-slate-300 dark:text-slate-600">
-                                                <FileText size={40} className="mx-auto mb-3 opacity-30" />
-                                                <p className="text-sm font-black uppercase tracking-widest">Ma'lumot yo'q</p>
-                                            </div>
-                                        )}
+                                    <div className="border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
+                                        <table className="w-full text-left text-sm border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-50 dark:bg-[#1e2025] text-[9px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200 dark:border-gray-700">
+                                                    <th className="px-3 py-2">Korxona</th>
+                                                    <th className="px-3 py-2 text-center border-l border-gray-200 dark:border-gray-700">Rol</th>
+                                                    <th className="px-3 py-2 text-right border-l border-gray-200 dark:border-gray-700">Shartnoma</th>
+                                                    <th className="px-3 py-2 text-right border-l border-gray-200 dark:border-gray-700">Summa</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                                {modalData.filter(b => b.baseAmount > 0).map((b, i) => (
+                                                    <tr key={i} className="hover:bg-gray-50 dark:hover:bg-[#1e2025]">
+                                                        <td className="px-3 py-2 font-bold text-gray-900 dark:text-white text-xs">{b.companyName}</td>
+                                                        <td className="px-3 py-2 text-center border-l border-gray-200 dark:border-gray-700">
+                                                            <span className="text-[9px] font-bold text-gray-500 uppercase">{b.role}</span>
+                                                        </td>
+                                                        <td className="px-3 py-2 text-right border-l border-gray-200 dark:border-gray-700 text-xs text-gray-500 tabular-nums">
+                                                            {b.contractAmount.toLocaleString()}
+                                                        </td>
+                                                        <td className="px-3 py-2 text-right border-l border-gray-200 dark:border-gray-700 font-bold text-gray-900 dark:text-white tabular-nums">
+                                                            {b.baseAmount.toLocaleString()}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {modalData.filter(b => b.baseAmount > 0).length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={4} className="px-3 py-6 text-center text-gray-500 text-xs italic">Ma'lumot topilmadi</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 )}
 
                                 {detailModal.type === 'bonus' && (
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         {modalData.filter(b => b.kpiBonus > 0).map((b, i) => (
-                                            <div key={i} className="p-5 rounded-2xl border border-emerald-500/10 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                                                            <TrendingUp size={14} className="text-emerald-500" />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-sm font-black text-slate-800 dark:text-white">{b.companyName}</span>
-                                                            <span className="text-[9px] text-slate-400 font-black uppercase ml-2">{b.role}</span>
-                                                        </div>
+                                            <div key={i} className="border border-emerald-200 dark:border-emerald-800/30 rounded overflow-hidden">
+                                                <div className="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/10 flex items-center justify-between border-b border-emerald-100 dark:border-emerald-800/20">
+                                                    <div>
+                                                        <span className="text-sm font-bold text-gray-900 dark:text-white">{b.companyName}</span>
+                                                        <span className="text-[9px] text-gray-500 font-bold uppercase ml-2">({b.role})</span>
                                                     </div>
-                                                    <span className="font-black text-emerald-500 tabular-nums text-lg">+{b.kpiBonus.toLocaleString()}</span>
+                                                    <span className="font-bold text-emerald-600 tabular-nums text-sm">+{b.kpiBonus.toLocaleString()}</span>
                                                 </div>
-                                                <div className="space-y-1.5 pl-11">
+                                                <div className="px-3 py-2 space-y-1 bg-white dark:bg-[#22252B]">
                                                     {b.details.filter(d => d.includes('KPI +') || d.includes('Auto KPI +') || d.includes('KPI Bonus')).map((d, j) => (
-                                                        <div key={j} className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                            <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
-                                                            <span className="font-medium">{d}</span>
+                                                        <div key={j} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                                                            <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                                                            <span>{d.replace('✅', '').trim()}</span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
                                         ))}
                                         {modalData.filter(b => b.kpiBonus > 0).length === 0 && (
-                                            <div className="text-center py-12 text-slate-300 dark:text-slate-600">
-                                                <CheckCircle2 size={40} className="mx-auto mb-3 opacity-30" />
-                                                <p className="text-sm font-black uppercase tracking-widest">Bonus yo'q</p>
-                                                <p className="text-xs text-slate-400 mt-2">Bu oyda KPI bonuslari hisoblanmagan</p>
-                                            </div>
+                                            <div className="text-center py-6 text-gray-500 text-xs italic">Bonuslar topilmadi</div>
                                         )}
                                     </div>
                                 )}
 
                                 {detailModal.type === 'penalty' && (
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         {modalData.filter(b => b.kpiPenalty > 0).map((b, i) => (
-                                            <div key={i} className="p-5 rounded-2xl border border-rose-500/10 bg-rose-500/5 hover:bg-rose-500/10 transition-colors">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-xl bg-rose-500/10 flex items-center justify-center">
-                                                            <TrendingDown size={14} className="text-rose-500" />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-sm font-black text-slate-800 dark:text-white">{b.companyName}</span>
-                                                            <span className="text-[9px] text-slate-400 font-black uppercase ml-2">{b.role}</span>
-                                                        </div>
+                                            <div key={i} className="border border-rose-200 dark:border-rose-800/30 rounded overflow-hidden">
+                                                <div className="px-3 py-2 bg-rose-50 dark:bg-rose-900/10 flex items-center justify-between border-b border-rose-100 dark:border-rose-800/20">
+                                                    <div>
+                                                        <span className="text-sm font-bold text-gray-900 dark:text-white">{b.companyName}</span>
+                                                        <span className="text-[9px] text-gray-500 font-bold uppercase ml-2">({b.role})</span>
                                                     </div>
-                                                    <span className="font-black text-rose-500 tabular-nums text-lg">-{b.kpiPenalty.toLocaleString()}</span>
+                                                    <span className="font-bold text-rose-600 tabular-nums text-sm">-{b.kpiPenalty.toLocaleString()}</span>
                                                 </div>
-                                                <div className="space-y-1.5 pl-11">
+                                                <div className="px-3 py-2 space-y-1 bg-white dark:bg-[#22252B]">
                                                     {b.details.filter(d => d.includes('KPI -') || d.includes('Auto KPI -')).map((d, j) => (
-                                                        <div key={j} className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                            <AlertCircle size={12} className="text-rose-400 shrink-0" />
-                                                            <span className="font-medium">{d}</span>
+                                                        <div key={j} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                                                            <AlertCircle size={12} className="text-rose-500 shrink-0" />
+                                                            <span>{d.replace('❌', '').trim()}</span>
                                                         </div>
                                                     ))}
                                                     {b.details.filter(d => d.includes('KPI -') || d.includes('Auto KPI -')).length === 0 && (
-                                                        <p className="text-xs text-slate-400 italic">Jarima sabablari ko'rsatilmagan</p>
+                                                        <p className="text-[10px] text-gray-400 italic">Jarima sababi aniqlanmadi</p>
                                                     )}
                                                 </div>
                                             </div>
                                         ))}
                                         {modalData.filter(b => b.kpiPenalty > 0).length === 0 && (
-                                            <div className="text-center py-12 text-slate-300 dark:text-slate-600">
-                                                <AlertCircle size={40} className="mx-auto mb-3 opacity-30" />
-                                                <p className="text-sm font-black uppercase tracking-widest">Jarima yo'q</p>
-                                                <p className="text-xs text-slate-400 mt-2">Bu oyda KPI jarimalari hisoblanmagan</p>
-                                            </div>
+                                            <div className="text-center py-6 text-gray-500 text-xs italic">Jarimalar topilmadi</div>
                                         )}
                                     </div>
                                 )}
                             </div>
 
                             {/* Modal Footer */}
-                            <div className="p-6 md:p-8 border-t border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    {modalData.length} ta korxona • {month}
-                                </p>
+                            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2025] flex justify-end">
                                 <button
                                     onClick={() => setDetailModal(null)}
-                                    className="px-8 py-3 bg-slate-900 dark:bg-white/10 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95"
+                                    className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded font-bold text-xs uppercase hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                                 >
                                     Yopish
                                 </button>

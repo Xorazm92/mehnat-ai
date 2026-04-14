@@ -258,28 +258,24 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         </div>
       )}
       {/* Header Section */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center liquid-glass-card p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] gap-8 shadow-glass border border-white/10 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-[100px] -mr-48 -mt-48 group-hover:bg-indigo-500/10 transition-colors duration-700"></div>
-
-        <div className="flex-1 relative z-10">
-          <h2 className="text-4xl md:text-5xl font-black text-slate-800 dark:text-white tracking-tighter leading-tight mb-3 premium-text-gradient">{t.organizations}</h2>
-          <div className="flex items-center gap-3">
-            <div className="flex -space-x-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-800 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-black text-slate-500">
-                  <Building2 size={12} />
-                </div>
-              ))}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-[#22252B] p-4 md:p-6 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 gap-4 relative overflow-hidden group">
+        <div className="flex-1 relative z-10 flex items-center gap-4">
+          <div className="w-10 h-10 rounded bg-blue-600 flex items-center justify-center text-white shadow-sm">
+            <Building2 size={24} />
+          </div>
+          <div>
+            <h2 className="text-[18px] md:text-xl font-bold text-gray-800 dark:text-white mb-1.5">{t.organizations}</h2>
+            <div className="flex items-center gap-3">
+              <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">
+                {t.totalFirms}: <span className="text-blue-600 tabular-nums font-bold">{filtered.length}</span>
+              </p>
             </div>
-            <p className="text-sm font-black text-slate-400 uppercase tracking-widest">
-              {t.totalFirms}: <span className="text-indigo-500 tabular-nums">{filtered.length}</span>
-            </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto relative z-10">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto relative z-10">
           {/* Active/Archive Toggle */}
-          <div className="flex bg-slate-100/50 dark:bg-white/5 p-1.5 rounded-2xl border border-white/10 shadow-inner backdrop-blur-md">
+          <div className="flex bg-gray-100 dark:bg-gray-800 p-0.5 rounded border border-gray-200 dark:border-gray-700">
             {[
               { label: 'Faol', value: true },
               { label: 'Arxiv', value: false },
@@ -288,7 +284,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               <button
                 key={String(opt.value)}
                 onClick={() => setFilterActive(opt.value)}
-                className={`px-6 py-2.5 rounded-xl transition-all text-[11px] font-black uppercase tracking-widest ${filterActive === opt.value ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-glass' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`px-4 py-1.5 rounded transition-all text-[12px] font-semibold ${filterActive === opt.value ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
               >
                 {opt.label}
               </button>
@@ -296,69 +292,68 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex bg-slate-100/50 dark:bg-white/5 p-1.5 rounded-2xl border border-white/10 shadow-inner backdrop-blur-md">
+          <div className="flex bg-gray-100 dark:bg-gray-800 p-0.5 rounded border border-gray-200 dark:border-gray-700">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-3.5 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-glass' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`p-1.5 rounded transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               title={t.gridView}
             >
-              <LayoutGrid size={20} />
+              <LayoutGrid size={16} />
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-3.5 rounded-xl transition-all ${viewMode === 'table' ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-glass' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`p-1.5 rounded transition-all ${viewMode === 'table' ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               title={t.tableView}
             >
-              <List size={20} />
+              <List size={16} />
             </button>
           </div>
 
           <MonthPicker
             selectedPeriod={selectedPeriod}
             onChange={onPeriodChange}
+            className="scale-90 origin-left"
           />
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={handleExport}
-              className="p-4 bg-white/40 dark:bg-white/5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-2xl transition-all shadow-glass border border-white/10 group/btn"
+              className="p-2 bg-white dark:bg-gray-800 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-all border border-gray-200 dark:border-gray-700"
               title="Excelga eksport"
             >
-              <Download size={22} className="group-hover:scale-110 group-hover:-translate-y-0.5 transition-transform" />
+              <Download size={18} />
             </button>
 
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-4 rounded-2xl transition-all shadow-glass border ${showFilters ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white/40 dark:bg-white/5 text-slate-400 hover:text-indigo-600 border-white/10'}`}
+              className={`p-2 rounded transition-all border ${showFilters ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:text-blue-600'}`}
               title="Aqlli Filtrlar"
             >
-              <Filter size={22} className={showFilters ? 'animate-pulse' : ''} />
+              <Filter size={18} />
             </button>
           </div>
 
           <button
             onClick={() => { setIsAdding(true); setForm({ id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString(), isActive: true }); }}
-            className="flex-1 md:flex-none bg-indigo-600 text-white px-10 py-5 rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-glass-lg shadow-indigo-500/30 hover:bg-indigo-500 hover:scale-105 transition-all active:scale-95 group/add"
+            className="bg-blue-600 text-white px-4 py-2 rounded font-semibold text-[13px] hover:bg-blue-700 transition-colors active:bg-blue-800 flex items-center gap-2"
           >
-            <Plus size={24} className="group-hover:rotate-90 transition-transform duration-500" />
-            <span className="inline">{t.addCompany}</span>
+            <Plus size={16} />
+            <span>{t.addCompany}</span>
           </button>
         </div>
       </div>
 
       {/* Smart Filters Panel */}
       {showFilters && (
-        <div className="liquid-glass-card p-10 rounded-[2.5rem] md:rounded-[3.5rem] shadow-glass-lg animate-scale-in border border-white/10 relative overflow-hidden bg-white/40 dark:bg-white/5">
-          <div className="absolute -top-10 -left-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-[80px]"></div>
-
-          <div className="flex items-center gap-4 mb-10 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shadow-glass border border-indigo-500/20">
-              <Filter size={24} />
+        <div className="bg-white dark:bg-[#22252B] p-5 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 animate-fade-in relative z-10">
+          <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">
+            <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center">
+              <Filter size={18} />
             </div>
-            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Aqlli Filtrlar</h3>
+            <h3 className="text-[14px] font-bold text-gray-800 dark:text-white">Aqlli Filtrlar</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: 'Soliq Turi', value: filterTaxType, onChange: setFilterTaxType, options: [{ label: 'Hammasi', val: 'all' }, ...Object.values(TaxType).map(v => ({ label: v, val: v }))] },
               {
@@ -384,12 +379,12 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               { label: 'IT Park', value: filterItPark, onChange: setFilterItPark, options: [{ label: 'Hammasi', val: 'all' }, { label: '✅ Rezident', val: 'yes' }, { label: '❌ Rezident emas', val: 'no' }] },
               { label: 'KPI Tizimi', value: filterKpi, onChange: setFilterKpi, options: [{ label: 'Hammasi', val: 'all' }, { label: '✅ Yoqilgan', val: 'yes' }, { label: '❌ O\'chirilgan', val: 'no' }] }
             ].map((f, idx) => (
-              <div key={idx} className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">{f.label}</label>
+              <div key={idx} className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-gray-500 uppercase">{f.label}</label>
                 <select
                   value={f.value}
                   onChange={(e) => { f.onChange(e.target.value); setCurrentPage(1); }}
-                  className="w-full p-4.5 rounded-[1.2rem] bg-white dark:bg-apple-darkBg border border-slate-100 dark:border-white/5 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-[13px] text-slate-700 dark:text-slate-300 transition-all shadow-sm"
+                  className="w-full px-3 py-2 rounded bg-white dark:bg-[#1A1D23] border border-gray-300 dark:border-gray-600 outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500 text-[13px] text-gray-700 dark:text-gray-300 transition-all shadow-sm"
                 >
                   {f.options.map((o, i) => <option key={i} value={o.val}>{o.label}</option>)}
                 </select>
@@ -398,14 +393,14 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           </div>
 
           {/* Reset Filters */}
-          <div className="flex justify-end mt-10 relative z-10">
+          <div className="flex justify-end mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
             <button
               onClick={() => {
                 setFilterTaxType('all'); setFilterStatus('all'); setFilterEmployee('all');
                 setFilterRisk('all'); setFilterServer('all'); setFilterItPark('all');
                 setFilterKpi('all'); setCurrentPage(1);
               }}
-              className="px-8 py-3 rounded-xl bg-slate-100 dark:bg-white/5 text-[10px] font-black text-slate-400 hover:text-rose-500 transition-all uppercase tracking-[0.2em] border border-transparent hover:border-rose-500/20"
+              className="px-4 py-1.5 rounded text-[12px] font-semibold text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all border border-transparent hover:border-red-200"
             >
               Filtrlarni Tozalash
             </button>
@@ -414,19 +409,15 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
       )}
 
       {/* Search Bar */}
-      <div className="relative group/search max-w-5xl mx-auto w-full">
-        <div className="absolute inset-0 bg-indigo-500/5 blur-3xl rounded-full opacity-0 group-focus-within/search:opacity-100 transition-opacity"></div>
-        <Search className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within/search:text-indigo-500 transition-colors pointer-events-none" size={24} />
+      <div className="relative w-full max-w-2xl">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
         <input
           type="text"
           placeholder="INN, Firma nomi yoki Direktor ismi bo'yicha qidirish..."
-          className="w-full pl-20 pr-10 py-7 md:py-8 bg-white/60 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[2.5rem] text-lg md:text-xl font-bold text-slate-700 dark:text-white placeholder-slate-400 focus:ring-0 focus:border-indigo-500 outline-none transition-all shadow-glass group-focus-within/search:scale-[1.02]"
+          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#22252B] border border-gray-300 dark:border-gray-600 rounded-md text-[14px] text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:border-blue-500 focus:ring-blue-500/30 transition-all shadow-sm"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
         />
-        <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-2">
-          <span className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-white/10 text-[10px] font-black text-slate-400 uppercase tracking-widest border border-white/10">⌘ K</span>
-        </div>
       </div>
 
       <div className="space-y-8">
@@ -456,67 +447,63 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         )}
 
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginated.map(c => {
               const risk = getRiskIndicator(c);
               return (
                 <div
                   key={c.id}
-                  className="liquid-glass-card p-10 rounded-[3.5rem] flex flex-col justify-between group cursor-pointer relative overflow-hidden transition-all duration-500 hover:shadow-glass-lg hover:-translate-y-2 border border-white/10"
+                  className={`bg-white dark:bg-[#22252B] p-4 rounded-md border-l-4 ${risk.color.replace('text-', 'border-l-')} border-t border-r border-b border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col`}
                   onClick={() => onCompanySelect(c)}
                 >
-                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
-
-                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
-
-                  <div className="flex gap-6 mb-10">
-                    <div className="h-20 w-20 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-[2rem] flex items-center justify-center text-3xl font-black text-white shadow-glass-lg transition-all duration-700 group-hover:rotate-6 group-hover:scale-110">
+                  <div className="flex gap-4 mb-4">
+                    <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded flex items-center justify-center text-xl font-bold text-blue-600 shrink-0 border border-blue-100 dark:border-blue-800">
                       {c.name.charAt(0)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-xl font-black text-slate-800 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-1" title={c.name}>{c.name}</h4>
-                      {c.brandName && <p className="text-xs text-slate-400 font-black uppercase tracking-widest opacity-70 mb-3">{c.brandName}</p>}
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-[9px] font-black px-3 py-1 bg-slate-100 dark:bg-white/10 text-slate-500 rounded-lg tabular-nums border border-white/5">INN: {c.inn}</span>
-                        <span className="text-[9px] font-black px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded-lg uppercase tracking-widest border border-indigo-500/10">{c.taxType}</span>
+                      <h4 className="text-[14px] font-bold text-gray-800 dark:text-white truncate mb-0.5" title={c.name}>{c.name}</h4>
+                      {c.brandName && <p className="text-[11px] text-gray-500 font-semibold mb-2">{c.brandName}</p>}
+                      <div className="flex gap-2">
+                        <span className="text-[10px] font-mono px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-700">INN: {c.inn}</span>
+                        <span className="text-[10px] px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded border border-blue-100 dark:border-blue-800">{c.taxType}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-8">
+                  <div className="grid grid-cols-2 gap-2 mb-4 mt-auto">
                     {[
-                      { label: t.accountant, val: c.accountantName, icon: <Users size={14} className="text-indigo-500" /> },
-                      { label: 'Soliq Rejimi', val: c.taxRegime || 'Standard', icon: <Calculator size={14} className="text-emerald-500" /> }
+                      { label: t.accountant, val: c.accountantName, icon: <Users size={12} className="text-blue-500" /> },
+                      { label: 'Soliq', val: c.taxRegime || 'Standard', icon: <Calculator size={12} className="text-green-500" /> }
                     ].map((stat, i) => (
-                      <div key={i} className="p-4 bg-slate-50/50 dark:bg-white/5 rounded-[1.5rem] border border-white/5 group/stat hover:bg-white/80 dark:hover:bg-white/10 transition-colors">
-                        <div className="flex items-center gap-2 mb-2 opacity-60">
+                      <div key={i} className="p-2 bg-gray-50 dark:bg-[#1A1D23] rounded border border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center gap-1.5 mb-1 text-gray-400">
                           {stat.icon}
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                          <p className="text-[10px] font-semibold">{stat.label}</p>
                         </div>
-                        <p className="text-xs font-black text-slate-700 dark:text-slate-200 truncate">{stat.val || '—'}</p>
+                        <p className="text-[11px] font-bold text-gray-700 dark:text-gray-200 truncate">{stat.val || '—'}</p>
                       </div>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between pt-6 border-t border-white/10">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800 mt-auto">
+                    <div className="flex flex-col gap-1">
                       {(c.login || c.password) ? (
-                        <div className="flex items-center gap-2 group/creds" onClick={(e) => { e.stopPropagation(); togglePassword(c.id); }}>
-                          <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover/creds:bg-indigo-500 group-hover/creds:text-white transition-all">
+                        <div className="flex items-center gap-1.5" onClick={(e) => { e.stopPropagation(); togglePassword(c.id); }}>
+                          <button className="text-gray-400 hover:text-blue-600 transition-colors p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
                             {showPasswords[c.id] ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </div>
-                          <p className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">
+                          </button>
+                          <p className="text-[11px] font-bold text-gray-500 font-mono">
                             {showPasswords[c.id] ? `${c.login || '—'} / ${c.password || '—'}` : '•••• / ••••'}
                           </p>
                         </div>
                       ) : (
-                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Ma'lumotlar yo'q</span>
+                        <span className="text-[10px] text-gray-400 font-medium">Ma'lumotlar yo'q</span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="p-3.5 bg-indigo-600/10 text-indigo-600 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all transform hover:scale-110 active:scale-95 shadow-glass border border-indigo-600/10"><Edit3 size={18} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="p-3.5 bg-rose-500/10 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all transform hover:scale-110 active:scale-95 shadow-glass border border-rose-500/10"><Trash2 size={18} /></button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors" title="Edit"><Edit3 size={16} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
                     </div>
                   </div>
                 </div>
@@ -524,41 +511,39 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             })}
           </div>
         ) : (
-          <div className="w-full liquid-glass-card rounded-[2rem] md:rounded-[3rem] shadow-glass-lg border border-white/10 overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
-
-            <div ref={bottomScrollRef} className="w-full overflow-x-auto scrollbar-thin">
-              <table className="w-full text-left border-collapse min-w-[960px]">
+          <div className="w-full bg-white dark:bg-[#22252B] rounded-md shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative">
+            <div ref={bottomScrollRef} className="w-full overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[960px] c1-table">
                 <thead>
-                  <tr className="bg-slate-100/80 dark:bg-white/5 backdrop-blur-md text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-white/10">
-                    <th className="px-4 py-6 w-[44px] text-center">№</th>
+                  <tr>
+                    <th className="w-[40px] text-center">№</th>
                     <th
-                      className="px-4 py-6 w-[220px] sticky left-0 bg-slate-100 dark:bg-slate-900 backdrop-blur-xl z-20 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.15)] cursor-pointer hover:text-indigo-600 transition-colors"
+                      className="w-[220px] sticky left-0 z-20 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
-                      <div className="flex items-center gap-2">
-                        <Building2 size={12} className="text-slate-400 shrink-0" />
+                      <div className="flex items-center gap-1.5">
+                        <Building2 size={14} className="text-gray-400 shrink-0" />
                         <span>{t.companyName} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
                       </div>
                     </th>
                     <th
-                      className="px-4 py-6 w-[110px] cursor-pointer hover:text-indigo-600 transition-colors"
+                      className="w-[100px] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       onClick={() => { setSortField('inn'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="px-4 py-6 w-[150px] text-indigo-500">
-                      <div className="flex items-center gap-1"><DollarSign size={11} /> SHARTNOMA</div>
+                    <th className="w-[120px] text-blue-600">
+                      <div className="flex items-center gap-1"><DollarSign size={12} /> SHARTNOMA</div>
                     </th>
-                    <th className="px-4 py-6 w-[110px]">REJIM</th>
-                    <th className="px-4 py-6 w-[150px]">BUXGALTER</th>
-                    <th className="px-4 py-6 w-[140px]">NAZORATCHI</th>
-                    <th className="px-4 py-6 w-[160px]">1C SERVER</th>
-                    <th className="px-4 py-6 w-[110px] text-right">{t.actions}</th>
+                    <th className="w-[100px]">REJIM</th>
+                    <th className="w-[150px]">BUXGALTER</th>
+                    <th className="w-[140px]">NAZORATCHI</th>
+                    <th className="w-[120px]">1C SERVER</th>
+                    <th className="w-[100px] text-center">{t.actions}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {paginated.map(c => {
+                <tbody>
+                  {paginated.map((c, i) => {
                     const risk = getRiskIndicator(c);
                     const op = operations.find(o => o.companyId === c.id && periodsEqual(o.period, selectedPeriod));
 
@@ -569,72 +554,47 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                     return (
                       <tr
                         key={c.id}
-                        className="hover:bg-white/60 dark:hover:bg-white/10 transition-all group/row cursor-pointer"
                         onClick={() => onCompanySelect(c)}
+                        className={(i % 2 === 0 ? 'bg-white dark:bg-[#22252B]' : 'bg-[#FAFAFA] dark:bg-[#1A1D23]') + ' hover:bg-blue-50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors group'}
                       >
-                        <td className="px-4 py-5 text-center">
-                          <span className="text-[11px] font-black text-slate-300 font-mono italic">{c.originalIndex || '-'}</span>
+                        <td className="text-center font-mono text-gray-500">
+                          {c.originalIndex || (i + 1)}
                         </td>
-                        <td
-                          className="px-4 py-5 sticky left-0 bg-white dark:bg-slate-900 group-hover/row:bg-slate-50 dark:group-hover/row:bg-slate-800 z-10 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors max-w-[220px]"
-                        >
-                          <div className="font-black text-slate-800 dark:text-white text-[13px] tracking-tight group-hover/row:text-indigo-600 dark:group-hover/row:text-indigo-400 transition-colors truncate" title={c.name}>{c.name}</div>
-                          {c.brandName && <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5 opacity-60 truncate">{c.brandName}</div>}
+                        <td className={`sticky left-0 bg-inherit z-10 font-medium text-gray-800 dark:text-gray-200 border-l-2 ${risk.color.replace('text-', 'border-l-')}`}>
+                          <div className="truncate max-w-[200px]" title={c.name}>{c.name}</div>
+                          {c.brandName && <div className="text-[10px] text-gray-500 truncate mt-0.5">{c.brandName}</div>}
                         </td>
-                        <td className="px-4 py-5 font-mono text-[10px] font-black text-slate-400 tabular-nums">
+                        <td className="font-mono text-gray-600 dark:text-gray-400">
                           {c.inn}
                         </td>
-                        <td className="px-4 py-5">
-                          <span className="font-black text-slate-800 dark:text-white tabular-nums text-[12px] tracking-tight">
-                            {displayAmount?.toLocaleString() || '0'}
-                          </span>
-                          <span className="text-[8px] font-black ml-1 text-slate-400 uppercase opacity-60">UZS</span>
+                        <td className="font-semibold text-right">
+                          {displayAmount?.toLocaleString() || '0'} <span className="text-[10px] font-normal text-gray-400">UZS</span>
                         </td>
-                        <td className="px-4 py-5">
-                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${c.taxType?.includes('nds') ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20'}`}>
+                        <td className="text-center">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${c.taxType?.includes('nds') ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
                             {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'Aylanma' : (c.taxType || 'Fix'))}
                           </span>
                         </td>
-                        <td className="px-4 py-5">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-black text-[10px] border border-indigo-500/20 shrink-0">
-                              {displayAccountant?.[0] || '?'}
-                            </div>
-                            <p className="text-[11px] font-black text-slate-700 dark:text-slate-200 truncate">{displayAccountant || '—'}</p>
+                        <td>
+                          <div className="flex items-center gap-1.5 truncate">
+                            <Users size={12} className="text-gray-400 shrink-0" />
+                            <span className="truncate text-gray-700 dark:text-gray-300">{displayAccountant || '—'}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-5">
-                          <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-tight truncate">{displaySupervisor || '—'}</p>
+                        <td>
+                          <span className="truncate block text-gray-700 dark:text-gray-300">{displaySupervisor || '—'}</span>
                         </td>
-                        <td className="px-4 py-5">
-                          <div className="flex flex-col gap-0.5">
-                            {c.serverInfo && <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{c.serverInfo}</span>}
-                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 truncate opacity-70" title={c.serverName}>{c.serverName || '—'}</span>
+                        <td>
+                          <div className="flex flex-col">
+                            {c.serverInfo && <span className="text-[10px] font-semibold text-green-600">{c.serverInfo}</span>}
+                            <span className="text-[10px] text-gray-500 truncate" title={c.serverName}>{c.serverName || '—'}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }}
-                              className="p-3 bg-slate-100 dark:bg-white/5 text-slate-500 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-glass transform hover:scale-110 active:scale-95"
-                              title="Details"
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); startEdit(c); }}
-                              className="p-3 bg-indigo-600/10 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-glass transform hover:scale-110 active:scale-95"
-                              title="Edit"
-                            >
-                              <Edit3 size={16} />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }}
-                              className="p-3 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-glass transform hover:scale-110 active:scale-95"
-                              title="Delete"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                        <td>
+                          <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="text-gray-400 hover:text-blue-600 p-1" title="Details"><Eye size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="text-gray-400 hover:text-blue-600 p-1" title="Edit"><Edit3 size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="text-gray-400 hover:text-red-600 p-1" title="Delete"><Trash2 size={14} /></button>
                           </div>
                         </td>
                       </tr>
@@ -655,24 +615,24 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         )}
 
         {totalPages > 1 && (
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-12 border-t border-white/10">
-            <p className="text-sm font-black text-slate-400 uppercase tracking-widest">
-              {t.page} <span className="text-indigo-500 tabular-nums">{currentPage}</span> {t.of} {totalPages}
+          <div className="flex items-center justify-between mt-4 bg-white dark:bg-[#22252B] p-3 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
+            <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">
+              {t.page} <span className="text-blue-600">{currentPage}</span> {t.of} {totalPages}
             </p>
-            <div className="flex gap-4">
+            <div className="flex gap-2">
               <button
                 onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 disabled={currentPage === 1}
-                className="flex items-center gap-3 bg-white/40 dark:bg-white/5 p-4 px-8 rounded-2xl disabled:opacity-20 font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-glass border border-white/10 disabled:cursor-not-allowed group/prev"
+                className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded disabled:opacity-50 text-[12px] font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:cursor-not-allowed"
               >
-                <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> {t.prev}
+                <ChevronLeft size={14} /> {t.prev}
               </button>
               <button
                 onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 disabled={currentPage === totalPages}
-                className="flex items-center gap-3 bg-white/40 dark:bg-white/5 p-4 px-8 rounded-2xl disabled:opacity-20 font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-glass border border-white/10 disabled:cursor-not-allowed group/next"
+                className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded disabled:opacity-50 text-[12px] font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:cursor-not-allowed"
               >
-                {t.next} <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                {t.next} <ChevronRight size={14} />
               </button>
             </div>
           </div>

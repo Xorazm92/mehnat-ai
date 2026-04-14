@@ -331,34 +331,30 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
     };
 
     return (
-        <div className="flex flex-col xl:flex-row gap-10 h-[calc(100vh-140px)] animate-fade-in pb-10">
+        <div className="flex flex-col xl:flex-row gap-6 h-[calc(100vh-140px)] animate-fade-in pb-6">
             {/* LEFT: Company Sidebar */}
-            <div className="w-full xl:w-[400px] liquid-glass-card rounded-[3rem] border border-white/10 flex flex-col overflow-hidden shadow-glass-lg relative group/sidebar">
-                <div className="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl"></div>
-
-                <div className="p-10 border-b border-white/5 relative z-10">
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="w-12 h-12 rounded-[1.2rem] bg-indigo-500/10 text-indigo-500 flex items-center justify-center border border-indigo-500/20 shadow-glass">
-                            <Shield size={24} />
-                        </div>
-                        <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tighter">
+            <div className="w-full xl:w-[350px] bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm flex flex-col overflow-hidden">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A1D23]">
+                    <div className="flex items-center gap-3 mb-4">
+                        <Shield size={18} className="text-indigo-600 dark:text-indigo-400" />
+                        <h3 className="text-sm font-bold text-gray-800 dark:text-white uppercase">
                             {t.organizations}
                         </h3>
                     </div>
 
-                    <div className="relative group">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         <input
                             type="text"
                             placeholder={t.searchMatrix}
-                            className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-white/5 rounded-[1.5rem] border border-transparent focus:border-indigo-500/20 outline-none font-black text-sm transition-all focus:bg-white/10 shadow-inner"
+                            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded text-xs font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-indigo-500 shadow-sm"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-3 scrollbar-none relative z-10">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1">
                     {filteredCompanies.map(c => {
                         const companyPerf = performances.filter(p => p.companyId === c.id);
                         const manualPercent = companyPerf.reduce((sum, p) => sum + (Number(p.calculatedScore) || 0), 0);
@@ -370,29 +366,27 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                             <div
                                 key={c.id}
                                 onClick={() => setSelectedCompanyId(c.id)}
-                                className={`p-6 rounded-[2rem] cursor-pointer transition-all duration-500 border ${isSelected
-                                    ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 text-white shadow-glass-indigo border-indigo-400/30'
-                                    : 'bg-white/40 dark:bg-white/5 border-transparent hover:border-white/20 hover:bg-white/60 dark:hover:bg-white/10'
-                                    } group/item`}
+                                className={`p-3 rounded cursor-pointer transition-colors border ${isSelected
+                                    ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800'
+                                    : 'bg-white dark:bg-[#22252B] border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                    }`}
                             >
-                                <div className="flex justify-between items-start mb-4">
-                                    <h4 className={`font-black text-base tracking-tight ${isSelected ? 'text-white' : 'text-slate-800 dark:text-white'}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <h4 className={`font-bold text-sm ${isSelected ? 'text-indigo-900 dark:text-indigo-100' : 'text-gray-800 dark:text-white'}`}>
                                         {c.name}
                                     </h4>
                                     {totalPercent !== 0 && (
-                                        <span className={`text-[10px] font-black px-3 py-1 rounded-full shadow-sm border ${isSelected
-                                            ? 'bg-white/20 text-white border-white/30'
-                                            : totalPercent > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${totalPercent > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'
                                             }`}>
                                             {totalPercent > 0 ? '+' : ''}{Number(totalPercent.toFixed(2))}%
                                         </span>
                                     )}
                                 </div>
-                                <div className="flex flex-wrap gap-2">
-                                    <div className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border ${isSelected ? 'bg-white/10 border-white/20 text-white/70' : 'bg-slate-100 dark:bg-white/5 border-transparent text-slate-400'}`}>
+                                <div className="flex flex-wrap gap-1">
+                                    <div className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 border border-gray-200 dark:border-gray-700">
                                         INN: {c.inn}
                                     </div>
-                                    <div className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border ${isSelected ? 'bg-white/10 border-white/20 text-white/70' : 'bg-slate-100 dark:bg-white/5 border-transparent text-slate-400'}`}>
+                                    <div className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 border border-gray-200 dark:border-gray-700">
                                         {c.accountantName}
                                     </div>
                                 </div>
@@ -403,57 +397,55 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
             </div>
 
             {/* RIGHT: Main Checklist Area */}
-            <div className="flex-1 liquid-glass-card rounded-[3rem] border border-white/10 flex flex-col overflow-hidden shadow-glass-lg relative">
+            <div className="flex-1 bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm flex flex-col overflow-hidden">
                 {selectedCompany ? (
                     <>
-                        <div className="p-10 border-b border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl relative z-10">
-                            <div className="absolute -top-10 -right-10 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl"></div>
-
-                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A1D23]">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                                 <div>
-                                    <h2 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter mb-4 premium-text-gradient">
+                                    <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase mb-3">
                                         {selectedCompany.name}
                                     </h2>
-                                    <div className="flex flex-wrap gap-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-black text-[10px] border border-indigo-500/20 shadow-sm">B</div>
+                                    <div className="flex flex-wrap gap-4 border-t border-gray-200 dark:border-gray-700 pt-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#22252B] rounded px-1.5 py-0.5">B</div>
                                             <div>
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{lang === 'uz' ? 'Buxgalter' : 'Бухгалтер'}</p>
-                                                <p className="text-xs font-black text-slate-700 dark:text-white">{selectedCompany.accountantName}</p>
+                                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5">{lang === 'uz' ? 'Buxgalter' : 'Бухгалтер'}</p>
+                                                <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200">{selectedCompany.accountantName}</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center font-black text-[10px] border border-purple-500/20 shadow-sm">BK</div>
+                                        <div className="flex items-center gap-2 border-l border-gray-200 dark:border-gray-700 pl-4">
+                                            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#22252B] rounded px-1.5 py-0.5">BK</div>
                                             <div>
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Bank Client</p>
-                                                <p className="text-xs font-black text-slate-700 dark:text-white">{staff.find(s => s.id === selectedCompany.bankClientId)?.name || '—'}</p>
+                                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5">Bank Client</p>
+                                                <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200">{staff.find(s => s.id === selectedCompany.bankClientId)?.name || '—'}</p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col items-end w-full md:w-auto">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">{lang === 'uz' ? 'Joriy Oy' : 'Текущий Месяц'}</p>
+                                <div className="flex flex-col items-start md:items-end w-full md:w-auto">
+                                    <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">{lang === 'uz' ? 'Joriy Oy' : 'Текущий Месяц'}</p>
                                     <input
                                         type="month"
                                         value={month}
                                         onChange={e => setMonth(e.target.value)}
-                                        className="bg-white/5 dark:bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-black text-slate-800 dark:text-white outline-none focus:bg-white/10 focus:border-white/20 transition-all appearance-none shadow-inner"
+                                        className="bg-white dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-1.5 text-xs font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-indigo-500 shadow-sm transition-colors uppercase cursor-pointer"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-10 scrollbar-none relative z-10 space-y-12">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-8">
                             {selectedOperation && (
                                 <div className="animate-fade-in-up">
-                                    <div className="flex items-center gap-4 mb-8">
-                                        <div className="w-1.5 h-8 bg-indigo-500 rounded-full shadow-glass-indigo"></div>
-                                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-1 h-4 bg-indigo-600 rounded-sm"></div>
+                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                                             {t.automationKpi}
                                         </h4>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {rules.filter(r => r.category === 'automation' && (r.role === 'accountant' || r.role === 'all')).map(rule => {
                                             const key = resolveAutomationKey(rule);
                                             if (!key) return null;
@@ -465,26 +457,26 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                             return (
                                                 <div
                                                     key={rule.id}
-                                                    className={`p-6 rounded-[2rem] border transition-all duration-500 flex items-center justify-between group/row ${score > 0 ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20 shadow-glass-emerald' : score < 0 ? 'bg-rose-500/5 dark:bg-rose-500/10 border-rose-500/20 shadow-glass-rose' : 'bg-white/40 dark:bg-white/5 border-white/10'}`}
+                                                    className={`p-3 rounded border flex items-center justify-between bg-white dark:bg-[#1e2025] ${score > 0 ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/30 dark:bg-emerald-900/10' : score < 0 ? 'border-rose-200 bg-rose-50/50 dark:border-rose-900/30 dark:bg-rose-900/10' : 'border-gray-200 dark:border-gray-700'}`}
                                                 >
-                                                    <div className="flex items-center gap-5">
-                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-700 ${score > 0 ? 'bg-emerald-500 text-white shadow-glass-lg' : score < 0 ? 'bg-rose-500 text-white shadow-glass-lg' : 'bg-slate-100 dark:bg-white/10 text-slate-300'}`}>
-                                                            {score < 0 ? <XCircle size={28} strokeWidth={2.5} /> : <CheckCircle2 size={score > 0 ? 28 : 24} strokeWidth={2.5} />}
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center ${score > 0 ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : score < 0 ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-800'}`}>
+                                                            {score < 0 ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
                                                         </div>
                                                         <div>
-                                                            <p className={`font-black text-base tracking-tight ${score !== 0 ? 'text-slate-800 dark:text-white' : 'text-slate-500'}`}>
+                                                            <p className={`font-bold text-sm leading-none mb-1 ${score !== 0 ? 'text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
                                                                 {lang === 'uz' ? rule.nameUz : rule.name}
                                                             </p>
-                                                            <div className="flex items-center gap-3 mt-1">
-                                                                <span className="text-[10px] font-black text-slate-400/60 uppercase tracking-widest px-2 py-0.5 bg-slate-100 dark:bg-white/5 rounded-lg">{typeof status === 'string' ? status : '—'}</span>
-                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[9px] font-bold text-gray-500 uppercase px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">{typeof status === 'string' ? status : '—'}</span>
+                                                                <p className="text-[9px] font-bold text-gray-400 uppercase">
                                                                     {Number(rule.rewardPercent || 0) > 0 ? `+${Number(rule.rewardPercent || 0)}%` : ''}
                                                                     {Number(rule.penaltyPercent || 0) < 0 ? ` / ${Number(rule.penaltyPercent || 0)}%` : ''}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className={`text-xl font-black tabular-nums ${score > 0 ? 'text-emerald-500' : score < 0 ? 'text-rose-500' : 'text-slate-200'}`}>
+                                                    <div className={`text-sm font-bold tabular-nums ${score > 0 ? 'text-emerald-600 dark:text-emerald-400' : score < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400'}`}>
                                                         {score > 0 ? '+' : ''}{Number(score.toFixed(2))}%
                                                     </div>
                                                 </div>
@@ -496,13 +488,13 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
 
                             {/* Accountant Tasks */}
                             <div className="animate-fade-in-up delay-100">
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className="w-1.5 h-8 bg-emerald-500 rounded-full shadow-glass-emerald"></div>
-                                    <h4 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="w-1 h-4 bg-emerald-500 rounded-sm"></div>
+                                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                                         {t.manualKpi}
                                     </h4>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {rules.filter(r => (r.role === 'accountant' || r.role === 'all') && r.category !== 'automation').map(rawRule => {
                                         const rule = getEffectiveRule(rawRule);
                                         const perf = performances.find(p => p.companyId === selectedCompany.id && p.employeeId === (selectedCompany.accountantId || '') && p.ruleId === rule.id);
@@ -515,93 +507,89 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                                     if (needsApproval) return;
                                                     handleToggle(rule, selectedCompany, selectedCompany.accountantId || '', perf?.value || 0);
                                                 }}
-                                                className={`p-6 rounded-[2rem] border transition-all duration-500 cursor-pointer group/card flex flex-col justify-between h-full ${perf?.value === 1 ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20 shadow-glass-emerald active:scale-95' :
-                                                    perf?.value === -1 ? 'bg-rose-500/5 dark:bg-rose-500/10 border-rose-500/20 shadow-glass-rose active:scale-95' :
-                                                        'bg-white/40 dark:bg-white/5 border-white/10 hover:border-indigo-500/30'
+                                                className={`p-3 border rounded shadow-sm flex flex-col justify-between transition-colors cursor-pointer select-none ${perf?.value === 1 ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800' :
+                                                    perf?.value === -1 ? 'bg-rose-50 border-rose-200 dark:bg-rose-900/10 dark:border-rose-800' :
+                                                        'bg-white dark:bg-[#1e2025] hover:border-indigo-300 border-gray-200 dark:border-gray-700'
                                                     }`}
                                             >
-                                                <div className="flex items-center justify-between mb-8">
-                                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-700 ${perf?.value === 1 ? 'bg-emerald-500 text-white shadow-glass-lg' :
-                                                        perf?.value === -1 ? 'bg-rose-500 text-white shadow-glass-lg' :
-                                                            'bg-slate-100 dark:bg-white/10 text-slate-300'
-                                                        }`}>
-                                                        {perf?.value === -1 ? <XCircle size={28} strokeWidth={2.5} /> : <CheckCircle2 size={perf?.value === 1 ? 28 : 24} strokeWidth={2.5} />}
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${perf?.value === 1 ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' :
+                                                            perf?.value === -1 ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
+                                                                'bg-gray-100 text-gray-400 dark:bg-gray-800'
+                                                            }`}>
+                                                            {perf?.value === -1 ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
+                                                        </div>
+                                                        <p className={`font-bold text-xs leading-tight ${perf?.value !== 0 ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
+                                                            {lang === 'uz' ? rule.nameUz : rule.name}
+                                                        </p>
                                                     </div>
 
                                                     {canEditPercents && (
-                                                        <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-3">
-                                                            <div className="relative group/reward">
-                                                                <input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    className="w-16 px-2 py-2 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] font-black text-emerald-500 outline-none focus:bg-emerald-500/20 transition-all text-center placeholder:text-emerald-500/30"
-                                                                    placeholder={String(rule.rewardPercent ?? '')}
-                                                                    value={percentInputs[getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'reward')] ?? (perf?.rewardPercentOverride ?? perf?.rewardPercentOverride === 0 ? String(perf.rewardPercentOverride) : '')}
-                                                                    onChange={(e) => {
-                                                                        const key = getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'reward');
-                                                                        setPercentInputs(prev => ({ ...prev, [key]: e.target.value }));
-                                                                    }}
-                                                                    onBlur={(e) => {
-                                                                        const v = e.target.value;
-                                                                        const reward = v.trim() === '' ? null : Number(v);
-                                                                        const penalty = (perf?.penaltyPercentOverride ?? perf?.penaltyPercentOverride === 0) ? perf.penaltyPercentOverride : null;
-                                                                        savePercentOverride(rule, selectedCompany, selectedCompany.accountantId || '', reward, penalty);
-                                                                    }}
-                                                                />
-                                                                <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase text-emerald-500 opacity-0 group-hover/reward:opacity-100 transition-opacity">Reward %</span>
-                                                            </div>
-                                                            <div className="relative group/penalty">
-                                                                <input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    className="w-16 px-2 py-2 bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20 rounded-xl text-[11px] font-black text-rose-500 outline-none focus:bg-rose-500/20 transition-all text-center placeholder:text-rose-500/30"
-                                                                    placeholder={String(rule.penaltyPercent ?? '')}
-                                                                    value={percentInputs[getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'penalty')] ?? (perf?.penaltyPercentOverride ?? perf?.penaltyPercentOverride === 0 ? String(perf.penaltyPercentOverride) : '')}
-                                                                    onChange={(e) => {
-                                                                        const key = getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'penalty');
-                                                                        setPercentInputs(prev => ({ ...prev, [key]: e.target.value }));
-                                                                    }}
-                                                                    onBlur={(e) => {
-                                                                        const v = e.target.value;
-                                                                        const penalty = v.trim() === '' ? null : Number(v);
-                                                                        const reward = (perf?.rewardPercentOverride ?? perf?.rewardPercentOverride === 0) ? perf.rewardPercentOverride : null;
-                                                                        savePercentOverride(rule, selectedCompany, selectedCompany.accountantId || '', reward, penalty);
-                                                                    }}
-                                                                />
-                                                                <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase text-rose-500 opacity-0 group-hover/penalty:opacity-100 transition-opacity">Penalty %</span>
-                                                            </div>
+                                                        <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 shrink-0 ml-2">
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                title="Reward %"
+                                                                className="w-12 px-1 py-1 bg-white dark:bg-[#22252B] border border-emerald-200 dark:border-emerald-900/50 rounded text-[10px] font-bold text-emerald-600 outline-none focus:border-emerald-500 transition-colors text-center"
+                                                                placeholder={String(rule.rewardPercent ?? '')}
+                                                                value={percentInputs[getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'reward')] ?? (perf?.rewardPercentOverride ?? perf?.rewardPercentOverride === 0 ? String(perf.rewardPercentOverride) : '')}
+                                                                onChange={(e) => {
+                                                                    const key = getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'reward');
+                                                                    setPercentInputs(prev => ({ ...prev, [key]: e.target.value }));
+                                                                }}
+                                                                onBlur={(e) => {
+                                                                    const v = e.target.value;
+                                                                    const reward = v.trim() === '' ? null : Number(v);
+                                                                    const penalty = (perf?.penaltyPercentOverride ?? perf?.penaltyPercentOverride === 0) ? perf.penaltyPercentOverride : null;
+                                                                    savePercentOverride(rule, selectedCompany, selectedCompany.accountantId || '', reward, penalty);
+                                                                }}
+                                                            />
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                title="Penalty %"
+                                                                className="w-12 px-1 py-1 bg-white dark:bg-[#22252B] border border-rose-200 dark:border-rose-900/50 rounded text-[10px] font-bold text-rose-600 outline-none focus:border-rose-500 transition-colors text-center"
+                                                                placeholder={String(rule.penaltyPercent ?? '')}
+                                                                value={percentInputs[getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'penalty')] ?? (perf?.penaltyPercentOverride ?? perf?.penaltyPercentOverride === 0 ? String(perf.penaltyPercentOverride) : '')}
+                                                                onChange={(e) => {
+                                                                    const key = getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'penalty');
+                                                                    setPercentInputs(prev => ({ ...prev, [key]: e.target.value }));
+                                                                }}
+                                                                onBlur={(e) => {
+                                                                    const v = e.target.value;
+                                                                    const penalty = v.trim() === '' ? null : Number(v);
+                                                                    const reward = (perf?.rewardPercentOverride ?? perf?.rewardPercentOverride === 0) ? perf.rewardPercentOverride : null;
+                                                                    savePercentOverride(rule, selectedCompany, selectedCompany.accountantId || '', reward, penalty);
+                                                                }}
+                                                            />
                                                         </div>
                                                     )}
                                                 </div>
 
-                                                <div>
-                                                    <p className={`font-black text-base tracking-tight mb-2 ${perf?.value !== 0 ? 'text-slate-800 dark:text-white' : 'text-slate-500'}`}>
-                                                        {lang === 'uz' ? rule.nameUz : rule.name}
+                                                <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
+                                                    <p className="text-[10px] font-bold text-gray-500">
+                                                        {((perf?.rewardPercentOverride ?? rule.rewardPercent) > 0) ? `+${(perf?.rewardPercentOverride ?? rule.rewardPercent)}%` : ''}
+                                                        {((perf?.penaltyPercentOverride ?? rule.penaltyPercent) < 0) ? ` / ${(perf?.penaltyPercentOverride ?? rule.penaltyPercent)}%` : ''}
                                                     </p>
-                                                    <div className="flex items-center gap-3">
-                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                            {((perf?.rewardPercentOverride ?? rule.rewardPercent) > 0) ? `+${(perf?.rewardPercentOverride ?? rule.rewardPercent)}%` : ''}
-                                                            {((perf?.penaltyPercentOverride ?? rule.penaltyPercent) < 0) ? ` / ${(perf?.penaltyPercentOverride ?? rule.penaltyPercent)}%` : ''}
-                                                        </p>
-                                                        {perf?.value === 1 && <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest px-2 py-0.5 bg-emerald-500/10 rounded-lg border border-emerald-500/10">Mukofot</span>}
-                                                        {perf?.value === -1 && <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest px-2 py-0.5 bg-rose-500/10 rounded-lg border border-rose-500/10">Jarima</span>}
-                                                        {needsApproval && (
-                                                            <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest px-2 py-0.5 bg-amber-500/10 rounded-lg border border-amber-500/10 animate-pulse">{t.pendingApproval}</span>
-                                                        )}
-                                                    </div>
+                                                    {perf?.value === 1 && <span className="text-[9px] font-bold text-emerald-600 uppercase px-1.5 py-0.5 bg-emerald-100 rounded">Mukofot</span>}
+                                                    {perf?.value === -1 && <span className="text-[9px] font-bold text-rose-600 uppercase px-1.5 py-0.5 bg-rose-100 rounded">Jarima</span>}
+                                                    {needsApproval && (
+                                                        <span className="text-[9px] font-bold text-amber-600 uppercase px-1.5 py-0.5 bg-amber-100 rounded">{t.pendingApproval}</span>
+                                                    )}
                                                 </div>
 
                                                 {needsApproval && perf && (
-                                                    <div className="flex items-center gap-3 mt-8" onClick={e => e.stopPropagation()}>
+                                                    <div className="flex items-center gap-2 mt-3" onClick={e => e.stopPropagation()}>
                                                         <button
                                                             onClick={() => handleApprove(perf)}
-                                                            className="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-glass shadow-emerald-500/20 active:scale-95"
+                                                            className="flex-1 py-1.5 bg-emerald-500 text-white rounded text-[10px] font-bold uppercase hover:bg-emerald-600 transition-colors"
                                                         >
                                                             Approve
                                                         </button>
                                                         <button
                                                             onClick={() => handleReject(perf)}
-                                                            className="flex-1 px-4 py-3 bg-rose-500 text-white rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-glass shadow-rose-500/20 active:scale-95"
+                                                            className="flex-1 py-1.5 bg-rose-500 text-white rounded text-[10px] font-bold uppercase hover:bg-rose-600 transition-colors"
                                                         >
                                                             Reject
                                                         </button>
@@ -616,13 +604,13 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                             {/* Bank Client Tasks */}
                             {selectedCompany.bankClientId && (
                                 <div className="animate-fade-in-up delay-200">
-                                    <div className="flex items-center gap-4 mb-8">
-                                        <div className="w-1.5 h-8 bg-purple-500 rounded-full shadow-glass-purple"></div>
-                                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-1 h-4 bg-purple-500 rounded-sm"></div>
+                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                                             {t.bankTasks}
                                         </h4>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {rules.filter(r => (r.role === 'bank_client' || r.role === 'all') && r.category !== 'automation').map(rawRule => {
                                             const rule = getEffectiveRule(rawRule);
                                             const perf = performances.find(p => p.companyId === selectedCompany.id && p.employeeId === (selectedCompany.bankClientId || '') && p.ruleId === rule.id);
@@ -635,48 +623,48 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                                         if (needsApproval) return;
                                                         handleToggle(rule, selectedCompany, selectedCompany.bankClientId || '', perf?.value || 0);
                                                     }}
-                                                    className={`p-6 rounded-[2rem] border transition-all duration-500 cursor-pointer group/card flex flex-col justify-between h-full ${perf?.value === 1 ? 'bg-purple-500/5 dark:bg-purple-500/10 border-purple-500/20 shadow-glass-purple active:scale-95' :
-                                                        perf?.value === -1 ? 'bg-rose-500/5 dark:bg-rose-500/10 border-rose-500/20 shadow-glass-rose active:scale-95' :
-                                                            'bg-white/40 dark:bg-white/5 border-white/10 hover:border-purple-500/30'
+                                                    className={`p-3 border rounded shadow-sm flex flex-col justify-between transition-colors cursor-pointer select-none ${perf?.value === 1 ? 'bg-purple-50 border-purple-200 dark:bg-purple-900/10 dark:border-purple-800' :
+                                                        perf?.value === -1 ? 'bg-rose-50 border-rose-200 dark:bg-rose-900/10 dark:border-rose-800' :
+                                                            'bg-white dark:bg-[#1e2025] hover:border-purple-300 border-gray-200 dark:border-gray-700'
                                                         }`}
                                                 >
-                                                    <div className="flex items-center justify-between mb-8">
-                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-700 ${perf?.value === 1 ? 'bg-purple-500 text-white shadow-glass-lg' :
-                                                            perf?.value === -1 ? 'bg-rose-500 text-white shadow-glass-lg' :
-                                                                'bg-slate-100 dark:bg-white/10 text-slate-300'
-                                                            }`}>
-                                                            {perf?.value === -1 ? <XCircle size={28} strokeWidth={2.5} /> : <CheckCircle2 size={perf?.value === 1 ? 28 : 24} strokeWidth={2.5} />}
+                                                    <div className="flex items-start justify-between mb-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${perf?.value === 1 ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30' :
+                                                                perf?.value === -1 ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
+                                                                    'bg-gray-100 text-gray-400 dark:bg-gray-800'
+                                                                }`}>
+                                                                {perf?.value === -1 ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
+                                                            </div>
+                                                            <p className={`font-bold text-xs leading-tight ${perf?.value !== 0 ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
+                                                                {lang === 'uz' ? rule.nameUz : rule.name}
+                                                            </p>
                                                         </div>
                                                     </div>
 
-                                                    <div>
-                                                        <p className={`font-black text-base tracking-tight mb-2 ${perf?.value !== 0 ? 'text-slate-800 dark:text-white' : 'text-slate-500'}`}>
-                                                            {lang === 'uz' ? rule.nameUz : rule.name}
+                                                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
+                                                        <p className="text-[10px] font-bold text-gray-500">
+                                                            {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
+                                                            {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
                                                         </p>
-                                                        <div className="flex items-center gap-3">
-                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                                {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
-                                                                {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
-                                                            </p>
-                                                            {perf?.value === 1 && <span className="text-[9px] font-black text-purple-500 uppercase tracking-widest px-2 py-0.5 bg-purple-500/10 rounded-lg border border-purple-500/10">Mukofot</span>}
-                                                            {perf?.value === -1 && <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest px-2 py-0.5 bg-rose-500/10 rounded-lg border border-rose-500/10">Jarima</span>}
-                                                            {needsApproval && (
-                                                                <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest px-2 py-0.5 bg-amber-500/10 rounded-lg border border-amber-500/10 animate-pulse">Tasdiq kutilmoqda</span>
-                                                            )}
-                                                        </div>
+                                                        {perf?.value === 1 && <span className="text-[9px] font-bold text-purple-600 uppercase px-1.5 py-0.5 bg-purple-100 rounded">Mukofot</span>}
+                                                        {perf?.value === -1 && <span className="text-[9px] font-bold text-rose-600 uppercase px-1.5 py-0.5 bg-rose-100 rounded">Jarima</span>}
+                                                        {needsApproval && (
+                                                            <span className="text-[9px] font-bold text-amber-600 uppercase px-1.5 py-0.5 bg-amber-100 rounded">Tasdiq kutilmoqda</span>
+                                                        )}
                                                     </div>
 
                                                     {needsApproval && perf && (
-                                                        <div className="flex items-center gap-3 mt-8" onClick={e => e.stopPropagation()}>
+                                                        <div className="flex items-center gap-2 mt-3" onClick={e => e.stopPropagation()}>
                                                             <button
                                                                 onClick={() => handleApprove(perf)}
-                                                                className="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-glass shadow-emerald-500/20 active:scale-95"
+                                                                className="flex-1 py-1.5 bg-emerald-500 text-white rounded text-[10px] font-bold uppercase hover:bg-emerald-600 transition-colors"
                                                             >
                                                                 Approve
                                                             </button>
                                                             <button
                                                                 onClick={() => handleReject(perf)}
-                                                                className="flex-1 px-4 py-3 bg-rose-500 text-white rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-glass shadow-rose-500/20 active:scale-95"
+                                                                className="flex-1 py-1.5 bg-rose-500 text-white rounded text-[10px] font-bold uppercase hover:bg-rose-600 transition-colors"
                                                             >
                                                                 Reject
                                                             </button>
@@ -692,14 +680,14 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                             {/* Supervisor Tasks */}
                             {selectedCompany.supervisorId && (
                                 <div className="animate-fade-in-up delay-300">
-                                    <div className="flex items-center gap-4 mb-8">
-                                        <div className="w-1.5 h-8 bg-indigo-500 rounded-full shadow-glass-indigo"></div>
-                                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">
-                                            {lang === 'uz' ? 'Nazoratchi Vazifalari' : 'Задачи Контролёра'}
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-1 h-4 bg-amber-500 rounded-sm"></div>
+                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                            {t.supervisorTasks}
                                         </h4>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        {rules.filter(r => r.role === 'supervisor' || r.role === 'all').map(rawRule => {
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {rules.filter(r => (r.role === 'supervisor' || r.role === 'all') && r.category !== 'automation').map(rawRule => {
                                             const rule = getEffectiveRule(rawRule);
                                             const perf = performances.find(p => p.companyId === selectedCompany.id && p.employeeId === (selectedCompany.supervisorId || '') && p.ruleId === rule.id);
                                             const needsApproval = perf?.source === 'employee' && perf?.status === 'submitted';
@@ -711,48 +699,46 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                                         if (needsApproval) return;
                                                         handleToggle(rule, selectedCompany, selectedCompany.supervisorId || '', perf?.value || 0);
                                                     }}
-                                                    className={`p-6 rounded-[2rem] border transition-all duration-500 cursor-pointer group/card flex flex-col justify-between h-full ${perf?.value === 1 ? 'bg-indigo-500/5 dark:bg-indigo-500/10 border-indigo-500/20 shadow-glass-indigo active:scale-95' :
-                                                        perf?.value === -1 ? 'bg-rose-500/5 dark:bg-rose-500/10 border-rose-500/20 shadow-glass-rose active:scale-95' :
-                                                            'bg-white/40 dark:bg-white/5 border-white/10 hover:border-indigo-500/30'
+                                                    className={`p-3 border rounded shadow-sm flex flex-col justify-between transition-colors cursor-pointer select-none ${perf?.value !== 0 ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800' :
+                                                            'bg-white dark:bg-[#1e2025] hover:border-amber-300 border-gray-200 dark:border-gray-700'
                                                         }`}
                                                 >
-                                                    <div className="flex items-center justify-between mb-8">
-                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-700 ${perf?.value === 1 ? 'bg-indigo-500 text-white shadow-glass-lg' :
-                                                            perf?.value === -1 ? 'bg-rose-500 text-white shadow-glass-lg' :
-                                                                'bg-slate-100 dark:bg-white/10 text-slate-300'
-                                                            }`}>
-                                                            {perf?.value === -1 ? <XCircle size={28} strokeWidth={2.5} /> : <CheckCircle2 size={perf?.value === 1 ? 28 : 24} strokeWidth={2.5} />}
+                                                    <div className="flex items-start justify-between mb-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${perf?.value !== 0 ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' :
+                                                                    'bg-gray-100 text-gray-400 dark:bg-gray-800'
+                                                                }`}>
+                                                                {perf?.value === -1 ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
+                                                            </div>
+                                                            <p className={`font-bold text-xs leading-tight ${perf?.value !== 0 ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
+                                                                {lang === 'uz' ? rule.nameUz : rule.name}
+                                                            </p>
                                                         </div>
                                                     </div>
 
-                                                    <div>
-                                                        <p className={`font-black text-base tracking-tight mb-2 ${perf?.value !== 0 ? 'text-slate-800 dark:text-white' : 'text-slate-500'}`}>
-                                                            {lang === 'uz' ? rule.nameUz : rule.name}
+                                                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
+                                                        <p className="text-[10px] font-bold text-gray-500">
+                                                            {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
+                                                            {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
                                                         </p>
-                                                        <div className="flex items-center gap-3">
-                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                                {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
-                                                                {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
-                                                            </p>
-                                                            {perf?.value === 1 && <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest px-2 py-0.5 bg-indigo-500/10 rounded-lg border border-indigo-500/10">Mukofot</span>}
-                                                            {perf?.value === -1 && <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest px-2 py-0.5 bg-rose-500/10 rounded-lg border border-rose-500/10">Jarima</span>}
-                                                            {needsApproval && (
-                                                                <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest px-2 py-0.5 bg-amber-500/10 rounded-lg border border-amber-500/10 animate-pulse">Tasdiq kutilmoqda</span>
-                                                            )}
-                                                        </div>
+                                                        {perf?.value === 1 && <span className="text-[9px] font-bold text-amber-600 uppercase px-1.5 py-0.5 bg-amber-100 rounded">Mukofot</span>}
+                                                        {perf?.value === -1 && <span className="text-[9px] font-bold text-amber-600 uppercase px-1.5 py-0.5 bg-amber-100 rounded">Jarima</span>}
+                                                        {needsApproval && (
+                                                            <span className="text-[9px] font-bold text-amber-600 uppercase px-1.5 py-0.5 bg-amber-100 rounded">Tasdiq kutilmoqda</span>
+                                                        )}
                                                     </div>
 
                                                     {needsApproval && perf && (
-                                                        <div className="flex items-center gap-3 mt-8" onClick={e => e.stopPropagation()}>
+                                                        <div className="flex items-center gap-2 mt-3" onClick={e => e.stopPropagation()}>
                                                             <button
                                                                 onClick={() => handleApprove(perf)}
-                                                                className="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-glass shadow-emerald-500/20 active:scale-95"
+                                                                className="flex-1 py-1.5 bg-emerald-500 text-white rounded text-[10px] font-bold uppercase hover:bg-emerald-600 transition-colors"
                                                             >
                                                                 Approve
                                                             </button>
                                                             <button
                                                                 onClick={() => handleReject(perf)}
-                                                                className="flex-1 px-4 py-3 bg-rose-500 text-white rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-glass shadow-rose-500/20 active:scale-95"
+                                                                className="flex-1 py-1.5 bg-rose-500 text-white rounded text-[10px] font-bold uppercase hover:bg-rose-600 transition-colors"
                                                             >
                                                                 Reject
                                                             </button>
@@ -764,30 +750,20 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                     </div>
                                 </div>
                             )}
+
                         </div>
                     </>
                 ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center bg-white/40 dark:bg-white/5 backdrop-blur-3xl animate-fade-in relative">
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] animate-pulse"></div>
-                        <div className="relative z-10 flex flex-col items-center">
-                            <div className="flex gap-6 mb-12">
-                                <div className="w-24 h-24 rounded-[2.5rem] bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shadow-glass-lg animate-bounce duration-[2000ms]">
-                                    <Shield size={40} className="text-indigo-500" />
-                                </div>
-                                <div className="w-24 h-24 rounded-[2.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-glass-lg animate-bounce duration-[2000ms] delay-300">
-                                    <CheckCircle2 size={40} className="text-emerald-500" />
-                                </div>
-                                <div className="w-24 h-24 rounded-[2.5rem] bg-purple-500/10 flex items-center justify-center border border-purple-500/20 shadow-glass-lg animate-bounce duration-[2000ms] delay-700">
-                                    <Activity size={40} className="text-purple-500" />
-                                </div>
-                            </div>
-                            <h3 className="text-3xl font-black text-slate-800 dark:text-white mb-4 tracking-tighter text-center">
-                                {t.auditReady}
-                            </h3>
-                            <p className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] text-center max-w-sm leading-relaxed">
-                                {t.selectCompanyAudit}
-                            </p>
+                    <div className="flex-1 flex flex-col items-center justify-center p-10 text-center relative z-10 animate-fade-in bg-white dark:bg-[#22252B]">
+                        <div className="w-20 h-20 mb-6 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-700">
+                            <Shield size={32} />
                         </div>
+                        <h3 className="text-xl font-bold text-gray-800 dark:text-white uppercase mb-2">
+                            {t.auditReady || t.selectCompany}
+                        </h3>
+                        <p className="text-sm font-bold text-gray-500 max-w-md">
+                            {t.selectCompanyAudit || t.selectCompanyDesc}
+                        </p>
                     </div>
                 )}
             </div>

@@ -12,32 +12,32 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'sm' }) => {
     switch (status) {
       case ReportStatus.ACCEPTED:
         return {
-          css: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-glass-emerald',
+          css: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           icon: <CheckCircle2 size={size === 'sm' ? 12 : 16} />
         };
       case ReportStatus.NOT_SUBMITTED:
         return {
-          css: 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-glass-rose',
+          css: 'bg-rose-50 text-rose-700 border-rose-200',
           icon: <AlertCircle size={size === 'sm' ? 12 : 16} />
         };
       case ReportStatus.NOT_REQUIRED:
         return {
-          css: 'bg-slate-500/5 text-slate-400 border-white/10 opacity-50',
+          css: 'bg-gray-100 text-gray-500 border-gray-200',
           icon: <MinusCircle size={size === 'sm' ? 12 : 16} />
         };
       case ReportStatus.BLOCKED:
         return {
-          css: 'bg-amber-500/15 text-amber-500 border-amber-500/30' + (size === 'sm' ? '' : ' animate-pulse'),
+          css: 'bg-amber-100 text-amber-700 border-amber-300' + (size === 'sm' ? '' : ' animate-pulse'),
           icon: <ShieldAlert size={size === 'sm' ? 12 : 16} />
         };
       case ReportStatus.IN_PROGRESS:
         return {
-          css: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20 shadow-glass-indigo',
+          css: 'bg-indigo-50 text-indigo-700 border-indigo-200',
           icon: <Clock size={size === 'sm' ? 12 : 16} />
         };
       default:
         return {
-          css: 'bg-slate-500/5 text-slate-500 border-white/5',
+          css: 'bg-gray-50 text-gray-500 border-gray-200',
           icon: <MinusCircle size={size === 'sm' ? 12 : 16} />
         };
     }
@@ -50,7 +50,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'sm' }) => {
         status === '-' ? 'YO\'Q' : status;
 
   return (
-    <span className={`px-4 py-1.5 rounded-xl font-black border uppercase tracking-[0.2em] ${css} backdrop-blur-md transition-all duration-500 inline-flex items-center gap-2 min-w-[70px] justify-center shadow-sm ${size === 'sm' ? 'text-[8px]' : 'text-[10px]'}`}>
+    <span className={`px-2 py-0.5 rounded border uppercase font-bold inline-flex items-center justify-center gap-1 min-w-[60px] ${css} ${size === 'sm' ? 'text-[9px]' : 'text-[11px]'} transition-colors`}>
       {icon}
       {label}
     </span>

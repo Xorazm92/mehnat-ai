@@ -87,6 +87,7 @@ const App: React.FC = () => {
   const [svodOperationFilter, setSvodOperationFilter] = useState<string>('all');
   const [showPassword, setShowPassword] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const pendingReportsCount = useMemo(() => {
     // Only count for relevant roles (Supervisor/Admin) or show own pending actions for Accountants?
@@ -155,6 +156,19 @@ const App: React.FC = () => {
       } catch (err: any) {
         console.error('Session initialization error:', err);
         const msg = String(err?.message || '');
+        
+        // Detect connection/DNS errors
+        if (
+          msg.includes('Failed to fetch') || 
+          msg.includes('Load failed') || 
+          msg.includes('net::ERR_NAME_NOT_RESOLVED') ||
+          msg.includes('fetch failed')
+        ) {
+          setConnectionError('supabase_unreachable');
+          setIsLoading(false);
+          return;
+        }
+
         if (
           msg.includes('Refresh Token Not Found') ||
           msg.includes('Invalid Refresh Token')
@@ -492,26 +506,68 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
-        {/* Iridescent Background Effects */}
-        <div className="absolute top-0 left-0 w-full h-full">
-          <div className="absolute top-[10%] left-[10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse-slow"></div>
-          <div className="absolute bottom-[10%] right-[10%] w-[40%] h-[40%] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse-slow-reverse"></div>
-        </div>
-
-        <div className="liquid-glass-card p-16 rounded-[3rem] flex flex-col items-center gap-8 border border-white/20 shadow-glass-2xl relative z-10 animate-macos">
+      <div className="min-h-screen flex items-center justify-center bg-[#F0F1F3] dark:bg-[#1A1D23]">
+        <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md p-12 flex flex-col items-center gap-6 shadow-md animate-macos">
           <div className="relative">
-            <div className="w-20 h-20 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl backdrop-blur-sm border border-indigo-500/20 shadow-glass flex items-center justify-center">
-                <div className="w-4 h-4 bg-indigo-500 rounded-full animate-pulse"></div>
-              </div>
-            </div>
+            <div className="w-14 h-14 border-3 border-gray-200 dark:border-gray-600 border-t-yellow-500 rounded-full animate-spin"></div>
           </div>
           <div className="text-center">
-            <img src="/logo.png" alt="Logo" className="w-20 h-20 object-contain mb-8 drop-shadow-2xl animate-pulse" />
-            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-widest uppercase mb-2">ASOS Intelligence</h1>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] animate-pulse">{translations[lang].initializing}</p>
+            <img src="/logo.png" alt="Logo" className="w-14 h-14 object-contain mx-auto mb-4" />
+            <h1 className="text-lg font-bold text-gray-800 dark:text-white mb-1">ASOS Бухгалтерия</h1>
+            <p className="text-[11px] text-gray-400 font-medium">{translations[lang].initializing}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (connectionError === 'supabase_unreachable') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#F0F1F3] dark:bg-[#1A1D23]">
+        <div className="w-full max-w-lg animate-macos">
+          <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md shadow-md overflow-hidden">
+            {/* 1C-style error header */}
+            <div className="bg-red-600 px-4 py-3 flex items-center gap-3">
+              <AlertCircle size={20} className="text-white" />
+              <h2 className="text-[14px] font-bold text-white">Ulanish xatosi</h2>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-[13px] text-gray-700 dark:text-gray-300 font-medium">
+                Ma'lumotlar bazasiga ulanib bo'lmadi. Buning sabablari:
+              </p>
+              <ul className="space-y-2">
+                {[
+                  "Supabase loyihangiz to'xtatilgan (paused) bo'lishi mumkin.",
+                  "Internet aloqangizda muammo bo'lishi mumkin.",
+                  "VITE_SUPABASE_URL manzili noto'g'ri bo'lishi mumkin."
+                ].map((text, i) => (
+                  <li key={i} className="flex gap-2 items-start text-[12px] text-gray-600 dark:text-gray-400">
+                    <span className="w-5 h-5 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-gray-500">
+                      {i + 1}
+                    </span>
+                    {text}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="flex-1 py-2 bg-blue-600 text-white font-semibold text-[13px] rounded hover:bg-blue-700 transition-colors"
+                >
+                  Qayta urinish
+                </button>
+                <a
+                  href="https://supabase.com/dashboard"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 flex items-center justify-center font-semibold text-[13px] rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Supabase Dashboard
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -520,97 +576,83 @@ const App: React.FC = () => {
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-[#020617] relative overflow-hidden">
-        {/* Dynamic Background Mesh (Handled by CSS body V2, but adding local glows for extra depth) */}
-        <div className="absolute inset-0 z-0 opacity-40">
-          <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-indigo-500/10 rounded-full blur-[180px]"></div>
-          <div className="absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] bg-blue-500/10 rounded-full blur-[180px]"></div>
-        </div>
-
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#F0F1F3] dark:bg-[#1A1D23]">
         <Toaster position="top-center" richColors />
 
-        <div className="w-full max-w-xl relative z-10 animate-macos">
-          {/* Top Branding Section */}
-          <div className="text-center mb-16">
-            <div className="relative inline-block group">
-              <div className="absolute inset-0 bg-indigo-500/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-              <div className="w-28 h-28 mx-auto mb-10 liquid-glass-card rounded-[2.5rem] flex items-center justify-center p-0 border border-white/40 shadow-glass-2xl group-hover:scale-110 transition-transform duration-700">
-                <div className="glass-reflection"></div>
-                <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain relative z-10 drop-shadow-2xl" />
+        <div className="w-full max-w-md animate-macos">
+          {/* 1C-style Login Card */}
+          <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md shadow-lg overflow-hidden">
+            {/* Yellow 1C Header */}
+            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 dark:from-yellow-700 dark:to-yellow-800 px-6 py-4 flex items-center gap-4">
+              <div className="h-12 w-12 flex items-center justify-center bg-white/30 dark:bg-white/10 rounded">
+                <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-yellow-100">ASOS Бухгалтерия</h1>
+                <p className="text-[11px] text-gray-700 dark:text-yellow-300/70 font-medium">{translations[lang].integratedNeuralNetwork}</p>
               </div>
             </div>
-            <h1 className="text-6xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none mb-4 premium-text-gradient drop-shadow-sm">ASOS Intelligence</h1>
-            <p className="text-[12px] font-black text-slate-400 dark:text-indigo-400/50 uppercase tracking-[0.5em] opacity-80">{translations[lang].integratedNeuralNetwork}</p>
-          </div>
 
-          <form onSubmit={handleSignIn} className="liquid-glass-card p-12 md:p-20 border border-white/30 dark:border-white/10 group/form">
-            <div className="glass-reflection"></div>
-
-            <div className="space-y-10 relative z-10">
-              <div className="group">
-                <div className="flex justify-between items-center mb-5">
-                  <label className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 group-focus-within:text-indigo-500 transition-colors">{translations[lang].accessIdentifier}</label>
-                </div>
-                <div className="relative">
-                  <input
-                    type="email"
-                    value={authEmail}
-                    onChange={(e) => setAuthEmail(e.target.value)}
-                    placeholder="neural@asos.uz"
-                    className="w-full bg-white/10 dark:bg-white/[0.03] border border-white/20 dark:border-white/5 rounded-3xl px-10 py-6 font-bold text-lg outline-none focus:bg-white/20 dark:focus:bg-white/10 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400/50"
-                    required
-                  />
-                </div>
+            {/* Login Form */}
+            <form onSubmit={handleSignIn} className="p-6 space-y-5">
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5">{translations[lang].accessIdentifier}</label>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="email@asos.uz"
+                  className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-3 py-2.5 text-[14px] text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
+                  required
+                />
               </div>
 
-              <div className="group">
-                <div className="flex justify-between items-center mb-5">
-                  <label className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 group-focus-within:text-indigo-500 transition-colors">{translations[lang].securityHashcode}</label>
-                  <span className="text-[9px] font-black text-slate-400/40 uppercase hover:text-indigo-500 cursor-pointer transition-colors">{translations[lang].emergencyProtocol}</span>
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-[12px] font-semibold text-gray-600 dark:text-gray-400">{translations[lang].securityHashcode}</label>
+                  <span className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium">{translations[lang].emergencyProtocol}</span>
                 </div>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     value={authPassword}
                     onChange={(e) => setAuthPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full bg-white/10 dark:bg-white/[0.03] border border-white/20 dark:border-white/5 rounded-3xl px-10 py-7 font-bold text-lg outline-none focus:bg-white/20 dark:focus:bg-white/10 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400/50 pr-20"
+                    placeholder="••••••••"
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-3 py-2.5 text-[14px] text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all pr-10"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-8 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
                   >
-                    {showPassword ? <EyeOff size={28} strokeWidth={2.5} /> : <Eye size={28} strokeWidth={2.5} />}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
 
               {authError && (
-                <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-3xl flex items-center gap-5 text-rose-500 animate-shake">
-                  <AlertCircle size={24} strokeWidth={3} />
-                  <p className="text-[12px] font-black uppercase tracking-widest">{authError}</p>
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded flex items-center gap-3 text-red-600 dark:text-red-400">
+                  <AlertCircle size={16} />
+                  <p className="text-[12px] font-semibold">{authError}</p>
                 </div>
               )}
 
               <button
                 type="submit"
-                className="w-full h-24 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-[13px] uppercase tracking-[0.4em] rounded-[2rem] hover:scale-[1.03] active:scale-[0.97] transition-all shadow-glass-indigo relative overflow-hidden group/btn"
+                className="w-full py-2.5 text-white font-bold text-[14px] rounded transition-colors flex items-center justify-center gap-2"
+                style={{ background: '#3366CC' }}
+                onMouseOver={(e) => (e.currentTarget.style.background = '#1A3D7A')}
+                onMouseOut={(e) => (e.currentTarget.style.background = '#3366CC')}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-white/20 to-indigo-500/0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
-                <span className="relative z-10 flex items-center justify-center gap-4">
-                  {translations[lang].authorizeTransmission} <TrendingUp size={24} strokeWidth={3} />
-                </span>
+                <TrendingUp size={16} />
+                {translations[lang].authorizeTransmission}
               </button>
-            </div>
-          </form>
+            </form>
 
-          <div className="mt-16 text-center space-y-2 opacity-50">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">{translations[lang].globalSecurityKey}: ASOS-UX-V2-PERFECT</p>
-            <div className="flex justify-center gap-6 mt-4">
-              <div className="h-1 w-12 bg-indigo-500/20 rounded-full"></div>
-              <div className="h-1 w-12 bg-emerald-500/10 rounded-full"></div>
+            {/* Footer */}
+            <div className="px-6 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-center">
+              <p className="text-[10px] text-gray-400">ASOS Intelligence v2.0</p>
             </div>
           </div>
         </div>
@@ -620,27 +662,18 @@ const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen flex selection:bg-indigo-500/30 overflow-hidden bg-slate-50 dark:bg-[#050505] text-slate-900 dark:text-white">
-        {/* Global Background Glows */}
-        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-          <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/[0.03] rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/[0.02] rounded-full blur-[120px]"></div>
-        </div>
-
+      <div className="h-screen flex selection:bg-blue-200/50 overflow-hidden bg-[#F0F1F3] dark:bg-[#1A1D23] text-gray-800 dark:text-gray-200">
         <Toaster
           position="top-center"
           richColors
           toastOptions={{
             style: {
-              background: 'rgba(255, 255, 255, 0.8)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '24px',
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              fontSize: '11px',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.1)'
+              background: '#fff',
+              border: '1px solid #E0E3E8',
+              borderRadius: '4px',
+              fontWeight: 600,
+              fontSize: '13px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
             }
           }}
         />
@@ -662,7 +695,7 @@ const App: React.FC = () => {
           pendingReportsCount={pendingReportsCount}
         />
 
-        <main className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-500 ease-in-out relative z-10`}>
+        <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-200 relative z-10">
           <TopBar
             isDarkMode={isDarkMode}
             onThemeToggle={toggleTheme}
@@ -682,21 +715,21 @@ const App: React.FC = () => {
             onPeriodChange={setSelectedPeriod}
           />
 
-          <div className={`flex-1 ${activeView === 'reports' ? 'overflow-hidden relative' : 'overflow-y-auto scrollbar-none overflow-x-hidden'}`}>
-            <div className={`${activeView === 'reports' ? 'absolute inset-0 flex flex-col' : 'w-full min-h-full'} p-4 sm:p-6 md:p-8 lg:p-6 animate-macos group/main`}>
+          <div className={`flex-1 ${activeView === 'reports' ? 'overflow-hidden relative' : 'overflow-y-auto overflow-x-hidden'}`}>
+            <div className={`${activeView === 'reports' ? 'absolute inset-0 flex flex-col' : 'w-full min-h-full'} p-3 sm:p-4 md:p-5 lg:p-4 animate-macos`}>
               {/* Access Control for Main Content */}
               {(!((ALLOWED_VIEWS[(userRole as UserRole) || ROLES.ACCOUNTANT] || ALLOWED_VIEWS[ROLES.ACCOUNTANT]).includes(activeView))) ? (
-                <div className="flex flex-col items-center justify-center py-32 text-center">
-                  <div className="w-32 h-32 rounded-[3rem] bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-10 shadow-glass-rose">
-                    <AlertCircle size={64} className="text-rose-500 drop-shadow-xl" />
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-16 h-16 rounded bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center justify-center mb-6">
+                    <AlertCircle size={32} className="text-red-500" />
                   </div>
-                  <h2 className="text-5xl font-black text-slate-800 dark:text-white mb-4 tracking-tighter uppercase leading-none">Access Restricted</h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-[0.4em]">Integrated Security Protocol Active — Authorization Level Insufficient</p>
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Ruxsat berilmagan</h2>
+                  <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">Ushbu bo'limga kirish huquqi mavjud emas</p>
                   <button
                     onClick={() => setActiveView('dashboard')}
-                    className="mt-12 px-10 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:scale-105 transition-all shadow-glass"
+                    className="px-6 py-2 bg-blue-600 text-white rounded font-semibold text-[13px] hover:bg-blue-700 transition-colors"
                   >
-                    Return to Safe Zone
+                    Bosh sahifaga qaytish
                   </button>
                 </div>
               ) : (

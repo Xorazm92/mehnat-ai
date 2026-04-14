@@ -37,123 +37,125 @@ const TopBar: React.FC<TopBarProps> = ({
   const getIcon = (type: string) => {
     switch (type) {
       case 'approval_request': return <Clock size={14} />;
-      case 'deadline': return <Bell size={14} className="text-amber-500" />;
+      case 'deadline': return <Bell size={14} className="text-amber-600" />;
       default: return <Bell size={14} />;
     }
   };
 
   return (
-    <header className="h-20 md:h-24 flex items-center justify-between px-6 md:px-10 sticky top-0 z-40 bg-white/5 dark:bg-black/10 backdrop-blur-3xl border-b border-white/10 shadow-glass-sm">
-      {/* Background Accent */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1 bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent"></div>
-
-      <div className="flex items-center gap-4 md:gap-8 flex-1 max-w-2xl relative z-10">
-        <button onClick={onMenuToggle} className="lg:hidden p-3 text-slate-500 hover:bg-white/10 dark:hover:bg-white/5 rounded-2xl transition-all border border-transparent hover:border-white/10">
-          <Menu size={24} />
+    <header className="h-12 flex items-center justify-between px-3 md:px-4 sticky top-0 z-40 bg-white dark:bg-[#22252B] border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="flex items-center gap-3 flex-1 max-w-xl">
+        {/* Mobile menu */}
+        <button onClick={onMenuToggle} className="lg:hidden p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
+          <Menu size={18} />
         </button>
-        <div className="relative w-full group hidden sm:block">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} strokeWidth={2.5} />
+
+        {/* Search */}
+        <div className="relative w-full hidden sm:block">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
           <input
             type="text"
             placeholder={t.search}
-            className="w-full bg-white/5 dark:bg-white/[0.03] border border-white/10 rounded-2xl py-3.5 pl-14 pr-8 outline-none text-[13px] font-black tracking-widest uppercase text-slate-700 dark:text-white placeholder:text-slate-400 focus:bg-white/10 focus:border-indigo-500/30 transition-all shadow-inner"
+            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded py-1.5 pl-8 pr-3 text-[13px] text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
           />
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-focus-within:opacity-100 transition-opacity">
-            <span className="px-2 py-1 bg-white/10 rounded-md text-[9px] font-black text-slate-400 border border-white/10 select-none">ESC</span>
-          </div>
         </div>
 
-        {/* Global Period Picker Integration */}
+        {/* Period Picker */}
         <div className="hidden sm:block shrink-0">
           <MonthPicker
             selectedPeriod={selectedPeriod}
             onChange={onPeriodChange}
-            className="h-12 scale-90 md:scale-100 origin-left"
+            className="h-8 scale-90 origin-left"
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-3 md:gap-8 relative z-10">
-        <div className="flex items-center gap-2 p-1.5 bg-white/5 dark:bg-white/[0.02] border border-white/10 rounded-[1.8rem] shadow-inner">
+      {/* Right side toolbar */}
+      <div className="flex items-center gap-1 md:gap-2">
+        {/* Toolbar buttons group */}
+        <div className="flex items-center gap-0.5 border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 p-0.5">
           <button
             onClick={onLangToggle}
-            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-slate-500 hover:text-indigo-500 hover:bg-white/10 rounded-xl transition-all"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors uppercase"
+            title="Tilni o'zgartirish"
           >
-            <Languages size={15} strokeWidth={3} className="hidden xs:block" />
+            <Languages size={13} className="hidden xs:block" />
             {lang}
           </button>
 
-          <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+          <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
 
           <button
             onClick={onThemeToggle}
-            className="p-2.5 text-slate-400 hover:text-indigo-500 hover:bg-white/10 rounded-xl transition-all"
+            className="p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Tema"
           >
-            {isDarkMode ? <Sun size={20} strokeWidth={2.5} /> : <Moon size={20} strokeWidth={2.5} />}
+            {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
           </button>
+
           <button
             onClick={onSync}
             disabled={isSyncing}
-            className={`p-2.5 text-slate-400 hover:text-indigo-500 hover:bg-white/10 rounded-xl transition-all ${isSyncing ? 'animate-spin text-indigo-500' : ''}`}
+            className={`p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors ${isSyncing ? 'animate-spin text-blue-600' : ''}`}
+            title="Yangilash"
           >
-            <RefreshCw size={20} strokeWidth={2.5} />
+            <RefreshCw size={15} />
           </button>
 
-          <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+          <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
 
-          {/* Notifications Bell */}
+          {/* Notifications */}
           <div className="relative">
             <button
               onClick={() => setShowNotifs(!showNotifs)}
-              className={`p-2.5 text-slate-400 hover:text-indigo-500 hover:bg-white/10 rounded-xl transition-all relative ${showNotifs ? 'text-indigo-500 bg-white/10' : ''}`}
+              className={`p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors relative ${showNotifs ? 'bg-gray-200 dark:bg-gray-700 text-blue-600' : ''}`}
+              title={t.notifications}
             >
-              <Bell size={20} strokeWidth={2.5} />
+              <Bell size={15} />
               {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 flex h-4.5 w-4.5 items-center justify-center bg-rose-500 text-white text-[9px] font-black rounded-full ring-4 ring-white/10 animate-pulse-subtle">
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center bg-red-600 text-white text-[9px] font-bold rounded-full">
                   {unreadCount}
                 </span>
               )}
             </button>
 
             {showNotifs && (
-              <div className="absolute right-0 mt-6 w-[calc(100vw-2rem)] sm:w-96 liquid-glass-card rounded-[2.5rem] overflow-hidden animate-macos z-50 border border-white/20 shadow-glass-2xl">
-                <div className="p-8 border-b border-white/10 flex items-center justify-between bg-white/5">
-                  <h3 className="font-black text-[11px] uppercase tracking-[0.3em] text-slate-800 dark:text-white">{t.notifications}</h3>
-                  <span className="px-3 py-1 bg-indigo-500/10 text-indigo-500 text-[9px] font-black rounded-lg border border-indigo-500/20">{unreadCount} {t.newLabel}</span>
+              <div className="absolute right-0 mt-1 w-[calc(100vw-1rem)] sm:w-80 bg-white dark:bg-[#22252B] rounded-md border border-gray-200 dark:border-gray-600 shadow-lg animate-macos z-50 overflow-hidden">
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between bg-gray-50 dark:bg-gray-800">
+                  <h3 className="font-bold text-[12px] text-gray-700 dark:text-gray-200">{t.notifications}</h3>
+                  <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 text-[10px] font-bold rounded border border-blue-200 dark:border-blue-800">{unreadCount} {t.newLabel}</span>
                 </div>
-                <div className="max-h-[70vh] overflow-y-auto scrollbar-none">
+                <div className="max-h-[60vh] overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <div className="p-16 text-center">
-                      <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6 text-slate-300">
-                        <Bell size={32} strokeWidth={1.5} className="opacity-40" />
-                      </div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{t.noMessages}</p>
+                    <div className="p-8 text-center">
+                      <Bell size={24} className="mx-auto mb-2 text-gray-300" />
+                      <p className="text-[11px] text-gray-400">{t.noMessages}</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
                       {notifications.map(n => (
-                        <div key={n.id} className={`p-6 flex gap-5 group transition-all hover:bg-white/5 ${n.isRead ? 'opacity-50 grayscale-[0.5]' : ''}`}>
-                          <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${n.isRead ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500 shadow-glass-indigo'}`}>
-                            {React.cloneElement(getIcon(n.type) as React.ReactElement, { size: 20, strokeWidth: 3 })}
+                        <div key={n.id} className={`px-3 py-2.5 flex gap-3 group transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 ${n.isRead ? 'opacity-50' : ''}`}>
+                          <div className={`shrink-0 w-8 h-8 rounded flex items-center justify-center ${n.isRead ? 'bg-gray-100 dark:bg-gray-700 text-gray-400' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600'}`}>
+                            {React.cloneElement(getIcon(n.type) as React.ReactElement, { size: 14 })}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-black text-slate-800 dark:text-white leading-tight mb-1">{n.title}</p>
-                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{n.message}</p>
-                            <div className="mt-3 flex items-center gap-4">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 opacity-60">
-                                <Clock size={12} strokeWidth={2.5} /> {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <p className="text-[12px] font-bold text-gray-800 dark:text-gray-200 leading-tight">{n.title}</p>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug mt-0.5 line-clamp-2">{n.message}</p>
+                            <div className="mt-1 flex items-center gap-2">
+                              <p className="text-[9px] text-gray-400 flex items-center gap-1">
+                                <Clock size={10} /> {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
-                              {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>}
+                              {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
                             </div>
                           </div>
-                          <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {!n.isRead && (
-                              <button onClick={() => onMarkAsRead(n.id)} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20">
-                                <Check size={16} strokeWidth={3} />
+                              <button onClick={() => onMarkAsRead(n.id)} className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors" title="O'qildi">
+                                <Check size={12} />
                               </button>
                             )}
-                            <button onClick={() => onDeleteNotification(n.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20">
-                              <Trash2 size={16} strokeWidth={3} />
+                            <button onClick={() => onDeleteNotification(n.id)} className="p-1 bg-red-50 text-red-500 rounded hover:bg-red-100 transition-colors" title="O'chirish">
+                              <Trash2 size={12} />
                             </button>
                           </div>
                         </div>
@@ -166,27 +168,28 @@ const TopBar: React.FC<TopBarProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-4 md:pl-8 md:border-l border-white/10">
+        {/* User profile */}
+        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-200 dark:border-gray-600">
           <button
             onClick={onProfileClick}
-            className="flex items-center gap-4 p-2 bg-white/5 hover:bg-white/10 border border-white/10 dark:border-white/5 rounded-[2rem] transition-all group cursor-pointer shadow-sm"
+            className="flex items-center gap-2 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors cursor-pointer"
           >
-            <div className="h-10 w-10 md:h-12 md:w-12 rounded-[1.2rem] bg-gradient-to-br from-indigo-500 to-emerald-500 flex items-center justify-center text-white text-lg font-black shadow-glass-indigo group-hover:scale-105 group-hover:rotate-3 transition-transform">
+            <div className="h-7 w-7 rounded bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-[11px] font-bold">
               {userName ? userName.charAt(0).toUpperCase() : 'A'}
             </div>
-            <div className="text-left pr-4 hidden lg:block">
-              <p className="text-[13px] font-black text-slate-800 dark:text-white leading-none mb-1 premium-text-gradient uppercase tracking-tight">{userName || t.administrator}</p>
-              <p className="text-[9px] text-indigo-500 dark:text-indigo-400 font-black uppercase tracking-[0.2em]">{(translations[lang] as any)[`role_${userRole}`] || userRole || t.role_super_admin}</p>
+            <div className="text-left hidden lg:block">
+              <p className="text-[12px] font-bold text-gray-800 dark:text-gray-200 leading-none">{userName || t.administrator}</p>
+              <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">{(translations[lang] as any)[`role_${userRole}`] || userRole || t.role_super_admin}</p>
             </div>
           </button>
 
           {onLogout && (
             <button
               onClick={onLogout}
-              className="p-3 text-rose-500/70 hover:text-rose-500 hover:bg-rose-500/10 rounded-2xl transition-all border border-transparent hover:border-rose-500/20"
+              className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
               title={t.logout}
             >
-              <LogOut size={22} strokeWidth={2.5} />
+              <LogOut size={16} />
             </button>
           )}
         </div>

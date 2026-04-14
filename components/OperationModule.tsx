@@ -198,7 +198,7 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
             left: coords.left,
             transform: 'translateX(-50%)'
           }}
-          className="z-[9999] min-w-[200px] liquid-glass-card p-2 animate-in fade-in zoom-in-95 duration-200 origin-top shadow-glass-lg"
+          className="z-[9999] min-w-[200px] bg-white dark:bg-[#22252B] p-2 animate-in fade-in zoom-in-95 duration-200 origin-top shadow-md border border-gray-200 dark:border-gray-700 rounded"
         >
           {!showInput ? (
             <div className="grid grid-cols-1 gap-1">
@@ -222,7 +222,7 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Matn kiriting..."
-                className="liquid-glass-input w-full text-xs px-4 py-3 rounded-xl mb-3 outline-none"
+                className="w-full text-xs px-3 py-2 rounded border border-gray-300 dark:border-gray-600 mb-3 outline-none focus:border-blue-500 font-inter bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200"
               />
               <div className="flex gap-2">
                 <button type="button" onClick={() => setShowInput(false)} className="flex-1 px-3 py-2 text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 transition-all font-inter">Bekor qilish</button>
@@ -252,23 +252,23 @@ const OperationRow = React.memo<{
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
 
   return (
-    <tr className="group hover:bg-white/40 dark:hover:bg-white/5 transition-all border-b border-white/20 dark:border-white/5">
-      <td className="sticky left-0 z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r border-white/20 dark:border-white/10 px-2 py-1.5 text-center text-[10px] font-mono text-slate-400 transition-colors w-10 min-w-[40px]">
+    <tr className="group hover:bg-blue-50 dark:hover:bg-gray-800/50 transition-all border-b border-gray-200 dark:border-gray-800">
+      <td className="sticky left-0 z-20 bg-gray-50 dark:bg-gray-900 group-hover:bg-blue-50 dark:group-hover:bg-gray-800/50 border-r border-gray-200 dark:border-gray-800 px-2 py-1.5 text-center text-[10px] font-mono text-gray-500 transition-colors w-10 min-w-[40px]">
         {idx + 1}
       </td>
       <td
-        className="sticky left-10 z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r border-white/20 dark:border-white/10 px-2 py-1.5 transition-colors w-48 min-w-[192px] cursor-pointer"
+        className="sticky left-10 z-20 bg-white dark:bg-[#22252B] group-hover:bg-blue-50 dark:group-hover:bg-gray-800/50 border-r border-gray-200 dark:border-gray-800 px-2 py-1.5 transition-colors w-48 min-w-[192px] cursor-pointer"
         onClick={() => row.companyId && onCompanySelect(row.companyId as string)}
       >
-        <div className="max-w-[180px] truncate text-[11px] font-bold text-slate-800 dark:text-slate-200 hover:text-blue-600 transition-colors" title={row.name}>
+        <div className="max-w-[180px] truncate text-[11px] font-bold text-gray-800 dark:text-gray-200 hover:text-blue-600 transition-colors" title={row.name}>
           {row.name}
         </div>
       </td>
-      <td className="md:sticky md:left-[232px] z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r border-white/20 dark:border-white/10 px-1 py-1.5 text-center text-[10px] font-mono text-slate-500 transition-colors w-20 min-w-[80px]">
+      <td className="md:sticky md:left-[232px] z-20 bg-white dark:bg-[#22252B] group-hover:bg-blue-50 dark:group-hover:bg-gray-800/50 border-r border-gray-200 dark:border-gray-800 px-1 py-1.5 text-center text-[10px] font-mono text-gray-500 transition-colors w-20 min-w-[80px]">
         {row.inn || '—'}
       </td>
-      <td className="md:sticky md:left-[312px] z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md group-hover:bg-white/80 dark:group-hover:bg-slate-800/80 border-r-2 border-white/30 dark:border-white/10 px-1 py-1.5 transition-colors w-24 min-w-[96px]">
-        <div className="max-w-[90px] truncate text-[10px] font-semibold text-slate-600 dark:text-slate-400" title={row.accountant}>
+      <td className="md:sticky md:left-[312px] z-20 bg-white dark:bg-[#22252B] group-hover:bg-blue-50 dark:group-hover:bg-gray-800/50 border-r-2 border-gray-300 dark:border-gray-700 px-1 py-1.5 transition-colors w-24 min-w-[96px]">
+        <div className="max-w-[90px] truncate text-[10px] font-semibold text-gray-600 dark:text-gray-400" title={row.accountant}>
           {row.accountant || '—'}
         </div>
       </td>
@@ -645,9 +645,9 @@ const OperationModule: React.FC<Props> = ({
 
   // ── Render ───────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-[#1A1D23]">
       {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 liquid-glass-topbar px-5 py-3.5 z-40">
+      <div className="flex-shrink-0 bg-white dark:bg-[#22252B] border-b border-gray-200 dark:border-gray-700 px-5 py-3 z-40 shadow-sm">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-4">
             <div>
@@ -723,7 +723,7 @@ const OperationModule: React.FC<Props> = ({
             { icon: '✗', label: `${t.rejected} (-)` },
             { icon: '—', label: `${t.not_required} (0)` },
             { icon: '⏳', label: t.pending, cls: 'animate-pulse' },
-            { icon: '⚠', label: t.blocked },
+            { icon: '⚠', label: t.kartoteka },
             { icon: '📝', label: t.comment },
             { icon: 'Xis.', label: t.reportLegend },
             { icon: 'To\'l', label: t.paymentLegend },
@@ -737,7 +737,7 @@ const OperationModule: React.FC<Props> = ({
       </div>
 
       {/* ── Matrix ──────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto relative rounded-3xl mx-4 mb-2 shadow-sm border border-white/10 dark:border-white/5 bg-white/20 dark:bg-slate-950/20 backdrop-blur-md">
+      <div className="flex-1 overflow-auto relative rounded bg-white dark:bg-[#22252B] mx-4 my-4 shadow-sm border border-gray-200 dark:border-gray-700">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
@@ -757,7 +757,7 @@ const OperationModule: React.FC<Props> = ({
             <thead className="sticky top-0 z-[60] shadow-sm">
               {/* Group row */}
               <tr className="h-6">
-                <th colSpan={4} className="sticky top-0 left-0 z-[80] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r-2 border-white/20 dark:border-white/10 px-2 py-1 text-left text-[9px] font-bold text-gray-400 uppercase tracking-widest w-[408px] min-w-[408px]">
+                <th colSpan={4} className="sticky top-0 left-0 z-[80] bg-gray-100 dark:bg-gray-800 border-b border-r-2 border-gray-300 dark:border-gray-700 px-2 py-1 text-left text-[9px] font-bold text-gray-500 uppercase tracking-widest w-[408px] min-w-[408px]">
                   {t.firmTable}
                 </th>
                 {(() => {
@@ -778,7 +778,7 @@ const OperationModule: React.FC<Props> = ({
                   };
 
                   return [...groupCounts.entries()].map(([name, count]) => (
-                    <th key={name} colSpan={count} className={`sticky top-0 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-1 py-1.5 text-center text-[9px] font-black uppercase tracking-wider ${groupColors[name] || 'bg-white/80 text-gray-500'}`}>
+                    <th key={name} colSpan={count} className={`sticky top-0 border-b border-r border-gray-200 dark:border-gray-700 px-1 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider ${groupColors[name] || 'bg-gray-100 text-gray-500'}`}>
                       {name}
                     </th>
                   ));
@@ -786,16 +786,16 @@ const OperationModule: React.FC<Props> = ({
               </tr>
               {/* Column header row (24px height roughly for the first row) */}
               <tr className="h-8">
-                <th className="sticky top-[24px] left-0 z-[70] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-2 py-2 text-center font-bold text-gray-500 w-10 min-w-[40px]">#</th>
-                <th className="sticky top-[24px] left-10 z-[70] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-2 py-2 text-left font-bold text-gray-700 dark:text-gray-300 w-48 min-w-[192px]">{t.companyName}</th>
-                <th className="md:sticky md:top-[24px] md:left-[232px] z-[70] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-1.5 py-2 text-center font-bold text-gray-500 w-20 min-w-[80px]">{t.inn}</th>
-                <th className="md:sticky md:top-[24px] md:left-[312px] z-[70] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r-2 border-white/20 dark:border-white/10 px-1.5 py-2 text-center font-bold text-gray-500 w-24 min-w-[96px]">{t.accountant}</th>
+                <th className="sticky top-[24px] left-0 z-[70] bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-center text-[10px] font-bold text-gray-500 w-10 min-w-[40px]">#</th>
+                <th className="sticky top-[24px] left-10 z-[70] bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-left text-[11px] font-bold text-gray-700 dark:text-gray-300 w-48 min-w-[192px]">{t.companyName}</th>
+                <th className="md:sticky md:top-[24px] md:left-[232px] z-[70] bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center text-[11px] font-bold text-gray-500 w-20 min-w-[80px]">{t.inn}</th>
+                <th className="md:sticky md:top-[24px] md:left-[312px] z-[70] bg-gray-100 dark:bg-gray-800 border-b border-r-2 border-gray-300 dark:border-gray-700 px-1.5 py-2 text-left text-[11px] font-bold text-gray-500 w-24 min-w-[96px]">BUXGALTER</th>
                 {visibleColumns.map(col => {
                   if ((col as any).isSplit) {
                     return (
                       <React.Fragment key={col.key}>
                         <th
-                          className="sticky top-[24px] bg-emerald-50/95 dark:bg-emerald-950/50 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-0.5 py-2 text-center w-10 cursor-help"
+                          className="sticky top-[24px] bg-emerald-50 dark:bg-emerald-950/30 border-b border-r border-emerald-100 dark:border-emerald-800/50 px-0.5 py-2 text-center w-10 text-[10px] cursor-help"
                           title={col.label}
                         >
                           <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-400 tracking-tight">{col.short}</span>
@@ -866,8 +866,8 @@ const OperationModule: React.FC<Props> = ({
             </div>
             <div className="h-4 w-px bg-slate-200 dark:bg-slate-800"></div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-tighter opacity-70">{t.source}:</span>
-              <strong className="text-blue-600 dark:text-blue-400 uppercase tracking-widest">{t.database}</strong>
+              <span className="text-[10px] uppercase tracking-tighter opacity-70">Sinxron:</span>
+              <strong className="text-blue-600 dark:text-blue-400 uppercase tracking-widest">Aktiv</strong>
             </div>
           </div>
 
@@ -881,7 +881,7 @@ const OperationModule: React.FC<Props> = ({
               disabled={currentPage === 1}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 disabled:opacity-20 hover:scale-105 hover:bg-white dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm"
             >
-              <span className="text-xs">←</span> {t.prev}
+              <span className="text-xs">←</span> Oldingi
             </button>
 
             <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/5 dark:bg-white/5 border border-white/10">
@@ -903,7 +903,7 @@ const OperationModule: React.FC<Props> = ({
               disabled={currentPage === totalPages || totalPages === 0}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white border border-indigo-500/30 text-[10px] font-black uppercase tracking-[0.2em] disabled:opacity-20 hover:scale-105 hover:bg-indigo-500 transition-all active:scale-95 shadow-glass-indigo"
             >
-              {t.next} <span className="text-xs">→</span>
+              Keyingi <span className="text-xs">→</span>
             </button>
           </div>
         </div>

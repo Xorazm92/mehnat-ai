@@ -86,130 +86,120 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
     const isSupervisor = currentStaff.role === 'supervisor' || currentStaff.role === 'chief_accountant' || currentStaff.role === 'super_admin';
 
     return (
-        <div className="space-y-12 animate-macos pb-20 max-w-[1400px] mx-auto group/cabinet">
-            {/* 🧊 WELCOME HERO V2 */}
-            <div className="flex flex-col lg:flex-row items-center gap-12 liquid-glass-card p-12 md:p-16 rounded-[4rem] border border-white/30 relative overflow-hidden group">
-                <div className="glass-reflection"></div>
-                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] -mr-48 -mt-48 transition-all group-hover:scale-110"></div>
-
-                <div className="relative z-10">
-                    <div className="h-52 w-52 rounded-[3.5rem] bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-glass-indigo relative group-hover:scale-105 transition-all duration-700">
-                        <User size={100} strokeWidth={2.5} className="group-hover:rotate-3 transition-transform duration-700" />
-                        <div className="absolute -bottom-4 -right-4 h-16 w-16 liquid-glass-card rounded-2xl flex items-center justify-center text-emerald-500 shadow-glass-emerald border border-white/40">
-                            <CheckCircle size={32} strokeWidth={3} />
+        <div className="space-y-6 animate-fade-in pb-20 max-w-7xl mx-auto group/cabinet">
+            {/* Header: User Information */}
+            <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div className="flex items-center gap-6">
+                    <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded border border-indigo-100 dark:border-indigo-800 flex items-center justify-center text-indigo-600 shrink-0 relative">
+                        <User size={40} />
+                        <div className="absolute -bottom-2 -right-2 h-6 w-6 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 border border-emerald-200 dark:border-emerald-800 rounded flex items-center justify-center">
+                            <CheckCircle size={12} />
                         </div>
                     </div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded text-[9px] font-bold uppercase tracking-widest">
+                                {currentStaff.role === 'super_admin' ? t.role_super_admin : currentStaff.role === 'supervisor' ? t.role_supervisor : currentStaff.role === 'chief_accountant' ? t.role_chief_accountant : t.role_accountant}
+                            </span>
+                            <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">ID: {currentStaff.id.slice(0, 8)}</span>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white uppercase leading-tight mb-2">
+                            {t.welcome}, {currentStaff.name.split(' ')[0]}!
+                        </h2>
+                        <p className="text-gray-500 text-sm font-bold max-w-xl leading-snug">
+                            {lang === 'uz' ? "Sizning bugungi nazorat va buxgalteriya hisoboti ko'rsatkichlaringiz." : "Ваши показатели контроля и бухгалтерской отчетности на сегодня."}
+                        </p>
+                    </div>
                 </div>
 
-                <div className="text-center lg:text-left flex-1 relative z-10">
-                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-8">
-                        <span className={`px-6 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] shadow-glass liquid-glass-rim ${currentStaff.role === 'super_admin' ? 'bg-amber-500 text-white' : 'bg-indigo-500 text-white'}`}>
-                            {currentStaff.role === 'super_admin' ? t.role_super_admin : currentStaff.role === 'supervisor' ? t.role_supervisor : currentStaff.role === 'chief_accountant' ? t.role_chief_accountant : t.role_accountant}
-                        </span>
-                        <span className="px-6 py-2.5 rounded-2xl bg-white/10 dark:bg-white/5 border border-white/20 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] shadow-glass">Vector-ID: {currentStaff.id.slice(0, 8)}</span>
-                    </div>
-                    <h2 className="text-6xl font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-6 premium-text-gradient">{t.welcome}, {currentStaff.name.split(' ')[0]}!</h2>
-                    <p className="text-slate-500 dark:text-slate-400 font-bold max-w-xl leading-relaxed text-lg opacity-80">
-                        {lang === 'uz' ? "Sizning bugungi nazorat va buxgalteriya hisoboti ko'rsatkichlaringiz. Jamoangiz samaradorligini real vaqt rejimida kuzatib boring." : "Ваши показатели контроля и бухгалтерской отчетности на сегодня. Следите за эффективностью вашей команды в режиме реального времени."}
+                <div className="bg-gray-50 dark:bg-[#1e2025] p-6 rounded border border-gray-200 dark:border-gray-700 w-full lg:w-auto min-w-[280px]">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Taxminiy Maosh</p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white tabular-nums flex items-baseline gap-2">
+                        {salarySummary.toLocaleString()} <span className="text-xs font-bold uppercase text-gray-400">UZS</span>
                     </p>
-                </div>
-
-                <div className="liquid-glass-card p-12 rounded-[3.5rem] text-center border border-white/30 min-w-[320px] shadow-glass-indigo group-hover:translate-y-[-10px] transition-all duration-700 relative z-10">
-                    <div className="glass-reflection"></div>
-                    <p className="text-[12px] font-black text-slate-400 uppercase tracking-[0.4em] mb-6">Taxminiy Maosh</p>
-                    <p className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums flex items-baseline justify-center gap-4">
-                        {salarySummary.toLocaleString()} <span className="text-sm font-black uppercase opacity-40">UZS</span>
-                    </p>
-                    <div className="mt-8 pt-8 border-t border-white/10 text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center justify-center gap-3">
-                        <TrendingUp size={16} /> KPI Bonusi Bilan Birga
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-[10px] font-bold text-emerald-600 uppercase flex items-center gap-1">
+                        <TrendingUp size={12} /> KPI Bonusi
                     </div>
-                    <div className={`absolute -bottom-10 -right-10 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl`}></div>
                 </div>
             </div>
 
             {isSupervisor && subordinates.length > 0 && (
-                <div className="liquid-glass-card p-12 rounded-[4rem] border border-white/20 shadow-glass-lg relative group overflow-hidden">
-                    <div className="glass-reflection"></div>
-                    <div className="absolute -top-32 -right-32 w-80 h-80 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-emerald-500/10 transition-all duration-1000"></div>
+                <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm p-4">
+                    <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="w-8 h-8 rounded bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center border border-emerald-100 dark:border-emerald-800 text-emerald-600">
+                            <TrendingUp size={16} />
+                        </div>
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase">
+                            {t.teamStatus}
+                        </h3>
+                    </div>
 
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-6 mb-12">
-                            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-glass-emerald">
-                                <TrendingUp size={28} strokeWidth={3} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                            { label: t.totalStaff, value: subordinates.length, color: 'indigo' },
+                            { label: t.averageKpi, value: '94%', color: 'emerald' },
+                            { label: t.tasks, value: '1.2k', color: 'sky' },
+                            { label: t.activeFirms, value: '48', color: 'amber' }
+                        ].map((stat, i) => (
+                            <div key={i} className="bg-gray-50 dark:bg-[#1e2025] px-4 py-3 border border-gray-200 dark:border-gray-700 rounded flex flex-col justify-between">
+                                <p className="text-[10px] font-bold text-gray-500 uppercase">{stat.label}</p>
+                                <p className="text-xl font-bold text-gray-900 dark:text-white tabular-nums mt-1">{stat.value}</p>
                             </div>
-                            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">
-                                {t.teamStatus}
-                            </h3>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-                            {[
-                                { label: t.totalStaff, value: subordinates.length, color: 'indigo' },
-                                { label: t.averageKpi, value: '94%', color: 'emerald' },
-                                { label: t.tasks, value: '1.2k', color: 'sky' },
-                                { label: t.activeFirms, value: '48', color: 'amber' }
-                            ].map((stat, i) => (
-                                <div key={i} className="bg-white/5 dark:bg-white/[0.02] border border-white/10 p-8 rounded-[2.5rem] text-center hover:bg-white/10 dark:hover:bg-white/[0.05] transition-all group/stat">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 group-hover/stat:text-indigo-500 transition-colors">{stat.label}</p>
-                                    <p className={`text-4xl font-black text-slate-900 dark:text-white tabular-nums group-hover/stat:scale-110 transition-transform`}>{stat.value}</p>
-                                </div>
-                            ))}
-                        </div>
+                        ))}
                     </div>
                 </div>
             )}
 
-            <div className="space-y-10">
-                <div className="flex items-center justify-between px-6">
-                    <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase flex items-center gap-6">
-                        <Briefcase size={36} className="text-indigo-500" />
+            <div className="space-y-4">
+                <div className="flex items-center justify-between bg-white dark:bg-[#22252B] p-4 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 border border-indigo-100 dark:border-indigo-800">
+                            <Briefcase size={16} />
+                        </div>
                         {t.personalCompanies}
                     </h3>
-                    <div className="px-8 py-3 bg-indigo-500/10 text-indigo-500 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-indigo-500/20 shadow-glass-indigo">
+                    <div className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded text-[10px] font-bold uppercase">
                         {t.total}: {personalCompanies.length}
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {personalCompanies.map(c => {
                         const op = operations.find(o => o.companyId === c.id);
                         const isDone = op?.profitTaxStatus === ReportStatus.ACCEPTED;
                         return (
-                            <div key={c.id} className="liquid-glass-card p-10 rounded-[3.5rem] border border-white/10 hover:border-indigo-500/40 transition-all duration-700 group relative overflow-hidden">
-                                <div className="glass-reflection"></div>
-                                <div className="absolute -top-16 -right-16 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/15 transition-all"></div>
-
-                                <div className="flex justify-between items-start mb-10 relative z-10">
-                                    <div className="font-black text-2xl text-slate-900 dark:text-white tracking-tighter group-hover:text-indigo-500 transition-colors leading-none pr-8">{c.name}</div>
+                            <div key={c.id} className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden flex flex-col">
+                                <div className={`p-4 border-b ${isDone ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800' : 'bg-gray-50 dark:bg-[#1e2025] border-gray-200 dark:border-gray-700'} flex justify-between items-start`}>
+                                    <div className="font-bold text-sm text-gray-900 dark:text-white max-w-[200px] truncate">{c.name}</div>
                                     {isDone ? (
-                                        <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 shadow-glass-emerald border border-emerald-500/20 animate-pulse-subtle">
-                                            <CheckCircle size={28} strokeWidth={3} />
+                                        <div className="w-6 h-6 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
+                                            <CheckCircle size={12} />
                                         </div>
                                     ) : (
-                                        <div className="h-14 w-14 rounded-2xl bg-white/5 text-slate-400 flex items-center justify-center shrink-0 border border-white/10 shadow-inner">
-                                            <Clock size={28} strokeWidth={3} />
+                                        <div className="w-6 h-6 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-600 flex items-center justify-center border border-amber-200 dark:border-amber-800">
+                                            <Clock size={12} />
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="space-y-6 relative z-10">
+                                <div className="p-4 flex-1 space-y-3">
                                     {[
                                         { label: 'Foyda Solig\'i', status: op?.profitTaxStatus },
                                         { label: 'Balans (F1)', status: op?.form1Status }
                                     ].map((item, idx) => (
-                                        <div key={idx} className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-white/5 pb-5 group/row">
-                                            <span className="group-hover/row:text-slate-600 dark:group-hover/row:text-white transition-colors">{item.label}</span>
-                                            <span className={item.status === ReportStatus.ACCEPTED ? 'text-emerald-500' : 'text-slate-400 opacity-60'}>{item.status || 'Kutilmoqda'}</span>
+                                        <div key={idx} className="flex justify-between items-center text-[10px] font-bold uppercase text-gray-500 border-b border-gray-200 dark:border-gray-700 pb-2 last:border-0 last:pb-0">
+                                            <span>{item.label}</span>
+                                            <span className={item.status === ReportStatus.ACCEPTED ? 'text-emerald-600' : 'text-gray-400'}>{item.status || 'Kutilmoqda'}</span>
                                         </div>
                                     ))}
                                 </div>
 
-                                <div className="mt-12 flex justify-between items-center relative z-10">
-                                    <div className="px-5 py-2.5 bg-white/5 rounded-[1.25rem] text-[10px] font-black text-slate-500 uppercase tracking-widest border border-white/10">
+                                <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1e2025] flex justify-between items-center">
+                                    <div className="px-2 py-1 bg-white dark:bg-[#22252B] rounded text-[9px] font-bold text-gray-500 uppercase border border-gray-200 dark:border-gray-700">
                                         {c.taxType}
                                     </div>
-                                    <div className="text-2xl font-black text-indigo-500 tabular-nums tracking-tighter">
-                                        {c.contractAmount?.toLocaleString()} <span className="text-[10px] opacity-40 ml-1">UZS</span>
+                                    <div className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">
+                                        {c.contractAmount?.toLocaleString()} <span className="text-[9px] uppercase text-gray-400 ml-0.5">UZS</span>
                                     </div>
                                 </div>
                             </div>
@@ -218,16 +208,13 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
                 </div>
             </div>
 
-            {/* 安全设置 V2 */}
-            <div className="liquid-glass-card p-12 md:p-16 rounded-[4rem] border border-white/20 shadow-glass-lg relative overflow-hidden group">
-                <div className="glass-reflection"></div>
-                <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-rose-500/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-rose-500/10 transition-all duration-1000"></div>
-
-                <div className="flex items-center gap-8 mb-16 relative z-10">
-                    <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-glass-rose">
-                        <AlertCircle size={32} strokeWidth={3} />
+            {/* Security Settings */}
+            <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm p-6">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="w-8 h-8 rounded bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center border border-rose-100 dark:border-rose-800 text-rose-600">
+                        <AlertCircle size={16} />
                     </div>
-                    <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase">
                         {t.securitySettings}
                     </h3>
                 </div>
@@ -240,7 +227,7 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
                         const confirmPass = (form.elements.namedItem('confirmPassword') as HTMLInputElement).value;
 
                         if (newPass.length < 6) {
-                            alert("Parol kamida 6 ta belgidan iborat bo'lik kerak");
+                            alert("Parol kamida 6 ta belgidan iborat bo'lishi kerak");
                             return;
                         }
                         if (newPass !== confirmPass) {
@@ -257,20 +244,20 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
                             form.reset();
                         }
                     }}
-                    className="max-w-xl space-y-12 relative z-10"
+                    className="max-w-xl space-y-6"
                 >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[
                             { name: 'newPassword', label: t.newPassword },
                             { name: 'confirmPassword', label: t.confirmPassword }
                         ].map((field) => (
-                            <div key={field.name} className="group">
-                                <label className="block text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 mb-5 group-focus-within:text-indigo-500 transition-colors">{field.label}</label>
+                            <div key={field.name}>
+                                <label className="block text-[10px] font-bold uppercase text-gray-500 mb-2">{field.label}</label>
                                 <input
                                     name={field.name}
                                     type="password"
                                     placeholder="••••••••"
-                                    className="w-full bg-white/5 dark:bg-white/[0.02] border border-white/10 rounded-[1.5rem] px-8 py-6 font-black text-lg outline-none focus:bg-white/10 dark:focus:bg-white/[0.05] focus:border-indigo-500/40 transition-all shadow-inner placeholder:text-slate-600"
+                                    className="w-full bg-gray-50 dark:bg-[#1e2025] border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-all placeholder:text-gray-400"
                                     required
                                 />
                             </div>
@@ -278,21 +265,18 @@ const StaffCabinet: React.FC<StaffCabinetProps> = ({ currentStaff, companies, op
                     </div>
                     <button
                         type="submit"
-                        className="px-16 py-7 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[2.5rem] font-black text-[14px] uppercase tracking-[0.4em] hover:scale-105 active:scale-95 transition-all shadow-glass-indigo relative overflow-hidden group/submit"
+                        className="px-6 py-2.5 bg-indigo-600 text-white rounded text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-white/20 to-indigo-500/0 -translate-x-full group-hover/submit:translate-x-full transition-transform duration-1000"></div>
-                        <span className="relative z-10 flex items-center justify-center gap-4">
-                            {t.updatePassword} <Shield size={20} className="animate-pulse" />
-                        </span>
+                        {t.updatePassword} <Shield size={14} />
                     </button>
                 </form>
 
-                <div className="mt-20 p-8 rounded-[2.5rem] bg-indigo-500/5 border border-indigo-500/20 flex items-center gap-6 group/info relative overflow-hidden">
-                    <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
-                        <Star size={24} className="animate-spin-slow" />
+                <div className="mt-8 p-4 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded flex items-start gap-4">
+                    <div className="w-8 h-8 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 flex items-center justify-center shrink-0">
+                        <Star size={14} />
                     </div>
-                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed opacity-60 max-w-2xl">
-                        Xavfsizlik protokoli: Barcha parollar SHA-256 algoritmi yordamida shifrlanadi. Shaxsiy ma'lumotlaringiz ASOS Intelligence himoyasi ostida.
+                    <p className="text-[10px] font-bold text-gray-500 uppercase leading-relaxed max-w-2xl mt-1">
+                        Xavfsizlik protokoli: Barcha parollar shifrlangan holatda saqlanadi. Ma'lumotlaringiz xavfsizligi kafolatlangan.
                     </p>
                 </div>
             </div>

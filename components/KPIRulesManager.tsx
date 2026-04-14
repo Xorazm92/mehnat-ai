@@ -56,30 +56,24 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
     };
 
     return (
-        <div className="space-y-12 animate-fade-in pb-20">
+        <div className="space-y-6 animate-fade-in p-6 bg-gray-50 dark:bg-[#1A1D23] min-h-screen">
             {/* KPI Header */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 rounded-[3.5rem] p-12 text-white shadow-glass-lg group">
-                <div className="absolute -top-10 -right-10 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] animate-pulse"></div>
-                <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-slate-500/10 rounded-full blur-[80px]"></div>
-                <div className="absolute top-0 right-0 p-12 opacity-[0.05] group-hover:scale-110 group-hover:rotate-12 transition-all duration-700 pointer-events-none">
-                    <Settings size={220} />
-                </div>
-
-                <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-10">
+            <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 p-4 rounded shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center border border-indigo-100 dark:border-indigo-800 text-indigo-600 shrink-0">
+                        <Settings size={20} />
+                    </div>
                     <div>
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-glass">
-                                <Settings className="text-white" size={32} />
-                            </div>
-                            <h2 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight premium-text-gradient">
-                                KPI Qoidalari
-                            </h2>
-                        </div>
-                        <p className="text-sm font-black text-white/40 uppercase tracking-[0.3em]">
-                            System-wide performance metrics and reward architecture
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight uppercase">
+                            KPI Qoidalari
+                        </h2>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                            Metrika va mukofotlar konfiguratsiyasi
                         </p>
                     </div>
+                </div>
 
+                <div className="flex items-center gap-2">
                     <button
                         onClick={() => setEditingRule({
                             id: undefined,
@@ -89,107 +83,125 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
                             category: 'reports',
                             sortOrder: rules.length + 1
                         })}
-                        className="flex items-center gap-4 bg-white text-slate-900 px-10 py-5 rounded-[2rem] font-black hover:bg-slate-50 transition-all shadow-glass-lg active:scale-95 group/btn"
+                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 transition-colors shadow-sm text-sm uppercase tracking-widest"
                     >
-                        <Plus size={24} className="group-hover:rotate-90 transition-transform duration-500" />
-                        <span className="uppercase tracking-widest text-xs">Yangi Qoida</span>
+                        <Plus size={16} />
+                        Yangi Qoida
                     </button>
                 </div>
             </div>
 
-            <div className="space-y-12">
+            <div className="space-y-6">
                 {['automation', 'manual'].map(category => (
                     <div key={category} className="animate-fade-in">
-                        <div className="flex items-center gap-4 mb-8 mx-4">
-                            <div className="w-1.5 h-8 bg-indigo-500 rounded-full shadow-glass-indigo"></div>
-                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">
+                        <div className="mb-3">
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200 dark:border-gray-700 pb-2">
                                 {category === 'automation' ? "Avtomatik Operatsiyalar" : "Manual Baholash"}
                             </h3>
                         </div>
 
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {rules.filter(r => r.category === category && r.isActive).map(rule => (
-                                <div key={rule.id} className="liquid-glass-card rounded-[2.5rem] p-8 border border-white/10 hover:border-indigo-500/30 transition-all duration-500 group/item relative overflow-hidden">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors"></div>
-
-                                    <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8 h-full">
-                                        <div className="flex items-center gap-6 flex-1">
-                                            <div
-                                                onClick={() => toggleActive(rule)}
-                                                className={`w-14 h-8 rounded-full relative cursor-pointer transition-all duration-500 shadow-inner ${rule.isActive ? 'bg-emerald-500 shadow-glass-emerald' : 'bg-slate-200 dark:bg-white/10'}`}
-                                            >
-                                                <div className={`absolute top-1.5 left-1.5 w-5 h-5 bg-white rounded-full transition-all duration-500 shadow-md ${rule.isActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                                            </div>
-
-                                            <div>
-                                                <h4 className="font-black text-xl text-slate-800 dark:text-white tracking-tight mb-2">
-                                                    {rule.nameUz}
-                                                    <span className="text-xs font-black text-slate-400/60 ml-3 uppercase tracking-widest">{rule.name}</span>
-                                                </h4>
-                                                <div className="flex gap-3">
-                                                    <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 bg-slate-100 dark:bg-white/5 border border-transparent rounded-xl text-slate-500">{rule.role}</span>
-                                                    <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 rounded-xl">{rule.inputType}</span>
+                        <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden text-sm">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50 dark:bg-[#1e2025] text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-gray-200 dark:border-gray-700">
+                                        <th className="px-4 py-2 w-12 text-center">Status</th>
+                                        <th className="px-4 py-2">Qoida Nomi</th>
+                                        <th className="px-4 py-2">Rol / Tip</th>
+                                        <th className="px-4 py-2 text-center text-emerald-600">Bonus %</th>
+                                        <th className="px-4 py-2 text-center text-rose-600">Jarima %</th>
+                                        <th className="px-4 py-2 text-right">Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                    {rules.filter(r => r.category === category && r.isActive).map(rule => (
+                                        <tr key={rule.id} className="hover:bg-gray-50 dark:hover:bg-[#1e2025] transition-colors">
+                                            <td className="px-4 py-3 text-center">
+                                                <div
+                                                    onClick={() => toggleActive(rule)}
+                                                    className={`w-10 h-6 rounded-full relative cursor-pointer transition-all duration-300 inline-block align-middle ${rule.isActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                >
+                                                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 shadow-sm ${rule.isActive ? 'translate-x-4' : 'translate-x-0'}`}></div>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-10 w-full sm:w-auto">
-                                            <div className="flex-1 sm:text-right">
-                                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Bonus / Jarima</p>
-                                                <div className="flex items-center gap-3 sm:justify-end">
-                                                    <span className="text-lg font-black text-emerald-500">+{rule.rewardPercent}%</span>
-                                                    <div className="w-[1px] h-6 bg-slate-200 dark:bg-white/10"></div>
-                                                    <span className="text-lg font-black text-rose-500">{rule.penaltyPercent}%</span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <p className="font-bold text-gray-900 dark:text-gray-100">{rule.nameUz}</p>
+                                                <p className="text-[10px] font-bold text-gray-500 uppercase font-mono mt-0.5">{rule.name}</p>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex gap-2">
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400">{rule.role}</span>
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/30 text-indigo-600 dark:text-indigo-400 rounded">{rule.inputType}</span>
                                                 </div>
-                                            </div>
-
-                                            <button
-                                                onClick={() => setEditingRule(rule)}
-                                                className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/10 border border-transparent hover:border-indigo-500/20 transition-all flex items-center justify-center shadow-sm"
-                                                title="Tahrirlash"
-                                            >
-                                                <Edit3 size={24} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                                            </td>
+                                            <td className="px-4 py-3 text-center font-bold text-emerald-600 tabular-nums border-l border-gray-100 dark:border-gray-800">
+                                                +{rule.rewardPercent}%
+                                            </td>
+                                            <td className="px-4 py-3 text-center font-bold text-rose-600 tabular-nums border-l border-gray-100 dark:border-gray-800">
+                                                {rule.penaltyPercent}%
+                                            </td>
+                                            <td className="px-4 py-3 text-right border-l border-gray-100 dark:border-gray-800">
+                                                <button
+                                                    onClick={() => setEditingRule(rule)}
+                                                    className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800/30 transition-colors inline-flex"
+                                                    title="Tahrirlash"
+                                                >
+                                                    <Edit3 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {rules.filter(r => r.category === category && r.isActive).length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="px-4 py-8 text-center text-gray-500 text-sm italic">
+                                                Bu turkumda faol qoidalar yo'q.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 ))}
 
                 {rules.filter(r => !r.isActive).length > 0 && (
-                    <div className="pt-12 border-t border-white/5">
+                    <div className="pt-6 mt-4 border-t border-gray-200 dark:border-gray-700">
                         <details className="group/archived">
-                            <summary className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] cursor-pointer hover:text-indigo-500 transition-colors mb-8 flex items-center gap-4 list-none outline-none">
-                                <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center group-open/archived:rotate-180 transition-transform">
+                            <summary className="text-[10px] font-bold text-gray-500 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors mb-4 flex items-center gap-2 list-none outline-none">
+                                <div className="w-6 h-6 rounded bg-gray-100 dark:bg-gray-800 flex items-center justify-center border border-gray-200 dark:border-gray-700 group-open/archived:rotate-180 transition-transform">
                                     <Plus size={14} />
                                 </div>
                                 Arxivlangan Qoidalar ({rules.filter(r => !r.isActive).length})
                             </summary>
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-10 bg-slate-50/50 dark:bg-white/5 rounded-[3rem] border border-white/5">
-                                {rules.filter(r => !r.isActive).map(rule => (
-                                    <div key={rule.id} className="flex items-center justify-between p-6 bg-white/40 dark:bg-white/5 rounded-[1.8rem] opacity-50 hover:opacity-100 transition-all group/architem border border-transparent hover:border-white/10 shadow-sm">
-                                        <div>
-                                            <p className="font-black text-slate-800 dark:text-white text-sm mb-1">{rule.nameUz}</p>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{rule.name}</p>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <button
-                                                onClick={() => toggleActive(rule)}
-                                                className="text-[9px] font-black uppercase tracking-widest text-emerald-500 px-3 py-1.5 bg-emerald-500/10 rounded-lg hover:bg-emerald-500/20 transition-all"
-                                            >
-                                                Restore
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(rule.id, rule.nameUz)}
-                                                className="w-10 h-10 flex items-center justify-center text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden text-sm">
+                                <table className="w-full text-left border-collapse">
+                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                        {rules.filter(r => !r.isActive).map(rule => (
+                                            <tr key={rule.id} className="hover:bg-gray-50 dark:hover:bg-[#1e2025] transition-colors opacity-70 hover:opacity-100">
+                                                <td className="px-4 py-3">
+                                                    <p className="font-bold text-gray-900 dark:text-gray-100">{rule.nameUz}</p>
+                                                    <p className="text-[10px] font-bold text-gray-500 uppercase font-mono mt-0.5">{rule.name}</p>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => toggleActive(rule)}
+                                                            className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/30 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all"
+                                                        >
+                                                            Restore
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(rule.id, rule.nameUz)}
+                                                            className="w-8 h-8 flex items-center justify-center text-rose-600 bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 rounded hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-all"
+                                                            title="O'chirish"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </details>
                     </div>
@@ -198,138 +210,133 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
 
             {/* Edit Modal */}
             {editingRule && (
-                <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xl z-[100] flex items-center justify-center p-6 sm:p-12 animate-fade-in-up">
-                    <div className="liquid-glass-card w-full max-w-4xl rounded-[4rem] p-12 shadow-glass-lg border border-white/20 relative overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="absolute -top-40 -left-40 w-80 h-80 bg-indigo-500/10 rounded-full blur-[120px]"></div>
-                        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-emerald-500/10 rounded-full blur-[120px]"></div>
+                <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 animate-fade-in" onClick={() => setEditingRule(null)}>
+                    <div className="bg-white dark:bg-[#22252B] w-full max-w-3xl rounded shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-[#1e2025] rounded-t">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-widest">
+                                {editingRule.id ? 'Qoidani Tahrirlash' : 'Yangi KPI Qoidasi'}
+                            </h3>
+                            <button onClick={() => setEditingRule(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <Plus size={20} className="rotate-45" />
+                            </button>
+                        </div>
 
-                        <div className="relative z-10 flex flex-col h-full">
-                            <div className="flex items-center justify-between mb-12">
-                                <h3 className="text-4xl font-black tracking-tighter premium-text-gradient">
-                                    {editingRule.id ? 'Qoidani Tahrirlash' : 'Yangi KPI Qoidasi'}
-                                </h3>
-                                <div className="w-16 h-16 rounded-2xl bg-white/10 dark:bg-white/5 flex items-center justify-center border border-white/20">
-                                    <Edit3 className="text-slate-800 dark:text-white" size={32} />
-                                </div>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto pr-4 scrollbar-none">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                    <div className="space-y-8">
-                                        <div className="group">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 block ml-2">Nomi (Internal ID)</label>
-                                            <input
-                                                type="text"
-                                                className="w-full bg-white/40 dark:bg-white/5 border border-white/10 p-6 rounded-[1.8rem] font-black text-slate-800 dark:text-white outline-none focus:bg-white/60 dark:focus:bg-white/10 focus:border-indigo-500/30 transition-all shadow-inner"
-                                                value={editingRule.name || ''}
-                                                onChange={e => setEditingRule({ ...editingRule, name: e.target.value })}
-                                                placeholder="e.g. quarterly_audit"
-                                            />
-                                        </div>
-                                        <div className="group">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 block ml-2">Nomi (O'zbekcha)</label>
-                                            <input
-                                                type="text"
-                                                className="w-full bg-white/40 dark:bg-white/5 border border-white/10 p-6 rounded-[1.8rem] font-black text-slate-800 dark:text-white outline-none focus:bg-white/60 dark:focus:bg-white/10 focus:border-indigo-500/30 transition-all shadow-inner"
-                                                value={editingRule.nameUz || ''}
-                                                onChange={e => setEditingRule({ ...editingRule, nameUz: e.target.value })}
-                                                placeholder="e.g. Choraklik Audit"
-                                            />
-                                        </div>
-                                        <div className="group">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 block ml-2">Maso'ul Role</label>
-                                            <select
-                                                className="w-full bg-white/40 dark:bg-white/5 border border-white/10 p-6 rounded-[1.8rem] font-black text-slate-800 dark:text-white outline-none focus:bg-white/60 dark:focus:bg-white/10 focus:border-indigo-500/30 transition-all shadow-inner appearance-none"
-                                                value={editingRule.role || 'accountant'}
-                                                onChange={e => setEditingRule({ ...editingRule, role: e.target.value as KPIRoleType })}
-                                            >
-                                                <option value="accountant">Accountant</option>
-                                                <option value="bank_client">Bank Client</option>
-                                                <option value="supervisor">Supervisor</option>
-                                            </select>
-                                        </div>
-                                        <div className="group">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 block ml-2">Turkum (Category)</label>
-                                            <input
-                                                type="text"
-                                                className="w-full bg-white/40 dark:bg-white/5 border border-white/10 p-6 rounded-[1.8rem] font-black text-slate-800 dark:text-white outline-none focus:bg-white/60 dark:focus:bg-white/10 focus:border-indigo-500/30 transition-all shadow-inner"
-                                                value={editingRule.category || ''}
-                                                onChange={e => setEditingRule({ ...editingRule, category: e.target.value })}
-                                                placeholder="manual / automation"
-                                            />
-                                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 scrollbar-none">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1 block">Nomi (Internal ID)</label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-gray-50 dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500 transition-colors"
+                                            value={editingRule.name || ''}
+                                            onChange={e => setEditingRule({ ...editingRule, name: e.target.value })}
+                                            placeholder="e.g. quarterly_audit"
+                                        />
                                     </div>
-
-                                    <div className="space-y-8">
-                                        <div className="group">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-3 block ml-2">Bonus % (+)</label>
-                                            <input
-                                                type="number" step="0.01"
-                                                className="w-full bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-[1.8rem] font-black text-2xl text-emerald-500 outline-none focus:bg-emerald-500/10 focus:border-emerald-500/40 transition-all shadow-inner"
-                                                value={editingRule.rewardPercent ?? ''}
-                                                onChange={e => {
-                                                    const v = e.target.value;
-                                                    setEditingRule({
-                                                        ...editingRule,
-                                                        rewardPercent: v === '' ? undefined : Number(v)
-                                                    });
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="group">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-500 mb-3 block ml-2">Jarima % (-)</label>
-                                            <input
-                                                type="number" step="0.01"
-                                                className="w-full bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20 p-6 rounded-[1.8rem] font-black text-2xl text-rose-500 outline-none focus:bg-rose-500/10 focus:border-rose-500/40 transition-all shadow-inner"
-                                                value={editingRule.penaltyPercent ?? ''}
-                                                onChange={e => {
-                                                    const v = e.target.value;
-                                                    setEditingRule({
-                                                        ...editingRule,
-                                                        penaltyPercent: v === '' ? undefined : Number(v)
-                                                    });
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="group">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 block ml-2">Input Tur (Input Type)</label>
-                                            <select
-                                                className="w-full bg-white/40 dark:bg-white/5 border border-white/10 p-6 rounded-[1.8rem] font-black text-slate-800 dark:text-white outline-none focus:bg-white/60 dark:focus:bg-white/10 focus:border-indigo-500/30 transition-all shadow-inner appearance-none"
-                                                value={editingRule.inputType || 'checkbox'}
-                                                onChange={e => setEditingRule({ ...editingRule, inputType: e.target.value as KPIInputType })}
-                                            >
-                                                <option value="checkbox">Checkbox (Ha/Yo'q)</option>
-                                                <option value="counter">Counter (Soni)</option>
-                                                <option value="number">Number</option>
-                                            </select>
-                                        </div>
-                                        <div
-                                            onClick={() => setEditingRule({ ...editingRule, isActive: !editingRule.isActive })}
-                                            className={`p-6 rounded-[1.8rem] border transition-all duration-500 cursor-pointer flex items-center justify-between group/status ${editingRule.isActive ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-100 dark:bg-white/5 border-white/10'}`}
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1 block">Nomi (O'zbekcha)</label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-gray-50 dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500 transition-colors"
+                                            value={editingRule.nameUz || ''}
+                                            onChange={e => setEditingRule({ ...editingRule, nameUz: e.target.value })}
+                                            placeholder="e.g. Choraklik Audit"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1 block">Maso'ul Role</label>
+                                        <select
+                                            className="w-full bg-gray-50 dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500 transition-colors"
+                                            value={editingRule.role || 'accountant'}
+                                            onChange={e => setEditingRule({ ...editingRule, role: e.target.value as KPIRoleType })}
                                         >
-                                            <span className={`font-black uppercase tracking-widest text-xs ${editingRule.isActive ? 'text-emerald-500' : 'text-slate-400'}`}>Qoida Holati</span>
-                                            <div className={`w-12 h-6 rounded-full relative transition-all duration-500 ${editingRule.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                                                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${editingRule.isActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                                            </div>
+                                            <option value="accountant">Accountant</option>
+                                            <option value="bank_client">Bank Client</option>
+                                            <option value="supervisor">Supervisor</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1 block">Turkum (Category)</label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-gray-50 dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500 transition-colors"
+                                            value={editingRule.category || ''}
+                                            onChange={e => setEditingRule({ ...editingRule, category: e.target.value })}
+                                            placeholder="manual / automation"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1 block">Bonus % (+)</label>
+                                        <input
+                                            type="number" step="0.01"
+                                            className="w-full bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-300 dark:border-emerald-800 rounded px-3 py-2 text-sm font-bold text-emerald-700 dark:text-emerald-400 outline-none focus:border-emerald-500 transition-colors"
+                                            value={editingRule.rewardPercent ?? ''}
+                                            onChange={e => {
+                                                const v = e.target.value;
+                                                setEditingRule({
+                                                    ...editingRule,
+                                                    rewardPercent: v === '' ? undefined : Number(v)
+                                                });
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-rose-600 mb-1 block">Jarima % (-)</label>
+                                        <input
+                                            type="number" step="0.01"
+                                            className="w-full bg-rose-50 dark:bg-rose-900/10 border border-rose-300 dark:border-rose-800 rounded px-3 py-2 text-sm font-bold text-rose-700 dark:text-rose-400 outline-none focus:border-rose-500 transition-colors"
+                                            value={editingRule.penaltyPercent ?? ''}
+                                            onChange={e => {
+                                                const v = e.target.value;
+                                                setEditingRule({
+                                                    ...editingRule,
+                                                    penaltyPercent: v === '' ? undefined : Number(v)
+                                                });
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1 block">Input Tur (Input Type)</label>
+                                        <select
+                                            className="w-full bg-gray-50 dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500 transition-colors"
+                                            value={editingRule.inputType || 'checkbox'}
+                                            onChange={e => setEditingRule({ ...editingRule, inputType: e.target.value as KPIInputType })}
+                                        >
+                                            <option value="checkbox">Checkbox (Ha/Yo'q)</option>
+                                            <option value="counter">Counter (Soni)</option>
+                                            <option value="number">Number</option>
+                                        </select>
+                                    </div>
+                                    <div
+                                        onClick={() => setEditingRule({ ...editingRule, isActive: !editingRule.isActive })}
+                                        className={`px-4 py-3 rounded border transition-colors cursor-pointer flex items-center justify-between ${editingRule.isActive ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50' : 'bg-gray-50 dark:bg-[#1e2025] border-gray-200 dark:border-gray-700'}`}
+                                    >
+                                        <span className={`font-bold uppercase tracking-widest text-[10px] ${editingRule.isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500'}`}>Qoida Holati</span>
+                                        <div className={`w-10 h-6 rounded-full relative transition-all duration-300 ${editingRule.isActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 shadow-sm ${editingRule.isActive ? 'translate-x-4' : 'translate-x-0'}`}></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="flex flex-col sm:flex-row gap-6 mt-12 pt-10 border-t border-white/10">
-                                <button
-                                    onClick={() => setEditingRule(null)}
-                                    className="flex-1 py-6 text-slate-400 font-extrabold uppercase tracking-widest hover:text-slate-600 transition-colors"
-                                >
-                                    Bekor qilish
-                                </button>
-                                <button
-                                    onClick={handleSave}
-                                    className="flex-[2] py-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-glass-lg hover:scale-[1.02] active:scale-95 transition-all text-sm"
-                                >
-                                    Qoidani Saqlash
-                                </button>
-                            </div>
+                        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 bg-gray-50 dark:bg-[#1e2025] rounded-b">
+                            <button
+                                onClick={() => setEditingRule(null)}
+                                className="flex-1 py-2 text-gray-600 dark:text-gray-400 font-bold border border-gray-300 dark:border-gray-600 rounded hover:bg-white dark:hover:bg-[#22252B] transition-colors text-[10px] uppercase tracking-widest"
+                            >
+                                Bekor qilish
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                className="flex-1 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 transition-colors text-[10px] uppercase tracking-widest shadow-sm"
+                            >
+                                Qoidani Saqlash
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -91,44 +91,30 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
     }
 
     return (
-        <div className="space-y-10 animate-fade-in pb-20">
-            {/* Premium Tab Navigation */}
-            <div className="liquid-glass-card rounded-[3rem] p-3 flex overflow-x-auto scrollbar-none border border-white/20 shadow-glass-lg relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-transparent to-emerald-500/5 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-
-                <div className="flex gap-3 w-full relative z-10">
-                    {visibleTabs.map(tab => {
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex-1 flex items-center justify-center gap-4 py-5 px-8 rounded-[1.8rem] transition-all duration-500 font-black text-xs uppercase tracking-[0.2em] whitespace-nowrap group/tab relative overflow-hidden ${isActive
-                                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-glass-lg scale-[1.02]'
-                                        : 'hover:bg-white/10 dark:hover:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                                    }`}
-                            >
-                                {isActive && (
-                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-emerald-500/20 opacity-30"></div>
-                                )}
-                                <div className={`relative z-10 flex items-center gap-4 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`}>
-                                    <tab.icon size={22} className={isActive ? 'animate-pulse' : 'opacity-50'} />
-                                    <span>{tab.label}</span>
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
+        <div className="space-y-0 animate-fade-in pb-20">
+            {/* Standard Tab Navigation */}
+            <div className="flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1d23] pt-2 px-2 shadow-sm rounded-t">
+                {visibleTabs.map(tab => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`flex items-center gap-2 py-2.5 px-6 font-bold text-xs uppercase transition-colors whitespace-nowrap border-t-[3px] rounded-t ${isActive
+                                    ? 'border-indigo-600 bg-white dark:bg-[#22252B] text-gray-900 dark:text-white border-x border-gray-200 dark:border-gray-700 -mb-[1px]'
+                                    : 'border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white dark:bg-[#1e2025] hover:bg-gray-50 dark:hover:bg-gray-800'
+                                }`}
+                        >
+                            <tab.icon size={16} />
+                            <span>{tab.label}</span>
+                        </button>
+                    );
+                })}
             </div>
 
-            {/* Content Area with extra depth */}
-            <div className="relative min-h-[600px] animate-fade-in-up">
-                <div className="absolute -top-20 -left-20 w-64 h-64 bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none"></div>
-                <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none"></div>
-
-                <div className="relative z-10">
-                    {activeComponent}
-                </div>
+            {/* Content Area */}
+            <div className="bg-white dark:bg-[#22252B] min-h-[600px] border border-gray-200 dark:border-gray-700 rounded-b shadow-sm relative z-10 p-0 md:p-0">
+                {activeComponent}
             </div>
         </div>
     );
