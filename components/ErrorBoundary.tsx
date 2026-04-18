@@ -42,30 +42,27 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       const isVersionError = isChunkLoadError(error);
 
       return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-          {/* Background Effects */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/[0.05] rounded-full blur-[120px]"></div>
-            <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/[0.05] rounded-full blur-[120px]"></div>
-          </div>
-
-          <div className="liquid-glass-card p-10 max-w-md w-full border border-white/20 shadow-glass-2xl relative z-10 animate-macos">
-            <div className="flex justify-center mb-8">
-              <div className={`${isVersionError ? 'bg-indigo-500/10 text-indigo-500' : 'bg-rose-500/10 text-rose-500'} rounded-3xl p-6 shadow-glass`}>
-                {isVersionError ? <Sparkles size={40} strokeWidth={2.5} /> : <AlertCircle size={40} strokeWidth={2.5} />}
+        <div className="min-h-screen bg-[#F0F1F3] dark:bg-[#1A1D23] flex items-center justify-center p-4">
+          <div className="c1-card p-6 max-w-md w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#22252B]">
+            <div className="flex items-center gap-3 mb-4 bg-red-50 dark:bg-red-900/20 p-3 border-b border-red-200 dark:border-red-900">
+              <div className={`${isVersionError ? 'text-indigo-600' : 'text-red-600'}`}>
+                {isVersionError ? <Sparkles size={24} /> : <AlertCircle size={24} />}
               </div>
+              <h2 className="text-[14px] font-bold text-gray-800 dark:text-white uppercase">
+                {isVersionError ? 'Yangi versiya tayyor' : 'Xatolik yuz berdi'}
+              </h2>
             </div>
 
             <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-3 text-center uppercase tracking-tight">
               {isVersionError ? 'Yangi versiya tayyor' : 'Xatolik yuz berdi'}
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-center mb-10 font-bold uppercase tracking-widest text-[11px] leading-relaxed">
+            <p className="text-gray-600 dark:text-gray-400 text-[13px] mb-6 font-medium">
               {isVersionError
                 ? 'Tizim yangilandi. Iltimos, so\'nggi o\'zgarishlarni ko\'rish uchun sahifani yangilang.'
                 : (error?.message || 'Noma\'lum xatolik yuz berdi')}
             </p>
 
-            <div className="space-y-4">
+            <div className="space-y-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => {
                   if (isVersionError) {
@@ -74,18 +71,18 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                     this.handleReset();
                   }
                 }}
-                className="w-full flex items-center justify-center gap-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-5 rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-glass"
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-[13px] font-semibold transition-colors"
               >
-                <RotateCcw size={20} strokeWidth={3} />
+                <RotateCcw size={16} />
                 {isVersionError ? 'Yangilash va kirish' : 'Qayta urinish'}
               </button>
 
               {!isVersionError && (
                 <button
                   onClick={() => window.location.href = '/'}
-                  className="w-full flex items-center justify-center gap-3 bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-slate-400 py-5 rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded text-[13px] font-semibold transition-colors border border-gray-300 dark:border-gray-600"
                 >
-                  <Home size={20} strokeWidth={3} />
+                  <Home size={16} />
                   Bosh sahifaga qaytish
                 </button>
               )}

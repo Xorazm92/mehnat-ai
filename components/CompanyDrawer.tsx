@@ -175,34 +175,34 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
   return (
     <>
-      <div className="fixed inset-0 bg-slate-900/60 z-[100] transition-opacity duration-300 animate-in fade-in" onClick={onClose}></div>
-      <div className="fixed right-0 top-0 h-full w-full max-w-[800px] bg-gray-50 dark:bg-[#1A1D23] z-[101] overflow-y-auto overflow-x-hidden border-l border-gray-200 dark:border-gray-700 animate-in slide-in-from-right duration-300 flex flex-col">
-        <div className="bg-white dark:bg-[#22252B] border-b border-gray-200 dark:border-gray-700 shrink-0 z-20">
+      <div className="fixed inset-0 bg-black/40 z-[100]" onClick={onClose}></div>
+      <div className="fixed right-0 top-0 h-full w-full max-w-[800px] bg-[#F8F9FA] dark:bg-[#111318] z-[101] overflow-y-auto overflow-x-hidden border-l border-[#DEE2E6] dark:border-[#3A3D44] animate-in slide-in-from-right duration-300 flex flex-col shadow-xl transition-colors">
+        <div className="bg-white dark:bg-[#1A1D23] border-b-2 border-b-[#3366CC] shrink-0 z-20 transition-colors shadow-sm">
           <div className="p-6 flex justify-between items-start">
-            <div className="flex gap-4 items-start">
-              <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 flex items-center justify-center text-2xl text-blue-600 dark:text-blue-400 font-bold shrink-0">
+            <div className="flex gap-5 items-start">
+              <div className="w-16 h-16 bg-[#FAFBFC] dark:bg-[#111318] rounded-sm border-2 border-[#DEE2E6] dark:border-[#3A3D44] flex items-center justify-center text-3xl text-[#3366CC] font-black shrink-0 transition-all shadow-inner">
                 {company.name.charAt(0)}
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 uppercase leading-tight">{company.name}</h2>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-[#1e2025] border border-gray-200 dark:border-gray-700 rounded text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase shrink-0">INN: {company.inn}</span>
-                  <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded text-[10px] font-bold text-indigo-600 uppercase shrink-0">{company.taxType}</span>
+              <div className="flex flex-col gap-1.5 pt-1">
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase leading-none tracking-tight">{company.name}</h2>
+                <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                  <span className="px-3 py-1 bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-[0.1em] leading-none shadow-sm">INN: <span className="text-gray-800 dark:text-white font-black tabular-nums">{company.inn}</span></span>
+                  <span className="px-3 py-1 bg-[#EBF3FF] dark:bg-[#1C2531] border border-[#3366CC]/20 rounded-sm text-[10px] font-black text-[#3366CC] uppercase tracking-[0.1em] leading-none shadow-sm">{company.taxType}</span>
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-[#1e2025] border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-800 rounded text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
-              <X size={16} />
+            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-rose-50 dark:hover:bg-rose-900/10 hover:text-rose-500 rounded-sm text-gray-400 Transition-all shadow-sm">
+              <X size={20} />
             </button>
           </div>
-          <div className="flex px-6 overflow-x-auto border-t border-gray-200 dark:border-gray-700">
+          <div className="flex px-6 overflow-x-auto gap-2 pb-4">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors font-bold text-[10px] uppercase tracking-widest whitespace-nowrap mb-[-2px] ${activeTab === tab.id ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                className={`flex items-center gap-2.5 px-4 py-2.5 transition-all font-black text-[10px] uppercase tracking-[0.15em] whitespace-nowrap rounded-sm border-2 ${activeTab === tab.id ? 'bg-[#3366CC] text-white border-[#3366CC] shadow-md' : 'bg-[#FAFBFC] dark:bg-[#111318] border-[#DEE2E6] dark:border-[#3A3D44] text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:border-gray-400'}`}
               >
-                <span className={activeTab === tab.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}>{tab.icon}</span>
+                <div className="shrink-0">{React.cloneElement(tab.icon as React.ReactElement, { size: 14 })}</div>
                 {tab.label}
               </button>
             ))}
@@ -211,87 +211,94 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
         <div className="p-6 flex-1 space-y-6">
           {activeTab === 'pasport' && (
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded p-5 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex items-center justify-center text-blue-600 p-1.5">
-                    <User size={16} />
+            <div className="space-y-6 animate-fade-in pb-10">
+              <div className="bg-white dark:bg-[#1A1D23] border-2 border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-6 shadow-sm transition-colors border-l-4 border-l-[#3366CC]">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-10 h-10 rounded-sm bg-[#FAFBFC] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] flex items-center justify-center text-[#3366CC] transition-colors shadow-inner">
+                    <User size={20} />
                   </div>
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Direktor</h4>
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Direktor / Rahbar</h4>
                 </div>
-                <div className="pl-11">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white uppercase">{company.directorName || '—'}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{company.directorPhone || 'Telefon ko\'rsatilmagan'}</p>
+                <div className="pl-14">
+                  <p className="text-lg font-black text-gray-800 dark:text-white uppercase tracking-tight leading-none">{company.directorName || '—'}</p>
+                  <p className="text-[11px] text-[#3366CC] font-black uppercase mt-2 tracking-widest tabular-nums flex items-center gap-2">
+                    <Phone size={12} /> {company.directorPhone || 'MALUMOT YOQ'}
+                  </p>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded p-5 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 flex items-center justify-center text-amber-600 p-1.5">
-                    <MapPin size={16} />
+              <div className="bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-6 shadow-sm transition-colors">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-10 h-10 rounded-sm bg-[#FFF9EB] dark:bg-[#2E281F] border border-[#DEE2E6] dark:border-[#3A3D44] flex items-center justify-center text-[#FFC107] transition-colors shadow-inner">
+                    <MapPin size={20} />
                   </div>
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Yuridik Manzil</h4>
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Yuridik Manzil</h4>
                 </div>
-                <div className="pl-11">
-                  <p className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase">{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
+                <div className="pl-14">
+                  <p className="text-[12px] font-black text-gray-700 dark:text-gray-300 uppercase tracking-tight leading-relaxed">{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden">
-                <div className="bg-gray-50 dark:bg-[#1e2025] px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-md overflow-hidden transition-colors">
+                <div className="bg-[#FAFBFC] dark:bg-[#111318] px-4 py-3 flex items-center justify-between border-b border-[#DEE2E6] dark:border-[#3A3D44]">
                   <div className="flex items-center gap-3">
-                    <FileText size={14} className="text-gray-500" />
-                    <h4 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase">Hujjatlar</h4>
+                    <FileText size={16} className="text-gray-400" />
+                    <h4 className="text-[10px] font-black text-gray-800 dark:text-white uppercase tracking-widest leading-none">Arxiv Hujjatlari</h4>
                   </div>
-                  <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-[9px] font-bold text-gray-600 dark:text-gray-300">{documents.length} fayl</span>
+                  <span className="px-3 py-1 bg-white dark:bg-black/20 border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm text-[9px] font-black text-[#3366CC] uppercase">{documents.length} FAYL</span>
                 </div>
                 {isLoadingDocs ? (
-                  <div className="p-6 flex flex-col items-center justify-center">
-                    <div className="animate-spin w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full mb-2"></div>
-                    <p className="text-[10px] font-bold uppercase text-gray-400">Yuklanmoqda...</p>
+                  <div className="p-10 flex flex-col items-center justify-center">
+                    <div className="animate-spin w-8 h-8 border-3 border-[#3366CC] border-t-transparent rounded-sm mb-4"></div>
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest leading-none">Yuklanmoqda...</p>
                   </div>
                 ) : documents.length > 0 ? (
-                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <div className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
                     {documents.slice(0, 5).map((doc, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-[#1e2025] transition-colors">
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate pr-4">{doc.file_name}</span>
-                        <a href={doc.file_url} target="_blank" rel="noreferrer" className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded shrink-0 transition-colors">
-                          <Download size={14} />
+                      <div key={i} className="flex items-center justify-between p-4 hover:bg-[#F2F7FF] dark:hover:bg-[#1C2531] transition-colors group">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-sm bg-[#FAFBFC] dark:bg-[#111318] flex items-center justify-center text-gray-400 border border-[#DEE2E6] dark:border-[#3A3D44] group-hover:text-[#3366CC] transition-colors shadow-inner">
+                                <FileText size={14} />
+                            </div>
+                            <span className="text-[12px] font-black text-gray-700 dark:text-gray-300 truncate pr-4 uppercase tracking-tight group-hover:text-gray-900 transition-colors">{doc.file_name}</span>
+                        </div>
+                        <a href={doc.file_url} target="_blank" rel="noreferrer" className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-[#3366CC] bg-[#FAFBFC] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shrink-0 transition-all shadow-sm active:scale-95">
+                          <Download size={16} />
                         </a>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-6 text-center text-[10px] font-bold uppercase text-gray-400 tracking-widest">
+                  <div className="p-16 text-center text-[10px] font-black uppercase text-gray-300 tracking-[0.3em]">
                     Hujjatlar topilmadi
                   </div>
                 )}
               </div>
 
               {/* Service Scope in Passport */}
-              <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden">
-                <div className="bg-gray-50 dark:bg-[#1e2025] px-4 py-3 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700">
-                  <Check size={14} className="text-gray-500" />
-                  <h4 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase">Xizmatlar & Operatsiyalar</h4>
+              <div className="bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-md overflow-hidden transition-colors">
+                <div className="bg-[#FAFBFC] dark:bg-[#111318] px-4 py-3 flex items-center gap-3 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+                  <Check size={16} className="text-gray-400" />
+                  <h4 className="text-[10px] font-black text-gray-800 dark:text-white uppercase tracking-widest">Xizmatlar & Operatsiyalar</h4>
                 </div>
-                <div className="p-5">
-                  <div className="flex flex-wrap gap-2 mb-4">
+                <div className="p-6">
+                  <div className="flex flex-wrap gap-2 mb-6">
                     {company.serviceScope?.length ? company.serviceScope.map(s => (
-                      <span key={s} className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 border border-emerald-200 dark:border-emerald-800 text-[9px] font-bold rounded uppercase truncate">{s}</span>
+                      <span key={s} className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 border border-emerald-100 dark:border-emerald-900/30 text-[9px] font-black rounded-sm uppercase tracking-widest shadow-sm">{s}</span>
                     )) : company.activeServices?.length ? company.activeServices.slice(0, 8).map(s => (
-                      <span key={s} className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 border border-indigo-200 dark:border-indigo-800 text-[9px] font-bold rounded uppercase truncate">{s.replace('_', ' ')}</span>
+                      <span key={s} className="px-3 py-1 bg-[#EBF3FF] dark:bg-[#1C2531] text-[#3366CC] border border-[#DEE2E6] dark:border-[#3A3D44] text-[9px] font-black rounded-sm uppercase tracking-widest shadow-sm">{s.replace('_', ' ')}</span>
                     )) : (
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Xizmatlar tanlanmagan</p>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] opacity-50">Xizmatlar tanlanmagan</p>
                     )}
                     {company.activeServices && company.activeServices.length > 8 && (
-                      <span className="text-[9px] font-bold text-gray-400 flex items-center px-1">+{company.activeServices.length - 8} yana</span>
+                      <span className="text-[9px] font-black text-gray-400 flex items-center px-1 uppercase tracking-widest">+{company.activeServices.length - 8} YANA</span>
                     )}
                   </div>
                   <button
                     onClick={() => setActiveTab('xizmatlar')}
-                    className="w-full py-2 bg-gray-100 dark:bg-[#1e2025] border border-gray-200 dark:border-gray-700 rounded text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                    className="w-full py-3 bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] hover:bg-[#F2F7FF] dark:hover:bg-[#1C2531] transition-all hover:text-[#3366CC] hover:border-[#3366CC] shadow-sm active:scale-[0.99]"
                   >
-                    Barchasini ko'rish
+                    BARCHASINI KO'RISH
                   </button>
                 </div>
               </div>
@@ -299,70 +306,70 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
           )}
 
           {activeTab === 'soliq' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white dark:bg-[#22252B] p-5 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">1C Server & Baza</h4>
-                  <div className="space-y-2 text-xs">
-                    <p className="font-bold text-gray-600 dark:text-gray-300 uppercase">Server ID: <span className="text-indigo-600 dark:text-indigo-400">{company.serverInfo || '—'}</span></p>
+            <div className="space-y-4 animate-fade-in">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+                  <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3">1C Server & Baza</h4>
+                  <div className="space-y-2 text-[11px]">
+                    <p className="font-bold text-gray-600 dark:text-gray-400 uppercase">Server ID: <span className="text-[#3366CC] dark:text-[#4D80E6]">{company.serverInfo || '—'}</span></p>
                     {company.serverName && (
-                      <p className="font-bold text-gray-600 dark:text-gray-300 uppercase">Server Nomi: <span className="text-emerald-600">{company.serverName}</span></p>
+                      <p className="font-bold text-gray-600 dark:text-gray-400 uppercase">Server Nomi: <span className="text-[#28A745]">{company.serverName}</span></p>
                     )}
-                    <p className="font-bold text-gray-500 uppercase">Baza: {company.baseName1c || '—'}</p>
+                    <p className="font-bold text-gray-400 uppercase tracking-tight">Baza: {company.baseName1c || '—'}</p>
                   </div>
                 </div>
-                <div className={`p-5 rounded border flex items-center gap-3 ${company.itParkResident ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-700' : 'bg-gray-50 dark:bg-[#1e2025] border-gray-200 dark:border-gray-700 text-gray-500'}`}>
-                  <Shield size={20} />
-                  <span className="text-xs font-bold uppercase">IT Park Rezidenti</span>
+                <div className={`p-4 rounded-sm border flex items-center gap-3 transition-colors ${company.itParkResident ? 'bg-[#F2F7FF] dark:bg-[#1C2531] border-[#DEE2E6] text-[#3366CC]' : 'bg-[#F8F9FA] dark:bg-[#111318] border-[#DEE2E6] text-gray-400'}`}>
+                  <Shield size={18} className="shrink-0" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">IT Park Rezidenti</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-[#22252B] p-5 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Statistika Hisobotlari</h4>
-                  <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+                  <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3">Statistika Hisobotlari</h4>
+                  <div className="flex flex-wrap gap-1.5">
                     {company.statReports?.length ? company.statReports.map(s => (
-                      <span key={s} className="px-2 py-1 bg-gray-100 dark:bg-[#1e2025] border border-gray-200 dark:border-gray-700 text-[9px] font-bold rounded text-gray-600 dark:text-gray-300 uppercase">{s}</span>
-                    )) : <p className="text-[10px] font-bold text-gray-400 uppercase">belgilanmagan</p>}
+                      <span key={s} className="px-2 py-0.5 bg-[#F8F9FA] dark:bg-[#1e2025] border border-[#DEE2E6] dark:border-[#3A3D44] text-[8px] font-bold rounded-sm text-gray-500 dark:text-gray-400 uppercase tracking-tight">{s}</span>
+                    )) : <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest opacity-50">belgilanmagan</p>}
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#22252B] p-5 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Majburiy Hisobotlar</h4>
-                  <div className="flex flex-wrap gap-2">
+                <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+                  <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3">Majburiy Hisobotlar</h4>
+                  <div className="flex flex-wrap gap-1.5">
                     {company.requiredReports?.length ? company.requiredReports.map(r => (
-                      <span key={r} className="px-2 py-1 bg-rose-50 border border-rose-200 text-[9px] font-bold rounded text-rose-700 uppercase">{r}</span>
-                    )) : <p className="text-[10px] font-bold text-gray-400 uppercase">belgilanmagan</p>}
+                      <span key={r} className="px-2 py-0.5 bg-[#FEEBF0] dark:bg-[#311C21] border border-[#DEE2E6] text-[8px] font-bold rounded-sm text-[#DC3545] uppercase tracking-tight">{r}</span>
+                    )) : <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest opacity-50">belgilanmagan</p>}
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#22252B] p-5 rounded border border-gray-200 dark:border-gray-700 shadow-sm col-span-1 md:col-span-2">
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Xizmatlar Ko'lami (Scope)</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm col-span-1 md:col-span-2 transition-colors">
+                  <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3">Xizmatlar Ko'lami (Scope)</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                     {company.serviceScope?.length ? company.serviceScope.map(s => (
-                      <div key={s} className="flex items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-indigo-700 rounded">
-                        <Check size={12} className="shrink-0" />
-                        <span className="text-[9px] font-bold uppercase truncate">{s}</span>
+                      <div key={s} className="flex items-center gap-2 px-2 py-1.5 bg-[#F2F7FF] dark:bg-[#1C2531] border border-[#DEE2E6] dark:border-[#3A3D44] text-[#3366CC] rounded-sm transition-colors">
+                        <Check size={10} className="shrink-0" />
+                        <span className="text-[9px] font-bold uppercase truncate tracking-tight">{s}</span>
                       </div>
                     )) : (
-                      <div className="col-span-full py-4 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded bg-gray-50 dark:bg-[#1e2025]">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Xizmatlar tanlanmagan</p>
+                      <div className="col-span-full py-6 text-center border border-dashed border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm bg-[#F8F9FA] dark:bg-[#111318] transition-colors">
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest opacity-50">Xizmatlar tanlanmagan</p>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#22252B] p-5 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <Database size={14} className="text-gray-500" />
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">1C Holati</h4>
+              <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+                <div className="flex items-center gap-2 mb-3">
+                  <Database size={12} className="text-gray-400" />
+                  <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">1C Holati</h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {['cloud', 'local', 'server', 'none'].map(status => (
-                    <div key={status} className={`px-3 py-1.5 rounded border font-bold text-[9px] uppercase transition-colors ${company.oneCStatus === status ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-gray-50 dark:bg-[#1e2025] border-gray-200 dark:border-gray-700 text-gray-500'}`}>
+                    <button key={status} className={`px-3 py-1.5 rounded-sm border font-bold text-[9px] uppercase transition-all tracking-widest shadow-sm ${company.oneCStatus === status ? 'bg-[#3366CC] border-[#3366CC] text-white' : 'bg-white dark:bg-[#22252B] border-[#DEE2E6] dark:border-[#3A3D44] text-gray-400'}`}>
                       {status === 'cloud' ? '☁️ Cloud' : status === 'local' ? '💻 Local' : status === 'server' ? '🖥️ Server' : '❌ Yo\'q'}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -370,22 +377,22 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
           )}
 
           {activeTab === 'loginlar' && (
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-[#22252B] p-5 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="space-y-4 animate-fade-in">
+              <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <Globe size={14} className="text-gray-500" />
-                    <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase">Soliq.uz (Asosiy)</h4>
+                  <div className="flex items-center gap-2">
+                    <Globe size={12} className="text-gray-400" />
+                    <h4 className="text-[10px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Soliq.uz (Asosiy)</h4>
                   </div>
                   {isEditingMainLogin ? (
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       <button
                         onClick={() => {
                           setIsEditingMainLogin(false);
                           setTempLogin(company.login || '');
                           setTempPassword(company.password || '');
                         }}
-                        className="px-3 py-1.5 text-[9px] font-bold text-gray-500 uppercase rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent"
+                        className="px-2.5 py-1 text-[8px] font-bold text-gray-400 uppercase rounded-sm border border-[#DEE2E6] hover:bg-[#F8F9FA] dark:hover:bg-[#1e2025] transition-all"
                       >
                         Bekor qilish
                       </button>
@@ -396,7 +403,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                           }
                           setIsEditingMainLogin(false);
                         }}
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[9px] font-bold uppercase rounded border border-indigo-700 transition-colors"
+                        className="px-2.5 py-1 bg-[#28A745] hover:bg-[#218838] text-white text-[8px] font-bold uppercase rounded-sm border border-[#218838] transition-all shadow-sm"
                       >
                         Saqlash
                       </button>
@@ -404,43 +411,43 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   ) : (
                     <button
                       onClick={() => setIsEditingMainLogin(true)}
-                      className="px-3 py-1.5 bg-gray-100 dark:bg-[#1e2025] hover:bg-gray-200 dark:hover:bg-gray-800 text-[9px] font-bold text-gray-600 dark:text-gray-300 uppercase rounded border border-gray-200 dark:border-gray-700 transition-colors"
+                      className="px-2.5 py-1 bg-[#F8F9FA] dark:bg-[#1e2025] hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-all hover:text-[#3366CC]"
                     >
                       Tahrirlash
                     </button>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Login</p>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Login</p>
                     {isEditingMainLogin ? (
                       <input
                         type="text"
-                        className="w-full bg-white dark:bg-[#1A1D23] p-2 rounded border border-gray-300 dark:border-gray-600 font-mono text-sm uppercase outline-none focus:border-indigo-500"
+                        className="w-full bg-[#FAFAFA] dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-mono text-[11px] uppercase outline-none focus:border-[#3366CC] transition-colors"
                         value={tempLogin}
                         onChange={(e) => setTempLogin(e.target.value)}
                       />
                     ) : (
-                      <p className="text-sm font-mono font-bold text-gray-900 dark:text-white uppercase bg-gray-50 dark:bg-[#1e2025] p-2 rounded border border-gray-200 dark:border-gray-700">{company.login || '—'}</p>
+                      <p className="text-[11px] font-mono font-bold text-gray-800 dark:text-white uppercase bg-[#F8F9FA] dark:bg-[#1e2025] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors">{company.login || '—'}</p>
                     )}
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Parol</p>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Parol</p>
                     <div className="relative">
                       {isEditingMainLogin ? (
                         <input
                           type="text"
-                          className="w-full bg-white dark:bg-[#1A1D23] p-2 rounded border border-gray-300 dark:border-gray-600 font-mono text-sm outline-none focus:border-indigo-500"
+                          className="w-full bg-[#FAFAFA] dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-mono text-[11px] outline-none focus:border-[#3366CC] transition-colors"
                           value={tempPassword}
                           onChange={(e) => setTempPassword(e.target.value)}
                         />
                       ) : (
-                        <div className="flex items-center justify-between bg-gray-50 dark:bg-[#1e2025] p-2 rounded border border-gray-200 dark:border-gray-700">
-                          <p className="text-sm font-mono font-bold text-gray-900 dark:text-white tracking-widest">
+                        <div className="flex items-center justify-between bg-[#F8F9FA] dark:bg-[#1e2025] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors">
+                          <p className="text-[11px] font-mono font-bold text-gray-800 dark:text-white tracking-widest leading-none">
                             {showPasswords['main'] ? company.password || '—' : '••••••••'}
                           </p>
-                          <button onClick={() => setShowPasswords(prev => ({ ...prev, main: !prev.main }))} className="text-gray-400 hover:text-indigo-600 transition-colors">
-                            {showPasswords['main'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                          <button onClick={() => setShowPasswords(prev => ({ ...prev, main: !prev.main }))} className="text-gray-400 hover:text-[#3366CC] transition-all">
+                            {showPasswords['main'] ? <EyeOff size={12} /> : <Eye size={12} />}
                           </button>
                         </div>
                       )}
@@ -449,59 +456,59 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#22252B] rounded border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-                <div className="bg-gray-50 dark:bg-[#1e2025] px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-                  <h4 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase">Qo'shimcha Kirish Ma'lumotlari</h4>
+              <div className="bg-white dark:bg-[#22252B] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm overflow-hidden transition-colors">
+                <div className="bg-[#F8F9FA] dark:bg-[#1e2025] px-3 py-2 flex items-center justify-between border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+                  <h4 className="text-[9px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Qo'shimcha Kirish Ma'lumotlari</h4>
                   <button
                     onClick={() => setIsAddingCredential(true)}
-                    className="flex items-center gap-1 text-[9px] font-bold text-indigo-600 uppercase py-1 px-2.5 bg-indigo-50 dark:bg-indigo-900/20 rounded border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+                    className="flex items-center gap-1 text-[8px] font-bold text-[#3366CC] uppercase py-1 px-2.5 bg-[#F2F7FF] dark:bg-[#1C2531] rounded-sm border border-[#DEE2E6] hover:bg-white transition-all shadow-sm"
                   >
                     <Plus size={10} /> Yangi Qo'shish
                   </button>
                 </div>
 
                 {isAddingCredential && (
-                  <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-indigo-50/50 dark:bg-indigo-900/10">
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="p-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] bg-[#F2F7FF]/50 dark:bg-[#1C2531]/30 transition-colors">
+                    <div className="grid grid-cols-2 gap-3 mb-3">
                       <div className="col-span-2">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Xizmat nomi (Masalan: Didox, Bank)</label>
+                        <label className="text-[8px] font-bold text-gray-400 uppercase mb-1 block tracking-widest">Xizmat nomi (Didox, Bank...)</label>
                         <input
                           type="text"
-                          className="w-full bg-white dark:bg-[#1e2025] p-2 rounded border border-gray-300 dark:border-gray-600 text-sm outline-none focus:border-indigo-500"
+                          className="w-full bg-white dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] text-[11px] font-bold outline-none focus:border-[#3366CC] transition-colors"
                           value={newCred.serviceName}
                           onChange={e => setNewCred({ ...newCred, serviceName: e.target.value })}
                         />
                       </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Login</label>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[8px] font-bold text-gray-400 uppercase block tracking-widest whitespace-nowrap">Login</label>
                         <input
                           type="text"
-                          className="w-full bg-white dark:bg-[#1e2025] p-2 rounded border border-gray-300 dark:border-gray-600 font-mono text-sm uppercase outline-none focus:border-indigo-500"
+                          className="w-full bg-white dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-mono text-[11px] uppercase outline-none focus:border-[#3366CC] transition-colors"
                           value={newCred.loginId}
                           onChange={e => setNewCred({ ...newCred, loginId: e.target.value })}
                         />
                       </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Parol</label>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[8px] font-bold text-gray-400 uppercase block tracking-widest whitespace-nowrap">Parol</label>
                         <input
                           type="text"
-                          className="w-full bg-white dark:bg-[#1e2025] p-2 rounded border border-gray-300 dark:border-gray-600 font-mono text-sm outline-none focus:border-indigo-500"
+                          className="w-full bg-white dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-mono text-[11px] outline-none focus:border-[#3366CC] transition-colors"
                           value={newCred.password}
                           onChange={e => setNewCred({ ...newCred, password: e.target.value })}
                         />
                       </div>
                       <div className="col-span-2">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Izoh</label>
+                        <label className="text-[8px] font-bold text-gray-400 uppercase mb-1 block tracking-widest">Izoh</label>
                         <input
                           type="text"
-                          className="w-full bg-white dark:bg-[#1e2025] p-2 rounded border border-gray-300 dark:border-gray-600 text-sm outline-none focus:border-indigo-500"
+                          className="w-full bg-white dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] text-[11px] font-bold outline-none focus:border-[#3366CC] transition-colors"
                           value={newCred.notes}
                           onChange={e => setNewCred({ ...newCred, notes: e.target.value })}
                         />
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2 text-[9px] uppercase font-bold">
-                      <button onClick={() => setIsAddingCredential(false)} className="px-3 py-1.5 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 rounded">Bekor qilish</button>
+                    <div className="flex justify-end gap-2 text-[8px] uppercase font-bold">
+                      <button onClick={() => setIsAddingCredential(false)} className="px-2.5 py-1 text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest">Bekor qilish</button>
                       <button
                         disabled={!newCred.serviceName || !newCred.loginId}
                         onClick={async () => {
@@ -522,7 +529,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                             setNewCred({ serviceName: '', loginId: '', password: '', notes: '' });
                           }
                         }}
-                        className="px-3 py-1.5 bg-indigo-600 text-white rounded border border-indigo-700 disabled:opacity-50"
+                        className="px-2.5 py-1 bg-[#3366CC] text-white rounded-sm border border-[#3366CC] disabled:opacity-50 shadow-sm transition-all"
                       >
                         Qo'shish
                       </button>
@@ -530,13 +537,13 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   </div>
                 )}
 
-                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                <div className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44]">
                   {credentials.map((cred) => (
-                    <div key={cred.id} className="p-4 hover:bg-gray-50 dark:hover:bg-[#1e2025] transition-colors relative group/cred">
+                    <div key={cred.id} className="p-3 hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] transition-colors relative group/cred">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">
-                          <Key size={12} className="text-gray-400" />
-                          <p className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">{cred.serviceName}</p>
+                          <Key size={10} className="text-gray-400" />
+                          <p className="text-[10px] font-bold text-gray-800 dark:text-white uppercase tracking-tight">{cred.serviceName}</p>
                         </div>
                         <button
                           onClick={() => {
@@ -546,27 +553,27 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                               });
                             }
                           }}
-                          className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded opacity-0 group-hover/cred:opacity-100 transition-all"
+                          className="p-1 text-gray-400 hover:text-[#DC3545] hover:bg-[#FEEBF0] rounded-sm opacity-0 group-hover/cred:opacity-100 transition-all"
                         >
-                          <Trash2 size={12} />
+                          <Trash2 size={10} />
                         </button>
                       </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm mt-3">
-                        <div className="bg-gray-50 dark:bg-[#1A1D23] p-2 rounded border border-gray-200 dark:border-gray-700">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase mb-0.5">Login</p>
-                          <p className="font-mono text-gray-800 dark:text-gray-200 uppercase">{cred.loginId || '—'}</p>
+                      <div className="grid grid-cols-2 gap-3 mt-1">
+                        <div className="bg-[#F8F9FA] dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors">
+                          <p className="text-[8px] font-bold text-gray-400 uppercase mb-0.5 tracking-widest">Login</p>
+                          <p className="font-mono text-[11px] font-bold text-gray-800 dark:text-gray-200 uppercase truncate leading-none mt-1">{cred.loginId || '—'}</p>
                         </div>
-                        <div className="bg-gray-50 dark:bg-[#1A1D23] p-2 rounded border border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                          <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase mb-0.5">Parol</p>
-                            <p className="font-mono text-gray-800 dark:text-gray-200 tracking-widest">{showPasswords[cred.id] ? cred.encryptedPassword || '—' : '••••••••'}</p>
+                        <div className="bg-[#F8F9FA] dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] flex justify-between items-center transition-colors">
+                          <div className="flex-1 min-w-0 pr-2">
+                            <p className="text-[8px] font-bold text-gray-400 uppercase mb-0.5 tracking-widest">Parol</p>
+                            <p className="font-mono text-[11px] font-bold text-gray-800 dark:text-gray-200 tracking-widest leading-none mt-1">{showPasswords[cred.id] ? cred.encryptedPassword || '—' : '••••••••'}</p>
                           </div>
-                          <button onClick={() => handleShowPassword(cred.id, company.id)} className="text-gray-400 hover:text-indigo-600">
-                            {showPasswords[cred.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                          <button onClick={() => handleShowPassword(cred.id, company.id)} className="text-gray-400 hover:text-[#3366CC] transition-all shrink-0">
+                            {showPasswords[cred.id] ? <EyeOff size={11} /> : <Eye size={11} />}
                           </button>
                         </div>
                       </div>
-                      {cred.notes && <p className="text-[10px] mt-2 text-gray-500">Izoh: {cred.notes}</p>}
+                      {cred.notes && <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-tight italic opacity-70">Izoh: {cred.notes}</p>}
                     </div>
                   ))}
                 </div>
@@ -575,10 +582,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
           )}
 
           {activeTab === 'jamoa' && (
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden">
-                <div className="bg-gray-50 dark:bg-[#1e2025] px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-                  <h4 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-widest">Amaldagi Jamoa</h4>
+            <div className="space-y-4 animate-fade-in">
+              <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden transition-colors">
+                <div className="bg-[#F8F9FA] dark:bg-[#1e2025] px-3 py-2 flex items-center justify-between border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+                  <h4 className="text-[9px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Amaldagi Jamoa</h4>
                   {onSave && !isEditingJamoa && (
                     <button
                       onClick={() => {
@@ -591,16 +598,16 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                         })));
                         setIsEditingJamoa(true);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-indigo-200 bg-indigo-50 text-indigo-700 text-[9px] font-bold uppercase transition-colors"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[#DEE2E6] bg-[#F8F9FA] dark:bg-[#1e2025] text-gray-500 dark:text-gray-400 text-[8px] font-bold uppercase transition-all hover:text-[#3366CC] hover:bg-[#F2F7FF]"
                     >
                       <Pencil size={10} /> Tahrirlash
                     </button>
                   )}
                   {isEditingJamoa && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       <button
                         onClick={() => setIsEditingJamoa(false)}
-                        className="px-3 py-1.5 rounded border border-gray-200 bg-gray-100 text-gray-600 text-[9px] font-bold uppercase transition-colors"
+                        className="px-2.5 py-1 rounded-sm border border-[#DEE2E6] bg-[#F8F9FA] dark:bg-[#1e2025] text-gray-400 text-[8px] font-bold uppercase transition-all"
                       >
                         Bekor
                       </button>
@@ -621,7 +628,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                             setIsSavingJamoa(false);
                           }
                         }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-emerald-700 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold uppercase transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[#218838] bg-[#28A745] hover:bg-[#218838] text-white text-[8px] font-bold uppercase transition-all shadow-sm disabled:opacity-50"
                       >
                         {isSavingJamoa ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} Saqlash
                       </button>
@@ -630,80 +637,80 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                 </div>
 
                 {assignmentsError && (
-                  <div className="m-4 p-3 rounded border border-amber-200 bg-amber-50 text-amber-700">
-                    <p className="text-[10px] font-bold uppercase tracking-widest">contract_assignments xatoligi</p>
-                    <p className="text-[10px] uppercase mt-1">{assignmentsError}</p>
+                  <div className="m-3 p-3 rounded-sm border border-[#FFEEBA] bg-[#FFF3CD] text-[#856404]">
+                    <p className="text-[9px] font-bold uppercase tracking-widest leading-none">contract_assignments xatoligi</p>
+                    <p className="text-[9px] uppercase mt-1 opacity-80">{assignmentsError}</p>
                   </div>
                 )}
 
                 {!isEditingJamoa ? (
-                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <div className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44]">
                     {(() => {
                       const displayedAssignments = assignments.length > 0 ? assignments : teamFallbackAssignments();
                       return displayedAssignments.length > 0 ? displayedAssignments.map((asgn: any) => {
                         const member = staff.find(s => s.id === asgn.user_id);
                         return (
-                          <div key={asgn.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#1e2025] transition-colors">
-                            <div className="flex gap-4 items-center">
-                              <div className="w-8 h-8 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 text-xs font-bold shrink-0">
+                          <div key={asgn.id} className="p-3 flex items-center justify-between hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] transition-colors group">
+                            <div className="flex gap-3 items-center">
+                              <div className="w-8 h-8 rounded-sm bg-[#F8F9FA] dark:bg-[#1e2025] border border-[#DEE2E6] dark:border-[#3A3D44] flex items-center justify-center text-gray-400 text-[10px] font-bold shrink-0 transition-colors uppercase">
                                 {member?.name?.charAt(0) || '?'}
                               </div>
-                              <div>
-                                <p className="text-sm font-bold text-gray-900 dark:text-white uppercase">{member?.name || 'Mavjud emas'}</p>
-                                <p className="text-[9px] font-bold text-gray-400 tracking-widest uppercase">{asgn.role.replace(/_/g, ' ')}</p>
+                              <div className="flex flex-col gap-0.5">
+                                <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200 uppercase tracking-tight">{member?.name || 'Mavjud emas'}</p>
+                                <p className="text-[8px] font-bold text-[#3366CC] tracking-widest uppercase opacity-70">{asgn.role.replace(/_/g, ' ')}</p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                            <div className="text-right flex flex-col gap-1">
+                              <span className="px-2 py-0.5 bg-white dark:bg-black/20 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] text-[9px] font-bold text-gray-600 dark:text-gray-300 whitespace-nowrap shadow-sm">
                                 {asgn.salary_type === 'percent' ? `${asgn.salary_value}%` : `${asgn.salary_value?.toLocaleString()} so'm`}
                               </span>
-                              {asgn.start_date && <p className="text-[9px] text-gray-400 mt-1 uppercase">Sana: {new Date(asgn.start_date).toLocaleDateString()}</p>}
+                              {asgn.start_date && <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tight">Sana: {new Date(asgn.start_date).toLocaleDateString()}</p>}
                             </div>
                           </div>
                         );
                       }) : (
-                        <div className="p-8 text-center bg-gray-50 dark:bg-[#1e2025]">
-                          <Users size={24} className="mx-auto mb-2 text-gray-400" />
-                          <p className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">Jamoa a'zolari tayinlanmagan</p>
+                        <div className="p-8 text-center bg-[#F8F9FA] dark:bg-[#111318] transition-colors">
+                          <Users size={20} className="mx-auto mb-2 text-gray-300" />
+                          <p className="text-[9px] font-bold uppercase text-gray-400 tracking-widest opacity-50">Jamoa a'zolari tayinlanmagan</p>
                         </div>
                       );
                     })()}
                   </div>
                 ) : (
-                  <div className="p-4 bg-gray-50 dark:bg-[#1A1D23] space-y-4">
+                  <div className="p-3 bg-[#F2F7FF]/30 dark:bg-[#1C2531]/20 space-y-3 transition-colors">
                     {editAssignments.map((asgn, idx) => {
                       const roleLabels: Record<string, string> = {
                         accountant: 'Buxgalter', controller: 'Nazoratchi', bank_manager: 'Bank Menejer', chief_accountant: 'Bosh Buxgalter'
                       };
                       return (
-                        <div key={asgn.role} className="p-4 bg-white dark:bg-[#22252B] rounded border border-gray-200 dark:border-gray-700 space-y-3">
-                          <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{roleLabels[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
+                        <div key={asgn.role} className="p-3 bg-white dark:bg-[#22252B] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] space-y-2.5 shadow-sm transition-colors">
+                          <p className="text-[8px] font-bold text-[#3366CC] dark:text-[#4D80E6] uppercase tracking-widest">{roleLabels[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="sm:col-span-2">
-                              <label className="text-[9px] font-bold text-gray-500 uppercase block mb-1">Xodim</label>
+                              <label className="text-[8px] font-bold text-gray-400 uppercase block mb-1 tracking-widest">Xodim</label>
                               <select
                                 value={asgn.userId || ''}
                                 onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, userId: e.target.value } : a))}
-                                className="w-full bg-white dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-xs uppercase outline-none focus:border-indigo-500"
+                                className="w-full bg-[#FAFAFA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-2 py-1.5 text-[10px] font-bold uppercase outline-none focus:border-[#3366CC] transition-colors"
                               >
                                 <option value="">— Tanlanmagan —</option>
                                 {staff.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
                               </select>
                             </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-gray-500 uppercase block mb-1">
+                            <div className="flex flex-col">
+                              <label className="text-[8px] font-bold text-gray-400 uppercase block mb-1 tracking-widest whitespace-nowrap">
                                 {asgn.salaryType === 'percent' ? 'Foiz (%)' : 'Summa (so\'m)'}
                               </label>
-                              <div className="flex border border-gray-300 dark:border-gray-600 rounded overflow-hidden">
+                              <div className="flex border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm overflow-hidden shadow-sm transition-colors">
                                 <input
                                   type="number"
                                   value={asgn.salaryValue}
                                   onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, salaryValue: Number(e.target.value) } : a))}
-                                  className="w-full bg-white dark:bg-[#1e2025] px-2 py-1.5 text-xs outline-none"
+                                  className="w-full bg-[#FAFAFA] dark:bg-[#111318] px-2 py-1.5 text-[10px] font-bold outline-none"
                                 />
                                 <button
                                   onClick={() => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, salaryType: a.salaryType === 'percent' ? 'fixed' : 'percent' } : a))}
-                                  className="px-2 py-1.5 bg-gray-100 dark:bg-gray-800 text-[9px] font-bold uppercase text-gray-600 shrink-0 border-l border-gray-300 dark:border-gray-600 hover:bg-gray-200 transition-colors"
+                                  className="px-2 py-1.5 bg-[#F8F9FA] dark:bg-[#1e2025] text-[8px] font-bold uppercase text-gray-500 shrink-0 border-l border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-[#F2F7FF] transition-all hover:text-[#3366CC]"
                                 >
                                   {asgn.salaryType === 'percent' ? '%' : 'UZS'}
                                 </button>
@@ -718,19 +725,19 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
               </div>
 
               {clientHistory.length > 0 && (
-                <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden">
-                  <div className="bg-gray-50 dark:bg-[#1e2025] px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                    <h4 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-widest">Tayinlovlar Tarixi</h4>
+                <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden transition-colors">
+                  <div className="bg-[#F8F9FA] dark:bg-[#1e2025] px-3 py-2 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+                    <h4 className="text-[9px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Tayinlovlar Tarixi</h4>
                   </div>
-                  <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[300px] overflow-y-auto">
+                  <div className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44] max-h-[250px] overflow-y-auto">
                     {clientHistory.filter(h => h.changeType === 'assign_role' || h.changeType === 'remove_role').map((h, i) => (
-                      <div key={i} className="flex gap-3 p-3">
-                        <div className={`mt-0.5 w-6 h-6 rounded shrink-0 flex items-center justify-center border ${h.changeType === 'assign_role' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
-                          {h.changeType === 'assign_role' ? <Check size={12} /> : <X size={12} />}
+                      <div key={i} className="flex gap-2.5 p-2.5 hover:bg-[#F8F9FA] dark:hover:bg-[#2A2D33] transition-colors group">
+                        <div className={`mt-0.5 w-6 h-6 rounded-sm shrink-0 flex items-center justify-center border transition-colors ${h.changeType === 'assign_role' ? 'bg-[#EBFBF0] text-[#28A745] border-[#DEE2E6]' : 'bg-[#FEEBF0] text-[#DC3545] border-[#DEE2E6]'}`}>
+                          {h.changeType === 'assign_role' ? <Check size={10} /> : <X size={10} />}
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-gray-900 dark:text-white uppercase">{h.notes || 'Rol o\'zgarishi'}</p>
-                          <p className="text-[9px] text-gray-500 uppercase mt-0.5">{new Date(h.changedAt).toLocaleString()} • {h.changedByName || 'Tizim'}</p>
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase truncate pr-2 tracking-tight leading-tight">{h.notes || 'Rol o\'zgarishi'}</p>
+                          <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest opacity-60 leading-none mt-0.5">{new Date(h.changedAt).toLocaleString()} • {h.changedByName || 'Tizim'}</p>
                         </div>
                       </div>
                     ))}
@@ -741,48 +748,48 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
           )}
 
           {activeTab === 'shartnoma' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4 animate-fade-in">
+              <div className="grid grid-cols-2 gap-3 transition-colors">
                 {company.internalContractor && (
-                  <div className="col-span-2 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800 rounded p-5">
-                    <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mb-1.5">Ichki Pudratchi (Ijrochi)</p>
+                  <div className="col-span-2 bg-[#F2F7FF] dark:bg-[#1C2531] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-4 transition-colors">
+                    <p className="text-[8px] font-bold text-[#3366CC] uppercase tracking-widest mb-1.5 opacity-70">Ichki Pudratchi (Ijrochi)</p>
                     <div className="flex items-center gap-2">
-                      <Building2 size={16} className="text-indigo-600" />
-                      <p className="text-lg font-bold text-indigo-700 dark:text-indigo-400 uppercase">{company.internalContractor}</p>
+                      <Building2 size={14} className="text-[#3366CC]" />
+                      <p className="text-[13px] font-bold text-gray-800 dark:text-white uppercase tracking-tight">{company.internalContractor}</p>
                     </div>
                   </div>
                 )}
 
-                <div className="bg-white dark:bg-[#22252B] p-4 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Shartnoma Raqami</p>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white uppercase">{company.contractNumber || '—'}</p>
+                <div className="bg-white dark:bg-[#22252B] p-3 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+                  <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Shartnoma Raqami</p>
+                  <p className="text-[11px] font-bold text-gray-800 dark:text-white uppercase tracking-tight">{company.contractNumber || '—'}</p>
                 </div>
-                <div className="bg-white dark:bg-[#22252B] p-4 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Sana</p>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white font-mono">{company.contractDate || '—'}</p>
+                <div className="bg-white dark:bg-[#22252B] p-3 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+                  <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sana</p>
+                  <p className="text-[11px] font-bold text-gray-800 dark:text-white font-mono tracking-tight">{company.contractDate || '—'}</p>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden">
-                <div className="bg-gray-50 dark:bg-[#1e2025] px-5 py-4 border-b border-gray-200 dark:border-gray-700 text-center">
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Moliyaviy Holat</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">Xizmat Narxi</p>
-                      <p className="text-xl font-bold text-gray-900 dark:text-white tabular-nums">{company.contractAmount?.toLocaleString()} <span className="text-[10px] text-gray-400 uppercase">so'm</span></p>
+              <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden transition-colors">
+                <div className="bg-[#F8F9FA] dark:bg-[#1e2025] px-4 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] text-center transition-colors">
+                  <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-4">Moliyaviy Holat</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Xizmat Narxi</p>
+                      <p className="text-[15px] font-bold text-gray-800 dark:text-white tabular-nums tracking-tight leading-none">{company.contractAmount?.toLocaleString()} <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">so'm</span></p>
                     </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">Joriy Balans</p>
-                      <p className={`text-xl font-bold tabular-nums ${(company.currentBalance || 0) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        {(company.currentBalance || 0).toLocaleString()} <span className="text-[10px] uppercase">so'm</span>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Joriy Balans</p>
+                      <p className={`text-[15px] font-bold tabular-nums tracking-tight leading-none uppercase ${(company.currentBalance || 0) < 0 ? 'text-[#DC3545]' : 'text-[#28A745]'}`}>
+                        {(company.currentBalance || 0).toLocaleString()} <span className="text-[8px] font-bold uppercase tracking-widest">so'm</span>
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-5">
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Kaskadli Taqsimot (Oylik prognozi)</h4>
-                  <div className="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
+                <div className="p-4 transition-colors">
+                  <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3 opacity-70">Kaskadli Taqsimot (Oylik prognozi)</h4>
+                  <div className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm overflow-hidden transition-colors">
                     {[
                       { label: 'Bosh Buxgalter', perc: company.chiefAccountantPerc || 0, sum: company.chiefAccountantSum, type: 'head' },
                       { label: 'Nazoratchi', perc: company.supervisorPerc || 0, type: 'sup' },
@@ -792,25 +799,25 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                       const amount = company.contractAmount || 0;
                       const val = item.sum || (amount * (item.perc / 100));
                       return (
-                        <div key={i} className="flex items-center justify-between p-3 bg-white dark:bg-[#22252B] hover:bg-gray-50 dark:hover:bg-[#1e2025] transition-colors">
-                          <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">{item.label}</span>
-                          <div className="text-right flex items-center gap-4">
-                            <p className="text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{item.sum ? 'Fiks.' : `${item.perc}%`}</p>
-                            <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">{val.toLocaleString()} <span className="text-[9px] text-gray-500">UZS</span></p>
+                        <div key={i} className="flex items-center justify-between p-2.5 bg-white dark:bg-[#22252B] hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] transition-colors group">
+                          <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-tight">{item.label}</span>
+                          <div className="text-right flex items-center gap-3">
+                            <p className="text-[8px] font-bold text-gray-400 bg-[#F8F9FA] dark:bg-[#1e2025] px-1.5 py-0.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors uppercase tracking-tight">{item.sum ? 'Fiks.' : `${item.perc}%`}</p>
+                            <p className="text-[11px] font-bold text-gray-800 dark:text-white tabular-nums tracking-tight uppercase leading-none">{val.toLocaleString()} <span className="text-[8px] text-gray-400 font-bold opacity-70 uppercase tracking-widest">UZS</span></p>
                           </div>
                         </div>
                       )
                     })}
                   </div>
-                  <div className="mt-3 flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded">
-                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase">Kompaniya Qoldig'i</span>
-                    <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                  <div className="mt-3 flex items-center justify-between p-3 bg-[#EBFBF0] dark:bg-[#1C2F23] border border-[#C3E6CB] dark:border-[#21512F] rounded-sm shadow-sm transition-colors">
+                    <span className="text-[10px] font-bold text-[#28A745] uppercase tracking-widest">Kompaniya Qoldig'i</span>
+                    <span className="text-[12px] font-bold text-[#208337] dark:text-[#52C41A] tabular-nums tracking-tight uppercase leading-none">
                       {((company.contractAmount || 0) - (
                         (company.chiefAccountantSum || ((company.contractAmount || 0) * (company.chiefAccountantPerc || 0) / 100)) +
                         (company.supervisorPerc ? (company.contractAmount || 0) * company.supervisorPerc / 100 : 0) +
                         (company.bankClientSum || ((company.contractAmount || 0) * (company.bankClientPerc || 0) / 100)) +
                         ((company.contractAmount || 0) * (company.accountantPerc || 0) / 100)
-                      )).toLocaleString()} <span className="text-[9px]">UZS</span>
+                      )).toLocaleString()} <span className="text-[9px] font-bold">UZS</span>
                     </span>
                   </div>
                 </div>
@@ -819,14 +826,14 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
           )}
 
           {activeTab === 'xizmatlar' && (
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-[#22252B] p-5 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <Check size={14} className="text-gray-500" />
-                    <h4 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-widest">Aktiv Xizmatlar</h4>
+            <div className="space-y-4 animate-fade-in px-1">
+              <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#F0F2F5] dark:border-[#1e2025]">
+                  <div className="flex items-center gap-2">
+                    <Check size={12} className="text-gray-400" />
+                    <h4 className="text-[9px] font-bold text-gray-800 dark:text-white uppercase tracking-widest leading-none mt-0.5">Aktiv Xizmatlar</h4>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <button
                       onClick={() => {
                         if (onSave) {
@@ -834,7 +841,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                           onSave({ ...company, activeServices: allKeys });
                         }
                       }}
-                      className="px-3 py-1.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 rounded border border-emerald-200 hover:bg-emerald-100 transition-colors uppercase"
+                      className="px-2.5 py-1.5 text-[8px] font-bold text-[#28A745] bg-[#EBFBF0] rounded-sm border border-[#C3E6CB] hover:bg-[#D4EDDA] transition-all uppercase tracking-widest shadow-sm"
                     >
                       Hammasini yoqish
                     </button>
@@ -842,244 +849,199 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                       onClick={() => {
                         if (onSave) onSave({ ...company, activeServices: [] });
                       }}
-                      className="px-3 py-1.5 text-[9px] font-bold text-rose-700 bg-rose-50 rounded border border-rose-200 hover:bg-rose-100 transition-colors uppercase"
+                      className="px-2.5 py-1.5 text-[8px] font-bold text-[#DC3545] bg-[#FEEBF0] rounded-sm border border-[#F5C6CB] hover:bg-[#F8D7DA] transition-all uppercase tracking-widest shadow-sm"
                     >
                       Hammasini o'chirish
                     </button>
                   </div>
                 </div>
-                <p className="text-[10px] text-gray-500 mb-6 uppercase tracking-widest">Yoqilmagan xizmatlar Operatsiyalar jadvalida kulrang (bloklangan) bo'lib ko'rsatiladi. Bo'sh ro'yxat = hammasi yoqilgan.</p>
-                <div className="space-y-6">
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-y-1.5 gap-x-4 max-h-[500px] overflow-y-auto pr-1">
                   {[
-                    { group: 'Oylik', keys: ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka'], color: 'indigo' },
-                    { group: 'Soliqlar', keys: ['yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds'], color: 'amber' },
-                    { group: 'Soliq H/T', keys: ['aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq'], color: 'purple' },
-                    { group: 'Yillik', keys: ['moliyaviy_natija', 'buxgalteriya_balansi'], color: 'emerald' },
-                    { group: 'Statistika', keys: ['stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt'], color: 'blue' },
-                    { group: 'IT Park', keys: ['itpark_oylik', 'itpark_chorak'], color: 'fuchsia' },
-                    { group: 'Komunalka', keys: ['kom_suv', 'kom_gaz', 'kom_svet'], color: 'rose' },
-                  ].map(section => (
-                    <div key={section.group} className="border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
-                      <div className={`bg-gray-50 dark:bg-[#1e2025] px-4 py-2 border-b border-gray-200 dark:border-gray-700`}>
-                        <h5 className={`text-[10px] font-bold uppercase tracking-widest text-${section.color}-600 dark:text-${section.color}-400`}>{section.group}</h5>
-                      </div>
-                      <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 bg-white dark:bg-[#22252B]">
-                        {section.keys.map(key => {
-                          const labels: Record<string, string> = {
-                            didox: 'Didox', xatlar: 'Xatlar', avtokameral: 'Avtokameral', my_mehnat: 'My Mehnat', one_c: '1C',
-                            pul_oqimlari: 'Pul Oqimlari', chiqadigan_soliqlar: 'Chiq. Soliqlar', hisoblangan_oylik: 'His. Oylik',
-                            debitor_kreditor: 'Deb/Kred', foyda_va_zarar: 'Foyda/Zarar', tovar_ostatka: 'Tovar Ost.',
-                            yer_soligi: "Yer Solig'i", mol_mulk_soligi: "Mol-mulk Sol.", suv_soligi: "Suv Solig'i",
-                            bonak: "Bo'nak", aksiz_soligi: 'AKSIZ', nedro_soligi: 'NEDRO', norezident_foyda: 'Nor. Foyda',
-                            norezident_nds: 'Nor. NDS', aylanma_qqs: 'Aylanma/QQS', daromad_soliq: 'Daromad Soliq',
-                            inps: 'INPS', foyda_soliq: 'Foyda Soliq', moliyaviy_natija: 'Mol. Natija',
-                            buxgalteriya_balansi: 'Bux. Balansi',
-                            stat_12_invest: '12-invest', stat_12_moliya: '12-moliya', stat_12_korxona: '12-korxona', stat_12_narx: '12-narx',
-                            stat_4_invest: '4-invest', stat_4_mehnat: '4-mehnat', stat_4_korxona_miz: '4-korxona(miz)', stat_4_kb_qur_sav_xiz: '4-kb (q/s/x)', stat_4_kb_sanoat: '4-kb sanoat',
-                            stat_1_invest: '1-invest', stat_1_ih: '1-ih', stat_1_energiya: '1-energiya', stat_1_korxona: '1-korxona', stat_1_korxona_tif: '1-korxona(tif)', stat_1_moliya: '1-moliya', stat_1_akt: '1-akt',
-                            itpark_oylik: 'IT Park Oylik',
-                            itpark_chorak: 'IT Park Chorak', kom_suv: 'Suv 💧', kom_gaz: 'Gaz 🔥', kom_svet: 'Svet ⚡'
-                          };
-                          const currentServices = company.activeServices || [];
-                          const isChecked = currentServices.length === 0 || currentServices.includes(key);
-                          return (
-                            <label key={key} className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors border ${isChecked ? `bg-${section.color}-50 dark:bg-${section.color}-900/10 border-${section.color}-200 dark:border-${section.color}-800` : 'bg-gray-50 dark:bg-[#1e2025] border-gray-200 dark:border-gray-700 opacity-60'}`}>
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => {
-                                  if (!onSave) return;
-                                  let newServices = [...(currentServices.length === 0 ? ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'] : currentServices)];
-                                  if (isChecked) {
-                                    newServices = newServices.filter(k => k !== key);
-                                  } else {
-                                    newServices.push(key);
-                                  }
-                                  onSave({ ...company, activeServices: newServices });
-                                }}
-                                className="rounded text-indigo-600 focus:ring-indigo-500"
-                              />
-                              <span className="text-[9px] font-bold text-gray-700 dark:text-gray-300 uppercase truncate">{labels[key] || key}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                    { key: 'didox', label: 'Didox / E-Docs' },
+                    { key: 'xatlar', label: 'E-Xat / Soliq Xat' },
+                    { key: 'avtokameral', label: 'Avtokameral Oylik' },
+                    { key: 'my_mehnat', label: 'My Mehnat / HR' },
+                    { key: 'one_c', label: '1C Buxgalteriya' },
+                    { key: 'pul_oqimlari', label: 'Pul oqimlari (DDS)' },
+                    { key: 'chiqadigan_soliqlar', label: 'To\'lanadigan Soliqlar' },
+                    { key: 'hisoblangan_oylik', label: 'Hisoblangan Ish Haqi' },
+                    { key: 'debitor_kreditor', label: 'Debitor & Kreditor' },
+                    { key: 'foyda_va_zarar', label: 'Foyda va Zarar (P&L)' },
+                    { key: 'tovar_ostatka', label: 'Tovar Qoldiqlari' },
+                    { key: 'aylanma_qqs', label: 'Aylanma / QQS (Monthly)' },
+                    { key: 'daromad_soliq', label: 'Daromad Solig\'i / INPS' },
+                    { key: 'foyda_soliq', label: 'Foyda Solig\'i (Quarterly)' },
+                    { key: 'yer_soligi', label: 'Yer Solig\'i' },
+                    { key: 'mol_mulk_soligi', label: 'Mol-Mulk Solig\'i' },
+                    { key: 'stat_12_moliya', label: 'Stat 12-Moliya' },
+                    { key: 'stat_12_korxona', label: 'Stat 12-Korxona' },
+                    { key: 'stat_4_mehnat', label: 'Stat 4-Mehnat' },
+                    { key: 'itpark_oylik', label: 'IT Park Oylik' },
+                    { key: 'itpark_chorak', label: 'IT Park Chorak' }
+                  ].map(service => {
+                    const isActive = company.activeServices?.includes(service.key);
+                    return (
+                      <label key={service.key} className="flex items-center gap-2 group cursor-pointer transition-all hover:bg-[#F2F7FF] dark:hover:bg-[#1C2531] p-1 rounded-sm border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44]">
+                        <div className="relative flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            className="peer appearance-none w-3.5 h-3.5 border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm bg-white dark:bg-[#111318] checked:bg-[#3366CC] checked:border-[#3366CC] transition-all cursor-pointer shadow-sm"
+                            checked={isActive}
+                            onChange={() => {
+                              if (!onSave) return;
+                              const current = company.activeServices || [];
+                              const updated = isActive ? current.filter(k => k !== service.key) : [...current, service.key];
+                              onSave({ ...company, activeServices: updated });
+                            }}
+                          />
+                          <Check size={8} className="absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
+                        </div>
+                        <span className={`text-[9px] font-bold uppercase tracking-tight transition-colors ${isActive ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400'}`}>
+                          {service.label}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           )}
 
-
           {activeTab === 'kpi' && (
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-[#22252B] p-5 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
-                <div className="flex items-center gap-3 mb-6">
-                  <Calculator size={14} className="text-gray-500" />
-                  <h4 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-widest">KPI Sozlamalari (Kompaniya uchun maxsus)</h4>
+            <div className="space-y-4 animate-fade-in px-1">
+              {isLoadingKpi ? (
+                <div className="bg-white dark:bg-[#22252B] p-8 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] flex flex-col items-center justify-center transition-colors">
+                  <div className="animate-spin w-6 h-6 border-2 border-[#3366CC] border-t-transparent rounded-full mb-3"></div>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">KPI ma'lumotlari yuklanmoqda...</p>
                 </div>
+              ) : (
+                <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+                  <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#F0F2F5] dark:border-[#1e2025]">
+                    <Calculator size={12} className="text-gray-400" />
+                    <h4 className="text-[9px] font-bold text-gray-800 dark:text-white uppercase tracking-widest mt-0.5 leading-none">Mijoz KPI Soblamalari (Override)</h4>
+                  </div>
 
-                <div className="space-y-4">
-                  {isLoadingKpi ? (
-                    <div className="flex flex-col items-center justify-center py-10">
-                      <Loader2 className="w-6 h-6 text-indigo-600 animate-spin mb-2" />
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Yuklanmoqda...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {['automation', 'manual'].map(category => (
-                        <div key={category} className="space-y-3">
-                          <div className="bg-gray-50 dark:bg-[#1e2025] px-3 py-2 rounded flex items-center border border-gray-200 dark:border-gray-700">
-                            <h5 className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-widest">
-                              {category === 'automation' ? "Operatsiyalar (Avtomatik)" : "Nazoratchi Vazifalari (Qo'lda)"}
-                            </h5>
+                  <div className="space-y-3">
+                    {kpiRules.map(rule => {
+                      const compRule = companyKpiRules.find(cr => cr.ruleId === rule.id);
+                      const isSaving = isSavingKpi === rule.id;
+                      const currentReward = compRule?.rewardPercent ?? '';
+                      const currentPenalty = compRule?.penaltyPercent ?? '';
+
+                      return (
+                        <div key={rule.id} className="p-3 bg-[#F8F9FA] dark:bg-[#1e2025] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-all hover:border-[#3366CC]/30 group">
+                          <div className="flex justify-between items-start mb-2.5">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[10px] font-bold text-gray-800 dark:text-white uppercase tracking-tight">{rule.nameUz}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[8px] text-gray-400 font-bold uppercase tracking-tight opacity-70">{rule.role}</span>
+                                <span className={`px-1 py-0.5 rounded-sm text-[7px] font-bold uppercase tracking-widest border ${rule.category === 'automation' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                  {rule.category}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="ml-4 text-right">
+                              <p className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Standart</p>
+                              <p className="text-[9px] font-bold text-[#3366CC] tracking-tight">+{rule.rewardPercent}/-{rule.penaltyPercent}%</p>
+                            </div>
                           </div>
-                          <div className="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
-                            {kpiRules.filter(r => r.category === category).map(rule => {
-                              const compRule = companyKpiRules.find(r => r.ruleId === rule.id);
-                              const currentReward = compRule?.rewardPercent ?? '';
-                              const currentPenalty = compRule?.penaltyPercent ?? '';
-                              const hasOverride = compRule && (compRule.rewardPercent !== null || compRule.penaltyPercent !== null);
 
-                              return (
-                                <div key={rule.id} className={`p-4 transition-colors ${hasOverride ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : 'bg-white dark:bg-[#22252B]'}`}>
-                                  <div className="flex items-start justify-between mb-3">
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <p className="text-xs font-bold text-gray-900 dark:text-white uppercase">{rule.nameUz}</p>
-                                        {isSavingKpi === rule.id && <Loader2 size={10} className="text-indigo-600 animate-spin" />}
-                                      </div>
-                                      <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mt-0.5">{rule.role}</p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <div className="text-right">
-                                        <p className="text-[9px] text-gray-400 font-bold uppercase">Standart</p>
-                                        <div className="flex gap-1.5 justify-end">
-                                          <span className="text-[10px] font-bold text-emerald-600">+{rule.rewardPercent}%</span>
-                                          <span className="text-[10px] font-bold text-rose-600">{rule.penaltyPercent}%</span>
-                                        </div>
-                                      </div>
-                                      {hasOverride && (
-                                        <button
-                                          onClick={async () => {
-                                            if (!window.confirm("Haqiqatan ham ushbu qoidani standart qiymatga qaytarmoqchimisiz?")) return;
-                                            setIsSavingKpi(rule.id);
-                                            try {
-                                              await upsertCompanyKPIRule({
-                                                id: compRule.id,
-                                                companyId: company.id,
-                                                ruleId: rule.id,
-                                                rewardPercent: null,
-                                                penaltyPercent: null,
-                                                isActive: true
-                                              });
-                                              setCompanyKpiRules(prev => prev.filter(r => r.ruleId !== rule.id));
-                                            } finally {
-                                              setIsSavingKpi(null);
-                                            }
-                                          }}
-                                          className="p-1.5 text-rose-500 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded transition-colors"
-                                          title="Standartga qaytarish"
-                                        >
-                                          <History size={12} />
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="flex gap-4">
-                                    <div className="flex-1">
-                                      <label className="text-[9px] font-bold text-emerald-700 uppercase mb-1 block">Bonus (%)</label>
-                                      <input
-                                        type="number"
-                                        step="0.1"
-                                        placeholder={`St: ${rule.rewardPercent}`}
-                                        className="w-full bg-white dark:bg-[#1A1D23] p-1.5 rounded border border-gray-300 dark:border-gray-600 font-mono text-xs outline-none focus:border-indigo-500"
-                                        value={currentReward}
-                                        onBlur={async (e) => {
-                                          const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                                          if (val === currentReward) return;
-
-                                          setIsSavingKpi(rule.id);
-                                          try {
-                                            await upsertCompanyKPIRule({
-                                              id: compRule?.id,
-                                              companyId: company.id,
-                                              ruleId: rule.id,
-                                              rewardPercent: val,
-                                              penaltyPercent: compRule?.penaltyPercent ?? null,
-                                              isActive: true
-                                            });
-                                            const freshRules = await fetchCompanyKPIRules(company.id);
-                                            setCompanyKpiRules(freshRules);
-                                          } finally {
-                                            setIsSavingKpi(null);
-                                          }
-                                        }}
-                                        onChange={(e) => {
-                                          const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                                          setCompanyKpiRules(prev => {
-                                            const copy = [...prev];
-                                            const idx = copy.findIndex(r => r.ruleId === rule.id);
-                                            if (idx >= 0) copy[idx] = { ...copy[idx], rewardPercent: val };
-                                            else copy.push({ companyId: company.id, ruleId: rule.id, rewardPercent: val });
-                                            return copy;
-                                          });
-                                        }}
-                                      />
-                                    </div>
-                                    <div className="flex-1">
-                                      <label className="text-[9px] font-bold text-rose-700 uppercase mb-1 block">Jarima (%)</label>
-                                      <input
-                                        type="number"
-                                        step="0.1"
-                                        placeholder={`St: ${rule.penaltyPercent}`}
-                                        className="w-full bg-white dark:bg-[#1A1D23] p-1.5 rounded border border-gray-300 dark:border-gray-600 font-mono text-xs outline-none focus:border-indigo-500"
-                                        value={currentPenalty}
-                                        onBlur={async (e) => {
-                                          const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                                          if (val === currentPenalty) return;
-
-                                          setIsSavingKpi(rule.id);
-                                          try {
-                                            await upsertCompanyKPIRule({
-                                              id: compRule?.id,
-                                              companyId: company.id,
-                                              ruleId: rule.id,
-                                              rewardPercent: compRule?.rewardPercent ?? null,
-                                              penaltyPercent: val,
-                                              isActive: true
-                                            });
-                                            const freshRules = await fetchCompanyKPIRules(company.id);
-                                            setCompanyKpiRules(freshRules);
-                                          } finally {
-                                            setIsSavingKpi(null);
-                                          }
-                                        }}
-                                        onChange={(e) => {
-                                          const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                                          setCompanyKpiRules(prev => {
-                                            const copy = [...prev];
-                                            const idx = copy.findIndex(r => r.ruleId === rule.id);
-                                            if (idx >= 0) copy[idx] = { ...copy[idx], penaltyPercent: val };
-                                            else copy.push({ companyId: company.id, ruleId: rule.id, penaltyPercent: val });
-                                            return copy;
-                                          });
-                                        }}
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                          <div className="grid grid-cols-2 gap-2 mt-3">
+                            <div className="flex items-center gap-2 p-1.5 bg-white dark:bg-[#1A1D23] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors shadow-sm">
+                              <label className="text-[7px] font-bold text-[#28A745] uppercase tracking-widest whitespace-nowrap">Bonus %:</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                disabled={isSaving}
+                                placeholder="Standart"
+                                className="flex-1 bg-transparent border-none outline-none text-[10px] font-bold text-gray-800 dark:text-white font-mono uppercase transition-colors disabled:opacity-50"
+                                value={currentReward}
+                                onBlur={async (e) => {
+                                  const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                  if (val === currentReward) return;
+                                  setIsSavingKpi(rule.id);
+                                  try {
+                                    await upsertCompanyKPIRule({
+                                      id: compRule?.id,
+                                      companyId: company.id,
+                                      ruleId: rule.id,
+                                      rewardPercent: val,
+                                      penaltyPercent: compRule?.penaltyPercent ?? null,
+                                      isActive: true
+                                    });
+                                    const freshRules = await fetchCompanyKPIRules(company.id);
+                                    setCompanyKpiRules(freshRules);
+                                  } finally {
+                                    setIsSavingKpi(null);
+                                  }
+                                }}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                  setCompanyKpiRules(prev => {
+                                    const copy = [...prev];
+                                    const idx = copy.findIndex(r => r.ruleId === rule.id);
+                                    if (idx >= 0) copy[idx] = { ...copy[idx], rewardPercent: val };
+                                    else copy.push({ companyId: company.id, ruleId: rule.id, rewardPercent: val });
+                                    return copy;
+                                  });
+                                }}
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 p-1.5 bg-white dark:bg-[#1A1D23] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors shadow-sm">
+                              <label className="text-[7px] font-bold text-[#DC3545] uppercase tracking-widest whitespace-nowrap">Jarima %:</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                disabled={isSaving}
+                                placeholder="Standart"
+                                className="flex-1 bg-transparent border-none outline-none text-[10px] font-bold text-gray-800 dark:text-white font-mono uppercase transition-colors disabled:opacity-50"
+                                value={currentPenalty}
+                                onBlur={async (e) => {
+                                  const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                  if (val === currentPenalty) return;
+                                  setIsSavingKpi(rule.id);
+                                  try {
+                                    await upsertCompanyKPIRule({
+                                      id: compRule?.id,
+                                      companyId: company.id,
+                                      ruleId: rule.id,
+                                      rewardPercent: compRule?.rewardPercent ?? null,
+                                      penaltyPercent: val,
+                                      isActive: true
+                                    });
+                                    const freshRules = await fetchCompanyKPIRules(company.id);
+                                    setCompanyKpiRules(freshRules);
+                                  } finally {
+                                    setIsSavingKpi(null);
+                                  }
+                                }}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                  setCompanyKpiRules(prev => {
+                                    const copy = [...prev];
+                                    const idx = copy.findIndex(r => r.ruleId === rule.id);
+                                    if (idx >= 0) copy[idx] = { ...copy[idx], penaltyPercent: val };
+                                    else copy.push({ companyId: company.id, ruleId: rule.id, penaltyPercent: val });
+                                    return copy;
+                                  });
+                                }}
+                              />
+                            </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      );
+                    })}
+
+                    {kpiRules.length === 0 && (
+                      <div className="p-8 text-center bg-[#F8F9FA] dark:bg-[#111318] border border-dashed border-[#DEE2E6] rounded-sm transition-colors">
+                        <AlertTriangle size={20} className="mx-auto mb-2 text-gray-300" />
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest opacity-50">Hech qanday KPI qoidasi topilmadi</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>

@@ -225,105 +225,110 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
     };
 
     return (
-        <div className="space-y-4 animate-fade-in p-6 bg-gray-50 dark:bg-[#1A1D23] min-h-screen">
+        <div className="space-y-4 animate-fade-in p-6 bg-[#F0F2F5] dark:bg-[#111318] min-h-screen">
             {/* Payroll Header */}
-            <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 p-4 rounded shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] p-5 rounded-sm shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center border border-indigo-100 dark:border-indigo-800 text-indigo-600 shrink-0">
+                    <div className="w-10 h-10 rounded-sm bg-[#3366CC] flex items-center justify-center text-white shadow-sm shrink-0">
                         <Wallet size={20} />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight uppercase">
+                        <h2 className="text-[14px] font-bold text-gray-800 dark:text-white leading-none uppercase tracking-wider">
                             Oylik Hisobot
                         </h2>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                            Finans va Maosh
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1.5 leading-none">
+                            FINANS VA MAOSH TIZIMI
                         </p>
                     </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 items-center">
-                    <div className="bg-gray-50 dark:bg-[#1e2025] px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700">
+                    <div className="bg-white dark:bg-[#1A1D23] px-3 py-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm">
                         <input
                             type="month"
                             value={month}
                             onChange={e => setMonth(e.target.value)}
-                            className="bg-transparent border-none font-bold text-sm text-gray-700 dark:text-gray-300 focus:ring-0 cursor-pointer p-0"
+                            className="bg-transparent border-none font-bold text-[11px] text-[#3366CC] focus:ring-0 cursor-pointer p-0 uppercase"
                         />
                     </div>
-                    <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded border border-emerald-200 dark:border-emerald-800 flex flex-col">
-                        <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5">Jami To'lov</p>
-                        <p className="text-lg font-bold tabular-nums leading-none">{summaries.reduce((a, b) => a + b.totalSalary, 0).toLocaleString()} <span className="text-[10px]">UZS</span></p>
+                    <div className="px-5 py-2.5 bg-[#EBFBF0] dark:bg-[#1A2321] text-emerald-600 rounded-sm border border-[#C3E6CB] dark:border-[#2D3D34] flex flex-col items-end shadow-sm">
+                        <p className="text-[8px] font-black uppercase tracking-widest mb-1 opacity-70">JAMI TO'LOV</p>
+                        <p className="text-[18px] font-bold tabular-nums leading-none">
+                            {summaries.reduce((a, b) => a + b.totalSalary, 0).toLocaleString()} <span className="text-[10px] font-bold uppercase ml-0.5">sum</span>
+                        </p>
                     </div>
                 </div>
             </div>
 
             {/* Main Table Container */}
-            <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden text-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[1000px]">
+            <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden transition-colors">
+                <div className="overflow-x-auto scrollbar-hide">
+                    <table className="w-full text-left border-collapse min-w-[1000px] c1-table">
                         <thead>
-                            <tr className="bg-gray-50 dark:bg-[#1e2025] text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-gray-200 dark:border-gray-700">
-                                <th className="px-4 py-3">Xodim & Rol</th>
-                                <th className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700">Stavka</th>
-                                <th className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700 text-emerald-600">KPI Bonus</th>
-                                <th className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700 text-rose-600">Jarima</th>
-                                <th className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700 text-indigo-600">Qo'sh.</th>
-                                <th className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700 text-amber-600">Avans</th>
-                                <th className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700 text-emerald-600">Qolgan</th>
-                                <th className="px-4 py-3 text-right border-l border-gray-200 dark:border-gray-700">Amallar</th>
+                            <tr className="bg-[#F8F9FA] dark:bg-[#1A1D23] text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+                                <th className="px-5 py-3">Xodim & Rol</th>
+                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">Stavka</th>
+                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] text-emerald-600">KPI Bonus</th>
+                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] text-rose-600">Jarima</th>
+                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] text-[#3366CC]">Qo'sh.</th>
+                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] text-amber-600">Avans</th>
+                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] text-emerald-600">Qolgan</th>
+                                <th className="px-5 py-3 text-right border-l border-[#F0F2F5] dark:border-[#1e2025]">Amallar</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
                             {summaries.map(s => (
-                                <tr key={s.employeeId} className="hover:bg-gray-50 dark:hover:bg-[#1e2025] transition-colors">
-                                    <td className="px-4 py-3">
+                                <tr key={s.employeeId} className="hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] transition-all group">
+                                    <td className="px-5 py-3">
                                         <div className="flex flex-col">
-                                            <p className="font-bold text-sm text-gray-900 dark:text-gray-100">{s.employeeName}</p>
-                                            <p className="text-[10px] font-bold text-gray-500 uppercase mt-0.5">{s.employeeRole}</p>
+                                            <p className="font-bold text-[11px] text-gray-800 dark:text-white uppercase tracking-tight">{s.employeeName}</p>
+                                            <p className="text-[8px] font-bold text-gray-400 uppercase mt-0.5 tracking-widest">{s.employeeRole}</p>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700 font-bold text-gray-800 dark:text-gray-200 tabular-nums">
+                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] font-bold text-gray-800 dark:text-white tabular-nums text-[11px]">
                                         {s.baseSalary.toLocaleString()}
                                     </td>
-                                    <td className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700">
-                                        <span className="font-bold text-emerald-600 tabular-nums">+{s.kpiBonus.toLocaleString()}</span>
+                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">
+                                        <span className="font-bold text-emerald-600 tabular-nums text-[11px]">+{s.kpiBonus.toLocaleString()}</span>
                                     </td>
-                                    <td className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700">
-                                        <span className="font-bold text-rose-600 tabular-nums">{s.kpiPenalty.toLocaleString()}</span>
+                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">
+                                        <span className="font-bold text-rose-600 tabular-nums text-[11px]">{s.kpiPenalty.toLocaleString()}</span>
                                     </td>
-                                    <td className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700">
-                                        <span className="font-bold text-indigo-600 tabular-nums">
+                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">
+                                        <span className="font-bold text-[#3366CC] tabular-nums text-[11px]">
                                             {s.manualBonuses > 0 ? '+' : ''}{s.manualBonuses.toLocaleString()}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700">
-                                        <span className="font-bold text-amber-600 tabular-nums">
+                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">
+                                        <span className="font-bold text-amber-600 tabular-nums text-[11px]">
                                             {s.totalReceived.toLocaleString()}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 text-center border-l border-gray-200 dark:border-gray-700">
-                                        <div className={`px-3 py-1 text-sm ${s.remainingBalance <= 0 ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800' : 'text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'} rounded border inline-block font-bold tabular-nums`}>
+                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">
+                                        <div className={`px-2 py-0.5 text-[11px] font-black border rounded-sm tabular-nums tracking-tight transition-colors ${s.remainingBalance <= 0
+                                            ? 'bg-[#EBFBF0] text-emerald-600 border-[#C3E6CB] dark:bg-[#1A2321] dark:border-[#2D3D34]'
+                                            : 'bg-[#F8F9FA] text-gray-800 border-[#DEE2E6] dark:bg-[#1A1D23] dark:border-[#3A3D44] dark:text-white'
+                                            }`}>
                                             {s.remainingBalance.toLocaleString()}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <div className="flex gap-2 justify-end">
+                                    <td className="px-5 py-3 text-right">
+                                        <div className="flex gap-1 justify-end opacity-20 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => setEditingAdj({ empId: s.employeeId, type: 'avans', amount: 0, reason: '' })}
-                                                className="px-3 h-8 flex items-center justify-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                                                className="h-7 px-2.5 flex items-center justify-center gap-1.5 bg-amber-50 dark:bg-[#2B231A] text-amber-600 rounded-sm border border-amber-200 dark:border-[#423425] hover:bg-amber-100 transition-all font-bold group/btn"
                                                 title="Avans berish"
                                             >
-                                                <HandCoins size={14} />
-                                                <span className="text-[10px] font-bold uppercase hidden xl:inline">Avans</span>
+                                                <HandCoins size={12} />
+                                                <span className="text-[8px] font-black uppercase tracking-widest hidden xl:inline">Avans</span>
                                             </button>
                                             <button
                                                 onClick={() => setEditingAdj({ empId: s.employeeId, type: 'payment', amount: s.remainingBalance, reason: 'Maosh to\'lovi' })}
-                                                className="px-3 h-8 flex items-center justify-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                                                className="h-7 px-2.5 flex items-center justify-center gap-1.5 bg-[#EBFBF0] dark:bg-[#1A2321] text-emerald-600 rounded-sm border border-[#C3E6CB] dark:border-[#2D3D34] hover:bg-[#D7F7E1] transition-all font-bold group/btn"
                                                 title="Maosh to'lash"
                                             >
-                                                <CheckCircle2 size={14} />
-                                                <span className="text-[10px] font-bold uppercase hidden xl:inline">To'lash</span>
+                                                <CheckCircle2 size={12} />
+                                                <span className="text-[8px] font-black uppercase tracking-widest hidden xl:inline">To'lash</span>
                                             </button>
                                         </div>
                                     </td>
@@ -336,32 +341,38 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
 
             {/* Manual Adjustment Modal */}
             {editingAdj && (
-                <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 animate-fade-in" onClick={() => setEditingAdj(null)}>
-                    <div className="bg-white dark:bg-[#22252B] w-full max-w-md rounded shadow-lg border border-gray-200 dark:border-gray-700" onClick={e => e.stopPropagation()}>
-                        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white uppercase">
-                                {editingAdj.type === 'bonus' ? 'Bonus belgilash' :
-                                    editingAdj.type === 'jarima' ? 'Jarima yozish' :
-                                        editingAdj.type === 'avans' ? 'Avans berish' : 'Maosh to\'lovi'}
-                            </h3>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 transition-colors animate-fade-in" onClick={() => setEditingAdj(null)}>
+                    <div className="bg-[#F0F2F5] dark:bg-[#111318] w-full max-w-md rounded-sm shadow-2xl border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="px-5 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] flex justify-between items-center bg-white dark:bg-[#1A1D23]">
+                            <div>
+                                <h3 className="text-[11px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">
+                                    {editingAdj.type === 'bonus' ? 'Bonus belgilash' :
+                                        editingAdj.type === 'jarima' ? 'Jarima yozish' :
+                                            editingAdj.type === 'avans' ? 'Avans berish' : 'Maosh to\'lovi'}
+                                </h3>
+                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">SOZLAMALARNI KIRITING</p>
+                            </div>
+                            <button onClick={() => setEditingAdj(null)} className="p-1 text-gray-400 hover:text-rose-500 transition-colors">
+                                <PlusCircle size={18} className="rotate-45" />
+                            </button>
                         </div>
 
-                        <div className="p-4 space-y-4">
-                            <div>
-                                <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">Summa (UZS)</label>
+                        <div className="p-5 space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block">Summa (sum)</label>
                                 <input
                                     type="number"
-                                    className="w-full bg-gray-50 dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500 transition-colors"
+                                    className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight"
                                     value={editingAdj.amount || ''}
                                     onChange={e => setEditingAdj({ ...editingAdj, amount: Number(e.target.value) })}
                                     placeholder="0"
                                 />
                             </div>
 
-                            <div>
-                                <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">Sabab / Izoh</label>
+                            <div className="space-y-1">
+                                <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block">Sabab / Izoh</label>
                                 <textarea
-                                    className="w-full bg-gray-50 dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500 transition-colors min-h-[100px]"
+                                    className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight min-h-[100px]"
                                     value={editingAdj.reason}
                                     onChange={e => setEditingAdj({ ...editingAdj, reason: e.target.value })}
                                     placeholder="Tafsilotlarni kiriting..."
@@ -369,16 +380,16 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
                             </div>
                         </div>
 
-                        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+                        <div className="p-5 border-t border-[#DEE2E6] dark:border-[#3A3D44] flex gap-2.5">
                             <button
                                 onClick={() => setEditingAdj(null)}
-                                className="flex-1 py-2 text-gray-600 dark:text-gray-400 font-bold border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-[#1e2025] transition-colors text-[10px] uppercase tracking-widest"
+                                className="flex-1 px-4 py-2 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-bold text-[10px] text-gray-500 uppercase tracking-widest bg-white dark:bg-[#22252B] hover:bg-[#F8F9FA] transition-all"
                             >
                                 Bekor qilish
                             </button>
                             <button
                                 onClick={handleAddAdjustment}
-                                className="flex-1 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest"
+                                className="flex-1 px-4 py-2 rounded-sm font-bold text-[10px] text-white bg-[#3366CC] hover:bg-[#2A52A3] transition-all shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest"
                             >
                                 <Save size={14} /> Saqlash
                             </button>

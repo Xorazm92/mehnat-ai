@@ -43,20 +43,20 @@ const TopBar: React.FC<TopBarProps> = ({
   };
 
   return (
-    <header className="h-12 flex items-center justify-between px-3 md:px-4 sticky top-0 z-40 bg-white dark:bg-[#22252B] border-b border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className="flex items-center gap-3 flex-1 max-w-xl">
+    <header className="h-12 flex items-center justify-between px-3 md:px-5 sticky top-0 z-40 bg-white dark:bg-[#22252B] border-b border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+      <div className="flex items-center gap-4 flex-1 max-w-xl">
         {/* Mobile menu */}
-        <button onClick={onMenuToggle} className="lg:hidden p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
+        <button onClick={onMenuToggle} className="lg:hidden p-1.5 text-gray-400 hover:bg-[#F0F2F5] dark:hover:bg-[#1A1D23] rounded-sm transition-colors">
           <Menu size={18} />
         </button>
 
         {/* Search */}
         <div className="relative w-full hidden sm:block">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
           <input
             type="text"
-            placeholder={t.search}
-            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded py-1.5 pl-8 pr-3 text-[13px] text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
+            placeholder="PROYEKT BOYLAB QIDIRISH..."
+            className="w-full bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm py-1.5 pl-9 pr-3 text-[10px] font-bold text-gray-800 dark:text-white placeholder:text-gray-400 uppercase tracking-tight focus:border-[#3366CC] transition-all"
           />
         </div>
 
@@ -65,96 +65,96 @@ const TopBar: React.FC<TopBarProps> = ({
           <MonthPicker
             selectedPeriod={selectedPeriod}
             onChange={onPeriodChange}
-            className="h-8 scale-90 origin-left"
+            className="h-8 scale-90 origin-left border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm bg-[#F8F9FA] dark:bg-[#111318]"
           />
         </div>
       </div>
 
       {/* Right side toolbar */}
-      <div className="flex items-center gap-1 md:gap-2">
+      <div className="flex items-center gap-1.5 md:gap-3">
         {/* Toolbar buttons group */}
-        <div className="flex items-center gap-0.5 border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 p-0.5">
+        <div className="flex items-center gap-1 border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm bg-[#F8F9FA] dark:bg-[#111318] p-0.5 shadow-sm">
           <button
             onClick={onLangToggle}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors uppercase"
+            className="flex items-center gap-1 px-2 py-1 text-[9px] font-black text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-[#22252B] hover:text-[#3366CC] rounded-sm transition-all uppercase tracking-widest border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44]"
             title="Tilni o'zgartirish"
           >
-            <Languages size={13} className="hidden xs:block" />
+            <Languages size={12} className="hidden xs:block" />
             {lang}
           </button>
 
-          <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+          <div className="w-px h-3 bg-[#DEE2E6] dark:bg-[#3A3D44]" />
 
           <button
             onClick={onThemeToggle}
-            className="p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+            className="p-1.5 text-gray-400 hover:text-[#3366CC] hover:bg-white dark:hover:bg-[#22252B] rounded-sm transition-all border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44]"
             title="Tema"
           >
-            {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
+            {isDarkMode ? <Sun size={14} /> : <Moon size={14} />}
           </button>
 
           <button
             onClick={onSync}
             disabled={isSyncing}
-            className={`p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors ${isSyncing ? 'animate-spin text-blue-600' : ''}`}
+            className={`p-1.5 text-gray-400 hover:text-[#3366CC] hover:bg-white dark:hover:bg-[#22252B] rounded-sm transition-all border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44] ${isSyncing ? 'animate-spin text-[#3366CC]' : ''}`}
             title="Yangilash"
           >
-            <RefreshCw size={15} />
+            <RefreshCw size={14} />
           </button>
 
-          <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+          <div className="w-px h-3 bg-[#DEE2E6] dark:bg-[#3A3D44]" />
 
           {/* Notifications */}
           <div className="relative">
             <button
               onClick={() => setShowNotifs(!showNotifs)}
-              className={`p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors relative ${showNotifs ? 'bg-gray-200 dark:bg-gray-700 text-blue-600' : ''}`}
+              className={`p-1.5 text-gray-400 hover:text-[#3366CC] hover:bg-white dark:hover:bg-[#22252B] rounded-sm transition-all border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44] relative ${showNotifs ? 'bg-white dark:bg-[#22252B] text-[#3366CC] border-[#DEE2E6] dark:border-[#3A3D44]' : ''}`}
               title={t.notifications}
             >
-              <Bell size={15} />
+              <Bell size={14} />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center bg-red-600 text-white text-[9px] font-bold rounded-full">
+                <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 items-center justify-center bg-rose-600 text-white text-[7px] font-black rounded-sm border border-white dark:border-[#22252B]">
                   {unreadCount}
                 </span>
               )}
             </button>
 
             {showNotifs && (
-              <div className="absolute right-0 mt-1 w-[calc(100vw-1rem)] sm:w-80 bg-white dark:bg-[#22252B] rounded-md border border-gray-200 dark:border-gray-600 shadow-lg animate-macos z-50 overflow-hidden">
-                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between bg-gray-50 dark:bg-gray-800">
-                  <h3 className="font-bold text-[12px] text-gray-700 dark:text-gray-200">{t.notifications}</h3>
-                  <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 text-[10px] font-bold rounded border border-blue-200 dark:border-blue-800">{unreadCount} {t.newLabel}</span>
+              <div className="absolute right-0 mt-1 w-[calc(100vw-1rem)] sm:w-80 bg-white dark:bg-[#22252B] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-2xl z-50 overflow-hidden transition-all animate-fade-in">
+                <div className="px-3 py-2 border-b border-[#DEE2E6] dark:border-[#3A3D44] flex items-center justify-between bg-[#F8F9FA] dark:bg-[#111318]">
+                  <h3 className="font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">{t.notifications}</h3>
+                  <span className="px-2 py-0.5 bg-[#EBF3FF] dark:bg-[#1C2531] text-[#3366CC] text-[9px] font-black rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] uppercase">{unreadCount} {t.newLabel}</span>
                 </div>
-                <div className="max-h-[60vh] overflow-y-auto">
+                <div className="max-h-[60vh] overflow-y-auto scrollbar-hide">
                   {notifications.length === 0 ? (
-                    <div className="p-8 text-center">
-                      <Bell size={24} className="mx-auto mb-2 text-gray-300" />
-                      <p className="text-[11px] text-gray-400">{t.noMessages}</p>
+                    <div className="p-8 text-center bg-white dark:bg-[#22252B]">
+                      <Bell size={24} className="mx-auto mb-2 text-gray-200" />
+                      <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{t.noMessages}</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    <div className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
                       {notifications.map(n => (
-                        <div key={n.id} className={`px-3 py-2.5 flex gap-3 group transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 ${n.isRead ? 'opacity-50' : ''}`}>
-                          <div className={`shrink-0 w-8 h-8 rounded flex items-center justify-center ${n.isRead ? 'bg-gray-100 dark:bg-gray-700 text-gray-400' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600'}`}>
+                        <div key={n.id} className={`px-4 py-3 flex gap-3 group transition-colors hover:bg-[#F8F9FA] dark:hover:bg-[#111318] ${n.isRead ? 'opacity-50' : ''}`}>
+                          <div className={`shrink-0 w-8 h-8 rounded-sm flex items-center justify-center border ${n.isRead ? 'bg-[#F0F2F5] dark:bg-[#1A1D23] text-gray-400 border-[#DEE2E6] dark:border-[#3A3D44]' : 'bg-[#EBF3FF] dark:bg-[#1C2531] text-[#3366CC] border-[#DEE2E6] dark:border-[#3A3D44]'}`}>
                             {React.cloneElement(getIcon(n.type) as React.ReactElement, { size: 14 })}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[12px] font-bold text-gray-800 dark:text-gray-200 leading-tight">{n.title}</p>
-                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug mt-0.5 line-clamp-2">{n.message}</p>
-                            <div className="mt-1 flex items-center gap-2">
-                              <p className="text-[9px] text-gray-400 flex items-center gap-1">
+                            <p className="text-[11px] font-bold text-gray-800 dark:text-white leading-tight uppercase tracking-tight">{n.title}</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug mt-1 line-clamp-2">{n.message}</p>
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
                                 <Clock size={10} /> {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
-                              {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+                              {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-[#3366CC]" />}
                             </div>
                           </div>
                           <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {!n.isRead && (
-                              <button onClick={() => onMarkAsRead(n.id)} className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors" title="O'qildi">
+                              <button onClick={() => onMarkAsRead(n.id)} className="p-1 px-1.5 bg-[#EBFBF0] text-emerald-600 rounded-sm border border-[#C3E6CB] hover:bg-[#D7F7E1] transition-all" title="O'qildi">
                                 <Check size={12} />
                               </button>
                             )}
-                            <button onClick={() => onDeleteNotification(n.id)} className="p-1 bg-red-50 text-red-500 rounded hover:bg-red-100 transition-colors" title="O'chirish">
+                            <button onClick={() => onDeleteNotification(n.id)} className="p-1 px-1.5 bg-rose-50 text-rose-500 rounded-sm border border-rose-200 hover:bg-rose-100 transition-all" title="O'chirish">
                               <Trash2 size={12} />
                             </button>
                           </div>
@@ -169,17 +169,17 @@ const TopBar: React.FC<TopBarProps> = ({
         </div>
 
         {/* User profile */}
-        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-200 dark:border-gray-600">
+        <div className="flex items-center gap-2 ml-3 pl-3 border-l border-[#DEE2E6] dark:border-[#3A3D44]">
           <button
             onClick={onProfileClick}
-            className="flex items-center gap-2 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors cursor-pointer"
+            className="flex items-center gap-2.5 p-1 hover:bg-[#F0F2F5] dark:hover:bg-[#1A1D23] rounded-sm transition-all border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44]"
           >
-            <div className="h-7 w-7 rounded bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-[11px] font-bold">
+            <div className="h-7 w-7 rounded-sm bg-[#3366CC] flex items-center justify-center text-white text-[10px] font-black shadow-sm">
               {userName ? userName.charAt(0).toUpperCase() : 'A'}
             </div>
-            <div className="text-left hidden lg:block">
-              <p className="text-[12px] font-bold text-gray-800 dark:text-gray-200 leading-none">{userName || t.administrator}</p>
-              <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">{(translations[lang] as any)[`role_${userRole}`] || userRole || t.role_super_admin}</p>
+            <div className="text-left hidden lg:block leading-none">
+              <p className="text-[11px] font-bold text-gray-800 dark:text-white uppercase tracking-tight">{userName || t.administrator}</p>
+              <p className="text-[8px] text-[#3366CC] font-bold uppercase tracking-widest mt-1">{(translations[lang] as any)[`role_${userRole}`] || userRole || t.role_super_admin}</p>
             </div>
           </button>
 

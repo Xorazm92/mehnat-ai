@@ -280,172 +280,178 @@ const Dashboard: React.FC<DashboardProps> = ({
     return null;
   };
 
-  return (
-    <div className="premium-container animate-macos pb-8">
-      {/* Header Actions */}
-      <div className="flex justify-between items-center mb-4 mt-2">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-yellow-400 dark:bg-yellow-600 flex items-center justify-center">
-            <LayoutDashboard className="text-gray-900 dark:text-yellow-100" size={18} />
-          </div>
-          <h2 className="text-[16px] font-bold text-gray-800 dark:text-white">{t.dashboard}</h2>
-        </div>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded font-semibold text-[12px] hover:bg-blue-700 transition-colors active:bg-blue-800"
-        >
-          <Download size={14} />
-          {t.excelExport}
-        </button>
-      </div>
-
-      {/* Metric Cards — 1C Style */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
-        {stats.headerMetrics.map((stat, i) => {
-          const borderColors = ['border-l-green-500', 'border-l-blue-600', 'border-l-red-500', 'border-l-blue-400', 'border-l-purple-500', 'border-l-amber-500'];
-          return (
-            <div key={i} className={`bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md p-4 ${borderColors[i]} border-l-4 hover:shadow-md transition-shadow`}>
-              {/* Header */}
-              <div className="flex justify-between items-start mb-3">
-                <div className={`p-1.5 rounded bg-gray-50 dark:bg-gray-800 ${stat.color}`}>
-                  {stat.icon}
+    return (
+        <div className="animate-fade-in pb-8 space-y-6">
+            {/* Header Actions */}
+            <div className="flex justify-between items-center mb-6 bg-white dark:bg-[#1A1D23] p-4 border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-sm bg-[#3366CC] flex items-center justify-center text-white shadow-sm">
+                        <LayoutDashboard size={20} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-black text-gray-800 dark:text-white uppercase tracking-tight">{t.dashboard}</h2>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Tizim holati va tahlili</p>
+                    </div>
                 </div>
-                <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${stat.isUp ? 'text-green-600 bg-green-50 dark:bg-green-900/20' : 'text-red-500 bg-red-50 dark:bg-red-900/20'}`}>
-                  {stat.isUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
-                  {stat.trend}
-                </div>
-              </div>
-
-              {/* Value */}
-              <div>
-                <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">{stat.label}</p>
-                <h3 className="text-xl font-bold text-gray-800 dark:text-white tabular-nums leading-none">
-                  {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
-                  {i === 5 && '%'}
-                </h3>
-                {i < 3 && <span className="text-[10px] text-gray-400 font-medium">uzs</span>}
-              </div>
-
-              {/* Sparkline */}
-              <div className="mt-2 h-10 opacity-60">
-                {mounted && (
-                  <ResponsiveContainer width="100%" height="100%" minHeight={40} minWidth={0}>
-                    <AreaChart data={stat.data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id={`grad-1c-${i}`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={stat.isUp ? '#339933' : '#CC3333'} stopOpacity={0.3} />
-                          <stop offset="100%" stopColor={stat.isUp ? '#339933' : '#CC3333'} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <Area
-                        type="monotone"
-                        dataKey="value"
-                        stroke={stat.isUp ? '#339933' : '#CC3333'}
-                        strokeWidth={1.5}
-                        fill={`url(#grad-1c-${i})`}
-                        isAnimationActive={true}
-                        animationDuration={800}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
+                <button
+                    onClick={handleExport}
+                    className="flex items-center gap-2 bg-[#F8F9FA] dark:bg-[#111318] text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-black text-[11px] uppercase tracking-wider hover:bg-[#EBF3FF] hover:border-[#3366CC] hover:text-[#3366CC] transition-all shadow-sm active:scale-95"
+                >
+                    <Download size={14} />
+                    {t.excelExport}
+                </button>
             </div>
-          );
-        })}
-      </div>
 
-      {/* Analytics Grid — 1C Style */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 mt-6">
-        {/* Report Status Bar Chart */}
-        <div className="xl:col-span-2 bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-          <div className="c1-section-header flex items-center gap-2">
-            <div className="w-1 h-4 bg-blue-600 rounded-sm"></div>
-            Hisobotlar holati
-          </div>
-          <div className="p-4 h-[320px] w-full">
-            {mounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0}>
-                <BarChart data={stats.reportStatusData} margin={{ top: 15, right: 20, left: 5, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#DEE2E6" opacity={0.6} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 11, fontWeight: 600 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 600 }} />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(51, 102, 204, 0.06)' }}
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #E0E3E8', borderRadius: '4px', fontSize: '12px', fontWeight: 600, padding: '8px 12px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}
-                  />
-                  <Legend iconType="square" wrapperStyle={{ paddingTop: '16px', fontSize: '11px', fontWeight: 600 }} />
-                  <Bar dataKey="Bajarildi" stackId="a" fill="#339933" radius={[0, 0, 2, 2]} barSize={35} />
-                  <Bar dataKey="Rad etildi" stackId="a" fill="#CC3333" barSize={35} />
-                  <Bar dataKey="Muammo" stackId="a" fill="#FFB800" barSize={35} />
-                  <Bar dataKey="Kutilmoqda" stackId="a" fill="#D1D5DB" radius={[2, 2, 0, 0]} barSize={35} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
+            {/* Metric Cards — 1C Style */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                {stats.headerMetrics.map((stat, i) => {
+                    const borderColors = ['border-t-emerald-500', 'border-t-[#3366CC]', 'border-t-rose-500', 'border-t-blue-400', 'border-t-purple-500', 'border-t-amber-500'];
+                    return (
+                        <div key={i} className={`bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-4 ${borderColors[i]} border-t-4 shadow-sm hover:shadow-md transition-shadow group`}>
+                            {/* Header */}
+                            <div className="flex justify-between items-start mb-4">
+                                <div className={`p-2 rounded-sm bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] ${stat.color} group-hover:border-[#3366CC] transition-colors`}>
+                                    {stat.icon}
+                                </div>
+                                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-sm text-[9px] font-black border uppercase tracking-widest ${stat.isUp ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100' : 'text-rose-500 bg-rose-50 dark:bg-rose-900/10 border-rose-100'}`}>
+                                    {stat.isUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+                                    {stat.trend}
+                                </div>
+                            </div>
 
-        {/* Soliq Tahlili */}
-        <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden flex flex-col">
-          <div className="c1-section-header flex items-center gap-2">
-            <div className="w-1 h-4 bg-red-500 rounded-sm"></div>
-            Soliq Tahlili
-          </div>
-          <p className="text-[11px] text-gray-400 font-medium px-4 pt-2">Turlari bo'yicha</p>
-          <div className="flex-1 w-full min-h-[260px] p-4">
-            {mounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={260} minWidth={0}>
-                <BarChart data={stats.taxStatusData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 10, fontWeight: 600 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 10, fontWeight: 600 }} />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(51, 102, 204, 0.06)' }}
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #E0E3E8', borderRadius: '4px', fontSize: '12px', fontWeight: 600, padding: '8px 12px' }}
-                  />
-                  <Legend iconType="square" wrapperStyle={{ paddingTop: '12px', fontSize: '10px', fontWeight: 600 }} />
-                  <Bar dataKey="Bajarildi" stackId="a" fill="#339933" barSize={20} radius={[0, 0, 2, 2]} />
-                  <Bar dataKey="Kutilmoqda" stackId="a" fill="#D1D5DB" barSize={20} radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
+                            {/* Value */}
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{stat.label}</p>
+                                <h3 className="text-xl font-black text-gray-800 dark:text-white tabular-nums leading-none tracking-tight">
+                                    {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
+                                    {i === 5 && '%'}
+                                </h3>
+                                {i < 3 && <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">uzs</span>}
+                            </div>
 
-        {/* Tax Regime Pie */}
-        <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden flex flex-col">
-          <div className="c1-section-header flex items-center gap-2">
-            <div className="w-1 h-4 bg-green-600 rounded-sm"></div>
-            Soliq rejimi
-          </div>
-          <div className="flex-1 flex items-center justify-center min-h-[260px] p-4">
-            {mounted && (
-              <ResponsiveContainer width="100%" height="100%" minHeight={260} minWidth={0}>
-                <PieChart>
-                  <Pie
-                    data={stats.taxRegimeData}
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={4}
-                    dataKey="value"
-                    stroke="#fff"
-                    strokeWidth={2}
-                  >
-                    {stats.taxRegimeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #E0E3E8', borderRadius: '4px', fontSize: '12px', padding: '8px 12px' }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 600, paddingTop: '8px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+                            {/* Sparkline */}
+                            <div className="mt-4 h-12 opacity-80 border-t border-[#F0F2F5] dark:border-[#1A1D23] pt-2">
+                                {mounted && (
+                                    <ResponsiveContainer width="100%" height="100%" minHeight={48} minWidth={0}>
+                                        <AreaChart data={stat.data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id={`grad-1c-${i}`} x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor={stat.isUp ? '#10B981' : '#EF4444'} stopOpacity={0.2} />
+                                                    <stop offset="100%" stopColor={stat.isUp ? '#10B981' : '#EF4444'} stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <Area
+                                                type="monotone"
+                                                dataKey="value"
+                                                stroke={stat.isUp ? '#10B981' : '#EF4444'}
+                                                strokeWidth={2}
+                                                fill={`url(#grad-1c-${i})`}
+                                                isAnimationActive={true}
+                                                animationDuration={1000}
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Analytics Grid — 1C Style */}
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 mt-6">
+                {/* Report Status Bar Chart */}
+                <div className="xl:col-span-2 bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden">
+                    <div className="bg-[#FAFBFC] dark:bg-[#111318] px-4 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-1 h-5 bg-[#3366CC] rounded-sm"></div>
+                            <h3 className="text-[11px] font-black text-gray-800 dark:text-white uppercase tracking-widest">Hisobotlar holati</h3>
+                        </div>
+                        <Info size={14} className="text-gray-300" />
+                    </div>
+                    <div className="p-6 h-[340px] w-full">
+                        {mounted && (
+                            <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0}>
+                                <BarChart data={stats.reportStatusData} margin={{ top: 15, right: 20, left: 5, bottom: 10 }}>
+                                    <CartesianGrid strokeDasharray="0" vertical={false} stroke="#F0F2F5" opacity={1} />
+                                    <XAxis dataKey="name" axisLine={{ stroke: '#DEE2E6' }} tickLine={false} tick={{ fill: '#6B7280', fontSize: 10, fontWeight: 700 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }} />
+                                    <Tooltip
+                                        cursor={{ fill: '#F8F9FA' }}
+                                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #DEE2E6', borderRadius: '2px', fontSize: '11px', fontWeight: 800, padding: '10px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Legend verticalAlign="top" align="right" iconType="rect" wrapperStyle={{ paddingBottom: '20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} />
+                                    <Bar dataKey="Bajarildi" stackId="a" fill="#339933" barSize={40} />
+                                    <Bar dataKey="Rad etildi" stackId="a" fill="#CC3333" barSize={40} />
+                                    <Bar dataKey="Muammo" stackId="a" fill="#FFB800" barSize={40} />
+                                    <Bar dataKey="Kutilmoqda" stackId="a" fill="#E5E7EB" barSize={40} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                </div>
+
+                {/* Soliq Tahlili */}
+                <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden flex flex-col">
+                    <div className="bg-[#FAFBFC] dark:bg-[#111318] px-4 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] flex items-center gap-2">
+                        <div className="w-1 h-5 bg-rose-500 rounded-sm"></div>
+                        <h3 className="text-[11px] font-black text-gray-800 dark:text-white uppercase tracking-widest">Soliq Tahlili</h3>
+                    </div>
+                    <div className="flex-1 w-full min-h-[280px] p-6">
+                        {mounted && (
+                            <ResponsiveContainer width="100%" height="100%" minHeight={280} minWidth={0}>
+                                <BarChart data={stats.taxStatusData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }} layout="vertical">
+                                    <CartesianGrid strokeDasharray="0" horizontal={false} stroke="#F0F2F5" />
+                                    <XAxis type="number" hide />
+                                    <YAxis type="category" dataKey="name" axisLine={{ stroke: '#DEE2E6' }} tickLine={false} tick={{ fill: '#6B7280', fontSize: 9, fontWeight: 700 }} width={80} />
+                                    <Tooltip
+                                        cursor={{ fill: '#F8F9FA' }}
+                                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #DEE2E6', borderRadius: '2px', fontSize: '10px', fontWeight: 800 }}
+                                    />
+                                    <Legend iconType="rect" wrapperStyle={{ paddingTop: '15px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' }} />
+                                    <Bar dataKey="Bajarildi" stackId="a" fill="#339933" barSize={12} />
+                                    <Bar dataKey="Kutilmoqda" stackId="a" fill="#E5E7EB" barSize={12} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                </div>
+
+                {/* Tax Regime Pie */}
+                <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden flex flex-col">
+                    <div className="bg-[#FAFBFC] dark:bg-[#111318] px-4 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] flex items-center gap-2">
+                        <div className="w-1 h-5 bg-emerald-600 rounded-sm"></div>
+                        <h3 className="text-[11px] font-black text-gray-800 dark:text-white uppercase tracking-widest">Soliq rejimi</h3>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center min-h-[280px] p-6">
+                        {mounted && (
+                            <ResponsiveContainer width="100%" height="100%" minHeight={280} minWidth={0}>
+                                <PieChart>
+                                    <Pie
+                                        data={stats.taxRegimeData}
+                                        innerRadius={65}
+                                        outerRadius={85}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                        stroke="#fff"
+                                        strokeWidth={4}
+                                    >
+                                        {stats.taxRegimeData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #DEE2E6', borderRadius: '2px', fontSize: '11px', fontWeight: 800 }}
+                                    />
+                                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, paddingTop: '15px', textTransform: 'uppercase' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Dashboard;

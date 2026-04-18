@@ -80,24 +80,23 @@ type ReportColumnKey = typeof REPORT_COLUMNS[number]['key'];
 const getStatusStyle = (value: string) => {
   const v = String(value || '').trim().toLowerCase();
 
-  if (!v || v === '0' || v === 'not_required') return { bg: 'bg-slate-100 dark:bg-slate-800/60', text: 'text-slate-400 dark:text-slate-500', icon: '—', tooltip: "Bo'sh" };
-  if (v === '+' || v === 'accepted') return { bg: 'bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400', icon: '✓', tooltip: 'Bajarildi (+)' };
-  if (v === '-' || v === 'not_submitted') return { bg: 'bg-rose-500/15', text: 'text-rose-600 dark:text-rose-400', icon: '✗', tooltip: 'Bajarilmadi (-)' };
-  if (v === 'topshirildi' || v === 'submitted') return { bg: 'bg-blue-500/20 animate-pulse', text: 'text-blue-700 dark:text-blue-400', icon: '⏳', tooltip: 'Topshirildi (Kutilmoqda)' };
-  if (v === 'kartoteka' || v === 'blocked') return { bg: 'bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400', icon: 'Kartoteka', tooltip: 'Kartoteka' };
-  if (v === 'error' || v === 'oshibka') return { bg: 'bg-rose-500/20', text: 'text-rose-700', icon: '!', tooltip: 'Xatolik' };
+  if (!v || v === '0' || v === 'not_required') return { bg: 'bg-[#F8F9FA] dark:bg-[#2A2D33]', text: 'text-[#ADB5BD] dark:text-[#6C757D]', icon: '—', tooltip: "Bo'sh" };
+  if (v === '+' || v === 'accepted') return { bg: 'bg-[#EBFBF0] dark:bg-[#1C2F23]', text: 'text-[#28A745] dark:text-[#34D058]', icon: '✓', tooltip: 'Bajarildi (+)' };
+  if (v === '-' || v === 'not_submitted') return { bg: 'bg-[#FEEBF0] dark:bg-[#311C21]', text: 'text-[#DC3545] dark:text-[#FF6B6B]', icon: '✗', tooltip: 'Bajarilmadi (-)' };
+  if (v === 'topshirildi' || v === 'submitted') return { bg: 'bg-[#EBF5FF] dark:bg-[#1C2531]', text: 'text-[#007BFF] dark:text-[#4DA3FF]', icon: '⏳', tooltip: 'Topshirildi (Kutilmoqda)' };
+  if (v === 'kartoteka' || v === 'blocked') return { bg: 'bg-[#FFF9EB] dark:bg-[#312B1C]', text: 'text-[#FFC107] dark:text-[#FFD700]', icon: '!', tooltip: 'Kartoteka' };
+  if (v === 'error' || v === 'oshibka') return { bg: 'bg-[#FEEBF0]', text: 'text-[#DC3545]', icon: '!', tooltip: 'Xatolik' };
 
-  // Custom text for any other value -> Blue
-  return { bg: 'bg-blue-500/15', text: 'text-blue-700 dark:text-blue-300', icon: value, tooltip: value };
+  return { bg: 'bg-[#EBF5FF] dark:bg-[#1C2531]', text: 'text-[#007BFF] dark:text-[#4DA3FF]', icon: value, tooltip: value };
 };
 
 const AVAILABLE_STATUSES = [
-  { value: '+', label: 'Tasdiqlash (✓)', icon: '✓', color: 'text-emerald-600' },
-  { value: 'topshirildi', label: 'Topshirildi (⏳)', icon: '⏳', color: 'text-blue-600' },
-  { value: '-', label: 'Bajarilmadi (-)', icon: '✗', color: 'text-rose-600' },
-  { value: 'kartoteka', label: 'Kartoteka', icon: '⚠', color: 'text-amber-600' },
-  { value: 'izoh', label: 'Matn yozish...', icon: '📝', color: 'text-blue-600' },
-  { value: '0', label: 'Tozalash', icon: '—', color: 'text-slate-400' },
+  { value: '+', label: 'Tasdiqlash (✓)', icon: '✓', color: 'text-[#28A745]' },
+  { value: 'topshirildi', label: 'Topshirildi (⏳)', icon: '⏳', color: 'text-[#007BFF]' },
+  { value: '-', label: 'Bajarilmadi (-)', icon: '✗', color: 'text-[#DC3545]' },
+  { value: 'kartoteka', label: 'Kartoteka', icon: '!', color: 'text-[#FFC107]' },
+  { value: 'izoh', label: 'Matn yozish...', icon: '✎', color: 'text-[#3366CC]' },
+  { value: '0', label: 'Tozalash', icon: '—', color: 'text-[#ADB5BD]' },
 ];
 
 interface StatusCellProps {
@@ -183,10 +182,10 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
         ref={buttonRef}
         onClick={() => !readOnly && setIsOpen(!isOpen)}
         disabled={readOnly}
-        className={`w-full h-7 min-w-[28px] px-1 rounded-md flex items-center justify-center text-[11px] font-bold transition-all duration-200 ${style.bg} ${style.text} hover:scale-[1.02] hover:shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ring-offset-1 focus:ring-2 ring-blue-500/30 outline-none overflow-hidden`}
+        className={`w-full h-6 min-w-[24px] px-1 rounded-sm flex items-center justify-center text-[10px] font-bold transition-all border border-black/5 dark:border-white/5 ${style.bg} ${style.text} hover:opacity-80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
         title={style.tooltip}
       >
-        <span className="truncate w-full text-center block">{style.icon}</span>
+        <span className="truncate w-full text-center block uppercase">{style.icon}</span>
       </button>
 
       {isOpen && createPortal(
@@ -194,23 +193,23 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
           ref={popoverRef}
           style={{
             position: 'absolute',
-            top: coords.top + 5,
+            top: coords.top + 2,
             left: coords.left,
             transform: 'translateX(-50%)'
           }}
-          className="z-[9999] min-w-[200px] bg-white dark:bg-[#22252B] p-2 animate-in fade-in zoom-in-95 duration-200 origin-top shadow-md border border-gray-200 dark:border-gray-700 rounded"
+          className="z-[9999] min-w-[180px] bg-white dark:bg-[#22252B] p-1 shadow-md border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm"
         >
           {!showInput ? (
-            <div className="grid grid-cols-1 gap-1">
+            <div className="grid grid-cols-1">
               {AVAILABLE_STATUSES.map((status) => (
                 <button
                   key={status.value}
                   onClick={() => handleSelect(status.value)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/40 dark:hover:bg-white/10 transition-all w-full text-left group"
+                  className="flex items-center gap-3 px-3 py-2 hover:bg-[#F8F9FA] dark:hover:bg-[#2A2D33] transition-colors w-full text-left group"
                 >
-                  <span className={`font-black text-xs w-6 h-6 flex items-center justify-center rounded-lg bg-white/50 dark:bg-white/5 border border-white/20 shadow-sm ${status.color}`}>{status.icon}</span>
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-apple-accent">{status.label}</span>
-                  {value === status.value && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-apple-accent shadow-[0_0_10px_rgba(0,122,255,0.5)]"></div>}
+                  <span className={`font-bold text-xs w-5 h-5 flex items-center justify-center rounded-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 ${status.color}`}>{status.icon}</span>
+                  <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 group-hover:text-[#3366CC]">{status.label}</span>
+                  {value === status.value && <div className="ml-auto w-1 h-1 rounded-full bg-[#3366CC]"></div>}
                 </button>
               ))}
             </div>
@@ -222,15 +221,15 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Matn kiriting..."
-                className="w-full text-xs px-3 py-2 rounded border border-gray-300 dark:border-gray-600 mb-3 outline-none focus:border-blue-500 font-inter bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200"
+                className="c1-input w-full text-xs font-bold mb-2"
               />
               <div className="flex gap-2">
-                <button type="button" onClick={() => setShowInput(false)} className="flex-1 px-3 py-2 text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 transition-all font-inter">Bekor qilish</button>
-                <button type="submit" className="flex-1 px-3 py-2 text-[11px] font-bold text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl hover:shadow-lg transition-all font-inter">Saqlash</button>
+                <button type="button" onClick={() => setShowInput(false)} className="c1-btn c1-btn-secondary flex-1 py-1 px-2 text-[10px]">Bekor</button>
+                <button type="submit" className="c1-btn c1-btn-primary flex-1 py-1 px-2 text-[10px]">Saqlash</button>
               </div>
             </form>
           )}
-          <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-slate-900 border-t border-l border-white/20 dark:border-white/10 transform rotate-45 rounded-[1px] backdrop-blur-3xl" />
+
         </div>,
         document.body
       )}
@@ -248,27 +247,26 @@ const OperationRow = React.memo<{
   onCellUpdate: (companyId: string, colKey: string, newValue: string) => void;
   onCompanySelect: (companyId: string) => void;
 }>(({ row, idx, visibleColumns, userRole, activeServices, onCellUpdate, onCompanySelect }) => {
-  // If activeServices is non-empty, only those keys are enabled
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
 
   return (
-    <tr className="group hover:bg-blue-50 dark:hover:bg-gray-800/50 transition-all border-b border-gray-200 dark:border-gray-800">
-      <td className="sticky left-0 z-20 bg-gray-50 dark:bg-gray-900 group-hover:bg-blue-50 dark:group-hover:bg-gray-800/50 border-r border-gray-200 dark:border-gray-800 px-2 py-1.5 text-center text-[10px] font-mono text-gray-500 transition-colors w-10 min-w-[40px]">
+    <tr className="group hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] transition-colors border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+      <td className="sticky left-0 z-20 bg-[#F8F9FA] dark:bg-[#1e2025] border-r border-[#DEE2E6] dark:border-[#3A3D44] px-2 py-1 text-center text-[10px] font-bold text-gray-500 w-10 min-w-[40px]">
         {idx + 1}
       </td>
       <td
-        className="sticky left-10 z-20 bg-white dark:bg-[#22252B] group-hover:bg-blue-50 dark:group-hover:bg-gray-800/50 border-r border-gray-200 dark:border-gray-800 px-2 py-1.5 transition-colors w-48 min-w-[192px] cursor-pointer"
+        className="sticky left-10 z-20 bg-white dark:bg-[#22252B] group-hover:bg-[#F2F7FF] dark:group-hover:bg-[#2A2D33] border-r border-[#DEE2E6] dark:border-[#3A3D44] px-2 py-1 transition-colors w-48 min-w-[192px] cursor-pointer"
         onClick={() => row.companyId && onCompanySelect(row.companyId as string)}
       >
-        <div className="max-w-[180px] truncate text-[11px] font-bold text-gray-800 dark:text-gray-200 hover:text-blue-600 transition-colors" title={row.name}>
+        <div className="max-w-[180px] truncate text-[11px] font-bold text-gray-800 dark:text-gray-200 group-hover:text-[#3366CC]" title={row.name}>
           {row.name}
         </div>
       </td>
-      <td className="md:sticky md:left-[232px] z-20 bg-white dark:bg-[#22252B] group-hover:bg-blue-50 dark:group-hover:bg-gray-800/50 border-r border-gray-200 dark:border-gray-800 px-1 py-1.5 text-center text-[10px] font-mono text-gray-500 transition-colors w-20 min-w-[80px]">
+      <td className="md:sticky md:left-[232px] z-20 bg-white dark:bg-[#22252B] group-hover:bg-[#F2F7FF] dark:group-hover:bg-[#2A2D33] border-r border-[#DEE2E6] dark:border-[#3A3D44] px-1 py-1 text-center text-[10px] font-bold text-gray-500 w-20 min-w-[80px]">
         {row.inn || '—'}
       </td>
-      <td className="md:sticky md:left-[312px] z-20 bg-white dark:bg-[#22252B] group-hover:bg-blue-50 dark:group-hover:bg-gray-800/50 border-r-2 border-gray-300 dark:border-gray-700 px-1 py-1.5 transition-colors w-24 min-w-[96px]">
-        <div className="max-w-[90px] truncate text-[10px] font-semibold text-gray-600 dark:text-gray-400" title={row.accountant}>
+      <td className="md:sticky md:left-[312px] z-20 bg-white dark:bg-[#22252B] group-hover:bg-[#F2F7FF] dark:group-hover:bg-[#2A2D33] border-r-2 border-[#ADB5BD] dark:border-[#495057] px-1 py-1 transition-colors w-24 min-w-[96px]">
+        <div className="max-w-[90px] truncate text-[10px] font-bold text-gray-600 dark:text-gray-400" title={row.accountant}>
           {row.accountant || '—'}
         </div>
       </td>
@@ -281,7 +279,7 @@ const OperationRow = React.memo<{
           const payDisabled = !isServiceEnabled(payKey);
           return (
             <React.Fragment key={col.key}>
-              <td className={`border-r border-gray-100 dark:border-white/10/30 px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : 'bg-emerald-50/30 dark:bg-emerald-950/10'}`}>
+              <td className={`border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-[#F8F9FA] dark:bg-[#2A2D33]' : 'bg-[#EBFBF0] dark:bg-[#1C2F23]'}`}>
                 {serviceDisabled ? (
                   <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
                 ) : (
@@ -293,7 +291,7 @@ const OperationRow = React.memo<{
                   />
                 )}
               </td>
-              <td className={`border-r border-gray-100 dark:border-white/10/30 px-0.5 py-0.5 text-center h-8 ${payDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : 'bg-amber-50/30 dark:bg-amber-950/10'}`}>
+              <td className={`border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-0.5 text-center h-8 ${payDisabled ? 'bg-[#F8F9FA] dark:bg-[#2A2D33]' : 'bg-[#FFF9EB] dark:bg-[#312B1C]'}`}>
                 {payDisabled ? (
                   <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
                 ) : (
@@ -310,7 +308,7 @@ const OperationRow = React.memo<{
         }
 
         return (
-          <td key={col.key} className={`border-r border-gray-100 dark:border-white/10/30 px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-gray-100 dark:bg-gray-800/50' : ''}`}>
+          <td key={col.key} className={`border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-[#F8F9FA] dark:bg-[#2A2D33]' : ''}`}>
             {serviceDisabled ? (
               <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
             ) : (
@@ -645,28 +643,28 @@ const OperationModule: React.FC<Props> = ({
 
   // ── Render ───────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-[#1A1D23]">
+    <div className="flex flex-col h-full bg-[#F0F2F5] dark:bg-[#1A1D23]">
       {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 bg-white dark:bg-[#22252B] border-b border-gray-200 dark:border-gray-700 px-5 py-3 z-40 shadow-sm">
+      <div className="flex-shrink-0 bg-white dark:bg-[#22252B] border-b border-[#DEE2E6] dark:border-[#3A3D44] px-4 py-2 z-40 shadow-sm transition-all duration-300">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-lg font-black text-gray-900 dark:text-white tracking-tight">{t.matrixTitle}</h1>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+              <h1 className="text-base font-bold text-gray-800 dark:text-white uppercase tracking-tight">{t.matrixTitle}</h1>
+              <p className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">
                 {filteredRows.length} / {rows.length} {t.taKorxona} · {selectedPeriod}
               </p>
             </div>
             {/* Mini Stats */}
             <div className="hidden lg:flex items-center gap-2">
               {[
-                { icon: '✓', count: stats.done, color: 'emerald' },
+                { icon: '✓', count: stats.done, color: 'blue' },
                 { icon: '✗', count: stats.notDone, color: 'red' },
-                { icon: '⚠', count: stats.warning, color: 'amber' },
-                { icon: '📝', count: stats.text, color: 'blue' },
+                { icon: '!', count: stats.warning, color: 'amber' },
+                { icon: '✎', count: stats.text, color: 'blue' },
               ].map(s => (
-                <div key={s.icon} className={`flex items-center gap-1 px-2.5 py-1 rounded-lg bg-${s.color}-50 dark:bg-${s.color}-500/10`}>
-                  <span className={`text-${s.color}-600 dark:text-${s.color}-400 font-black text-xs`}>{s.icon}</span>
-                  <span className={`text-${s.color}-700 dark:text-${s.color}-300 font-bold text-[11px]`}>{s.count}</span>
+                <div key={s.icon} className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-[#F8F9FA] dark:bg-[#2A2D33] border border-[#DEE2E6] dark:border-[#3A3D44]">
+                  <span className={`${s.color === 'blue' ? 'text-[#3366CC]' : s.color === 'red' ? 'text-[#DC3545]' : 'text-[#FFC107]'} font-bold text-[10px]`}>{s.icon}</span>
+                  <span className="text-gray-800 dark:text-gray-200 font-bold text-[10px] tabular-nums">{s.count}</span>
                 </div>
               ))}
             </div>
@@ -675,15 +673,15 @@ const OperationModule: React.FC<Props> = ({
           <div className="flex items-center gap-2 flex-wrap">
             {/* Search */}
             <div className="relative">
-              <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                placeholder={t.searchPlaceholder} className="pl-8 pr-3 py-1.5 w-48 bg-white/30 dark:bg-gray-800 border border-white/20 dark:border-white/10 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+                placeholder={t.searchPlaceholder} className="c1-input w-40 pl-8" />
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
 
             {/* Accountant Filter */}
             <div className="relative">
               <select value={filterAccountant} onChange={e => setFilterAccountant(e.target.value)}
-                className="appearance-none pl-2.5 pr-7 py-1.5 bg-white/30 dark:bg-gray-800 border border-white/20 dark:border-white/10 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer">
+                className="c1-input pr-6 cursor-pointer text-[11px]">
                 <option value="all">{t.allAccountants}</option>
                 {accountants.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
@@ -693,7 +691,7 @@ const OperationModule: React.FC<Props> = ({
             {/* Group Filter */}
             <div className="relative">
               <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
-                className="appearance-none pl-2.5 pr-7 py-1.5 bg-white/30 dark:bg-gray-800 border border-white/20 dark:border-white/10 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer">
+                className="c1-input pr-6 cursor-pointer text-[11px]">
                 <option value="all">{t.allColumns}</option>
                 {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
@@ -701,43 +699,40 @@ const OperationModule: React.FC<Props> = ({
             </div>
 
             {/* Period Selector */}
-            {/* Period Selector */}
             <MonthPicker
               selectedPeriod={selectedPeriod}
               onChange={(p) => onPeriodChange?.(p)}
               className="z-20"
             />
 
-            <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-white/20 dark:border-white/10 rounded-lg text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-white/30 dark:hover:bg-gray-700 transition-all active:scale-95">
-              <Download size={14} /> Export
+            <button onClick={handleExport} className="c1-btn c1-btn-secondary px-3 py-1.5 flex items-center gap-2 uppercase tracking-tight">
+              <Download size={12} /> Excel
             </button>
-
-
           </div>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/20 dark:border-white/10 overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-4 mt-2 pt-2 border-t border-[#DEE2E6] dark:border-[#3A3D44] overflow-x-auto scrollbar-hide">
           {[
             { icon: '✓', label: `${t.approved} (+)` },
             { icon: '✗', label: `${t.rejected} (-)` },
             { icon: '—', label: `${t.not_required} (0)` },
-            { icon: '⏳', label: t.pending, cls: 'animate-pulse' },
-            { icon: '⚠', label: t.kartoteka },
-            { icon: '📝', label: t.comment },
+            { icon: '⏳', label: t.pending },
+            { icon: '!', label: t.kartoteka },
+            { icon: '✎', label: t.comment },
             { icon: 'Xis.', label: t.reportLegend },
             { icon: 'To\'l', label: t.paymentLegend },
           ].map(l => (
             <div key={l.label} className="flex items-center gap-1.5 shrink-0">
-              <span className={`font-black text-[11px] w-5 h-5 flex items-center justify-center rounded-md bg-white/30 dark:bg-white/5 border border-white/20 ${l.cls || 'text-slate-400'}`}>{l.icon}</span>
-              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{l.label}</span>
+              <span className={`font-bold text-[10px] w-4 h-4 flex items-center justify-center rounded-sm bg-[#F8F9FA] dark:bg-[#2A2D33] border border-[#DEE2E6] dark:border-[#495057] text-gray-500`}>{l.icon}</span>
+              <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter">{l.label}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* ── Matrix ──────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto relative rounded bg-white dark:bg-[#22252B] mx-4 my-4 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="flex-1 overflow-auto relative rounded-sm bg-white dark:bg-[#1e2025] mx-4 my-2 shadow-sm border border-[#DEE2E6] dark:border-[#3A3D44]">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
@@ -754,10 +749,10 @@ const OperationModule: React.FC<Props> = ({
           </div>
         ) : (
           <table className="w-full border-separate border-spacing-0 text-xs">
-            <thead className="sticky top-0 z-[60] shadow-sm">
+            <thead className="sticky top-0 z-[60]">
               {/* Group row */}
               <tr className="h-6">
-                <th colSpan={4} className="sticky top-0 left-0 z-[80] bg-gray-100 dark:bg-gray-800 border-b border-r-2 border-gray-300 dark:border-gray-700 px-2 py-1 text-left text-[9px] font-bold text-gray-500 uppercase tracking-widest w-[408px] min-w-[408px]">
+                <th colSpan={4} className="sticky top-0 left-0 z-[80] bg-[#F8F9FA] dark:bg-[#1e2025] border-b border-r-2 border-[#ADB5BD] dark:border-[#495057] px-2 py-1 text-left text-[9px] font-bold text-gray-500 uppercase tracking-widest w-[408px] min-w-[408px]">
                   {t.firmTable}
                 </th>
                 {(() => {
@@ -768,45 +763,45 @@ const OperationModule: React.FC<Props> = ({
                   });
 
                   const groupColors: Record<string, string> = {
-                    'Oylik': 'bg-blue-50/95 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
-                    'Soliqlar': 'bg-orange-50/95 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
-                    'Soliq H/T': 'bg-purple-50/95 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-                    'Yillik': 'bg-emerald-50/95 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
-                    'Statistika': 'bg-cyan-50/95 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300',
-                    'IT Park': 'bg-violet-50/95 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300',
-                    'Komunalka': 'bg-rose-50/95 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300',
+                    'Oylik': 'bg-[#F2F7FF] dark:bg-[#1C2531] text-[#3366CC]',
+                    'Soliqlar': 'bg-[#FFF9EB] dark:bg-[#312B1C] text-[#FFC107]',
+                    'Soliq H/T': 'bg-[#FBF2FF] dark:bg-[#2B1C31] text-[#9933CC]',
+                    'Yillik': 'bg-[#F2FFF7] dark:bg-[#1C3123] text-[#28A745]',
+                    'Statistika': 'bg-[#F2FEFF] dark:bg-[#1C3131] text-[#17A2B8]',
+                    'IT Park': 'bg-[#F7F2FF] dark:bg-[#231C31] text-[#6F42C1]',
+                    'Komunalka': 'bg-[#FFF2F2] dark:bg-[#311C1C] text-[#DC3545]',
                   };
 
                   return [...groupCounts.entries()].map(([name, count]) => (
-                    <th key={name} colSpan={count} className={`sticky top-0 border-b border-r border-gray-200 dark:border-gray-700 px-1 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider ${groupColors[name] || 'bg-gray-100 text-gray-500'}`}>
+                    <th key={name} colSpan={count} className={`sticky top-0 border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-1 py-1 text-center text-[9px] font-bold uppercase tracking-wider ${groupColors[name] || 'bg-gray-100 text-gray-500'}`}>
                       {name}
                     </th>
                   ));
                 })()}
               </tr>
-              {/* Column header row (24px height roughly for the first row) */}
+              {/* Column header row */}
               <tr className="h-8">
-                <th className="sticky top-[24px] left-0 z-[70] bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-center text-[10px] font-bold text-gray-500 w-10 min-w-[40px]">#</th>
-                <th className="sticky top-[24px] left-10 z-[70] bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2 text-left text-[11px] font-bold text-gray-700 dark:text-gray-300 w-48 min-w-[192px]">{t.companyName}</th>
-                <th className="md:sticky md:top-[24px] md:left-[232px] z-[70] bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 px-1.5 py-2 text-center text-[11px] font-bold text-gray-500 w-20 min-w-[80px]">{t.inn}</th>
-                <th className="md:sticky md:top-[24px] md:left-[312px] z-[70] bg-gray-100 dark:bg-gray-800 border-b border-r-2 border-gray-300 dark:border-gray-700 px-1.5 py-2 text-left text-[11px] font-bold text-gray-500 w-24 min-w-[96px]">BUXGALTER</th>
+                <th className="sticky top-[24px] left-0 z-[70] bg-[#F8F9FA] dark:bg-[#1e2025] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-2 py-2 text-center text-[10px] font-bold text-gray-500 w-10 min-w-[40px]">#</th>
+                <th className="sticky top-[24px] left-10 z-[70] bg-[#F8F9FA] dark:bg-[#1e2025] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-2 py-2 text-left text-[10px] font-bold text-gray-700 dark:text-gray-300 w-48 min-w-[192px] uppercase">{t.companyName}</th>
+                <th className="md:sticky md:top-[24px] md:left-[232px] z-[70] bg-[#F8F9FA] dark:bg-[#1e2025] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-1.5 py-2 text-center text-[10px] font-bold text-gray-500 w-20 min-w-[80px]">INN</th>
+                <th className="md:sticky md:top-[24px] md:left-[312px] z-[70] bg-[#F8F9FA] dark:bg-[#1e2025] border-b border-r-2 border-[#ADB5BD] dark:border-[#495057] px-1.5 py-2 text-left text-[10px] font-bold text-gray-500 w-24 min-w-[96px] uppercase">BUXGALTER</th>
                 {visibleColumns.map(col => {
                   if ((col as any).isSplit) {
                     return (
                       <React.Fragment key={col.key}>
                         <th
-                          className="sticky top-[24px] bg-emerald-50 dark:bg-emerald-950/30 border-b border-r border-emerald-100 dark:border-emerald-800/50 px-0.5 py-2 text-center w-10 text-[10px] cursor-help"
+                          className="sticky top-[24px] bg-[#EBFBF0] dark:bg-[#1C2F23] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-2 text-center w-10 text-[9px] cursor-help"
                           title={col.label}
                         >
-                          <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-400 tracking-tight">{col.short}</span>
-                          <div className="text-[7px] font-bold text-emerald-500">Xis.</div>
+                          <span className="text-[9px] font-bold text-[#28A745] dark:text-[#34D058] tracking-widest">{col.short}</span>
+                          <div className="text-[7px] font-bold text-[#28A745]/70 uppercase tracking-tighter">Xis.</div>
                         </th>
                         <th
-                          className="sticky top-[24px] bg-amber-50/95 dark:bg-amber-950/50 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-0.5 py-2 text-center w-10 cursor-help"
+                          className="sticky top-[24px] bg-[#FFF9EB] dark:bg-[#312B1C] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-2 text-center w-10 cursor-help"
                           title={`${col.label} to'lov`}
                         >
-                          <span className="text-[9px] font-black text-amber-700 dark:text-amber-400 tracking-tight">{(col as any).payShort}</span>
-                          <div className="text-[7px] font-bold text-amber-500">To'l</div>
+                          <span className="text-[9px] font-bold text-[#FFC107] dark:text-[#FFD700] tracking-widest">{(col as any).payShort}</span>
+                          <div className="text-[7px] font-bold text-[#FFC107]/70 uppercase tracking-tighter">To'l</div>
                         </th>
                       </React.Fragment>
                     );
@@ -814,7 +809,7 @@ const OperationModule: React.FC<Props> = ({
                   return (
                     <th
                       key={col.key}
-                      className="sticky top-[24px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-r border-white/20 dark:border-white/10 px-0.5 py-2 text-center w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-help group/header"
+                      className="sticky top-[24px] bg-white dark:bg-[#22252B] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-2 text-center w-10 hover:bg-[#F8F9FA] dark:hover:bg-[#2A2D33] transition-colors cursor-help group/header"
                       title={col.label + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
                       onContextMenu={(e) => {
                         if (userRole === 'super_admin' || userRole === 'admin') {
@@ -823,7 +818,7 @@ const OperationModule: React.FC<Props> = ({
                         }
                       }}
                     >
-                      <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 tracking-tight group-hover/header:text-blue-600 dark:group-hover/header:text-blue-400 transition-colors">
+                      <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest group-hover/header:text-[#3366CC] transition-colors">
                         {col.short}
                       </span>
                     </th>
@@ -853,25 +848,25 @@ const OperationModule: React.FC<Props> = ({
       </div>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl px-6 py-3.5 mt-auto">
+      <div className="flex-shrink-0 border-t border-[#DEE2E6] dark:border-[#3A3D44] bg-white dark:bg-[#22252B] px-6 py-2 mt-auto shadow-inner">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-6 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50"></span>
-              <span>{t.totalFirms}: <strong className="text-slate-900 dark:text-white">{filteredRows.length}</strong></span>
+              <span className="w-1.5 h-1.5 rounded-sm bg-[#3366CC]/50"></span>
+              <span>{t.totalFirms}: <strong className="text-gray-900 dark:text-white">{filteredRows.length}</strong></span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/50"></span>
+              <span className="w-1.5 h-1.5 rounded-sm bg-[#007AFF]/50"></span>
               <span><strong>{visibleColumns.length}</strong> {t.reports.toLowerCase()}</span>
             </div>
-            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800"></div>
+            <div className="h-4 w-px bg-gray-200 dark:bg-gray-800"></div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-tighter opacity-70">Sinxron:</span>
-              <strong className="text-blue-600 dark:text-blue-400 uppercase tracking-widest">Aktiv</strong>
+              <span className="text-[9px] uppercase tracking-widest opacity-70">SINXRON:</span>
+              <strong className="text-[#3366CC] dark:text-[#4DA3FF]">AKTIV</strong>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => {
                 setCurrentPage(p => Math.max(1, p - 1));
@@ -879,17 +874,17 @@ const OperationModule: React.FC<Props> = ({
                 if (matrix) matrix.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === 1}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 disabled:opacity-20 hover:scale-105 hover:bg-white dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm"
+              className="c1-btn c1-btn-secondary px-3 py-1.5 text-[10px] flex items-center gap-1 uppercase tracking-widest"
             >
-              <span className="text-xs">←</span> Oldingi
+              ← Oldingi
             </button>
 
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/5 dark:bg-white/5 border border-white/10">
-              <span className="text-[11px] font-black text-slate-900 dark:text-white tracking-widest">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-[#F8F9FA] dark:bg-[#2A2D33] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm">
+              <span className="text-[10px] font-bold text-gray-900 dark:text-white tabular-nums">
                 {currentPage}
               </span>
-              <span className="text-[10px] font-bold text-slate-400">/</span>
-              <span className="text-[11px] font-black text-slate-400 tracking-widest">
+              <span className="text-[10px] font-bold text-gray-400">/</span>
+              <span className="text-[10px] font-bold text-gray-400 tabular-nums">
                 {totalPages || 1}
               </span>
             </div>
@@ -901,9 +896,9 @@ const OperationModule: React.FC<Props> = ({
                 if (matrix) matrix.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === totalPages || totalPages === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white border border-indigo-500/30 text-[10px] font-black uppercase tracking-[0.2em] disabled:opacity-20 hover:scale-105 hover:bg-indigo-500 transition-all active:scale-95 shadow-glass-indigo"
+              className="c1-btn c1-btn-primary px-3 py-1.5 text-[10px] flex items-center gap-1 uppercase tracking-widest"
             >
-              Keyingi <span className="text-xs">→</span>
+              Keyingi →
             </button>
           </div>
         </div>

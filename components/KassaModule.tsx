@@ -68,78 +68,82 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
     };
 
     return (
-        <div className="space-y-10 animate-fade-in pb-20">
+        <div className="space-y-4 animate-fade-in pb-20">
             {/* Header & Stats */}
-            {/* Header & Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                <div className="sm:col-span-2 bg-white dark:bg-[#22252B] border-t-4 border-t-blue-600 border border-gray-200 dark:border-gray-700 rounded p-6 shadow-sm relative overflow-hidden group flex flex-col justify-between">
-                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                        <Wallet size={180} className="hidden sm:block text-blue-600" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2 bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-5 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
+                    <div className="absolute top-[-20px] right-[-20px] opacity-[0.03] pointer-events-none">
+                        <Wallet size={160} className="text-[#3366CC]" />
                     </div>
 
                     <div className="relative z-10 flex justify-between items-start mb-6">
-                        <div>
-                            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">{t.kassa || 'Kassa'}</h2>
-                            <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">{selectedPeriod} Davri bo'yicha</p>
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-sm bg-[#3366CC] flex items-center justify-center text-white shadow-sm shrink-0">
+                                <Wallet size={20} />
+                            </div>
+                            <div>
+                                <h2 className="text-[14px] font-bold text-gray-800 dark:text-white uppercase tracking-wider">{t.kassa || 'Kassa'}</h2>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">{selectedPeriod} DAVRI BO'YICHA</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="relative z-10 grid grid-cols-1 xs:grid-cols-2 gap-6 md:gap-8">
-                        <div className="group/stat">
-                            <span className="text-gray-500 font-bold text-[10px] uppercase tracking-widest mb-1 block">Kutilayotgan</span>
-                            <div className="text-xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 tabular-nums">
-                                {stats.totalExpected.toLocaleString()} <span className="text-sm font-bold text-gray-400 ml-1">UZS</span>
+                    <div className="relative z-10 grid grid-cols-2 gap-8">
+                        <div>
+                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Kutilayotgan</span>
+                            <div className="text-[22px] font-bold text-gray-800 dark:text-white tabular-nums leading-none">
+                                {stats.totalExpected.toLocaleString()} <span className="text-[10px] font-bold text-gray-400 ml-1 uppercase">sum</span>
                             </div>
                         </div>
-                        <div className="group/stat">
-                            <span className="text-emerald-600 dark:text-emerald-500 font-bold text-[10px] uppercase tracking-widest mb-1 block">To'langan</span>
-                            <div className="text-xl md:text-3xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                                {stats.totalPaid.toLocaleString()} <span className="text-sm font-bold text-emerald-400/50 ml-1">UZS</span>
+                        <div>
+                            <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-widest mb-1 block">To'langan</span>
+                            <div className="text-[22px] font-bold tabular-nums text-emerald-600 leading-none">
+                                {stats.totalPaid.toLocaleString()} <span className="text-[10px] font-bold text-emerald-600/50 ml-1 uppercase">sum</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#22252B] rounded border border-gray-200 dark:border-gray-700 p-6 flex flex-col justify-center items-center text-center shadow-sm sm:col-span-2 lg:col-span-1">
-                    <div className="relative h-24 w-24 md:h-32 md:w-32 flex items-center justify-center">
+                <div className="bg-white dark:bg-[#22252B] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] p-5 flex flex-col justify-center items-center text-center shadow-sm transition-colors">
+                    <div className="relative h-24 w-24 flex items-center justify-center">
                         <svg className="h-full w-full transform -rotate-90">
                             <circle
-                                cx="50%" cy="50%" r="40%"
+                                cx="50%" cy="50%" r="42%"
                                 fill="transparent"
                                 stroke="currentColor"
-                                strokeWidth="8"
-                                className="text-gray-100 dark:text-gray-800"
+                                strokeWidth="6"
+                                className="text-[#F0F2F5] dark:text-[#1e2025]"
                             />
                             <circle
-                                cx="50%" cy="50%" r="40%"
+                                cx="50%" cy="50%" r="42%"
                                 fill="transparent"
-                                stroke="#2563eb"
-                                strokeWidth="10"
-                                strokeDasharray="251.2%"
-                                strokeDashoffset={`${251.2 - (251.2 * stats.percent) / 100}%`}
+                                stroke="#3366CC"
+                                strokeWidth="8"
+                                strokeDasharray="263.8%"
+                                strokeDashoffset={`${263.8 - (263.8 * stats.percent) / 100}%`}
                                 className="transition-all duration-1000 ease-out"
-                                strokeLinecap="round"
+                                strokeLinecap="square"
                             />
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 tabular-nums">{stats.percent}%</span>
+                            <span className="text-[18px] font-bold text-gray-800 dark:text-white tabular-nums">{stats.percent}%</span>
                         </div>
                     </div>
-                    <p className="mt-4 text-[11px] font-bold text-gray-500 uppercase flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                        {stats.pendingCount} ta korxona qoldi
-                    </p>
+                    <div className="mt-4 flex flex-col items-center">
+                        <div className={`px-2 py-0.5 rounded-sm text-[8px] font-bold uppercase tracking-widest border ${stats.percent >= 90 ? 'bg-[#EBFBF0] text-emerald-600 border-[#C3E6CB]' : 'bg-[#FFF3CD] text-amber-600 border-[#FFEEBA]'}`}>
+                            {stats.pendingCount} TA KORXONA QOLDI
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Toolbar */}
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-3">
                 <div className="flex-1 relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#3366CC] transition-colors" size={14} />
                     <input
                         type="text"
-                        placeholder={t.search}
-                        className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#1e2025] py-2 pl-10 pr-3 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500 shadow-sm"
+                        placeholder="INN YOKI FIRMA NOMI..."
+                        className="w-full rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] bg-white dark:bg-[#22252B] py-2 pl-9 pr-3 text-[11px] font-bold uppercase tracking-tight text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm transition-all"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -149,60 +153,59 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                         type="month"
                         value={selectedPeriod}
                         onChange={(e) => setSelectedPeriod(e.target.value)}
-                        className="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#1e2025] px-3 py-2 pr-10 text-sm text-gray-800 dark:text-gray-200 outline-none focus:border-blue-500 shadow-sm appearance-none min-w-[200px]"
+                        className="rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] bg-white dark:bg-[#22252B] px-3 py-2 pr-10 text-[11px] font-bold uppercase text-[#3366CC] outline-none focus:border-[#3366CC] shadow-sm appearance-none min-w-[180px] transition-all"
                     />
-                    <Clock className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-focus-within:text-blue-500 transition-colors" size={18} />
+                    <Clock className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-focus-within:text-[#3366CC] transition-colors" size={14} />
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="bg-white dark:bg-[#22252B] rounded border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto scrollbar-thin">
-                    <table className="w-full text-left border-collapse">
+            <div className="bg-white dark:bg-[#22252B] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm overflow-hidden transition-colors">
+                <div className="overflow-x-auto scrollbar-hide">
+                    <table className="w-full text-left border-collapse c1-table">
                         <thead>
-                            <tr className="bg-gray-100 dark:bg-gray-800 text-[10px] font-bold uppercase text-gray-500 border-b border-gray-200 dark:border-gray-700">
-                                <th className="px-4 py-3 sticky left-0 z-20 bg-gray-100 dark:bg-gray-800 md:relative md:z-0">{t.companyName}</th>
-                                <th className="px-4 py-3">{t.inn}</th>
-                                <th className="px-4 py-3">{t.amount}</th>
-                                <th className="px-4 py-3">{t.status}</th>
-                                <th className="px-4 py-3 text-right md:sticky md:right-0 z-20 bg-gray-100 dark:bg-gray-800 md:relative md:z-0">{t.actions}</th>
+                            <tr className="bg-[#F8F9FA] dark:bg-[#1A1D23] text-[9px] font-bold uppercase text-gray-400 border-b border-[#DEE2E6] dark:border-[#3A3D44] tracking-widest">
+                                <th className="px-5 py-3">{t.companyName}</th>
+                                <th className="px-5 py-3">{t.inn}</th>
+                                <th className="px-5 py-3">{t.amount}</th>
+                                <th className="px-5 py-3 text-center">{t.status}</th>
+                                <th className="px-5 py-3 text-right">{t.actions}</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                        <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
                             {filteredData.map((item) => (
-                                <tr key={item.id} className="hover:bg-blue-50 dark:hover:bg-gray-800/50 transition-all group/row">
-                                    <td className="px-4 py-2 sticky left-0 z-10 bg-white dark:bg-[#22252B] group-hover/row:bg-blue-50 dark:group-hover/row:bg-gray-800/50 md:relative md:z-0">
-                                        <div className="font-bold text-xs text-gray-800 dark:text-gray-100 group-hover/row:text-blue-600 transition-colors truncate max-w-[200px] md:max-w-none">
+                                <tr key={item.id} className="hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] transition-all group">
+                                    <td className="px-5 py-2.5">
+                                        <div className="font-bold text-[11px] text-gray-800 dark:text-white uppercase tracking-tight truncate max-w-[250px]">
                                             {item.name}
                                         </div>
-                                        {item.brandName && <p className="text-[10px] font-semibold text-gray-500 mt-0.5 truncate max-w-[200px] md:max-w-none">{item.brandName}</p>}
+                                        {item.brandName && <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5 truncate max-w-[250px]">{item.brandName}</p>}
                                     </td>
-                                    <td className="px-4 py-2 font-mono text-gray-500 text-xs">{item.inn}</td>
-                                    <td className="px-4 py-2">
-                                        <div className="font-bold text-gray-800 dark:text-gray-200 text-xs">
-                                            {(item.contractAmount || 0).toLocaleString()} <span className="text-[10px] font-normal text-gray-500 ml-1">UZS</span>
+                                    <td className="px-5 py-2.5 font-mono text-gray-500 text-[10px] font-bold">{item.inn}</td>
+                                    <td className="px-5 py-2.5">
+                                        <div className="font-bold text-gray-800 dark:text-white text-[11px] tabular-nums">
+                                            {(item.contractAmount || 0).toLocaleString()} <span className="text-[8px] font-bold text-gray-400 ml-1 uppercase">sum</span>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2">
+                                    <td className="px-5 py-2.5 text-center">
                                         {item.payment ? (
-                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase border ${item.payment.status === PaymentStatus.PAID
-                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800/50'
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest border transition-colors ${item.payment.status === PaymentStatus.PAID
+                                                ? 'bg-[#EBFBF0] text-emerald-600 border-[#C3E6CB]'
                                                 : item.payment.status === PaymentStatus.PENDING
-                                                    ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800/50'
-                                                    : 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800/50'
+                                                    ? 'bg-[#FFF3CD] text-amber-600 border-[#FFEEBA]'
+                                                    : 'bg-[#FEEBF0] text-rose-600 border-[#F5C6CB]'
                                                 }`}>
-                                                {item.payment.status === PaymentStatus.PAID ? <CheckCircle2 size={12} strokeWidth={2} /> : <Clock size={12} strokeWidth={2} />}
+                                                {item.payment.status === PaymentStatus.PAID ? <CheckCircle2 size={10} strokeWidth={3} /> : <Clock size={10} strokeWidth={3} />}
                                                 {item.payment.status}
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase bg-gray-100 dark:bg-gray-800 text-gray-500 border border-gray-200 dark:border-gray-700">
-                                                <Clock size={12} strokeWidth={2} />
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest bg-[#F8F9FA] dark:bg-[#1A1D23] text-gray-400 border border-[#DEE2E6] dark:border-[#3A3D44]">
+                                                <Clock size={10} strokeWidth={3} />
                                                 Kutilmoqda
                                             </span>
                                         )}
                                     </td>
-                                    <td className="px-4 py-2 text-right">
-                                        <div className="flex items-center justify-end gap-2">
+                                    <td className="px-5 py-2.5 text-right">
+                                        <div className="flex items-center justify-end gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => {
                                                     setEditingPayment(item.payment || {
@@ -214,7 +217,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                                     });
                                                     setIsModalOpen(true);
                                                 }}
-                                                className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 rounded transition-colors"
+                                                className="p-1.5 text-[#3366CC] hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] rounded-sm border border-transparent hover:border-[#3366CC]/30 transition-all"
                                                 title="To'lov / Tahrirlash"
                                             >
                                                 <CreditCard size={14} />
@@ -222,7 +225,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                             {item.payment && (
                                                 <button
                                                     onClick={() => { if (confirm('To\'lovni o\'chirishni tasdiqlaysizmi?')) onDeletePayment(item.payment!.id); }}
-                                                    className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/40 rounded transition-colors"
+                                                    className="p-1.5 text-rose-500 hover:bg-[#FEEBF0] dark:hover:bg-[#2D1B1E] rounded-sm border border-transparent hover:border-rose-300 transition-all"
                                                     title="O'chirish"
                                                 >
                                                     <Trash2 size={14} />
@@ -235,58 +238,57 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                         </tbody>
                     </table>
                     {filteredData.length === 0 && (
-                        <div className="py-20 flex flex-col items-center justify-center text-gray-400">
+                        <div className="py-24 flex flex-col items-center justify-center text-gray-300">
                             <Search size={32} className="opacity-20 mb-4" />
-                            <p className="font-bold uppercase text-xs opacity-60">Ma'lumot topilmadi</p>
+                            <p className="font-bold uppercase tracking-widest text-[9px] opacity-40">Ma'lumot topilmadi</p>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Payment Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#22252B] w-full max-w-lg rounded shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-[#1A1D23]">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 transition-colors animate-fade-in">
+                    <div className="bg-[#F0F2F5] dark:bg-[#111318] w-full max-w-lg rounded-sm shadow-2xl border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden">
+                        <div className="px-5 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] flex justify-between items-center bg-white dark:bg-[#1A1D23]">
                             <div>
-                                <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">To'lovni tasdiqlash</h3>
-                                <p className="text-[10px] text-gray-500 mt-0.5">Tranzaksiya tafsilotlarini kiriting</p>
+                                <h3 className="text-[11px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">To'lovni tasdiqlash</h3>
+                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors">
+                            <button onClick={() => setIsModalOpen(false)} className="p-1 text-gray-400 hover:text-rose-500 transition-colors">
                                 <Plus size={18} className="rotate-45" />
                             </button>
                         </div>
-                        <form onSubmit={handleSave} className="p-6 space-y-4">
+                        <form onSubmit={handleSave} className="p-5 space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-600 dark:text-gray-400">{t.amount}</label>
+                                    <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{t.amount}</label>
                                     <div className="relative">
                                         <input
                                             type="number"
                                             value={editingPayment?.amount || ''}
                                             onChange={(e) => setEditingPayment(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                                            className="w-full bg-white dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 shadow-sm"
+                                            className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight"
                                             required
                                         />
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 UZS">UZS</div>
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-bold text-gray-400 uppercase">sum</div>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-600 dark:text-gray-400">{t.date}</label>
+                                    <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{t.date}</label>
                                     <input
                                         type="date"
                                         value={editingPayment?.paymentDate || ''}
                                         onChange={(e) => setEditingPayment(prev => ({ ...prev, paymentDate: e.target.value }))}
-                                        className="w-full bg-white dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 shadow-sm"
+                                        className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-[#3366CC] outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight"
                                         required
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-600 dark:text-gray-400">To'lov Holati</label>
+                                    <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">To'lov Holati</label>
                                     <select
                                         value={editingPayment?.status || PaymentStatus.PENDING}
                                         onChange={(e) => setEditingPayment(prev => ({ ...prev, status: e.target.value as PaymentStatus }))}
-                                        className="w-full bg-white dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 shadow-sm"
+                                        className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight"
                                     >
                                         <option value={PaymentStatus.PAID}>To'landi</option>
                                         <option value={PaymentStatus.PENDING}>Kutilmoqda</option>
@@ -295,33 +297,33 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                     </select>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-600 dark:text-gray-400">{t.comment}</label>
+                                    <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{t.comment}</label>
                                     <input
                                         type="text"
-                                        placeholder="Ixtiyoriy izoh..."
+                                        placeholder="IXTIYORIY IZOH..."
                                         value={editingPayment?.comment || ''}
                                         onChange={(e) => setEditingPayment(prev => ({ ...prev, comment: e.target.value }))}
-                                        className="w-full bg-white dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 shadow-sm"
+                                        className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight"
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                            <div className="flex gap-2.5 pt-4 border-t border-[#DEE2E6] dark:border-[#3A3D44] mt-5">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 px-4 py-2 rounded border border-gray-300 dark:border-gray-600 font-bold text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                                    className="flex-1 px-4 py-2 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-bold text-[10px] text-gray-500 uppercase tracking-widest bg-white dark:bg-[#22252B] hover:bg-[#F8F9FA] transition-all"
                                 >
                                     {t.cancel}
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSaving}
-                                    className="flex-1 px-4 py-2 rounded font-bold text-xs text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+                                    className="flex-1 px-4 py-2 rounded-sm font-bold text-[10px] text-white bg-[#3366CC] hover:bg-[#2A52A3] disabled:opacity-50 transition-all shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest"
                                 >
                                     {isSaving ? (
                                         <>
-                                            <Loader2 size={14} className="animate-spin" />
+                                            <Loader2 size={12} className="animate-spin" />
                                             SAQLANMOQDA...
                                         </>
                                     ) : (

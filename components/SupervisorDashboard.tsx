@@ -230,31 +230,30 @@ const SupervisorDashboard: React.FC<Props> = ({
     // ═════════════════════════════════════════════════════════════════
 
     return (
-        <div className="space-y-6 animate-macos pb-10 max-w-[1600px] mx-auto">
+        <div className="space-y-8 animate-fade-in pb-10 max-w-[1600px] mx-auto">
             {/* ═══ HEADER ═══ */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-[#DEE2E6] dark:border-[#3A3D44] pb-6">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
-                        <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 bg-clip-text text-transparent">
-                            VERTIKAL NAZORAT
-                        </span>
-                        <span className="text-slate-800 dark:text-white">DIAGRAMMASI</span>
+                    <h1 className="text-2xl font-black tracking-tight flex items-center gap-3">
+                        <Shield className="text-[#3366CC]" size={28} />
+                        <span className="text-gray-800 dark:text-white uppercase">VERTIKAL NAZORAT</span>
+                        <span className="text-[#3366CC] uppercase">DIAGRAMMASI</span>
                     </h1>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] mt-1 pl-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-1 italic">
                         Nazoratchi boshqaruv paneli • {selectedPeriod}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleExport}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm transition-colors shadow-lg shadow-emerald-500/20"
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-sm font-black text-[11px] transition-all shadow-sm uppercase tracking-widest border border-emerald-700"
                     >
-                        <Download size={16} /> Export Excel
+                        <Download size={14} /> EXPORT EXCEL
                     </button>
                     <MonthPicker
                         selectedPeriod={selectedPeriod}
                         onChange={onPeriodChange}
-                        className="border border-apple-border dark:border-apple-darkBorder rounded-xl"
+                        className="border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm bg-white dark:bg-[#1A1D23]"
                     />
                 </div>
             </div>
@@ -262,34 +261,34 @@ const SupervisorDashboard: React.FC<Props> = ({
             {/* ═══ 4 STAT CARDS ═══ */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'JAMI FIRMALAR', value: String(summary.companyCount), icon: <Building2 size={22} />, bg: 'bg-gradient-to-br from-blue-600 to-indigo-700', glow: 'shadow-blue-500/25' },
-                    { label: 'SHARTNOMA QIYMATI', value: fmtMoney(summary.totalContract), icon: <DollarSign size={22} />, bg: 'bg-gradient-to-br from-emerald-600 to-teal-700', glow: 'shadow-emerald-500/25' },
-                    { label: 'XODIMLAR', value: String(summary.staffCount), icon: <Users size={22} />, bg: 'bg-gradient-to-br from-violet-600 to-purple-700', glow: 'shadow-violet-500/25' },
-                    { label: 'NAZORAT ULUSHI', value: fmtMoney(summary.totalSupervisorEarnings), icon: <Wallet size={22} />, bg: 'bg-gradient-to-br from-amber-500 to-orange-600', glow: 'shadow-amber-500/25' },
+                    { label: 'JAMI FIRMALAR', value: String(summary.companyCount), icon: <Building2 size={20} />, color: 'text-[#3366CC]', bg: 'bg-[#F0F2F5] dark:bg-[#1A1D23]' },
+                    { label: 'SHARTNOMA QIYMATI', value: fmtMoney(summary.totalContract), icon: <DollarSign size={20} />, color: 'text-emerald-600', bg: 'bg-[#F0F2F5] dark:bg-[#1A1D23]' },
+                    { label: 'XODIMLAR', value: String(summary.staffCount), icon: <Users size={20} />, color: 'text-indigo-600', bg: 'bg-[#F0F2F5] dark:bg-[#1A1D23]' },
+                    { label: 'NAZORAT ULUSHI', value: fmtMoney(summary.totalSupervisorEarnings), icon: <Wallet size={20} />, color: 'text-amber-600', bg: 'bg-[#F0F2F5] dark:bg-[#1A1D23]' },
                 ].map((card, i) => (
-                    <div key={i} className={`relative ${card.bg} rounded-[1.5rem] p-5 text-white overflow-hidden shadow-xl ${card.glow} group hover:scale-[1.02] transition-all duration-300`}>
-                        <div className="absolute -top-2 -right-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <div className="w-20 h-20 flex items-center justify-center">{card.icon}</div>
+                    <div key={i} className={`${card.bg} border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-5 shadow-sm group hover:border-[#3366CC] transition-all`}>
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">{card.label}</p>
+                            <div className={`${card.color} opacity-40 group-hover:opacity-100 transition-opacity`}>{card.icon}</div>
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/50 mb-3">{card.label}</p>
-                        <h2 className="text-3xl font-black tabular-nums tracking-tight">{card.value}</h2>
+                        <h2 className="text-2xl font-black tabular-nums tracking-tighter text-gray-800 dark:text-white uppercase">{card.value}</h2>
                     </div>
                 ))}
             </div>
 
             {/* ═══ TAB NAVIGATION ═══ */}
-            <div className="flex gap-1 bg-slate-100 dark:bg-white/5 rounded-2xl p-1">
+            <div className="flex gap-1 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
                 {([
-                    { key: 'overview', label: 'Umumiy ko\'rinish', icon: <Eye size={16} /> },
-                    { key: 'hierarchy', label: 'Vertikal Tuzilma', icon: <Network size={16} /> },
-                    { key: 'companies', label: 'Firmalar ro\'yxati', icon: <Building2 size={16} /> },
+                    { key: 'overview', label: 'Umumiy ko\'rinish', icon: <Eye size={14} /> },
+                    { key: 'hierarchy', label: 'Vertikal Tuzilma', icon: <Network size={14} /> },
+                    { key: 'companies', label: 'Firmalar ro\'yxati', icon: <Building2 size={14} /> },
                 ] as { key: typeof activeTab, label: string, icon: React.ReactNode }[]).map(tab => (
                     <button
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
-                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === tab.key
-                            ? 'liquid-glass-card shadow-lg text-slate-800 dark:text-white'
-                            : 'text-slate-400 hover:text-slate-600'
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-bold text-[11px] uppercase tracking-widest transition-all border-t-2 ${activeTab === tab.key
+                            ? 'bg-white dark:bg-[#22252B] text-[#3366CC] border-t-[#3366CC] border-x border-[#DEE2E6] dark:border-[#3A3D44] -mb-[1px]'
+                            : 'text-gray-400 hover:text-gray-600 border-t-transparent border-x-transparent'
                             }`}
                     >
                         {tab.icon} {tab.label}
@@ -302,77 +301,80 @@ const SupervisorDashboard: React.FC<Props> = ({
             {/* ═══════════════════════════════════════════════════════════════ */}
             {activeTab === 'overview' && (
                 <div className="space-y-6">
-                    {/* ── HIERARCHY TREE (Visual org chart) ── */}
-                    <div className="bg-slate-900 rounded-[2rem] p-8 overflow-x-auto shadow-2xl">
-                        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-500 mb-8 text-center">
+                    {/* ── HIERARCHY TREE (Industrial org chart) ── */}
+                    <div className="bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-8 overflow-x-auto shadow-sm">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-10 text-center">
                             ASOS ERP • NAZORAT TUZILMASI • {selectedPeriod}
                         </h3>
 
                         {/* Chief Accountant (Ёркиной) at top */}
                         <div className="flex flex-col items-center">
-                            <div className="bg-gradient-to-br from-amber-600 to-amber-800 rounded-2xl px-8 py-4 text-center border-2 border-amber-500/50 shadow-lg shadow-amber-500/20 relative">
-                                <Crown size={14} className="absolute -top-2 left-1/2 -translate-x-1/2 text-amber-400" />
-                                <p className="text-[9px] font-black uppercase tracking-widest text-amber-300/60">BOSH NAZORATCHI</p>
-                                <p className="text-lg font-black text-white tracking-tight">Ёркиной</p>
-                                <p className="text-[9px] font-bold text-amber-200/50 mt-0.5">
-                                    {allActiveCompanies.length} firma • {fmtMoney(allActiveCompanies.reduce((s, c) => s + (c.contractAmount || 0), 0))} UZS
-                                </p>
+                            <div className="bg-[#3366CC] border-2 border-[#2A52A3] rounded-sm px-10 py-5 text-center shadow-md relative min-w-[240px]">
+                                <Crown size={18} className="absolute -top-3 left-1/2 -translate-x-1/2 text-white" />
+                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/70 mb-1">BOSH NAZORATCHI</p>
+                                <p className="text-xl font-black text-white tracking-tight uppercase">Ёркиной</p>
+                                <div className="mt-3 pt-2 border-t border-white/20">
+                                    <p className="text-[10px] font-black text-white/80 uppercase">
+                                        {allActiveCompanies.length} FIRMA • {fmtMoney(allActiveCompanies.reduce((s, c) => s + (c.contractAmount || 0), 0))} UZS
+                                    </p>
+                                </div>
                             </div>
 
                             {/* Vertical connector */}
-                            <div className="w-0.5 h-8 bg-gradient-to-b from-amber-500/50 to-slate-600" />
+                            <div className="w-px h-10 bg-[#DEE2E6] dark:bg-[#3A3D44]" />
 
                             {/* Supervisors level */}
-                            <div className="flex gap-6 flex-wrap justify-center">
+                            <div className="flex gap-4 flex-wrap justify-center items-start">
                                 {supervisorsData.map((sup, i) => {
                                     const isExpanded = expandedSupervisor === sup.id;
-                                    const colors = [
-                                        { bg: 'from-cyan-600 to-cyan-800', border: 'border-cyan-500/50', glow: 'shadow-cyan-500/20', text: 'text-cyan-300', accent: 'text-cyan-400' },
-                                        { bg: 'from-violet-600 to-violet-800', border: 'border-violet-500/50', glow: 'shadow-violet-500/20', text: 'text-violet-300', accent: 'text-violet-400' },
-                                        { bg: 'from-emerald-600 to-emerald-800', border: 'border-emerald-500/50', glow: 'shadow-emerald-500/20', text: 'text-emerald-300', accent: 'text-emerald-400' },
-                                        { bg: 'from-rose-600 to-rose-800', border: 'border-rose-500/50', glow: 'shadow-rose-500/20', text: 'text-rose-300', accent: 'text-rose-400' },
-                                    ];
-                                    const c = colors[i % colors.length];
-
+                                    
                                     return (
                                         <div key={sup.id} className="flex flex-col items-center">
                                             {/* Connector from top */}
-                                            <div className="w-0.5 h-4 bg-slate-600" />
+                                            <div className="h-6 w-px bg-[#DEE2E6] dark:bg-[#3A3D44]" />
 
                                             {/* Supervisor Card */}
                                             <div
                                                 onClick={() => setExpandedSupervisor(isExpanded ? null : sup.id)}
-                                                className={`bg-gradient-to-br ${c.bg} rounded-2xl px-6 py-4 text-center border-2 ${c.border} shadow-lg ${c.glow} cursor-pointer hover:scale-105 transition-all duration-300 min-w-[200px] ${sup.isCurrent ? 'ring-2 ring-white/30' : ''}`}
+                                                className={`bg-white dark:bg-[#22252B] border-2 rounded-sm px-6 py-4 text-center shadow-sm cursor-pointer hover:border-[#3366CC] transition-all min-w-[210px] relative ${sup.isCurrent ? 'border-[#3366CC] ring-1 ring-[#3366CC]/20' : 'border-[#DEE2E6] dark:border-[#3A3D44]'}`}
                                             >
-                                                {sup.isCurrent && <Star size={12} className="absolute -top-1 -right-1 text-amber-400 fill-amber-400" />}
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40">NAZORATCHI</p>
-                                                <p className="text-base font-black text-white tracking-tight">{sup.name}</p>
-                                                <div className="flex items-center justify-center gap-3 mt-2">
-                                                    <span className={`text-[10px] font-black ${c.text}`}>{sup.companiesCount} firma</span>
-                                                    <span className="text-[10px] font-bold text-white/30">•</span>
-                                                    <span className={`text-[10px] font-black ${c.text}`}>{fmtMoney(sup.totalContract)}</span>
+                                                {sup.isCurrent && <div className="absolute top-0 right-0 bg-[#3366CC] text-white p-1 rounded-bl-sm"><Star size={10} fill="currentColor" /></div>}
+                                                <p className="text-[8px] font-black uppercase tracking-widest text-gray-400 mb-1">NAZORATCHI</p>
+                                                <p className="text-[14px] font-black text-gray-800 dark:text-white uppercase tracking-tight">{sup.name}</p>
+                                                
+                                                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-[#F0F2F5] dark:border-[#1A1D23]">
+                                                    <div className="text-center border-r border-[#F0F2F5] dark:border-[#1A1D23]">
+                                                        <p className="text-[10px] font-black text-[#3366CC]">{sup.companiesCount}</p>
+                                                        <p className="text-[7px] font-bold text-gray-400 uppercase">Firma</p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <p className="text-[10px] font-black text-[#3366CC]">{fmtMoney(sup.totalContract)}</p>
+                                                        <p className="text-[7px] font-bold text-gray-400 uppercase">Summa</p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-[9px] font-bold text-white/30 mt-1">
-                                                    {sup.uniqueAccountants.length} buxgalter
-                                                </p>
-                                                <ChevronDown size={14} className={`mx-auto mt-1 text-white/30 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                
+                                                <div className="mt-2 flex items-center justify-center gap-1.5">
+                                                    <p className="text-[8px] font-black text-gray-500 uppercase">
+                                                        {sup.uniqueAccountants.length} BUXGALTER
+                                                    </p>
+                                                    <ChevronDown size={12} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180 text-[#3366CC]' : ''}`} />
+                                                </div>
                                             </div>
 
                                             {/* Accountants under supervisor */}
                                             {isExpanded && (
-                                                <div className="flex flex-col items-center mt-2">
-                                                    <div className="w-0.5 h-4 bg-slate-600" />
-                                                    <div className="flex gap-2 flex-wrap justify-center max-w-[500px]">
+                                                <div className="flex flex-col items-center mt-2 animate-fade-in">
+                                                    <div className="w-px h-4 bg-[#DEE2E6] dark:bg-[#3A3D44]" />
+                                                    <div className="flex flex-col gap-1 w-full max-w-[190px]">
                                                         {sup.uniqueAccountants.map((accName, ai) => (
-                                                            <div key={ai} className="flex flex-col items-center">
-                                                                <div className="w-0.5 h-3 bg-slate-700" />
-                                                                <div className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-center min-w-[100px]">
-                                                                    <p className="text-[9px] font-black text-slate-500 uppercase">Buxgalter</p>
-                                                                    <p className="text-[11px] font-bold text-slate-300 truncate">{accName}</p>
-                                                                    <p className="text-[9px] font-bold text-slate-500">
-                                                                        {sup.companies.filter(c => c.accountantName === accName).length} firma
+                                                            <div key={ai} className="bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-2 flex items-center justify-between group hover:bg-white dark:hover:bg-[#1A1D23] transition-colors">
+                                                                <div>
+                                                                    <p className="text-[9px] font-black text-gray-800 dark:text-gray-200 uppercase truncate max-w-[120px]">{accName}</p>
+                                                                    <p className="text-[7px] font-bold text-gray-400 uppercase">
+                                                                        {sup.companies.filter(c => c.accountantName === accName).length} FIRMA
                                                                     </p>
                                                                 </div>
+                                                                <ArrowRight size={10} className="text-gray-300 group-hover:text-[#3366CC]" />
                                                             </div>
                                                         ))}
                                                     </div>
@@ -388,12 +390,9 @@ const SupervisorDashboard: React.FC<Props> = ({
                     {/* ── NAZORATCHI DISTRIBUTION BARS ── */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {supervisorsData.map((sup, i) => {
-                            const barColors = ['bg-cyan-500', 'bg-violet-500', 'bg-emerald-500', 'bg-rose-500'];
-                            const barBg = ['bg-cyan-500/10', 'bg-violet-500/10', 'bg-emerald-500/10', 'bg-rose-500/10'];
-                            const textColors = ['text-cyan-400', 'text-violet-400', 'text-emerald-400', 'text-rose-400'];
-                            const color = barColors[i % barColors.length];
-                            const bgColor = barBg[i % barBg.length];
-                            const textColor = textColors[i % textColors.length];
+                            const barColor = 'bg-[#3366CC]';
+                            const bgColor = 'bg-[#F0F2F5] dark:bg-[#1A1D23]';
+                            const textColor = 'text-[#3366CC]';
 
                             // Get accountant distribution for this supervisor
                             const accDist: Record<string, number> = {};
@@ -404,27 +403,27 @@ const SupervisorDashboard: React.FC<Props> = ({
                             const sortedAcc = Object.entries(accDist).sort((a, b) => b[1] - a[1]);
 
                             return (
-                                <div key={sup.id} className="liquid-glass-card rounded-[1.5rem] border border-apple-border dark:border-apple-darkBorder p-5 shadow-sm">
-                                    <h4 className={`text-xs font-black uppercase tracking-widest ${textColor} mb-4 flex items-center gap-2`}>
+                                <div key={sup.id} className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-5 shadow-sm">
+                                    <h4 className={`text-[10px] font-black uppercase tracking-widest ${textColor} mb-5 flex items-center gap-2 border-b border-[#F0F2F5] dark:border-[#1A1D23] pb-3`}>
                                         <Shield size={14} /> NAZORAT: {sup.name} ({sup.companiesCount} firma)
                                     </h4>
-                                    <div className="space-y-2">
+                                    <div className="space-y-3">
                                         {sortedAcc.slice(0, 8).map(([name, count]) => (
                                             <div key={name} className="flex items-center gap-3">
-                                                <span className="text-[11px] font-bold text-slate-500 w-20 truncate">{name}</span>
-                                                <div className="flex-1 h-4 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                                <span className="text-[10px] font-bold text-gray-500 w-24 truncate">{name}</span>
+                                                <div className="flex-1 h-3 bg-[#F8F9FA] dark:bg-[#111318] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden">
                                                     <div
-                                                        className={`h-full ${color} rounded-full transition-all duration-700 flex items-center justify-end pr-1.5`}
+                                                        className={`h-full ${barColor} transition-all duration-700 flex items-center justify-end pr-1.5`}
                                                         style={{ width: `${(count / sup.companiesCount) * 100}%` }}
                                                     >
-                                                        {count > 2 && <span className="text-[8px] font-black text-white">{count}</span>}
+                                                        {count > 2 && <span className="text-[7px] font-black text-white">{count}</span>}
                                                     </div>
                                                 </div>
-                                                <span className="text-[10px] font-black text-slate-500 tabular-nums w-6 text-right">{count}</span>
+                                                <span className="text-[10px] font-black text-gray-500 tabular-nums w-6 text-right">{count}</span>
                                             </div>
                                         ))}
                                         {sortedAcc.length > 8 && (
-                                            <p className="text-[10px] font-bold text-slate-400 text-center">+{sortedAcc.length - 8} buxgalter</p>
+                                            <p className="text-[9px] font-bold text-gray-400 text-center uppercase tracking-widest mt-2">+{sortedAcc.length - 8} buxgalter</p>
                                         )}
                                     </div>
                                 </div>
@@ -433,43 +432,43 @@ const SupervisorDashboard: React.FC<Props> = ({
                     </div>
 
                     {/* ── MY ACCOUNTANTS FINANCIAL TABLE ── */}
-                    <div className="liquid-glass-card rounded-[1.5rem] border border-apple-border dark:border-apple-darkBorder overflow-hidden shadow-sm">
-                        <div className="p-5 border-b border-apple-border dark:border-apple-darkBorder bg-slate-50 dark:bg-white/5">
-                            <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-2">
-                                <UserCheck size={16} className="text-amber-500" />
+                    <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden">
+                        <div className="p-4 border-b border-[#DEE2E6] dark:border-[#3A3D44] bg-[#F8F9FA] dark:bg-[#111318]">
+                            <h3 className="text-[11px] font-black text-gray-800 dark:text-white uppercase tracking-widest flex items-center gap-2">
+                                <UserCheck size={16} className="text-[#3366CC]" />
                                 MENING BUXGALTERLARIM — {myAccountants.length} ta
                             </h3>
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-5">
                             {myAccountants.map((acc) => (
-                                <div key={acc.id} className="bg-white/40 dark:bg-white/5 rounded-2xl p-6 border border-white/20 dark:border-white/10 hover:shadow-glass transition-all group">
-                                    <div className="flex items-center justify-between mb-4">
+                                <div key={acc.id} className="bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-4 hover:border-[#3366CC] transition-all group shadow-sm">
+                                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#F0F2F5] dark:border-[#22252B]">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-[1.2rem] bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-glass-lg border border-white/20 group-hover:scale-110 transition-transform">
+                                            <div className="w-10 h-10 rounded-sm bg-[#3366CC] text-white flex items-center justify-center font-black text-sm border border-[#2A52A3] shadow-sm">
                                                 {acc.name[0]}
                                             </div>
                                             <div>
-                                                <h4 className="font-black text-base text-slate-800 dark:text-white leading-tight">{acc.name}</h4>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{acc.companiesCount} ta firma</p>
+                                                <h4 className="font-black text-[13px] text-gray-800 dark:text-white leading-tight uppercase tracking-tight">{acc.name}</h4>
+                                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">{acc.companiesCount} ta firma</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-sm font-black text-emerald-500">{fmtMoney(acc.totalContract)}</p>
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Shartnoma</p>
+                                            <p className="text-[14px] font-black text-emerald-600 tabular-nums">{fmtMoney(acc.totalContract)}</p>
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-0.5">Shartnoma</p>
                                         </div>
                                     </div>
 
                                     {/* Company list under this accountant */}
-                                    <div className="space-y-2 mt-6 pt-4 border-t border-white/5 max-h-40 overflow-y-auto scrollbar-thin pr-2">
+                                    <div className="space-y-1.5 mt-4 max-h-40 overflow-y-auto scrollbar-hide pr-1">
                                         {acc.companies.map(c => {
                                             const prog = getCompanyProgress(c.id);
                                             return (
-                                                <div key={c.id} className="flex items-center gap-3 bg-white/30 dark:bg-white/5 p-3 rounded-xl border border-white/10 group/row hover:bg-white/50 transition-colors">
-                                                    <div className={`w-2 h-2 rounded-full shrink-0 ${prog.percent >= 80 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : prog.percent >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} />
-                                                    <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 truncate flex-1">{c.name}</span>
-                                                    <span className="font-black tabular-nums text-[10px] text-slate-500">{fmtMoney(c.contractAmount || 0)}</span>
-                                                    <div className="w-10 h-1 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden ml-2">
-                                                        <div className={`h-full rounded-full ${prog.percent >= 80 ? 'bg-emerald-500' : prog.percent >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${prog.percent}%` }} />
+                                                <div key={c.id} className="flex items-center gap-3 bg-[#F8F9FA] dark:bg-[#111318] p-2.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] group/row hover:border-[#3366CC] transition-colors">
+                                                    <div className={`w-1.5 h-1.5 rounded-sm shrink-0 ${prog.percent >= 80 ? 'bg-emerald-500' : prog.percent >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                                                    <span className="font-bold text-[10px] text-gray-700 dark:text-gray-300 truncate flex-1 uppercase tracking-tight">{c.name}</span>
+                                                    <span className="font-black tabular-nums text-[9px] text-gray-500">{fmtMoney(c.contractAmount || 0)}</span>
+                                                    <div className="w-10 h-1 bg-[#DEE2E6] dark:bg-[#3A3D44] rounded-sm overflow-hidden ml-2">
+                                                        <div className={`h-full ${prog.percent >= 80 ? 'bg-emerald-500' : prog.percent >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${prog.percent}%` }} />
                                                     </div>
                                                 </div>
                                             );
@@ -482,23 +481,13 @@ const SupervisorDashboard: React.FC<Props> = ({
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {/* ═══ TAB: HIERARCHY ═══ */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {activeTab === 'hierarchy' && (
                 <div className="space-y-6">
                     {/* Full hierarchy for each supervisor */}
                     {supervisorsData.map((sup, i) => {
                         const isMe = sup.isCurrent;
-                        const gradients = [
-                            'from-cyan-500/10 to-cyan-600/5 border-cyan-500/20',
-                            'from-violet-500/10 to-violet-600/5 border-violet-500/20',
-                            'from-emerald-500/10 to-emerald-600/5 border-emerald-500/20',
-                            'from-rose-500/10 to-rose-600/5 border-rose-500/20',
-                        ];
-                        const accentColors = ['text-cyan-500', 'text-violet-500', 'text-emerald-500', 'text-rose-500'];
-                        const barColors2 = ['bg-cyan-500', 'bg-violet-500', 'bg-emerald-500', 'bg-rose-500'];
-
+                        
                         // Accountant breakdown
                         const accMap: Record<string, Company[]> = {};
                         sup.companies.forEach(c => {
@@ -509,55 +498,55 @@ const SupervisorDashboard: React.FC<Props> = ({
                         const accList = Object.entries(accMap).sort((a, b) => b[1].length - a[1].length);
 
                         return (
-                            <div key={sup.id} className={`bg-gradient-to-br ${gradients[i % gradients.length]} rounded-[2rem] border-2 p-6 ${isMe ? 'ring-2 ring-amber-400/30' : ''}`}>
-                                <div className="flex items-center justify-between mb-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-2xl ${barColors2[i % barColors2.length]} text-white flex items-center justify-center font-black text-lg shadow-lg`}>
+                            <div key={sup.id} className={`bg-[#F8F9FA] dark:bg-[#111318] rounded-sm border-t-4 p-6 shadow-sm ${isMe ? 'border-t-[#3366CC]' : 'border-t-gray-400'}`}>
+                                <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+                                    <div className="flex items-center gap-5">
+                                        <div className={`w-12 h-12 rounded-sm bg-[#3366CC] text-white flex items-center justify-center font-black text-lg shadow-sm font-sans uppercase`}>
                                             {sup.name[0]}
                                         </div>
                                         <div>
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="text-xl font-black text-slate-800 dark:text-white">{sup.name}</h3>
-                                                {isMe && <span className="text-[9px] font-black px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full uppercase">Siz</span>}
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">{sup.name}</h3>
+                                                {isMe && <span className="text-[9px] font-black px-2 py-0.5 bg-[#EBF3FF] text-[#3366CC] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] uppercase">SIZ</span>}
                                             </div>
-                                            <p className="text-xs font-bold text-slate-400">
-                                                {sup.companiesCount} firma • {fmtMoney(sup.totalContract)} UZS • {sup.uniqueAccountants.length} buxgalter
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                                {sup.companiesCount} FIRMA • {fmtMoney(sup.totalContract)} UZS • {sup.uniqueAccountants.length} BUXGALTER
                                             </p>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className={`text-2xl font-black ${accentColors[i % accentColors.length]}`}>{fmtMoney(sup.totalSupervisorEarnings)}</p>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nazorat ulushi</p>
+                                        <p className={`text-2xl font-black text-[#3366CC] tabular-nums`}>{fmtMoney(sup.totalSupervisorEarnings)}</p>
+                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">NAZORAT ULUSHI</p>
                                     </div>
                                 </div>
 
                                 {/* Accountant cards grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                                     {accList.map(([accName, accCompanies]) => {
                                         const accTotal = accCompanies.reduce((s, c) => s + (c.contractAmount || 0), 0);
                                         return (
-                                            <div key={accName} className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/50 dark:border-white/10">
-                                                <div className="flex items-center justify-between mb-2">
+                                            <div key={accName} className="bg-white dark:bg-[#22252B] rounded-sm p-4 border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm hover:border-[#3366CC] transition-all">
+                                                <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#F0F2F5] dark:border-[#1A1D23]">
                                                     <div className="flex items-center gap-2">
-                                                        <div className={`w-7 h-7 rounded-lg ${barColors2[i % barColors2.length]}/20 flex items-center justify-center`}>
-                                                            <span className={`text-[10px] font-black ${accentColors[i % accentColors.length]}`}>{accName[0]}</span>
+                                                        <div className={`w-7 h-7 rounded-sm bg-[#F0F2F5] dark:bg-[#1A1D23] flex items-center justify-center border border-[#DEE2E6] dark:border-[#3A3D44]`}>
+                                                            <span className={`text-[10px] font-black text-[#3366CC]`}>{accName[0]}</span>
                                                         </div>
                                                         <div>
-                                                            <p className="text-xs font-black text-slate-800 dark:text-white">{accName}</p>
-                                                            <p className="text-[9px] font-bold text-slate-400">{accCompanies.length} firma</p>
+                                                            <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200 uppercase tracking-tight truncate max-w-[100px]">{accName}</p>
+                                                            <p className="text-[8px] font-bold text-gray-400 uppercase">{accCompanies.length} FIRMA</p>
                                                         </div>
                                                     </div>
-                                                    <p className="text-xs font-black text-slate-600 dark:text-slate-300">{fmtMoney(accTotal)}</p>
+                                                    <p className="text-[10px] font-black text-gray-600 dark:text-gray-400 tabular-nums">{fmtMoney(accTotal)}</p>
                                                 </div>
-                                                <div className="space-y-1">
-                                                    {accCompanies.slice(0, 3).map(c => (
-                                                        <div key={c.id} className="flex items-center justify-between text-[9px]">
-                                                            <span className="font-bold text-slate-500 truncate flex-1 mr-2">{c.name}</span>
-                                                            <span className="font-black text-slate-400 tabular-nums">{fmtMoney(c.contractAmount || 0)}</span>
+                                                <div className="space-y-1.5 mt-2">
+                                                    {accCompanies.slice(0, 4).map(c => (
+                                                        <div key={c.id} className="flex items-center justify-between text-[9px] bg-[#F8F9FA] dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44]">
+                                                            <span className="font-bold text-gray-500 uppercase truncate flex-1 mr-2">{c.name}</span>
+                                                            <span className="font-black text-gray-600 dark:text-gray-400 tabular-nums">{fmtMoney(c.contractAmount || 0)}</span>
                                                         </div>
                                                     ))}
-                                                    {accCompanies.length > 3 && (
-                                                        <p className="text-[8px] font-bold text-slate-400/60">+{accCompanies.length - 3} firma</p>
+                                                    {accCompanies.length > 4 && (
+                                                        <p className="text-[8px] font-bold text-gray-400 uppercase text-center mt-1">+{accCompanies.length - 4} FIRMA</p>
                                                     )}
                                                 </div>
                                             </div>
@@ -570,19 +559,17 @@ const SupervisorDashboard: React.FC<Props> = ({
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {/* ═══ TAB: COMPANIES LIST ═══ */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {activeTab === 'companies' && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                     {/* Search & Filter */}
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3 bg-white dark:bg-[#1A1D23] p-4 border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm">
                         <div className="relative flex-1">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                             <input
                                 type="text"
-                                placeholder="Firma qidirish (nomi yoki INN)..."
-                                className="w-full pl-12 pr-4 py-3.5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder outline-none font-bold text-sm focus:ring-2 focus:ring-apple-accent/20 transition-all shadow-sm"
+                                placeholder="FIRMA QIDIRISH (NOMI YOKI INN)..."
+                                className="w-full pl-11 pr-4 py-3 bg-[#F8F9FA] dark:bg-[#111318] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] outline-none font-bold text-[11px] uppercase tracking-wider focus:border-[#3366CC] transition-all shadow-inner"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
@@ -590,9 +577,9 @@ const SupervisorDashboard: React.FC<Props> = ({
                         <select
                             value={filterAccountant}
                             onChange={e => setFilterAccountant(e.target.value)}
-                            className="px-4 py-3.5 liquid-glass-card rounded-2xl border border-apple-border dark:border-apple-darkBorder font-bold text-sm outline-none cursor-pointer shadow-sm min-w-[160px]"
+                            className="px-4 py-3 bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm font-black text-[11px] uppercase tracking-wider outline-none cursor-pointer min-w-[180px] shadow-sm text-gray-500 focus:border-[#3366CC]"
                         >
-                            <option value="all">Barcha buxgalterlar</option>
+                            <option value="all">BARCHA BUXGALTERLAR</option>
                             {myAccountants.map(acc => (
                                 <option key={acc.id} value={acc.name}>{acc.name} ({acc.companiesCount})</option>
                             ))}
@@ -601,7 +588,7 @@ const SupervisorDashboard: React.FC<Props> = ({
 
                     {/* Company Grid + Detail */}
                     <div className="flex flex-col lg:flex-row gap-6">
-                        <div className={`w-full ${selectedCompany ? 'lg:w-3/5' : 'lg:w-full'} transition-all duration-500`}>
+                        <div className={`w-full ${selectedCompany ? 'lg:w-[55%]' : 'lg:w-full'} transition-all duration-500`}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                                 {filteredCompanies.map(c => {
                                     const prog = getCompanyProgress(c.id);
@@ -612,43 +599,40 @@ const SupervisorDashboard: React.FC<Props> = ({
                                         <div
                                             key={c.id}
                                             onClick={() => setSelectedCompanyId(isSelected ? null : c.id)}
-                                            className={`relative p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all duration-300 group hover:-translate-y-0.5 ${isSelected
-                                                ? 'bg-apple-accent/5 border-apple-accent shadow-lg shadow-apple-accent/10'
-                                                : 'liquid-glass-card border-slate-100 dark:border-white/5 hover:border-apple-accent/30 hover:shadow-md'
+                                            className={`relative p-5 rounded-sm border-2 cursor-pointer transition-all duration-200 group ${isSelected
+                                                ? 'bg-[#EBF3FF] dark:bg-[#1C2531] border-[#3366CC] shadow-md'
+                                                : 'bg-white dark:bg-[#22252B] border-[#DEE2E6] dark:border-[#3A3D44] hover:border-[#3366CC] shadow-sm'
                                                 }`}
                                         >
-                                            <div className="flex items-start justify-between mb-3">
+                                            <div className="flex items-start justify-between mb-3 border-b border-[#F0F2F5] dark:border-[#1A1D23] pb-2">
                                                 <div className="flex-1 min-w-0">
-                                                    <h4 className={`font-black text-sm truncate ${isSelected ? 'text-apple-accent' : 'text-slate-800 dark:text-white'}`}>{c.name}</h4>
-                                                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">INN: {c.inn}</p>
+                                                    <h4 className={`font-black text-[12px] uppercase tracking-tight truncate ${isSelected ? 'text-[#3366CC]' : 'text-gray-800 dark:text-white'}`}>{c.name}</h4>
+                                                    <p className="text-[9px] font-bold text-gray-400 mt-0.5">INN: {c.inn}</p>
                                                 </div>
-                                                <ChevronRight size={16} className={`shrink-0 text-slate-300 transition-transform ${isSelected ? 'rotate-90 text-apple-accent' : ''}`} />
+                                                <ChevronRight size={14} className={`shrink-0 text-gray-300 transition-transform ${isSelected ? 'rotate-90 text-[#3366CC]' : ''}`} />
                                             </div>
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <span className="text-[10px] font-black px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg truncate">{c.accountantName || '—'}</span>
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <span className="text-[8px] font-black px-2 py-0.5 bg-[#F0F2F5] dark:bg-[#1A1D23] text-gray-600 dark:text-gray-400 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] uppercase">{c.accountantName || '—'}</span>
                                                 {c.bankClientName && c.bankClientName !== '—' && (
-                                                    <span className="text-[10px] font-black px-2 py-0.5 bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-lg truncate">{c.bankClientName}</span>
+                                                    <span className="text-[8px] font-black px-2 py-0.5 bg-[#F0F2F5] dark:bg-[#1A1D23] text-gray-600 dark:text-gray-400 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] uppercase">{c.bankClientName}</span>
                                                 )}
                                             </div>
-                                            <div className="flex items-center justify-between text-xs mb-3">
-                                                <span className="font-bold text-slate-500">{fmtMoney(c.contractAmount || 0)}</span>
-                                                <span className="font-black text-amber-600 dark:text-amber-400">+{fmtMoney(supAmt)}</span>
+                                            <div className="flex items-center justify-between text-[11px] mb-4 bg-[#F8F9FA] dark:bg-[#111318] p-2 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44]">
+                                                <span className="font-black text-gray-500 tabular-nums">{fmtMoney(c.contractAmount || 0)}</span>
+                                                <span className="font-black text-emerald-600 tabular-nums">+{fmtMoney(supAmt)}</span>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <div className="flex-1 h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                                <div className="flex-1 h-1.5 bg-[#F0F2F5] dark:bg-[#1A1D23] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden">
                                                     <div
-                                                        className={`h-full rounded-full transition-all duration-700 ${prog.percent >= 80 ? 'bg-emerald-500' : prog.percent >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                                                        className={`h-full transition-all duration-700 ${prog.percent >= 80 ? 'bg-emerald-500' : prog.percent >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
                                                         style={{ width: `${prog.percent}%` }}
                                                     />
                                                 </div>
-                                                <span className={`text-[10px] font-black tabular-nums ${prog.percent >= 80 ? 'text-emerald-500' : prog.percent >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>{prog.percent}%</span>
+                                                <span className={`text-[10px] font-black tabular-nums ${prog.percent >= 80 ? 'text-emerald-600' : prog.percent >= 50 ? 'text-amber-600' : 'text-rose-600'}`}>{prog.percent}%</span>
                                             </div>
                                             {prog.blocked > 0 && (
-                                                <div className="absolute top-3 right-10">
-                                                    <span className="relative flex h-2 w-2">
-                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
-                                                    </span>
+                                                <div className="absolute top-2 right-2 flex gap-1">
+                                                    <AlertCircle size={10} className="text-rose-500 animate-pulse" />
                                                 </div>
                                             )}
                                         </div>
@@ -656,51 +640,51 @@ const SupervisorDashboard: React.FC<Props> = ({
                                 })}
                             </div>
                             {filteredCompanies.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20 text-center">
-                                    <Building2 size={48} className="text-slate-200 dark:text-slate-700 mb-4" />
-                                    <p className="font-black text-slate-400 text-lg">Firmalar topilmadi</p>
+                                <div className="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm">
+                                    <Building2 size={40} className="text-gray-200 dark:text-gray-700 mb-4" />
+                                    <p className="font-black text-gray-400 text-sm uppercase tracking-widest">Firmalar topilmadi</p>
                                 </div>
                             )}
                         </div>
 
                         {/* Detail Panel */}
                         {selectedCompany && (
-                            <div className="w-full lg:w-2/5 liquid-glass-card rounded-[2rem] border border-apple-border dark:border-apple-darkBorder shadow-xl overflow-hidden flex flex-col max-h-[calc(100vh-240px)] sticky top-6">
-                                <div className="p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white relative">
-                                    <button onClick={() => setSelectedCompanyId(null)} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition-colors">
-                                        <X size={18} />
+                            <div className="w-full lg:w-[45%] bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-2xl overflow-hidden flex flex-col max-h-[80vh] sticky top-6 animate-fade-in">
+                                <div className="p-5 bg-[#3366CC] text-white relative shadow-md">
+                                    <button onClick={() => setSelectedCompanyId(null)} className="absolute top-4 right-4 p-1.5 rounded-sm hover:bg-white/10 border border-white/20 transition-all">
+                                        <X size={16} />
                                     </button>
-                                    <h3 className="text-xl font-black tracking-tight pr-8">{selectedCompany.name}</h3>
-                                    <div className="flex items-center gap-3 mt-2 text-xs font-bold text-white/60">
+                                    <h3 className="text-lg font-black tracking-tight uppercase pr-8">{selectedCompany.name}</h3>
+                                    <div className="flex items-center gap-3 mt-2 text-[9px] font-black text-white/70 uppercase tracking-widest">
                                         <span>INN: {selectedCompany.inn}</span>
-                                        {selectedCompany.taxType && <span className="px-2 py-0.5 bg-white/10 rounded-lg uppercase">{selectedCompany.taxType}</span>}
+                                        {selectedCompany.taxType && <span className="px-2 py-0.5 bg-white/10 rounded-sm border border-white/20">{selectedCompany.taxType}</span>}
                                     </div>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-thin">
+                                <div className="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-hide">
                                     {/* Employees */}
                                     <div>
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2 border-b border-[#DEE2E6] dark:border-[#3A3D44] pb-2">
                                             <Users size={14} /> MAS'UL XODIMLAR
                                         </h4>
                                         <div className="space-y-2">
                                             {[
-                                                { name: selectedCompany.accountantName || '—', role: 'Buxgalter', perc: selectedCompany.accountantPerc || 20, color: 'bg-blue-500', bgLight: 'bg-blue-50 dark:bg-blue-500/5' },
-                                                ...(selectedCompany.bankClientName && selectedCompany.bankClientName !== '—' ? [{ name: selectedCompany.bankClientName, role: 'Bank Klient', perc: selectedCompany.bankClientPerc || 5, color: 'bg-purple-500', bgLight: 'bg-purple-50 dark:bg-purple-500/5' }] : []),
-                                                { name: selectedCompany.supervisorName || currentUserName || '—', role: 'Nazoratchi (Siz)', perc: selectedCompany.supervisorPerc || 5, color: 'bg-amber-500', bgLight: 'bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20' },
-                                                { name: 'Ёркиной', role: 'Bosh Buxgalter', perc: selectedCompany.chiefAccountantPerc || 7, color: 'bg-slate-700', bgLight: 'bg-slate-50 dark:bg-white/5' },
+                                                { name: selectedCompany.accountantName || '—', role: 'Buxgalter', perc: selectedCompany.accountantPerc || 20, color: 'bg-blue-600', icon: <User size={14} /> },
+                                                ...(selectedCompany.bankClientName && selectedCompany.bankClientName !== '—' ? [{ name: selectedCompany.bankClientName, role: 'Bank Klient', perc: selectedCompany.bankClientPerc || 5, color: 'bg-indigo-600', icon: <Wallet size={14} /> }] : []),
+                                                { name: selectedCompany.supervisorName || currentUserName || '—', role: 'Nazoratchi (Siz)', perc: selectedCompany.supervisorPerc || 5, color: 'bg-[#3366CC]', icon: <Shield size={14} /> },
+                                                { name: 'Ёркиной', role: 'Bosh Buxgalter', perc: selectedCompany.chiefAccountantPerc || 7, color: 'bg-gray-800', icon: <Crown size={14} /> },
                                             ].map((emp, i) => (
-                                                <div key={i} className={`flex items-center justify-between p-3 ${emp.bgLight} rounded-xl`}>
+                                                <div key={i} className={`flex items-center justify-between p-3 bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm hover:border-[#3366CC] transition-all`}>
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-8 h-8 rounded-lg ${emp.color} text-white flex items-center justify-center font-black text-xs`}>{emp.name[0]}</div>
+                                                        <div className={`w-9 h-9 rounded-sm ${emp.color} text-white flex items-center justify-center font-black text-xs shadow-sm`}>{React.cloneElement(emp.icon as React.ReactElement, { size: 16 })}</div>
                                                         <div>
-                                                            <p className="font-bold text-sm text-slate-800 dark:text-white">{emp.name}</p>
-                                                            <p className={`text-[10px] font-black uppercase ${emp.color.replace('bg-', 'text-')}`}>{emp.role}</p>
+                                                            <p className="font-black text-[12px] text-gray-800 dark:text-white uppercase tracking-tight">{emp.name}</p>
+                                                            <p className={`text-[8px] font-black uppercase tracking-widest text-gray-400 mt-0.5`}>{emp.role}</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{emp.perc}%</p>
-                                                        <p className="text-[10px] font-bold text-slate-400">{fmtMoney((selectedCompany.contractAmount || 0) * (emp.perc / 100))}</p>
+                                                        <p className="text-[11px] font-black text-[#3366CC] tabular-nums">{emp.perc}%</p>
+                                                        <p className="text-[9px] font-bold text-gray-400 tabular-nums">{fmtMoney((selectedCompany.contractAmount || 0) * (emp.perc / 100))}</p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -709,31 +693,31 @@ const SupervisorDashboard: React.FC<Props> = ({
 
                                     {/* Contract */}
                                     <div>
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
-                                            <DollarSign size={14} /> SHARTNOMA
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2 border-b border-[#DEE2E6] dark:border-[#3A3D44] pb-2">
+                                            <DollarSign size={14} /> SHARTNOMA TADBIRLARI
                                         </h4>
-                                        <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-4">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <span className="text-xs font-bold text-slate-500">Jami</span>
-                                                <span className="text-sm font-black text-slate-800 dark:text-white">{(selectedCompany.contractAmount || 0).toLocaleString()} UZS</span>
+                                        <div className="bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-4">
+                                            <div className="flex justify-between items-center mb-4 border-b border-[#DEE2E6] dark:border-[#3A3D44] pb-2">
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">JAMI SUMMA</span>
+                                                <span className="text-[14px] font-black text-gray-800 dark:text-white tabular-nums">{(selectedCompany.contractAmount || 0).toLocaleString()} UZS</span>
                                             </div>
-                                            <div className="flex w-full h-4 rounded-full overflow-hidden bg-slate-200 dark:bg-white/10">
-                                                <div className="bg-blue-500 h-full" style={{ width: `${selectedCompany.accountantPerc || 20}%` }} />
-                                                <div className="bg-purple-500 h-full" style={{ width: `${selectedCompany.bankClientPerc || 5}%` }} />
-                                                <div className="bg-amber-500 h-full" style={{ width: `${selectedCompany.supervisorPerc || 5}%` }} />
-                                                <div className="bg-slate-700 h-full" style={{ width: `${selectedCompany.chiefAccountantPerc || 7}%` }} />
-                                                <div className="bg-emerald-500 h-full" style={{ width: `${selectedCompany.firmaSharePercent || 50}%` }} />
+                                            <div className="flex w-full h-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden bg-white dark:bg-[#22252B] shadow-inner">
+                                                <div className="bg-blue-600 h-full border-r border-[#DEE2E6] dark:border-[#3A3D44]" style={{ width: `${selectedCompany.accountantPerc || 20}%` }} />
+                                                <div className="bg-indigo-600 h-full border-r border-[#DEE2E6] dark:border-[#3A3D44]" style={{ width: `${selectedCompany.bankClientPerc || 5}%` }} />
+                                                <div className="bg-[#3366CC] h-full border-r border-[#DEE2E6] dark:border-[#3A3D44]" style={{ width: `${selectedCompany.supervisorPerc || 5}%` }} />
+                                                <div className="bg-gray-800 h-full border-r border-[#DEE2E6] dark:border-[#3A3D44]" style={{ width: `${selectedCompany.chiefAccountantPerc || 7}%` }} />
+                                                <div className="bg-emerald-600 h-full" style={{ width: `${selectedCompany.firmaSharePercent || 50}%` }} />
                                             </div>
-                                            <div className="flex flex-wrap gap-3 mt-2">
+                                            <div className="flex flex-wrap gap-4 mt-4">
                                                 {[
-                                                    { label: 'Bux', color: 'bg-blue-500' },
-                                                    { label: 'Bank', color: 'bg-purple-500' },
-                                                    { label: 'Naz', color: 'bg-amber-500' },
-                                                    { label: 'Bosh', color: 'bg-slate-700' },
-                                                    { label: 'Firma', color: 'bg-emerald-500' },
+                                                    { label: 'BUX', color: 'bg-blue-600' },
+                                                    { label: 'BANK', color: 'bg-indigo-600' },
+                                                    { label: 'NAZ', color: 'bg-[#3366CC]' },
+                                                    { label: 'BOSH', color: 'bg-gray-800' },
+                                                    { label: 'FIRMA', color: 'bg-emerald-600' },
                                                 ].map((item, i) => (
-                                                    <span key={i} className="flex items-center gap-1 text-[9px] font-bold text-slate-400">
-                                                        <span className={`w-2 h-2 rounded-full ${item.color}`} /> {item.label}
+                                                    <span key={i} className="flex items-center gap-2 text-[8px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                                                        <span className={`w-2.5 h-2.5 rounded-sm ${item.color} border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm`} /> {item.label}
                                                     </span>
                                                 ))}
                                             </div>
@@ -742,8 +726,8 @@ const SupervisorDashboard: React.FC<Props> = ({
 
                                     {/* Report Status */}
                                     <div>
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
-                                            <BarChart3 size={14} /> HISOBOT — {selectedPeriod}
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2 border-b border-[#DEE2E6] dark:border-[#3A3D44] pb-2">
+                                            <BarChart3 size={14} /> HISOBOT STATUSI — {selectedPeriod}
                                         </h4>
                                         {selectedOp ? (
                                             <div className="grid grid-cols-2 gap-2">
@@ -753,20 +737,20 @@ const SupervisorDashboard: React.FC<Props> = ({
                                                     const isDone = lower === '+' || lower.startsWith('+');
                                                     const isBlocked = lower === 'kartoteka';
                                                     return (
-                                                        <div key={field} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold ${isDone ? 'bg-emerald-50 dark:bg-emerald-500/5 text-emerald-600' :
-                                                            isBlocked ? 'bg-rose-50 dark:bg-rose-500/5 text-rose-600' :
-                                                                'bg-slate-50 dark:bg-white/5 text-slate-400'
+                                                        <div key={field} className={`flex items-center gap-2 px-3 py-2.5 rounded-sm border text-[10px] font-black uppercase tracking-tight transition-all ${isDone ? 'bg-[#EBFBF0] dark:bg-[#1C3125] text-emerald-600 border-[#C3E6CB] dark:border-[#2C4A36]' :
+                                                            isBlocked ? 'bg-rose-50 dark:bg-rose-500/5 text-rose-600 border-rose-100 dark:border-rose-900/30 shadow-inner' :
+                                                                'bg-[#F8F9FA] dark:bg-[#111318] text-gray-400 border-[#DEE2E6] dark:border-[#3A3D44]'
                                                             }`}>
-                                                            {isDone ? <CheckCircle2 size={12} strokeWidth={3} /> : isBlocked ? <XCircle size={12} strokeWidth={3} /> : <AlertCircle size={12} strokeWidth={3} />}
-                                                            <span className="truncate capitalize">{field.replace(/_/g, ' ')}</span>
+                                                            {isDone ? <CheckCircle2 size={12} /> : isBlocked ? <XCircle size={12} className="animate-pulse" /> : <AlertCircle size={12} />}
+                                                            <span className="truncate">{field.replace(/_/g, ' ')}</span>
                                                         </div>
                                                     );
                                                 })}
                                             </div>
                                         ) : (
-                                            <div className="p-6 text-center bg-slate-50 dark:bg-white/5 rounded-2xl">
-                                                <AlertCircle size={24} className="text-slate-300 mx-auto mb-2" />
-                                                <p className="text-xs font-bold text-slate-400">Bu davr uchun hisobot mavjud emas</p>
+                                            <div className="p-10 text-center bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm">
+                                                <AlertCircle size={24} className="text-gray-200 dark:text-gray-700 mx-auto mb-3" />
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ma'lumot mavjud emas</p>
                                             </div>
                                         )}
                                     </div>

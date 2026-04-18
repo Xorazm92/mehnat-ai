@@ -72,12 +72,12 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const getRiskIndicator = (company: Company) => {
     const risk = company.riskLevel || 'low';
     if (risk === 'high' || company.companyStatus === 'problem' || company.companyStatus === 'debtor') {
-      return { emoji: '🔴', color: 'text-rose-500', bg: 'bg-rose-500/10' };
+      return { emoji: '🔴', color: 'text-rose-600', bg: 'bg-[#FEEBF0]', border: 'border-[#F5C6CB]' };
     }
     if (risk === 'medium' || company.companyStatus === 'suspended') {
-      return { emoji: '🟡', color: 'text-amber-500', bg: 'bg-amber-500/10' };
+      return { emoji: '🟡', color: 'text-amber-600', bg: 'bg-[#FFF3CD]', border: 'border-[#FFEEBA]' };
     }
-    return { emoji: '🟢', color: 'text-emerald-500', bg: 'bg-emerald-500/10' };
+    return { emoji: '🟢', color: 'text-emerald-600', bg: 'bg-[#EBFBF0]', border: 'border-[#C3E6CB]' };
   };
 
   const filtered = useMemo(() => {
@@ -249,95 +249,93 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   };
 
   return (
-    <div className="w-full space-y-6 md:space-y-10 animate-fade-in pb-24 min-w-0">
+    <div className="w-full space-y-4 animate-fade-in pb-24 min-w-0">
       {companies.length === 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-[2rem] p-8 text-center">
-          <p className="text-amber-700 dark:text-amber-300 font-black text-sm uppercase tracking-widest">
-            ⚠️ Hech qanday firma yuklanmadi. Iltimos, sahifani yangilang yoki administratorga murojaat qiling.
+        <div className="bg-[#FEEBF0] border border-[#F5C6CB] rounded-sm p-6 text-center shadow-sm">
+          <p className="text-rose-700 font-bold text-[11px] uppercase tracking-widest leading-relaxed">
+            ⚠️ Hech qanday firma yuklanmadi. Sahifani yangilang yoki administratorga murojaat qiling.
           </p>
         </div>
       )}
       {/* Header Section */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-[#22252B] p-4 md:p-6 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 gap-4 relative overflow-hidden group">
-        <div className="flex-1 relative z-10 flex items-center gap-4">
-          <div className="w-10 h-10 rounded bg-blue-600 flex items-center justify-center text-white shadow-sm">
-            <Building2 size={24} />
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-[#22252B] p-4 rounded-sm shadow-sm border border-[#DEE2E6] dark:border-[#3A3D44] gap-4 transition-colors">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-sm bg-[#3366CC] flex items-center justify-center text-white shadow-sm shrink-0">
+            <Building2 size={20} />
           </div>
-          <div>
-            <h2 className="text-[18px] md:text-xl font-bold text-gray-800 dark:text-white mb-1.5">{t.organizations}</h2>
-            <div className="flex items-center gap-3">
-              <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">
-                {t.totalFirms}: <span className="text-blue-600 tabular-nums font-bold">{filtered.length}</span>
-              </p>
-            </div>
+          <div className="min-w-0">
+            <h2 className="text-[14px] font-bold text-gray-800 dark:text-white mb-0.5 uppercase tracking-wider truncate">{t.organizations}</h2>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              {t.totalFirms}: <span className="text-[#3366CC] tabular-nums">{filtered.length}</span>
+            </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto relative z-10">
-          {/* Active/Archive Toggle */}
-          <div className="flex bg-gray-100 dark:bg-gray-800 p-0.5 rounded border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto">
+          <div className="flex bg-[#F8F9FA] dark:bg-[#1A1D23] p-1 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors">
             {[
               { label: 'Faol', value: true },
               { label: 'Arxiv', value: false },
-              { label: 'Hammasi', value: null }
+              { label: 'Barchasi', value: null }
             ].map((opt) => (
               <button
                 key={String(opt.value)}
                 onClick={() => setFilterActive(opt.value)}
-                className={`px-4 py-1.5 rounded transition-all text-[12px] font-semibold ${filterActive === opt.value ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                className={`px-3 py-1 rounded-sm transition-all text-[9px] font-bold uppercase tracking-widest ${filterActive === opt.value ? 'bg-white dark:bg-[#333] text-[#3366CC] shadow-sm border border-[#DEE2E6] dark:border-[#444]' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 border border-transparent'}`}
               >
                 {opt.label}
               </button>
             ))}
           </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex bg-gray-100 dark:bg-gray-800 p-0.5 rounded border border-gray-200 dark:border-gray-700">
+          <div className="flex bg-[#F8F9FA] dark:bg-[#1A1D23] p-1 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`p-1 rounded-sm transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-[#333] text-[#3366CC] shadow-sm border border-[#DEE2E6] dark:border-[#444]' : 'text-gray-400 hover:text-gray-600 border border-transparent'}`}
               title={t.gridView}
             >
-              <LayoutGrid size={16} />
+              <LayoutGrid size={14} />
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded transition-all ${viewMode === 'table' ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`p-1 rounded-sm transition-all ${viewMode === 'table' ? 'bg-white dark:bg-[#333] text-[#3366CC] shadow-sm border border-[#DEE2E6] dark:border-[#444]' : 'text-gray-400 hover:text-gray-600 border border-transparent'}`}
               title={t.tableView}
             >
-              <List size={16} />
+              <List size={14} />
             </button>
           </div>
+
+          <div className="h-6 w-px bg-[#DEE2E6] dark:bg-[#3A3D44] mx-1 hidden sm:block" />
 
           <MonthPicker
             selectedPeriod={selectedPeriod}
             onChange={onPeriodChange}
-            className="scale-90 origin-left"
+            className="scale-90 origin-right transition-transform hover:scale-100"
           />
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <button
               onClick={handleExport}
-              className="p-2 bg-white dark:bg-gray-800 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-all border border-gray-200 dark:border-gray-700"
+              className="p-1.5 bg-white dark:bg-[#22252B] text-gray-500 hover:text-[#3366CC] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-[#F8F9FA] transition-all"
               title="Excelga eksport"
             >
-              <Download size={18} />
+              <Download size={15} />
             </button>
 
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 rounded transition-all border ${showFilters ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:text-blue-600'}`}
-              title="Aqlli Filtrlar"
+              className={`p-1.5 rounded-sm border transition-all ${showFilters ? 'bg-[#EBF3FF] dark:bg-[#1C2531] text-[#3366CC] border-[#3366CC]/30' : 'bg-white dark:bg-[#22252B] text-gray-500 border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-[#F8F9FA]'}`}
+              title="Filtrlar"
             >
-              <Filter size={18} />
+              <Filter size={15} />
             </button>
           </div>
 
           <button
             onClick={() => { setIsAdding(true); setForm({ id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString(), isActive: true }); }}
-            className="bg-blue-600 text-white px-4 py-2 rounded font-semibold text-[13px] hover:bg-blue-700 transition-colors active:bg-blue-800 flex items-center gap-2"
+            className="bg-[#3366CC] text-white px-3 py-1.5 rounded-sm font-bold text-[10px] hover:bg-[#2A52A3] transition-all active:transform active:scale-95 flex items-center gap-1.5 uppercase tracking-widest shadow-sm"
           >
-            <Plus size={16} />
+            <Plus size={14} />
             <span>{t.addCompany}</span>
           </button>
         </div>
@@ -345,46 +343,44 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
       {/* Smart Filters Panel */}
       {showFilters && (
-        <div className="bg-white dark:bg-[#22252B] p-5 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 animate-fade-in relative z-10">
-          <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">
-            <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center">
-              <Filter size={18} />
-            </div>
-            <h3 className="text-[14px] font-bold text-gray-800 dark:text-white">Aqlli Filtrlar</h3>
+        <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm shadow-sm border border-[#DEE2E6] dark:border-[#3A3D44] animate-fade-in transition-colors">
+          <div className="flex items-center gap-2 mb-4 border-b border-[#F0F2F5] dark:border-[#1e2025] pb-3">
+            <Filter size={14} className="text-[#3366CC]" />
+            <h3 className="text-[10px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Aqlli Filtrlar</h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
             {[
-              { label: 'Soliq Turi', value: filterTaxType, onChange: setFilterTaxType, options: [{ label: 'Hammasi', val: 'all' }, ...Object.values(TaxType).map(v => ({ label: v, val: v }))] },
+              { label: 'Soliq Turi', value: filterTaxType, onChange: setFilterTaxType, options: [{ label: 'Barchasi', val: 'all' }, ...Object.values(TaxType).map(v => ({ label: v.toUpperCase(), val: v }))] },
               {
                 label: 'Holati', value: filterStatus, onChange: setFilterStatus, options: [
-                  { label: 'Hammasi', val: 'all' },
-                  { label: '🟢 Faol', val: 'active' },
-                  { label: '🟡 To\'xtatilgan', val: 'suspended' },
-                  { label: '🔴 Qarzdor', val: 'debtor' },
-                  { label: '🔴 Muammoli', val: 'problem' },
-                  { label: '⚫ Bankrot', val: 'bankrupt' }
+                  { label: 'Barchasi', val: 'all' },
+                  { label: 'Faol', val: 'active' },
+                  { label: 'To\'xtatilgan', val: 'suspended' },
+                  { label: 'Qarzdor', val: 'debtor' },
+                  { label: 'Muammoli', val: 'problem' },
+                  { label: 'Bankrot', val: 'bankrupt' }
                 ]
               },
-              { label: 'Buxgalter', value: filterEmployee, onChange: setFilterEmployee, options: [{ label: 'Hammasi', val: 'all' }, ...staff.map(s => ({ label: s.name, val: s.id }))] },
+              { label: 'Buxgalter', value: filterEmployee, onChange: setFilterEmployee, options: [{ label: 'Barchasi', val: 'all' }, ...staff.map(s => ({ label: s.name, val: s.id }))] },
               {
-                label: 'Xavf Darajasi', value: filterRisk, onChange: setFilterRisk, options: [
-                  { label: 'Hammasi', val: 'all' },
-                  { label: '🟢 Past', val: 'low' },
-                  { label: '🟡 O\'rta', val: 'medium' },
-                  { label: '🔴 Yuqori', val: 'high' }
+                label: 'Xavf', value: filterRisk, onChange: setFilterRisk, options: [
+                  { label: 'Barchasi', val: 'all' },
+                  { label: 'Past', val: 'low' },
+                  { label: "O'rta", val: 'medium' },
+                  { label: 'Yuqori', val: 'high' }
                 ]
               },
-              { label: '1C Server', value: filterServer, onChange: setFilterServer, options: [{ label: 'Hammasi', val: 'all' }, { label: 'CR1', val: 'CR1' }, { label: 'CR2', val: 'CR2' }, { label: 'CR3', val: 'CR3' }] },
-              { label: 'IT Park', value: filterItPark, onChange: setFilterItPark, options: [{ label: 'Hammasi', val: 'all' }, { label: '✅ Rezident', val: 'yes' }, { label: '❌ Rezident emas', val: 'no' }] },
-              { label: 'KPI Tizimi', value: filterKpi, onChange: setFilterKpi, options: [{ label: 'Hammasi', val: 'all' }, { label: '✅ Yoqilgan', val: 'yes' }, { label: '❌ O\'chirilgan', val: 'no' }] }
+              { label: 'Server', value: filterServer, onChange: setFilterServer, options: [{ label: 'Barchasi', val: 'all' }, { label: 'CR1', val: 'CR1' }, { label: 'CR2', val: 'CR2' }, { label: 'CR3', val: 'CR3' }] },
+              { label: 'IT Park', value: filterItPark, onChange: setFilterItPark, options: [{ label: 'Barchasi', val: 'all' }, { label: 'Rezident', val: 'yes' }, { label: 'No-Rezident', val: 'no' }] },
+              { label: 'KPI', value: filterKpi, onChange: setFilterKpi, options: [{ label: 'Barchasi', val: 'all' }, { label: 'Yoqilgan', val: 'yes' }, { label: "O'chirilgan", val: 'no' }] }
             ].map((f, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-gray-500 uppercase">{f.label}</label>
+              <div key={idx} className="space-y-1">
+                <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{f.label}</label>
                 <select
                   value={f.value}
                   onChange={(e) => { f.onChange(e.target.value); setCurrentPage(1); }}
-                  className="w-full px-3 py-2 rounded bg-white dark:bg-[#1A1D23] border border-gray-300 dark:border-gray-600 outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500 text-[13px] text-gray-700 dark:text-gray-300 transition-all shadow-sm"
+                  className="w-full px-2 py-1.5 rounded-sm bg-[#F8F9FA] dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] outline-none focus:border-[#3366CC] text-[10px] font-bold text-gray-700 dark:text-gray-300 transition-all uppercase tracking-tight"
                 >
                   {f.options.map((o, i) => <option key={i} value={o.val}>{o.label}</option>)}
                 </select>
@@ -392,38 +388,37 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             ))}
           </div>
 
-          {/* Reset Filters */}
-          <div className="flex justify-end mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex justify-end mt-4 pt-3 border-t border-[#F0F2F5] dark:border-[#1e2025]">
             <button
               onClick={() => {
                 setFilterTaxType('all'); setFilterStatus('all'); setFilterEmployee('all');
                 setFilterRisk('all'); setFilterServer('all'); setFilterItPark('all');
                 setFilterKpi('all'); setCurrentPage(1);
               }}
-              className="px-4 py-1.5 rounded text-[12px] font-semibold text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all border border-transparent hover:border-red-200"
+              className="px-3 py-1 text-[8px] font-bold text-gray-400 hover:text-red-500 transition-colors uppercase tracking-widest"
             >
-              Filtrlarni Tozalash
+              Reset
             </button>
           </div>
         </div>
       )}
 
       {/* Search Bar */}
-      <div className="relative w-full max-w-2xl">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+      <div className="relative w-full max-w-xl">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
         <input
           type="text"
-          placeholder="INN, Firma nomi yoki Direktor ismi bo'yicha qidirish..."
-          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#22252B] border border-gray-300 dark:border-gray-600 rounded-md text-[14px] text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:border-blue-500 focus:ring-blue-500/30 transition-all shadow-sm"
+          placeholder="INN, FIRMA NOMI YOKI DIREKTOR..."
+          className="w-full pl-9 pr-4 py-2 bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm text-[11px] font-bold text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:border-[#3366CC] transition-all shadow-sm uppercase tracking-tight"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
         />
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-4">
         {isAdding && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fade-in">
-            <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-hide">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 transition-colors animate-fade-in">
+            <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-sm border border-[#DEE2E6] bg-[#F0F2F5] dark:bg-[#111318] shadow-2xl">
               <OnboardingWizard
                 staff={staff}
                 initialData={form}
@@ -438,8 +433,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 }}
               />
               {isSaving && (
-                <div className="absolute inset-0 z-[110] flex items-center justify-center bg-white/50 dark:bg-black/50 rounded-[2.5rem]">
-                  <div className="w-12 h-12 border-4 border-apple-accent border-t-transparent rounded-full animate-spin"></div>
+                <div className="absolute inset-0 z-[110] flex items-center justify-center bg-white/50 dark:bg-black/50">
+                  <div className="w-8 h-8 border-3 border-[#3366CC] border-t-transparent rounded-full animate-spin"></div>
                 </div>
               )}
             </div>
@@ -447,63 +442,63 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         )}
 
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {paginated.map(c => {
               const risk = getRiskIndicator(c);
               return (
                 <div
                   key={c.id}
-                  className={`bg-white dark:bg-[#22252B] p-4 rounded-md border-l-4 ${risk.color.replace('text-', 'border-l-')} border-t border-r border-b border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col`}
+                  className={`bg-white dark:bg-[#22252B] p-3 rounded-sm border-l-4 ${risk.color.replace('text-', 'border-l-')} border-t border-r border-b border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm hover:border-[#3366CC]/50 transition-all cursor-pointer flex flex-col group`}
                   onClick={() => onCompanySelect(c)}
                 >
-                  <div className="flex gap-4 mb-4">
-                    <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded flex items-center justify-center text-xl font-bold text-blue-600 shrink-0 border border-blue-100 dark:border-blue-800">
+                  <div className="flex gap-3 mb-3">
+                    <div className="w-10 h-10 bg-[#F8F9FA] dark:bg-[#1A1D23] rounded-sm flex items-center justify-center text-[16px] font-bold text-[#3366CC] shrink-0 border border-[#DEE2E6] dark:border-[#3A3D44] group-hover:bg-[#EBF3FF] transition-colors">
                       {c.name.charAt(0)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-[14px] font-bold text-gray-800 dark:text-white truncate mb-0.5" title={c.name}>{c.name}</h4>
-                      {c.brandName && <p className="text-[11px] text-gray-500 font-semibold mb-2">{c.brandName}</p>}
-                      <div className="flex gap-2">
-                        <span className="text-[10px] font-mono px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-700">INN: {c.inn}</span>
-                        <span className="text-[10px] px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded border border-blue-100 dark:border-blue-800">{c.taxType}</span>
+                      <h4 className="text-[12px] font-bold text-gray-800 dark:text-white truncate mb-0.5 uppercase tracking-tight" title={c.name}>{c.name}</h4>
+                      {c.brandName && <p className="text-[9px] text-gray-400 font-bold uppercase truncate leading-none mb-1.5">{c.brandName}</p>}
+                      <div className="flex gap-1.5">
+                        <span className="text-[8px] font-bold px-1.5 py-0.5 bg-[#F0F2F5] dark:bg-[#111318] text-gray-500 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] uppercase tracking-widest">INN: {c.inn}</span>
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-sm border uppercase tracking-widest ${c.taxType === 'nds_profit' ? 'bg-[#FEEBF0] text-rose-600 border-[#F5C6CB]' : 'bg-[#EBF3FF] text-[#3366CC] border-[#DEE2E6]'}`}>{c.taxType}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 mb-4 mt-auto">
+                  <div className="grid grid-cols-2 gap-2 mb-3 mt-auto">
                     {[
-                      { label: t.accountant, val: c.accountantName, icon: <Users size={12} className="text-blue-500" /> },
-                      { label: 'Soliq', val: c.taxRegime || 'Standard', icon: <Calculator size={12} className="text-green-500" /> }
+                      { label: t.accountant, val: c.accountantName, icon: <Users size={10} className="text-gray-400" /> },
+                      { label: 'Soliq Rejimi', val: c.taxRegime || 'Standard', icon: <Calculator size={10} className="text-gray-400" /> }
                     ].map((stat, i) => (
-                      <div key={i} className="p-2 bg-gray-50 dark:bg-[#1A1D23] rounded border border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center gap-1.5 mb-1 text-gray-400">
+                      <div key={i} className="p-1.5 bg-[#F8F9FA] dark:bg-[#1A1D23] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44]">
+                        <div className="flex items-center gap-1 mb-0.5">
                           {stat.icon}
-                          <p className="text-[10px] font-semibold">{stat.label}</p>
+                          <p className="text-[7px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p>
                         </div>
-                        <p className="text-[11px] font-bold text-gray-700 dark:text-gray-200 truncate">{stat.val || '—'}</p>
+                        <p className="text-[9px] font-bold text-gray-700 dark:text-gray-300 truncate tracking-tight">{stat.val || '—'}</p>
                       </div>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800 mt-auto">
-                    <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between pt-2.5 border-t border-[#F0F2F5] dark:border-[#1e2025] mt-auto">
+                    <div className="min-w-0 flex-1">
                       {(c.login || c.password) ? (
-                        <div className="flex items-center gap-1.5" onClick={(e) => { e.stopPropagation(); togglePassword(c.id); }}>
-                          <button className="text-gray-400 hover:text-blue-600 transition-colors p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-                            {showPasswords[c.id] ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                          <p className="text-[11px] font-bold text-gray-500 font-mono">
+                        <div className="flex items-center gap-1.5 cursor-help" onClick={(e) => { e.stopPropagation(); togglePassword(c.id); }}>
+                          <div className="text-gray-400 p-0.5">
+                            {showPasswords[c.id] ? <EyeOff size={12} /> : <Eye size={12} />}
+                          </div>
+                          <p className="text-[9px] font-bold text-[#3366CC] font-mono whitespace-nowrap overflow-hidden text-ellipsis">
                             {showPasswords[c.id] ? `${c.login || '—'} / ${c.password || '—'}` : '•••• / ••••'}
                           </p>
                         </div>
                       ) : (
-                        <span className="text-[10px] text-gray-400 font-medium">Ma'lumotlar yo'q</span>
+                        <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Login yo'q</span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors" title="Edit"><Edit3 size={16} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
+                    <div className="flex items-center gap-1 ml-2">
+                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="p-1 text-[#3366CC] hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] rounded-sm border border-transparent hover:border-[#3366CC]/30 transition-all"><Edit3 size={14} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="p-1 text-rose-500 hover:bg-[#FEEBF0] dark:hover:bg-[#2D1B1E] rounded-sm border border-transparent hover:border-rose-300 transition-all"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 </div>
@@ -511,38 +506,38 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             })}
           </div>
         ) : (
-          <div className="w-full bg-white dark:bg-[#22252B] rounded-md shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative">
+          <div className="w-full bg-white dark:bg-[#22252B] rounded-sm shadow-sm border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden relative transition-colors">
             <div ref={bottomScrollRef} className="w-full overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[960px] c1-table">
+              <table className="w-full text-left border-collapse min-w-[1000px] c1-table">
                 <thead>
                   <tr>
-                    <th className="w-[40px] text-center">№</th>
+                    <th className="w-[40px] text-center uppercase tracking-widest text-gray-400">№</th>
                     <th
-                      className="w-[220px] sticky left-0 z-20 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="w-[240px] sticky left-0 z-20 cursor-pointer hover:bg-[#F8F9FA] dark:hover:bg-[#1e2025] transition-colors"
                       onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       <div className="flex items-center gap-1.5">
-                        <Building2 size={14} className="text-gray-400 shrink-0" />
+                        <Building2 size={12} className="text-gray-400 shrink-0" />
                         <span>{t.companyName} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
                       </div>
                     </th>
                     <th
-                      className="w-[100px] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="w-[100px] cursor-pointer hover:bg-[#F8F9FA] dark:hover:bg-[#1e2025] transition-colors"
                       onClick={() => { setSortField('inn'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="w-[120px] text-blue-600">
-                      <div className="flex items-center gap-1"><DollarSign size={12} /> SHARTNOMA</div>
+                    <th className="w-[130px] text-[#3366CC] font-bold">
+                      <div className="flex items-center justify-end gap-1 uppercase tracking-tight"><DollarSign size={10} /> SHARTNOMA</div>
                     </th>
-                    <th className="w-[100px]">REJIM</th>
-                    <th className="w-[150px]">BUXGALTER</th>
-                    <th className="w-[140px]">NAZORATCHI</th>
-                    <th className="w-[120px]">1C SERVER</th>
-                    <th className="w-[100px] text-center">{t.actions}</th>
+                    <th className="w-[110px] text-center uppercase tracking-tight">REJIM</th>
+                    <th className="w-[160px] uppercase tracking-tight">BUXGALTER</th>
+                    <th className="w-[150px] uppercase tracking-tight">NAZORATCHI</th>
+                    <th className="w-[130px] uppercase tracking-tight">1C SERVER</th>
+                    <th className="w-[90px] text-center uppercase tracking-tight">{t.actions}</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
                   {paginated.map((c, i) => {
                     const risk = getRiskIndicator(c);
                     const op = operations.find(o => o.companyId === c.id && periodsEqual(o.period, selectedPeriod));
@@ -555,46 +550,46 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                       <tr
                         key={c.id}
                         onClick={() => onCompanySelect(c)}
-                        className={(i % 2 === 0 ? 'bg-white dark:bg-[#22252B]' : 'bg-[#FAFAFA] dark:bg-[#1A1D23]') + ' hover:bg-blue-50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors group'}
+                        className={(i % 2 === 0 ? 'bg-white dark:bg-[#22252B]' : 'bg-[#FAFAFA] dark:bg-[#202328]') + ' hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] cursor-pointer transition-colors group'}
                       >
-                        <td className="text-center font-mono text-gray-500">
+                        <td className="text-center font-mono text-[10px] text-gray-400 font-bold">
                           {c.originalIndex || (i + 1)}
                         </td>
-                        <td className={`sticky left-0 bg-inherit z-10 font-medium text-gray-800 dark:text-gray-200 border-l-2 ${risk.color.replace('text-', 'border-l-')}`}>
-                          <div className="truncate max-w-[200px]" title={c.name}>{c.name}</div>
-                          {c.brandName && <div className="text-[10px] text-gray-500 truncate mt-0.5">{c.brandName}</div>}
+                        <td className={`sticky left-0 bg-inherit z-10 font-bold text-gray-800 dark:text-white border-l-4 ${risk.color.replace('text-', 'border-l-')}`}>
+                          <div className="truncate max-w-[210px] uppercase tracking-tight" title={c.name}>{c.name}</div>
+                          {c.brandName && <div className="text-[8px] text-gray-400 font-bold truncate mt-0.5 uppercase tracking-widest">{c.brandName}</div>}
                         </td>
-                        <td className="font-mono text-gray-600 dark:text-gray-400">
+                        <td className="font-mono text-[10px] text-gray-500 font-bold">
                           {c.inn}
                         </td>
-                        <td className="font-semibold text-right">
-                          {displayAmount?.toLocaleString() || '0'} <span className="text-[10px] font-normal text-gray-400">UZS</span>
+                        <td className="font-bold text-right text-[11px] tabular-nums">
+                          {displayAmount?.toLocaleString() || '0'} <span className="text-[8px] font-bold text-gray-400 uppercase ml-0.5">sum</span>
                         </td>
                         <td className="text-center">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${c.taxType?.includes('nds') ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                            {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'Aylanma' : (c.taxType || 'Fix'))}
+                          <span className={`px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest border transition-colors ${c.taxType?.includes('nds') ? 'bg-[#FEEBF0] text-rose-600 border-[#F5C6CB]' : 'bg-[#EBF3FF] text-[#3366CC] border-[#DEE2E6]'}`}>
+                            {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'AYLANMA' : (c.taxType?.toUpperCase() || 'FIX'))}
                           </span>
                         </td>
                         <td>
                           <div className="flex items-center gap-1.5 truncate">
-                            <Users size={12} className="text-gray-400 shrink-0" />
-                            <span className="truncate text-gray-700 dark:text-gray-300">{displayAccountant || '—'}</span>
+                            <Users size={10} className="text-gray-400 shrink-0" />
+                            <span className="truncate text-gray-700 dark:text-gray-300 text-[10px] font-bold uppercase tracking-tight">{displayAccountant || '—'}</span>
                           </div>
                         </td>
                         <td>
-                          <span className="truncate block text-gray-700 dark:text-gray-300">{displaySupervisor || '—'}</span>
+                          <span className="truncate block text-gray-600 dark:text-gray-400 text-[10px] font-bold uppercase tracking-tight">{displaySupervisor || '—'}</span>
                         </td>
                         <td>
                           <div className="flex flex-col">
-                            {c.serverInfo && <span className="text-[10px] font-semibold text-green-600">{c.serverInfo}</span>}
-                            <span className="text-[10px] text-gray-500 truncate" title={c.serverName}>{c.serverName || '—'}</span>
+                            {c.serverInfo && <span className="text-[9px] font-black text-[#28A745] uppercase tracking-widest leading-none mb-0.5">{c.serverInfo}</span>}
+                            <span className="text-[8px] text-gray-400 font-bold truncate uppercase tracking-tight" title={c.serverName}>{c.serverName || '—'}</span>
                           </div>
                         </td>
                         <td>
-                          <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="text-gray-400 hover:text-blue-600 p-1" title="Details"><Eye size={14} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="text-gray-400 hover:text-blue-600 p-1" title="Edit"><Edit3 size={14} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="text-gray-400 hover:text-red-600 p-1" title="Delete"><Trash2 size={14} /></button>
+                          <div className="flex items-center justify-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
+                            <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="text-gray-400 hover:text-[#3366CC] p-1 transition-colors" title="Batafsil"><Eye size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="text-gray-400 hover:text-[#3366CC] p-1 transition-colors" title="Edit"><Edit3 size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="text-gray-400 hover:text-rose-500 p-1 transition-colors" title="Delete"><Trash2 size={14} /></button>
                           </div>
                         </td>
                       </tr>
@@ -603,11 +598,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 </tbody>
               </table>
               {paginated.length === 0 && (
-                <div className="py-40 flex flex-col items-center justify-center text-slate-300">
-                  <div className="w-24 h-24 rounded-[3rem] bg-slate-50 dark:bg-white/5 flex items-center justify-center mb-6 shadow-inner">
-                    <LayoutGrid size={48} className="opacity-20 translate-y-1" />
-                  </div>
-                  <p className="font-black uppercase tracking-[0.3em] text-sm opacity-40">{t.noData}</p>
+                <div className="py-32 flex flex-col items-center justify-center text-gray-300">
+                  <LayoutGrid size={40} className="opacity-20 mb-4" />
+                  <p className="font-bold uppercase tracking-[0.2em] text-[10px] opacity-40">{t.noData}</p>
                 </div>
               )}
             </div>
@@ -615,24 +608,24 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 bg-white dark:bg-[#22252B] p-3 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
-            <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">
-              {t.page} <span className="text-blue-600">{currentPage}</span> {t.of} {totalPages}
+          <div className="flex items-center justify-between mt-4 bg-white dark:bg-[#22252B] p-2.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              {t.page} <span className="text-[#3366CC]">{currentPage}</span> / {totalPages}
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <button
                 onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 disabled={currentPage === 1}
-                className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded disabled:opacity-50 text-[12px] font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:cursor-not-allowed"
+                className="flex items-center gap-1 bg-[#F8F9FA] dark:bg-[#1A1D23] px-3 py-1 rounded-sm disabled:opacity-30 text-[9px] font-bold text-gray-600 dark:text-gray-300 border border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-[#EBF3FF] transition-all disabled:cursor-not-allowed uppercase tracking-widest"
               >
-                <ChevronLeft size={14} /> {t.prev}
+                <ChevronLeft size={12} /> {t.prev}
               </button>
               <button
                 onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 disabled={currentPage === totalPages}
-                className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded disabled:opacity-50 text-[12px] font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:cursor-not-allowed"
+                className="flex items-center gap-1 bg-[#F8F9FA] dark:bg-[#1A1D23] px-3 py-1 rounded-sm disabled:opacity-30 text-[9px] font-bold text-gray-600 dark:text-gray-300 border border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-[#EBF3FF] transition-all disabled:cursor-not-allowed uppercase tracking-widest"
               >
-                {t.next} <ChevronRight size={14} />
+                {t.next} <ChevronRight size={12} />
               </button>
             </div>
           </div>

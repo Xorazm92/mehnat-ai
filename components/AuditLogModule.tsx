@@ -54,29 +54,29 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
     );
 
     return (
-        <div className="space-y-4 animate-fade-in p-6 bg-gray-50 dark:bg-[#1A1D23] min-h-screen">
+        <div className="space-y-4 animate-fade-in p-6 bg-[#F8F9FA] dark:bg-[#111318] min-h-screen font-inter group/audit">
             {/* Header */}
-            <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 p-4 rounded shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center border border-indigo-100 dark:border-indigo-800 text-indigo-600 shrink-0">
-                        <Shield size={20} />
+            <div className="bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] p-5 rounded-sm shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-all border-b-2 border-b-[#3366CC]">
+                <div className="flex items-center gap-5">
+                    <div className="w-12 h-12 rounded-sm bg-[#FAFBFC] dark:bg-[#111318] flex items-center justify-center border border-[#DEE2E6] dark:border-[#3A3D44] text-[#3366CC] shrink-0 shadow-inner">
+                        <Shield size={24} />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight uppercase">
+                        <h2 className="text-lg font-black text-gray-800 dark:text-white leading-none uppercase tracking-tight">
                             {t.auditLogs}
                         </h2>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5 leading-none">
                             {t.auditSub}
                         </p>
                     </div>
                 </div>
 
-                <div className="relative w-full md:w-[350px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <div className="relative w-full md:w-[400px] group/search">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within/search:text-[#3366CC] transition-colors" size={16} />
                     <input
                         type="text"
-                        placeholder={t.searchAudit}
-                        className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-[#1e2025] border border-gray-200 dark:border-gray-700 rounded text-sm font-bold text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-colors"
+                        placeholder={t.searchAudit.toUpperCase()}
+                        className="w-full pl-11 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm text-[12px] font-black text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#3366CC] transition-all shadow-inner uppercase tracking-tight"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -84,81 +84,82 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
             </div>
 
             {/* Audit Table */}
-            <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-md overflow-hidden transition-colors">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-sm">
+                    <table className="w-full text-left border-collapse text-[12px] uppercase tracking-tight">
                         <thead>
-                            <tr className="bg-gray-50 dark:bg-[#1e2025] border-b border-gray-200 dark:border-gray-700">
-                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">{t.time}</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l border-gray-200 dark:border-gray-700">{t.user}</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l border-gray-200 dark:border-gray-700">{t.action}</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l border-gray-200 dark:border-gray-700">{t.object}</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l border-gray-200 dark:border-gray-700">{t.details}</th>
+                            <tr className="bg-[#FAFBFC] dark:bg-[#111318] border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+                                <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">{t.time}</th>
+                                <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-l border-[#DEE2E6] dark:border-[#3A3D44] leading-none">{t.user}</th>
+                                <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-l border-[#DEE2E6] dark:border-[#3A3D44] leading-none">{t.action}</th>
+                                <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-l border-[#DEE2E6] dark:border-[#3A3D44] leading-none">{t.object}</th>
+                                <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-l border-[#DEE2E6] dark:border-[#3A3D44] leading-none">{t.details}</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-12 text-center">
-                                        <div className="flex flex-col items-center justify-center gap-3">
-                                            <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest animate-pulse">{t.loadingAudit}</p>
+                                    <td colSpan={5} className="px-6 py-20 text-center">
+                                        <div className="flex flex-col items-center justify-center gap-4">
+                                            <div className="w-8 h-8 border-3 border-[#3366CC] border-t-transparent rounded-sm animate-spin"></div>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest animate-pulse">{t.loadingAudit}</p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : filteredLogs.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-12 text-center">
-                                        <div className="flex flex-col items-center justify-center gap-3 text-gray-400">
-                                            <History size={32} />
-                                            <p className="font-bold uppercase tracking-widest text-[10px]">{t.noDataFound}</p>
+                                    <td colSpan={5} className="px-6 py-20 text-center">
+                                        <div className="flex flex-col items-center justify-center gap-3 text-gray-300">
+                                            <History size={40} className="opacity-20" />
+                                            <p className="font-black uppercase tracking-[0.3em] text-[10px]">{t.noDataFound}</p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : filteredLogs.map(log => (
-                                <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-[#1e2025] transition-colors">
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-bold text-gray-900 dark:text-white">
-                                                    {new Date(log.created_at).toLocaleDateString()}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-gray-500 tabular-nums uppercase mt-0.5">
-                                                    {new Date(log.created_at).toLocaleTimeString()}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 border-l border-gray-200 dark:border-gray-700">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 flex items-center justify-center border border-indigo-100 dark:border-indigo-800">
-                                                <User size={12} />
-                                            </div>
-                                            <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                                                {log.profiles?.full_name || 'System'}
+                                <tr key={log.id} className="hover:bg-[#F2F7FF] dark:hover:bg-[#1C2531] transition-all group">
+                                    <td className="px-5 py-3 whitespace-nowrap">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="font-black text-gray-800 dark:text-white text-[12px]">
+                                                {new Date(log.created_at).toLocaleDateString()}
+                                            </span>
+                                            <span className="text-[10px] font-black text-gray-400 tabular-nums uppercase tracking-widest">
+                                                {new Date(log.created_at).toLocaleTimeString()}
                                             </span>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 border-l border-gray-200 dark:border-gray-700">
-                                        <span className={`px-2 py-1 rounded text-[9px] font-bold uppercase border
-                                            ${log.action.includes('delete') ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800' :
-                                                log.action.includes('create') || log.action.includes('insert') ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800' :
-                                                    log.action.includes('update') ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800' :
-                                                        'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800'}
+                                    <td className="px-5 py-3 border-l border-[#DEE2E6] dark:border-[#3A3D44]">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-sm bg-[#F8F9FA] dark:bg-[#111318] text-gray-400 flex items-center justify-center border border-[#DEE2E6] dark:border-[#3A3D44] shadow-inner group-hover:text-[#3366CC] transition-colors">
+                                                <User size={14} />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="font-black text-gray-800 dark:text-white truncate max-w-[150px] uppercase tracking-tight">
+                                                    {log.profiles?.full_name || 'System Auto'}
+                                                </span>
+                                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{log.ip_address || '0.0.0.0'}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-5 py-3 border-l border-[#DEE2E6] dark:border-[#3A3D44]">
+                                        <span className={`px-3 py-1 rounded-sm text-[9px] font-black uppercase border shadow-sm tracking-widest
+                                            ${log.action.includes('delete') ? 'bg-[#FEEBF0] text-[#DC3545] border-[#DEE2E6]' :
+                                                log.action.includes('create') || log.action.includes('insert') ? 'bg-[#EBFBF0] text-[#28A745] border-[#DEE2E6]' :
+                                                    log.action.includes('update') ? 'bg-[#FFF9EB] text-[#FFC107] border-[#DEE2E6]' :
+                                                        'bg-[#F2F7FF] text-[#3366CC] border-[#DEE2E6]'}
                                         `}>
                                             {log.action.replace('_', ' ')}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 border-l border-gray-200 dark:border-gray-700">
+                                    <td className="px-5 py-3 border-l border-[#DEE2E6] dark:border-[#3A3D44]">
                                         <div className="flex flex-col gap-1">
-                                            <span className="text-[10px] font-bold text-gray-500 uppercase">{log.entity_type}</span>
-                                            <span className="text-[9px] font-mono text-gray-400 truncate max-w-[120px]">
-                                                {log.entity_id}
-                                            </span>
+                                            <span className="font-black text-gray-800 dark:text-white text-[11px] tracking-tight">{log.entity_type}</span>
+                                            <div className="inline-flex items-center px-2 py-0.5 bg-[#F8F9FA] dark:bg-[#111318] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] text-[8px] font-black text-gray-400 uppercase tracking-widest w-fit">
+                                                ID: {log.entity_id.slice(0, 8)}
+                                            </div>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 border-l border-gray-200 dark:border-gray-700">
-                                        <div className="max-w-[200px] truncate text-[10px] font-mono text-gray-500 bg-gray-50 dark:bg-[#1e2025] px-2 py-1 rounded border border-gray-200 dark:border-gray-700 cursor-help" title={JSON.stringify(log.details, null, 2)}>
+                                    <td className="px-5 py-3 border-l border-[#DEE2E6] dark:border-[#3A3D44]">
+                                        <div className="max-w-[220px] truncate text-[10px] font-mono font-black text-gray-500 bg-[#F8F9FA] dark:bg-[#111318] px-3 py-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] cursor-help group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors shadow-inner" title={JSON.stringify(log.details, null, 2)}>
                                             {JSON.stringify(log.details)}
                                         </div>
                                     </td>

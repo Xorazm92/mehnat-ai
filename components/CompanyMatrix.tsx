@@ -37,50 +37,46 @@ const CompanyMatrix: React.FC<MatrixProps> = ({ companies, operations, activeFil
   }, [companies, operations, search, activeFilter]);
 
   return (
-    <div className="liquid-glass-card rounded-[3.5rem] border border-white/20 shadow-glass-lg overflow-hidden mb-20 animate-fade-in relative group">
-      {/* Background accents */}
-      <div className="absolute -top-40 -left-40 w-80 h-80 bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none"></div>
-
-      <div className="p-6 md:p-12 border-b border-white/10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 md:gap-10 bg-white/5 relative z-10">
+    <div className="c1-card animate-fade-in">
+      <div className="p-6 border-b border-[#DEE2E6] dark:border-[#3A3D44] bg-[#FAFBFC] dark:bg-[#22252B] flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>
-          <h2 className="text-2xl md:text-4xl font-black tracking-tighter premium-text-gradient uppercase leading-tight mb-2">
-            {t.monitoringMatrix}
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase tracking-tight">
+            {t.matrixTitle}
           </h2>
-          <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.4em]">
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
             {t.matrixSub}
           </p>
         </div>
 
-        <div className="relative group w-full max-w-lg">
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors z-10">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          </div>
+        <div className="relative w-full max-w-sm">
           <input
             type="text"
             placeholder={t.searchMatrix}
-            className="w-full pl-16 pr-8 py-5 bg-white/10 dark:bg-white/5 border border-white/20 rounded-[1.8rem] text-sm font-black text-slate-800 dark:text-white outline-none focus:bg-white/20 dark:focus:bg-white/10 focus:border-indigo-500/40 transition-all shadow-inner placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className="c1-input w-full pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
         </div>
       </div>
 
       <div className="overflow-x-auto scrollbar-none relative z-10">
         <table className="w-full text-left border-collapse min-w-[1200px]">
           <thead>
-            <tr className="bg-white/5 dark:bg-white/5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-slate-400 border-b border-white/10">
-              <th className="px-6 md:px-12 py-6 md:py-10 backdrop-blur-md">{t.organizations || 'Kompaniya'}</th>
-              <th className="px-4 md:px-6 py-6 md:py-10 text-center backdrop-blur-md">{t.inn || 'INN'}</th>
-              <th className="px-4 md:px-6 py-6 md:py-10 text-center backdrop-blur-md">{t.regime || 'Soliq turi'}</th>
-              <th className="px-4 md:px-6 py-6 md:py-10 text-center backdrop-blur-md">Foyda solig'i</th>
-              <th className="px-4 md:px-6 py-6 md:py-10 text-center backdrop-blur-md">Forma 1</th>
-              <th className="px-4 md:px-6 py-6 md:py-10 text-center backdrop-blur-md">Forma 2</th>
-              <th className="px-4 md:px-6 py-6 md:py-10 text-center backdrop-blur-md">Statistika</th>
-              <th className="px-6 md:px-12 py-6 md:py-10 text-right backdrop-blur-md">{t.actions || 'Amallar'}</th>
+            <tr className="bg-[#FAFBFC] dark:bg-[#1e2025] text-[9px] font-bold uppercase tracking-widest text-[#6c757d] dark:text-[#ADB5BD] border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+              <th className="px-6 py-4">{t.organizations || 'Kompaniya'}</th>
+              <th className="px-4 py-4 text-center">{t.inn || 'INN'}</th>
+              <th className="px-4 py-4 text-center">{t.taxRegimeLabel || 'Soliq turi'}</th>
+              <th className="px-4 py-4 text-center">Foyda solig'i</th>
+              <th className="px-4 py-4 text-center">Forma 1</th>
+              <th className="px-4 py-4 text-center">Forma 2</th>
+              <th className="px-4 py-4 text-center">Statistika</th>
+              <th className="px-6 py-4 text-right">{t.actions || 'Amallar'}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5 bg-white/5">
+          <tbody className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44]">
             {filteredData.map(c => {
               const op = operations.find(o => o.companyId === c.id);
               if (!op) return null;
@@ -91,56 +87,49 @@ const CompanyMatrix: React.FC<MatrixProps> = ({ companies, operations, activeFil
                   className="hover:bg-white/10 dark:hover:bg-white/5 transition-all duration-500 group cursor-pointer"
                   onClick={() => onCompanySelect(c)}
                 >
-                  <td className="px-6 md:px-12 py-6 md:py-10">
-                    <div className="flex items-center gap-4 md:gap-6">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-4">
                       <div
-                        className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-[1.5rem] flex items-center justify-center font-black text-xl md:text-2xl text-white shadow-glass group-hover:rotate-6 group-hover:scale-110 transition-all duration-500 border border-white/20 relative overflow-hidden"
-                        style={{ background: `linear-gradient(135deg, ${c.name.charCodeAt(0) % 2 === 0 ? '#6366F1' : '#007AFF'} 0%, #1e1b4b 100%)` }}
+                        className="w-10 h-10 rounded-sm flex items-center justify-center font-black text-base text-white border border-black/10"
+                        style={{ background: `linear-gradient(135deg, ${c.name.charCodeAt(0) % 2 === 0 ? '#3366CC' : '#007AFF'} 0%, #1e1b4b 100%)` }}
                       >
-                        <div className="glass-reflection"></div>
-                        <span className="relative z-10">{c.name.charAt(0)}</span>
+                        {c.name.charAt(0)}
                       </div>
                       <div>
-                        <div className="font-black text-lg md:text-xl text-slate-800 dark:text-white tracking-tight group-hover:text-indigo-500 transition-colors mb-2 uppercase">{c.name}</div>
-                        <div className="flex items-center gap-2 md:gap-3">
-                          <span className="text-[8px] md:text-[9px] font-black text-slate-400 dark:text-slate-500 px-2 md:px-3 py-1 md:py-1.5 bg-white/5 border border-white/10 rounded-lg md:rounded-xl uppercase tracking-widest">INN: {c.inn}</span>
-                          <span className="text-[8px] md:text-[9px] font-black text-indigo-500 bg-indigo-500/10 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl uppercase tracking-widest">{c.accountantName || '—'}</span>
+                        <div className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#3366CC] transition-colors mb-0.5 uppercase">{c.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest px-1.5 py-0.5 bg-gray-50 dark:bg-[#2A2D33] border border-gray-100 dark:border-gray-800 rounded-sm">INN: {c.inn}</span>
+                          <span className="text-[8px] font-bold text-blue-600 bg-blue-50 dark:bg-[#1e2025] px-1.5 py-0.5 rounded-sm uppercase tracking-widest">{c.accountantName || '—'}</span>
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-10 text-center">
-                    <span className="text-xs font-black font-mono text-slate-500 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 shadow-glass-inset tabular-nums">{c.inn}</span>
+                  <td className="px-4 py-4 text-center">
+                    <span className="text-[10px] font-black font-mono text-gray-500 tabular-nums">{c.inn}</span>
                   </td>
-                  <td className="px-4 py-10 text-center">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-indigo-500/5 px-3 py-1.5 rounded-xl border border-indigo-500/10 whitespace-nowrap">
+                  <td className="px-4 py-4 text-center">
+                    <span className="c1-badge">
                       {c.taxType?.replace('_', ' ') || 'VAT'}
                     </span>
                   </td>
-                  <td className="px-4 py-10 text-center">
-                    <div className="transform group-hover:scale-110 transition-transform duration-500">
-                      <StatusBadge status={c.taxType === TaxType.TURNOVER ? ReportStatus.NOT_REQUIRED : op.profitTaxStatus} size="sm" />
-                    </div>
+                  <td className="px-4 py-4 text-center">
+                    <StatusBadge status={c.taxType === TaxType.TURNOVER ? ReportStatus.NOT_REQUIRED : op.profitTaxStatus} size="sm" />
                   </td>
-                  <td className="px-4 py-10 text-center">
-                    <div className="transform group-hover:scale-110 transition-transform duration-500">
-                      <StatusBadge status={op.form1Status} size="sm" />
-                    </div>
+                  <td className="px-4 py-4 text-center">
+                    <StatusBadge status={op.form1Status} size="sm" />
                   </td>
-                  <td className="px-4 py-10 text-center">
-                    <div className="transform group-hover:scale-110 transition-transform duration-500">
-                      <StatusBadge status={op.form2Status} size="sm" />
-                    </div>
+                  <td className="px-4 py-4 text-center">
+                    <StatusBadge status={op.form2Status} size="sm" />
                   </td>
-                  <td className="px-4 py-10 text-center">
-                    <div className="flex flex-col items-center gap-3 transform group-hover:scale-110 transition-transform duration-500">
+                  <td className="px-4 py-4 text-center">
+                    <div className="flex flex-col items-center gap-1">
                       <StatusBadge status={op.statsStatus} size="sm" />
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">[{c.statsType || '1-M'}]</span>
+                      <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest">[{c.statsType || '1-M'}]</span>
                     </div>
                   </td>
-                  <td className="px-6 md:px-12 py-10 text-right">
-                    <button className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/10 hover:border-indigo-500/20 hover:scale-110 transition-all active:scale-95 inline-flex items-center justify-center shadow-sm group/btn">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover/btn:rotate-12 transition-transform"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  <td className="px-6 py-4 text-right">
+                    <button className="c1-btn c1-btn-secondary p-2 inline-flex items-center justify-center">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
                   </td>
                 </tr>

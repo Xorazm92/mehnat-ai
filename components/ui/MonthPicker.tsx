@@ -61,64 +61,60 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
         <div className={`inline-block ${className}`} ref={triggerRef}>
             <button
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="flex items-center gap-3 px-6 py-3 bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/20 rounded-[1.2rem] text-[11px] font-black text-slate-700 dark:text-white hover:bg-white/20 dark:hover:bg-white/10 transition-all shadow-glass active:scale-95 group uppercase tracking-[0.2em] relative overflow-hidden"
+                className="flex items-center gap-2 px-3 py-1.5 c1-input text-[13px] font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <CalendarIcon size={14} className="text-indigo-500 transition-transform group-hover:scale-110 relative z-10" />
-                <span className="relative z-10">{selectedPeriod}</span>
+                <CalendarIcon size={14} className="text-blue-600" />
+                <span>{selectedPeriod}</span>
             </button>
 
             {isOpen && createPortal(
                 <div className="fixed inset-0 z-[10000]">
                     {/* Minimal backdrop for closing */}
                     <div
-                        className="absolute inset-0 bg-black/5 dark:bg-black/20 backdrop-blur-[2px]"
+                        className="absolute inset-0 bg-slate-900/40"
                         onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
                     />
 
-                    {/* Premium Popover content */}
+                    {/* Industrial Popover content */}
                     <div
-                        className="absolute liquid-glass-card rounded-[2rem] shadow-glass-2xl border border-white/20 p-8 w-[340px] animate-fade-in-up"
+                        className="absolute bg-[#F0F2F5] dark:bg-[#111318] p-5 w-[280px] rounded-sm shadow-2xl border border-[#DEE2E6] dark:border-[#3A3D44] animate-fade-in"
                         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
                         style={{
-                            top: coords.top + 12,
-                            left: Math.max(20, Math.min(coords.left, window.innerWidth - 360))
+                            top: coords.top + 4,
+                            left: Math.max(10, Math.min(coords.left, window.innerWidth - 290))
                         }}
                     >
-                        {/* Iridescent background glow */}
-                        <div className="absolute -top-20 -right-20 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
                         <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center justify-between mb-5 pb-2 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setViewYear(y => y - 1); }}
-                                    className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-2xl transition-all border border-transparent hover:border-white/10 text-slate-600 dark:text-white group/btn"
+                                    className="p-1.5 hover:bg-white dark:hover:bg-[#22252B] rounded-sm border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44] transition-all text-gray-400 hover:text-[#3366CC]"
                                 >
-                                    <ChevronLeft size={24} className="group-hover/btn:-translate-x-0.5 transition-transform" />
+                                    <ChevronLeft size={16} />
                                 </button>
-                                <span className="text-2xl font-black text-slate-800 dark:text-white tracking-tighter">{viewYear}</span>
+                                <span className="text-[14px] font-black text-gray-800 dark:text-white uppercase tracking-widest">{viewYear}</span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setViewYear(y => y + 1); }}
-                                    className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-2xl transition-all border border-transparent hover:border-white/10 text-slate-600 dark:text-white group/btn"
+                                    className="p-1.5 hover:bg-white dark:hover:bg-[#22252B] rounded-sm border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44] transition-all text-gray-400 hover:text-[#3366CC]"
                                 >
-                                    <ChevronRight size={24} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                                    <ChevronRight size={16} />
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-3 gap-2">
                                 {MONTHS_UZ.map((month) => {
                                     const isSelected = selectedPeriod === `${viewYear} ${month}`;
                                     return (
                                         <button
                                             key={month}
                                             onClick={(e) => { e.stopPropagation(); handleMonthSelect(month); }}
-                                            className={`py-4 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative overflow-hidden ${isSelected
-                                                ? 'bg-indigo-500 text-white shadow-glass-indigo scale-[1.05] liquid-glass-rim'
-                                                : 'bg-white/5 text-slate-500 hover:text-indigo-500 hover:bg-indigo-500/10 border border-white/5 hover:border-indigo-500/20'
+                                            className={`py-2 px-1 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-all border ${isSelected
+                                                ? 'bg-[#3366CC] text-white border-[#2A52A3] shadow-sm'
+                                                : 'text-gray-500 dark:text-gray-400 bg-white dark:bg-[#22252B] border-[#DEE2E6] dark:border-[#3A3D44] hover:border-[#3366CC] hover:text-[#3366CC]'
                                                 }`}
                                         >
-                                            <span className="relative z-10">{month}</span>
+                                            {month}
                                         </button>
                                     );
                                 })}
