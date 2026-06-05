@@ -59,21 +59,24 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
   return (
     <div className="space-y-6 animate-fade-in pb-20">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] p-5 rounded-sm shadow-sm gap-4 transition-colors">
+      <div className="dashboard-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-sm bg-[#3366CC] flex items-center justify-center text-white shadow-sm">
-            <UserPlus size={20} />
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md bg-gradient-to-br from-[var(--primary)] to-[var(--primary-dark)]">
+            <UserPlus size={24} />
           </div>
           <div>
-            <h2 className="text-lg font-black text-gray-800 dark:text-white uppercase tracking-tight leading-none">{t.staff}</h2>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5">{t.profile}</p>
+            <h2 className="text-[15px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>{t.staff}</h2>
+            <p className="text-[11px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>{t.profile}</p>
           </div>
         </div>
         <button
           onClick={() => setIsAdding(true)}
-          className="bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-sm text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm hover:bg-[#EBF3FF] hover:border-[#3366CC] hover:text-[#3366CC] transition-all active:scale-95"
+          className="font-bold px-6 py-3 rounded-xl text-[12px] flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md"
+          style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.borderColor = 'var(--primary)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
         >
-          <UserPlus size={14} />
+          <UserPlus size={16} />
           {t.addStaff}
         </button>
       </div>
@@ -83,18 +86,20 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
         <div className="relative flex-grow group">
           <input
             type="text"
-            className="w-full pl-11 pr-4 py-3 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] bg-white dark:bg-[#1A1D23] focus:outline-none focus:border-[#3366CC] text-[12px] font-black text-gray-800 dark:text-white transition-all shadow-inner placeholder:text-gray-400 placeholder:font-bold placeholder:uppercase placeholder:tracking-widest"
+            className="w-full pl-12 pr-4 py-3.5 rounded-xl text-[12px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
             placeholder="XODIMLARNI QIDIRISH..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#3366CC] transition-colors" />
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-3)' }} />
         </div>
 
         <div className="flex gap-4">
           <div className="relative group">
             <select
-              className="pl-11 pr-10 py-3 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] bg-white dark:bg-[#1A1D23] focus:outline-none focus:border-[#3366CC] text-[10px] font-black uppercase text-gray-700 dark:text-white transition-all shadow-sm appearance-none min-w-[180px] tracking-widest"
+              className="pl-12 pr-10 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none min-w-[200px]"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
             >
@@ -105,15 +110,16 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
               <option value="accountant">{t.role_accountant.toUpperCase()}</option>
               <option value="manager">{t.role_manager.toUpperCase()}</option>
             </select>
-            <Briefcase size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#3366CC] transition-colors" />
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none">
+            <Briefcase size={18} className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-3)' }} />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-3)' }}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
             </div>
           </div>
 
           <div className="relative group">
             <select
-              className="pl-11 pr-10 py-3 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] bg-white dark:bg-[#1A1D23] focus:outline-none focus:border-[#3366CC] text-[10px] font-black uppercase text-gray-700 dark:text-white transition-all shadow-sm appearance-none min-w-[160px] tracking-widest"
+              className="pl-12 pr-10 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none min-w-[180px]"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -122,28 +128,28 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
               <option value="sick">BETOB / KASAL</option>
               <option value="vacation">MEHNAT TA'TILIDA</option>
             </select>
-            <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#3366CC] transition-colors" />
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none">
+            <Filter size={18} className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-3)' }} />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-3)' }}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5">
         {/* ADD STAFF FORM CARD */}
         {isAdding && (
-          <div className="bg-white dark:bg-[#1A1D23] p-8 rounded-sm border-t-4 border-t-[#3366CC] border border-[#DEE2E6] dark:border-[#3A3D44] shadow-md relative overflow-hidden sm:col-span-full transition-all animate-fade-in">
+          <div className="dashboard-card relative overflow-hidden sm:col-span-full animate-fade-in p-8 border-t-[4px]" style={{ borderTopColor: 'var(--primary)' }}>
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-sm bg-[#F8F9FA] dark:bg-[#111318] text-[#3366CC] flex items-center justify-center border border-[#DEE2E6] dark:border-[#3A3D44] shadow-inner">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-[var(--primary)] shadow-sm border" style={{ background: 'var(--primary-ghost)', borderColor: 'var(--primary)' }}>
                   <UserPlus size={22} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-gray-800 dark:text-white uppercase tracking-widest">
+                  <h3 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text)' }}>
                     {form.id ? t.edit : t.addStaff}
                   </h3>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-1">Xodim ma'lumotlarini kiriting</p>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: 'var(--text-3)' }}>Xodim ma'lumotlarini kiriting</p>
                 </div>
               </div>
 
@@ -155,12 +161,13 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
                 ].map(field => (
                   <div key={field.key} className="space-y-1.5 relative group/input">
                     <input
-                      className="w-full pl-11 pr-4 py-3 rounded-sm bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] focus:outline-none focus:border-[#3366CC] font-black text-[12px] text-gray-800 dark:text-white transition-all shadow-inner placeholder:text-gray-400 placeholder:uppercase"
+                      className="w-full pl-12 pr-4 py-3.5 rounded-xl font-black text-[12px] outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 placeholder:uppercase"
+                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                       placeholder={field.placeholder}
                       value={(form as any)[field.key] || ''}
                       onChange={e => setForm({ ...form, [field.key]: e.target.value })}
                     />
-                    <div className="absolute left-4 top-[14px] text-gray-300 group-focus-within/input:text-[#3366CC] transition-colors">
+                    <div className="absolute left-4 top-[14px] transition-colors" style={{ color: 'var(--text-3)' }}>
                       {field.icon}
                     </div>
                   </div>
@@ -168,7 +175,8 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
 
                 <div className="space-y-1.5 relative group/input">
                   <select
-                    className="w-full pl-11 pr-10 py-3 rounded-sm bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] focus:outline-none focus:border-[#3366CC] font-black text-[11px] text-gray-800 dark:text-white transition-all shadow-inner appearance-none uppercase tracking-widest"
+                    className="w-full pl-12 pr-10 py-3.5 rounded-xl font-black text-[11px] outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none uppercase tracking-widest"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                     value={form.role || ''}
                     onChange={e => setForm({ ...form, role: e.target.value })}
                   >
@@ -179,40 +187,44 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
                     <option value="accountant">{t.role_accountant.toUpperCase()}</option>
                     <option value="manager">{t.role_manager.toUpperCase()}</option>
                   </select>
-                  <div className="absolute left-4 top-[14px] text-gray-300 group-focus-within/input:text-[#3366CC] transition-colors pointer-events-none">
+                  <div className="absolute left-4 top-[14px] pointer-events-none transition-colors" style={{ color: 'var(--text-3)' }}>
                     <Briefcase size={16} />
                   </div>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none">
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-3)' }}>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
 
                 <div className="space-y-1.5 relative group/input md:col-span-2 lg:col-span-1">
                   <input
-                    className="w-full pl-11 pr-4 py-3 rounded-sm bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] focus:outline-none focus:border-[#3366CC] font-black text-[12px] text-gray-800 dark:text-white transition-all shadow-inner tracking-[0.3em] placeholder:tracking-normal placeholder:text-gray-300"
+                    className="w-full pl-12 pr-4 py-3.5 rounded-xl font-black text-[12px] outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 tracking-[0.3em] placeholder:tracking-normal"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                     placeholder={form.id ? t.passwordChange.toUpperCase() : t.password.toUpperCase()}
                     type="password"
                     value={form.password || ''}
                     onChange={e => setForm({ ...form, password: e.target.value })}
                   />
-                  <div className="absolute left-4 top-[14px] text-gray-300 group-focus-within/input:text-[#3366CC] transition-colors">
+                  <div className="absolute left-4 top-[14px] transition-colors" style={{ color: 'var(--text-3)' }}>
                     <ShieldCheck size={16} />
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-8 mt-8 border-t border-[#DEE2E6] dark:border-[#3A3D44] justify-end">
+              <div className="flex gap-4 pt-8 mt-8 justify-end" style={{ borderTop: '1px solid var(--border)' }}>
                 <button
                   onClick={() => { setIsAdding(false); setForm({}); }}
-                  className="px-8 py-3 bg-[#F8F9FA] dark:bg-[#111318] text-gray-500 dark:text-gray-400 border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm text-[11px] font-black uppercase tracking-widest transition-all hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 flex items-center justify-center shadow-sm"
+                  className="px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all hover:shadow-sm active:scale-95 flex items-center justify-center"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text-3)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
                 >
                   <X size={16} className="mr-2" /> BEKOR QILISH
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className={`px-10 py-3 rounded-sm font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-md transition-all active:scale-95 ${isSaving ? 'bg-gray-300 cursor-not-allowed text-white opacity-80' : 'bg-[#3366CC] text-white hover:bg-[#2855AA]'
-                    }`}
+                  className={`px-10 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-md transition-all active:scale-95 ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-lg'}`}
+                  style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white' }}
                 >
                   {isSaving ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-sm animate-spin"></div>
@@ -227,20 +239,20 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
         )}
 
         {/* STAFF LIST TABLE */}
-        <div className="bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden sm:col-span-full transition-colors">
+        <div className="dashboard-card overflow-hidden sm:col-span-full">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
-                <tr className="bg-[#F8F9FA] dark:bg-[#111318] text-[10px] font-black uppercase tracking-widest text-gray-500 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
-                  <th className="px-5 py-4">Xodim</th>
-                  <th className="px-5 py-4 text-center">Lavozim</th>
-                  <th className="px-5 py-4">Aloqa Kanallari</th>
-                  <th className="px-5 py-4 text-center">Biriktirma</th>
-                  <th className="px-5 py-4 text-right">Boshqaruv</th>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Xodim</th>
+                  <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-3)' }}>Lavozim</th>
+                  <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Aloqa Kanallari</th>
+                  <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-3)' }}>Biriktirma</th>
+                  <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest text-right" style={{ color: 'var(--text-3)' }}>Boshqaruv</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
-                {filteredStaff.map((person) => {
+                {filteredStaff.map((person, i) => {
                   const myCompanies = companies.filter(c => c.accountantId === person.id || c.accountantName === person.name);
                   const associatedOrganizations = myCompanies.length;
 
@@ -248,30 +260,33 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
                     <tr
                       key={person.id}
                       onClick={() => onStaffSelect(person)}
-                      className="hover:bg-[#F2F7FF] dark:hover:bg-[#1e222a] transition-all cursor-pointer group"
+                      className="transition-colors group cursor-pointer"
+                      style={{ backgroundColor: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--primary-light)'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'var(--surface)' : 'var(--surface-2)'}
                     >
-                      <td className="px-5 py-4">
+                      <td className="px-6 py-5">
                         <div className="flex items-center gap-4">
                           <div className="relative">
                             <div
-                              className="w-10 h-10 rounded-sm shrink-0 flex items-center justify-center text-sm font-black text-white shadow-sm transition-transform group-hover:scale-110"
-                              style={{ backgroundColor: person.avatarColor || '#3366CC' }}
+                              className="w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center text-sm font-black text-white shadow-sm transition-transform group-hover:scale-110"
+                              style={{ backgroundColor: person.avatarColor || 'var(--primary)' }}
                             >
                               {person.name.charAt(0)}
                             </div>
-                            <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-white dark:border-[#1A1D23] rounded-sm shadow-sm ${person.status === 'sick' ? 'bg-amber-400' :
+                            <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 rounded-full shadow-sm ${person.status === 'sick' ? 'bg-amber-400' :
                                 person.status === 'vacation' ? 'bg-rose-500' :
                                   'bg-emerald-500'
-                              }`} />
+                              }`} style={{ borderColor: 'var(--surface)' }} />
                           </div>
                           <div>
-                            <div className="text-[13px] font-black text-gray-800 dark:text-white group-hover:text-[#3366CC] transition-colors uppercase tracking-tight">{person.name}</div>
-                            <div className="text-[9px] font-bold text-gray-400 mt-0.5 uppercase tracking-widest">{person.id.slice(0, 8)}</div>
+                            <div className="text-[13px] font-black uppercase tracking-tight transition-colors" style={{ color: 'var(--text)' }}>{person.name}</div>
+                            <div className="text-[10px] font-bold mt-1 uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{person.id.slice(0, 8)}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-center">
-                        <span className="px-3 py-1 bg-[#F0F2F5] dark:bg-[#2A2D33] text-gray-600 dark:text-gray-300 text-[9px] font-black uppercase tracking-[0.1em] rounded-sm inline-block border border-[#DEE2E6] dark:border-[#3A3D44]">
+                      <td className="px-6 py-5 text-center">
+                        <span className="c1-badge" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
                           {person.role === 'super_admin' ? t.role_super_admin :
                             person.role === 'supervisor' ? t.role_supervisor :
                               person.role === 'chief_accountant' ? t.role_chief_accountant :
@@ -279,32 +294,38 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
                                   t.role_accountant}
                         </span>
                       </td>
-                      <td className="px-5 py-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="text-[11px] text-gray-700 dark:text-gray-300 font-black tracking-tight">{person.phone || '—'}</div>
-                          <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest truncate max-w-[180px]">{person.email || '—'}</div>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col gap-1.5">
+                          <div className="text-[12px] font-black tracking-tight" style={{ color: 'var(--text)' }}>{person.phone || '—'}</div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest truncate max-w-[180px]" style={{ color: 'var(--text-3)' }}>{person.email || '—'}</div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-center">
-                        <div className="inline-flex items-center justify-center min-w-[32px] h-8 bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] text-[12px] font-black text-[#3366CC] rounded-sm tabular-nums shadow-inner">
+                      <td className="px-6 py-5 text-center">
+                        <div className="inline-flex items-center justify-center min-w-[36px] h-9 border text-[12px] font-black rounded-xl tabular-nums shadow-sm" style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--primary)' }}>
                           {associatedOrganizations}
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1 text-gray-400 group-hover:text-gray-600">
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={(e) => { e.stopPropagation(); setForm(person); setIsAdding(true); }}
-                            className="p-2 hover:text-[#3366CC] hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] rounded-sm border border-transparent hover:border-[#DEE2E6] transition-all"
+                            className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
+                            style={{ color: 'var(--primary)' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-ghost)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             title="Tahrirlash"
                           >
-                            <Edit3 size={15} />
+                            <Edit3 size={16} />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); if (confirm(person.name + t.confirmDelete)) onDelete(person.id); }}
-                            className="p-2 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-sm border border-transparent hover:border-rose-100 transition-all"
+                            className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
+                            style={{ color: 'var(--danger)' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-light)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             title="O'chirish"
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
@@ -313,9 +334,9 @@ const StaffModule: React.FC<Props> = ({ staff, companies, operations, lang, onSa
                 })}
                 {filteredStaff.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-8 py-16 text-center text-gray-300 dark:text-gray-700">
-                      <Search size={32} className="mx-auto mb-4 opacity-10" />
-                      <span className="text-[10px] uppercase font-black tracking-[0.3em] opacity-40">MA'LUMOT TOPILMADI</span>
+                    <td colSpan={5} className="px-8 py-20 text-center">
+                      <Search size={40} className="mx-auto mb-4 opacity-20" style={{ color: 'var(--text-3)' }} />
+                      <span className="text-[11px] uppercase font-black tracking-[0.3em] opacity-50" style={{ color: 'var(--text-3)' }}>MA'LUMOT TOPILMADI</span>
                     </td>
                   </tr>
                 )}

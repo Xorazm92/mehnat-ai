@@ -258,21 +258,21 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         </div>
       )}
       {/* Header Section */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-[#22252B] p-4 rounded-sm shadow-sm border border-[#DEE2E6] dark:border-[#3A3D44] gap-4 transition-colors">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-sm bg-[#3366CC] flex items-center justify-center text-white shadow-sm shrink-0">
-            <Building2 size={20} />
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center dashboard-card p-5 gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0" style={{ background: 'var(--primary)' }}>
+            <Building2 size={24} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-[14px] font-bold text-gray-800 dark:text-white mb-0.5 uppercase tracking-wider truncate">{t.organizations}</h2>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              {t.totalFirms}: <span className="text-[#3366CC] tabular-nums">{filtered.length}</span>
+            <h2 className="text-lg font-black uppercase tracking-wider truncate" style={{ color: 'var(--text)' }}>{t.organizations}</h2>
+            <p className="text-[11px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>
+              {t.totalFirms}: <span className="tabular-nums" style={{ color: 'var(--primary)' }}>{filtered.length}</span>
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto">
-          <div className="flex bg-[#F8F9FA] dark:bg-[#1A1D23] p-1 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors">
+          <div className="flex p-1 rounded-lg transition-colors" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
             {[
               { label: 'Faol', value: true },
               { label: 'Arxiv', value: false },
@@ -281,62 +281,71 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               <button
                 key={String(opt.value)}
                 onClick={() => setFilterActive(opt.value)}
-                className={`px-3 py-1 rounded-sm transition-all text-[9px] font-bold uppercase tracking-widest ${filterActive === opt.value ? 'bg-white dark:bg-[#333] text-[#3366CC] shadow-sm border border-[#DEE2E6] dark:border-[#444]' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 border border-transparent'}`}
+                className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold uppercase tracking-widest ${filterActive === opt.value ? 'shadow-sm' : ''}`}
+                style={filterActive === opt.value ? { background: 'var(--surface)', color: 'var(--primary)', border: '1px solid var(--border)' } : { color: 'var(--text-2)', border: '1px solid transparent' }}
               >
                 {opt.label}
               </button>
             ))}
           </div>
 
-          <div className="flex bg-[#F8F9FA] dark:bg-[#1A1D23] p-1 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors">
+          <div className="flex p-1 rounded-lg transition-colors" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1 rounded-sm transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-[#333] text-[#3366CC] shadow-sm border border-[#DEE2E6] dark:border-[#444]' : 'text-gray-400 hover:text-gray-600 border border-transparent'}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'shadow-sm' : ''}`}
+              style={viewMode === 'grid' ? { background: 'var(--surface)', color: 'var(--primary)', border: '1px solid var(--border)' } : { color: 'var(--text-2)', border: '1px solid transparent' }}
               title={t.gridView}
             >
-              <LayoutGrid size={14} />
+              <LayoutGrid size={15} />
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1 rounded-sm transition-all ${viewMode === 'table' ? 'bg-white dark:bg-[#333] text-[#3366CC] shadow-sm border border-[#DEE2E6] dark:border-[#444]' : 'text-gray-400 hover:text-gray-600 border border-transparent'}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === 'table' ? 'shadow-sm' : ''}`}
+              style={viewMode === 'table' ? { background: 'var(--surface)', color: 'var(--primary)', border: '1px solid var(--border)' } : { color: 'var(--text-2)', border: '1px solid transparent' }}
               title={t.tableView}
             >
-              <List size={14} />
+              <List size={15} />
             </button>
           </div>
 
-          <div className="h-6 w-px bg-[#DEE2E6] dark:bg-[#3A3D44] mx-1 hidden sm:block" />
+          <div className="h-8 w-px mx-1 hidden sm:block" style={{ background: 'var(--border)' }} />
 
           <MonthPicker
             selectedPeriod={selectedPeriod}
             onChange={onPeriodChange}
-            className="scale-90 origin-right transition-transform hover:scale-100"
+            className="h-9 text-[13px] rounded-lg"
           />
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleExport}
-              className="p-1.5 bg-white dark:bg-[#22252B] text-gray-500 hover:text-[#3366CC] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-[#F8F9FA] transition-all"
+              className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-ghost)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.background = 'var(--surface-2)'; }}
               title="Excelga eksport"
             >
-              <Download size={15} />
+              <Download size={16} />
             </button>
 
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-1.5 rounded-sm border transition-all ${showFilters ? 'bg-[#EBF3FF] dark:bg-[#1C2531] text-[#3366CC] border-[#3366CC]/30' : 'bg-white dark:bg-[#22252B] text-gray-500 border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-[#F8F9FA]'}`}
+              className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
+              style={showFilters ? { background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' } : { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+              onMouseEnter={e => { if (!showFilters) { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-ghost)'; } }}
+              onMouseLeave={e => { if (!showFilters) { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.background = 'var(--surface-2)'; } }}
               title="Filtrlar"
             >
-              <Filter size={15} />
+              <Filter size={16} />
             </button>
           </div>
 
           <button
             onClick={() => { setIsAdding(true); setForm({ id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString(), isActive: true }); }}
-            className="bg-[#3366CC] text-white px-3 py-1.5 rounded-sm font-bold text-[10px] hover:bg-[#2A52A3] transition-all active:transform active:scale-95 flex items-center gap-1.5 uppercase tracking-widest shadow-sm"
+            className="ai-button-glow flex items-center gap-2"
           >
-            <Plus size={14} />
-            <span>{t.addCompany}</span>
+            <Plus size={16} />
+            <span className="uppercase tracking-widest text-[11px]">{t.addCompany}</span>
           </button>
         </div>
       </div>
@@ -442,63 +451,68 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         )}
 
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginated.map(c => {
               const risk = getRiskIndicator(c);
+              const avatarColor = `hsl(${(c.name.charCodeAt(0) * 15) % 360}, 70%, 60%)`;
               return (
                 <div
                   key={c.id}
-                  className={`bg-white dark:bg-[#22252B] p-3 rounded-sm border-l-4 ${risk.color.replace('text-', 'border-l-')} border-t border-r border-b border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm hover:border-[#3366CC]/50 transition-all cursor-pointer flex flex-col group`}
+                  className={`dashboard-card p-4 transition-all cursor-pointer flex flex-col group relative overflow-hidden`}
                   onClick={() => onCompanySelect(c)}
                 >
-                  <div className="flex gap-3 mb-3">
-                    <div className="w-10 h-10 bg-[#F8F9FA] dark:bg-[#1A1D23] rounded-sm flex items-center justify-center text-[16px] font-bold text-[#3366CC] shrink-0 border border-[#DEE2E6] dark:border-[#3A3D44] group-hover:bg-[#EBF3FF] transition-colors">
+                  <div className={`absolute top-0 left-0 bottom-0 w-1 ${risk.bg.replace('bg-', 'bg-')} ${risk.color.replace('text-', 'bg-')}`}></div>
+                  
+                  <div className="flex gap-3 mb-4 pl-2">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-black shrink-0 shadow-sm transition-transform group-hover:scale-105" style={{ background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}99)` }}>
                       {c.name.charAt(0)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-[12px] font-bold text-gray-800 dark:text-white truncate mb-0.5 uppercase tracking-tight" title={c.name}>{c.name}</h4>
-                      {c.brandName && <p className="text-[9px] text-gray-400 font-bold uppercase truncate leading-none mb-1.5">{c.brandName}</p>}
-                      <div className="flex gap-1.5">
-                        <span className="text-[8px] font-bold px-1.5 py-0.5 bg-[#F0F2F5] dark:bg-[#111318] text-gray-500 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] uppercase tracking-widest">INN: {c.inn}</span>
-                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-sm border uppercase tracking-widest ${c.taxType === 'nds_profit' ? 'bg-[#FEEBF0] text-rose-600 border-[#F5C6CB]' : 'bg-[#EBF3FF] text-[#3366CC] border-[#DEE2E6]'}`}>{c.taxType}</span>
+                      <h4 className="text-[13px] font-bold truncate mb-0.5" style={{ color: 'var(--text)' }} title={c.name}>{c.name}</h4>
+                      {c.brandName && <p className="text-[10px] font-bold uppercase truncate mb-1" style={{ color: 'var(--text-3)' }}>{c.brandName}</p>}
+                      <div className="flex gap-1.5 mt-1">
+                        <span className="c1-badge" style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }}>INN: {c.inn}</span>
+                        <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-light)' : 'var(--primary-ghost)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--primary)' }}>
+                          {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'AYLANMA' : (c.taxType?.toUpperCase() || 'FIX'))}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 mb-3 mt-auto">
+                  <div className="grid grid-cols-2 gap-2 mb-4 mt-auto pl-2">
                     {[
-                      { label: t.accountant, val: c.accountantName, icon: <Users size={10} className="text-gray-400" /> },
-                      { label: 'Soliq Rejimi', val: c.taxRegime || 'Standard', icon: <Calculator size={10} className="text-gray-400" /> }
+                      { label: t.accountant, val: c.accountantName, icon: <Users size={12} /> },
+                      { label: 'Soliq Rejimi', val: c.taxRegime || 'Standard', icon: <Calculator size={12} /> }
                     ].map((stat, i) => (
-                      <div key={i} className="p-1.5 bg-[#F8F9FA] dark:bg-[#1A1D23] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44]">
-                        <div className="flex items-center gap-1 mb-0.5">
+                      <div key={i} className="p-2 rounded-lg" style={{ background: 'var(--surface-2)' }}>
+                        <div className="flex items-center gap-1.5 mb-1" style={{ color: 'var(--text-3)' }}>
                           {stat.icon}
-                          <p className="text-[7px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p>
+                          <p className="text-[9px] font-bold uppercase tracking-widest">{stat.label}</p>
                         </div>
-                        <p className="text-[9px] font-bold text-gray-700 dark:text-gray-300 truncate tracking-tight">{stat.val || '—'}</p>
+                        <p className="text-[11px] font-bold truncate" style={{ color: 'var(--text)' }}>{stat.val || '—'}</p>
                       </div>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between pt-2.5 border-t border-[#F0F2F5] dark:border-[#1e2025] mt-auto">
+                  <div className="flex items-center justify-between pt-3 mt-auto pl-2" style={{ borderTop: '1px solid var(--border)' }}>
                     <div className="min-w-0 flex-1">
                       {(c.login || c.password) ? (
                         <div className="flex items-center gap-1.5 cursor-help" onClick={(e) => { e.stopPropagation(); togglePassword(c.id); }}>
-                          <div className="text-gray-400 p-0.5">
-                            {showPasswords[c.id] ? <EyeOff size={12} /> : <Eye size={12} />}
+                          <div style={{ color: 'var(--text-3)' }}>
+                            {showPasswords[c.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                           </div>
-                          <p className="text-[9px] font-bold text-[#3366CC] font-mono whitespace-nowrap overflow-hidden text-ellipsis">
+                          <p className="text-[11px] font-bold font-mono whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--primary)' }}>
                             {showPasswords[c.id] ? `${c.login || '—'} / ${c.password || '—'}` : '•••• / ••••'}
                           </p>
                         </div>
                       ) : (
-                        <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Login yo'q</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Login yo'q</span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-1 ml-2">
-                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="p-1 text-[#3366CC] hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] rounded-sm border border-transparent hover:border-[#3366CC]/30 transition-all"><Edit3 size={14} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="p-1 text-rose-500 hover:bg-[#FEEBF0] dark:hover:bg-[#2D1B1E] rounded-sm border border-transparent hover:border-rose-300 transition-all"><Trash2 size={14} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--primary)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-ghost)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Edit3 size={15} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Trash2 size={15} /></button>
                     </div>
                   </div>
                 </div>
@@ -506,38 +520,38 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             })}
           </div>
         ) : (
-          <div className="w-full bg-white dark:bg-[#22252B] rounded-sm shadow-sm border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden relative transition-colors">
+          <div className="dashboard-card overflow-hidden relative">
             <div ref={bottomScrollRef} className="w-full overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1000px] c1-table">
+              <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr>
-                    <th className="w-[40px] text-center uppercase tracking-widest text-gray-400">№</th>
+                    <th className="w-[40px] text-center">№</th>
                     <th
-                      className="w-[240px] sticky left-0 z-20 cursor-pointer hover:bg-[#F8F9FA] dark:hover:bg-[#1e2025] transition-colors"
+                      className="w-[240px] sticky left-0 z-20 cursor-pointer hover:bg-[var(--primary-ghost)] transition-colors"
                       onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       <div className="flex items-center gap-1.5">
-                        <Building2 size={12} className="text-gray-400 shrink-0" />
+                        <Building2 size={12} style={{ color: 'var(--text-3)' }} />
                         <span>{t.companyName} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
                       </div>
                     </th>
                     <th
-                      className="w-[100px] cursor-pointer hover:bg-[#F8F9FA] dark:hover:bg-[#1e2025] transition-colors"
+                      className="w-[100px] cursor-pointer hover:bg-[var(--primary-ghost)] transition-colors"
                       onClick={() => { setSortField('inn'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="w-[130px] text-[#3366CC] font-bold">
-                      <div className="flex items-center justify-end gap-1 uppercase tracking-tight"><DollarSign size={10} /> SHARTNOMA</div>
+                    <th className="w-[130px]" style={{ color: 'var(--primary)' }}>
+                      <div className="flex items-center justify-end gap-1"><DollarSign size={11} /> SHARTNOMA</div>
                     </th>
-                    <th className="w-[110px] text-center uppercase tracking-tight">REJIM</th>
-                    <th className="w-[160px] uppercase tracking-tight">BUXGALTER</th>
-                    <th className="w-[150px] uppercase tracking-tight">NAZORATCHI</th>
-                    <th className="w-[130px] uppercase tracking-tight">1C SERVER</th>
-                    <th className="w-[90px] text-center uppercase tracking-tight">{t.actions}</th>
+                    <th className="w-[110px] text-center">REJIM</th>
+                    <th className="w-[160px]">BUXGALTER</th>
+                    <th className="w-[150px]">NAZORATCHI</th>
+                    <th className="w-[130px]">1C SERVER</th>
+                    <th className="w-[90px] text-center">{t.actions}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
+                <tbody>
                   {paginated.map((c, i) => {
                     const risk = getRiskIndicator(c);
                     const op = operations.find(o => o.companyId === c.id && periodsEqual(o.period, selectedPeriod));
@@ -550,46 +564,48 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                       <tr
                         key={c.id}
                         onClick={() => onCompanySelect(c)}
-                        className={(i % 2 === 0 ? 'bg-white dark:bg-[#22252B]' : 'bg-[#FAFAFA] dark:bg-[#202328]') + ' hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] cursor-pointer transition-colors group'}
+                        className="group cursor-pointer transition-colors hover:bg-[var(--primary-ghost)]"
+                        style={{ backgroundColor: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-2)' }}
                       >
-                        <td className="text-center font-mono text-[10px] text-gray-400 font-bold">
+                        <td className="text-center font-mono text-[10px] font-bold" style={{ color: 'var(--text-3)' }}>
                           {c.originalIndex || (i + 1)}
                         </td>
-                        <td className={`sticky left-0 bg-inherit z-10 font-bold text-gray-800 dark:text-white border-l-4 ${risk.color.replace('text-', 'border-l-')}`}>
+                        <td className="sticky left-0 bg-inherit z-10 font-bold relative pl-3" style={{ color: 'var(--text)' }}>
+                          <div className={`absolute left-0 top-0 bottom-0 w-1 ${risk.bg.replace('bg-', 'bg-')} ${risk.color.replace('text-', 'bg-')}`}></div>
                           <div className="truncate max-w-[210px] uppercase tracking-tight" title={c.name}>{c.name}</div>
-                          {c.brandName && <div className="text-[8px] text-gray-400 font-bold truncate mt-0.5 uppercase tracking-widest">{c.brandName}</div>}
+                          {c.brandName && <div className="text-[9px] font-bold truncate uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-3)' }}>{c.brandName}</div>}
                         </td>
-                        <td className="font-mono text-[10px] text-gray-500 font-bold">
+                        <td className="font-mono text-[11px] font-bold" style={{ color: 'var(--text-2)' }}>
                           {c.inn}
                         </td>
-                        <td className="font-bold text-right text-[11px] tabular-nums">
-                          {displayAmount?.toLocaleString() || '0'} <span className="text-[8px] font-bold text-gray-400 uppercase ml-0.5">sum</span>
+                        <td className="font-bold text-right text-[12px] tabular-nums" style={{ color: 'var(--text)' }}>
+                          {displayAmount?.toLocaleString() || '0'} <span className="text-[9px] font-bold uppercase ml-0.5" style={{ color: 'var(--text-3)' }}>sum</span>
                         </td>
                         <td className="text-center">
-                          <span className={`px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest border transition-colors ${c.taxType?.includes('nds') ? 'bg-[#FEEBF0] text-rose-600 border-[#F5C6CB]' : 'bg-[#EBF3FF] text-[#3366CC] border-[#DEE2E6]'}`}>
+                          <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-light)' : 'var(--primary-ghost)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--primary)' }}>
                             {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'AYLANMA' : (c.taxType?.toUpperCase() || 'FIX'))}
                           </span>
                         </td>
                         <td>
                           <div className="flex items-center gap-1.5 truncate">
-                            <Users size={10} className="text-gray-400 shrink-0" />
-                            <span className="truncate text-gray-700 dark:text-gray-300 text-[10px] font-bold uppercase tracking-tight">{displayAccountant || '—'}</span>
+                            <Users size={12} style={{ color: 'var(--text-3)' }} className="shrink-0" />
+                            <span className="truncate text-[11px] font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{displayAccountant || '—'}</span>
                           </div>
                         </td>
                         <td>
-                          <span className="truncate block text-gray-600 dark:text-gray-400 text-[10px] font-bold uppercase tracking-tight">{displaySupervisor || '—'}</span>
+                          <span className="truncate block text-[11px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-2)' }}>{displaySupervisor || '—'}</span>
                         </td>
                         <td>
                           <div className="flex flex-col">
-                            {c.serverInfo && <span className="text-[9px] font-black text-[#28A745] uppercase tracking-widest leading-none mb-0.5">{c.serverInfo}</span>}
-                            <span className="text-[8px] text-gray-400 font-bold truncate uppercase tracking-tight" title={c.serverName}>{c.serverName || '—'}</span>
+                            {c.serverInfo && <span className="text-[10px] font-black uppercase tracking-widest leading-none mb-0.5" style={{ color: 'var(--success)' }}>{c.serverInfo}</span>}
+                            <span className="text-[9px] font-bold truncate uppercase tracking-tight" style={{ color: 'var(--text-3)' }} title={c.serverName}>{c.serverName || '—'}</span>
                           </div>
                         </td>
                         <td>
                           <div className="flex items-center justify-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="text-gray-400 hover:text-[#3366CC] p-1 transition-colors" title="Batafsil"><Eye size={14} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="text-gray-400 hover:text-[#3366CC] p-1 transition-colors" title="Edit"><Edit3 size={14} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="text-gray-400 hover:text-rose-500 p-1 transition-colors" title="Delete"><Trash2 size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--primary)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-ghost)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Batafsil"><Eye size={13} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--primary)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-ghost)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Edit"><Edit3 size={13} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Delete"><Trash2 size={13} /></button>
                           </div>
                         </td>
                       </tr>
@@ -598,9 +614,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 </tbody>
               </table>
               {paginated.length === 0 && (
-                <div className="py-32 flex flex-col items-center justify-center text-gray-300">
-                  <LayoutGrid size={40} className="opacity-20 mb-4" />
-                  <p className="font-bold uppercase tracking-[0.2em] text-[10px] opacity-40">{t.noData}</p>
+                <div className="py-24 flex flex-col items-center justify-center" style={{ color: 'var(--text-3)' }}>
+                  <LayoutGrid size={48} className="mb-4 opacity-20" />
+                  <p className="font-bold uppercase tracking-[0.2em] text-[11px] opacity-60">{t.noData}</p>
                 </div>
               )}
             </div>
@@ -608,24 +624,30 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 bg-white dark:bg-[#22252B] p-2.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              {t.page} <span className="text-[#3366CC]">{currentPage}</span> / {totalPages}
+          <div className="flex items-center justify-between mt-4 dashboard-card p-3">
+            <p className="text-[11px] font-bold uppercase tracking-widest pl-2" style={{ color: 'var(--text-3)' }}>
+              {t.page} <span style={{ color: 'var(--primary)' }}>{currentPage}</span> / {totalPages}
             </p>
-            <div className="flex gap-1.5">
+            <div className="flex gap-2 pr-1">
               <button
                 onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 disabled={currentPage === 1}
-                className="flex items-center gap-1 bg-[#F8F9FA] dark:bg-[#1A1D23] px-3 py-1 rounded-sm disabled:opacity-30 text-[9px] font-bold text-gray-600 dark:text-gray-300 border border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-[#EBF3FF] transition-all disabled:cursor-not-allowed uppercase tracking-widest"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg disabled:opacity-30 text-[11px] font-bold uppercase tracking-widest transition-all disabled:cursor-not-allowed"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+                onMouseEnter={e => { if (currentPage !== 1) { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-ghost)'; } }}
+                onMouseLeave={e => { if (currentPage !== 1) { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.background = 'var(--surface-2)'; } }}
               >
-                <ChevronLeft size={12} /> {t.prev}
+                <ChevronLeft size={14} /> {t.prev}
               </button>
               <button
                 onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 disabled={currentPage === totalPages}
-                className="flex items-center gap-1 bg-[#F8F9FA] dark:bg-[#1A1D23] px-3 py-1 rounded-sm disabled:opacity-30 text-[9px] font-bold text-gray-600 dark:text-gray-300 border border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-[#EBF3FF] transition-all disabled:cursor-not-allowed uppercase tracking-widest"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg disabled:opacity-30 text-[11px] font-bold uppercase tracking-widest transition-all disabled:cursor-not-allowed"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+                onMouseEnter={e => { if (currentPage !== totalPages) { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-ghost)'; } }}
+                onMouseLeave={e => { if (currentPage !== totalPages) { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.background = 'var(--surface-2)'; } }}
               >
-                {t.next} <ChevronRight size={12} />
+                {t.next} <ChevronRight size={14} />
               </button>
             </div>
           </div>

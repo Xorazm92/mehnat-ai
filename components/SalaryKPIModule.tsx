@@ -25,7 +25,7 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
 
     const normalizedRole = (currentUserRole || '').toLowerCase();
 
-    const tabs = [
+    const tabs = useMemo(() => [
         {
             id: 'nazoratchi',
             label: 'Nazoratchi',
@@ -73,7 +73,7 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
             component: <KPIRulesManager lang={lang} />,
             allowedRoles: ['manager', 'admin', 'chief_accountant', 'super_admin']
         }
-    ] as const;
+    ], [companies, operations, staff, lang, currentUserId, currentUserRole]);
 
     const visibleTabs = tabs.filter(tab => {
         if (!normalizedRole) return true;

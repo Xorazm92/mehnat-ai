@@ -80,14 +80,14 @@ type ReportColumnKey = typeof REPORT_COLUMNS[number]['key'];
 const getStatusStyle = (value: string) => {
   const v = String(value || '').trim().toLowerCase();
 
-  if (!v || v === '0' || v === 'not_required') return { bg: 'bg-[#F8F9FA] dark:bg-[#2A2D33]', text: 'text-[#ADB5BD] dark:text-[#6C757D]', icon: '—', tooltip: "Bo'sh" };
-  if (v === '+' || v === 'accepted') return { bg: 'bg-[#EBFBF0] dark:bg-[#1C2F23]', text: 'text-[#28A745] dark:text-[#34D058]', icon: '✓', tooltip: 'Bajarildi (+)' };
-  if (v === '-' || v === 'not_submitted') return { bg: 'bg-[#FEEBF0] dark:bg-[#311C21]', text: 'text-[#DC3545] dark:text-[#FF6B6B]', icon: '✗', tooltip: 'Bajarilmadi (-)' };
-  if (v === 'topshirildi' || v === 'submitted') return { bg: 'bg-[#EBF5FF] dark:bg-[#1C2531]', text: 'text-[#007BFF] dark:text-[#4DA3FF]', icon: '⏳', tooltip: 'Topshirildi (Kutilmoqda)' };
-  if (v === 'kartoteka' || v === 'blocked') return { bg: 'bg-[#FFF9EB] dark:bg-[#312B1C]', text: 'text-[#FFC107] dark:text-[#FFD700]', icon: '!', tooltip: 'Kartoteka' };
-  if (v === 'error' || v === 'oshibka') return { bg: 'bg-[#FEEBF0]', text: 'text-[#DC3545]', icon: '!', tooltip: 'Xatolik' };
+  if (!v || v === '0' || v === 'not_required') return { bg: 'var(--surface-2)', text: 'var(--text-3)', icon: '—', tooltip: "Bo'sh" };
+  if (v === '+' || v === 'accepted') return { bg: 'rgba(52, 208, 88, 0.1)', text: '#34d058', icon: '✓', tooltip: 'Bajarildi (+)' };
+  if (v === '-' || v === 'not_submitted') return { bg: 'rgba(255, 107, 107, 0.1)', text: '#ff6b6b', icon: '✗', tooltip: 'Bajarilmadi (-)' };
+  if (v === 'topshirildi' || v === 'submitted') return { bg: 'rgba(77, 163, 255, 0.1)', text: '#4da3ff', icon: '⏳', tooltip: 'Topshirildi (Kutilmoqda)' };
+  if (v === 'kartoteka' || v === 'blocked') return { bg: 'rgba(255, 215, 0, 0.1)', text: '#ffd700', icon: '!', tooltip: 'Kartoteka' };
+  if (v === 'error' || v === 'oshibka') return { bg: 'rgba(255, 107, 107, 0.1)', text: '#ff6b6b', icon: '!', tooltip: 'Xatolik' };
 
-  return { bg: 'bg-[#EBF5FF] dark:bg-[#1C2531]', text: 'text-[#007BFF] dark:text-[#4DA3FF]', icon: value, tooltip: value };
+  return { bg: 'rgba(77, 163, 255, 0.1)', text: '#4da3ff', icon: value, tooltip: value };
 };
 
 const AVAILABLE_STATUSES = [
@@ -250,23 +250,26 @@ const OperationRow = React.memo<{
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
 
   return (
-    <tr className="group hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] transition-colors border-b border-[#DEE2E6] dark:border-[#3A3D44]">
-      <td className="sticky left-0 z-20 bg-[#F8F9FA] dark:bg-[#1e2025] border-r border-[#DEE2E6] dark:border-[#3A3D44] px-2 py-1 text-center text-[10px] font-bold text-gray-500 w-10 min-w-[40px]">
+    <tr className="group transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
+      <td className="sticky left-0 z-20 px-2 py-1.5 text-center text-[10px] font-bold w-10 min-w-[40px] transition-colors" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
         {idx + 1}
       </td>
       <td
-        className="sticky left-10 z-20 bg-white dark:bg-[#22252B] group-hover:bg-[#F2F7FF] dark:group-hover:bg-[#2A2D33] border-r border-[#DEE2E6] dark:border-[#3A3D44] px-2 py-1 transition-colors w-48 min-w-[192px] cursor-pointer"
+        className="sticky left-10 z-20 px-3 py-1.5 transition-colors w-48 min-w-[192px] cursor-pointer"
+        style={{ background: 'var(--surface)', borderRight: '1px solid var(--border)' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--surface)'}
         onClick={() => row.companyId && onCompanySelect(row.companyId as string)}
       >
-        <div className="max-w-[180px] truncate text-[11px] font-bold text-gray-800 dark:text-gray-200 group-hover:text-[#3366CC]" title={row.name}>
+        <div className="max-w-[180px] truncate text-[11px] font-bold transition-colors" style={{ color: 'var(--text)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text)'} title={row.name}>
           {row.name}
         </div>
       </td>
-      <td className="md:sticky md:left-[232px] z-20 bg-white dark:bg-[#22252B] group-hover:bg-[#F2F7FF] dark:group-hover:bg-[#2A2D33] border-r border-[#DEE2E6] dark:border-[#3A3D44] px-1 py-1 text-center text-[10px] font-bold text-gray-500 w-20 min-w-[80px]">
+      <td className="md:sticky md:left-[232px] z-20 px-1.5 py-1.5 text-center text-[10px] font-bold w-20 min-w-[80px] transition-colors group-hover:bg-[var(--surface-2)]" style={{ background: 'var(--surface)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
         {row.inn || '—'}
       </td>
-      <td className="md:sticky md:left-[312px] z-20 bg-white dark:bg-[#22252B] group-hover:bg-[#F2F7FF] dark:group-hover:bg-[#2A2D33] border-r-2 border-[#ADB5BD] dark:border-[#495057] px-1 py-1 transition-colors w-24 min-w-[96px]">
-        <div className="max-w-[90px] truncate text-[10px] font-bold text-gray-600 dark:text-gray-400" title={row.accountant}>
+      <td className="md:sticky md:left-[312px] z-20 px-2 py-1.5 transition-colors w-24 min-w-[96px] group-hover:bg-[var(--surface-2)]" style={{ background: 'var(--surface)', borderRight: '2px solid var(--border)' }}>
+        <div className="max-w-[90px] truncate text-[10px] font-bold" style={{ color: 'var(--text-2)' }} title={row.accountant}>
           {row.accountant || '—'}
         </div>
       </td>
@@ -279,9 +282,9 @@ const OperationRow = React.memo<{
           const payDisabled = !isServiceEnabled(payKey);
           return (
             <React.Fragment key={col.key}>
-              <td className={`border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-[#F8F9FA] dark:bg-[#2A2D33]' : 'bg-[#EBFBF0] dark:bg-[#1C2F23]'}`}>
+              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: serviceDisabled ? 'var(--surface-2)' : 'rgba(52, 208, 88, 0.05)' }}>
                 {serviceDisabled ? (
-                  <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
+                  <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>—</span>
                 ) : (
                   <StatusCell
                     value={String(row[col.key] || '')}
@@ -291,9 +294,9 @@ const OperationRow = React.memo<{
                   />
                 )}
               </td>
-              <td className={`border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-0.5 text-center h-8 ${payDisabled ? 'bg-[#F8F9FA] dark:bg-[#2A2D33]' : 'bg-[#FFF9EB] dark:bg-[#312B1C]'}`}>
+              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: payDisabled ? 'var(--surface-2)' : 'rgba(255, 215, 0, 0.05)' }}>
                 {payDisabled ? (
-                  <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
+                  <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>—</span>
                 ) : (
                   <StatusCell
                     value={String(row[payKey] || '')}
@@ -308,9 +311,9 @@ const OperationRow = React.memo<{
         }
 
         return (
-          <td key={col.key} className={`border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-0.5 text-center h-8 ${serviceDisabled ? 'bg-[#F8F9FA] dark:bg-[#2A2D33]' : ''}`}>
+          <td key={col.key} className="px-0.5 py-0.5 text-center h-8 transition-colors group-hover:bg-[var(--surface-2)]" style={{ borderRight: '1px solid var(--border)', background: serviceDisabled ? 'var(--surface-2)' : 'transparent' }}>
             {serviceDisabled ? (
-              <span className="text-[9px] text-gray-300 dark:text-gray-600">—</span>
+              <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>—</span>
             ) : (
               <StatusCell
                 value={String(row[col.key] || '')}
@@ -643,96 +646,111 @@ const OperationModule: React.FC<Props> = ({
 
   // ── Render ───────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-[#F0F2F5] dark:bg-[#1A1D23]">
+    <div className="flex flex-col h-full bg-[var(--background)]">
       {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 bg-white dark:bg-[#22252B] border-b border-[#DEE2E6] dark:border-[#3A3D44] px-4 py-2 z-40 shadow-sm transition-all duration-300">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-4">
+      <div className="flex-shrink-0 z-40 border-b transition-all duration-300 py-3 px-6 dashboard-card !rounded-none !border-x-0 !border-t-0 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-5">
             <div>
-              <h1 className="text-base font-bold text-gray-800 dark:text-white uppercase tracking-tight">{t.matrixTitle}</h1>
-              <p className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">
-                {filteredRows.length} / {rows.length} {t.taKorxona} · {selectedPeriod}
+              <h1 className="text-[15px] font-black uppercase tracking-widest leading-tight" style={{ color: 'var(--text)' }}>{t.matrixTitle}</h1>
+              <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>
+                {filteredRows.length} / {rows.length} {t.taKorxona} · <span style={{ color: 'var(--primary)' }}>{selectedPeriod}</span>
               </p>
             </div>
             {/* Mini Stats */}
-            <div className="hidden lg:flex items-center gap-2">
+            <div className="hidden xl:flex items-center gap-3">
               {[
-                { icon: '✓', count: stats.done, color: 'blue' },
-                { icon: '✗', count: stats.notDone, color: 'red' },
-                { icon: '!', count: stats.warning, color: 'amber' },
-                { icon: '✎', count: stats.text, color: 'blue' },
+                { icon: '✓', count: stats.done, color: '#34d058', bg: 'rgba(52, 208, 88, 0.1)' },
+                { icon: '✗', count: stats.notDone, color: '#ff6b6b', bg: 'rgba(255, 107, 107, 0.1)' },
+                { icon: '!', count: stats.warning, color: '#ffd700', bg: 'rgba(255, 215, 0, 0.1)' },
+                { icon: '✎', count: stats.text, color: 'var(--primary)', bg: 'var(--primary-ghost)' },
               ].map(s => (
-                <div key={s.icon} className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-[#F8F9FA] dark:bg-[#2A2D33] border border-[#DEE2E6] dark:border-[#3A3D44]">
-                  <span className={`${s.color === 'blue' ? 'text-[#3366CC]' : s.color === 'red' ? 'text-[#DC3545]' : 'text-[#FFC107]'} font-bold text-[10px]`}>{s.icon}</span>
-                  <span className="text-gray-800 dark:text-gray-200 font-bold text-[10px] tabular-nums">{s.count}</span>
+                <div key={s.icon} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <span className="font-bold text-[11px] w-4 h-4 flex items-center justify-center rounded-sm" style={{ color: s.color, background: s.bg }}>{s.icon}</span>
+                  <span className="font-bold text-[11px] tabular-nums" style={{ color: 'var(--text)' }}>{s.count}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Search */}
-            <div className="relative">
+            <div className="relative group">
               <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                placeholder={t.searchPlaceholder} className="c1-input w-40 pl-8" />
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                placeholder={t.searchPlaceholder} 
+                className="w-48 pl-10 pr-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 placeholder:text-[var(--text-3)]"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-3)' }} />
             </div>
 
             {/* Accountant Filter */}
             <div className="relative">
               <select value={filterAccountant} onChange={e => setFilterAccountant(e.target.value)}
-                className="c1-input pr-6 cursor-pointer text-[11px]">
+                className="pl-4 pr-9 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none min-w-[130px] cursor-pointer"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}>
                 <option value="all">{t.allAccountants}</option>
                 {accountants.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
-              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-3)' }} />
             </div>
 
             {/* Group Filter */}
             <div className="relative">
               <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
-                className="c1-input pr-6 cursor-pointer text-[11px]">
+                className="pl-4 pr-9 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none min-w-[120px] cursor-pointer"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}>
                 <option value="all">{t.allColumns}</option>
                 {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
-              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-3)' }} />
             </div>
 
             {/* Period Selector */}
             <MonthPicker
               selectedPeriod={selectedPeriod}
               onChange={(p) => onPeriodChange?.(p)}
-              className="z-20"
+              className="z-20 h-full"
             />
 
-            <button onClick={handleExport} className="c1-btn c1-btn-secondary px-3 py-1.5 flex items-center gap-2 uppercase tracking-tight">
-              <Download size={12} /> Excel
+            <button onClick={handleExport} 
+              className="font-bold px-4 py-2 rounded-xl text-[11px] flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#34d058'; e.currentTarget.style.borderColor = '#34d058'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+            >
+              <Download size={14} /> Excel
             </button>
           </div>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-2 pt-2 border-t border-[#DEE2E6] dark:border-[#3A3D44] overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-5 mt-4 pt-3 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid var(--border)' }}>
           {[
-            { icon: '✓', label: `${t.approved} (+)` },
-            { icon: '✗', label: `${t.rejected} (-)` },
-            { icon: '—', label: `${t.not_required} (0)` },
-            { icon: '⏳', label: t.pending },
-            { icon: '!', label: t.kartoteka },
-            { icon: '✎', label: t.comment },
-            { icon: 'Xis.', label: t.reportLegend },
-            { icon: 'To\'l', label: t.paymentLegend },
+            { icon: '✓', label: `${t.approved} (+)`, color: '#34d058', bg: 'rgba(52, 208, 88, 0.1)' },
+            { icon: '✗', label: `${t.rejected} (-)`, color: '#ff6b6b', bg: 'rgba(255, 107, 107, 0.1)' },
+            { icon: '—', label: `${t.not_required} (0)`, color: 'var(--text-3)', bg: 'var(--surface-2)' },
+            { icon: '⏳', label: t.pending, color: '#4da3ff', bg: 'rgba(77, 163, 255, 0.1)' },
+            { icon: '!', label: t.kartoteka, color: '#ffd700', bg: 'rgba(255, 215, 0, 0.1)' },
+            { icon: '✎', label: t.comment, color: 'var(--primary)', bg: 'var(--primary-ghost)' },
           ].map(l => (
-            <div key={l.label} className="flex items-center gap-1.5 shrink-0">
-              <span className={`font-bold text-[10px] w-4 h-4 flex items-center justify-center rounded-sm bg-[#F8F9FA] dark:bg-[#2A2D33] border border-[#DEE2E6] dark:border-[#495057] text-gray-500`}>{l.icon}</span>
-              <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter">{l.label}</span>
+            <div key={l.label} className="flex items-center gap-2 shrink-0">
+              <span className="font-bold text-[10px] w-5 h-5 flex items-center justify-center rounded-md border" style={{ color: l.color, background: l.bg, borderColor: 'var(--border)' }}>{l.icon}</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{l.label}</span>
             </div>
           ))}
+          <div className="flex items-center gap-2 shrink-0 ml-4 border-l pl-4" style={{ borderColor: 'var(--border)' }}>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter" style={{ background: 'rgba(52, 208, 88, 0.1)', color: '#34d058', border: '1px solid rgba(52, 208, 88, 0.2)' }}>Xis.</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.reportLegend}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter" style={{ background: 'rgba(255, 215, 0, 0.1)', color: '#ffd700', border: '1px solid rgba(255, 215, 0, 0.2)' }}>To'l</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.paymentLegend}</span>
+          </div>
         </div>
       </div>
 
       {/* ── Matrix ──────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto relative rounded-sm bg-white dark:bg-[#1e2025] mx-4 my-2 shadow-sm border border-[#DEE2E6] dark:border-[#3A3D44]">
+      <div className="flex-1 overflow-auto relative dashboard-card mx-4 my-4 !shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
@@ -751,8 +769,8 @@ const OperationModule: React.FC<Props> = ({
           <table className="w-full border-separate border-spacing-0 text-xs">
             <thead className="sticky top-0 z-[60]">
               {/* Group row */}
-              <tr className="h-6">
-                <th colSpan={4} className="sticky top-0 left-0 z-[80] bg-[#F8F9FA] dark:bg-[#1e2025] border-b border-r-2 border-[#ADB5BD] dark:border-[#495057] px-2 py-1 text-left text-[9px] font-bold text-gray-500 uppercase tracking-widest w-[408px] min-w-[408px]">
+              <tr className="h-7">
+                <th colSpan={4} className="sticky top-0 left-0 z-[80] px-3 py-1.5 text-left text-[10px] font-black uppercase tracking-widest w-[408px] min-w-[408px]" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)', color: 'var(--text-3)' }}>
                   {t.firmTable}
                 </th>
                 {(() => {
@@ -762,46 +780,51 @@ const OperationModule: React.FC<Props> = ({
                     groupCounts.set(c.group, (groupCounts.get(c.group) || 0) + visualCols);
                   });
 
-                  const groupColors: Record<string, string> = {
-                    'Oylik': 'bg-[#F2F7FF] dark:bg-[#1C2531] text-[#3366CC]',
-                    'Soliqlar': 'bg-[#FFF9EB] dark:bg-[#312B1C] text-[#FFC107]',
-                    'Soliq H/T': 'bg-[#FBF2FF] dark:bg-[#2B1C31] text-[#9933CC]',
-                    'Yillik': 'bg-[#F2FFF7] dark:bg-[#1C3123] text-[#28A745]',
-                    'Statistika': 'bg-[#F2FEFF] dark:bg-[#1C3131] text-[#17A2B8]',
-                    'IT Park': 'bg-[#F7F2FF] dark:bg-[#231C31] text-[#6F42C1]',
-                    'Komunalka': 'bg-[#FFF2F2] dark:bg-[#311C1C] text-[#DC3545]',
+                  const groupColors: Record<string, any> = {
+                    'Oylik': { bg: 'rgba(51, 102, 204, 0.05)', color: '#3366cc' },
+                    'Soliqlar': { bg: 'rgba(255, 193, 7, 0.05)', color: '#ffc107' },
+                    'Soliq H/T': { bg: 'rgba(153, 51, 204, 0.05)', color: '#9933cc' },
+                    'Yillik': { bg: 'rgba(40, 167, 69, 0.05)', color: '#28a745' },
+                    'Statistika': { bg: 'rgba(23, 162, 184, 0.05)', color: '#17a2b8' },
+                    'IT Park': { bg: 'rgba(111, 66, 193, 0.05)', color: '#6f42c1' },
+                    'Komunalka': { bg: 'rgba(220, 53, 69, 0.05)', color: '#dc3545' },
                   };
 
-                  return [...groupCounts.entries()].map(([name, count]) => (
-                    <th key={name} colSpan={count} className={`sticky top-0 border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-1 py-1 text-center text-[9px] font-bold uppercase tracking-wider ${groupColors[name] || 'bg-gray-100 text-gray-500'}`}>
-                      {name}
-                    </th>
-                  ));
+                  return [...groupCounts.entries()].map(([name, count]) => {
+                    const style = groupColors[name] || { bg: 'var(--surface-2)', color: 'var(--text-3)' };
+                    return (
+                      <th key={name} colSpan={count} className="sticky top-0 px-1 py-1.5 text-center text-[10px] font-black uppercase tracking-wider" style={{ background: style.bg, color: style.color, borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>
+                        {name}
+                      </th>
+                    );
+                  });
                 })()}
               </tr>
               {/* Column header row */}
-              <tr className="h-8">
-                <th className="sticky top-[24px] left-0 z-[70] bg-[#F8F9FA] dark:bg-[#1e2025] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-2 py-2 text-center text-[10px] font-bold text-gray-500 w-10 min-w-[40px]">#</th>
-                <th className="sticky top-[24px] left-10 z-[70] bg-[#F8F9FA] dark:bg-[#1e2025] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-2 py-2 text-left text-[10px] font-bold text-gray-700 dark:text-gray-300 w-48 min-w-[192px] uppercase">{t.companyName}</th>
-                <th className="md:sticky md:top-[24px] md:left-[232px] z-[70] bg-[#F8F9FA] dark:bg-[#1e2025] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-1.5 py-2 text-center text-[10px] font-bold text-gray-500 w-20 min-w-[80px]">INN</th>
-                <th className="md:sticky md:top-[24px] md:left-[312px] z-[70] bg-[#F8F9FA] dark:bg-[#1e2025] border-b border-r-2 border-[#ADB5BD] dark:border-[#495057] px-1.5 py-2 text-left text-[10px] font-bold text-gray-500 w-24 min-w-[96px] uppercase">BUXGALTER</th>
+              <tr className="h-9">
+                <th className="sticky top-[28px] left-0 z-[70] px-2 py-2 text-center text-[10px] font-bold w-10 min-w-[40px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>#</th>
+                <th className="sticky top-[28px] left-10 z-[70] px-3 py-2 text-left text-[10px] font-bold w-48 min-w-[192px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>{t.companyName}</th>
+                <th className="md:sticky md:top-[28px] md:left-[232px] z-[70] px-1.5 py-2 text-center text-[10px] font-bold w-20 min-w-[80px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>INN</th>
+                <th className="md:sticky md:top-[28px] md:left-[312px] z-[70] px-2 py-2 text-left text-[10px] font-bold w-24 min-w-[96px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)' }}>BUXGALTER</th>
                 {visibleColumns.map(col => {
                   if ((col as any).isSplit) {
                     return (
                       <React.Fragment key={col.key}>
                         <th
-                          className="sticky top-[24px] bg-[#EBFBF0] dark:bg-[#1C2F23] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-2 text-center w-10 text-[9px] cursor-help"
+                          className="sticky top-[28px] px-0.5 py-2 text-center w-10 text-[9px] cursor-help"
+                          style={{ background: 'rgba(52, 208, 88, 0.08)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
                           title={col.label}
                         >
-                          <span className="text-[9px] font-bold text-[#28A745] dark:text-[#34D058] tracking-widest">{col.short}</span>
-                          <div className="text-[7px] font-bold text-[#28A745]/70 uppercase tracking-tighter">Xis.</div>
+                          <span className="text-[10px] font-black tracking-widest" style={{ color: '#34d058' }}>{col.short}</span>
+                          <div className="text-[7px] font-black uppercase tracking-tighter" style={{ color: 'rgba(52, 208, 88, 0.7)' }}>Xis.</div>
                         </th>
                         <th
-                          className="sticky top-[24px] bg-[#FFF9EB] dark:bg-[#312B1C] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-2 text-center w-10 cursor-help"
+                          className="sticky top-[28px] px-0.5 py-2 text-center w-10 cursor-help"
+                          style={{ background: 'rgba(255, 215, 0, 0.08)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
                           title={`${col.label} to'lov`}
                         >
-                          <span className="text-[9px] font-bold text-[#FFC107] dark:text-[#FFD700] tracking-widest">{(col as any).payShort}</span>
-                          <div className="text-[7px] font-bold text-[#FFC107]/70 uppercase tracking-tighter">To'l</div>
+                          <span className="text-[10px] font-black tracking-widest" style={{ color: '#ffd700' }}>{(col as any).payShort}</span>
+                          <div className="text-[7px] font-black uppercase tracking-tighter" style={{ color: 'rgba(255, 215, 0, 0.7)' }}>To'l</div>
                         </th>
                       </React.Fragment>
                     );
@@ -809,7 +832,8 @@ const OperationModule: React.FC<Props> = ({
                   return (
                     <th
                       key={col.key}
-                      className="sticky top-[24px] bg-white dark:bg-[#22252B] border-b border-r border-[#DEE2E6] dark:border-[#3A3D44] px-0.5 py-2 text-center w-10 hover:bg-[#F8F9FA] dark:hover:bg-[#2A2D33] transition-colors cursor-help group/header"
+                      className="sticky top-[28px] px-0.5 py-2 text-center w-10 transition-colors cursor-help group/header"
+                      style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
                       title={col.label + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
                       onContextMenu={(e) => {
                         if (userRole === 'super_admin' || userRole === 'admin') {
@@ -817,8 +841,13 @@ const OperationModule: React.FC<Props> = ({
                           handleClearColumn(col.key);
                         }
                       }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'var(--surface)'}
                     >
-                      <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest group-hover/header:text-[#3366CC] transition-colors">
+                      <span className="text-[10px] font-black uppercase tracking-widest transition-colors" style={{ color: 'var(--text-3)' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+                      >
                         {col.short}
                       </span>
                     </th>
@@ -848,25 +877,25 @@ const OperationModule: React.FC<Props> = ({
       </div>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 border-t border-[#DEE2E6] dark:border-[#3A3D44] bg-white dark:bg-[#22252B] px-6 py-2 mt-auto shadow-inner">
+      <div className="flex-shrink-0 dashboard-card !rounded-none !border-x-0 !border-b-0 px-6 py-3 mt-auto !shadow-none">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+          <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-sm bg-[#3366CC]/50"></span>
-              <span>{t.totalFirms}: <strong className="text-gray-900 dark:text-white">{filteredRows.length}</strong></span>
+              <span className="w-2 h-2 rounded-sm bg-[var(--primary)] opacity-50"></span>
+              <span>{t.totalFirms}: <strong style={{ color: 'var(--text)' }}>{filteredRows.length}</strong></span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-sm bg-[#007AFF]/50"></span>
-              <span><strong>{visibleColumns.length}</strong> {t.reports.toLowerCase()}</span>
+              <span className="w-2 h-2 rounded-sm opacity-50" style={{ background: '#34d058' }}></span>
+              <span><strong style={{ color: 'var(--text)' }}>{visibleColumns.length}</strong> {t.reports.toLowerCase()}</span>
             </div>
-            <div className="h-4 w-px bg-gray-200 dark:bg-gray-800"></div>
+            <div className="h-4 w-px" style={{ background: 'var(--border)' }}></div>
             <div className="flex items-center gap-2">
               <span className="text-[9px] uppercase tracking-widest opacity-70">SINXRON:</span>
-              <strong className="text-[#3366CC] dark:text-[#4DA3FF]">AKTIV</strong>
+              <strong style={{ color: 'var(--primary)' }}>AKTIV</strong>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => {
                 setCurrentPage(p => Math.max(1, p - 1));
@@ -874,17 +903,20 @@ const OperationModule: React.FC<Props> = ({
                 if (matrix) matrix.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === 1}
-              className="c1-btn c1-btn-secondary px-3 py-1.5 text-[10px] flex items-center gap-1 uppercase tracking-widest"
+              className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+              onMouseEnter={e => { if (!e.currentTarget.disabled) { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text-3)'; } }}
+              onMouseLeave={e => { if (!e.currentTarget.disabled) { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; } }}
             >
               ← Oldingi
             </button>
 
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-[#F8F9FA] dark:bg-[#2A2D33] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm">
-              <span className="text-[10px] font-bold text-gray-900 dark:text-white tabular-nums">
+            <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <span className="text-[11px] font-black tabular-nums" style={{ color: 'var(--text)' }}>
                 {currentPage}
               </span>
-              <span className="text-[10px] font-bold text-gray-400">/</span>
-              <span className="text-[10px] font-bold text-gray-400 tabular-nums">
+              <span className="text-[11px] font-bold" style={{ color: 'var(--text-3)' }}>/</span>
+              <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--text-3)' }}>
                 {totalPages || 1}
               </span>
             </div>
@@ -896,7 +928,8 @@ const OperationModule: React.FC<Props> = ({
                 if (matrix) matrix.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === totalPages || totalPages === 0}
-              className="c1-btn c1-btn-primary px-3 py-1.5 text-[10px] flex items-center gap-1 uppercase tracking-widest"
+              className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white' }}
             >
               Keyingi →
             </button>

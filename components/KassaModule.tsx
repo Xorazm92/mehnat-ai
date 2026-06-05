@@ -70,142 +70,141 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
     return (
         <div className="space-y-4 animate-fade-in pb-20">
             {/* Header & Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2 bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-5 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
-                    <div className="absolute top-[-20px] right-[-20px] opacity-[0.03] pointer-events-none">
-                        <Wallet size={160} className="text-[#3366CC]" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="md:col-span-2 dashboard-card p-6 relative overflow-hidden flex flex-col justify-between">
+                    <div className="absolute top-[-20px] right-[-20px] opacity-5 pointer-events-none">
+                        <Wallet size={200} style={{ color: 'var(--primary)' }} />
                     </div>
 
-                    <div className="relative z-10 flex justify-between items-start mb-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-sm bg-[#3366CC] flex items-center justify-center text-white shadow-sm shrink-0">
-                                <Wallet size={20} />
+                    <div className="relative z-10 flex justify-between items-start mb-8">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md shrink-0 bg-gradient-to-br from-[var(--primary)] to-[var(--primary-dark)]">
+                                <Wallet size={24} />
                             </div>
                             <div>
-                                <h2 className="text-[14px] font-bold text-gray-800 dark:text-white uppercase tracking-wider">{t.kassa || 'Kassa'}</h2>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">{selectedPeriod} DAVRI BO'YICHA</p>
+                                <h2 className="text-2xl font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{t.kassa || 'Kassa'}</h2>
+                                <p className="text-[12px] font-bold uppercase tracking-widest leading-none mt-1" style={{ color: 'var(--text-3)' }}>{selectedPeriod} DAVRI BO'YICHA</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="relative z-10 grid grid-cols-2 gap-8">
                         <div>
-                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Kutilayotgan</span>
-                            <div className="text-[22px] font-bold text-gray-800 dark:text-white tabular-nums leading-none">
-                                {stats.totalExpected.toLocaleString()} <span className="text-[10px] font-bold text-gray-400 ml-1 uppercase">sum</span>
+                            <span className="text-[11px] font-bold uppercase tracking-widest mb-2 block" style={{ color: 'var(--text-3)' }}>Kutilayotgan</span>
+                            <div className="text-3xl font-black tabular-nums leading-none" style={{ color: 'var(--text)' }}>
+                                {stats.totalExpected.toLocaleString()} <span className="text-[14px] font-bold ml-1 uppercase" style={{ color: 'var(--text-3)' }}>sum</span>
                             </div>
                         </div>
                         <div>
-                            <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-widest mb-1 block">To'langan</span>
-                            <div className="text-[22px] font-bold tabular-nums text-emerald-600 leading-none">
-                                {stats.totalPaid.toLocaleString()} <span className="text-[10px] font-bold text-emerald-600/50 ml-1 uppercase">sum</span>
+                            <span className="text-[11px] font-bold uppercase tracking-widest mb-2 block" style={{ color: 'var(--success)' }}>To'langan</span>
+                            <div className="text-3xl font-black tabular-nums leading-none" style={{ color: 'var(--success)' }}>
+                                {stats.totalPaid.toLocaleString()} <span className="text-[14px] font-bold ml-1 uppercase opacity-60">sum</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#22252B] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] p-5 flex flex-col justify-center items-center text-center shadow-sm transition-colors">
-                    <div className="relative h-24 w-24 flex items-center justify-center">
+                <div className="dashboard-card p-6 flex flex-col justify-center items-center text-center">
+                    <div className="relative h-32 w-32 flex items-center justify-center">
                         <svg className="h-full w-full transform -rotate-90">
                             <circle
                                 cx="50%" cy="50%" r="42%"
                                 fill="transparent"
-                                stroke="currentColor"
-                                strokeWidth="6"
-                                className="text-[#F0F2F5] dark:text-[#1e2025]"
+                                stroke="var(--border)"
+                                strokeWidth="8"
                             />
                             <circle
                                 cx="50%" cy="50%" r="42%"
                                 fill="transparent"
-                                stroke="#3366CC"
-                                strokeWidth="8"
+                                stroke="var(--primary)"
+                                strokeWidth="10"
                                 strokeDasharray="263.8%"
                                 strokeDashoffset={`${263.8 - (263.8 * stats.percent) / 100}%`}
                                 className="transition-all duration-1000 ease-out"
-                                strokeLinecap="square"
+                                strokeLinecap="round"
                             />
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-[18px] font-bold text-gray-800 dark:text-white tabular-nums">{stats.percent}%</span>
+                            <span className="text-3xl font-black tabular-nums" style={{ color: 'var(--text)' }}>{stats.percent}%</span>
                         </div>
                     </div>
-                    <div className="mt-4 flex flex-col items-center">
-                        <div className={`px-2 py-0.5 rounded-sm text-[8px] font-bold uppercase tracking-widest border ${stats.percent >= 90 ? 'bg-[#EBFBF0] text-emerald-600 border-[#C3E6CB]' : 'bg-[#FFF3CD] text-amber-600 border-[#FFEEBA]'}`}>
+                    <div className="mt-6 flex flex-col items-center">
+                        <div className="c1-badge" style={{ background: stats.percent >= 90 ? 'var(--success-light)' : 'var(--warning-light)', color: stats.percent >= 90 ? 'var(--success)' : 'var(--warning)' }}>
                             {stats.pendingCount} TA KORXONA QOLDI
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#3366CC] transition-colors" size={14} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={18} style={{ color: 'var(--text-3)' }} />
                     <input
                         type="text"
                         placeholder="INN YOKI FIRMA NOMI..."
-                        className="w-full rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] bg-white dark:bg-[#22252B] py-2 pl-9 pr-3 text-[11px] font-bold uppercase tracking-tight text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm transition-all"
+                        className="w-full rounded-xl py-3 pl-12 pr-4 text-[12px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20"
+                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <div className="relative group">
+                <div className="relative group min-w-[200px]">
                     <input
                         type="month"
                         value={selectedPeriod}
                         onChange={(e) => setSelectedPeriod(e.target.value)}
-                        className="rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] bg-white dark:bg-[#22252B] px-3 py-2 pr-10 text-[11px] font-bold uppercase text-[#3366CC] outline-none focus:border-[#3366CC] shadow-sm appearance-none min-w-[180px] transition-all"
+                        className="w-full rounded-xl px-4 py-3 pr-12 text-[12px] font-bold uppercase outline-none transition-all appearance-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 cursor-pointer"
+                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--primary)' }}
                     />
-                    <Clock className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-focus-within:text-[#3366CC] transition-colors" size={14} />
+                    <Clock className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" size={18} style={{ color: 'var(--text-3)' }} />
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-[#22252B] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm overflow-hidden transition-colors">
+            <div className="dashboard-card overflow-hidden">
                 <div className="overflow-x-auto scrollbar-hide">
-                    <table className="w-full text-left border-collapse c1-table">
+                    <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
-                            <tr className="bg-[#F8F9FA] dark:bg-[#1A1D23] text-[9px] font-bold uppercase text-gray-400 border-b border-[#DEE2E6] dark:border-[#3A3D44] tracking-widest">
-                                <th className="px-5 py-3">{t.companyName}</th>
-                                <th className="px-5 py-3">{t.inn}</th>
-                                <th className="px-5 py-3">{t.amount}</th>
-                                <th className="px-5 py-3 text-center">{t.status}</th>
-                                <th className="px-5 py-3 text-right">{t.actions}</th>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.companyName}</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.inn}</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.amount}</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-3)' }}>{t.status}</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right" style={{ color: 'var(--text-3)' }}>{t.actions}</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
-                            {filteredData.map((item) => (
-                                <tr key={item.id} className="hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] transition-all group">
-                                    <td className="px-5 py-2.5">
-                                        <div className="font-bold text-[11px] text-gray-800 dark:text-white uppercase tracking-tight truncate max-w-[250px]">
+                        <tbody>
+                            {filteredData.map((item, i) => (
+                                <tr key={item.id} className="transition-colors group hover:bg-[var(--primary-ghost)] cursor-pointer" style={{ backgroundColor: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                                    <td className="px-6 py-3">
+                                        <div className="font-bold text-[13px] uppercase tracking-tight truncate max-w-[250px]" style={{ color: 'var(--text)' }}>
                                             {item.name}
                                         </div>
-                                        {item.brandName && <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5 truncate max-w-[250px]">{item.brandName}</p>}
+                                        {item.brandName && <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5 truncate max-w-[250px]" style={{ color: 'var(--text-3)' }}>{item.brandName}</p>}
                                     </td>
-                                    <td className="px-5 py-2.5 font-mono text-gray-500 text-[10px] font-bold">{item.inn}</td>
-                                    <td className="px-5 py-2.5">
-                                        <div className="font-bold text-gray-800 dark:text-white text-[11px] tabular-nums">
-                                            {(item.contractAmount || 0).toLocaleString()} <span className="text-[8px] font-bold text-gray-400 ml-1 uppercase">sum</span>
+                                    <td className="px-6 py-3 font-mono text-[11px] font-bold" style={{ color: 'var(--text-2)' }}>{item.inn}</td>
+                                    <td className="px-6 py-3">
+                                        <div className="font-bold text-[13px] tabular-nums" style={{ color: 'var(--text)' }}>
+                                            {(item.contractAmount || 0).toLocaleString()} <span className="text-[10px] font-bold ml-1 uppercase" style={{ color: 'var(--text-3)' }}>sum</span>
                                         </div>
                                     </td>
-                                    <td className="px-5 py-2.5 text-center">
+                                    <td className="px-6 py-3 text-center">
                                         {item.payment ? (
-                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest border transition-colors ${item.payment.status === PaymentStatus.PAID
-                                                ? 'bg-[#EBFBF0] text-emerald-600 border-[#C3E6CB]'
-                                                : item.payment.status === PaymentStatus.PENDING
-                                                    ? 'bg-[#FFF3CD] text-amber-600 border-[#FFEEBA]'
-                                                    : 'bg-[#FEEBF0] text-rose-600 border-[#F5C6CB]'
-                                                }`}>
-                                                {item.payment.status === PaymentStatus.PAID ? <CheckCircle2 size={10} strokeWidth={3} /> : <Clock size={10} strokeWidth={3} />}
+                                            <span className={`c1-badge inline-flex items-center gap-1.5`} style={{
+                                                background: item.payment.status === PaymentStatus.PAID ? 'var(--success-light)' : item.payment.status === PaymentStatus.PENDING ? 'var(--warning-light)' : 'var(--danger-light)',
+                                                color: item.payment.status === PaymentStatus.PAID ? 'var(--success)' : item.payment.status === PaymentStatus.PENDING ? 'var(--warning)' : 'var(--danger)'
+                                            }}>
+                                                {item.payment.status === PaymentStatus.PAID ? <CheckCircle2 size={12} strokeWidth={3} /> : <Clock size={12} strokeWidth={3} />}
                                                 {item.payment.status}
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest bg-[#F8F9FA] dark:bg-[#1A1D23] text-gray-400 border border-[#DEE2E6] dark:border-[#3A3D44]">
-                                                <Clock size={10} strokeWidth={3} />
+                                            <span className="c1-badge inline-flex items-center gap-1.5" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+                                                <Clock size={12} strokeWidth={3} />
                                                 Kutilmoqda
                                             </span>
                                         )}
                                     </td>
-                                    <td className="px-5 py-2.5 text-right">
-                                        <div className="flex items-center justify-end gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
+                                    <td className="px-6 py-3 text-right">
+                                        <div className="flex items-center justify-end gap-2 opacity-20 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => {
                                                     setEditingPayment(item.payment || {
@@ -217,18 +216,24 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                                     });
                                                     setIsModalOpen(true);
                                                 }}
-                                                className="p-1.5 text-[#3366CC] hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] rounded-sm border border-transparent hover:border-[#3366CC]/30 transition-all"
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
+                                                style={{ color: 'var(--primary)' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-ghost)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                                 title="To'lov / Tahrirlash"
                                             >
-                                                <CreditCard size={14} />
+                                                <CreditCard size={16} />
                                             </button>
                                             {item.payment && (
                                                 <button
                                                     onClick={() => { if (confirm('To\'lovni o\'chirishni tasdiqlaysizmi?')) onDeletePayment(item.payment!.id); }}
-                                                    className="p-1.5 text-rose-500 hover:bg-[#FEEBF0] dark:hover:bg-[#2D1B1E] rounded-sm border border-transparent hover:border-rose-300 transition-all"
+                                                    className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
+                                                    style={{ color: 'var(--danger)' }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-light)'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                                     title="O'chirish"
                                                 >
-                                                    <Trash2 size={14} />
+                                                    <Trash2 size={16} />
                                                 </button>
                                             )}
                                         </div>
@@ -238,57 +243,61 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                         </tbody>
                     </table>
                     {filteredData.length === 0 && (
-                        <div className="py-24 flex flex-col items-center justify-center text-gray-300">
-                            <Search size={32} className="opacity-20 mb-4" />
-                            <p className="font-bold uppercase tracking-widest text-[9px] opacity-40">Ma'lumot topilmadi</p>
+                        <div className="py-24 flex flex-col items-center justify-center" style={{ color: 'var(--text-3)' }}>
+                            <Search size={48} className="opacity-20 mb-4" />
+                            <p className="font-bold uppercase tracking-[0.2em] text-[11px] opacity-60">Ma'lumot topilmadi</p>
                         </div>
                     )}
                 </div>
             </div>
 
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 transition-colors animate-fade-in">
-                    <div className="bg-[#F0F2F5] dark:bg-[#111318] w-full max-w-lg rounded-sm shadow-2xl border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden">
-                        <div className="px-5 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] flex justify-between items-center bg-white dark:bg-[#1A1D23]">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in">
+                    <div className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0">
+                        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--primary)' }}></div>
+                        <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--border)' }}>
                             <div>
-                                <h3 className="text-[11px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">To'lovni tasdiqlash</h3>
-                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
+                                <h3 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>To'lovni tasdiqlash</h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="p-1 text-gray-400 hover:text-rose-500 transition-colors">
-                                <Plus size={18} className="rotate-45" />
+                            <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--text-3)', background: 'var(--surface-2)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-light)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'var(--surface-2)'; }}>
+                                <Plus size={20} className="rotate-45" />
                             </button>
                         </div>
-                        <form onSubmit={handleSave} className="p-5 space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{t.amount}</label>
+                        <form onSubmit={handleSave} className="p-6 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.amount}</label>
                                     <div className="relative">
                                         <input
                                             type="number"
                                             value={editingPayment?.amount || ''}
                                             onChange={(e) => setEditingPayment(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                                            className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight"
+                                            className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
+                                            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                                             required
                                         />
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-bold text-gray-400 uppercase">sum</div>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase" style={{ color: 'var(--text-3)' }}>sum</div>
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{t.date}</label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.date}</label>
                                     <input
                                         type="date"
                                         value={editingPayment?.paymentDate || ''}
                                         onChange={(e) => setEditingPayment(prev => ({ ...prev, paymentDate: e.target.value }))}
-                                        className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-[#3366CC] outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--primary)' }}
                                         required
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">To'lov Holati</label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>To'lov Holati</label>
                                     <select
                                         value={editingPayment?.status || PaymentStatus.PENDING}
                                         onChange={(e) => setEditingPayment(prev => ({ ...prev, status: e.target.value as PaymentStatus }))}
-                                        className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                                     >
                                         <option value={PaymentStatus.PAID}>To'landi</option>
                                         <option value={PaymentStatus.PENDING}>Kutilmoqda</option>
@@ -296,34 +305,39 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                         <option value={PaymentStatus.OVERDUE}>Muddati o'tgan</option>
                                     </select>
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{t.comment}</label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.comment}</label>
                                     <input
                                         type="text"
                                         placeholder="IXTIYORIY IZOH..."
                                         value={editingPayment?.comment || ''}
                                         onChange={(e) => setEditingPayment(prev => ({ ...prev, comment: e.target.value }))}
-                                        className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex gap-2.5 pt-4 border-t border-[#DEE2E6] dark:border-[#3A3D44] mt-5">
+                            <div className="flex gap-3 pt-6 mt-6" style={{ borderTop: '1px solid var(--border)' }}>
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 px-4 py-2 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-bold text-[10px] text-gray-500 uppercase tracking-widest bg-white dark:bg-[#22252B] hover:bg-[#F8F9FA] transition-all"
+                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all shadow-sm"
+                                    style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text-3)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
                                 >
                                     {t.cancel}
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSaving}
-                                    className="flex-1 px-4 py-2 rounded-sm font-bold text-[10px] text-white bg-[#3366CC] hover:bg-[#2A52A3] disabled:opacity-50 transition-all shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest"
+                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-[11px] text-white transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest disabled:opacity-50"
+                                    style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))' }}
                                 >
                                     {isSaving ? (
                                         <>
-                                            <Loader2 size={12} className="animate-spin" />
+                                            <Loader2 size={16} className="animate-spin" />
                                             SAQLANMOQDA...
                                         </>
                                     ) : (

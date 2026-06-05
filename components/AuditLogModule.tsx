@@ -54,29 +54,31 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
     );
 
     return (
-        <div className="space-y-4 animate-fade-in p-6 bg-[#F8F9FA] dark:bg-[#111318] min-h-screen font-inter group/audit">
+        <div className="space-y-6 animate-fade-in p-6 bg-[var(--background)] min-h-screen">
             {/* Header */}
-            <div className="bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] p-5 rounded-sm shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-all border-b-2 border-b-[#3366CC]">
-                <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 rounded-sm bg-[#FAFBFC] dark:bg-[#111318] flex items-center justify-center border border-[#DEE2E6] dark:border-[#3A3D44] text-[#3366CC] shrink-0 shadow-inner">
-                        <Shield size={24} />
+            <div className="dashboard-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[var(--primary)] to-[var(--primary-dark)]"></div>
+                <div className="flex items-center gap-5 relative z-10">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner" style={{ background: 'var(--primary-ghost)', color: 'var(--primary)' }}>
+                        <Shield size={28} />
                     </div>
                     <div>
-                        <h2 className="text-lg font-black text-gray-800 dark:text-white leading-none uppercase tracking-tight">
+                        <h2 className="text-xl font-black leading-none uppercase tracking-widest" style={{ color: 'var(--text)' }}>
                             {t.auditLogs}
                         </h2>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5 leading-none">
+                        <p className="text-[11px] font-bold uppercase tracking-widest mt-2 leading-none" style={{ color: 'var(--text-3)' }}>
                             {t.auditSub}
                         </p>
                     </div>
                 </div>
 
-                <div className="relative w-full md:w-[400px] group/search">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within/search:text-[#3366CC] transition-colors" size={16} />
+                <div className="relative w-full md:w-[400px] group/search z-10">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-3)' }} size={16} />
                     <input
                         type="text"
                         placeholder={t.searchAudit.toUpperCase()}
-                        className="w-full pl-11 pr-4 py-2.5 bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm text-[12px] font-black text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#3366CC] transition-all shadow-inner uppercase tracking-tight"
+                        className="w-full pl-11 pr-4 py-3 rounded-xl text-[12px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 placeholder:text-[var(--text-3)] shadow-sm"
+                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -84,82 +86,86 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
             </div>
 
             {/* Audit Table */}
-            <div className="bg-white dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-md overflow-hidden transition-colors">
+            <div className="dashboard-card overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-[12px] uppercase tracking-tight">
+                    <table className="w-full text-left border-collapse text-[12px] uppercase tracking-widest">
                         <thead>
-                            <tr className="bg-[#FAFBFC] dark:bg-[#111318] border-b border-[#DEE2E6] dark:border-[#3A3D44]">
-                                <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">{t.time}</th>
-                                <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-l border-[#DEE2E6] dark:border-[#3A3D44] leading-none">{t.user}</th>
-                                <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-l border-[#DEE2E6] dark:border-[#3A3D44] leading-none">{t.action}</th>
-                                <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-l border-[#DEE2E6] dark:border-[#3A3D44] leading-none">{t.object}</th>
-                                <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-l border-[#DEE2E6] dark:border-[#3A3D44] leading-none">{t.details}</th>
+                            <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                                <th className="px-6 py-4 text-[10px] font-black leading-none" style={{ color: 'var(--text-3)' }}>{t.time}</th>
+                                <th className="px-6 py-4 text-[10px] font-black border-l leading-none" style={{ color: 'var(--text-3)', borderColor: 'var(--border)' }}>{t.user}</th>
+                                <th className="px-6 py-4 text-[10px] font-black border-l leading-none" style={{ color: 'var(--text-3)', borderColor: 'var(--border)' }}>{t.action}</th>
+                                <th className="px-6 py-4 text-[10px] font-black border-l leading-none" style={{ color: 'var(--text-3)', borderColor: 'var(--border)' }}>{t.object}</th>
+                                <th className="px-6 py-4 text-[10px] font-black border-l leading-none" style={{ color: 'var(--text-3)', borderColor: 'var(--border)' }}>{t.details}</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
+                        <tbody className="divide-y transition-colors" style={{ divideColor: 'var(--border)' }}>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-20 text-center">
+                                    <td colSpan={5} className="px-6 py-20 text-center border-t" style={{ borderColor: 'var(--border)' }}>
                                         <div className="flex flex-col items-center justify-center gap-4">
-                                            <div className="w-8 h-8 border-3 border-[#3366CC] border-t-transparent rounded-sm animate-spin"></div>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest animate-pulse">{t.loadingAudit}</p>
+                                            <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }}></div>
+                                            <p className="text-[11px] font-bold uppercase tracking-widest animate-pulse" style={{ color: 'var(--text-3)' }}>{t.loadingAudit}</p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : filteredLogs.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-20 text-center">
-                                        <div className="flex flex-col items-center justify-center gap-3 text-gray-300">
-                                            <History size={40} className="opacity-20" />
-                                            <p className="font-black uppercase tracking-[0.3em] text-[10px]">{t.noDataFound}</p>
+                                    <td colSpan={5} className="px-6 py-20 text-center border-t" style={{ borderColor: 'var(--border)' }}>
+                                        <div className="flex flex-col items-center justify-center gap-3">
+                                            <History size={48} style={{ color: 'var(--text-3)' }} className="opacity-50" />
+                                            <p className="font-bold uppercase tracking-widest text-[11px]" style={{ color: 'var(--text-3)' }}>{t.noDataFound}</p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : filteredLogs.map(log => (
-                                <tr key={log.id} className="hover:bg-[#F2F7FF] dark:hover:bg-[#1C2531] transition-all group">
-                                    <td className="px-5 py-3 whitespace-nowrap">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="font-black text-gray-800 dark:text-white text-[12px]">
+                                <tr key={log.id} className="transition-all group hover:bg-[var(--surface-2)]" style={{ borderTop: '1px solid var(--border)' }}>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex flex-col gap-1.5">
+                                            <span className="font-bold text-[12px]" style={{ color: 'var(--text)' }}>
                                                 {new Date(log.created_at).toLocaleDateString()}
                                             </span>
-                                            <span className="text-[10px] font-black text-gray-400 tabular-nums uppercase tracking-widest">
+                                            <span className="text-[10px] font-bold tabular-nums uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
                                                 {new Date(log.created_at).toLocaleTimeString()}
                                             </span>
                                         </div>
                                     </td>
-                                    <td className="px-5 py-3 border-l border-[#DEE2E6] dark:border-[#3A3D44]">
+                                    <td className="px-6 py-4 border-l" style={{ borderColor: 'var(--border)' }}>
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-sm bg-[#F8F9FA] dark:bg-[#111318] text-gray-400 flex items-center justify-center border border-[#DEE2E6] dark:border-[#3A3D44] shadow-inner group-hover:text-[#3366CC] transition-colors">
-                                                <User size={14} />
+                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors" style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}>
+                                                <User size={16} />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="font-black text-gray-800 dark:text-white truncate max-w-[150px] uppercase tracking-tight">
+                                                <span className="font-bold truncate max-w-[150px] uppercase tracking-widest text-[11px]" style={{ color: 'var(--text)' }}>
                                                     {log.profiles?.full_name || 'System Auto'}
                                                 </span>
-                                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{log.ip_address || '0.0.0.0'}</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>{log.ip_address || '0.0.0.0'}</span>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-5 py-3 border-l border-[#DEE2E6] dark:border-[#3A3D44]">
-                                        <span className={`px-3 py-1 rounded-sm text-[9px] font-black uppercase border shadow-sm tracking-widest
-                                            ${log.action.includes('delete') ? 'bg-[#FEEBF0] text-[#DC3545] border-[#DEE2E6]' :
-                                                log.action.includes('create') || log.action.includes('insert') ? 'bg-[#EBFBF0] text-[#28A745] border-[#DEE2E6]' :
-                                                    log.action.includes('update') ? 'bg-[#FFF9EB] text-[#FFC107] border-[#DEE2E6]' :
-                                                        'bg-[#F2F7FF] text-[#3366CC] border-[#DEE2E6]'}
-                                        `}>
+                                    <td className="px-6 py-4 border-l" style={{ borderColor: 'var(--border)' }}>
+                                        <span className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest inline-block" style={{
+                                            background: log.action.includes('delete') ? 'rgba(255, 107, 107, 0.1)' :
+                                                log.action.includes('create') || log.action.includes('insert') ? 'rgba(52, 208, 88, 0.1)' :
+                                                    log.action.includes('update') ? 'rgba(255, 215, 0, 0.1)' :
+                                                        'var(--primary-ghost)',
+                                            color: log.action.includes('delete') ? '#ff6b6b' :
+                                                log.action.includes('create') || log.action.includes('insert') ? '#34d058' :
+                                                    log.action.includes('update') ? '#ffd700' :
+                                                        'var(--primary)'
+                                        }}>
                                             {log.action.replace('_', ' ')}
                                         </span>
                                     </td>
-                                    <td className="px-5 py-3 border-l border-[#DEE2E6] dark:border-[#3A3D44]">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="font-black text-gray-800 dark:text-white text-[11px] tracking-tight">{log.entity_type}</span>
-                                            <div className="inline-flex items-center px-2 py-0.5 bg-[#F8F9FA] dark:bg-[#111318] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] text-[8px] font-black text-gray-400 uppercase tracking-widest w-fit">
-                                                ID: {log.entity_id.slice(0, 8)}
+                                    <td className="px-6 py-4 border-l" style={{ borderColor: 'var(--border)' }}>
+                                        <div className="flex flex-col gap-1.5">
+                                            <span className="font-bold text-[11px] tracking-widest uppercase" style={{ color: 'var(--text)' }}>{(log.entity_type || '').replace('_', ' ')}</span>
+                                            <div className="inline-flex items-center px-2 py-1 rounded border text-[9px] font-bold uppercase tracking-widest w-fit" style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text-3)' }}>
+                                                ID: {log.entity_id?.slice(0, 8) || 'N/A'}
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-5 py-3 border-l border-[#DEE2E6] dark:border-[#3A3D44]">
-                                        <div className="max-w-[220px] truncate text-[10px] font-mono font-black text-gray-500 bg-[#F8F9FA] dark:bg-[#111318] px-3 py-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] cursor-help group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors shadow-inner" title={JSON.stringify(log.details, null, 2)}>
+                                    <td className="px-6 py-4 border-l" style={{ borderColor: 'var(--border)' }}>
+                                        <div className="max-w-[250px] truncate text-[10px] font-mono font-bold px-3 py-2 rounded-lg cursor-help transition-colors" title={JSON.stringify(log.details, null, 2)} style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}>
                                             {JSON.stringify(log.details)}
                                         </div>
                                     </td>

@@ -84,6 +84,8 @@ const StaffProfileDrawer: React.FC<Props> = ({ staff, companies, assignments, op
     } as EmployeeSalarySummary;
   }, [staff.id, companies, operations, currentMonth, performances]);
 
+  const hasFetchedRef = React.useRef(false);
+
   // Fetch performance data when tab changes to finance or initially
   useEffect(() => {
     const loadPerf = async () => {
@@ -92,15 +94,17 @@ const StaffProfileDrawer: React.FC<Props> = ({ staff, companies, assignments, op
         const data = await fetchMonthlyPerformance(`${currentMonth}-01`, undefined, staff.id);
         setPerformances(data);
       } catch (e) {
-        console.error(e);
+        console.error('loadPerf error:', e);
+      } finally {
+        setLoadingSalary(false);
       }
-      setLoadingSalary(false);
     };
 
-    if (activeTab === 'finance' && performances.length === 0) {
+    if (activeTab === 'finance' && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       loadPerf();
     }
-  }, [activeTab, staff.id]);
+  }, [activeTab, staff.id, currentMonth]);
 
   const tabs = [
     { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
@@ -305,7 +309,7 @@ const StaffProfileDrawer: React.FC<Props> = ({ staff, companies, assignments, op
             <div className="space-y-6 animate-fade-in pb-10">
               {/* Live Balance Card */}
               <div className="bg-white dark:bg-[#1A1D23] p-6 rounded-sm border-2 border-[#DEE2E6] dark:border-[#3A3D44] shadow-md flex flex-col transition-colors border-t-4 border-t-[#3366CC]">
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">{(t as any).currentFiscalBalance} ({t.month.toUpperCase()})</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">{(t as any).currentFiscalBalance} ({(t.month || '').toUpperCase()})</p>
                 <div className="text-4xl font-black text-gray-800 dark:text-white mb-6 tabular-nums pb-4 border-b border-[#F0F2F5] dark:border-[#1e2025] leading-none flex items-baseline gap-3">
                   {loadingSalary ? '...' : salarySummary?.totalSalary.toLocaleString() || '0'} <span className="text-[12px] text-gray-400 uppercase tracking-widest font-black">UZS</span>
                 </div>
