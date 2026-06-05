@@ -1,17 +1,19 @@
 
-import { TaxRegime, StatsType, ReportStatus, Company, OperationEntry, Config } from './types';
+import { StatsType, ReportStatus, Company, OperationEntry, Config, TaxType } from './types';
 
 // 1-Sahifa: FIRMALAR_BAZASI (Static Data)
 // Fixed property 'accountant' to 'accountantId' and added 'createdAt'
 // Added 'accountantName' to fix property missing error
 export const COMPANIES: Company[] = [
-  { id: '1', name: 'Premium Tex GMBH', inn: '301234567', accountantId: 's1', accountantName: 'Abrorbek', taxRegime: TaxRegime.VAT, statsType: StatsType.KB1, department: 'Sanoat', createdAt: '2024-01-01' },
-  { id: '2', name: 'Zamin Qurilish LLC', inn: '302345678', accountantId: 's2', accountantName: 'Axmadjon', taxRegime: TaxRegime.TURNOVER, statsType: StatsType.MICRO, department: 'Qurilish', createdAt: '2024-01-01' },
-  { id: '3', name: 'Smart Soft Systems', inn: '303456789', accountantId: 's3', accountantName: 'Dilmurod', taxRegime: TaxRegime.VAT, statsType: StatsType.KB1, department: 'IT', createdAt: '2024-01-01' },
-  { id: '4', name: "G'alaba Tekstil", inn: '304567890', accountantId: 's1', accountantName: 'Abrorbek', taxRegime: TaxRegime.INCOME, statsType: StatsType.MEHNAT1, department: 'Yengil Sanoat', createdAt: '2024-01-01' },
-  { id: '5', name: 'Fayz Savdo Markazi', inn: '305678901', accountantId: 's2', accountantName: 'Axmadjon', taxRegime: TaxRegime.TURNOVER, statsType: StatsType.SMALL, department: 'Savdo', createdAt: '2024-01-01' },
-  { id: '6', name: 'Logistik Trans', inn: '306789012', accountantId: 's1', accountantName: 'Abrorbek', taxRegime: TaxRegime.VAT, statsType: StatsType.KB1, department: 'Logistika', createdAt: '2024-01-01' },
+  { id: '1', name: 'Premium Tex GMBH', inn: '301234567', accountantId: 's1', accountantName: 'Abrorbek', taxType: TaxType.NDS_PROFIT, statsType: StatsType.KB1, department: 'Sanoat', createdAt: '2024-01-01', isActive: true },
+  { id: '2', name: 'Zamin Qurilish LLC', inn: '302345678', accountantId: 's2', accountantName: 'Axmadjon', taxType: TaxType.TURNOVER, statsType: StatsType.MICRO, department: 'Qurilish', createdAt: '2024-01-01', isActive: true },
+  { id: '3', name: 'Smart Soft Systems', inn: '303456789', accountantId: 's3', accountantName: 'Dilmurod', taxType: TaxType.NDS_PROFIT, statsType: StatsType.KB1, department: 'IT', createdAt: '2024-01-01', isActive: true },
+  { id: '4', name: "G'alaba Tekstil", inn: '304567890', accountantId: 's1', accountantName: 'Abrorbek', taxType: TaxType.FIXED, statsType: StatsType.MEHNAT1, department: 'Yengil Sanoat', createdAt: '2024-01-01', isActive: true },
+  { id: '5', name: 'Fayz Savdo Markazi', inn: '305678901', accountantId: 's2', accountantName: 'Axmadjon', taxType: TaxType.TURNOVER, statsType: StatsType.SMALL, department: 'Savdo', createdAt: '2024-01-01', isActive: true },
+  { id: '6', name: 'Logistik Trans', inn: '306789012', accountantId: 's1', accountantName: 'Abrorbek', taxType: TaxType.NDS_PROFIT, statsType: StatsType.KB1, department: 'Logistika', createdAt: '2024-01-01', isActive: true },
 ];
+
+
 
 // 2-Sahifa: OPERATSIYA_JURNALI (Dynamic Data)
 // Added 'id' and 'updatedAt' to satisfy OperationEntry interface

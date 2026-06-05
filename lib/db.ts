@@ -345,7 +345,8 @@ const seedInitialData = () => {
     id: name.toLowerCase(),
     name,
     role: 'Buxgalter',
-    avatarColor: `hsl(${i * 137.508}, 50%, 50%)`
+    avatarColor: `hsl(${i * 137.508}, 50%, 50%)`,
+    is_active: true
   }));
 
   localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(staff));

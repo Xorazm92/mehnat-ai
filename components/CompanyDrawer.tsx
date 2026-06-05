@@ -4,7 +4,7 @@ import { translations } from '../lib/translations';
 import StatusBadge from './StatusBadge';
 import { fetchDocuments, fetchCredentials, fetchClientHistory, logCredentialAccess, fetchKPIRules, fetchCompanyKPIRules, upsertCompanyKPIRule } from '../lib/supabaseData';
 import { supabase } from '../lib/supabaseClient';
-import { X, Shield, History, FileText, Lock, Globe, Building, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Send, Check, Calculator, Trash2, Plus, ChevronRight, ArrowRight, Pencil, Save, Loader2 } from 'lucide-react';
+import { X, Shield, History, FileText, Lock, Globe, Building, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Send, Check, Calculator, Trash2, Plus, ChevronRight, ArrowRight, Pencil, Save, Loader2, Phone } from 'lucide-react';
 
 interface DrawerProps {
   company: Company | null;

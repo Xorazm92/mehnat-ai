@@ -90,7 +90,7 @@ export const OPERATION_TEMPLATES: OperationTemplate[] = [
         frequency: 'monthly'
     },
     {
-        key: 'nds_bekor',
+        key: 'nds_bekor_qilish',
         nameUz: 'NDS Bekor Qilish',
         nameRu: 'Отмена НДС',
         assignedRole: 'accountant',
@@ -98,7 +98,7 @@ export const OPERATION_TEMPLATES: OperationTemplate[] = [
         frequency: 'monthly'
     },
     {
-        key: 'it_park',
+        key: 'itpark_oylik',
         nameUz: 'IT Park Hisoboti',
         nameRu: 'Отчет IT Park',
         assignedRole: 'accountant',
@@ -207,8 +207,8 @@ export const MAP_JSON_FIELD_TO_KEY: Record<string, OperationFieldKey> = {
     'Suv solig\'i ma\'lumotnoma': 'suv_soligi',
     'Statistika': 'statistika',
     'Bo\'nak': 'bonak',
-    'NDSNI BEKOR QILISH': 'nds_bekor',
-    'IT PARK Rezidenti': 'it_park',
+    'NDSNI BEKOR QILISH': 'nds_bekor_qilish',
+    'IT PARK Rezidenti': 'itpark_oylik',
     '1c': 'one_c',
     'Tovar ostatka': 'tovar_ostatka',
     'Didox': 'didox',

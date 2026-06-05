@@ -710,6 +710,7 @@ const App: React.FC = () => {
             onLogout={handleSignOut}
             onProfileClick={() => setActiveView('cabinet')}
             notifications={notifications}
+            onMarkAsRead={handleMarkAsRead}
             onDeleteNotification={handleDeleteNotification}
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
