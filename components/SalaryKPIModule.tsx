@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Company, Staff, Language, OperationEntry } from '../types';
 import { translations } from '../lib/translations';
 import { LayoutDashboard, CheckSquare, Settings, DollarSign, Lock } from 'lucide-react';

@@ -42,7 +42,7 @@ const StaffKPIReport: React.FC<Props> = ({ kpis, staff, lang, onStaffSelect, sel
   ];
 
   const selectedOpLabel = selectedOperation === 'all'
-    ? (lang === 'uz' ? 'Umumiy Progress' : 'Общий прогресс')
+    ? (lang === 'uz' ? 'Umumiy Bajarilish' : 'Общий прогресс')
     : REPORT_COLUMNS.find(c => c.key === selectedOperation)?.label || t.annualProgress;
 
   const monthFormatted = selectedPeriod; // E.g., "2026-02"
@@ -135,13 +135,13 @@ const StaffKPIReport: React.FC<Props> = ({ kpis, staff, lang, onStaffSelect, sel
               <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">{t.accountant}</th>
               <th className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700">{t.total}</th>
               <th className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-emerald-600 dark:text-emerald-500 cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-900/10" onClick={() => onOperationChange('all')}>
-                Success
+                {lang === 'uz' ? 'Bajarildi' : 'Успешно'}
               </th>
               <th className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-rose-600 dark:text-rose-500">
-                Pending
+                {lang === 'uz' ? 'Kutilmoqda' : 'Ожидается'}
               </th>
               <th className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-amber-600 dark:text-amber-500">
-                Blocked
+                {lang === 'uz' ? 'Muammo' : 'Заблокировано'}
               </th>
               <th className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700">{selectedOpLabel} (%)</th>
               <th className="px-4 py-3 text-center text-indigo-600 dark:text-indigo-500">{t.statShort}</th>
@@ -163,7 +163,13 @@ const StaffKPIReport: React.FC<Props> = ({ kpis, staff, lang, onStaffSelect, sel
                       <div className="font-bold text-sm text-gray-800 dark:text-gray-200 block group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {k.name}
                       </div>
-                      <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">{(k as any).role || t.leadAccountant}</div>
+                      <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                        {((k as any).role === 'accountant' || !(k as any).role) ? t.role_accountant :
+                         (k as any).role === 'chief_accountant' ? t.role_chief_accountant :
+                         (k as any).role === 'manager' ? t.role_manager :
+                         (k as any).role === 'supervisor' ? t.role_supervisor :
+                         (k as any).role}
+                      </div>
                     </div>
                   </div>
                 </td>

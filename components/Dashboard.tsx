@@ -305,25 +305,6 @@ const Dashboard: React.FC<DashboardProps> = ({
           {t.excelExport}
         </button>
       </div>
-            {/* Header Actions */}
-            <div className="flex justify-between items-center mb-6 bg-white dark:bg-[#1A1D23] p-4 border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm">
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-sm bg-[#3366CC] flex items-center justify-center text-white shadow-sm">
-                        <LayoutDashboard size={20} />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-black text-gray-800 dark:text-white uppercase tracking-tight">{t.dashboard}</h2>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Tizim holati va tahlili</p>
-                    </div>
-                </div>
-                <button
-                    onClick={handleExport}
-                    className="flex items-center gap-2 bg-[#F8F9FA] dark:bg-[#111318] text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-black text-[11px] uppercase tracking-wider hover:bg-[#EBF3FF] hover:border-[#3366CC] hover:text-[#3366CC] transition-all shadow-sm active:scale-95"
-                >
-                    <Download size={14} />
-                    {t.excelExport}
-                </button>
-            </div>
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">

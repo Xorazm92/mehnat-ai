@@ -67,7 +67,7 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ companies, op
                         <CheckCircle size={22} />
                     </div>
                     <div className="text-4xl font-black text-emerald-600 mb-2 tabular-nums tracking-tighter">{Math.round(stats.completionRate)}%</div>
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Umumiy Progress</div>
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Umumiy Bajarilish</div>
                 </div>
 
                 <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-6 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden transition-colors">
