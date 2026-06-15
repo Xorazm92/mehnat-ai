@@ -1,0 +1,31 @@
+                                        {selectedCompany.taxType && <span className="px-2 py-0.5 bg-white/10 rounded-sm border border-white/20">{selectedCompany.taxType}</span>}
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-hide">
+                                    {/* Employees */}
+                                    <div>
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2 border-b border-[#DEE2E6] dark:border-[#3A3D44] pb-2">
+                                            <Users size={14} /> MAS'UL XODIMLAR
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {[
+                                                { name: selectedCompany.accountantName || '—', role: 'Buxgalter', perc: selectedCompany.accountantPerc || 20, color: 'bg-blue-600', icon: <User size={14} /> },
+                                                ...(selectedCompany.bankClientName && selectedCompany.bankClientName !== '—' ? [{ name: selectedCompany.bankClientName, role: 'Bank Klient', perc: selectedCompany.bankClientPerc || 5, color: 'bg-indigo-600', icon: <Wallet size={14} /> }] : []),
+                                                { name: selectedCompany.supervisorName || currentUserName || '—', role: 'Nazoratchi (Siz)', perc: selectedCompany.supervisorPerc || 5, color: 'bg-[#3366CC]', icon: <Shield size={14} /> },
+                                                { name: 'Ёркиной', role: 'Bosh Buxgalter', perc: selectedCompany.chiefAccountantPerc || 7, color: 'bg-gray-800', icon: <Crown size={14} /> },
+                                            ].map((emp, i) => (
+                                                <div key={i} className={`flex items-center justify-between p-3 bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm hover:border-[#3366CC] transition-all`}>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-9 h-9 rounded-sm ${emp.color} text-white flex items-center justify-center font-black text-xs shadow-sm`}>{React.cloneElement(emp.icon as React.ReactElement, { size: 16 })}</div>
+                                                        <div>
+                                                            <p className="font-black text-[12px] text-gray-800 dark:text-white uppercase tracking-tight">{emp.name}</p>
+                                                            <p className={`text-[8px] font-black uppercase tracking-widest text-gray-400 mt-0.5`}>{emp.role}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-[11px] font-black text-[#3366CC] tabular-nums">{emp.perc}%</p>
+                                                        <p className="text-[9px] font-bold text-gray-400 tabular-nums">{fmtMoney((selectedCompany.contractAmount || 0) * (emp.perc / 100))}</p>
+                                                    </div>
+                                                </div>
+                                            ))}

@@ -1,0 +1,31 @@
+      adjustments: 0,
+      totalSalary: totalBase - totalKpiPenalty + totalKpiBonus,
+      performanceDetails: performances
+    } as EmployeeSalarySummary;
+  }, [staff.id, companies, operations, currentMonth, performances]);
+
+  const hasFetchedRef = React.useRef(false);
+
+  // Fetch performance data when tab changes to finance or initially
+  useEffect(() => {
+    const loadPerf = async () => {
+      setLoadingSalary(true);
+      try {
+        const data = await fetchMonthlyPerformance(`${currentMonth}-01`, undefined, staff.id);
+        setPerformances(data);
+      } catch (e) {
+        console.error('loadPerf error:', e);
+      } finally {
+        setLoadingSalary(false);
+      }
+    };
+
+    if (activeTab === 'finance' && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      loadPerf();
+    }
+  }, [activeTab, staff.id, currentMonth]);
+
+  const tabs = [
+    { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
+    { id: 'finance', label: 'Moliya va KPI', icon: Wallet },

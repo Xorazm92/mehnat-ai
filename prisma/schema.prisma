@@ -1,0 +1,525 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =====================================================
+// ENUMS
+// =====================================================
+
+enum UserRole {
+  super_admin
+  admin
+  chief_accountant
+  supervisor
+  accountant
+  bank_manager
+}
+
+enum TaxRegime {
+  vat
+  turnover
+  fixed
+  yatt
+  income
+}
+
+enum ReportStatus {
+  accepted
+  not_submitted
+  not_required
+  in_progress
+  blocked
+  error
+  unknown
+  rejected
+  submitted
+}
+
+enum StatsType {
+  kb1
+  micro
+  mehnat1
+  small
+}
+
+enum AuditAction {
+  create
+  update
+  delete
+  login
+  logout
+}
+
+// =====================================================
+// USER (replaces Supabase auth.users + profiles)
+// =====================================================
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  fullName     String
+  passwordHash String
+  role         UserRole  @default(accountant)
+  avatarColor  String?   @default("hsl(200, 50%, 50%)")
+  phone        String?
+  department   String?
+  gender       String? // 'erkak' | 'ayol'
+  birthDate    DateTime?
+  education    String? // 'oliy' | 'orta' | 'magistratura'
+  hiredAt      DateTime?
+  firedAt      DateTime?
+  status       String?   @default("active") // 'active' | 'vacation' | 'sick'
+  rating       Int?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  assignedCompanies   Company[]            @relation("AccountantCompanies")
+  supervisedCompanies Company[]            @relation("SupervisorCompanies")
+  chiefCompanies      Company[]            @relation("ChiefAccountantCompanies")
+  auditLogs           AuditLog[]
+  notifications       Notification[]
+  contractAssignments ContractAssignment[]
+  performanceRecords  MonthlyPerformance[]
+  payrollAdjustments  PayrollAdjustment[]
+  kassaEntries        KassaEntry[]
+  expenses            Expense[]
+  attendances         Attendance[]         @relation("UserAttendance")
+  assignedInventory   InventoryItem[]      @relation("UserAssignedInventory")
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+}
+
+// =====================================================
+// COMPANY
+// =====================================================
+
+model Company {
+  id                String    @id @default(uuid())
+  name              String
+  inn               String
+  taxRegime         TaxRegime @default(vat)
+  department        String?
+  accountantId      String?
+  accountant        User?     @relation("AccountantCompanies", fields: [accountantId], references: [id], onDelete: SetNull)
+  supervisorId      String?
+  supervisor        User?     @relation("SupervisorCompanies", fields: [supervisorId], references: [id], onDelete: SetNull)
+  chiefAccountantId String?
+  chiefAccountant   User?     @relation("ChiefAccountantCompanies", fields: [chiefAccountantId], references: [id], onDelete: SetNull)
+
+  // Login credentials
+  login    String?
+  password String?
+
+  // Extended fields
+  brandName      String?
+  directorName   String?
+  directorPhone  String?
+  legalAddress   String?
+  founderName    String?
+  ownerName      String?
+  bankClientId   String?
+  bankClientName String?
+  statsType      StatsType?
+  kpiEnabled     Boolean    @default(false)
+  serverInfo     String?
+  serverName     String?
+  baseName1c     String?
+  contractAmount Decimal?   @db.Decimal(12, 2)
+  contractNumber String?
+  contractDate   DateTime?
+  paymentDay     Int?
+
+  // Tab 2: SOLIQ
+  vatCertificateDate String?
+  hasLandTax         Boolean @default(false)
+  hasWaterTax        Boolean @default(false)
+  hasPropertyTax     Boolean @default(false)
+  hasExciseTax       Boolean @default(false)
+  oneCStatus         String? // 'cloud' | 'local' | 'server' | 'none'
+  oneCLocation       String?
+
+  // Tab 6: XAVF
+  companyStatus String? @default("active")
+  riskLevel     String? @default("low")
+  riskNotes     String?
+
+  // Percentages
+  accountantPerc      Decimal? @db.Decimal(5, 2)
+  bankClientPerc      Decimal? @db.Decimal(5, 2)
+  chiefAccountantPerc Decimal? @db.Decimal(5, 2)
+  supervisorPerc      Decimal? @db.Decimal(5, 2)
+
+  // Misc
+  requiredReports      String[] // JSON array of report keys
+  activeServices       String[] // Active service keys
+  itParkResident       String?
+  isInternalContractor Boolean  @default(false)
+  notes                String?
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  monthlyReports      MonthlyReport[]
+  operations          Operation[]
+  contractAssignments ContractAssignment[]
+  documents           Document[]
+  credentials         ClientCredential[]
+
+  @@index([accountantId])
+  @@index([supervisorId])
+  @@index([inn])
+  @@index([isActive])
+}
+
+// =====================================================
+// MONTHLY REPORT (company_monthly_reports)
+// =====================================================
+
+model MonthlyReport {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period    String // "2025-02"
+
+  // All operation columns
+  bankKlient          String?
+  didox               String?
+  xatlar              String?
+  avtokameral         String?
+  myMehnat            String?
+  oneC                String?
+  pulOqimlari         String?
+  chiqadiganSoliqlar  String?
+  hisoblananOylik     String?
+  debitorKreditor     String?
+  foydaVaZarar        String?
+  tovarOstatka        String?
+  ndsBekorQilish      String?
+  aylanmaQqs          String?
+  daromadSoliq        String?
+  inps                String?
+  foydaSoliq          String?
+  moliyaviyNatija     String?
+  buxgalteriyaBalansi String?
+  statistika          String?
+  bonak               String?
+  yerSoligi           String?
+  molMulkSoligi       String?
+  suvSoligi           String?
+
+  // Statistika 2026
+  stat12Invest     String?
+  stat12Moliya     String?
+  stat12Korxona    String?
+  stat12Narx       String?
+  stat4Invest      String?
+  stat4Mehnat      String?
+  stat4KorxonaMiz  String?
+  stat4KbQurSavXiz String?
+  stat4KbSanoat    String?
+  stat1Invest      String?
+  stat1Ih          String?
+  stat1Energiya    String?
+  stat1Korxona     String?
+  stat1KorxonaTif  String?
+  stat1Moliya      String?
+  stat1Akt         String?
+
+  comment   String?
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, period])
+  @@index([companyId])
+  @@index([period])
+}
+
+// =====================================================
+// OPERATION (annual/quarterly reports)
+// =====================================================
+
+model Operation {
+  id                String       @id @default(uuid())
+  companyId         String
+  company           Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period            String // "2024 Yillik"
+  profitTaxStatus   ReportStatus @default(not_submitted)
+  form1Status       ReportStatus @default(not_submitted)
+  form2Status       ReportStatus @default(not_submitted)
+  statsStatus       ReportStatus @default(not_submitted)
+  comment           String?
+  deadlineProfitTax DateTime?
+  deadlineStats     DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([companyId, period])
+  @@index([companyId])
+  @@index([period])
+}
+
+// =====================================================
+// KPI RULES (Dynamic KPI system)
+// =====================================================
+
+model KpiRule {
+  id             String  @id @default(uuid())
+  name           String  @unique // Internal: "telegram_response"
+  nameUz         String // O'zbekcha: "Telegramda javob"
+  role           String // 'accountant' | 'bank_client' | 'supervisor' | 'all'
+  rewardPercent  Decimal @db.Decimal(5, 2)
+  penaltyPercent Decimal @db.Decimal(5, 2)
+  inputType      String // 'checkbox' | 'counter' | 'number' | 'rating'
+  category       String // 'attendance', 'telegram', 'reports'
+  description    String?
+  isActive       Boolean @default(true)
+  sortOrder      Int     @default(0)
+
+  performances MonthlyPerformance[]
+  companyRules CompanyKpiRule[]
+}
+
+model CompanyKpiRule {
+  id             String   @id @default(uuid())
+  companyId      String
+  ruleId         String
+  rule           KpiRule  @relation(fields: [ruleId], references: [id])
+  rewardPercent  Decimal? @db.Decimal(5, 2)
+  penaltyPercent Decimal? @db.Decimal(5, 2)
+  isActive       Boolean  @default(true)
+
+  @@unique([companyId, ruleId])
+}
+
+// =====================================================
+// MONTHLY PERFORMANCE (KPI entries)
+// =====================================================
+
+model MonthlyPerformance {
+  id                     String    @id @default(uuid())
+  month                  String // '2026-02-01'
+  companyId              String
+  employeeId             String
+  employee               User      @relation(fields: [employeeId], references: [id])
+  ruleId                 String
+  rule                   KpiRule   @relation(fields: [ruleId], references: [id])
+  value                  Decimal   @db.Decimal(10, 2)
+  calculatedScore        Decimal   @db.Decimal(10, 2)
+  rewardPercentOverride  Decimal?  @db.Decimal(5, 2)
+  penaltyPercentOverride Decimal?  @db.Decimal(5, 2)
+  source                 String? // 'employee' | 'supervisor' | 'chief' | 'system'
+  status                 String    @default("draft")
+  submittedBy            String?
+  submittedAt            DateTime?
+  approvedBy             String?
+  approvedAt             DateTime?
+  rejectedReason         String?
+  notes                  String?
+  changeReason           String?
+  recordedAt             DateTime  @default(now())
+
+  @@index([employeeId])
+  @@index([companyId])
+  @@index([month])
+}
+
+// =====================================================
+// PAYROLL ADJUSTMENT
+// =====================================================
+
+model PayrollAdjustment {
+  id             String    @id @default(uuid())
+  month          String
+  employeeId     String
+  employee       User      @relation(fields: [employeeId], references: [id])
+  adjustmentType String // 'bonus' | 'avans' | 'jarima' | 'payment' | 'manual' | 'other'
+  amount         Decimal   @db.Decimal(12, 2)
+  reason         String
+  approvedBy     String?
+  approvedAt     DateTime?
+  isApproved     Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  createdBy      String?
+}
+
+// =====================================================
+// CONTRACT ASSIGNMENT
+// =====================================================
+
+model ContractAssignment {
+  id          String    @id @default(uuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  role        String // 'accountant' | 'controller' | 'bank_manager' | 'chief' | 'chief_accountant'
+  salaryType  String // 'percent' | 'fixed'
+  salaryValue Decimal   @db.Decimal(12, 2)
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([companyId])
+  @@index([userId])
+}
+
+// =====================================================
+// CLIENT CREDENTIALS
+// =====================================================
+
+model ClientCredential {
+  id                String   @id @default(uuid())
+  companyId         String
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  serviceName       String // 'soliq' | 'didox' | 'my_mehnat' | 'bank_client'
+  loginId           String
+  encryptedPassword String
+  keyFilePath       String?
+  notes             String?
+  updatedBy         String?
+  updatedAt         DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// =====================================================
+// KASSA
+// =====================================================
+
+model KassaEntry {
+  id          String   @id @default(uuid())
+  companyId   String?
+  type        String // 'income' | 'expense'
+  category    String
+  amount      Decimal  @db.Decimal(12, 2)
+  description String?
+  date        DateTime
+  createdAt   DateTime @default(now())
+  createdBy   String?
+  user        User?    @relation(fields: [createdBy], references: [id])
+
+  @@index([date])
+  @@index([type])
+}
+
+// =====================================================
+// EXPENSE
+// =====================================================
+
+model Expense {
+  id          String   @id @default(uuid())
+  amount      Decimal  @db.Decimal(12, 2)
+  date        DateTime
+  category    String
+  description String?
+  createdAt   DateTime @default(now())
+  createdBy   String?
+  user        User?    @relation(fields: [createdBy], references: [id])
+
+  @@index([date])
+  @@index([category])
+}
+
+// =====================================================
+// AUDIT LOG
+// =====================================================
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    AuditAction
+  tableName String
+  recordId  String?
+  oldData   Json?
+  newData   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime    @default(now())
+
+  @@index([userId])
+  @@index([tableName])
+  @@index([createdAt])
+}
+
+// =====================================================
+// NOTIFICATION
+// =====================================================
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // 'deadline' | 'status_change' | 'kpi_alert' | 'system' | 'approval_request'
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// =====================================================
+// DOCUMENT
+// =====================================================
+
+model Document {
+  id         String   @id @default(uuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name       String
+  filePath   String
+  fileSize   Int?
+  mimeType   String?
+  uploadedBy String?
+  uploadedAt DateTime @default(now())
+
+  @@index([companyId])
+}
+
+// =====================================================
+// ATTENDANCE & INVENTORY
+// =====================================================
+
+model Attendance {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation("UserAttendance", fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  checkIn   DateTime?
+  checkOut  DateTime?
+  status    String    @default("present") // present, absent, late, excused
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([date])
+}
+
+model InventoryItem {
+  id           String   @id @default(uuid())
+  name         String
+  serialNumber String?  @unique
+  status       String   @default("available") // available, assigned, maintenance, retired
+  condition    String   @default("good")
+  assignedToId String?
+  assignedTo   User?    @relation("UserAssignedInventory", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([assignedToId])
+}

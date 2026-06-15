@@ -1,0 +1,31 @@
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[1000px]">
+          <thead>
+            <tr className="bg-gray-100 dark:bg-gray-800 text-[10px] font-bold uppercase text-gray-500 border-b border-gray-200 dark:border-gray-700">
+              <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">{t.accountant}</th>
+              <th className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700">{t.total}</th>
+              <th className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-emerald-600 dark:text-emerald-500 cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-900/10" onClick={() => onOperationChange('all')}>
+                {lang === 'uz' ? 'Bajarildi' : 'Успешно'}
+              </th>
+              <th className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-rose-600 dark:text-rose-500">
+                {lang === 'uz' ? 'Kutilmoqda' : 'Ожидается'}
+              </th>
+              <th className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-amber-600 dark:text-amber-500">
+                {lang === 'uz' ? 'Muammo' : 'Заблокировано'}
+              </th>
+              <th className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700">{selectedOpLabel} (%)</th>
+              <th className="px-4 py-3 text-center text-indigo-600 dark:text-indigo-500">{t.statShort}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+            {kpis.map((k, idx) => (
+              <tr
+                key={staffKey(k, idx)}
+                className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer group"
+                onClick={() => handleStaffClick(k.name)}
+              >
+                <td className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded shrink-0 bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-sm font-bold text-indigo-600 dark:text-indigo-400 group-hover:text-white group-hover:bg-indigo-500 transition-colors">
+                      {k.name.charAt(0)}
