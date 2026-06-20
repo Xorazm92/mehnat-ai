@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { revalidateTag } from "next/cache";
 import type { ReportStatus } from "@prisma/client";
 
 // =====================================================
@@ -49,11 +50,13 @@ export async function upsertMonthlyReport(data: {
 
   const { companyId, period, ...fields } = data;
 
-  return prisma.monthlyReport.upsert({
+  const result = await prisma.monthlyReport.upsert({
     where: { companyId_period: { companyId, period } },
     create: { companyId, period, ...fields },
     update: fields,
   });
+  revalidateTag("operations", "max");
+  return result;
 }
 
 export async function clearColumnForPeriod(period: string, colKey: string) {
@@ -78,6 +81,7 @@ export async function clearColumnForPeriod(period: string, colKey: string) {
   );
   
   await prisma.$transaction(updates);
+  revalidateTag("operations", "max");
   return { success: true };
 }
 
@@ -146,11 +150,13 @@ export async function upsertOperation(data: {
 
   const { companyId, period, ...fields } = data;
 
-  return prisma.operation.upsert({
+  const result = await prisma.operation.upsert({
     where: { companyId_period: { companyId, period } },
     create: { companyId, period, ...fields },
     update: fields,
   });
+  revalidateTag("operations", "max");
+  return result;
 }
 
 export async function getOperationSummary(period?: string) {

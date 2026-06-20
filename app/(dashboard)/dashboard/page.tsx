@@ -1,8 +1,10 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getCompanyStats } from "@/server/companies";
-import { getOperationSummary } from "@/server/operations";
-import { getUnreadCount } from "@/server/audit";
+import {
+  getCachedCompanyStats,
+  getCachedOperationSummary,
+  getCachedUnreadCount,
+} from "@/lib/cached-queries";
 import {
   getAdminCabinetData,
   getSupervisorCabinetData,
@@ -16,6 +18,7 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
+  const userId = (session.user as any)?.id;
   const userRole = (session.user as any)?.role as string;
   const userName = session.user?.name || "";
 
@@ -99,10 +102,10 @@ export default async function DashboardPage() {
     );
   }
 
-  // ─── Fallback: umumiy dashboard ───────────────────────────
+  // ─── Fallback: umumiy dashboard — CACHED ──────────────────
   const [companyStats, operationStats, unreadNotifs] = await Promise.all([
-    getCompanyStats().catch(() => ({ total: 0, byTaxRegime: [], byRisk: [] })),
-    getOperationSummary().catch(() => ({
+    getCachedCompanyStats(userId, userRole).catch(() => ({ total: 0, byTaxRegime: [], byRisk: [] })),
+    getCachedOperationSummary(userId, userRole).catch(() => ({
       total: 0,
       accepted: 0,
       rejected: 0,
@@ -110,7 +113,7 @@ export default async function DashboardPage() {
       inProgress: 0,
       pending: 0,
     })),
-    getUnreadCount().catch(() => 0),
+    getCachedUnreadCount(userId).catch(() => 0),
   ]);
 
   const progressPercent =

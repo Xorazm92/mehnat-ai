@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole, isAdminRole } from "@/lib/permissions";
+import { revalidateTag } from "next/cache";
 import type { TaxRegime, StatsType } from "@prisma/client";
 
 export async function getCompanies() {
@@ -98,7 +99,9 @@ export async function createCompany(data: {
   const role = (session.user as any).role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
-  return prisma.company.create({ data });
+  const result = await prisma.company.create({ data });
+  revalidateTag("companies", "max");
+  return result;
 }
 
 export async function updateCompany(
@@ -150,7 +153,9 @@ export async function updateCompany(
     throw new Error("Forbidden");
   }
 
-  return prisma.company.update({ where: { id }, data });
+  const result = await prisma.company.update({ where: { id }, data });
+  revalidateTag("companies", "max");
+  return result;
 }
 
 export async function deleteCompany(id: string) {
@@ -160,10 +165,12 @@ export async function deleteCompany(id: string) {
   const role = (session.user as any).role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
-  return prisma.company.update({
+  const result = await prisma.company.update({
     where: { id },
     data: { isActive: false },
   });
+  revalidateTag("companies", "max");
+  return result;
 }
 
 export async function getCompanyStats() {

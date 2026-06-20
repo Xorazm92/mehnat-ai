@@ -1,8 +1,13 @@
-import { getCompanies } from "@/server/companies";
+import { auth } from "@/lib/auth";
+import { getCachedCompanies } from "@/lib/cached-queries";
 import KassaClient from "./KassaClient";
 
 export default async function KassaPage() {
-  const companies = await getCompanies();
+  const session = await auth();
+  const userId = (session?.user as any)?.id;
+  const userRole = (session?.user as any)?.role || "employee";
+
+  const companies = await getCachedCompanies(userId, userRole);
 
   return (
     <div className="h-full">

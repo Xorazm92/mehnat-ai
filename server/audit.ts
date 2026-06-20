@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
+import { revalidateTag } from "next/cache";
 import type { AuditAction } from "@prisma/client";
 
 export async function getAuditLogs(filters?: {
@@ -88,13 +89,15 @@ export async function markNotificationsRead(ids?: string[]) {
 
   const userId = (session.user as any).id;
 
-  return prisma.notification.updateMany({
+  const result = await prisma.notification.updateMany({
     where: {
       userId,
       ...(ids ? { id: { in: ids } } : {}),
     },
     data: { isRead: true },
   });
+  revalidateTag("notifications", "max");
+  return result;
 }
 
 export async function createNotification(data: {
@@ -105,7 +108,9 @@ export async function createNotification(data: {
   link?: string;
 }) {
   // Internal server-side only — no auth check (called from server actions)
-  return prisma.notification.create({ data });
+  const result = await prisma.notification.create({ data });
+  revalidateTag("notifications", "max");
+  return result;
 }
 
 export async function getUnreadCount() {

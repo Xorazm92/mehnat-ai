@@ -1,17 +1,16 @@
 import { auth } from "@/lib/auth";
-import { getCompanies } from "@/server/companies";
-import { getUsers } from "@/server/users";
-import { getOperations } from "@/server/operations";
+import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
 import KPIClient from "./KPIClient";
 
 export default async function KpiPage() {
   const session = await auth();
+  const userId = (session?.user as any)?.id;
   const userRole = (session?.user as any)?.role || "employee";
 
   const [companies, staff, operations] = await Promise.all([
-    getCompanies(),
-    getUsers(),
-    getOperations(),
+    getCachedCompanies(userId, userRole),
+    getCachedUsers(),
+    getCachedOperations(userId, userRole),
   ]);
 
   const mappedStaff = staff.map(u => ({

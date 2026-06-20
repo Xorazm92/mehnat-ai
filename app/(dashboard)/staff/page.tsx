@@ -1,17 +1,17 @@
 import { auth } from "@/lib/auth";
-import { getUsers } from "@/server/users";
-import { getCompanies } from "@/server/companies";
-import { getOperations } from "@/server/operations";
+import { getCachedUsers, getCachedCompanies, getCachedOperations } from "@/lib/cached-queries";
 import StaffClient from "./StaffClient";
 
 export default async function StaffPage() {
   const session = await auth();
+  const userId = (session?.user as any)?.id;
+  const userRole = (session?.user as any)?.role || "employee";
 
-  // Parallelda ma'lumotlarni olish
+  // Parallelda ma'lumotlarni cache'dan olish
   const [staff, companies, operations] = await Promise.all([
-    getUsers(),
-    getCompanies(),
-    getOperations(),
+    getCachedUsers(),
+    getCachedCompanies(userId, userRole),
+    getCachedOperations(userId, userRole),
   ]);
 
   // Convert schema objects to frontend format mapping

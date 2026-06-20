@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { revalidateTag } from "next/cache";
 import bcrypt from "bcryptjs";
 import type { UserRole } from "@/lib/permissions";
 
@@ -87,7 +88,7 @@ export async function createUser(data: {
 
   const passwordHash = await bcrypt.hash(data.password, 12);
 
-  return prisma.user.create({
+  const result = await prisma.user.create({
     data: {
       email: data.email,
       fullName: data.fullName,
@@ -99,6 +100,8 @@ export async function createUser(data: {
       avatarColor: data.avatarColor || `hsl(${Math.floor(Math.random() * 360)}, 60%, 50%)`,
     },
   });
+  revalidateTag("users", "max");
+  return result;
 }
 
 export async function updateUser(
@@ -130,10 +133,12 @@ export async function updateUser(
   // Can only update own profile unless admin
   if (id !== userId && !isSeniorRole(role)) throw new Error("Forbidden");
 
-  return prisma.user.update({
+  const result = await prisma.user.update({
     where: { id },
     data,
   });
+  revalidateTag("users", "max");
+  return result;
 }
 
 export async function changePassword(
@@ -164,8 +169,10 @@ export async function deactivateUser(id: string) {
   const role = (session.user as any).role as string;
   if (!["super_admin", "admin"].includes(role)) throw new Error("Forbidden");
 
-  return prisma.user.update({
+  const result = await prisma.user.update({
     where: { id },
     data: { isActive: false, firedAt: new Date() },
   });
+  revalidateTag("users", "max");
+  return result;
 }
