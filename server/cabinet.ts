@@ -92,9 +92,14 @@ export async function getBankCabinetData() {
     prisma.company.findMany({
       where: {
         isActive: true,
-        contractAssignments: {
-          some: { userId, isActive: true, role: { in: ["bank_manager", "bank_client"] } },
-        },
+        OR: [
+          { bankClientId: userId },
+          {
+            contractAssignments: {
+              some: { userId, isActive: true, role: { in: ["bank_manager", "bank_client"] } },
+            },
+          },
+        ],
       },
       select: {
         id: true,
