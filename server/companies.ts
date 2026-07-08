@@ -28,6 +28,8 @@ export async function getCompanies() {
         accountant: { select: { id: true, fullName: true, avatarColor: true } },
         supervisor: { select: { id: true, fullName: true } },
         chiefAccountant: { select: { id: true, fullName: true } },
+        bankClient: { select: { id: true, fullName: true } },
+        departmentRef: { select: { id: true, name: true } },
       },
       orderBy: { name: "asc" },
     });
@@ -38,12 +40,14 @@ export async function getCompanies() {
     return prisma.company.findMany({
       where: {
         isActive: true,
-        contractAssignments: {
-          some: { userId, isActive: true, role: "bank_manager" },
-        },
+        OR: [
+          { bankClientId: userId },
+          { contractAssignments: { some: { userId, isActive: true, role: "bank_manager" } } },
+        ],
       },
       include: {
         accountant: { select: { id: true, fullName: true, avatarColor: true } },
+        bankClient: { select: { id: true, fullName: true } },
       },
       orderBy: { name: "asc" },
     });
@@ -72,6 +76,8 @@ export async function getCompanyById(id: string) {
       accountant: { select: { id: true, fullName: true, avatarColor: true } },
       supervisor: { select: { id: true, fullName: true } },
       chiefAccountant: { select: { id: true, fullName: true } },
+      bankClient: { select: { id: true, fullName: true, role: true } },
+      departmentRef: { select: { id: true, name: true } },
       contractAssignments: {
         where: { isActive: true },
         include: { user: { select: { id: true, fullName: true, role: true } } },
@@ -154,6 +160,11 @@ function sanitizeCompanyData(raw: Record<string, unknown>) {
   if (raw.chiefAccountantPerc !== undefined) data.chiefAccountantPerc = raw.chiefAccountantPerc !== null ? Number(raw.chiefAccountantPerc) : null;
   if (raw.supervisorPerc !== undefined) data.supervisorPerc = raw.supervisorPerc !== null ? Number(raw.supervisorPerc) : null;
 
+  if (raw.accountantSum !== undefined) data.accountantSum = raw.accountantSum !== null ? Number(raw.accountantSum) : null;
+  if (raw.bankClientSum !== undefined) data.bankClientSum = raw.bankClientSum !== null ? Number(raw.bankClientSum) : null;
+  if (raw.chiefAccountantSum !== undefined) data.chiefAccountantSum = raw.chiefAccountantSum !== null ? Number(raw.chiefAccountantSum) : null;
+  if (raw.supervisorSum !== undefined) data.supervisorSum = raw.supervisorSum !== null ? Number(raw.supervisorSum) : null;
+
   if (raw.requiredReports !== undefined) {
     data.requiredReports = Array.isArray(raw.requiredReports) ? raw.requiredReports.map(String) : [];
   }
@@ -187,6 +198,7 @@ function sanitizeCompanyData(raw: Record<string, unknown>) {
   if (raw.supervisorId !== undefined) data.supervisorId = raw.supervisorId ? String(raw.supervisorId) : null;
   if (raw.chiefAccountantId !== undefined) data.chiefAccountantId = raw.chiefAccountantId ? String(raw.chiefAccountantId) : null;
   if (raw.bankClientId !== undefined) data.bankClientId = raw.bankClientId ? String(raw.bankClientId) : null;
+  if (raw.departmentId !== undefined) data.departmentId = raw.departmentId ? String(raw.departmentId) : null;
 
   return data;
 }

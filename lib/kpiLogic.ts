@@ -221,7 +221,7 @@ export const calculateCompanySalaries = (
     };
 
     // accountant
-    calculateForRole('accountant', company.accountantId, company.accountantName, company.accountantPerc);
+    calculateForRole('accountant', company.accountantId, company.accountantName, company.accountantPerc, company.accountantSum);
 
     // bank_manager
     calculateForRole('bank_manager', company.bankClientId, company.bankClientName, company.bankClientPerc, company.bankClientSum);
@@ -235,7 +235,7 @@ export const calculateCompanySalaries = (
     }
 
     // supervisor
-    calculateForRole('supervisor', company.supervisorId, company.supervisorName, company.supervisorPerc);
+    calculateForRole('supervisor', company.supervisorId, company.supervisorName, company.supervisorPerc, company.supervisorSum);
 
     return results;
 };

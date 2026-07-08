@@ -163,11 +163,13 @@ export interface Company {
   chiefAccountantId?: string;
   chiefAccountantName?: string;
   accountantPerc?: number;
+  accountantSum?: number;
   bankClientPerc?: number; // New from JSON: "% банк клиент"
   bankClientSum?: number;
   chiefAccountantPerc?: number; // New from JSON: "%Bosh buxgalter Yorqinoy"
   chiefAccountantSum?: number;
   supervisorPerc?: number;
+  supervisorSum?: number;
   statsType?: StatsType;
   itParkResident?: boolean | string; // Changed to allow "oylik/kvartalni" string
   statReports?: string[];

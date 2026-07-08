@@ -29,6 +29,8 @@ const _getCachedCompaniesForSenior = unstable_cache(
         accountant: { select: { id: true, fullName: true, avatarColor: true } },
         supervisor: { select: { id: true, fullName: true } },
         chiefAccountant: { select: { id: true, fullName: true } },
+        bankClient: { select: { id: true, fullName: true } },
+        departmentRef: { select: { id: true, name: true } },
       },
       orderBy: { name: "asc" },
     });
@@ -42,12 +44,14 @@ const _getCachedCompaniesForBankManager = unstable_cache(
     return prisma.company.findMany({
       where: {
         isActive: true,
-        contractAssignments: {
-          some: { userId, isActive: true, role: "bank_manager" },
-        },
+        OR: [
+          { bankClientId: userId },
+          { contractAssignments: { some: { userId, isActive: true, role: "bank_manager" } } },
+        ],
       },
       include: {
         accountant: { select: { id: true, fullName: true, avatarColor: true } },
+        bankClient: { select: { id: true, fullName: true } },
       },
       orderBy: { name: "asc" },
     });
