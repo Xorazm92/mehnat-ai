@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Company, OperationEntry, Language, Staff, Payment, Expense } from '@/types';
 import {
-  LayoutDashboard,
   ArrowUpRight,
   ArrowDownRight,
   Users,
@@ -135,7 +134,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       if (allZero) {
         return Array.from({ length: 6 }, (_, i) => ({ value: 10 + Math.sin(i) * 2 }));
       }
-      return realValues.map((v, i) => ({
+      return realValues.map((v) => ({
         value: v === 0 ? (baseline > 0 ? baseline * 0.1 : 5) : v
       }));
     };
@@ -265,21 +264,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 p-2 rounded shadow-md">
-          <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">{payload[0].payload.name}</p>
-          <p className="text-[13px] font-bold text-gray-800 dark:text-white">
-            {payload[0].value.toLocaleString()}
-            <span className="text-[10px] text-gray-400 ml-1">uzs</span>
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   const CARD_ACCENTS = ['#6366F1','#10B981','#EF4444','#3B82F6','#8B5CF6','#F59E0B'];
   const CARD_ICONS_BG = [
     'rgba(99,102,241,0.1)','rgba(16,185,129,0.1)','rgba(239,68,68,0.1)',
@@ -292,14 +276,14 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{t.dashboard}</h2>
-          <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-2)' }}>Tizim holati va tahlili</p>
+          <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Tizim holati va tahlili</p>
         </div>
         <button
           onClick={handleExport}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-all"
-          style={{ background: 'var(--primary)', color: '#fff' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-dark)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'var(--primary)')}
+          style={{ background: 'var(--accent-blue)', color: '#fff' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-blue-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent-blue)')}
         >
           <Download size={14} />
           {t.excelExport}
@@ -320,7 +304,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
                 <div className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide"
                   style={{
-                    background: stat.isUp ? 'var(--success-light)' : 'var(--danger-light)',
+                    background: stat.isUp ? 'var(--success-bg)' : 'var(--danger-bg)',
                     color: stat.isUp ? 'var(--success)' : 'var(--danger)',
                   }}>
                   {stat.isUp ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
@@ -329,7 +313,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
 
               <div className="relative z-10">
-                <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-3)' }}>
+                <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
                   {stat.label}
                 </p>
                 <div className="flex items-baseline gap-1">
@@ -337,7 +321,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
                     {i === 5 && '%'}
                   </h3>
-                  {i < 3 && <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>uzs</span>}
+                  {i < 3 && <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>uzs</span>}
                 </div>
               </div>
 
@@ -374,23 +358,23 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Report Status Bar Chart */}
         <div className="xl:col-span-2 dashboard-card flex flex-col">
-          <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
             <div className="flex items-center gap-3">
               <div className="w-1.5 h-6 rounded-full bg-indigo-500"></div>
               <h3 className="text-[13px] font-bold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Hisobotlar holati</h3>
             </div>
-            <Info size={16} style={{ color: 'var(--text-3)' }} />
+            <Info size={16} style={{ color: 'var(--text-muted)' }} />
           </div>
           <div className="p-5 h-[340px] w-full">
             {mounted && (
               <ResponsiveContainer width="100%" height={340}>
                 <BarChart data={stats.reportStatusData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-2)', fontSize: 11, fontWeight: 600 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-3)', fontSize: 11, fontWeight: 600 }} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11, fontWeight: 600 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 600 }} />
                   <Tooltip
-                    cursor={{ fill: 'var(--primary-ghost)' }}
-                    contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, boxShadow: 'var(--shadow-md)' }}
+                    cursor={{ fill: 'var(--accent-blue-light)' }}
+                    contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, boxShadow: 'var(--shadow-md)' }}
                   />
                   <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '11px', fontWeight: 600 }} />
                   <Bar dataKey={t.completedStatus} stackId="a" fill="var(--success)" radius={[0, 0, 4, 4]} barSize={32} />
@@ -405,7 +389,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Soliq Tahlili */}
         <div className="dashboard-card flex flex-col">
-          <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: '1px solid var(--card-border)' }}>
             <div className="w-1.5 h-6 rounded-full bg-rose-500"></div>
             <h3 className="text-[13px] font-bold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Soliq Tahlili</h3>
           </div>
@@ -415,10 +399,10 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <BarChart data={stats.taxStatusData} margin={{ top: 0, right: 10, left: -10, bottom: 0 }} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
                   <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-2)', fontSize: 10, fontWeight: 600 }} width={90} />
+                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 10, fontWeight: 600 }} width={90} />
                   <Tooltip
-                    cursor={{ fill: 'var(--primary-ghost)' }}
-                    contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, boxShadow: 'var(--shadow-sm)' }}
+                    cursor={{ fill: 'var(--accent-blue-light)' }}
+                    contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, boxShadow: 'var(--shadow-sm)' }}
                   />
                   <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', fontSize: '11px', fontWeight: 600 }} />
                   <Bar dataKey={t.completedStatus} stackId="a" fill="var(--success)" radius={[4, 0, 0, 4]} barSize={14} />
@@ -431,7 +415,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Tax Regime Pie */}
         <div className="dashboard-card flex flex-col">
-          <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: '1px solid var(--card-border)' }}>
             <div className="w-1.5 h-6 rounded-full bg-emerald-500"></div>
             <h3 className="text-[13px] font-bold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Soliq rejimi</h3>
           </div>
@@ -445,7 +429,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     outerRadius={95}
                     paddingAngle={6}
                     dataKey="value"
-                    stroke="var(--surface)"
+                    stroke="var(--card-bg)"
                     strokeWidth={3}
                   >
                     {stats.taxRegimeData.map((entry, index) => (
@@ -453,7 +437,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, boxShadow: 'var(--shadow-sm)' }}
+                    contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, boxShadow: 'var(--shadow-sm)' }}
                   />
                   <Legend verticalAlign="bottom" height={40} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 600, paddingTop: '20px' }} />
                 </PieChart>

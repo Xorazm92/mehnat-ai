@@ -32,7 +32,7 @@ export async function createKpiRule(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
   return prisma.kpiRule.create({ data });
@@ -49,7 +49,7 @@ export async function updateKpiRule(id: string, data: Partial<{
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
   return prisma.kpiRule.update({ where: { id }, data });
@@ -59,7 +59,7 @@ export async function deleteKpiRule(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
   return prisma.kpiRule.delete({ where: { id } });
@@ -73,8 +73,8 @@ export async function getMonthlyPerformance(month: string, employeeId?: string) 
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role as string;
+  const userId = session.user.id;
+  const role = session.user.role as string;
 
   // Non-senior users can only see their own
   const targetEmployeeId = isSeniorRole(role) ? employeeId : userId;
@@ -105,7 +105,7 @@ export async function upsertPerformance(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const submittedBy = (session.user as any).id;
+  const submittedBy = session.user.id;
 
   return prisma.monthlyPerformance.create({
     data: {
@@ -121,7 +121,7 @@ export async function approvePerformance(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!["super_admin", "admin", "chief_accountant"].includes(role)) {
     throw new Error("Forbidden");
   }
@@ -130,7 +130,7 @@ export async function approvePerformance(id: string) {
     where: { id },
     data: {
       status: "approved",
-      approvedBy: (session.user as any).id,
+      approvedBy: session.user.id,
       approvedAt: new Date(),
     },
   });
@@ -144,7 +144,7 @@ export async function getEmployeeKpiSummary(month: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
   const performances = await prisma.monthlyPerformance.findMany({
@@ -156,7 +156,14 @@ export async function getEmployeeKpiSummary(month: string) {
   });
 
   // Group by employee
-  const byEmployee: Record<string, any> = {};
+  interface EmpKpiSummary {
+    employeeId: string;
+    employeeName: string;
+    employeeRole: (typeof performances)[number]["employee"]["role"];
+    totalScore: number;
+    entries: typeof performances;
+  }
+  const byEmployee: Record<string, EmpKpiSummary> = {};
   for (const p of performances) {
     const eid = p.employeeId;
     if (!byEmployee[eid]) {
@@ -196,7 +203,7 @@ export async function upsertCompanyKpiRule(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!["super_admin", "admin", "supervisor"].includes(role)) {
     throw new Error("Forbidden");
   }

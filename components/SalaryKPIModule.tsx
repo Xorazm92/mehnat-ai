@@ -1,8 +1,7 @@
 "use client";
 import React, { useState, useMemo } from 'react';
 import { Company, Staff, Language, OperationEntry } from '@/types';
-import { translations } from '@/lib/translations';
-import { LayoutDashboard, CheckSquare, Settings, DollarSign, Lock } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Settings, DollarSign } from 'lucide-react';
 
 // Sub-components
 import NazoratchiChecklist from './NazoratchiChecklist';
@@ -20,7 +19,6 @@ interface Props {
 }
 
 const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, lang, currentUserId = 'user-1', currentUserRole = 'manager' }) => {
-    const t = translations[lang];
     // Default tab based on role could be set here
     const [activeTab, setActiveTab] = useState<'nazoratchi' | 'employee' | 'payroll' | 'rules'>('nazoratchi');
 
@@ -86,7 +84,7 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
     if (visibleTabs.length === 0) {
         return (
             <div className="p-10 text-center text-slate-400">
-                Sizda bu bo'limni ko'rish huquqi yo'q.
+                Sizda bu bo&apos;limni ko&apos;rish huquqi yo&apos;q.
             </div>
         );
     }

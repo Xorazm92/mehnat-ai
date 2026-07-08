@@ -11,7 +11,7 @@ export async function getAccountantCabinetData() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
+  const userId = session.user.id;
   const currentMonth = new Date().toISOString().slice(0, 7); // "2026-06"
 
   const [companies, recentPerformance, adjustments] = await Promise.all([
@@ -84,7 +84,7 @@ export async function getBankCabinetData() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
+  const userId = session.user.id;
   const currentMonth = new Date().toISOString().slice(0, 7);
 
   const [assignedCompanies, kassaEntries, myPerformance] = await Promise.all([
@@ -158,7 +158,7 @@ export async function getSupervisorCabinetData() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
+  const userId = session.user.id;
   const currentMonth = new Date().toISOString().slice(0, 7);
 
   const [supervisedCompanies, accountants, pendingKpi, riskStats] = await Promise.all([
@@ -241,7 +241,7 @@ export async function getChiefAccountantCabinetData() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
+  const userId = session.user.id;
   const currentMonth = new Date().toISOString().slice(0, 7);
 
   const [chiefCompanies, teamMembers, pendingApprovals, payrollSummary] = await Promise.all([
@@ -337,7 +337,7 @@ export async function getAdminCabinetData() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
   const [userStats, companyStats, recentAudit, systemHealth] = await Promise.all([

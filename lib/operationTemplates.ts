@@ -1,4 +1,4 @@
-import { OperationTemplate, OperationFieldKey } from '@/types';
+import { OperationTemplate, OperationFieldKey, OperationEntry } from '@/types';
 
 export const OPERATION_TEMPLATES: OperationTemplate[] = [
     {
@@ -194,6 +194,92 @@ export const OPERATION_TEMPLATES: OperationTemplate[] = [
         frequency: 'monthly'
     }
 ];
+
+// OperationFieldKey (snake_case, frontend/UI) <-> MonthlyReport ustun nomi (camelCase, Prisma).
+// Eslatma: "hisoblangan_oylik" -> "hisoblananOylik" — DB ustuni tarixiy sabablarga ko'ra
+// shu nom bilan yaratilgan (mavjud ma'lumotlarni yo'qotmaslik uchun o'zgartirilmadi).
+export const FIELD_TO_DB_COLUMN: Record<OperationFieldKey, string> = {
+    didox: 'didox',
+    xatlar: 'xatlar',
+    avtokameral: 'avtokameral',
+    my_mehnat: 'myMehnat',
+    one_c: 'oneC',
+    pul_oqimlari: 'pulOqimlari',
+    chiqadigan_soliqlar: 'chiqadiganSoliqlar',
+    hisoblangan_oylik: 'hisoblananOylik',
+    debitor_kreditor: 'debitorKreditor',
+    foyda_va_zarar: 'foydaVaZarar',
+    tovar_ostatka: 'tovarOstatka',
+    bank_klient: 'bankKlient',
+    nds_bekor_qilish: 'ndsBekorQilish',
+    aylanma_qqs: 'aylanmaQqs',
+    daromad_soliq: 'daromadSoliq',
+    inps: 'inps',
+    foyda_soliq: 'foydaSoliq',
+    moliyaviy_natija: 'moliyaviyNatija',
+    buxgalteriya_balansi: 'buxgalteriyaBalansi',
+    statistika: 'statistika',
+    bonak: 'bonak',
+    yer_soligi: 'yerSoligi',
+    mol_mulk_soligi: 'molMulkSoligi',
+    suv_soligi: 'suvSoligi',
+    stat_12_invest: 'stat12Invest',
+    stat_12_moliya: 'stat12Moliya',
+    stat_12_korxona: 'stat12Korxona',
+    stat_12_narx: 'stat12Narx',
+    stat_4_invest: 'stat4Invest',
+    stat_4_mehnat: 'stat4Mehnat',
+    stat_4_korxona_miz: 'stat4KorxonaMiz',
+    stat_4_kb_qur_sav_xiz: 'stat4KbQurSavXiz',
+    stat_4_kb_sanoat: 'stat4KbSanoat',
+    stat_1_invest: 'stat1Invest',
+    stat_1_ih: 'stat1Ih',
+    stat_1_energiya: 'stat1Energiya',
+    stat_1_korxona: 'stat1Korxona',
+    stat_1_korxona_tif: 'stat1KorxonaTif',
+    stat_1_moliya: 'stat1Moliya',
+    stat_1_akt: 'stat1Akt',
+    aksiz_soligi: 'aksizSoligi',
+    nedro_soligi: 'nedroSoligi',
+    norezident_foyda: 'norezidentFoyda',
+    norezident_nds: 'norezidentNds',
+    aylanma_qqs_tolov: 'aylanmaQqsTolov',
+    daromad_soliq_tolov: 'daromadSoliqTolov',
+    inps_tolov: 'inpsTolov',
+    foyda_soliq_tolov: 'foydaSoliqTolov',
+    itpark_oylik: 'itparkOylik',
+    itpark_chorak: 'itparkChorak',
+    kom_suv: 'komSuv',
+    kom_gaz: 'komGaz',
+    kom_svet: 'komSvet',
+};
+
+/** Prisma MonthlyReport (camelCase) yozuvini OperationEntry (snake_case) shakliga o'giradi. */
+export const mapMonthlyReportToOperationEntry = (report: {
+    id: string;
+    companyId: string;
+    period: string;
+    comment: string | null;
+    updatedAt: Date | string;
+    [key: string]: unknown;
+}): OperationEntry => {
+    const entry: Record<string, unknown> = {
+        id: report.id,
+        companyId: report.companyId,
+        period: report.period,
+        comment: report.comment ?? undefined,
+        updatedAt: report.updatedAt instanceof Date ? report.updatedAt.toISOString() : report.updatedAt,
+        history: [],
+    };
+
+    (Object.keys(FIELD_TO_DB_COLUMN) as OperationFieldKey[]).forEach((fieldKey) => {
+        const dbColumn = FIELD_TO_DB_COLUMN[fieldKey];
+        const value = report[dbColumn];
+        if (value != null) entry[fieldKey] = value;
+    });
+
+    return entry as unknown as OperationEntry;
+};
 
 export const MAP_JSON_FIELD_TO_KEY: Record<string, OperationFieldKey> = {
     'Aylanma/QQS': 'aylanma_qqs',

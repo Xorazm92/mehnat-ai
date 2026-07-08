@@ -36,7 +36,7 @@ export default function PayrollClient({ companies, staff, operations, userRole }
               : 'bg-bg-card text-text-secondary hover:text-text-primary'
           }`}
         >
-          To'lovlar Tarixi
+          To&apos;lovlar Tarixi
         </button>
       </div>
 

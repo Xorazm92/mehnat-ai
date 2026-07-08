@@ -12,15 +12,15 @@ interface Props {
   userRole: string;
 }
 
-export default function OrganizationsClient({ companies, staff, operations, userRole }: Props) {
+export default function OrganizationsClient({ companies, staff, operations }: Props) {
   const [selectedPeriod, setSelectedPeriod] = useState<string>("2026-03");
 
-  const handleSave = async (company: Partial<Company>) => {
+  const handleSave = async (company: Partial<Company>, assignments?: any[]) => {
     const isExisting = companies.some(c => c.id === company.id);
     if (isExisting) {
-      await updateCompany(company.id as string, company as any);
+      await updateCompany(company.id as string, company as any, assignments);
     } else {
-      await createCompany(company as any);
+      await createCompany(company as any, assignments);
     }
   };
 
@@ -38,7 +38,7 @@ export default function OrganizationsClient({ companies, staff, operations, user
       onPeriodChange={setSelectedPeriod}
       onSave={handleSave}
       onDelete={handleDelete}
-      onCompanySelect={(c) => {}}
+      onCompanySelect={() => {}}
     />
   );
 }

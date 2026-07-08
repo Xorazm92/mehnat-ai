@@ -18,8 +18,8 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const userId = (session.user as any)?.id;
-  const userRole = (session.user as any)?.role as string;
+  const userId = session.user?.id;
+  const userRole = session.user?.role as string;
   const userName = session.user?.name || "";
 
   // Buxgalter va bank-klient o'z kabinetiga yo'naltirilsin
@@ -103,7 +103,7 @@ export default async function DashboardPage() {
   }
 
   // ─── Fallback: umumiy dashboard — CACHED ──────────────────
-  const [companyStats, operationStats, unreadNotifs] = await Promise.all([
+  const [companyStats, operationStats] = await Promise.all([
     getCachedCompanyStats(userId, userRole).catch(() => ({ total: 0, byTaxRegime: [], byRisk: [] })),
     getCachedOperationSummary(userId, userRole).catch(() => ({
       total: 0,
@@ -124,10 +124,10 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">
+        <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
           Xush kelibsiz, {userName.split(" ")[0]}! 👋
         </h1>
-        <p className="text-text-secondary text-sm mt-1">
+        <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
           {new Date().toLocaleDateString("uz-UZ", {
             weekday: "long",
             year: "numeric",
@@ -144,26 +144,26 @@ export default async function DashboardPage() {
         <StatCard title="Bloklangan" value={operationStats.blocked} icon="🚫" color="red" />
       </div>
 
-      <div className="bg-bg-card border border-border-glass rounded-2xl p-6">
+      <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-text-primary font-semibold">Umumiy progress</h2>
-          <span className="text-blue-400 font-bold text-lg">{progressPercent}%</span>
+          <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>Umumiy progress</h2>
+          <span className="font-bold text-lg" style={{ color: "var(--accent-blue)" }}>{progressPercent}%</span>
         </div>
-        <div className="w-full bg-slate-700 rounded-full h-3">
+        <div className="w-full rounded-full h-3" style={{ background: "var(--input-bg)" }}>
           <div
             className="h-3 rounded-full transition-all duration-500"
             style={{
               width: `${progressPercent}%`,
               background:
                 progressPercent >= 80
-                  ? "linear-gradient(90deg, #22c55e, #16a34a)"
+                  ? "linear-gradient(90deg, var(--success), var(--success-border))"
                   : progressPercent >= 50
-                  ? "linear-gradient(90deg, #eab308, #ca8a04)"
-                  : "linear-gradient(90deg, #ef4444, #dc2626)",
+                  ? "linear-gradient(90deg, var(--warning), var(--warning-border))"
+                  : "linear-gradient(90deg, var(--danger), var(--danger-border))",
             }}
           />
         </div>
-        <div className="flex items-center justify-between mt-3 text-xs text-text-secondary">
+        <div className="flex items-center justify-between mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
           <span>{operationStats.accepted} ta qabul qilindi</span>
           <span>{operationStats.total} ta jami</span>
         </div>
@@ -183,20 +183,22 @@ function StatCard({
   icon: string;
   color: "blue" | "green" | "yellow" | "red";
 }) {
-  const colors = {
-    blue: "from-blue-600/20 to-blue-600/5 border-blue-500/20",
-    green: "from-green-600/20 to-green-600/5 border-green-500/20",
-    yellow: "from-yellow-600/20 to-yellow-600/5 border-yellow-500/20",
-    red: "from-red-600/20 to-red-600/5 border-red-500/20",
+  const stylesMap = {
+    blue: { bg: "var(--accent-blue-light)", border: "1px solid rgba(59, 130, 246, 0.2)", textColor: "var(--accent-blue)" },
+    green: { bg: "var(--success-bg)", border: "1px solid var(--success-border)", textColor: "var(--success)" },
+    yellow: { bg: "var(--warning-bg)", border: "1px solid var(--warning-border)", textColor: "var(--warning)" },
+    red: { bg: "var(--danger-bg)", border: "1px solid var(--danger-border)", textColor: "var(--danger)" },
   };
 
+  const style = stylesMap[color];
+
   return (
-    <div className={`bg-gradient-to-br ${colors[color]} border rounded-2xl p-5`}>
+    <div className="rounded-2xl p-5" style={{ background: style.bg, border: style.border }}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-2xl">{icon}</span>
       </div>
-      <div className="text-3xl font-bold text-text-primary mb-1">{value.toLocaleString()}</div>
-      <div className="text-sm text-text-secondary">{title}</div>
+      <div className="text-3xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>{value.toLocaleString()}</div>
+      <div className="text-sm" style={{ color: "var(--text-muted)" }}>{title}</div>
     </div>
   );
 }

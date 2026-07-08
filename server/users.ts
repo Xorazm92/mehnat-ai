@@ -11,7 +11,7 @@ export async function getUsers() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
   return prisma.user.findMany({
@@ -41,8 +41,8 @@ export async function getUserById(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role as string;
+  const userId = session.user.id;
+  const role = session.user.role as string;
 
   // Can only view own profile unless senior
   if (id !== userId && !isSeniorRole(role)) throw new Error("Forbidden");
@@ -83,7 +83,7 @@ export async function createUser(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!["super_admin", "admin"].includes(role)) throw new Error("Forbidden");
 
   const passwordHash = await bcrypt.hash(data.password, 12);
@@ -122,8 +122,8 @@ export async function updateUser(
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role as string;
+  const userId = session.user.id;
+  const role = session.user.role as string;
 
   // Only admins can change role/isActive
   if ((data.role || data.isActive !== undefined) && !["super_admin", "admin"].includes(role)) {
@@ -149,7 +149,7 @@ export async function changePassword(
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
+  const userId = session.user.id;
   if (id !== userId) throw new Error("Forbidden");
 
   const user = await prisma.user.findUnique({ where: { id } });
@@ -166,7 +166,7 @@ export async function deactivateUser(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!["super_admin", "admin"].includes(role)) throw new Error("Forbidden");
 
   const result = await prisma.user.update({

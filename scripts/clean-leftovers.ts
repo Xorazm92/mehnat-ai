@@ -33,7 +33,6 @@ async function main() {
 
   // Also verify any remaining numeric users
   const users = await prisma.user.findMany({ where: { isActive: true } });
-  let archivedUsers = 0;
   for (const u of users) {
     const name = u.fullName.toLowerCase().trim();
     if (name === "#ref!") {
@@ -41,7 +40,6 @@ async function main() {
         where: { id: u.id },
         data: { isActive: false }
       });
-      archivedUsers++;
       console.log(`🗑️ Arxivlandi (Xato Xodim): ${u.fullName}`);
     }
   }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Company, KPIRule, MonthlyPerformance, Staff, Language, CompanyKPIRule, OperationEntry } from '@/types';
-import { CheckCircle2, XCircle, Search, AlertCircle, Save, Shield, Activity } from 'lucide-react';
+import { CheckCircle2, XCircle, Search, Shield } from 'lucide-react';
 import { translations } from '@/lib/translations';
 import { getReportStatusMultiplier } from '@/lib/kpiLogic';
 import { periodsEqual } from '@/lib/periods';
@@ -24,7 +24,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
     const [percentInputs, setPercentInputs] = useState<Record<string, string>>({});
     const [search, setSearch] = useState('');
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-    const [loading, setLoading] = useState(false);
+    const [, setLoading] = useState(false);
 
     const canEditPercents = currentUserRole === 'super_admin' || currentUserRole === 'chief_accountant';
 
@@ -333,21 +333,25 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
     return (
         <div className="flex flex-col xl:flex-row gap-6 h-[calc(100vh-140px)] animate-fade-in pb-6">
             {/* LEFT: Company Sidebar */}
-            <div className="w-full xl:w-[350px] bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm flex flex-col overflow-hidden">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A1D23]">
+            <div className="w-full xl:w-[340px] flex flex-col overflow-hidden rounded-xl"
+                style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
+                <div className="p-4" style={{ borderBottom: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
                     <div className="flex items-center gap-3 mb-4">
-                        <Shield size={18} className="text-indigo-600 dark:text-indigo-400" />
-                        <h3 className="text-sm font-bold text-gray-800 dark:text-white uppercase">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
+                            style={{ background: "linear-gradient(135deg, var(--accent-indigo), var(--accent-blue))" }}>
+                            <Shield size={15} />
+                        </div>
+                        <h3 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>
                             {t.organizations}
                         </h3>
                     </div>
-
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={14} style={{ color: "var(--text-muted)" }} />
                         <input
                             type="text"
                             placeholder={t.searchMatrix}
-                            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded text-xs font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-indigo-500 shadow-sm"
+                            className="w-full pl-9 pr-3 py-2.5 rounded-lg text-[12px] font-bold outline-none transition-all"
+                            style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
@@ -366,29 +370,30 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                             <div
                                 key={c.id}
                                 onClick={() => setSelectedCompanyId(c.id)}
-                                className={`p-3 rounded cursor-pointer transition-colors border ${isSelected
-                                    ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800'
-                                    : 'bg-white dark:bg-[#22252B] border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                                    }`}
+                                className="p-3 rounded-lg cursor-pointer transition-all"
+                                style={{
+                                    background: isSelected ? "var(--accent-blue-light)" : "transparent",
+                                    border: `1px solid ${isSelected ? "var(--accent-blue)" : "transparent"}`,
+                                }}
+                                onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.borderColor = "var(--card-border)"; } }}
+                                onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; } }}
                             >
                                 <div className="flex justify-between items-start mb-2">
-                                    <h4 className={`font-bold text-sm ${isSelected ? 'text-indigo-900 dark:text-indigo-100' : 'text-gray-800 dark:text-white'}`}>
+                                    <h4 className="font-bold text-[13px] leading-tight" style={{ color: isSelected ? "var(--accent-blue)" : "var(--text-primary)" }}>
                                         {c.name}
                                     </h4>
                                     {totalPercent !== 0 && (
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${totalPercent > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'
-                                            }`}>
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md"
+                                            style={totalPercent > 0
+                                                ? { background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }
+                                                : { background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger-border)" }}>
                                             {totalPercent > 0 ? '+' : ''}{Number(totalPercent.toFixed(2))}%
                                         </span>
                                     )}
                                 </div>
                                 <div className="flex flex-wrap gap-1">
-                                    <div className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 border border-gray-200 dark:border-gray-700">
-                                        INN: {c.inn}
-                                    </div>
-                                    <div className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 border border-gray-200 dark:border-gray-700">
-                                        {c.accountantName}
-                                    </div>
+                                    <span className="c1-badge" style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}>INN: {c.inn}</span>
+                                    <span className="c1-badge" style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}>{c.accountantName}</span>
                                 </div>
                             </div>
                         );
@@ -397,51 +402,52 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
             </div>
 
             {/* RIGHT: Main Checklist Area */}
-            <div className="flex-1 bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 rounded shadow-sm flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden rounded-xl"
+                style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
                 {selectedCompany ? (
                     <>
-                        <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A1D23]">
+                        <div className="p-5" style={{ borderBottom: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
                             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                                 <div>
-                                    <h2 className="text-xl font-bold text-gray-800 dark:text-white uppercase mb-3">
+                                    <h2 className="text-[17px] font-bold uppercase mb-3" style={{ color: "var(--text-primary)" }}>
                                         {selectedCompany.name}
                                     </h2>
-                                    <div className="flex flex-wrap gap-4 border-t border-gray-200 dark:border-gray-700 pt-3">
+                                    <div className="flex flex-wrap gap-4 pt-3" style={{ borderTop: "1px solid var(--card-border)" }}>
                                         <div className="flex items-center gap-2">
-                                            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#22252B] rounded px-1.5 py-0.5">B</div>
+                                            <span className="c1-badge" style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}>B</span>
                                             <div>
-                                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5">{lang === 'uz' ? 'Buxgalter' : 'Бухгалтер'}</p>
-                                                <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200">{selectedCompany.accountantName}</p>
+                                                <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{lang === 'uz' ? 'Buxgalter' : 'Бухгалтер'}</p>
+                                                <p className="text-[12px] font-bold" style={{ color: "var(--text-primary)" }}>{selectedCompany.accountantName}</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2 border-l border-gray-200 dark:border-gray-700 pl-4">
-                                            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#22252B] rounded px-1.5 py-0.5">BK</div>
+                                        <div className="flex items-center gap-2 pl-4" style={{ borderLeft: "1px solid var(--card-border)" }}>
+                                            <span className="c1-badge" style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}>BK</span>
                                             <div>
-                                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5">Bank Client</p>
-                                                <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200">{staff.find(s => s.id === selectedCompany.bankClientId)?.name || '—'}</p>
+                                                <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Bank Client</p>
+                                                <p className="text-[12px] font-bold" style={{ color: "var(--text-primary)" }}>{staff.find(s => s.id === selectedCompany.bankClientId)?.name || '—'}</p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div className="flex flex-col items-start md:items-end w-full md:w-auto">
-                                    <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">{lang === 'uz' ? 'Joriy Oy' : 'Текущий Месяц'}</p>
+                                <div className="flex flex-col items-start md:items-end">
+                                    <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "var(--text-muted)" }}>{lang === 'uz' ? 'Joriy Oy' : 'Текущий Месяц'}</p>
                                     <input
                                         type="month"
                                         value={month}
                                         onChange={e => setMonth(e.target.value)}
-                                        className="bg-white dark:bg-[#1e2025] border border-gray-300 dark:border-gray-600 rounded px-3 py-1.5 text-xs font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-indigo-500 shadow-sm transition-colors uppercase cursor-pointer"
+                                        className="rounded-lg px-3 py-2 text-[13px] font-bold outline-none transition-all cursor-pointer"
+                                        style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--accent-blue)" }}
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                        <div className="flex-1 overflow-y-auto p-5 space-y-8">
                             {selectedOperation && (
-                                <div className="animate-fade-in-up">
+                                <div className="animate-fade-in">
                                     <div className="flex items-center gap-2 mb-4">
-                                        <div className="w-1 h-4 bg-indigo-600 rounded-sm"></div>
-                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                        <div className="w-1 h-4 rounded-sm" style={{ background: "var(--accent-indigo)" }}></div>
+                                        <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
                                             {t.automationKpi}
                                         </h4>
                                     </div>
@@ -455,30 +461,34 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                             const score = mult * Math.abs(weight);
 
                                             return (
-                                                <div
-                                                    key={rule.id}
-                                                    className={`p-3 rounded border flex items-center justify-between bg-white dark:bg-[#1e2025] ${score > 0 ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/30 dark:bg-emerald-900/10' : score < 0 ? 'border-rose-200 bg-rose-50/50 dark:border-rose-900/30 dark:bg-rose-900/10' : 'border-gray-200 dark:border-gray-700'}`}
-                                                >
+                                                <div key={rule.id}
+                                                    className="p-3 rounded-xl flex items-center justify-between transition-all"
+                                                    style={{
+                                                        background: score > 0 ? "var(--success-bg)" : score < 0 ? "var(--danger-bg)" : "var(--input-bg)",
+                                                        border: `1px solid ${score > 0 ? "var(--success-border)" : score < 0 ? "var(--danger-border)" : "var(--card-border)"}`
+                                                    }}>
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center ${score > 0 ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : score < 0 ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-800'}`}>
-                                                            {score < 0 ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
+                                                        <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center"
+                                                            style={{ background: score > 0 ? "var(--success)" : score < 0 ? "var(--danger)" : "var(--text-muted)", opacity: score === 0 ? 0.3 : 1, color: "white" }}>
+                                                            {score < 0 ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
                                                         </div>
                                                         <div>
-                                                            <p className={`font-bold text-sm leading-none mb-1 ${score !== 0 ? 'text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                            <p className="font-bold text-[13px] leading-none mb-1" style={{ color: score !== 0 ? "var(--text-primary)" : "var(--text-muted)" }}>
                                                                 {lang === 'uz' ? rule.nameUz : rule.name}
                                                             </p>
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-[9px] font-bold text-gray-500 uppercase px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">{typeof status === 'string' ? status : '—'}</span>
-                                                                <p className="text-[9px] font-bold text-gray-400 uppercase">
+                                                                <span className="c1-badge" style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}>{typeof status === 'string' ? status : '—'}</span>
+                                                                <span className="text-[9px] font-bold uppercase" style={{ color: "var(--text-muted)" }}>
                                                                     {Number(rule.rewardPercent || 0) > 0 ? `+${Number(rule.rewardPercent || 0)}%` : ''}
                                                                     {Number(rule.penaltyPercent || 0) < 0 ? ` / ${Number(rule.penaltyPercent || 0)}%` : ''}
-                                                                </p>
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className={`text-sm font-bold tabular-nums ${score > 0 ? 'text-emerald-600 dark:text-emerald-400' : score < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400'}`}>
+                                                    <span className="text-[13px] font-bold tabular-nums"
+                                                        style={{ color: score > 0 ? "var(--success)" : score < 0 ? "var(--danger)" : "var(--text-muted)" }}>
                                                         {score > 0 ? '+' : ''}{Number(score.toFixed(2))}%
-                                                    </div>
+                                                    </span>
                                                 </div>
                                             );
                                         })}
@@ -487,10 +497,10 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                             )}
 
                             {/* Accountant Tasks */}
-                            <div className="animate-fade-in-up delay-100">
+                            <div className="animate-fade-in">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <div className="w-1 h-4 bg-emerald-500 rounded-sm"></div>
-                                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    <div className="w-1 h-4 rounded-sm" style={{ background: "var(--success)" }}></div>
+                                    <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
                                         {t.manualKpi}
                                     </h4>
                                 </div>
@@ -507,20 +517,24 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                                     if (needsApproval) return;
                                                     handleToggle(rule, selectedCompany, selectedCompany.accountantId || '', perf?.value || 0);
                                                 }}
-                                                className={`p-3 border rounded shadow-sm flex flex-col justify-between transition-colors cursor-pointer select-none ${perf?.value === 1 ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800' :
-                                                    perf?.value === -1 ? 'bg-rose-50 border-rose-200 dark:bg-rose-900/10 dark:border-rose-800' :
-                                                        'bg-white dark:bg-[#1e2025] hover:border-indigo-300 border-gray-200 dark:border-gray-700'
-                                                    }`}
+                                                className="p-3 rounded-xl flex flex-col justify-between cursor-pointer select-none transition-all"
+                                                style={{
+                                                    background: perf?.value === 1 ? "var(--success-bg)" : perf?.value === -1 ? "var(--danger-bg)" : "var(--input-bg)",
+                                                    border: `1px solid ${perf?.value === 1 ? "var(--success-border)" : perf?.value === -1 ? "var(--danger-border)" : "var(--card-border)"}`,
+                                                }}
+                                                onMouseEnter={e => { if (perf?.value === 0) e.currentTarget.style.borderColor = "var(--accent-indigo)"; }}
+                                                onMouseLeave={e => { if (perf?.value === 0) e.currentTarget.style.borderColor = "var(--card-border)"; }}
                                             >
                                                 <div className="flex items-start justify-between mb-3">
                                                     <div className="flex items-center gap-2">
-                                                        <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${perf?.value === 1 ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' :
-                                                            perf?.value === -1 ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
-                                                                'bg-gray-100 text-gray-400 dark:bg-gray-800'
-                                                            }`}>
-                                                            {perf?.value === -1 ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
+                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                                            style={{
+                                                                background: perf?.value === 1 ? "var(--success)" : perf?.value === -1 ? "var(--danger)" : "var(--card-border)",
+                                                                color: perf?.value !== 0 ? "white" : "var(--text-muted)"
+                                                            }}>
+                                                            {perf?.value === -1 ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
                                                         </div>
-                                                        <p className={`font-bold text-xs leading-tight ${perf?.value !== 0 ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
+                                                        <p className="font-bold text-[12px] leading-tight" style={{ color: perf?.value !== 0 ? "var(--text-primary)" : "var(--text-secondary)" }}>
                                                             {lang === 'uz' ? rule.nameUz : rule.name}
                                                         </p>
                                                     </div>
@@ -531,7 +545,8 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                                                 type="number"
                                                                 step="0.01"
                                                                 title="Reward %"
-                                                                className="w-12 px-1 py-1 bg-white dark:bg-[#22252B] border border-emerald-200 dark:border-emerald-900/50 rounded text-[10px] font-bold text-emerald-600 outline-none focus:border-emerald-500 transition-colors text-center"
+                                                                className="w-12 px-1 py-1 rounded text-[10px] font-bold outline-none text-center transition-colors"
+                                                                style={{ background: "var(--input-bg)", border: "1px solid var(--success-border)", color: "var(--success)" }}
                                                                 placeholder={String(rule.rewardPercent ?? '')}
                                                                 value={percentInputs[getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'reward')] ?? (perf?.rewardPercentOverride ?? perf?.rewardPercentOverride === 0 ? String(perf.rewardPercentOverride) : '')}
                                                                 onChange={(e) => {
@@ -549,7 +564,8 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                                                 type="number"
                                                                 step="0.01"
                                                                 title="Penalty %"
-                                                                className="w-12 px-1 py-1 bg-white dark:bg-[#22252B] border border-rose-200 dark:border-rose-900/50 rounded text-[10px] font-bold text-rose-600 outline-none focus:border-rose-500 transition-colors text-center"
+                                                                className="w-12 px-1 py-1 rounded text-[10px] font-bold outline-none text-center transition-colors"
+                                                                style={{ background: "var(--input-bg)", border: "1px solid var(--danger-border)", color: "var(--danger)" }}
                                                                 placeholder={String(rule.penaltyPercent ?? '')}
                                                                 value={percentInputs[getPercentKey(selectedCompany.id, selectedCompany.accountantId || '', rule.id, 'penalty')] ?? (perf?.penaltyPercentOverride ?? perf?.penaltyPercentOverride === 0 ? String(perf.penaltyPercentOverride) : '')}
                                                                 onChange={(e) => {
@@ -567,32 +583,28 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                                     )}
                                                 </div>
 
-                                                <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
-                                                    <p className="text-[10px] font-bold text-gray-500">
+                                                <div className="flex items-center gap-2 mt-auto pt-2" style={{ borderTop: "1px solid var(--card-border)" }}>
+                                                    <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
                                                         {((perf?.rewardPercentOverride ?? rule.rewardPercent) > 0) ? `+${(perf?.rewardPercentOverride ?? rule.rewardPercent)}%` : ''}
                                                         {((perf?.penaltyPercentOverride ?? rule.penaltyPercent) < 0) ? ` / ${(perf?.penaltyPercentOverride ?? rule.penaltyPercent)}%` : ''}
                                                     </p>
-                                                    {perf?.value === 1 && <span className="text-[9px] font-bold text-emerald-600 uppercase px-1.5 py-0.5 bg-emerald-100 rounded">Mukofot</span>}
-                                                    {perf?.value === -1 && <span className="text-[9px] font-bold text-rose-600 uppercase px-1.5 py-0.5 bg-rose-100 rounded">Jarima</span>}
+                                                    {perf?.value === 1 && <span className="c1-badge" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>Mukofot</span>}
+                                                    {perf?.value === -1 && <span className="c1-badge" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger-border)" }}>Jarima</span>}
                                                     {needsApproval && (
-                                                        <span className="text-[9px] font-bold text-amber-600 uppercase px-1.5 py-0.5 bg-amber-100 rounded">{t.pendingApproval}</span>
+                                                        <span className="c1-badge" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>{t.pendingApproval}</span>
                                                     )}
                                                 </div>
 
                                                 {needsApproval && perf && (
                                                     <div className="flex items-center gap-2 mt-3" onClick={e => e.stopPropagation()}>
-                                                        <button
-                                                            onClick={() => handleApprove(perf)}
-                                                            className="flex-1 py-1.5 bg-emerald-500 text-white rounded text-[10px] font-bold uppercase hover:bg-emerald-600 transition-colors"
-                                                        >
-                                                            Approve
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleReject(perf)}
-                                                            className="flex-1 py-1.5 bg-rose-500 text-white rounded text-[10px] font-bold uppercase hover:bg-rose-600 transition-colors"
-                                                        >
-                                                            Reject
-                                                        </button>
+                                                        <button onClick={() => handleApprove(perf)}
+                                                            className="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-colors text-white"
+                                                            style={{ background: "var(--success)" }}
+                                                        >Tasdiqlash</button>
+                                                        <button onClick={() => handleReject(perf)}
+                                                            className="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-colors text-white"
+                                                            style={{ background: "var(--danger)" }}
+                                                        >Rad etish</button>
                                                     </div>
                                                 )}
                                             </div>
@@ -603,10 +615,10 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
 
                             {/* Bank Client Tasks */}
                             {selectedCompany.bankClientId && (
-                                <div className="animate-fade-in-up delay-200">
+                                <div className="animate-fade-in">
                                     <div className="flex items-center gap-2 mb-4">
-                                        <div className="w-1 h-4 bg-purple-500 rounded-sm"></div>
-                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                        <div className="w-1 h-4 rounded-sm" style={{ background: "var(--accent-indigo)" }}></div>
+                                        <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
                                             {t.bankTasks}
                                         </h4>
                                     </div>
@@ -617,57 +629,36 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                             const needsApproval = perf?.source === 'employee' && perf?.status === 'submitted';
 
                                             return (
-                                                <div
-                                                    key={rule.id}
-                                                    onClick={() => {
-                                                        if (needsApproval) return;
-                                                        handleToggle(rule, selectedCompany, selectedCompany.bankClientId || '', perf?.value || 0);
+                                                <div key={rule.id}
+                                                    onClick={() => { if (needsApproval) return; handleToggle(rule, selectedCompany, selectedCompany.bankClientId || '', perf?.value || 0); }}
+                                                    className="p-3 rounded-xl flex flex-col justify-between cursor-pointer select-none transition-all"
+                                                    style={{
+                                                        background: perf?.value === 1 ? "var(--accent-blue-light)" : perf?.value === -1 ? "var(--danger-bg)" : "var(--input-bg)",
+                                                        border: `1px solid ${perf?.value === 1 ? "var(--accent-blue)" : perf?.value === -1 ? "var(--danger-border)" : "var(--card-border)"}`
                                                     }}
-                                                    className={`p-3 border rounded shadow-sm flex flex-col justify-between transition-colors cursor-pointer select-none ${perf?.value === 1 ? 'bg-purple-50 border-purple-200 dark:bg-purple-900/10 dark:border-purple-800' :
-                                                        perf?.value === -1 ? 'bg-rose-50 border-rose-200 dark:bg-rose-900/10 dark:border-rose-800' :
-                                                            'bg-white dark:bg-[#1e2025] hover:border-purple-300 border-gray-200 dark:border-gray-700'
-                                                        }`}
                                                 >
-                                                    <div className="flex items-start justify-between mb-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${perf?.value === 1 ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30' :
-                                                                perf?.value === -1 ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
-                                                                    'bg-gray-100 text-gray-400 dark:bg-gray-800'
-                                                                }`}>
-                                                                {perf?.value === -1 ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
-                                                            </div>
-                                                            <p className={`font-bold text-xs leading-tight ${perf?.value !== 0 ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
-                                                                {lang === 'uz' ? rule.nameUz : rule.name}
-                                                            </p>
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                                            style={{ background: perf?.value === 1 ? "var(--accent-blue)" : perf?.value === -1 ? "var(--danger)" : "var(--card-border)", color: perf?.value !== 0 ? "white" : "var(--text-muted)" }}>
+                                                            {perf?.value === -1 ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
                                                         </div>
+                                                        <p className="font-bold text-[12px] leading-tight" style={{ color: perf?.value !== 0 ? "var(--text-primary)" : "var(--text-secondary)" }}>
+                                                            {lang === 'uz' ? rule.nameUz : rule.name}
+                                                        </p>
                                                     </div>
-
-                                                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
-                                                        <p className="text-[10px] font-bold text-gray-500">
+                                                    <div className="flex items-center gap-2 pt-2" style={{ borderTop: "1px solid var(--card-border)" }}>
+                                                        <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
                                                             {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
                                                             {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
                                                         </p>
-                                                        {perf?.value === 1 && <span className="text-[9px] font-bold text-purple-600 uppercase px-1.5 py-0.5 bg-purple-100 rounded">Mukofot</span>}
-                                                        {perf?.value === -1 && <span className="text-[9px] font-bold text-rose-600 uppercase px-1.5 py-0.5 bg-rose-100 rounded">Jarima</span>}
-                                                        {needsApproval && (
-                                                            <span className="text-[9px] font-bold text-amber-600 uppercase px-1.5 py-0.5 bg-amber-100 rounded">Tasdiq kutilmoqda</span>
-                                                        )}
+                                                        {perf?.value === 1 && <span className="c1-badge" style={{ background: "var(--accent-blue-light)", color: "var(--accent-blue)", border: "1px solid var(--accent-blue)" }}>Mukofot</span>}
+                                                        {perf?.value === -1 && <span className="c1-badge" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger-border)" }}>Jarima</span>}
+                                                        {needsApproval && <span className="c1-badge" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>Tasdiq kutilmoqda</span>}
                                                     </div>
-
                                                     {needsApproval && perf && (
-                                                        <div className="flex items-center gap-2 mt-3" onClick={e => e.stopPropagation()}>
-                                                            <button
-                                                                onClick={() => handleApprove(perf)}
-                                                                className="flex-1 py-1.5 bg-emerald-500 text-white rounded text-[10px] font-bold uppercase hover:bg-emerald-600 transition-colors"
-                                                            >
-                                                                Approve
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleReject(perf)}
-                                                                className="flex-1 py-1.5 bg-rose-500 text-white rounded text-[10px] font-bold uppercase hover:bg-rose-600 transition-colors"
-                                                            >
-                                                                Reject
-                                                            </button>
+                                                        <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
+                                                            <button onClick={() => handleApprove(perf)} className="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase text-white" style={{ background: "var(--success)" }}>Tasdiqlash</button>
+                                                            <button onClick={() => handleReject(perf)} className="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase text-white" style={{ background: "var(--danger)" }}>Rad etish</button>
                                                         </div>
                                                     )}
                                                 </div>
@@ -679,10 +670,10 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
 
                             {/* Supervisor Tasks */}
                             {selectedCompany.supervisorId && (
-                                <div className="animate-fade-in-up delay-300">
+                                <div className="animate-fade-in">
                                     <div className="flex items-center gap-2 mb-4">
-                                        <div className="w-1 h-4 bg-amber-500 rounded-sm"></div>
-                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                        <div className="w-1 h-4 rounded-sm" style={{ background: "var(--warning)" }}></div>
+                                        <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
                                             {t.supervisorTasks}
                                         </h4>
                                     </div>
@@ -693,55 +684,36 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                                             const needsApproval = perf?.source === 'employee' && perf?.status === 'submitted';
 
                                             return (
-                                                <div
-                                                    key={rule.id}
-                                                    onClick={() => {
-                                                        if (needsApproval) return;
-                                                        handleToggle(rule, selectedCompany, selectedCompany.supervisorId || '', perf?.value || 0);
+                                                <div key={rule.id}
+                                                    onClick={() => { if (needsApproval) return; handleToggle(rule, selectedCompany, selectedCompany.supervisorId || '', perf?.value || 0); }}
+                                                    className="p-3 rounded-xl flex flex-col justify-between cursor-pointer select-none transition-all"
+                                                    style={{
+                                                        background: perf?.value !== 0 ? "var(--warning-light)" : "var(--input-bg)",
+                                                        border: `1px solid ${perf?.value !== 0 ? "var(--warning-border)" : "var(--card-border)"}`
                                                     }}
-                                                    className={`p-3 border rounded shadow-sm flex flex-col justify-between transition-colors cursor-pointer select-none ${perf?.value !== 0 ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800' :
-                                                            'bg-white dark:bg-[#1e2025] hover:border-amber-300 border-gray-200 dark:border-gray-700'
-                                                        }`}
                                                 >
-                                                    <div className="flex items-start justify-between mb-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${perf?.value !== 0 ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' :
-                                                                    'bg-gray-100 text-gray-400 dark:bg-gray-800'
-                                                                }`}>
-                                                                {perf?.value === -1 ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
-                                                            </div>
-                                                            <p className={`font-bold text-xs leading-tight ${perf?.value !== 0 ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
-                                                                {lang === 'uz' ? rule.nameUz : rule.name}
-                                                            </p>
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                                            style={{ background: perf?.value !== 0 ? "var(--warning)" : "var(--card-border)", color: perf?.value !== 0 ? "white" : "var(--text-muted)" }}>
+                                                            {perf?.value === -1 ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
                                                         </div>
+                                                        <p className="font-bold text-[12px] leading-tight" style={{ color: perf?.value !== 0 ? "var(--text-primary)" : "var(--text-secondary)" }}>
+                                                            {lang === 'uz' ? rule.nameUz : rule.name}
+                                                        </p>
                                                     </div>
-
-                                                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
-                                                        <p className="text-[10px] font-bold text-gray-500">
+                                                    <div className="flex items-center gap-2 pt-2" style={{ borderTop: "1px solid var(--card-border)" }}>
+                                                        <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
                                                             {rule.rewardPercent > 0 ? `+${rule.rewardPercent}%` : ''}
                                                             {rule.penaltyPercent < 0 ? ` / ${rule.penaltyPercent}%` : ''}
                                                         </p>
-                                                        {perf?.value === 1 && <span className="text-[9px] font-bold text-amber-600 uppercase px-1.5 py-0.5 bg-amber-100 rounded">Mukofot</span>}
-                                                        {perf?.value === -1 && <span className="text-[9px] font-bold text-amber-600 uppercase px-1.5 py-0.5 bg-amber-100 rounded">Jarima</span>}
-                                                        {needsApproval && (
-                                                            <span className="text-[9px] font-bold text-amber-600 uppercase px-1.5 py-0.5 bg-amber-100 rounded">Tasdiq kutilmoqda</span>
-                                                        )}
+                                                        {perf?.value === 1 && <span className="c1-badge" style={{ background: "var(--warning-light)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>Mukofot</span>}
+                                                        {perf?.value === -1 && <span className="c1-badge" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger-border)" }}>Jarima</span>}
+                                                        {needsApproval && <span className="c1-badge" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>Tasdiq kutilmoqda</span>}
                                                     </div>
-
                                                     {needsApproval && perf && (
-                                                        <div className="flex items-center gap-2 mt-3" onClick={e => e.stopPropagation()}>
-                                                            <button
-                                                                onClick={() => handleApprove(perf)}
-                                                                className="flex-1 py-1.5 bg-emerald-500 text-white rounded text-[10px] font-bold uppercase hover:bg-emerald-600 transition-colors"
-                                                            >
-                                                                Approve
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleReject(perf)}
-                                                                className="flex-1 py-1.5 bg-rose-500 text-white rounded text-[10px] font-bold uppercase hover:bg-rose-600 transition-colors"
-                                                            >
-                                                                Reject
-                                                            </button>
+                                                        <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
+                                                            <button onClick={() => handleApprove(perf)} className="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase text-white" style={{ background: "var(--success)" }}>Tasdiqlash</button>
+                                                            <button onClick={() => handleReject(perf)} className="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase text-white" style={{ background: "var(--danger)" }}>Rad etish</button>
                                                         </div>
                                                     )}
                                                 </div>
@@ -754,14 +726,15 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, operations, staff, la
                         </div>
                     </>
                 ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center p-10 text-center relative z-10 animate-fade-in bg-white dark:bg-[#22252B]">
-                        <div className="w-20 h-20 mb-6 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-700">
+                    <div className="flex-1 flex flex-col items-center justify-center p-10 text-center animate-fade-in">
+                        <div className="w-20 h-20 mb-6 rounded-2xl flex items-center justify-center"
+                            style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-muted)" }}>
                             <Shield size={32} />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-800 dark:text-white uppercase mb-2">
+                        <h3 className="text-[17px] font-bold uppercase mb-2" style={{ color: "var(--text-primary)" }}>
                             {(t as any).auditReady || (t as any).selectCompany}
                         </h3>
-                        <p className="text-sm font-bold text-gray-500 max-w-md">
+                        <p className="text-[13px] font-medium max-w-md" style={{ color: "var(--text-muted)" }}>
                             {(t as any).selectCompanyAudit || (t as any).selectCompanyDesc}
                         </p>
                     </div>

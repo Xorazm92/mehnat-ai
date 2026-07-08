@@ -15,6 +15,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isSeniorRole } from "@/lib/permissions";
+import { mapMonthlyReportToOperationEntry } from "@/lib/operationTemplates";
 
 // ─────────────────────────────────────────────
 // COMPANIES
@@ -123,24 +124,17 @@ export const getCachedUsers = cache(async () => {
 // OPERATIONS
 // ─────────────────────────────────────────────
 
+// Eslatma: bu yerda "Operation" emas, "MonthlyReport" jadvali so'raladi — Firmalar/Xodimlar/
+// KPI/Oylik/Hisobotlar sahifalari oylik hisobot-checklist ma'lumotini (Didox, 1C, soliqlar va h.k.)
+// kutadi (frontend turi: OperationEntry). Yillik/choraklik "Operation" statistikasi uchun
+// alohida `getCachedOperationSummary` bor.
 const _getCachedOperationsForSenior = unstable_cache(
   async () => {
-    return prisma.operation.findMany({
+    const reports = await prisma.monthlyReport.findMany({
       where: {},
-      include: {
-        company: {
-          select: {
-            id: true,
-            name: true,
-            inn: true,
-            taxRegime: true,
-            accountantId: true,
-            accountant: { select: { id: true, fullName: true } },
-          },
-        },
-      },
-      orderBy: [{ period: "desc" }, { company: { name: "asc" } }],
+      orderBy: [{ period: "desc" }],
     });
+    return reports.map(mapMonthlyReportToOperationEntry);
   },
   ["operations-senior"],
   { tags: ["operations"], revalidate: 300 }
@@ -148,28 +142,17 @@ const _getCachedOperationsForSenior = unstable_cache(
 
 const _getCachedOperationsForAccountant = unstable_cache(
   async (userId: string) => {
-    return prisma.operation.findMany({
+    const reports = await prisma.monthlyReport.findMany({
       where: { company: { accountantId: userId } },
-      include: {
-        company: {
-          select: {
-            id: true,
-            name: true,
-            inn: true,
-            taxRegime: true,
-            accountantId: true,
-            accountant: { select: { id: true, fullName: true } },
-          },
-        },
-      },
-      orderBy: [{ period: "desc" }, { company: { name: "asc" } }],
+      orderBy: [{ period: "desc" }],
     });
+    return reports.map(mapMonthlyReportToOperationEntry);
   },
   ["operations-accountant"],
   { tags: ["operations"], revalidate: 300 }
 );
 
-/** Operatsiyalarni cache'dan olish (render ichida deduplicate) */
+/** Operatsiyalarni (oylik hisobot-checklist) cache'dan olish (render ichida deduplicate) */
 export const getCachedOperations = cache(
   async (userId: string, role: string) => {
     if (isSeniorRole(role)) {

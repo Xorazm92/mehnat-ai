@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
 import { revalidateTag } from "next/cache";
-import type { ReportStatus } from "@prisma/client";
+import { Prisma, type ReportStatus } from "@prisma/client";
 
 // =====================================================
 // MONTHLY REPORTS
@@ -14,8 +14,8 @@ export async function getMonthlyReports(companyId: string, period?: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role as string;
+  const userId = session.user.id;
+  const role = session.user.role as string;
 
   // Access check
   if (!isSeniorRole(role)) {
@@ -32,16 +32,12 @@ export async function getMonthlyReports(companyId: string, period?: string) {
   });
 }
 
-export async function upsertMonthlyReport(data: {
-  companyId: string;
-  period: string;
-  [key: string]: any;
-}) {
+export async function upsertMonthlyReport(data: Prisma.MonthlyReportUncheckedCreateInput) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role as string;
+  const userId = session.user.id;
+  const role = session.user.role as string;
 
   if (!isSeniorRole(role)) {
     const company = await prisma.company.findUnique({ where: { id: data.companyId } });
@@ -62,7 +58,7 @@ export async function upsertMonthlyReport(data: {
 export async function clearColumnForPeriod(period: string, colKey: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
   // In Prisma, we can't dynamically set a column to null easily in updateMany. 
@@ -96,8 +92,8 @@ export async function getOperations(filters?: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role as string;
+  const userId = session.user.id;
+  const role = session.user.role as string;
 
   let companyFilter = {};
   if (!isSeniorRole(role)) {
@@ -140,8 +136,8 @@ export async function upsertOperation(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role as string;
+  const userId = session.user.id;
+  const role = session.user.role as string;
 
   if (!isSeniorRole(role)) {
     const company = await prisma.company.findUnique({ where: { id: data.companyId } });
@@ -163,8 +159,8 @@ export async function getOperationSummary(period?: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role as string;
+  const userId = session.user.id;
+  const role = session.user.role as string;
 
   const companyFilter = isSeniorRole(role)
     ? {}
@@ -218,8 +214,8 @@ export async function getDeadlines() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role as string;
+  const userId = session.user.id;
+  const role = session.user.role as string;
 
   const today = new Date();
   const soon = new Date();

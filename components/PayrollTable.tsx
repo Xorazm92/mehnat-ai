@@ -1,9 +1,8 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
-import { Staff, EmployeeSalarySummary, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance, KPIRule, CompanyKPIRule } from '@/types';
+import { Staff, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance, KPIRule, CompanyKPIRule } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
-import { translations } from '@/lib/translations';
-import { Wallet, MinusCircle, PlusCircle, Save, HandCoins, CheckCircle2 } from 'lucide-react';
+import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2 } from 'lucide-react';
 import { periodsEqual } from '@/lib/periods';
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
 import { getPayrollAdjustments, createPayrollAdjustment } from '@/server/payroll';
@@ -17,8 +16,7 @@ interface Props {
     currentUserRole?: string;
 }
 
-const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, currentUserId, currentUserRole }) => {
-    const t = translations[lang];
+const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [editingAdj, setEditingAdj] = useState<{ empId: string, type: 'bonus' | 'jarima' | 'avans' | 'payment', amount: number, reason: string } | null>(null);
     const [adjustmentsList, setAdjustmentsList] = useState<PayrollAdjustment[]>([]);
@@ -233,174 +231,254 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
         }
     };
 
+    const ROLE_LABELS: Record<string, string> = {
+        super_admin: "Super Admin", admin: "Admin",
+        chief_accountant: "Bosh Buxgalter", supervisor: "Nazoratchi",
+        accountant: "Buxgalter", bank_manager: "Bank Menejer",
+    };
+
     return (
-        <div className="space-y-4 animate-fade-in p-6 bg-[#F0F2F5] dark:bg-[#111318] min-h-screen">
-            {/* Payroll Header */}
-            <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] p-5 rounded-sm shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
+        <div className="space-y-5 animate-fade-in pb-10">
+            {/* Header */}
+            <div
+                className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 rounded-xl"
+                style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}
+            >
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-sm bg-[#3366CC] flex items-center justify-center text-white shadow-sm shrink-0">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-md"
+                        style={{ background: "linear-gradient(135deg, var(--accent-blue), var(--accent-indigo))" }}>
                         <Wallet size={20} />
                     </div>
                     <div>
-                        <h2 className="text-[14px] font-bold text-gray-800 dark:text-white leading-none uppercase tracking-wider">
+                        <h2 className="text-[15px] font-bold leading-none" style={{ color: "var(--text-primary)" }}>
                             Oylik Hisobot
                         </h2>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1.5 leading-none">
-                            FINANS VA MAOSH TIZIMI
+                        <p className="text-[11px] mt-1 font-medium" style={{ color: "var(--text-muted)" }}>
+                            Finans va maosh tizimi
                         </p>
                     </div>
                 </div>
-
-                <div className="flex flex-col sm:flex-row gap-4 items-center">
-                    <div className="bg-white dark:bg-[#1A1D23] px-3 py-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm">
+                <div className="flex flex-wrap gap-3 items-center">
+                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg"
+                        style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)" }}>
+                        <span className="text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>Oy:</span>
                         <input
-                            type="month"
-                            value={month}
+                            type="month" value={month}
                             onChange={e => setMonth(e.target.value)}
-                            className="bg-transparent border-none font-bold text-[11px] text-[#3366CC] focus:ring-0 cursor-pointer p-0 uppercase"
+                            className="bg-transparent border-none outline-none font-bold text-[13px] cursor-pointer"
+                            style={{ color: "var(--accent-blue)" }}
                         />
                     </div>
-                    <div className="px-5 py-2.5 bg-[#EBFBF0] dark:bg-[#1A2321] text-emerald-600 rounded-sm border border-[#C3E6CB] dark:border-[#2D3D34] flex flex-col items-end shadow-sm">
-                        <p className="text-[8px] font-black uppercase tracking-widest mb-1 opacity-70">JAMI TO'LOV</p>
-                        <p className="text-[18px] font-bold tabular-nums leading-none">
-                            {summaries.reduce((a, b) => a + b.totalSalary, 0).toLocaleString()} <span className="text-[10px] font-bold uppercase ml-0.5">sum</span>
+                    <div className="px-5 py-2.5 rounded-xl" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--success)" }}>Jami to&apos;lov</p>
+                        <p className="text-[18px] font-black tabular-nums leading-none" style={{ color: "var(--success)" }}>
+                            {summaries.reduce((a, b) => a + b.totalSalary, 0).toLocaleString("uz-UZ")}
+                            <span className="text-[11px] font-bold ml-1.5" style={{ color: "var(--success)", opacity: 0.7 }}>so&apos;m</span>
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Main Table Container */}
-            <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden transition-colors">
-                <div className="overflow-x-auto scrollbar-hide">
-                    <table className="w-full text-left border-collapse min-w-[1000px] c1-table">
+            {/* Summary stat cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                    { label: "Xodimlar", value: summaries.length, icon: "👥", color: "var(--accent-blue)", bg: "var(--info-bg)" },
+                    { label: "Jami stavka", value: summaries.reduce((a, b) => a + b.baseSalary, 0).toLocaleString("uz-UZ") + " so'm", icon: "💼", color: "var(--accent-indigo)", bg: "var(--accent-indigo-light)" },
+                    { label: "KPI bonus", value: "+" + summaries.reduce((a, b) => a + b.kpiBonus, 0).toLocaleString("uz-UZ") + " so'm", icon: "📈", color: "var(--success)", bg: "var(--success-bg)" },
+                    { label: "Jami jarima", value: summaries.reduce((a, b) => a + Math.abs(b.kpiPenalty), 0).toLocaleString("uz-UZ") + " so'm", icon: "⚠️", color: "var(--danger)", bg: "var(--danger-bg)" },
+                ].map((card, i) => (
+                    <div key={i} className="p-4 rounded-xl" style={{ background: card.bg, border: `1px solid ${card.color}22` }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg">{card.icon}</span>
+                            <span className="text-[11px] font-semibold" style={{ color: card.color }}>{card.label}</span>
+                        </div>
+                        <p className="text-[15px] font-black tabular-nums" style={{ color: card.color }}>{card.value}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* Table */}
+            <div className="rounded-xl overflow-hidden" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse" style={{ minWidth: "900px" }}>
                         <thead>
-                            <tr className="bg-[#F8F9FA] dark:bg-[#1A1D23] text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
-                                <th className="px-5 py-3">Xodim & Rol</th>
-                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">Stavka</th>
-                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] text-emerald-600">KPI Bonus</th>
-                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] text-rose-600">Jarima</th>
-                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] text-[#3366CC]">Qo'sh.</th>
-                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] text-amber-600">Avans</th>
-                                <th className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] text-emerald-600">Qolgan</th>
-                                <th className="px-5 py-3 text-right border-l border-[#F0F2F5] dark:border-[#1e2025]">Amallar</th>
+                            <tr style={{ background: "var(--table-header-bg)", borderBottom: "2px solid var(--table-border)" }}>
+                                {[
+                                    { label: "Xodim", align: "left" },
+                                    { label: "Stavka (so'm)", align: "right", color: "var(--text-primary)" },
+                                    { label: "KPI Bonus", align: "right", color: "var(--success)" },
+                                    { label: "Jarima", align: "right", color: "var(--danger)" },
+                                    { label: "Qo'shimcha", align: "right", color: "var(--accent-blue)" },
+                                    { label: "Avans", align: "right", color: "var(--warning)" },
+                                    { label: "Jami maosh", align: "right", color: "var(--accent-indigo)" },
+                                    { label: "Qolgan", align: "right", color: "var(--success)" },
+                                    { label: "Amallar", align: "center" },
+                                ].map((h, i) => (
+                                    <th key={i} className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"
+                                        style={{ color: h.color || "var(--text-muted)", textAlign: h.align as any }}>
+                                        {h.label}
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1e2025]">
-                            {summaries.map(s => (
-                                <tr key={s.employeeId} className="hover:bg-[#EBF3FF] dark:hover:bg-[#1C2531] transition-all group">
-                                    <td className="px-5 py-3">
-                                        <div className="flex flex-col">
-                                            <p className="font-bold text-[11px] text-gray-800 dark:text-white uppercase tracking-tight">{s.employeeName}</p>
-                                            <p className="text-[8px] font-bold text-gray-400 uppercase mt-0.5 tracking-widest">{s.employeeRole}</p>
+                        <tbody>
+                            {summaries.map((s, i) => (
+                                <tr key={s.employeeId}
+                                    style={{
+                                        borderBottom: "1px solid var(--table-border)",
+                                        background: i % 2 === 0 ? "var(--table-row-even)" : "var(--table-row-odd)",
+                                    }}
+                                    className="group transition-colors"
+                                    onMouseEnter={e => (e.currentTarget.style.background = "var(--table-row-hover)")}
+                                    onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? "var(--table-row-even)" : "var(--table-row-odd)")}
+                                >
+                                    {/* Employee */}
+                                    <td className="px-4 py-3.5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                                                style={{ background: `hsl(${(s.employeeName.charCodeAt(0) * 37) % 360}, 60%, 50%)` }}>
+                                                {s.employeeName.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="text-[13px] font-semibold leading-none" style={{ color: "var(--text-primary)" }}>{s.employeeName}</p>
+                                                <p className="text-[10px] mt-0.5 leading-none" style={{ color: "var(--text-muted)" }}>
+                                                    {ROLE_LABELS[s.employeeRole] || s.employeeRole}
+                                                    <span className="ml-1.5 opacity-60">• {s.companyCount} firma</span>
+                                                </p>
+                                            </div>
                                         </div>
                                     </td>
-                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025] font-bold text-gray-800 dark:text-white tabular-nums text-[11px]">
-                                        {s.baseSalary.toLocaleString()}
-                                    </td>
-                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">
-                                        <span className="font-bold text-emerald-600 tabular-nums text-[11px]">+{s.kpiBonus.toLocaleString()}</span>
-                                    </td>
-                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">
-                                        <span className="font-bold text-rose-600 tabular-nums text-[11px]">{s.kpiPenalty.toLocaleString()}</span>
-                                    </td>
-                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">
-                                        <span className="font-bold text-[#3366CC] tabular-nums text-[11px]">
-                                            {s.manualBonuses > 0 ? '+' : ''}{s.manualBonuses.toLocaleString()}
+                                    {/* Stavka */}
+                                    <td className="px-4 py-3.5 text-right">
+                                        <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
+                                            {s.baseSalary.toLocaleString("uz-UZ")}
                                         </span>
                                     </td>
-                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">
-                                        <span className="font-bold text-amber-600 tabular-nums text-[11px]">
-                                            {s.totalReceived.toLocaleString()}
+                                    {/* KPI Bonus */}
+                                    <td className="px-4 py-3.5 text-right">
+                                        <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--success)" }}>
+                                            +{s.kpiBonus.toLocaleString("uz-UZ")}
                                         </span>
                                     </td>
-                                    <td className="px-5 py-3 text-center border-l border-[#F0F2F5] dark:border-[#1e2025]">
-                                        <div className={`px-2 py-0.5 text-[11px] font-black border rounded-sm tabular-nums tracking-tight transition-colors ${s.remainingBalance <= 0
-                                            ? 'bg-[#EBFBF0] text-emerald-600 border-[#C3E6CB] dark:bg-[#1A2321] dark:border-[#2D3D34]'
-                                            : 'bg-[#F8F9FA] text-gray-800 border-[#DEE2E6] dark:bg-[#1A1D23] dark:border-[#3A3D44] dark:text-white'
-                                            }`}>
-                                            {s.remainingBalance.toLocaleString()}
-                                        </div>
+                                    {/* Jarima */}
+                                    <td className="px-4 py-3.5 text-right">
+                                        <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--danger)" }}>
+                                            {s.kpiPenalty.toLocaleString("uz-UZ")}
+                                        </span>
                                     </td>
-                                    <td className="px-5 py-3 text-right">
-                                        <div className="flex gap-1 justify-end opacity-20 group-hover:opacity-100 transition-opacity">
+                                    {/* Qo'shimcha */}
+                                    <td className="px-4 py-3.5 text-right">
+                                        <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--accent-blue)" }}>
+                                            {s.manualBonuses > 0 ? "+" : ""}{s.manualBonuses.toLocaleString("uz-UZ")}
+                                        </span>
+                                    </td>
+                                    {/* Avans */}
+                                    <td className="px-4 py-3.5 text-right">
+                                        <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--warning)" }}>
+                                            {Math.abs(s.totalReceived).toLocaleString("uz-UZ")}
+                                        </span>
+                                    </td>
+                                    {/* Jami */}
+                                    <td className="px-4 py-3.5 text-right">
+                                        <span className="text-[14px] font-black tabular-nums whitespace-nowrap" style={{ color: "var(--accent-indigo)" }}>
+                                            {s.totalSalary.toLocaleString("uz-UZ")}
+                                        </span>
+                                    </td>
+                                    {/* Qolgan */}
+                                    <td className="px-4 py-3.5 text-right">
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold tabular-nums whitespace-nowrap"
+                                            style={{
+                                                background: s.remainingBalance <= 0 ? "var(--success-bg)" : "var(--warning-bg)",
+                                                color: s.remainingBalance <= 0 ? "var(--success)" : "var(--warning)",
+                                                border: `1px solid ${s.remainingBalance <= 0 ? "var(--success-border)" : "var(--warning-border)"}`,
+                                            }}>
+                                            {s.remainingBalance.toLocaleString("uz-UZ")}
+                                        </span>
+                                    </td>
+                                    {/* Actions */}
+                                    <td className="px-4 py-3.5 text-center">
+                                        <div className="flex gap-1.5 justify-center opacity-30 group-hover:opacity-100 transition-opacity">
                                             <button
-                                                onClick={() => setEditingAdj({ empId: s.employeeId, type: 'avans', amount: 0, reason: '' })}
-                                                className="h-7 px-2.5 flex items-center justify-center gap-1.5 bg-amber-50 dark:bg-[#2B231A] text-amber-600 rounded-sm border border-amber-200 dark:border-[#423425] hover:bg-amber-100 transition-all font-bold group/btn"
+                                                onClick={() => setEditingAdj({ empId: s.employeeId, type: "avans", amount: 0, reason: "" })}
+                                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
+                                                style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}
                                                 title="Avans berish"
                                             >
-                                                <HandCoins size={12} />
-                                                <span className="text-[8px] font-black uppercase tracking-widest hidden xl:inline">Avans</span>
+                                                <HandCoins size={12} /> Avans
                                             </button>
                                             <button
-                                                onClick={() => setEditingAdj({ empId: s.employeeId, type: 'payment', amount: s.remainingBalance, reason: 'Maosh to\'lovi' })}
-                                                className="h-7 px-2.5 flex items-center justify-center gap-1.5 bg-[#EBFBF0] dark:bg-[#1A2321] text-emerald-600 rounded-sm border border-[#C3E6CB] dark:border-[#2D3D34] hover:bg-[#D7F7E1] transition-all font-bold group/btn"
+                                                onClick={() => setEditingAdj({ empId: s.employeeId, type: "payment", amount: s.remainingBalance, reason: "Maosh to'lovi" })}
+                                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
+                                                style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}
                                                 title="Maosh to'lash"
                                             >
-                                                <CheckCircle2 size={12} />
-                                                <span className="text-[8px] font-black uppercase tracking-widest hidden xl:inline">To'lash</span>
+                                                <CheckCircle2 size={12} /> To&apos;lash
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
                             ))}
+                            {summaries.length === 0 && (
+                                <tr>
+                                    <td colSpan={9} className="px-8 py-16 text-center">
+                                        <Wallet size={36} className="mx-auto mb-3" style={{ color: "var(--text-muted)", opacity: 0.4 }} />
+                                        <p className="text-[13px] font-medium" style={{ color: "var(--text-muted)" }}>Bu oy uchun ma&apos;lumot topilmadi</p>
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            {/* Manual Adjustment Modal */}
+            {/* Adjustment Modal */}
             {editingAdj && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 transition-colors animate-fade-in" onClick={() => setEditingAdj(null)}>
-                    <div className="bg-[#F0F2F5] dark:bg-[#111318] w-full max-w-md rounded-sm shadow-2xl border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <div className="px-5 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] flex justify-between items-center bg-white dark:bg-[#1A1D23]">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
+                    style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+                    onClick={() => setEditingAdj(null)}>
+                    <div className="w-full max-w-md rounded-2xl overflow-hidden animate-scale-in"
+                        style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}
+                        onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: "1px solid var(--card-border)" }}>
                             <div>
-                                <h3 className="text-[11px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">
-                                    {editingAdj.type === 'bonus' ? 'Bonus belgilash' :
-                                        editingAdj.type === 'jarima' ? 'Jarima yozish' :
-                                            editingAdj.type === 'avans' ? 'Avans berish' : 'Maosh to\'lovi'}
+                                <h3 className="text-[15px] font-bold" style={{ color: "var(--text-primary)" }}>
+                                    {editingAdj.type === "bonus" ? "Bonus belgilash" :
+                                        editingAdj.type === "jarima" ? "Jarima yozish" :
+                                            editingAdj.type === "avans" ? "Avans berish" : "Maosh to'lovi"}
                                 </h3>
-                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">SOZLAMALARNI KIRITING</p>
+                                <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>Miqdor va sababni kiriting</p>
                             </div>
-                            <button onClick={() => setEditingAdj(null)} className="p-1 text-gray-400 hover:text-rose-500 transition-colors">
-                                <PlusCircle size={18} className="rotate-45" />
+                            <button onClick={() => setEditingAdj(null)}
+                                className="p-2 rounded-lg transition-all"
+                                style={{ color: "var(--text-muted)" }}
+                                onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = ""; e.currentTarget.style.color = "var(--text-muted)"; }}>
+                                <MinusCircle size={18} className="rotate-45" />
                             </button>
                         </div>
-
-                        <div className="p-5 space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block">Summa (sum)</label>
-                                <input
-                                    type="number"
-                                    className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight"
-                                    value={editingAdj.amount || ''}
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-[11px] font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Summa (so&apos;m)</label>
+                                <input type="number"
+                                    className="erp-input text-[15px] font-bold"
+                                    value={editingAdj.amount || ""}
                                     onChange={e => setEditingAdj({ ...editingAdj, amount: Number(e.target.value) })}
-                                    placeholder="0"
-                                />
+                                    placeholder="0" />
                             </div>
-
-                            <div className="space-y-1">
-                                <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block">Sabab / Izoh</label>
+                            <div>
+                                <label className="block text-[11px] font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Sabab / Izoh</label>
                                 <textarea
-                                    className="w-full bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-white outline-none focus:border-[#3366CC] shadow-sm uppercase tracking-tight min-h-[100px]"
+                                    className="erp-input min-h-[90px] resize-none"
                                     value={editingAdj.reason}
                                     onChange={e => setEditingAdj({ ...editingAdj, reason: e.target.value })}
-                                    placeholder="Tafsilotlarni kiriting..."
-                                />
+                                    placeholder="Tafsilotlarni kiriting..." />
                             </div>
                         </div>
-
-                        <div className="p-5 border-t border-[#DEE2E6] dark:border-[#3A3D44] flex gap-2.5">
-                            <button
-                                onClick={() => setEditingAdj(null)}
-                                className="flex-1 px-4 py-2 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-bold text-[10px] text-gray-500 uppercase tracking-widest bg-white dark:bg-[#22252B] hover:bg-[#F8F9FA] transition-all"
-                            >
-                                Bekor qilish
-                            </button>
-                            <button
-                                onClick={handleAddAdjustment}
-                                className="flex-1 px-4 py-2 rounded-sm font-bold text-[10px] text-white bg-[#3366CC] hover:bg-[#2A52A3] transition-all shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest"
-                            >
-                                <Save size={14} /> Saqlash
+                        <div className="px-6 pb-6 flex gap-3">
+                            <button onClick={() => setEditingAdj(null)} className="btn-secondary flex-1">Bekor qilish</button>
+                            <button onClick={handleAddAdjustment}
+                                className="btn-primary flex-1">
+                                <Save size={15} /> Saqlash
                             </button>
                         </div>
                     </div>
@@ -411,3 +489,4 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, lang, cur
 };
 
 export default PayrollTable;
+

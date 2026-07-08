@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Company, OperationEntry, Payment, PaymentStatus, Language, ClientCredential, ClientHistory, Staff, TaxType, CompanyStatus, RiskLevel, KPIRule } from '@/types';
-import { translations } from '@/lib/translations';
-import StatusBadge from './StatusBadge';
-import { X, Shield, History, FileText, Lock, Globe, Building, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Send, Check, Calculator, Trash2, Plus, ChevronRight, ArrowRight, Pencil, Save, Loader2, Phone } from 'lucide-react';
+import { Company, OperationEntry, Payment, Language, ClientCredential, ClientHistory, Staff } from '@/types';
+import { X, Shield, FileText, Lock, Globe, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Check, Calculator, Trash2, Plus, Pencil, Save, Loader2, Phone } from 'lucide-react';
 import { getKpiRules, getCompanyKpiRules, upsertCompanyKpiRule } from '@/server/kpi';
-import { createAuditLog } from '@/server/audit';
 
 interface DrawerProps {
   company: Company | null;
@@ -19,8 +16,7 @@ interface DrawerProps {
 
 type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xizmatlar' | 'kpi';
 
-const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, staff = [], lang, userId, onClose, onSave }) => {
-  const t = translations[lang];
+const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, onSave }) => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [credentials, setCredentials] = useState<ClientCredential[]>([]);
   const [clientHistory, setClientHistory] = useState<ClientHistory[]>([]);
@@ -108,35 +104,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
   if (!company) return null;
 
-  const companyPayments = payments.filter(p => p.companyId === company.id);
-  const totalPaid = companyPayments.filter(p => p.status === PaymentStatus.PAID).reduce((sum, p) => sum + p.amount, 0);
-  const totalPending = companyPayments.filter(p => p.status !== PaymentStatus.PAID).reduce((sum, p) => sum + p.amount, 0);
-
-  const getRiskBadge = () => {
-    const risk = company.riskLevel || 'low';
-    if (risk === 'high' || company.companyStatus === 'problem' || company.companyStatus === 'debtor') {
-      return { emoji: '🔴', text: 'Yuqori Xavf', color: 'bg-rose-500/10 text-rose-500 border-rose-500/20' };
-    }
-    if (risk === 'medium' || company.companyStatus === 'suspended') {
-      return { emoji: '🟡', text: "O'rta Xavf", color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' };
-    }
-    return { emoji: '🟢', text: 'Past Xavf', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
-  };
-
-  const riskBadge = getRiskBadge();
-
-  const handleShowPassword = async (credId: string, companyId: string) => {
+  const handleShowPassword = async (credId: string) => {
     if (!showPasswords[credId]) {
       // Access logged
     }
     setShowPasswords(prev => ({ ...prev, [credId]: !prev[credId] }));
   };
-
-  const contractAmount = company.contractAmount || 0;
-  const firmaShare = (company.firmaSharePercent || 50) / 100 * contractAmount;
-  const buxgalterShare = (company.accountantPerc || 20) / 100 * contractAmount;
-  const bankShare = (company.bankClientSum || 0);
-  const nazoratchiShare = (company.supervisorPerc || 2.5) / 100 * contractAmount;
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     { id: 'pasport', label: 'Pasport', icon: <FileText size={14} /> },
@@ -151,23 +124,23 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
   return (
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity" onClick={onClose}></div>
-      <div className="fixed right-0 top-0 h-full w-full max-w-[850px] z-[101] overflow-y-auto overflow-x-hidden animate-in slide-in-from-right duration-300 flex flex-col shadow-2xl" style={{ background: 'var(--surface-2)' }}>
+      <div className="fixed right-0 top-0 h-full w-full max-w-[850px] z-[101] overflow-y-auto overflow-x-hidden animate-in slide-in-from-right duration-300 flex flex-col shadow-2xl" style={{ background: 'var(--input-bg)' }}>
         <div className="dashboard-card shrink-0 z-20 shadow-md !rounded-none !border-0 !border-b border-[var(--border)] relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--primary)' }}></div>
+          <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
           <div className="p-6 flex justify-between items-start">
             <div className="flex gap-5 items-start">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl text-white font-black shrink-0 shadow-md transition-transform hover:scale-105" style={{ background: `linear-gradient(135deg, var(--primary), var(--primary-dark))` }}>
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl text-white font-black shrink-0 shadow-md transition-transform hover:scale-105" style={{ background: `linear-gradient(135deg, var(--primary), var(--accent-blue-hover))` }}>
                 {company.name.charAt(0)}
               </div>
               <div className="flex flex-col gap-1.5 pt-1">
                 <h2 className="text-2xl font-black uppercase tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.name}</h2>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <span className="c1-badge" style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }}>INN: {company.inn}</span>
-                  <span className="c1-badge" style={{ background: 'var(--primary-ghost)', color: 'var(--primary)' }}>{company.taxType}</span>
+                  <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>INN: {company.inn}</span>
+                  <span className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{company.taxType}</span>
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-xl transition-all shadow-sm" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-light)'; e.currentTarget.style.borderColor = 'var(--danger)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
+            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-xl transition-all shadow-sm" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.borderColor = 'var(--danger)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}>
               <X size={20} />
             </button>
           </div>
@@ -177,7 +150,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 transition-all font-bold text-[11px] uppercase tracking-widest whitespace-nowrap rounded-lg border`}
-                style={activeTab === tab.id ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' } : { background: 'var(--surface-2)', color: 'var(--text-2)', borderColor: 'var(--border)' }}
+                style={activeTab === tab.id ? { background: 'var(--accent-blue)', color: '#fff', borderColor: 'var(--accent-blue)' } : { background: 'var(--input-bg)', color: 'var(--text-secondary)', borderColor: 'var(--card-border)' }}
               >
                 <div className="shrink-0">{React.cloneElement(tab.icon as React.ReactElement<any>, { size: 14 })}</div>
                 {tab.label}
@@ -189,16 +162,16 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
         <div className="p-6 flex-1 space-y-6">
           {activeTab === 'pasport' && (
             <div className="space-y-6 animate-fade-in pb-10">
-              <div className="dashboard-card p-6 border-l-4" style={{ borderLeftColor: 'var(--primary)' }}>
+              <div className="dashboard-card p-6 border-l-4" style={{ borderLeftColor: 'var(--accent-blue)' }}>
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--primary-ghost)', color: 'var(--primary)' }}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
                     <User size={20} />
                   </div>
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Direktor / Rahbar</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Direktor / Rahbar</h4>
                 </div>
                 <div className="pl-14">
                   <p className="text-xl font-black uppercase tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.directorName || '—'}</p>
-                  <p className="text-[12px] font-bold uppercase mt-3 tracking-widest tabular-nums flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+                  <p className="text-[12px] font-bold uppercase mt-3 tracking-widest tabular-nums flex items-center gap-2" style={{ color: 'var(--accent-blue)' }}>
                     <Phone size={14} /> {company.directorPhone || 'MALUMOT YOQ'}
                   </p>
                 </div>
@@ -209,7 +182,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--warning-light)', color: 'var(--warning)' }}>
                     <MapPin size={20} />
                   </div>
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Yuridik Manzil</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Yuridik Manzil</h4>
                 </div>
                 <div className="pl-14">
                   <p className="text-[13px] font-bold uppercase tracking-tight leading-relaxed" style={{ color: 'var(--text)' }}>{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
@@ -217,36 +190,36 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
               </div>
 
               <div className="dashboard-card overflow-hidden">
-                <div className="px-5 py-4 flex items-center justify-between" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                <div className="px-5 py-4 flex items-center justify-between" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
                   <div className="flex items-center gap-3">
-                    <FileText size={18} style={{ color: 'var(--text-3)' }} />
+                    <FileText size={18} style={{ color: 'var(--text-muted)' }} />
                     <h4 className="text-[11px] font-bold uppercase tracking-widest leading-none" style={{ color: 'var(--text)' }}>Arxiv Hujjatlari</h4>
                   </div>
-                  <span className="c1-badge" style={{ background: 'var(--primary-ghost)', color: 'var(--primary)' }}>{documents.length} FAYL</span>
+                  <span className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{documents.length} FAYL</span>
                 </div>
                 {isLoadingDocs ? (
                   <div className="p-10 flex flex-col items-center justify-center">
-                    <div className="animate-spin w-8 h-8 border-3 border-t-transparent rounded-full mb-4" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }}></div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest leading-none" style={{ color: 'var(--text-3)' }}>Yuklanmoqda...</p>
+                    <div className="animate-spin w-8 h-8 border-3 border-t-transparent rounded-full mb-4" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
+                    <p className="text-[11px] font-bold uppercase tracking-widest leading-none" style={{ color: 'var(--text-muted)' }}>Yuklanmoqda...</p>
                   </div>
                 ) : documents.length > 0 ? (
-                  <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                  <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
                     {documents.slice(0, 5).map((doc, i) => (
-                      <div key={i} className="flex items-center justify-between p-5 transition-colors group hover:bg-[var(--primary-ghost)]">
+                      <div key={i} className="flex items-center justify-between p-5 transition-colors group hover:bg-[var(--accent-blue-light)]">
                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}>
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }}>
                                 <FileText size={16} />
                             </div>
                             <span className="text-[13px] font-bold truncate pr-4 uppercase tracking-tight transition-colors" style={{ color: 'var(--text)' }}>{doc.file_name}</span>
                         </div>
-                        <a href={doc.file_url} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center rounded-lg shrink-0 transition-all shadow-sm" style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-ghost)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.background = 'var(--surface-2)'; }}>
+                        <a href={doc.file_url} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center rounded-lg shrink-0 transition-all shadow-sm" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; }}>
                           <Download size={18} />
                         </a>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-16 text-center text-[12px] font-bold uppercase tracking-[0.3em]" style={{ color: 'var(--text-3)' }}>
+                  <div className="p-16 text-center text-[12px] font-bold uppercase tracking-[0.3em]" style={{ color: 'var(--text-muted)' }}>
                     Hujjatlar topilmadi
                   </div>
                 )}
@@ -254,31 +227,31 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
               {/* Service Scope in Passport */}
               <div className="dashboard-card overflow-hidden">
-                <div className="px-5 py-4 flex items-center gap-3" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-                  <Check size={18} style={{ color: 'var(--text-3)' }} />
+                <div className="px-5 py-4 flex items-center gap-3" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
+                  <Check size={18} style={{ color: 'var(--text-muted)' }} />
                   <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Xizmatlar & Operatsiyalar</h4>
                 </div>
                 <div className="p-6">
                   <div className="flex flex-wrap gap-2 mb-6">
                     {company.serviceScope?.length ? company.serviceScope.map(s => (
-                      <span key={s} className="c1-badge" style={{ background: 'var(--success-light)', color: 'var(--success)' }}>{s}</span>
+                      <span key={s} className="c1-badge" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>{s}</span>
                     )) : company.activeServices?.length ? company.activeServices.slice(0, 8).map(s => (
-                      <span key={s} className="c1-badge" style={{ background: 'var(--primary-ghost)', color: 'var(--primary)' }}>{s.replace('_', ' ')}</span>
+                      <span key={s} className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{s.replace('_', ' ')}</span>
                     )) : (
-                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] opacity-50" style={{ color: 'var(--text-3)' }}>Xizmatlar tanlanmagan</p>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Xizmatlar tanlanmagan</p>
                     )}
                     {company.activeServices && company.activeServices.length > 8 && (
-                      <span className="text-[10px] font-bold flex items-center px-1 uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>+{company.activeServices.length - 8} YANA</span>
+                      <span className="text-[10px] font-bold flex items-center px-1 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>+{company.activeServices.length - 8} YANA</span>
                     )}
                   </div>
                   <button
                     onClick={() => setActiveTab('xizmatlar')}
                     className="w-full py-3 rounded-lg text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-sm flex items-center justify-center gap-2"
-                    style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-ghost)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--surface-2)'; }}
+                    style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.borderColor = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--card-border)'; e.currentTarget.style.background = 'var(--input-bg)'; }}
                   >
-                    BARCHASINI KO'RISH
+                    BARCHASINI KO&apos;RISH
                   </button>
                 </div>
               </div>
@@ -289,51 +262,51 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
             <div className="space-y-4 animate-fade-in">
               <div className="grid grid-cols-2 gap-4">
                 <div className="dashboard-card p-5">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>1C Server & Baza</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>1C Server & Baza</h4>
                   <div className="space-y-3 text-[12px]">
-                    <p className="font-bold uppercase tracking-tight" style={{ color: 'var(--text-2)' }}>Server ID: <span style={{ color: 'var(--primary)' }}>{company.serverInfo || '—'}</span></p>
+                    <p className="font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>Server ID: <span style={{ color: 'var(--accent-blue)' }}>{company.serverInfo || '—'}</span></p>
                     {company.serverName && (
-                      <p className="font-bold uppercase tracking-tight" style={{ color: 'var(--text-2)' }}>Server Nomi: <span style={{ color: 'var(--success)' }}>{company.serverName}</span></p>
+                      <p className="font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>Server Nomi: <span style={{ color: 'var(--success)' }}>{company.serverName}</span></p>
                     )}
-                    <p className="font-bold uppercase tracking-tight" style={{ color: 'var(--text-3)' }}>Baza: {company.baseName1c || '—'}</p>
+                    <p className="font-bold uppercase tracking-tight" style={{ color: 'var(--text-muted)' }}>Baza: {company.baseName1c || '—'}</p>
                   </div>
                 </div>
-                <div className={`dashboard-card p-5 flex items-center gap-4 transition-colors`} style={{ background: company.itParkResident ? 'var(--primary-ghost)' : 'var(--surface)', borderColor: company.itParkResident ? 'var(--primary)' : 'var(--border)' }}>
-                  <Shield size={24} className="shrink-0" style={{ color: company.itParkResident ? 'var(--primary)' : 'var(--text-3)' }} />
-                  <span className="text-[13px] font-black uppercase tracking-widest" style={{ color: company.itParkResident ? 'var(--primary)' : 'var(--text-3)' }}>IT Park Rezidenti</span>
+                <div className={`dashboard-card p-5 flex items-center gap-4 transition-colors`} style={{ background: company.itParkResident ? 'var(--accent-blue-light)' : 'var(--card-bg)', borderColor: company.itParkResident ? 'var(--accent-blue)' : 'var(--card-border)' }}>
+                  <Shield size={24} className="shrink-0" style={{ color: company.itParkResident ? 'var(--accent-blue)' : 'var(--text-muted)' }} />
+                  <span className="text-[13px] font-black uppercase tracking-widest" style={{ color: company.itParkResident ? 'var(--accent-blue)' : 'var(--text-muted)' }}>IT Park Rezidenti</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="dashboard-card p-5">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>Statistika Hisobotlari</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Statistika Hisobotlari</h4>
                   <div className="flex flex-wrap gap-2">
                     {company.statReports?.length ? company.statReports.map(s => (
-                      <span key={s} className="c1-badge" style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }}>{s}</span>
-                    )) : <p className="text-[11px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-3)' }}>belgilanmagan</p>}
+                      <span key={s} className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>{s}</span>
+                    )) : <p className="text-[11px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>belgilanmagan</p>}
                   </div>
                 </div>
 
                 <div className="dashboard-card p-5">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>Majburiy Hisobotlar</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Majburiy Hisobotlar</h4>
                   <div className="flex flex-wrap gap-2">
                     {company.requiredReports?.length ? company.requiredReports.map(r => (
-                      <span key={r} className="c1-badge" style={{ background: 'var(--danger-light)', color: 'var(--danger)' }}>{r}</span>
-                    )) : <p className="text-[11px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-3)' }}>belgilanmagan</p>}
+                      <span key={r} className="c1-badge" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>{r}</span>
+                    )) : <p className="text-[11px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>belgilanmagan</p>}
                   </div>
                 </div>
 
                 <div className="dashboard-card p-5 col-span-1 md:col-span-2">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>Xizmatlar Ko'lami (Scope)</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Xizmatlar Ko&apos;lami (Scope)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {company.serviceScope?.length ? company.serviceScope.map(s => (
-                      <div key={s} className="flex items-center gap-2 p-2 rounded-lg transition-colors" style={{ background: 'var(--primary-ghost)', color: 'var(--primary)' }}>
+                      <div key={s} className="flex items-center gap-2 p-2 rounded-lg transition-colors" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
                         <Check size={14} className="shrink-0" />
                         <span className="text-[10px] font-bold uppercase truncate tracking-tight">{s}</span>
                       </div>
                     )) : (
-                      <div className="col-span-full py-8 text-center rounded-lg border border-dashed transition-colors" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
-                        <p className="text-[11px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-3)' }}>Xizmatlar tanlanmagan</p>
+                      <div className="col-span-full py-8 text-center rounded-lg border border-dashed transition-colors" style={{ borderColor: 'var(--card-border)', background: 'var(--input-bg)' }}>
+                        <p className="text-[11px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>Xizmatlar tanlanmagan</p>
                       </div>
                     )}
                   </div>
@@ -342,12 +315,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
               <div className="dashboard-card p-5">
                 <div className="flex items-center gap-2 mb-4">
-                  <Database size={16} style={{ color: 'var(--text-3)' }} />
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>1C Holati</h4>
+                  <Database size={16} style={{ color: 'var(--text-muted)' }} />
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>1C Holati</h4>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {['cloud', 'local', 'server', 'none'].map(status => (
-                    <button key={status} className={`px-4 py-2 rounded-lg border font-bold text-[11px] uppercase transition-all tracking-widest shadow-sm`} style={company.oneCStatus === status ? { background: 'var(--primary)', borderColor: 'var(--primary)', color: '#fff' } : { background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text-2)' }}>
+                    <button key={status} className={`px-4 py-2 rounded-lg border font-bold text-[11px] uppercase transition-all tracking-widest shadow-sm`} style={company.oneCStatus === status ? { background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' } : { background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}>
                       {status === 'cloud' ? '☁️ Cloud' : status === 'local' ? '💻 Local' : status === 'server' ? '🖥️ Server' : '❌ Yo\'q'}
                     </button>
                   ))}
@@ -438,12 +411,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
 
               <div className="bg-white dark:bg-[#22252B] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm overflow-hidden transition-colors">
                 <div className="bg-[#F8F9FA] dark:bg-[#1e2025] px-3 py-2 flex items-center justify-between border-b border-[#DEE2E6] dark:border-[#3A3D44]">
-                  <h4 className="text-[9px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Qo'shimcha Kirish Ma'lumotlari</h4>
+                  <h4 className="text-[9px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Qo&apos;shimcha Kirish Ma&apos;lumotlari</h4>
                   <button
                     onClick={() => setIsAddingCredential(true)}
                     className="flex items-center gap-1 text-[8px] font-bold text-[#3366CC] uppercase py-1 px-2.5 bg-[#F2F7FF] dark:bg-[#1C2531] rounded-sm border border-[#DEE2E6] hover:bg-white transition-all shadow-sm"
                   >
-                    <Plus size={10} /> Yangi Qo'shish
+                    <Plus size={10} /> Yangi Qo&apos;shish
                   </button>
                 </div>
 
@@ -508,7 +481,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                         }}
                         className="px-2.5 py-1 bg-[#3366CC] text-white rounded-sm border border-[#3366CC] disabled:opacity-50 shadow-sm transition-all"
                       >
-                        Qo'shish
+                        Qo&apos;shish
                       </button>
                     </div>
                   </div>
@@ -544,7 +517,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                             <p className="text-[8px] font-bold text-gray-400 uppercase mb-0.5 tracking-widest">Parol</p>
                             <p className="font-mono text-[11px] font-bold text-gray-800 dark:text-gray-200 tracking-widest leading-none mt-1">{showPasswords[cred.id] ? cred.encryptedPassword || '—' : '••••••••'}</p>
                           </div>
-                          <button onClick={() => handleShowPassword(cred.id, company.id)} className="text-gray-400 hover:text-[#3366CC] transition-all shrink-0">
+                          <button onClick={() => handleShowPassword(cred.id)} className="text-gray-400 hover:text-[#3366CC] transition-all shrink-0">
                             {showPasswords[cred.id] ? <EyeOff size={11} /> : <Eye size={11} />}
                           </button>
                         </div>
@@ -647,7 +620,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                       }) : (
                         <div className="p-8 text-center bg-[#F8F9FA] dark:bg-[#111318] transition-colors">
                           <Users size={20} className="mx-auto mb-2 text-gray-300" />
-                          <p className="text-[9px] font-bold uppercase text-gray-400 tracking-widest opacity-50">Jamoa a'zolari tayinlanmagan</p>
+                          <p className="text-[9px] font-bold uppercase text-gray-400 tracking-widest opacity-50">Jamoa a&apos;zolari tayinlanmagan</p>
                         </div>
                       );
                     })()}
@@ -727,11 +700,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
             <div className="space-y-6 animate-fade-in px-2">
               <div className="grid grid-cols-2 gap-4">
                 {company.internalContractor && (
-                  <div className="col-span-2 dashboard-card p-5 !shadow-sm flex items-center justify-between" style={{ background: 'var(--primary-ghost)' }}>
+                  <div className="col-span-2 dashboard-card p-5 !shadow-sm flex items-center justify-between" style={{ background: 'var(--accent-blue-light)' }}>
                     <div>
-                      <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 opacity-70" style={{ color: 'var(--primary)' }}>Ichki Pudratchi (Ijrochi)</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 opacity-70" style={{ color: 'var(--accent-blue)' }}>Ichki Pudratchi (Ijrochi)</p>
                       <div className="flex items-center gap-3">
-                        <Building2 size={16} style={{ color: 'var(--primary)' }} />
+                        <Building2 size={16} style={{ color: 'var(--accent-blue)' }} />
                         <p className="text-[14px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.internalContractor}</p>
                       </div>
                     </div>
@@ -739,62 +712,62 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                 )}
 
                 <div className="dashboard-card p-5 !shadow-sm">
-                  <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-3)' }}>Shartnoma Raqami</p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Shartnoma Raqami</p>
                   <p className="text-[13px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.contractNumber || '—'}</p>
                 </div>
                 <div className="dashboard-card p-5 !shadow-sm">
-                  <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-3)' }}>Sana</p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Sana</p>
                   <p className="text-[13px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.contractDate || '—'}</p>
                 </div>
               </div>
 
               <div className="dashboard-card overflow-hidden !shadow-sm">
-                <div className="p-5 text-center" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest mb-5" style={{ color: 'var(--text-3)' }}>Moliyaviy Holat</h4>
+                <div className="p-5 text-center" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest mb-5" style={{ color: 'var(--text-muted)' }}>Moliyaviy Holat</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
-                      <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Xizmat Narxi</p>
-                      <p className="text-[18px] font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.contractAmount?.toLocaleString()} <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>so'm</span></p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xizmat Narxi</p>
+                      <p className="text-[18px] font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{Number(company.contractAmount || 0).toLocaleString()} <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>so&apos;m</span></p>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Joriy Balans</p>
-                      <p className={`text-[18px] font-black tabular-nums tracking-tight leading-none uppercase`} style={{ color: (company.currentBalance || 0) < 0 ? '#ff6b6b' : '#34d058' }}>
-                        {(company.currentBalance || 0).toLocaleString()} <span className="text-[9px] font-bold uppercase tracking-widest">so'm</span>
+                      <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Joriy Balans</p>
+                      <p className={`text-[18px] font-black tabular-nums tracking-tight leading-none uppercase`} style={{ color: Number(company.currentBalance || 0) < 0 ? '#ff6b6b' : '#34d058' }}>
+                        {Number(company.currentBalance || 0).toLocaleString()} <span className="text-[9px] font-bold uppercase tracking-widest">so&apos;m</span>
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="p-5">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest mb-4 opacity-70" style={{ color: 'var(--text-3)' }}>Kaskadli Taqsimot (Oylik prognozi)</h4>
-                  <div className="divide-y rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest mb-4 opacity-70" style={{ color: 'var(--text-muted)' }}>Kaskadli Taqsimot (Oylik prognozi)</h4>
+                  <div className="divide-y rounded-xl overflow-hidden border" style={{ borderColor: 'var(--card-border)' }}>
                     {[
-                      { label: 'Bosh Buxgalter', perc: company.chiefAccountantPerc || 0, sum: company.chiefAccountantSum, type: 'head' },
-                      { label: 'Nazoratchi', perc: company.supervisorPerc || 0, type: 'sup' },
-                      { label: 'Bank Klient', perc: company.bankClientPerc || 0, sum: company.bankClientSum, type: 'bank' },
-                      { label: 'Buxgalter', perc: company.accountantPerc || 0, type: 'acc' }
+                      { label: 'Bosh Buxgalter', perc: Number(company.chiefAccountantPerc || 0), sum: company.chiefAccountantSum ? Number(company.chiefAccountantSum) : null, type: 'head' },
+                      { label: 'Nazoratchi', perc: Number(company.supervisorPerc || 0), type: 'sup' },
+                      { label: 'Bank Klient', perc: Number(company.bankClientPerc || 0), sum: company.bankClientSum ? Number(company.bankClientSum) : null, type: 'bank' },
+                      { label: 'Buxgalter', perc: Number(company.accountantPerc || 0), type: 'acc' }
                     ].map((item, i) => {
-                      const amount = company.contractAmount || 0;
+                      const amount = Number(company.contractAmount || 0);
                       const val = item.sum || (amount * (item.perc / 100));
                       return (
-                        <div key={i} className="flex items-center justify-between p-3.5 transition-colors group hover:bg-[var(--surface-2)]" style={{ background: 'var(--surface)' }}>
+                        <div key={i} className="flex items-center justify-between p-3.5 transition-colors group hover:bg-[var(--input-bg)]" style={{ background: 'var(--card-bg)' }}>
                           <span className="text-[11px] font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{item.label}</span>
                           <div className="text-right flex items-center gap-4">
-                            <p className="text-[9px] font-bold px-2 py-1 rounded-md border uppercase tracking-tight" style={{ color: 'var(--text-3)', background: 'var(--surface-2)', borderColor: 'var(--border)' }}>{item.sum ? 'Fiks.' : `${item.perc}%`}</p>
-                            <p className="text-[13px] font-black tabular-nums tracking-tight uppercase leading-none" style={{ color: 'var(--text)' }}>{val.toLocaleString()} <span className="text-[9px] font-bold opacity-70 uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>UZS</span></p>
+                            <p className="text-[9px] font-bold px-2 py-1 rounded-md border uppercase tracking-tight" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>{item.sum ? 'Fiks.' : `${item.perc}%`}</p>
+                            <p className="text-[13px] font-black tabular-nums tracking-tight uppercase leading-none" style={{ color: 'var(--text)' }}>{val.toLocaleString()} <span className="text-[9px] font-bold opacity-70 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>UZS</span></p>
                           </div>
                         </div>
                       )
                     })}
                   </div>
                   <div className="mt-4 flex items-center justify-between p-4 rounded-xl shadow-sm" style={{ background: 'rgba(52, 208, 88, 0.1)', border: '1px solid rgba(52, 208, 88, 0.2)' }}>
-                    <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: '#34d058' }}>Kompaniya Qoldig'i</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: '#34d058' }}>Kompaniya Qoldig&apos;i</span>
                     <span className="text-[14px] font-black tabular-nums tracking-tight uppercase leading-none" style={{ color: '#34d058' }}>
-                      {((company.contractAmount || 0) - (
-                        (company.chiefAccountantSum || ((company.contractAmount || 0) * (company.chiefAccountantPerc || 0) / 100)) +
-                        (company.supervisorPerc ? (company.contractAmount || 0) * company.supervisorPerc / 100 : 0) +
-                        (company.bankClientSum || ((company.contractAmount || 0) * (company.bankClientPerc || 0) / 100)) +
-                        ((company.contractAmount || 0) * (company.accountantPerc || 0) / 100)
+                      {(Number(company.contractAmount || 0) - (
+                        (company.chiefAccountantSum ? Number(company.chiefAccountantSum) : (Number(company.contractAmount || 0) * Number(company.chiefAccountantPerc || 0) / 100)) +
+                        (company.supervisorPerc ? Number(company.contractAmount || 0) * Number(company.supervisorPerc || 0) / 100 : 0) +
+                        (company.bankClientSum ? Number(company.bankClientSum) : (Number(company.contractAmount || 0) * Number(company.bankClientPerc || 0) / 100)) +
+                        (Number(company.contractAmount || 0) * Number(company.accountantPerc || 0) / 100)
                       )).toLocaleString()} <span className="text-[10px] font-bold">UZS</span>
                     </span>
                   </div>
@@ -806,9 +779,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
           {activeTab === 'xizmatlar' && (
             <div className="space-y-6 animate-fade-in px-2">
               <div className="dashboard-card p-5 !shadow-sm">
-                <div className="flex items-center justify-between mb-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                <div className="flex items-center justify-between mb-5 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
                   <div className="flex items-center gap-3">
-                    <Check size={16} style={{ color: 'var(--text-3)' }} />
+                    <Check size={16} style={{ color: 'var(--text-muted)' }} />
                     <h4 className="text-[11px] font-black uppercase tracking-widest leading-none mt-0.5" style={{ color: 'var(--text)' }}>Aktiv Xizmatlar</h4>
                   </div>
                   <div className="flex gap-3">
@@ -831,7 +804,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                       className="px-3 py-2 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
                       style={{ color: '#ff6b6b', background: 'rgba(255, 107, 107, 0.1)', border: '1px solid rgba(255, 107, 107, 0.2)' }}
                     >
-                      Hammasini o'chirish
+                      Hammasini o&apos;chirish
                     </button>
                   </div>
                 </div>
@@ -862,12 +835,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                   ].map(service => {
                     const isActive = company.activeServices?.includes(service.key);
                     return (
-                      <label key={service.key} className="flex items-center gap-3 group cursor-pointer transition-all hover:bg-[var(--surface-2)] p-2 rounded-xl border border-transparent" onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}>
+                      <label key={service.key} className="flex items-center gap-3 group cursor-pointer transition-all hover:bg-[var(--input-bg)] p-2 rounded-xl border border-transparent" onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--card-border)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}>
                         <div className="relative flex items-center justify-center">
                           <input
                             type="checkbox"
                             className="peer appearance-none w-5 h-5 border rounded-md transition-all cursor-pointer shadow-sm"
-                            style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+                            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
                             checked={isActive}
                             onChange={() => {
                               if (!onSave) return;
@@ -876,10 +849,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                               onSave({ ...company, activeServices: updated });
                             }}
                           />
-                          <div className="absolute inset-0 rounded-md pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" style={{ background: 'var(--primary)' }}></div>
+                          <div className="absolute inset-0 rounded-md pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" style={{ background: 'var(--accent-blue)' }}></div>
                           <Check size={12} className="absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none z-10" />
                         </div>
-                        <span className={`text-[10px] font-bold uppercase tracking-tight transition-colors`} style={{ color: isActive ? 'var(--text)' : 'var(--text-3)' }}>
+                        <span className={`text-[10px] font-bold uppercase tracking-tight transition-colors`} style={{ color: isActive ? 'var(--text)' : 'var(--text-muted)' }}>
                           {service.label}
                         </span>
                       </label>
@@ -894,13 +867,13 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
             <div className="space-y-6 animate-fade-in px-2">
               {isLoadingKpi ? (
                 <div className="dashboard-card p-10 flex flex-col items-center justify-center transition-colors">
-                  <div className="animate-spin w-8 h-8 border-3 border-t-transparent rounded-full mb-4" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }}></div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>KPI ma'lumotlari yuklanmoqda...</p>
+                  <div className="animate-spin w-8 h-8 border-3 border-t-transparent rounded-full mb-4" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>KPI ma&apos;lumotlari yuklanmoqda...</p>
                 </div>
               ) : (
                 <div className="dashboard-card p-5 !shadow-sm">
-                  <div className="flex items-center gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
-                    <Calculator size={16} style={{ color: 'var(--text-3)' }} />
+                  <div className="flex items-center gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
+                    <Calculator size={16} style={{ color: 'var(--text-muted)' }} />
                     <h4 className="text-[11px] font-black uppercase tracking-widest mt-0.5 leading-none" style={{ color: 'var(--text)' }}>Mijoz KPI Soblamalari (Override)</h4>
                   </div>
 
@@ -912,12 +885,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                       const currentPenalty = compRule?.penaltyPercent ?? '';
 
                       return (
-                        <div key={rule.id} className="p-4 rounded-xl border transition-all group hover:shadow-sm" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                        <div key={rule.id} className="p-4 rounded-xl border transition-all group hover:shadow-sm" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
                           <div className="flex justify-between items-start mb-4">
                             <div className="min-w-0 flex-1">
                               <p className="text-[11px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{rule.nameUz}</p>
                               <div className="flex items-center gap-3 mt-1.5">
-                                <span className="text-[9px] font-bold uppercase tracking-tight opacity-70" style={{ color: 'var(--text-3)' }}>{rule.role}</span>
+                                <span className="text-[9px] font-bold uppercase tracking-tight opacity-70" style={{ color: 'var(--text-muted)' }}>{rule.role}</span>
                                 <span className="px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border" style={{
                                   background: rule.category === 'automation' ? 'rgba(77, 163, 255, 0.1)' : 'rgba(255, 215, 0, 0.1)',
                                   color: rule.category === 'automation' ? '#4da3ff' : '#ffd700',
@@ -928,13 +901,13 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                               </div>
                             </div>
                             <div className="ml-5 text-right">
-                              <p className="text-[9px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-3)' }}>Standart</p>
-                              <p className="text-[10px] font-black tracking-tight mt-0.5" style={{ color: 'var(--primary)' }}>+{rule.rewardPercent}/-{rule.penaltyPercent}%</p>
+                              <p className="text-[9px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-muted)' }}>Standart</p>
+                              <p className="text-[10px] font-black tracking-tight mt-0.5" style={{ color: 'var(--accent-blue)' }}>+{rule.rewardPercent}/-{rule.penaltyPercent}%</p>
                             </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-4 mt-4">
-                            <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                            <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>
                               <label className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: '#34d058' }}>Bonus %:</label>
                               <input
                                 type="number"
@@ -975,7 +948,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                                 }}
                               />
                             </div>
-                            <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                            <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>
                               <label className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: '#ff6b6b' }}>Jarima %:</label>
                               <input
                                 type="number"
@@ -1022,9 +995,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, operation, payments, st
                     })}
 
                     {kpiRules.length === 0 && (
-                      <div className="p-10 text-center rounded-xl border border-dashed transition-colors" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                        <AlertTriangle size={24} className="mx-auto mb-3" style={{ color: 'var(--text-3)' }} />
-                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-3)' }}>Hech qanday KPI qoidasi topilmadi</p>
+                      <div className="p-10 text-center rounded-xl border border-dashed transition-colors" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                        <AlertTriangle size={24} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
+                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>Hech qanday KPI qoidasi topilmadi</p>
                       </div>
                     )}
                   </div>

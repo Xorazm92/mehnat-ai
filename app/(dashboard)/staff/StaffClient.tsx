@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function StaffClient({ staff, companies, operations }: Props) {
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [, setSelectedStaff] = useState<Staff | null>(null);
 
   const handleSave = async (s: Partial<Staff>) => {
     if (s.id) {

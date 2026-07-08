@@ -1,5 +1,5 @@
 
-import { Company, OperationEntry, ReportStatus, ContractRole, MonthlyPerformance, KPIRule } from '@/types';
+import { Company, OperationEntry, ContractRole, MonthlyPerformance, KPIRule } from '@/types';
 
 export interface SalaryResult {
     role: ContractRole | 'chief_accountant' | 'supervisor';

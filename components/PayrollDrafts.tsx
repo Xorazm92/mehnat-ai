@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Staff, Company, Language, EmployeeSalarySummary, OperationEntry, MonthlyPerformance, KPIRule, CompanyKPIRule, EmployeeSalary } from '@/types';
-import { calculateCompanySalaries, SalaryResult } from '@/lib/kpiLogic';
-import { translations } from '@/lib/translations';
-import { DollarSign, CheckCircle2, AlertCircle, FileText, ChevronRight, X, Building2, TrendingUp, TrendingDown } from 'lucide-react';
+import { calculateCompanySalaries } from '@/lib/kpiLogic';
+import { DollarSign, CheckCircle2, AlertCircle, FileText, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { periodsEqual } from '@/lib/periods';
-import { getKpiRules, getMonthlyPerformance, getCompanyKpiRules } from '@/server/kpi';
-import { getPayrollSummary } from '@/server/payroll';
+import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
+import { getPayrollAdjustments, approveEmployeeSalary } from '@/server/payroll';
+import { toast } from 'sonner';
 
 interface Props {
     staff: Staff[];
@@ -42,7 +42,6 @@ interface DetailModal {
 }
 
 const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, userRole }) => {
-    const t = translations[lang];
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
     const [performanceList, setPerformanceList] = useState<MonthlyPerformance[]>([]);
     const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
@@ -53,7 +52,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
     const [detailModal, setDetailModal] = useState<DetailModal | null>(null);
 
     const superAdminCommission = useMemo(() => {
-        const totalTurnover = companies.filter(c => c.isActive).reduce((acc, c) => acc + (c.contractAmount || 0), 0);
+        const totalTurnover = companies.filter(c => c.isActive).reduce((acc, c) => acc + Number(c.contractAmount || 0), 0);
         return totalTurnover * 0.07;
     }, [companies]);
 
@@ -217,9 +216,10 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
     const loadPerformance = async () => {
         setLoading(true);
         try {
-            const [perf, rules] = await Promise.all([
+            const [perf, rules, adjustments] = await Promise.all([
                 getMonthlyPerformance(`${month}-01`),
-                getKpiRules()
+                getKpiRules(),
+                getPayrollAdjustments(month)
             ]);
 
             // Map server data to component types
@@ -236,7 +236,24 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                 penaltyPercent: Number(r.penaltyPercent ?? 0),
             })));
             setCompanyOverrides([]);
-            setApprovedSalaries([]);
+            // Oldin tasdiqlangan oyliklarni DB dan tiklaymiz (faqat local state emas)
+            setApprovedSalaries(
+                (adjustments as any[])
+                    .filter(a => a.adjustmentType === 'payment' && a.isApproved)
+                    .map(a => ({
+                        id: a.id,
+                        employeeId: a.employeeId,
+                        month: a.month,
+                        baseSalary: 0,
+                        kpiBonus: 0,
+                        kpiPenalty: 0,
+                        totalSalary: Number(a.amount),
+                        breakdown: [],
+                        isApproved: true,
+                        approvedBy: a.approvedBy,
+                        approvedAt: a.approvedAt,
+                    } as EmployeeSalary))
+            );
         } catch (e) {
             console.error(e);
         }
@@ -261,37 +278,49 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
 
         setSavingId(employeeId);
         try {
-            // TODO: Implement saveEmployeeSalary server action when ready
-            console.log('Approving salary for', employeeId, draft);
-            // For now, just mark as approved locally
-            setApprovedSalaries(prev => [...prev, {
+            const adjustment = await approveEmployeeSalary({
                 employeeId: draft.employeeId,
                 month: draft.month,
                 baseSalary: draft.baseSalary,
                 kpiBonus: draft.kpiBonus,
                 kpiPenalty: draft.kpiPenalty,
                 totalSalary: draft.totalSalary,
+            });
+            setApprovedSalaries(prev => [...prev, {
+                id: adjustment.id,
+                employeeId: draft.employeeId,
+                month: draft.month,
+                baseSalary: draft.baseSalary,
+                kpiBonus: draft.kpiBonus,
+                kpiPenalty: draft.kpiPenalty,
+                totalSalary: draft.totalSalary,
+                breakdown: draft.companyBreakdowns,
                 isApproved: true,
+                approvedAt: adjustment.approvedAt?.toISOString(),
             } as EmployeeSalary]);
+            toast.success(lang === 'uz' ? 'Oylik tasdiqlandi' : 'Зарплата подтверждена');
         } catch (e) {
             console.error('Failed to approve', e);
+            const message = e instanceof Error ? e.message : String(e);
+            toast.error((lang === 'uz' ? 'Xatolik: ' : 'Ошибка: ') + message);
         }
         setSavingId(null);
     };
 
     return (
-        <div className="space-y-4 animate-fade-in p-4 bg-[#F0F2F5] dark:bg-[#1A1D23] min-h-screen">
+        <div className="space-y-4 animate-fade-in pb-6">
             {/* Drafts Header */}
-            <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] p-3 rounded-sm shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div className="page-header flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-sm bg-[#F2F7FF] dark:bg-[#1C2531] flex items-center justify-center border border-[#DEE2E6] dark:border-[#3A3D44] text-[#3366CC] shrink-0">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md shrink-0"
+                        style={{ background: "linear-gradient(135deg, var(--accent-blue), var(--accent-indigo))" }}>
                         <DollarSign size={18} />
                     </div>
                     <div>
-                        <h2 className="text-base font-bold text-gray-800 dark:text-white uppercase tracking-tight leading-none">
-                            Oylik Xomcho't
+                        <h2 className="text-[15px] font-bold leading-none" style={{ color: "var(--text-primary)" }}>
+                            Oylik Xomcho&apos;t
                         </h2>
-                        <p className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">
+                        <p className="text-[11px] mt-1 font-medium" style={{ color: "var(--text-muted)" }}>
                             Qoralamalar (Drafts)
                         </p>
                     </div>
@@ -299,106 +328,138 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
 
                 <div className="flex flex-col sm:flex-row gap-3 items-center">
                     {userRole === 'admin' && (
-                        <div className="px-3 py-1 bg-[#EBFBF0] dark:bg-[#1C2F23] text-[#28A745] dark:text-[#34D058] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] flex flex-col items-start min-w-[140px]">
-                            <p className="text-[8px] font-bold uppercase tracking-widest mb-0.5 opacity-70">Super Admin (7%)</p>
-                            <p className="text-sm font-bold tabular-nums leading-none">{superAdminCommission.toLocaleString()} <span className="text-[9px]">UZS</span></p>
+                        <div className="px-3 py-2 rounded-xl flex flex-col items-start min-w-[140px]"
+                            style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
+                            <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--success)", opacity: 0.8 }}>Super Admin (7%)</p>
+                            <p className="text-[15px] font-black tabular-nums leading-none" style={{ color: "var(--success)" }}>{superAdminCommission.toLocaleString()} <span className="text-[10px]">UZS</span></p>
                         </div>
                     )}
-                    <div className="bg-[#F8F9FA] dark:bg-[#1e2025] px-2 py-1 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44]">
+                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg"
+                        style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)" }}>
+                        <span className="text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>Oy:</span>
                         <input
                             type="month"
                             value={month}
                             onChange={(e) => setMonth(e.target.value)}
-                            className="bg-transparent border-none font-bold text-xs text-gray-700 dark:text-gray-200 focus:ring-0 cursor-pointer p-0"
+                            className="bg-transparent border-none outline-none font-bold text-[13px] cursor-pointer"
+                            style={{ color: "var(--accent-blue)" }}
                         />
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {staff.map(s => {
                     const draft = drafts[s.id];
                     if (!draft || draft.companyCount === 0) return null;
                     const isApproved = approvedSalaries.some(a => a.employeeId === s.id);
 
                     return (
-                        <div key={s.id} className={`bg-white dark:bg-[#22252B] rounded-sm border ${isApproved ? 'border-[#28A745] dark:border-[#34D058]' : 'border-[#DEE2E6] dark:border-[#3A3D44]'} shadow-sm flex flex-col`}>
-                            <div className={`px-3 py-2 border-b ${isApproved ? 'bg-[#EBFBF0] dark:bg-[#1C2F23] border-[#DEE2E6] dark:border-[#3A3D44]' : 'bg-[#F8F9FA] dark:bg-[#1e2025] border-[#DEE2E6] dark:border-[#3A3D44]'} flex items-center justify-between`}>
-                                <div className="flex flex-col">
-                                    <h4 className="font-bold text-[12px] text-gray-800 dark:text-gray-100 uppercase tracking-tight">{s.name}</h4>
-                                    <p className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">{s.role}</p>
+                        <div key={s.id} className="rounded-xl overflow-hidden flex flex-col transition-all"
+                            style={{
+                                background: "var(--card-bg)",
+                                border: `1px solid ${isApproved ? "var(--success-border)" : "var(--card-border)"}`,
+                                boxShadow: isApproved ? "0 0 0 1px var(--success-border)" : "var(--card-shadow)"
+                            }}>
+                            {/* Card Header */}
+                            <div className="px-4 py-3 flex items-center justify-between"
+                                style={{
+                                    background: isApproved ? "var(--success-bg)" : "var(--table-header-bg)",
+                                    borderBottom: "1px solid var(--card-border)"
+                                }}>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                                        style={{ background: `hsl(${(s.name.charCodeAt(0) * 37) % 360}, 60%, 50%)` }}>
+                                        {s.name.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-[13px] leading-none" style={{ color: "var(--text-primary)" }}>{s.name}</h4>
+                                        <p className="text-[10px] mt-0.5 font-medium" style={{ color: "var(--text-muted)" }}>{s.role}</p>
+                                    </div>
                                 </div>
                                 <div>
                                     {isApproved ? (
-                                        <span className="px-2 py-0.5 bg-white dark:bg-black/20 text-[#28A745] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm text-[8px] font-bold uppercase flex items-center gap-1">
-                                            <CheckCircle2 size={10} /> Tasdiqlandi
+                                        <span className="c1-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px]"
+                                            style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
+                                            <CheckCircle2 size={11} /> Tasdiqlandi
                                         </span>
                                     ) : (
-                                        <span className="px-2 py-0.5 bg-[#FFF9EB] dark:bg-[#312B1C] text-[#FFC107] dark:text-[#FFD700] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm text-[8px] font-bold uppercase tracking-widest">
+                                        <span className="c1-badge px-2.5 py-1 rounded-lg text-[10px]"
+                                            style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>
                                             Draft
                                         </span>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="p-3 flex-1 space-y-1.5">
+                            {/* Card Body */}
+                            <div className="p-3 flex-1 space-y-2">
                                 {/* Asosiy Oylik */}
                                 <button
                                     onClick={() => setDetailModal({ type: 'base', employeeId: s.id, employeeName: s.name })}
-                                    className="w-full flex justify-between items-center px-3 py-1.5 bg-[#F8F9FA] dark:bg-[#1e2025] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] transition-colors text-[11px]"
+                                    className="w-full flex justify-between items-center px-3 py-2 rounded-lg text-[12px] transition-all group"
+                                    style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent-blue)"; e.currentTarget.style.background = "var(--accent-blue-light)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--card-border)"; e.currentTarget.style.background = "var(--input-bg)"; }}
                                 >
-                                    <div className="flex items-center gap-2 text-gray-500 uppercase tracking-tighter">
-                                        <FileText size={12} />
-                                        <span className="font-bold">Asosiy</span>
+                                    <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+                                        <FileText size={13} />
+                                        <span className="font-bold uppercase tracking-tight text-[11px]">Asosiy</span>
                                     </div>
-                                    <span className="font-bold text-gray-800 dark:text-white tabular-nums">{draft.baseSalary.toLocaleString()}</span>
+                                    <span className="font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{draft.baseSalary.toLocaleString()}</span>
                                 </button>
 
                                 {/* KPI Bonus */}
                                 <button
                                     onClick={() => setDetailModal({ type: 'bonus', employeeId: s.id, employeeName: s.name })}
-                                    className="w-full flex justify-between items-center px-3 py-1.5 bg-[#EBFBF0] dark:bg-[#1C2F23] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm hover:opacity-80 transition-opacity text-[11px]"
+                                    className="w-full flex justify-between items-center px-3 py-2 rounded-lg text-[12px] transition-opacity"
+                                    style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}
+                                    onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
+                                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                                 >
-                                    <div className="flex items-center gap-2 text-[#28A745]">
-                                        <TrendingUp size={12} />
-                                        <span className="font-bold uppercase tracking-tighter">Bonus</span>
+                                    <div className="flex items-center gap-2" style={{ color: "var(--success)" }}>
+                                        <TrendingUp size={13} />
+                                        <span className="font-bold uppercase tracking-tight text-[11px]">Bonus</span>
                                     </div>
-                                    <span className="font-bold text-[#28A745] tabular-nums">+{draft.kpiBonus.toLocaleString()}</span>
+                                    <span className="font-bold tabular-nums" style={{ color: "var(--success)" }}>+{draft.kpiBonus.toLocaleString()}</span>
                                 </button>
 
                                 {/* KPI Jarima */}
                                 <button
                                     onClick={() => setDetailModal({ type: 'penalty', employeeId: s.id, employeeName: s.name })}
-                                    className="w-full flex justify-between items-center px-3 py-1.5 bg-[#FEEBF0] dark:bg-[#311C21] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm hover:opacity-80 transition-opacity text-[11px]"
+                                    className="w-full flex justify-between items-center px-3 py-2 rounded-lg text-[12px] transition-opacity"
+                                    style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}
+                                    onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
+                                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                                 >
-                                    <div className="flex items-center gap-2 text-[#DC3545]">
-                                        <TrendingDown size={12} />
-                                        <span className="font-bold uppercase tracking-tighter">Jarima</span>
+                                    <div className="flex items-center gap-2" style={{ color: "var(--danger)" }}>
+                                        <TrendingDown size={13} />
+                                        <span className="font-bold uppercase tracking-tight text-[11px]">Jarima</span>
                                     </div>
-                                    <span className="font-bold text-[#DC3545] tabular-nums">{draft.kpiPenalty.toLocaleString()}</span>
+                                    <span className="font-bold tabular-nums" style={{ color: "var(--danger)" }}>{draft.kpiPenalty.toLocaleString()}</span>
                                 </button>
                             </div>
 
-                            <div className="px-3 py-2 border-t border-[#DEE2E6] dark:border-[#3A3D44] bg-[#F8F9FA] dark:bg-[#1e2025] flex justify-between items-center">
+                            {/* Card Footer */}
+                            <div className="px-4 py-3 flex justify-between items-center"
+                                style={{ borderTop: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
                                 <div className="flex flex-col">
-                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Jami To'lov</span>
-                                    <span className="text-base font-bold text-gray-800 dark:text-white tabular-nums">{draft.totalSalary.toLocaleString()}</span>
+                                    <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami To&apos;lov</span>
+                                    <span className="text-[17px] font-black tabular-nums" style={{ color: "var(--text-primary)" }}>{draft.totalSalary.toLocaleString()}</span>
                                 </div>
                                 {isApproved ? (
-                                    <div className="px-3 py-1 bg-[#F1F3F5] dark:bg-[#2A2D33] text-gray-400 dark:text-gray-500 rounded-sm font-bold text-[9px] uppercase border border-[#DEE2E6] dark:border-[#3A3D44] cursor-not-allowed tracking-widest">
+                                    <div className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-not-allowed"
+                                        style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}>
                                         Saqlangan
                                     </div>
                                 ) : (
                                     <button
                                         onClick={() => handleApprove(s.id)}
                                         disabled={savingId === s.id}
-                                        className="c1-btn c1-btn-primary px-3 py-1.5 text-[9px] uppercase tracking-widest flex items-center gap-1.5"
+                                        className="c1-btn c1-btn-primary px-4 py-2 text-[10px] disabled:opacity-50"
                                     >
                                         {savingId === s.id ? '...' : (
-                                            <>
-                                                <DollarSign size={10} />
-                                                Tasdiqlash
-                                            </>
+                                            <><DollarSign size={11} />Tasdiqlash</>
                                         )}
                                     </button>
                                 )}
@@ -409,85 +470,93 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
             </div>
 
             {loading && (
-                <div className="flex flex-col items-center justify-center py-10 gap-2">
-                    <div className="w-5 h-5 border-2 border-[#3366CC] border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest animate-pulse">Yuklanmoqda...</p>
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
+                        style={{ borderColor: "var(--accent-blue)", borderTopColor: "transparent" }}></div>
+                    <p className="text-[11px] font-bold uppercase tracking-widest animate-pulse" style={{ color: "var(--text-muted)" }}>Yuklanmoqda...</p>
                 </div>
             )}
 
             {/* ── Detail Modal ── */}
             {detailModal && modalData && (
                 <>
-                    <div className="fixed inset-0 bg-[#000]/60 z-[200] backdrop-blur-none" onClick={() => setDetailModal(null)}></div>
+                    <div className="fixed inset-0 z-[200]" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }} onClick={() => setDetailModal(null)}></div>
                     <div className="fixed inset-0 z-[201] flex items-center justify-center p-4">
                         <div
-                            className="w-full max-w-2xl bg-white dark:bg-[#22252B] rounded-sm shadow-2xl border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden flex flex-col max-h-[90vh]"
+                            className="w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-in"
+                            style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Modal Header */}
-                            <div className={`px-4 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] flex justify-between items-start ${detailModal.type === 'base' ? 'bg-[#F2F7FF] dark:bg-[#1C2531]' : detailModal.type === 'bonus' ? 'bg-[#EBFBF0] dark:bg-[#1C2F23]' : 'bg-[#FEEBF0] dark:bg-[#311C21]'}`}>
+                            <div className="px-5 py-4 flex justify-between items-start"
+                                style={{
+                                    borderBottom: "1px solid var(--card-border)",
+                                    background: detailModal.type === 'base' ? "var(--accent-blue-light)" : detailModal.type === 'bonus' ? "var(--success-bg)" : "var(--danger-bg)"
+                                }}>
                                 <div>
-                                    <h3 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-widest flex items-center gap-2">
-                                        {detailModal.type === 'base' && <FileText size={16} className="text-[#3366CC]" />}
-                                        {detailModal.type === 'bonus' && <TrendingUp size={16} className="text-[#28A745]" />}
-                                        {detailModal.type === 'penalty' && <TrendingDown size={16} className="text-[#DC3545]" />}
+                                    <h3 className="text-[14px] font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+                                        {detailModal.type === 'base' && <FileText size={16} style={{ color: "var(--accent-blue)" }} />}
+                                        {detailModal.type === 'bonus' && <TrendingUp size={16} style={{ color: "var(--success)" }} />}
+                                        {detailModal.type === 'penalty' && <TrendingDown size={16} style={{ color: "var(--danger)" }} />}
                                         {detailModal.type === 'base' && 'Asosiy Oylik Tafsiloti'}
                                         {detailModal.type === 'bonus' && 'KPI Bonus Tafsiloti'}
                                         {detailModal.type === 'penalty' && 'KPI Jarima Tafsiloti'}
                                     </h3>
-                                    <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest mt-1">
+                                    <p className="text-[11px] mt-1 font-medium" style={{ color: "var(--text-muted)" }}>
                                         {detailModal.employeeName} • {month}
                                     </p>
                                 </div>
-                                <button onClick={() => setDetailModal(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                                <button onClick={() => setDetailModal(null)}
+                                    className="p-1.5 rounded-lg transition-all"
+                                    style={{ color: "var(--text-muted)" }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = ""; e.currentTarget.style.color = "var(--text-muted)"; }}
+                                >
                                     <X size={18} />
                                 </button>
                             </div>
 
                             {/* Total summary */}
-                            <div className="px-6 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] bg-[#F8F9FA] dark:bg-[#1e2025]">
+                            <div className="px-6 py-3" style={{ borderBottom: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
                                 <div className="flex items-baseline gap-2">
-                                    <span className={`text-xl font-bold tabular-nums ${detailModal.type === 'base' ? 'text-gray-800 dark:text-white' : detailModal.type === 'bonus' ? 'text-[#28A745]' : 'text-[#DC3545]'}`}>
+                                    <span className="text-xl font-black tabular-nums"
+                                        style={{ color: detailModal.type === 'base' ? "var(--text-primary)" : detailModal.type === 'bonus' ? "var(--success)" : "var(--danger)" }}>
                                         {detailModal.type === 'base' && drafts[detailModal.employeeId]?.baseSalary.toLocaleString()}
                                         {detailModal.type === 'bonus' && `+${drafts[detailModal.employeeId]?.kpiBonus.toLocaleString()}`}
                                         {detailModal.type === 'penalty' && drafts[detailModal.employeeId]?.kpiPenalty.toLocaleString()}
                                     </span>
-                                    <span className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">UZS (Jami)</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>UZS (Jami)</span>
                                 </div>
                             </div>
 
                             {/* Modal Body */}
-                            <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-[#22252B]">
+                            <div className="flex-1 overflow-y-auto p-5" style={{ background: "var(--card-bg)" }}>
                                 {detailModal.type === 'base' && (
-                                    <div className="border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm overflow-hidden">
+                                    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--card-border)" }}>
                                         <table className="w-full text-left text-[11px] border-collapse">
                                             <thead>
-                                                <tr className="bg-[#F8F9FA] dark:bg-[#1e2025] text-[9px] font-bold text-gray-500 uppercase tracking-widest border-b border-[#DEE2E6] dark:border-[#3A3D44]">
-                                                    <th className="px-3 py-1.5">Korxona</th>
-                                                    <th className="px-3 py-1.5 text-center border-l border-[#DEE2E6] dark:border-[#3A3D44]">Rol</th>
-                                                    <th className="px-3 py-1.5 text-right border-l border-[#DEE2E6] dark:border-[#3A3D44]">Shartnoma</th>
-                                                    <th className="px-3 py-1.5 text-right border-l border-[#DEE2E6] dark:border-[#3A3D44]">Summa</th>
+                                                <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--table-border)" }}>
+                                                    <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Korxona</th>
+                                                    <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-center" style={{ color: "var(--text-muted)", borderLeft: "1px solid var(--table-border)" }}>Rol</th>
+                                                    <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--text-muted)", borderLeft: "1px solid var(--table-border)" }}>Shartnoma</th>
+                                                    <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--text-muted)", borderLeft: "1px solid var(--table-border)" }}>Summa</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44]">
+                                            <tbody>
                                                 {modalData.filter(b => b.baseAmount > 0).map((b, i) => (
-                                                    <tr key={i} className="hover:bg-[#F8F9FA] dark:hover:bg-[#1e2025]">
-                                                        <td className="px-3 py-1.5 font-bold text-gray-800 dark:text-white text-[10px] uppercase">{b.companyName}</td>
-                                                        <td className="px-3 py-1.5 text-center border-l border-[#DEE2E6] dark:border-[#3A3D44]">
-                                                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{b.role}</span>
+                                                    <tr key={i} style={{ borderBottom: "1px solid var(--table-border)" }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
+                                                        onMouseLeave={e => e.currentTarget.style.background = ""}>
+                                                        <td className="px-3 py-2 font-bold text-[11px] uppercase" style={{ color: "var(--text-primary)" }}>{b.companyName}</td>
+                                                        <td className="px-3 py-2 text-center" style={{ borderLeft: "1px solid var(--table-border)" }}>
+                                                            <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{b.role}</span>
                                                         </td>
-                                                        <td className="px-3 py-1.5 text-right border-l border-[#DEE2E6] dark:border-[#3A3D44] text-[10px] text-gray-500 tabular-nums">
-                                                            {b.contractAmount.toLocaleString()}
-                                                        </td>
-                                                        <td className="px-3 py-1.5 text-right border-l border-[#DEE2E6] dark:border-[#3A3D44] font-bold text-gray-800 dark:text-white tabular-nums">
-                                                            {b.baseAmount.toLocaleString()}
-                                                        </td>
+                                                        <td className="px-3 py-2 text-right text-[11px] tabular-nums" style={{ color: "var(--text-secondary)", borderLeft: "1px solid var(--table-border)" }}>{b.contractAmount.toLocaleString()}</td>
+                                                        <td className="px-3 py-2 text-right font-bold tabular-nums" style={{ color: "var(--text-primary)", borderLeft: "1px solid var(--table-border)" }}>{b.baseAmount.toLocaleString()}</td>
                                                     </tr>
                                                 ))}
                                                 {modalData.filter(b => b.baseAmount > 0).length === 0 && (
-                                                    <tr>
-                                                        <td colSpan={4} className="px-3 py-6 text-center text-gray-400 text-[10px] uppercase font-bold tracking-widest">Ma'lumot topilmadi</td>
-                                                    </tr>
+                                                    <tr><td colSpan={4} className="empty-state py-8" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot topilmadi</td></tr>
                                                 )}
                                             </tbody>
                                         </table>
@@ -495,21 +564,21 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                 )}
 
                                 {detailModal.type === 'bonus' && (
-                                    <div className="space-y-2">
+                                    <div className="space-y-3">
                                         {modalData.filter(b => b.kpiBonus > 0).map((b, i) => (
-                                            <div key={i} className="border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm overflow-hidden bg-[#F8F9FA] dark:bg-[#1e2025]">
-                                                <div className="px-3 py-1.5 bg-[#EBFBF0] dark:bg-[#1C2F23] flex items-center justify-between border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+                                            <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--success-border)" }}>
+                                                <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "var(--success-bg)", borderBottom: "1px solid var(--success-border)" }}>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-[11px] font-bold text-gray-800 dark:text-white uppercase">{b.companyName}</span>
-                                                        <span className="text-[8px] text-gray-400 font-bold uppercase">({b.role})</span>
+                                                        <span className="text-[12px] font-bold uppercase" style={{ color: "var(--text-primary)" }}>{b.companyName}</span>
+                                                        <span className="text-[9px] font-bold uppercase" style={{ color: "var(--text-muted)" }}>({b.role})</span>
                                                     </div>
-                                                    <span className="font-bold text-[#28A745] tabular-nums text-[11px]">+{b.kpiBonus.toLocaleString()}</span>
+                                                    <span className="font-bold tabular-nums text-[12px]" style={{ color: "var(--success)" }}>+{b.kpiBonus.toLocaleString()}</span>
                                                 </div>
-                                                <div className="p-3 space-y-1.5">
+                                                <div className="p-3 space-y-2" style={{ background: "var(--card-bg)" }}>
                                                     {b.details.filter(d => d.includes('KPI +') || d.includes('Auto KPI +') || d.includes('KPI Bonus')).map((d, j) => (
-                                                        <div key={j} className="flex items-start gap-2 text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-tighter">
-                                                            <div className="w-3 h-3 rounded-sm bg-[#28A745] flex items-center justify-center shrink-0 mt-0.5">
-                                                                <CheckCircle2 size={8} className="text-white" />
+                                                        <div key={j} className="flex items-start gap-2 text-[11px] font-medium" style={{ color: "var(--text-secondary)" }}>
+                                                            <div className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "var(--success)", opacity: 0.9 }}>
+                                                                <CheckCircle2 size={9} className="text-white" />
                                                             </div>
                                                             <span>{d.replace('✅', '').trim()}</span>
                                                         </div>
@@ -518,50 +587,47 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                             </div>
                                         ))}
                                         {modalData.filter(b => b.kpiBonus > 0).length === 0 && (
-                                            <div className="text-center py-6 text-gray-400 text-[10px] font-bold uppercase tracking-widest">Bonuslar topilmadi</div>
+                                            <div className="empty-state py-8">Bonuslar topilmadi</div>
                                         )}
                                     </div>
                                 )}
 
                                 {detailModal.type === 'penalty' && (
-                                    <div className="space-y-2">
+                                    <div className="space-y-3">
                                         {modalData.filter(b => b.kpiPenalty > 0).map((b, i) => (
-                                            <div key={i} className="border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm overflow-hidden bg-[#F8F9FA] dark:bg-[#1e2025]">
-                                                <div className="px-3 py-1.5 bg-[#FEEBF0] dark:bg-[#311C21] flex items-center justify-between border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+                                            <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--danger-border)" }}>
+                                                <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "var(--danger-bg)", borderBottom: "1px solid var(--danger-border)" }}>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-[11px] font-bold text-gray-800 dark:text-white uppercase">{b.companyName}</span>
-                                                        <span className="text-[8px] text-gray-400 font-bold uppercase">({b.role})</span>
+                                                        <span className="text-[12px] font-bold uppercase" style={{ color: "var(--text-primary)" }}>{b.companyName}</span>
+                                                        <span className="text-[9px] font-bold uppercase" style={{ color: "var(--text-muted)" }}>({b.role})</span>
                                                     </div>
-                                                    <span className="font-bold text-[#DC3545] tabular-nums text-[11px]">-{b.kpiPenalty.toLocaleString()}</span>
+                                                    <span className="font-bold tabular-nums text-[12px]" style={{ color: "var(--danger)" }}>-{b.kpiPenalty.toLocaleString()}</span>
                                                 </div>
-                                                <div className="p-3 space-y-1.5">
+                                                <div className="p-3 space-y-2" style={{ background: "var(--card-bg)" }}>
                                                     {b.details.filter(d => d.includes('KPI -') || d.includes('Auto KPI -')).map((d, j) => (
-                                                        <div key={j} className="flex items-start gap-2 text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-tighter">
-                                                            <div className="w-3 h-3 rounded-sm bg-[#DC3545] flex items-center justify-center shrink-0 mt-0.5">
-                                                                <AlertCircle size={8} className="text-white" />
+                                                        <div key={j} className="flex items-start gap-2 text-[11px] font-medium" style={{ color: "var(--text-secondary)" }}>
+                                                            <div className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "var(--danger)", opacity: 0.9 }}>
+                                                                <AlertCircle size={9} className="text-white" />
                                                             </div>
                                                             <span>{d.replace('❌', '').trim()}</span>
                                                         </div>
                                                     ))}
                                                     {b.details.filter(d => d.includes('KPI -') || d.includes('Auto KPI -')).length === 0 && (
-                                                        <p className="text-[8px] text-gray-400 italic uppercase">Jarima sababi aniqlanmadi</p>
+                                                        <p className="text-[10px] italic" style={{ color: "var(--text-muted)" }}>Jarima sababi aniqlanmadi</p>
                                                     )}
                                                 </div>
                                             </div>
                                         ))}
                                         {modalData.filter(b => b.kpiPenalty > 0).length === 0 && (
-                                            <div className="text-center py-6 text-gray-400 text-[10px] font-bold uppercase tracking-widest">Jarimalar topilmadi</div>
+                                            <div className="empty-state py-8">Jarimalar topilmadi</div>
                                         )}
                                     </div>
                                 )}
                             </div>
 
                             {/* Modal Footer */}
-                            <div className="p-3 border-t border-[#DEE2E6] dark:border-[#3A3D44] bg-[#F8F9FA] dark:bg-[#1e2025] flex justify-end">
-                                <button
-                                    onClick={() => setDetailModal(null)}
-                                    className="c1-btn c1-btn-secondary px-6 py-1.5 text-[10px] uppercase tracking-widest"
-                                >
+                            <div className="p-4 flex justify-end" style={{ borderTop: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
+                                <button onClick={() => setDetailModal(null)} className="btn-secondary px-6">
                                     Yopish
                                 </button>
                             </div>

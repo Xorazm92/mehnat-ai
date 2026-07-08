@@ -1,16 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { Company, OperationEntry, Staff, Language, Payment, Expense } from '@/types';
-import { translations } from '@/lib/translations';
 import { periodsEqual } from '@/lib/periods';
 import { MonthPicker } from './ui/MonthPicker';
 import {
-    Building2, Users, Search, DollarSign, TrendingUp,
-    ChevronRight, ChevronDown, Briefcase, CheckCircle2, AlertCircle,
-    XCircle, Eye, Wallet, BarChart3, ArrowUpRight, X, Crown, Star,
-    Shield, UserCheck, Network, Download, Activity, Clock, TrendingUp as TrendingUpIcon,
-    PieChart as PieChartIcon, CheckCircle, ArrowRight, User, LogOut
+    Building2, Users, Search, DollarSign,
+    ChevronRight, ChevronDown, CheckCircle2, AlertCircle,
+    XCircle, Eye, Wallet, BarChart3, X, Crown, Star,
+    Shield, UserCheck, Network, Download,
+    ArrowRight, User
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import * as XLSX from 'xlsx';
 
 interface Props {
@@ -35,30 +33,15 @@ const REPORT_FIELDS = [
     'bonak', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi'
 ] as const;
 
-// Hierarchy node for the tree
-interface HierarchyNode {
-    id: string;
-    name: string;
-    role: string;
-    color: string;
-    companiesCount: number;
-    totalContract: number;
-    children: HierarchyNode[];
-}
-
 const SupervisorDashboard: React.FC<Props> = ({
     companies,
     operations,
     staff,
-    payments,
-    expenses,
     selectedPeriod,
     onPeriodChange,
-    lang,
     currentUserId,
     currentUserName
 }) => {
-    const t = translations[lang];
     const [search, setSearch] = useState('');
     const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
     const [filterAccountant, setFilterAccountant] = useState<string>('all');
@@ -103,8 +86,8 @@ const SupervisorDashboard: React.FC<Props> = ({
             name: data.name,
             companies: data.companies,
             companiesCount: data.companies.length,
-            totalContract: data.companies.reduce((sum, c) => sum + (c.contractAmount || 0), 0),
-            totalSupervisorEarnings: data.companies.reduce((sum, c) => sum + (c.contractAmount || 0) * ((c.supervisorPerc || 5) / 100), 0),
+            totalContract: data.companies.reduce((sum, c) => sum + Number(c.contractAmount || 0), 0),
+            totalSupervisorEarnings: data.companies.reduce((sum, c) => sum + Number(c.contractAmount || 0) * (Number(c.supervisorPerc || 5) / 100), 0),
             staffCount: data.staff.size,
             uniqueAccountants: [...new Set(data.companies.map(c => c.accountantName).filter(Boolean))],
             isCurrent: id === currentUserId
@@ -124,7 +107,7 @@ const SupervisorDashboard: React.FC<Props> = ({
             id,
             name: data.name,
             companiesCount: data.companies.length,
-            totalContract: data.companies.reduce((sum, c) => sum + (c.contractAmount || 0), 0),
+            totalContract: data.companies.reduce((sum, c) => sum + Number(c.contractAmount || 0), 0),
             companies: data.companies
         })).sort((a, b) => b.companiesCount - a.companiesCount);
     }, [myCompanies]);
@@ -156,8 +139,8 @@ const SupervisorDashboard: React.FC<Props> = ({
         let totalDone = 0, totalReports = 0;
 
         myCompanies.forEach(c => {
-            totalContract += (c.contractAmount || 0);
-            totalSupervisorEarnings += (c.contractAmount || 0) * ((c.supervisorPerc || 5) / 100);
+            totalContract += Number(c.contractAmount || 0);
+            totalSupervisorEarnings += Number(c.contractAmount || 0) * (Number(c.supervisorPerc || 5) / 100);
             const p = getCompanyProgress(c.id);
             totalDone += p.done;
             totalReports += p.total;
@@ -216,7 +199,7 @@ const SupervisorDashboard: React.FC<Props> = ({
             Accountant: c.accountantName,
             Contract: c.contractAmount,
             SupervisorPerc: c.supervisorPerc,
-            SupervisorAmount: (c.contractAmount || 0) * ((c.supervisorPerc || 5) / 100),
+            SupervisorAmount: Number(c.contractAmount || 0) * (Number(c.supervisorPerc || 5) / 100),
             Status: c.isActive ? 'Active' : 'Inactive'
         }));
         const wsCompanies = XLSX.utils.json_to_sheet(companiesData);
@@ -315,7 +298,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                                 <p className="text-xl font-black text-white tracking-tight uppercase">Ёркиной</p>
                                 <div className="mt-3 pt-2 border-t border-white/20">
                                     <p className="text-[10px] font-black text-white/80 uppercase">
-                                        {allActiveCompanies.length} FIRMA • {fmtMoney(allActiveCompanies.reduce((s, c) => s + (c.contractAmount || 0), 0))} UZS
+                                        {allActiveCompanies.length} FIRMA • {fmtMoney(allActiveCompanies.reduce((s, c) => s + Number(c.contractAmount || 0), 0))} UZS
                                     </p>
                                 </div>
                             </div>
@@ -325,7 +308,7 @@ const SupervisorDashboard: React.FC<Props> = ({
 
                             {/* Supervisors level */}
                             <div className="flex gap-4 flex-wrap justify-center items-start">
-                                {supervisorsData.map((sup, i) => {
+                                {supervisorsData.map((sup) => {
                                     const isExpanded = expandedSupervisor === sup.id;
                                     
                                     return (
@@ -389,9 +372,8 @@ const SupervisorDashboard: React.FC<Props> = ({
 
                     {/* ── NAZORATCHI DISTRIBUTION BARS ── */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {supervisorsData.map((sup, i) => {
+                        {supervisorsData.map((sup) => {
                             const barColor = 'bg-[#3366CC]';
-                            const bgColor = 'bg-[#F0F2F5] dark:bg-[#1A1D23]';
                             const textColor = 'text-[#3366CC]';
 
                             // Get accountant distribution for this supervisor
@@ -485,7 +467,7 @@ const SupervisorDashboard: React.FC<Props> = ({
             {activeTab === 'hierarchy' && (
                 <div className="space-y-6">
                     {/* Full hierarchy for each supervisor */}
-                    {supervisorsData.map((sup, i) => {
+                    {supervisorsData.map((sup) => {
                         const isMe = sup.isCurrent;
                         
                         // Accountant breakdown
@@ -523,7 +505,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                                 {/* Accountant cards grid */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                                     {accList.map(([accName, accCompanies]) => {
-                                        const accTotal = accCompanies.reduce((s, c) => s + (c.contractAmount || 0), 0);
+                                        const accTotal = accCompanies.reduce((s, c) => s + Number(c.contractAmount || 0), 0);
                                         return (
                                             <div key={accName} className="bg-white dark:bg-[#22252B] rounded-sm p-4 border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm hover:border-[#3366CC] transition-all">
                                                 <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#F0F2F5] dark:border-[#1A1D23]">
@@ -593,7 +575,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                                 {filteredCompanies.map(c => {
                                     const prog = getCompanyProgress(c.id);
                                     const isSelected = c.id === selectedCompanyId;
-                                    const supAmt = (c.contractAmount || 0) * ((c.supervisorPerc || 5) / 100);
+                                    const supAmt = Number(c.contractAmount || 0) * (Number(c.supervisorPerc || 5) / 100);
 
                                     return (
                                         <div
@@ -665,7 +647,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                                     {/* Employees */}
                                     <div>
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2 border-b border-[#DEE2E6] dark:border-[#3A3D44] pb-2">
-                                            <Users size={14} /> MAS'UL XODIMLAR
+                                            <Users size={14} /> MAS&apos;UL XODIMLAR
                                         </h4>
                                         <div className="space-y-2">
                                             {[
@@ -684,7 +666,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                                                     </div>
                                                     <div className="text-right">
                                                         <p className="text-[11px] font-black text-[#3366CC] tabular-nums">{emp.perc}%</p>
-                                                        <p className="text-[9px] font-bold text-gray-400 tabular-nums">{fmtMoney((selectedCompany.contractAmount || 0) * (emp.perc / 100))}</p>
+                                                        <p className="text-[9px] font-bold text-gray-400 tabular-nums">{fmtMoney(Number(selectedCompany.contractAmount || 0) * (emp.perc / 100))}</p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -699,7 +681,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                                         <div className="bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm p-4">
                                             <div className="flex justify-between items-center mb-4 border-b border-[#DEE2E6] dark:border-[#3A3D44] pb-2">
                                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">JAMI SUMMA</span>
-                                                <span className="text-[14px] font-black text-gray-800 dark:text-white tabular-nums">{(selectedCompany.contractAmount || 0).toLocaleString()} UZS</span>
+                                                <span className="text-[14px] font-black text-gray-800 dark:text-white tabular-nums">{Number(selectedCompany.contractAmount || 0).toLocaleString()} UZS</span>
                                             </div>
                                             <div className="flex w-full h-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] overflow-hidden bg-white dark:bg-[#22252B] shadow-inner">
                                                 <div className="bg-blue-600 h-full border-r border-[#DEE2E6] dark:border-[#3A3D44]" style={{ width: `${selectedCompany.accountantPerc || 20}%` }} />
@@ -750,7 +732,7 @@ const SupervisorDashboard: React.FC<Props> = ({
                                         ) : (
                                             <div className="p-10 text-center bg-[#F8F9FA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm">
                                                 <AlertCircle size={24} className="text-gray-200 dark:text-gray-700 mx-auto mb-3" />
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ma'lumot mavjud emas</p>
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ma&apos;lumot mavjud emas</p>
                                             </div>
                                         )}
                                     </div>

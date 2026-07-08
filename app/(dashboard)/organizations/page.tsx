@@ -4,8 +4,8 @@ import OrganizationsClient from "./OrganizationsClient";
 
 export default async function OrganizationsPage() {
   const session = await auth();
-  const userId = (session?.user as any)?.id;
-  const userRole = (session?.user as any)?.role || "employee";
+  const userId = session?.user?.id ?? "";
+  const userRole = session?.user?.role || "employee";
 
   // Parallelda ma'lumotlarni cache'dan olish
   const [companies, staff, operations] = await Promise.all([

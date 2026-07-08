@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ALLOWED_VIEWS, ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { ALLOWED_VIEWS, type UserRole } from "@/lib/permissions";
 import {
   LayoutDashboard,
   Building2,
@@ -19,29 +19,35 @@ import {
   Package,
   Bell,
   Banknote,
-  TrainFront
+  ChevronRight,
 } from "lucide-react";
 
 const ALL_NAV_ITEMS = [
-  { href: "/dashboard", view: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/organizations", view: "organizations", label: "Firmalar", icon: Building2 },
-  { href: "/staff", view: "staff", label: "Xodimlar", icon: Users },
-  { href: "/reports", view: "reports", label: "Hisobotlar", icon: FileText },
-  { href: "/kpi", view: "kpi", label: "KPI", icon: TrendingUp },
-  { href: "/kassa", view: "kassa", label: "Kassa", icon: Wallet },
-  { href: "/expenses", view: "expenses", label: "Xarajatlar", icon: Receipt },
-  { href: "/payroll", view: "payroll", label: "Oylik", icon: CreditCard },
-  { href: "/attendance", view: "attendance", label: "Davomat", icon: Calendar },
-  { href: "/documents", view: "documents", label: "Hujjatlar", icon: FileText },
-  { href: "/inventory", view: "inventory", label: "Inventar", icon: Package },
-  { href: "/notifications", view: "notifications", label: "Xabarlar", icon: Bell },
-  // Kabinetlar
-  { href: "/cabinet", view: "cabinet", label: "Kabinet", icon: UserCircle },
-  { href: "/cabinet/bank", view: "cabinet_bank", label: "Bank Kabinet", icon: Banknote },
-  // Admin
-  { href: "/audit-logs", view: "audit_logs", label: "Audit Log", icon: ScrollText },
-  { href: "/settings", view: "settings", label: "Sozlamalar", icon: Settings },
+  { href: "/dashboard",     view: "dashboard",     label: "Dashboard",   icon: LayoutDashboard, group: "asosiy" },
+  { href: "/organizations", view: "organizations", label: "Firmalar",    icon: Building2,       group: "asosiy" },
+  { href: "/staff",         view: "staff",         label: "Xodimlar",    icon: Users,           group: "asosiy" },
+  { href: "/kpi",           view: "kpi",           label: "KPI",         icon: TrendingUp,      group: "asosiy" },
+  { href: "/reports",       view: "reports",       label: "Hisobotlar",  icon: FileText,        group: "moliya" },
+  { href: "/kassa",         view: "kassa",         label: "Kassa",       icon: Wallet,          group: "moliya" },
+  { href: "/expenses",      view: "expenses",      label: "Xarajatlar",  icon: Receipt,         group: "moliya" },
+  { href: "/payroll",       view: "payroll",       label: "Oylik",       icon: CreditCard,      group: "moliya" },
+  { href: "/attendance",    view: "attendance",    label: "Davomat",     icon: Calendar,        group: "boshqa" },
+  { href: "/documents",     view: "documents",     label: "Hujjatlar",   icon: FileText,        group: "boshqa" },
+  { href: "/inventory",     view: "inventory",     label: "Inventar",    icon: Package,         group: "boshqa" },
+  { href: "/notifications", view: "notifications", label: "Xabarlar",    icon: Bell,            group: "boshqa" },
+  { href: "/cabinet",       view: "cabinet",       label: "Kabinet",     icon: UserCircle,      group: "kabinet" },
+  { href: "/cabinet/bank",  view: "cabinet_bank",  label: "Bank",        icon: Banknote,        group: "kabinet" },
+  { href: "/audit-logs",    view: "audit_logs",    label: "Audit Log",   icon: ScrollText,      group: "admin" },
+  { href: "/settings",      view: "settings",      label: "Sozlamalar",  icon: Settings,        group: "admin" },
 ];
+
+const GROUP_LABELS: Record<string, string> = {
+  asosiy: "ASOSIY",
+  moliya:  "MOLIYA",
+  boshqa:  "BOSHQA",
+  kabinet: "KABINET",
+  admin:   "ADMIN",
+};
 
 interface DashboardSidebarProps {
   userRole: string;
@@ -51,60 +57,143 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const pathname = usePathname();
   const role = userRole as UserRole;
   const allowedViews = ALLOWED_VIEWS[role] || [];
-  
+
   const visibleItems = ALL_NAV_ITEMS.filter((item) =>
     allowedViews.includes(item.view as any)
   );
 
+  // Group items
+  const groups = ["asosiy", "moliya", "boshqa", "kabinet", "admin"];
+
   return (
-    <aside className="w-20 flex-shrink-0 h-screen bg-bg-secondary border-r border-border-glass flex flex-col items-center z-20 relative">
-      {/* Logo qismi (Figma: UTY BI logosi uchun joy) */}
-      <div className="h-20 w-full flex items-center justify-center border-b border-border-glass">
-         <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-accent-blue/10 text-accent-blue">
-            <TrainFront size={24} />
-         </div>
+    <aside
+      className="flex-shrink-0 h-screen flex flex-col z-20 relative overflow-hidden transition-all duration-300"
+      style={{
+        width: "var(--sidebar-width)",
+        background: "var(--sidebar-bg)",
+        borderRight: "1px solid var(--sidebar-border)",
+      }}
+    >
+      {/* Logo */}
+      <div
+        className="h-16 flex items-center px-5 flex-shrink-0"
+        style={{ borderBottom: "1px solid var(--sidebar-border)" }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-md"
+            style={{
+              background: "linear-gradient(135deg, #2563EB, #4F46E5)",
+              boxShadow: "0 4px 12px rgba(37, 99, 235, 0.35)",
+            }}
+          >
+            U
+          </div>
+          <div>
+            <h1
+              className="text-[15px] font-black tracking-tight leading-none"
+              style={{ color: "var(--text-primary)" }}
+            >
+              UTY<span style={{ color: "var(--accent-blue)" }}>BI</span>
+            </h1>
+            <p
+              className="text-[9px] font-semibold uppercase tracking-widest leading-none mt-0.5"
+              style={{ color: "var(--text-muted)" }}
+            >
+              ERP Tizim
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Nav items */}
-      <nav className="flex-1 w-full p-4 space-y-4 overflow-y-auto scrollbar-hide flex flex-col items-center">
-        {visibleItems.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/cabinet" && pathname.startsWith(item.href + "/")) ||
-            (item.href === "/cabinet" && pathname === "/cabinet") ||
-            (item.href === "/cabinet/bank" && pathname.startsWith("/cabinet/bank"));
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-3 px-3 scrollbar-hide space-y-0.5">
+        {groups.map((group) => {
+          const groupItems = visibleItems.filter((item) => item.group === group);
+          if (groupItems.length === 0) return null;
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-200 group relative ${
-                isActive
-                  ? "bg-accent-blue text-white shadow-md shadow-accent-blue/30"
-                  : "text-text-secondary hover:text-accent-blue hover:bg-accent-blue/10 border border-transparent"
-              }`}
-            >
-              <Icon
-                size={22}
-                className={`transition-colors ${
-                  isActive ? "text-white" : ""
-                }`}
-              />
-              
-              {/* Tooltip */}
-              <div className="absolute left-14 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                {item.label}
-              </div>
-            </Link>
+            <div key={group}>
+              <div className="sidebar-label">{GROUP_LABELS[group]}</div>
+              {groupItems.map((item) => {
+                const Icon = item.icon;
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== "/cabinet" && pathname.startsWith(item.href + "/")) ||
+                  (item.href === "/cabinet" && pathname === "/cabinet") ||
+                  (item.href === "/cabinet/bank" && pathname.startsWith("/cabinet/bank"));
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`sidebar-nav-item ${isActive ? "active" : ""}`}
+                    style={
+                      isActive
+                        ? {
+                            background: "var(--sidebar-item-active-bg)",
+                            color: "var(--sidebar-item-active-text)",
+                          }
+                        : {}
+                    }
+                  >
+                    <Icon
+                      size={17}
+                      className="flex-shrink-0"
+                      style={{ opacity: isActive ? 1 : 0.7 }}
+                    />
+                    <span className="flex-1 text-[13px] font-medium">{item.label}</span>
+                    {isActive && (
+                      <ChevronRight
+                        size={14}
+                        className="flex-shrink-0 opacity-60"
+                      />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
           );
         })}
       </nav>
-      
-      <div className="w-full p-4 border-t border-border-glass flex items-center justify-center">
-        <div className="w-10 h-10 rounded-full bg-bg-primary flex items-center justify-center border border-border-glass text-text-secondary">
-          <Settings size={20} />
+
+      {/* Bottom - Settings quick link */}
+      <div
+        className="p-3 flex-shrink-0"
+        style={{ borderTop: "1px solid var(--sidebar-border)" }}
+      >
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-lg"
+          style={{ background: "var(--bg-hover)" }}
+        >
+          <div
+            className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-black text-white flex-shrink-0"
+            style={{ background: "linear-gradient(135deg, #2563EB, #4F46E5)" }}
+          >
+            {userRole?.charAt(0)?.toUpperCase() || "U"}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p
+              className="text-[11px] font-semibold truncate leading-none"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {role === "super_admin"
+                ? "Super Admin"
+                : role === "chief_accountant"
+                ? "Bosh Buxgalter"
+                : role === "accountant"
+                ? "Buxgalter"
+                : role === "supervisor"
+                ? "Nazoratchi"
+                : role || "Foydalanuvchi"}
+            </p>
+            <p
+              className="text-[10px] mt-0.5 leading-none"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Faol
+            </p>
+          </div>
         </div>
       </div>
     </aside>

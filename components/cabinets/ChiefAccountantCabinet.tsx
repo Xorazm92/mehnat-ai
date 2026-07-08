@@ -6,7 +6,6 @@ import {
   TrendingUp,
   CheckCircle2,
   Clock,
-  ChevronRight,
   Award,
   DollarSign,
   FileCheck,
@@ -84,67 +83,66 @@ export function ChiefAccountantCabinet({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Salom, {firstName}! 📊</h1>
-          <p className="text-text-secondary text-sm mt-1" suppressHydrationWarning>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Salom, {firstName}! 📊</h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }} suppressHydrationWarning>
             Bosh Buxgalter kabinetingiz — {monthLabel}
           </p>
         </div>
-        <div className="px-4 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium">
+        <div className="px-4 py-2 rounded-xl text-sm font-medium"
+          style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--accent-indigo)" }}>
           👑 Bosh Buxgalter
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-purple-600/20 to-purple-600/5 border border-purple-500/20 rounded-2xl p-4">
+        <div className="rounded-2xl p-4" style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}>
           <div className="flex items-center gap-2 mb-2">
-            <Building2 size={16} className="text-purple-400" />
-            <span className="text-text-secondary text-xs">Firmalar</span>
+            <Building2 size={16} style={{ color: "var(--accent-indigo)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Firmalar</span>
           </div>
-          <div className="text-2xl font-bold text-text-primary">{companiesCount}</div>
+          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{companiesCount}</div>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-600/20 to-blue-600/5 border border-blue-500/20 rounded-2xl p-4">
+        <div className="rounded-2xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
           <div className="flex items-center gap-2 mb-2">
-            <Users size={16} className="text-blue-400" />
-            <span className="text-text-secondary text-xs">Jamoa</span>
+            <Users size={16} style={{ color: "var(--accent-blue)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Jamoa</span>
           </div>
-          <div className="text-2xl font-bold text-text-primary">{teamMembers.length}</div>
+          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{teamMembers.length}</div>
         </div>
 
-        <div className="bg-gradient-to-br from-yellow-600/20 to-yellow-600/5 border border-yellow-500/20 rounded-2xl p-4">
+        <div className="rounded-2xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
           <div className="flex items-center gap-2 mb-2">
-            <Clock size={16} className="text-yellow-400" />
-            <span className="text-text-secondary text-xs">KPI Kutmoqda</span>
+            <Clock size={16} style={{ color: "var(--warning)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI Kutmoqda</span>
           </div>
-          <div className="text-2xl font-bold text-yellow-400">{pendingApprovals.length}</div>
+          <div className="text-2xl font-bold" style={{ color: "var(--warning)" }}>{pendingApprovals.length}</div>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-600/5 border border-emerald-500/20 rounded-2xl p-4">
+        <div className="rounded-2xl p-4" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
           <div className="flex items-center gap-2 mb-2">
-            <Award size={16} className="text-emerald-400" />
-            <span className="text-text-secondary text-xs">Jamoa KPI</span>
+            <Award size={16} style={{ color: "var(--success)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Jamoa KPI</span>
           </div>
-          <div className="text-2xl font-bold text-emerald-400">
+          <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>
             {totalTeamScore.toFixed(0)}
           </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Jamoa a'zolari */}
-        <div className="bg-bg-card border border-border-glass rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between p-5 border-b border-border-glass">
+        <div className="glass-card overflow-hidden">
+          <div className="flex items-center justify-between p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
             <div className="flex items-center gap-2">
-              <Users size={18} className="text-blue-400" />
-              <h2 className="text-text-primary font-semibold">Jamoa Ko'rsatkichlari</h2>
+              <Users size={18} style={{ color: "var(--accent-blue)" }} />
+              <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>Jamoa Ko&apos;rsatkichlari</h2>
             </div>
           </div>
-          <div className="divide-y divide-slate-700/30">
+          <div className="divide-y" style={{ borderColor: "var(--card-border)" }}>
             {teamMembers.length === 0 ? (
               <div className="p-8 text-center text-text-secondary">
                 <Users size={32} className="mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Jamoa a'zolari yo'q</p>
+                <p className="text-sm">Jamoa a&apos;zolari yo&apos;q</p>
               </div>
             ) : (
               teamMembers.map((member) => {
@@ -161,36 +159,39 @@ export function ChiefAccountantCabinet({
                 return (
                   <div
                     key={member.id}
-                    className="flex items-center gap-4 p-4 hover:bg-black/5 dark:bg-white/5 transition-colors"
+                    className="flex items-center gap-4 p-4 transition-colors"
+                    style={{ borderBottom: "1px solid var(--card-border)" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
+                    onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-text-primary text-sm font-bold flex-shrink-0"
-                      style={{ background: member.avatarColor || "#8b5cf6" }}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                      style={{ background: member.avatarColor || "var(--accent-indigo)" }}
                     >
                       {member.fullName[0]}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-text-primary text-sm font-medium truncate">
+                        <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
                           {member.fullName}
                         </p>
-                        <span className="text-[10px] text-text-secondary bg-slate-700 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--input-bg)", color: "var(--text-secondary)", border: "1px solid var(--card-border)" }}>
                           {roleLabels[member.role] || member.role}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1 bg-slate-700 rounded-full h-1.5">
+                        <div className="flex-1 rounded-full h-1.5" style={{ background: "var(--input-bg)" }}>
                           <div
-                            className="h-1.5 rounded-full bg-purple-500 transition-all"
-                            style={{ width: `${percent}%` }}
+                            className="h-1.5 rounded-full transition-all"
+                            style={{ width: `${percent}%`, background: "var(--accent-indigo)" }}
                           />
                         </div>
-                        <span className="text-xs text-text-secondary w-8 text-right">{percent}%</span>
+                        <span className="text-xs w-8 text-right" style={{ color: "var(--text-muted)" }}>{percent}%</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-text-primary text-sm font-bold">{score.toFixed(0)}</p>
-                      <p className="text-text-secondary text-[10px]">
+                      <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{score.toFixed(0)}</p>
+                      <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
                         {member._count.assignedCompanies} firma
                       </p>
                     </div>
@@ -203,17 +204,17 @@ export function ChiefAccountantCabinet({
 
         <div className="space-y-4">
           {/* Tasdiqlash kutayotgan KPI */}
-          <div className="bg-bg-card border border-border-glass rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-border-glass">
+          <div className="glass-card overflow-hidden">
+            <div className="flex items-center justify-between p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
               <div className="flex items-center gap-2">
-                <TrendingUp size={18} className="text-cyan-400" />
-                <h2 className="text-text-primary font-semibold">KPI Tasdiqlanishi</h2>
+                <TrendingUp size={18} style={{ color: "var(--accent-blue)" }} />
+                <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>KPI Tasdiqlanishi</h2>
               </div>
-              <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>
                 {pendingApprovals.length}
               </span>
             </div>
-            <div className="divide-y divide-slate-700/30 max-h-52 overflow-y-auto">
+            <div className="max-h-52 overflow-y-auto">
               {pendingApprovals.length === 0 ? (
                 <div className="p-6 text-center text-text-secondary">
                   <CheckCircle2 size={28} className="mx-auto mb-2 text-emerald-400/30" />
@@ -223,21 +224,24 @@ export function ChiefAccountantCabinet({
                 pendingApprovals.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 p-3 hover:bg-slate-700/20 transition-colors"
+                    className="flex items-center gap-3 p-3 transition-colors"
+                    style={{ borderBottom: "1px solid var(--card-border)" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
+                    onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
                     <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-text-primary text-xs font-bold flex-shrink-0"
-                      style={{ background: item.employee.avatarColor || "#8b5cf6" }}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                      style={{ background: item.employee.avatarColor || "var(--accent-indigo)" }}
                     >
                       {item.employee.fullName[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-text-primary text-xs font-medium truncate">
+                      <p className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>
                         {item.employee.fullName}
                       </p>
-                      <p className="text-text-secondary text-[10px] truncate">{item.rule.nameUz}</p>
+                      <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>{item.rule.nameUz}</p>
                     </div>
-                    <span className="text-sm font-bold text-text-primary">
+                    <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
                       {Number(item.calculatedScore).toFixed(1)}
                     </span>
                   </div>
@@ -247,34 +251,36 @@ export function ChiefAccountantCabinet({
           </div>
 
           {/* Maosh tuzatmalar */}
-          <div className="bg-bg-card border border-border-glass rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-border-glass">
+          <div className="glass-card overflow-hidden">
+            <div className="flex items-center justify-between p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
               <div className="flex items-center gap-2">
-                <DollarSign size={18} className="text-emerald-400" />
-                <h2 className="text-text-primary font-semibold">Tasdiq Kutayotgan</h2>
+                <DollarSign size={18} style={{ color: "var(--success)" }} />
+                <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>Tasdiq Kutayotgan</h2>
               </div>
             </div>
-            <div className="divide-y divide-slate-700/30">
+            <div className="divide-y" style={{ borderColor: "var(--card-border)" }}>
               {payrollSummary.length === 0 ? (
-                <div className="p-5 text-center text-text-secondary text-sm">
-                  Tasdiq kutayotgan yo'q
+                <div className="p-5 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+                  Tasdiq kutayotgan yo&apos;q
                 </div>
               ) : (
                 payrollSummary.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between gap-3 p-3 hover:bg-slate-700/20"
+                    className="flex items-center justify-between gap-3 p-3 transition-colors"
+                    style={{ borderBottom: "1px solid var(--card-border)" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
+                    onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-text-primary text-xs font-medium truncate">
+                      <p className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>
                         {item.employee.fullName}
                       </p>
-                      <p className="text-text-secondary text-[10px] truncate">{item.reason}</p>
+                      <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>{item.reason}</p>
                     </div>
                     <span
-                      className={`text-sm font-bold ${
-                        item.adjustmentType === "jarima" ? "text-red-400" : "text-emerald-400"
-                      }`}
+                      className="text-sm font-bold"
+                      style={{ color: item.adjustmentType === "jarima" ? "var(--danger)" : "var(--success)" }}
                     >
                       {item.adjustmentType === "jarima" ? "-" : "+"}
                       {Number(item.amount).toLocaleString()}
@@ -288,49 +294,53 @@ export function ChiefAccountantCabinet({
       </div>
 
       {/* Firmalar jadvali */}
-      <div className="bg-bg-card border border-border-glass rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-5 border-b border-border-glass">
+      <div className="glass-card overflow-hidden">
+        <div className="flex items-center justify-between p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
           <div className="flex items-center gap-2">
-            <FileCheck size={18} className="text-purple-400" />
-            <h2 className="text-text-primary font-semibold">Nazorat Ostidagi Firmalar</h2>
+            <FileCheck size={18} style={{ color: "var(--accent-indigo)" }} />
+            <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>Nazorat Ostidagi Firmalar</h2>
           </div>
-          <span className="text-xs text-text-secondary">{companiesCount} ta</span>
+          <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{companiesCount} ta</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-black/5 dark:bg-white/5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px" style={{ background: "var(--card-border)" }}>
           {chiefCompanies.slice(0, 9).map((company) => (
             <div
               key={company.id}
-              className="flex items-center gap-3 p-4 bg-bg-card hover:bg-black/5 dark:bg-white/5 transition-colors"
+              className="flex items-center gap-3 p-4 transition-colors"
+              style={{ background: "var(--input-bg)" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--input-bg)"}
             >
-              <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                <Building2 size={14} className="text-purple-400" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(99,102,241,0.15)" }}>
+                <Building2 size={14} style={{ color: "var(--accent-indigo)" }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-text-primary text-sm font-medium truncate">{company.name}</p>
+                <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>{company.name}</p>
                 {company.accountant && (
-                  <p className="text-text-secondary text-xs truncate">
+                  <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
                     {company.accountant.fullName}
                   </p>
                 )}
               </div>
               <span
-                className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  company.riskLevel === "high"
-                    ? "bg-red-400"
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{
+                  background: company.riskLevel === "high"
+                    ? "var(--danger)"
                     : company.riskLevel === "medium"
-                    ? "bg-yellow-400"
-                    : "bg-emerald-400"
-                }`}
+                    ? "var(--warning)"
+                    : "var(--success)"
+                }}
               />
             </div>
           ))}
         </div>
         {companiesCount > 9 && (
-          <div className="p-3 text-center text-text-secondary text-xs">
-            +{companiesCount - 9} ta firma ko'rsatilmadi
+          <div className="p-3 text-center text-xs" style={{ color: "var(--text-muted)", borderTop: "1px solid var(--card-border)" }}>
+            +{companiesCount - 9} ta firma ko&apos;rsatilmadi
           </div>
         )}
-      </div>
+      </div>  </div>
     </div>
   );
 }

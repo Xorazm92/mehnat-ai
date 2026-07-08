@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { KPIRule, Language, KPIRoleType, KPIInputType } from '@/types';
-import { translations } from '@/lib/translations';
-import { Settings, Plus, Edit3, Trash2, CheckCircle2, X, AlertCircle } from 'lucide-react';
+import { Settings, Plus, Edit3, Trash2, X } from 'lucide-react';
 import { getKpiRules, createKpiRule, updateKpiRule, deleteKpiRule } from '@/server/kpi';
 
 interface Props {
     lang: Language;
 }
 
-const KPIRulesManager: React.FC<Props> = ({ lang }) => {
-    const t = translations[lang];
+const KPIRulesManager: React.FC<Props> = () => {
     const [rules, setRules] = useState<KPIRule[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [, setLoading] = useState(false);
     const [editingRule, setEditingRule] = useState<Partial<KPIRule> | null>(null);
 
     useEffect(() => {
@@ -158,7 +156,7 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
                                     {rules.filter(r => r.category === category && r.isActive).length === 0 && (
                                         <tr>
                                             <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest">
-                                                Bu turkumda faol qoidalar yo'q.
+                                                Bu turkumda faol qoidalar yo&apos;q.
                                             </td>
                                         </tr>
                                     )}
@@ -240,7 +238,7 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Nomi (O'zbekcha)</label>
+                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Nomi (O&apos;zbekcha)</label>
                                         <input
                                             type="text"
                                             className="c1-input w-full font-bold"
@@ -250,7 +248,7 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Maso'ul Role</label>
+                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Maso&apos;ul Role</label>
                                         <select
                                             className="c1-input w-full font-bold uppercase"
                                             value={editingRule.role || 'accountant'}
@@ -311,7 +309,7 @@ const KPIRulesManager: React.FC<Props> = ({ lang }) => {
                                             value={editingRule.inputType || 'checkbox'}
                                             onChange={e => setEditingRule({ ...editingRule, inputType: e.target.value as KPIInputType })}
                                         >
-                                            <option value="checkbox">Checkbox (Ha/Yo'q)</option>
+                                            <option value="checkbox">Checkbox (Ha/Yo&apos;q)</option>
                                             <option value="counter">Counter (Soni)</option>
                                             <option value="number">Number</option>
                                         </select>

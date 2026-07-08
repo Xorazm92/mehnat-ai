@@ -1,18 +1,31 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { LogOut, User, Sun, Moon, Building2, ChevronDown, Globe } from "lucide-react";
+import {
+  LogOut, User, Sun, Moon, Building2, ChevronDown, Globe,
+  Bell, Settings, Search, Command
+} from "lucide-react";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 
 const ROLE_LABELS: Record<string, string> = {
-  super_admin: "Super Admin",
-  admin: "Admin",
+  super_admin:      "Super Admin",
+  admin:            "Admin",
   chief_accountant: "Bosh Buxgalter",
-  supervisor: "Nazoratchi",
-  accountant: "Buxgalter",
-  bank_manager: "Bank Menejer",
+  supervisor:       "Nazoratchi",
+  accountant:       "Buxgalter",
+  bank_manager:     "Bank Menejer",
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  super_admin:      "#7C3AED",
+  admin:            "#2563EB",
+  chief_accountant: "#059669",
+  supervisor:       "#D97706",
+  accountant:       "#2563EB",
+  bank_manager:     "#DC2626",
 };
 
 interface DashboardTopBarProps {
@@ -20,6 +33,7 @@ interface DashboardTopBarProps {
   userEmail: string;
   userRole: string;
   avatarColor?: string;
+  unreadCount?: number;
 }
 
 export function DashboardTopBar({
@@ -27,8 +41,10 @@ export function DashboardTopBar({
   userEmail,
   userRole,
   avatarColor,
+  unreadCount = 0,
 }: DashboardTopBarProps) {
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -53,69 +69,301 @@ export function DashboardTopBar({
     .toUpperCase()
     .slice(0, 2);
 
+  const roleColor = ROLE_COLORS[userRole] || "#2563EB";
+  const bgColor = avatarColor || "#2563EB";
+
   return (
-    <header className="flex items-center justify-between px-6 h-20 bg-bg-secondary border-b border-border-glass flex-shrink-0 z-10 sticky top-0">
-      {/* Left: UTY BI Logo and Dropdown */}
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
-           <h2 className="text-xl font-black text-accent-blue tracking-wider">UTY<span className="text-text-primary">BI</span></h2>
+    <header
+      className="flex items-center justify-between px-6 flex-shrink-0 z-30 sticky top-0"
+      style={{
+        height: "var(--topbar-height)",
+        background: "var(--topbar-bg)",
+        borderBottom: "1px solid var(--topbar-border)",
+        boxShadow: "0 1px 0 0 var(--topbar-border)",
+      }}
+    >
+      {/* Left: Search */}
+      <div className="flex items-center gap-4 flex-1">
+        <div className="relative hidden md:flex items-center max-w-xs w-full">
+          <Search
+            size={15}
+            className="absolute left-3.5 pointer-events-none"
+            style={{ color: "var(--text-muted)" }}
+          />
+          <input
+            type="text"
+            placeholder="Qidirish..."
+            className="w-full pl-10 pr-10 py-2 text-sm rounded-lg outline-none transition-all"
+            style={{
+              background: "var(--input-bg)",
+              border: "1px solid var(--input-border)",
+              color: "var(--text-primary)",
+              fontSize: "13px",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "var(--input-focus-border)";
+              e.currentTarget.style.boxShadow = `0 0 0 3px var(--input-focus-ring)`;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "var(--input-border)";
+              e.currentTarget.style.boxShadow = "";
+            }}
+          />
+          <div
+            className="absolute right-3 flex items-center gap-0.5 pointer-events-none"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <Command size={11} />
+            <span style={{ fontSize: "11px", fontWeight: 600 }}>K</span>
+          </div>
         </div>
-        
-        {/* Korxona dropdowni placeholder */}
-        <button className="flex items-center gap-2 px-4 py-2 bg-bg-primary border border-border-glass rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-            <Building2 size={16} className="text-text-secondary" />
-            <span className="text-sm font-medium text-text-primary">"O'ztemiryo'lxisob"</span>
-            <ChevronDown size={16} className="text-text-secondary ml-2" />
+
+        {/* Company selector */}
+        <button
+          className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all"
+          style={{
+            background: "var(--input-bg)",
+            border: "1px solid var(--input-border)",
+            color: "var(--text-secondary)",
+            fontSize: "13px",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "var(--accent-blue)";
+            e.currentTarget.style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "var(--input-border)";
+            e.currentTarget.style.color = "var(--text-secondary)";
+          }}
+        >
+          <Building2 size={14} style={{ flexShrink: 0 }} />
+          <span className="font-medium max-w-[160px] truncate">&quot;O&apos;ztemiryo&apos;lxisob&quot;</span>
+          <ChevronDown size={13} className="flex-shrink-0 opacity-60" />
         </button>
       </div>
 
-      {/* Right: actions */}
-      <div className="flex items-center gap-3">
-        {/* Til tanlash */}
-        <button className="flex items-center gap-2 px-3 py-2 text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-all border border-transparent">
-          <Globe size={18} />
-          <span className="text-sm font-medium">O'zbekcha</span>
-          <ChevronDown size={14} />
+      {/* Right: Actions */}
+      <div className="flex items-center gap-1.5">
+        {/* Language */}
+        <button
+          className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all"
+          style={{
+            color: "var(--text-secondary)",
+            fontSize: "12px",
+            fontWeight: 600,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--bg-hover)";
+            e.currentTarget.style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "";
+            e.currentTarget.style.color = "var(--text-secondary)";
+          }}
+        >
+          <Globe size={15} />
+          <span>O&apos;zbekcha</span>
+          <ChevronDown size={12} className="opacity-60" />
         </button>
 
-        {/* Theme Toggler */}
+        {/* Theme toggle */}
         {mounted && (
-            <button
+          <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2.5 text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-all border border-transparent"
-            title="Mavzuni o'zgartirish"
-            >
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
+            className="p-2 rounded-lg transition-all"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--bg-hover)";
+              e.currentTarget.style.color = "var(--text-primary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "";
+              e.currentTarget.style.color = "var(--text-secondary)";
+            }}
+            title={theme === "dark" ? "Yorug' rejim" : "Qorong'u rejim"}
+          >
+            {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+          </button>
         )}
 
-        {/* User info */}
-        <div className="flex items-center gap-3 pl-4 border-l border-border-glass ml-2">
-          {/* Avatar */}
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm shadow-black/10 flex-shrink-0 border border-border-glass"
-            style={{ backgroundColor: avatarColor || "var(--accent-blue)" }}
-          >
-            {initials || <User size={16} />}
-          </div>
+        {/* Notifications */}
+        <Link
+          href="/notifications"
+          className="relative p-2 rounded-lg transition-all"
+          style={{ color: "var(--text-secondary)" }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--bg-hover)";
+            e.currentTarget.style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "";
+            e.currentTarget.style.color = "var(--text-secondary)";
+          }}
+        >
+          <Bell size={17} />
+          {unreadCount > 0 && (
+            <span
+              className="absolute top-1 right-1 w-2 h-2 rounded-full"
+              style={{ background: "var(--accent-red)" }}
+            />
+          )}
+        </Link>
 
-          <div className="hidden sm:block">
-            <p className="text-sm font-semibold text-text-primary leading-none">{userName}</p>
-            <p className="text-xs text-text-secondary mt-1">
-              {ROLE_LABELS[userRole] || userRole}
-            </p>
-          </div>
+        {/* Settings */}
+        <Link
+          href="/settings"
+          className="p-2 rounded-lg transition-all"
+          style={{ color: "var(--text-secondary)" }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--bg-hover)";
+            e.currentTarget.style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "";
+            e.currentTarget.style.color = "var(--text-secondary)";
+          }}
+        >
+          <Settings size={17} />
+        </Link>
 
-          {/* Logout */}
+        {/* Divider */}
+        <div
+          className="w-px h-6 mx-1"
+          style={{ background: "var(--topbar-border)" }}
+        />
+
+        {/* User menu */}
+        <div className="relative">
           <button
-            id="logout-btn"
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="ml-1 p-2.5 text-text-secondary hover:text-accent-red hover:bg-accent-red/10 rounded-xl transition-all disabled:opacity-50"
-            title="Chiqish"
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-all"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--bg-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "";
+            }}
           >
-            <LogOut size={18} />
+            {/* Avatar */}
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+              style={{
+                background: `linear-gradient(135deg, ${bgColor}, ${bgColor}cc)`,
+                boxShadow: `0 2px 8px ${bgColor}44`,
+                fontSize: "12px",
+              }}
+            >
+              {initials || <User size={14} />}
+            </div>
+
+            <div className="hidden sm:block text-left leading-none">
+              <p
+                className="text-[13px] font-semibold leading-none"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {userName || "Foydalanuvchi"}
+              </p>
+              <p
+                className="text-[11px] mt-0.5 font-medium leading-none"
+                style={{ color: roleColor }}
+              >
+                {ROLE_LABELS[userRole] || userRole}
+              </p>
+            </div>
+
+            <ChevronDown
+              size={14}
+              className="hidden sm:block"
+              style={{ color: "var(--text-muted)" }}
+            />
           </button>
+
+          {/* Dropdown */}
+          {showUserMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowUserMenu(false)}
+              />
+              <div
+                className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden z-50 animate-scale-in"
+                style={{
+                  background: "var(--card-bg)",
+                  border: "1px solid var(--card-border)",
+                  boxShadow:
+                    "0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1)",
+                }}
+              >
+                {/* Header */}
+                <div
+                  className="px-4 py-3"
+                  style={{ borderBottom: "1px solid var(--card-border)" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                      style={{
+                        background: `linear-gradient(135deg, ${bgColor}, ${bgColor}cc)`,
+                      }}
+                    >
+                      {initials || <User size={16} />}
+                    </div>
+                    <div className="min-w-0">
+                      <p
+                        className="text-[13px] font-semibold truncate"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {userName}
+                      </p>
+                      <p
+                        className="text-[11px] truncate"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {userEmail}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Role badge */}
+                <div className="px-4 py-2.5" style={{ borderBottom: "1px solid var(--card-border)" }}>
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                    style={{
+                      background: `${roleColor}15`,
+                      color: roleColor,
+                    }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{ background: roleColor }}
+                    />
+                    {ROLE_LABELS[userRole] || userRole}
+                  </span>
+                </div>
+
+                {/* Logout */}
+                <div className="p-1.5">
+                  <button
+                    id="logout-btn"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all disabled:opacity-50"
+                    style={{ color: "var(--danger)" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "var(--danger-bg)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "";
+                    }}
+                  >
+                    <LogOut size={15} />
+                    {loggingOut ? "Chiqilmoqda..." : "Tizimdan chiqish"}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>

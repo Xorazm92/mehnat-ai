@@ -7,7 +7,7 @@ export default async function BankCabinetPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const userRole = (session.user as any)?.role as string;
+  const userRole = session.user?.role as string;
   const userName = session.user?.name || "";
 
   // Faqat bank_manager kirishi mumkin

@@ -77,48 +77,49 @@ export function SupervisorCabinet({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Salom, {firstName}! 🔍</h1>
-          <p className="text-text-secondary text-sm mt-1" suppressHydrationWarning>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Salom, {firstName}! 🔍</h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }} suppressHydrationWarning>
             Nazoratchi kabinetingiz — {monthLabel}
           </p>
         </div>
-        <div className="px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium">
+        <div className="px-4 py-2 rounded-xl text-sm font-medium"
+          style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)", color: "var(--accent-blue)" }}>
           🛡️ Nazoratchi
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-600/20 to-blue-600/5 border border-blue-500/20 rounded-2xl p-4">
+        <div className="rounded-2xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
           <div className="flex items-center gap-2 mb-2">
-            <Building2 size={16} className="text-blue-400" />
-            <span className="text-text-secondary text-xs">Firmalar</span>
+            <Building2 size={16} style={{ color: "var(--accent-blue)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Firmalar</span>
           </div>
-          <div className="text-2xl font-bold text-text-primary">{companiesCount}</div>
+          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{companiesCount}</div>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-600/20 to-purple-600/5 border border-purple-500/20 rounded-2xl p-4">
+        <div className="rounded-2xl p-4" style={{ background: "var(--accent-indigo)" + "22", border: "1px solid rgba(99,102,241,0.2)" }}>
           <div className="flex items-center gap-2 mb-2">
-            <Users size={16} className="text-purple-400" />
-            <span className="text-text-secondary text-xs">Buxgalterlar</span>
+            <Users size={16} style={{ color: "var(--accent-indigo)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Buxgalterlar</span>
           </div>
-          <div className="text-2xl font-bold text-text-primary">{accountants.length}</div>
+          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{accountants.length}</div>
         </div>
 
-        <div className="bg-gradient-to-br from-red-600/20 to-red-600/5 border border-red-500/20 rounded-2xl p-4">
+        <div className="rounded-2xl p-4" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={16} className="text-red-400" />
-            <span className="text-text-secondary text-xs">Yuqori risk</span>
+            <AlertTriangle size={16} style={{ color: "var(--danger)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Yuqori risk</span>
           </div>
-          <div className="text-2xl font-bold text-red-400">{highRisk}</div>
+          <div className="text-2xl font-bold" style={{ color: "var(--danger)" }}>{highRisk}</div>
         </div>
 
-        <div className="bg-gradient-to-br from-yellow-600/20 to-yellow-600/5 border border-yellow-500/20 rounded-2xl p-4">
+        <div className="rounded-2xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
           <div className="flex items-center gap-2 mb-2">
-            <Clock size={16} className="text-yellow-400" />
-            <span className="text-text-secondary text-xs">KPI Kutmoqda</span>
+            <Clock size={16} style={{ color: "var(--warning)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI Kutmoqda</span>
           </div>
-          <div className="text-2xl font-bold text-yellow-400">{pendingKpi.length}</div>
+          <div className="text-2xl font-bold" style={{ color: "var(--warning)" }}>{pendingKpi.length}</div>
         </div>
       </div>
 
@@ -143,10 +144,6 @@ export function SupervisorCabinet({
                   (s, p) => s + Number(p.calculatedScore),
                   0
                 );
-                const approvedCount = acc.performanceRecords.filter(
-                  (p) => p.status === "approved"
-                ).length;
-
                 return (
                   <div
                     key={acc.id}
@@ -174,7 +171,7 @@ export function SupervisorCabinet({
                             : "bg-red-400"
                         }`}
                       />
-                      <ChevronRight size={14} className="text-slate-600" />
+                      <ChevronRight size={14} style={{ color: "var(--text-muted)" }} />
                     </div>
                   </div>
                 );
@@ -184,96 +181,102 @@ export function SupervisorCabinet({
         </div>
 
         <div className="space-y-4">
-          {/* Risk Matritsasi */}
-          <div className="bg-bg-card border border-border-glass rounded-2xl p-5">
+          {/* Risk Daraja */}
+          <div className="glass-card p-5">
             <div className="flex items-center gap-2 mb-4">
-              <ShieldCheck size={18} className="text-orange-400" />
-              <h2 className="text-text-primary font-semibold">Risk Daraja</h2>
+              <ShieldCheck size={18} style={{ color: "var(--warning)" }} />
+              <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>Risk Daraja</h2>
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <span className="text-red-400 text-xs font-medium w-16">Yuqori</span>
-                <div className="flex-1 bg-slate-700 rounded-full h-2">
+                <span className="text-xs font-medium w-16" style={{ color: "var(--danger)" }}>Yuqori</span>
+                <div className="flex-1 rounded-full h-2" style={{ background: "var(--input-bg)" }}>
                   <div
-                    className="h-2 rounded-full bg-red-500 transition-all"
+                    className="h-2 rounded-full transition-all"
                     style={{
                       width: companiesCount
                         ? `${(highRisk / companiesCount) * 100}%`
                         : "0%",
+                      background: "var(--danger)"
                     }}
                   />
                 </div>
-                <span className="text-text-primary text-sm font-bold w-6">{highRisk}</span>
+                <span className="text-sm font-bold w-6" style={{ color: "var(--text-primary)" }}>{highRisk}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-yellow-400 text-xs font-medium w-16">O'rta</span>
-                <div className="flex-1 bg-slate-700 rounded-full h-2">
+                <span className="text-xs font-medium w-16" style={{ color: "var(--warning)" }}>O&apos;rta</span>
+                <div className="flex-1 rounded-full h-2" style={{ background: "var(--input-bg)" }}>
                   <div
-                    className="h-2 rounded-full bg-yellow-500 transition-all"
+                    className="h-2 rounded-full transition-all"
                     style={{
                       width: companiesCount
                         ? `${(mediumRisk / companiesCount) * 100}%`
                         : "0%",
+                      background: "var(--warning)"
                     }}
                   />
                 </div>
-                <span className="text-text-primary text-sm font-bold w-6">{mediumRisk}</span>
+                <span className="text-sm font-bold w-6" style={{ color: "var(--text-primary)" }}>{mediumRisk}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-emerald-400 text-xs font-medium w-16">Past</span>
-                <div className="flex-1 bg-slate-700 rounded-full h-2">
+                <span className="text-xs font-medium w-16" style={{ color: "var(--success)" }}>Past</span>
+                <div className="flex-1 rounded-full h-2" style={{ background: "var(--input-bg)" }}>
                   <div
-                    className="h-2 rounded-full bg-emerald-500 transition-all"
+                    className="h-2 rounded-full transition-all"
                     style={{
                       width: companiesCount
                         ? `${(lowRisk / companiesCount) * 100}%`
                         : "0%",
+                      background: "var(--success)"
                     }}
                   />
                 </div>
-                <span className="text-text-primary text-sm font-bold w-6">{lowRisk}</span>
+                <span className="text-sm font-bold w-6" style={{ color: "var(--text-primary)" }}>{lowRisk}</span>
               </div>
             </div>
           </div>
-
+ 
           {/* Tasdiqlash kutayotgan KPI */}
-          <div className="bg-bg-card border border-border-glass rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-border-glass">
+          <div className="glass-card overflow-hidden">
+            <div className="flex items-center justify-between p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
               <div className="flex items-center gap-2">
-                <TrendingUp size={18} className="text-cyan-400" />
-                <h2 className="text-text-primary font-semibold">KPI Tasdiqlanishi</h2>
+                <TrendingUp size={18} style={{ color: "var(--accent-blue)" }} />
+                <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>KPI Tasdiqlanishi</h2>
               </div>
-              <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>
                 {pendingKpi.length} ta
               </span>
             </div>
-            <div className="divide-y divide-slate-700/30 max-h-52 overflow-y-auto">
+            <div className="max-h-52 overflow-y-auto">
               {pendingKpi.length === 0 ? (
-                <div className="p-6 text-center text-text-secondary">
-                  <CheckCircle2 size={28} className="mx-auto mb-2 text-emerald-400/30" />
+                <div className="p-6 text-center" style={{ color: "var(--text-muted)" }}>
+                  <CheckCircle2 size={28} className="mx-auto mb-2 opacity-30" />
                   <p className="text-sm">Barcha KPI tasdiqlangan</p>
                 </div>
               ) : (
                 pendingKpi.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 p-3 hover:bg-slate-700/20 transition-colors"
+                    className="flex items-center gap-3 p-3 transition-colors"
+                    style={{ borderBottom: "1px solid var(--card-border)" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
+                    onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
                     <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-text-primary text-xs font-bold flex-shrink-0"
-                      style={{ background: item.employee.avatarColor || "#8b5cf6" }}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                      style={{ background: item.employee.avatarColor || "var(--accent-indigo)" }}
                     >
                       {item.employee.fullName[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-text-primary text-xs font-medium truncate">
+                      <p className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>
                         {item.employee.fullName}
                       </p>
-                      <p className="text-text-secondary text-[10px] truncate">
+                      <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>
                         {item.rule.nameUz}
                       </p>
                     </div>
-                    <span className="text-sm font-bold text-text-primary">
+                    <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
                       {Number(item.calculatedScore).toFixed(1)}
                     </span>
                   </div>
@@ -286,10 +289,10 @@ export function SupervisorCabinet({
 
       {/* Yuqori risk firmalar */}
       {highRisk > 0 && (
-        <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5">
+        <div className="rounded-2xl p-5" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
           <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle size={18} className="text-red-400" />
-            <h2 className="text-text-primary font-semibold">Yuqori Risk Firmalar</h2>
+            <AlertTriangle size={18} style={{ color: "var(--danger)" }} />
+            <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>Yuqori Risk Firmalar</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {supervisedCompanies
@@ -297,13 +300,14 @@ export function SupervisorCabinet({
               .map((company) => (
                 <div
                   key={company.id}
-                  className="flex items-center gap-3 p-3 bg-bg-card rounded-xl"
+                  className="flex items-center gap-3 rounded-xl p-3"
+                  style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}
                 >
-                  <AlertTriangle size={14} className="text-red-400 flex-shrink-0" />
+                  <AlertTriangle size={14} style={{ color: "var(--danger)" }} className="flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-text-primary text-sm font-medium truncate">{company.name}</p>
+                    <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>{company.name}</p>
                     {company.accountant && (
-                      <p className="text-text-secondary text-xs">
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                         Buxgalter: {company.accountant.fullName}
                       </p>
                     )}

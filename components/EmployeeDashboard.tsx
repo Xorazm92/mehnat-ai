@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { EmployeeSalarySummary, Language, MonthlyPerformance, Company, OperationEntry, KPIRule, PayrollAdjustment } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
 import { translations } from '@/lib/translations';
-import { Wallet, TrendingUp, AlertCircle, Award, Star, TrendingDown, Activity } from 'lucide-react';
+import { Wallet, TrendingUp, AlertCircle, Award, TrendingDown, Activity } from 'lucide-react';
 import { getKpiRules, getMonthlyPerformance, upsertPerformance } from '@/server/kpi';
 import { getPayrollAdjustments } from '@/server/payroll';
 
@@ -176,7 +176,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                             <p className="text-xs font-bold text-emerald-600">+{summary.kpiBonus.toLocaleString()}</p>
                         </div>
                         <div className="p-2 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-900/30 rounded">
-                            <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mb-1">Qo'shimcha</p>
+                            <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mb-1">Qo&apos;shimcha</p>
                             <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{summary.adjustments.toLocaleString()}</p>
                         </div>
                     </div>
@@ -196,7 +196,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                     <div>
                         <div className="flex items-end gap-2 mb-2">
                             <h3 className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{efficiency}%</h3>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">ko'rsatkich</span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">ko&apos;rsatkich</span>
                         </div>
                         <div className="w-full bg-gray-100 dark:bg-gray-800 h-2 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
                             <div className="h-full bg-amber-500" style={{ width: `${efficiency}%` }}></div>
@@ -258,7 +258,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                                         <span className="text-gray-300 dark:text-gray-600">•</span>
                                         <p className="text-[10px] font-bold text-emerald-500/80">{new Date(p.submittedAt || '').toLocaleDateString()}</p>
                                     </div>
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase">Oylikka ta'sir</p>
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase">Oylikka ta&apos;sir</p>
                                 </div>
                             </div>
                         ))}
@@ -304,7 +304,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                         {performances.filter(p => p.calculatedScore < 0).length === 0 && (
                             <div className="text-center py-10 bg-gray-50 dark:bg-[#1e2025] rounded border border-dashed border-gray-300 dark:border-gray-700">
                                 <div className="text-2xl mb-2 opacity-50">🛡️</div>
-                                <p className="font-bold text-gray-500 uppercase text-xs">A'lo darajada! Hech qanday jarima yo'q</p>
+                                <p className="font-bold text-gray-500 uppercase text-xs">A&apos;lo darajada! Hech qanday jarima yo&apos;q</p>
                             </div>
                         )}
                     </div>
@@ -430,7 +430,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
 
                                                     {perf?.rejectedReason && (
                                                         <div className="mt-2 pt-2 border-t border-rose-200 dark:border-rose-800/50">
-                                                            <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400">"{perf.rejectedReason}"</p>
+                                                            <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400">&quot;{perf.rejectedReason}&quot;</p>
                                                         </div>
                                                     )}
                                                 </button>

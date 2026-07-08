@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Expense, Language } from '@/types';
 import { translations } from '@/lib/translations';
-import { Receipt, Plus, Search, Filter, Edit3, Trash2, Calendar, Tag, ChevronRight, TrendingDown } from 'lucide-react';
+import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown } from 'lucide-react';
 
 interface ExpenseModuleProps {
     expenses: Expense[];
@@ -63,12 +63,12 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                             <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-md shrink-0 bg-gradient-to-br from-[var(--danger)] to-[var(--danger-dark)]">
                                 <TrendingDown size={20} />
                             </div>
-                            <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>SHU OYDA</span>
+                            <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>SHU OYDA</span>
                         </div>
                         <div className="text-3xl font-black tabular-nums leading-none mb-4" style={{ color: 'var(--text)' }}>
-                            {stats.totalMonth.toLocaleString()} <span className="text-[14px] font-bold ml-1 uppercase" style={{ color: 'var(--text-3)' }}>sum</span>
+                            {stats.totalMonth.toLocaleString()} <span className="text-[14px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
                         </div>
-                        <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                        <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                             <div className="h-full w-3/4 rounded-full" style={{ background: 'var(--danger)' }}></div>
                         </div>
                     </div>
@@ -76,44 +76,44 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
 
                 <div className="dashboard-card p-6 flex flex-col justify-center relative">
                     <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center border" style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text-3)' }}>
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
                             <Receipt size={20} />
                         </div>
                         <div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>UMUMIY</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>UMUMIY</span>
                             <h4 className="font-bold text-[13px] uppercase tracking-tight" style={{ color: 'var(--text)' }}>Jami xarajat</h4>
                         </div>
                     </div>
                     <div className="text-2xl font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-                        {stats.totalAll.toLocaleString()} <span className="text-[12px] font-bold ml-1 uppercase" style={{ color: 'var(--text-3)' }}>sum</span>
+                        {stats.totalAll.toLocaleString()} <span className="text-[12px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
                     </div>
                 </div>
 
                 <div className="dashboard-card p-6 flex flex-col justify-center relative">
                     <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center border" style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text-3)' }}>
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
                             <Tag size={20} />
                         </div>
                         <div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>FAOLLIK</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>FAOLLIK</span>
                             <h4 className="font-bold text-[13px] uppercase tracking-tight" style={{ color: 'var(--text)' }}>Tranzaksiyalar</h4>
                         </div>
                     </div>
                     <div className="flex items-end gap-2 leading-none">
                         <span className="text-3xl font-black tabular-nums" style={{ color: 'var(--text)' }}>{stats.count}</span>
-                        <span className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-3)' }}>QAYD</span>
+                        <span className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>QAYD</span>
                     </div>
                 </div>
             </div>
 
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={18} style={{ color: 'var(--text-3)' }} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={18} style={{ color: 'var(--text-muted)' }} />
                     <input
                         type="text"
                         placeholder="QIDIRISH..."
                         className="w-full rounded-xl py-3 pl-12 pr-4 text-[12px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20"
-                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -140,20 +140,20 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
-                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[120px]" style={{ color: 'var(--text-3)' }}>Sana</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[150px]" style={{ color: 'var(--text-3)' }}>Kategoriya</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Izoh</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[150px]" style={{ color: 'var(--text-3)' }}>Summa</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[100px]" style={{ color: 'var(--text-3)' }}>Amallar</th>
+                            <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[120px]" style={{ color: 'var(--text-muted)' }}>Sana</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[150px]" style={{ color: 'var(--text-muted)' }}>Kategoriya</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Izoh</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[150px]" style={{ color: 'var(--text-muted)' }}>Summa</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[100px]" style={{ color: 'var(--text-muted)' }}>Amallar</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredExpenses.map((expense, i) => (
-                                <tr key={expense.id} className="transition-colors group hover:bg-[var(--danger-light)] cursor-pointer" style={{ backgroundColor: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-                                    <td className="px-6 py-4 text-[11px] font-bold uppercase tracking-tight font-mono" style={{ color: 'var(--text-2)' }}>{expense.date}</td>
+                                <tr key={expense.id} className="transition-colors group hover:bg-[var(--danger-bg)] cursor-pointer" style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
+                                    <td className="px-6 py-4 text-[11px] font-bold uppercase tracking-tight font-mono" style={{ color: 'var(--text-secondary)' }}>{expense.date}</td>
                                     <td className="px-6 py-4">
-                                        <span className="c1-badge" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>{expense.category}</span>
+                                        <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>{expense.category}</span>
                                     </td>
                                     <td className="px-6 py-4 text-[13px] font-bold truncate max-w-[300px] tracking-tight" style={{ color: 'var(--text)' }}>
                                         {expense.description || "—"}
@@ -168,8 +168,8 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                                             <button
                                                 onClick={() => { setEditingExpense(expense); setIsModalOpen(true); }}
                                                 className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
-                                                style={{ color: 'var(--primary)' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-ghost)'}
+                                                style={{ color: 'var(--accent-blue)' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'}
                                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                                 title="Tahrirlash"
                                             >
@@ -180,7 +180,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                                                     onClick={() => { if (confirm('Xarajatni o\'chirishni tasdiqlaysizmi?')) onDeleteExpense(expense.id); }}
                                                     className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
                                                     style={{ color: 'var(--danger)' }}
-                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-light)'}
+                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'}
                                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                                     title="O'chirish"
                                                 >
@@ -194,9 +194,9 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                             {filteredExpenses.length === 0 && (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-24 text-center">
-                                        <div className="flex flex-col items-center" style={{ color: 'var(--text-3)' }}>
+                                        <div className="flex flex-col items-center" style={{ color: 'var(--text-muted)' }}>
                                             <Search size={48} className="mb-4 opacity-20" />
-                                            <span className="text-[11px] uppercase font-bold tracking-[0.2em] opacity-60">Ma'lumot topilmadi</span>
+                                            <span className="text-[11px] uppercase font-bold tracking-[0.2em] opacity-60">Ma&apos;lumot topilmadi</span>
                                         </div>
                                     </td>
                                 </tr>
@@ -208,74 +208,74 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in">
                     <div className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0">
                         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--danger)' }}></div>
-                        <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--border)' }}>
+                        <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
                             <div>
                                 <h3 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Xarajatni kiritish</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--text-3)', background: 'var(--surface-2)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-light)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'var(--surface-2)'; }}>
+                            <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--input-bg)'; }}>
                                 <Plus size={20} className="rotate-45" />
                             </button>
                         </div>
                         <form onSubmit={handleSave} className="p-6 space-y-5">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.amount}</label>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</label>
                                     <div className="relative">
                                         <input
                                             type="number"
                                             value={editingExpense?.amount || ''}
                                             onChange={(e) => setEditingExpense(prev => ({ ...prev, amount: Number(e.target.value) }))}
                                             className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
-                                            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                                            style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                             required
                                         />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase" style={{ color: 'var(--text-3)' }}>sum</div>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.date}</label>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
                                     <input
                                         type="date"
                                         value={editingExpense?.date || ''}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, date: e.target.value }))}
                                         className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
-                                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--danger)' }}
+                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--danger)' }}
                                         required
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.category}</label>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.category}</label>
                                     <select
                                         value={editingExpense?.category || 'Other'}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, category: e.target.value }))}
                                         className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
-                                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     >
                                         {categories.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.comment}</label>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
                                     <input
                                         type="text"
                                         placeholder="IXTIYORIY IZOH..."
                                         value={editingExpense?.description || ''}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, description: e.target.value }))}
                                         className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
-                                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 pt-6 mt-6" style={{ borderTop: '1px solid var(--border)' }}>
+                            <div className="flex gap-3 pt-6 mt-6" style={{ borderTop: '1px solid var(--card-border)' }}>
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
                                     className="flex-1 px-4 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all shadow-sm"
-                                    style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
-                                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text-3)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+                                    style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
                                 >
                                     {t.cancel}
                                 </button>

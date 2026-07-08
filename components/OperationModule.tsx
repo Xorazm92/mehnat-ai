@@ -3,9 +3,9 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom';
 import { Company, OperationEntry, Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
-import { ChevronDown, ChevronsUpDown, Download, Search, Filter, RefreshCw, Calendar, Loader2, Info } from 'lucide-react';
+import { ChevronDown, Download, Search, RefreshCw, Info } from 'lucide-react';
 import { MonthPicker } from './ui/MonthPicker';
-import { AVAILABLE_PERIODS, periodsEqual } from '@/lib/periods';
+import { periodsEqual } from '@/lib/periods';
 import { toast } from 'sonner';
 import { upsertMonthlyReport, clearColumnForPeriod } from '@/server/operations';
 import { createNotification } from '@/server/audit';
@@ -72,8 +72,6 @@ const REPORT_COLUMNS = [
   { key: 'kom_gaz', label: 'Gaz', short: 'G🔥', group: 'Komunalka' },
   { key: 'kom_svet', label: 'Svet', short: 'E⚡', group: 'Komunalka' },
 ] as const;
-
-type ReportColumnKey = typeof REPORT_COLUMNS[number]['key'];
 
 // ── Status Rendering ───────────────────────────────────────────
 const getStatusStyle = (value: string) => {
@@ -366,9 +364,7 @@ const OperationModule: React.FC<Props> = ({
   lang,
   onUpdate,
   staff = [],
-  activeFilter = 'all',
   onPeriodChange,
-  onBatchUpdate,
   onCompanySelect,
   userRole,
   currentUserId,
@@ -736,7 +732,7 @@ const OperationModule: React.FC<Props> = ({
             <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.reportLegend}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter" style={{ background: 'rgba(255, 215, 0, 0.1)', color: '#ffd700', border: '1px solid rgba(255, 215, 0, 0.2)' }}>To'l</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter" style={{ background: 'rgba(255, 215, 0, 0.1)', color: '#ffd700', border: '1px solid rgba(255, 215, 0, 0.2)' }}>To&apos;l</span>
             <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.paymentLegend}</span>
           </div>
         </div>
@@ -817,7 +813,7 @@ const OperationModule: React.FC<Props> = ({
                           title={`${col.label} to'lov`}
                         >
                           <span className="text-[10px] font-black tracking-widest" style={{ color: '#ffd700' }}>{(col as any).payShort}</span>
-                          <div className="text-[7px] font-black uppercase tracking-tighter" style={{ color: 'rgba(255, 215, 0, 0.7)' }}>To'l</div>
+                          <div className="text-[7px] font-black uppercase tracking-tighter" style={{ color: 'rgba(255, 215, 0, 0.7)' }}>To&apos;l</div>
                         </th>
                       </React.Fragment>
                     );

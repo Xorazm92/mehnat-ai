@@ -26,7 +26,7 @@ async function main() {
 
   let archived = 0;
 
-  for (const [name, list] of byName.entries()) {
+  for (const [, list] of byName.entries()) {
     if (list.length > 1) {
       // Find the best one to keep:
       // 1. Valid INN (length >= 9, not all 0s)
@@ -48,7 +48,6 @@ async function main() {
       });
 
       // Keep the first one, archive the rest
-      const keep = list[0];
       const duplicates = list.slice(1);
 
       for (const dup of duplicates) {

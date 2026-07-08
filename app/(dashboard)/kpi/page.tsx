@@ -4,8 +4,8 @@ import KPIClient from "./KPIClient";
 
 export default async function KpiPage() {
   const session = await auth();
-  const userId = (session?.user as any)?.id;
-  const userRole = (session?.user as any)?.role || "employee";
+  const userId = session?.user?.id ?? "";
+  const userRole = session?.user?.role || "employee";
 
   const [companies, staff, operations] = await Promise.all([
     getCachedCompanies(userId, userRole),

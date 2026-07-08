@@ -2,6 +2,8 @@ import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { DashboardTopBar } from "@/components/DashboardTopBar";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { getCachedUnreadCount } from "@/lib/cached-queries";
 
 export default async function DashboardLayout({
   children,
@@ -9,25 +11,46 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+  const userId = session?.user?.id ?? "";
+  const userRole = session?.user?.role ?? "";
+  const avatarColor = session?.user?.avatarColor ?? undefined;
+  const unreadCount = userId ? await getCachedUnreadCount(userId) : 0;
 
   return (
     <SessionProvider session={session}>
-      <div className="flex flex-col h-screen bg-bg-primary text-text-primary overflow-hidden">
-        {/* TopBar full width */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+          background: "var(--bg-primary)",
+          color: "var(--text-primary)",
+          overflow: "hidden",
+        }}
+      >
+        {/* TopBar */}
         <DashboardTopBar
           userName={session?.user?.name || ""}
           userEmail={session?.user?.email || ""}
-          userRole={(session?.user as any)?.role}
-          avatarColor={(session?.user as any)?.avatarColor}
+          userRole={userRole}
+          avatarColor={avatarColor}
+          unreadCount={unreadCount}
         />
 
-        <div className="flex flex-1 overflow-hidden">
+        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           {/* Sidebar */}
-          <DashboardSidebar userRole={(session?.user as any)?.role} />
+          <DashboardSidebar userRole={userRole} />
 
           {/* Main content */}
-          <main className="flex-1 overflow-y-auto p-6">
-            {children}
+          <main
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "1.5rem",
+              background: "var(--bg-primary)",
+            }}
+          >
+            <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </div>
       </div>

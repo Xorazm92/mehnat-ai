@@ -13,7 +13,7 @@ export async function getKassaEntries(filters?: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!["super_admin", "admin", "chief_accountant", "bank_manager"].includes(role)) {
     throw new Error("Forbidden");
   }
@@ -49,13 +49,13 @@ export async function createKassaEntry(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isSeniorRole(role) && role !== "bank_manager") throw new Error("Forbidden");
 
   return prisma.kassaEntry.create({
     data: {
       ...data,
-      createdBy: (session.user as any).id,
+      createdBy: session.user.id,
     },
   });
 }
@@ -64,7 +64,7 @@ export async function deleteKassaEntry(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
   return prisma.kassaEntry.delete({ where: { id } });
@@ -112,8 +112,8 @@ export async function getExpenses(filters?: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
-  if (!isSeniorRole(role)) throw new Error("Forbidden");
+  const role = session.user.role as string;
+  if (!isSeniorRole(role) && role !== "bank_manager") throw new Error("Forbidden");
 
   return prisma.expense.findMany({
     where: {
@@ -146,17 +146,86 @@ export async function createExpense(data: {
   return prisma.expense.create({
     data: {
       ...data,
-      createdBy: (session.user as any).id,
+      createdBy: session.user.id,
     },
   });
+}
+
+export async function updateExpense(id: string, data: {
+  amount: number;
+  date: Date;
+  category: string;
+  description?: string;
+}) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  return prisma.expense.update({ where: { id }, data });
 }
 
 export async function deleteExpense(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
   return prisma.expense.delete({ where: { id } });
+}
+
+// =====================================================
+// PAYMENTS (Kassa — firma shartnoma to'lovlari)
+// =====================================================
+
+export async function getPayments(period?: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const role = session.user.role as string;
+  if (!["super_admin", "admin", "chief_accountant", "supervisor", "bank_manager"].includes(role)) {
+    throw new Error("Forbidden");
+  }
+
+  return prisma.payment.findMany({
+    where: { ...(period ? { period } : {}) },
+    include: {
+      company: { select: { id: true, name: true, inn: true, contractAmount: true } },
+    },
+    orderBy: [{ period: "desc" }],
+  });
+}
+
+export async function upsertPayment(data: {
+  companyId: string;
+  period: string;
+  amount: number;
+  status: string;
+  paymentDate?: Date;
+  comment?: string;
+}) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const role = session.user.role as string;
+  if (!isSeniorRole(role) && role !== "bank_manager") throw new Error("Forbidden");
+
+  const { companyId, period, ...fields } = data;
+
+  const result = await prisma.payment.upsert({
+    where: { companyId_period: { companyId, period } },
+    create: { companyId, period, ...fields, createdBy: session.user.id },
+    update: fields,
+  });
+
+  return result;
+}
+
+export async function deletePayment(id: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const role = session.user.role as string;
+  if (!isAdminRole(role)) throw new Error("Forbidden");
+
+  return prisma.payment.delete({ where: { id } });
 }

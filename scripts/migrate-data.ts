@@ -125,7 +125,6 @@ async function migrateCompanies() {
   const users = await prisma.user.findMany({
     select: { id: true, email: true, fullName: true },
   });
-  const userByEmail = new Map(users.map((u) => [u.email, u]));
   const userByName = new Map(users.map((u) => [u.fullName.toLowerCase(), u]));
 
   let created = 0;
@@ -149,7 +148,6 @@ async function migrateCompanies() {
       let accountantId: string | undefined;
       if (c.accountant_id || c.accountantId) {
         // Direct ID (Supabase UUID format)
-        const uid = c.accountant_id || c.accountantId;
         // Try to find by old Supabase ID in email field
       }
       if (!accountantId && (c.accountant_name || c.accountantName)) {

@@ -92,6 +92,7 @@ model User {
   expenses            Expense[]
   attendances         Attendance[]         @relation("UserAttendance")
   assignedInventory   InventoryItem[]      @relation("UserAssignedInventory")
+  payments            Payment[]
 
   @@index([email])
   @@index([role])
@@ -174,6 +175,7 @@ model Company {
   contractAssignments ContractAssignment[]
   documents           Document[]
   credentials         ClientCredential[]
+  payments            Payment[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -235,12 +237,51 @@ model MonthlyReport {
   stat1Moliya      String?
   stat1Akt         String?
 
+  // Qo'shimcha soliqlar / IT Park / Komunalka
+  aksizSoligi     String?
+  nedroSoligi     String?
+  norezidentFoyda String?
+  norezidentNds   String?
+  aylanmaQqsTolov String?
+  daromadSoliqTolov String?
+  inpsTolov       String?
+  foydaSoliqTolov String?
+  itparkOylik     String?
+  itparkChorak    String?
+  komSuv          String?
+  komGaz          String?
+  komSvet         String?
+
   comment   String?
   updatedAt DateTime @updatedAt
 
   @@unique([companyId, period])
   @@index([companyId])
   @@index([period])
+}
+
+// =====================================================
+// PAYMENT (Kassa — firma shartnoma to'lovlari, oylik)
+// =====================================================
+
+model Payment {
+  id          String   @id @default(uuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period      String // "2026-07"
+  amount      Decimal  @db.Decimal(12, 2)
+  paymentDate DateTime?
+  status      String   @default("pending") // 'paid' | 'pending' | 'partial' | 'overdue'
+  comment     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  user        User?    @relation(fields: [createdBy], references: [id])
+
+  @@unique([companyId, period])
+  @@index([companyId])
+  @@index([period])
+  @@index([status])
 }
 
 // =====================================================

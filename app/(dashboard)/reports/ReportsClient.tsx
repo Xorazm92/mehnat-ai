@@ -28,7 +28,7 @@ export default function ReportsClient({ companies, operations, staff, userRole }
       userRole={userRole}
       selectedPeriod={selectedPeriod}
       onPeriodChange={setSelectedPeriod}
-      onCompanySelect={(c) => {}}
+      onCompanySelect={() => {}}
       onUpdate={handleUpdate}
     />
   );

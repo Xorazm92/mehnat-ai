@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Company, Staff, TaxType, ServerInfo, ContractRole, SalaryCalculationType, ServiceScope } from '@/types';
+import { Company, Staff, TaxType, ServerInfo } from '@/types';
 import { ChevronRight, ChevronLeft, Check, X, Building2, Server, Calculator, Users } from 'lucide-react';
 
 interface Props {
@@ -96,7 +96,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
             <div className="p-10 min-h-[400px]">
                 {currentStep === 0 && (
                     <div className="space-y-8 animate-fade-in">
-                        <h3 className="text-2xl font-black text-slate-800 dark:text-white">Asosiy ma'lumotlar</h3>
+                        <h3 className="text-2xl font-black text-slate-800 dark:text-white">Asosiy ma&apos;lumotlar</h3>
                         <div className="grid grid-cols-2 gap-8">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Firma Nomi</label>
@@ -315,7 +315,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                             <button
                                                 onClick={() => setFormData({ ...formData, activeServices: [] })}
                                                 className="c1-btn c1-btn-danger text-[8px] py-1"
-                                            >O'chirish</button>
+                                            >O&apos;chirish</button>
                                         </div>
                                     </div>
                                 </div>

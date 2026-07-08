@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from 'react';
 import { AlertCircle, RotateCcw, Home, Sparkles } from 'lucide-react';
 import { isChunkLoadError } from '@/lib/errors';

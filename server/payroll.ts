@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { createAuditLog } from "@/server/audit";
 
 // =====================================================
 // PAYROLL ADJUSTMENTS
@@ -12,8 +13,8 @@ export async function getPayrollAdjustments(month: string, employeeId?: string) 
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role as string;
+  const userId = session.user.id;
+  const role = session.user.role as string;
 
   const targetId = isSeniorRole(role) ? employeeId : userId;
 
@@ -39,13 +40,13 @@ export async function createPayrollAdjustment(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
   return prisma.payrollAdjustment.create({
     data: {
       ...data,
-      createdBy: (session.user as any).id,
+      createdBy: session.user.id,
     },
   });
 }
@@ -54,14 +55,14 @@ export async function approvePayrollAdjustment(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!["super_admin", "admin"].includes(role)) throw new Error("Forbidden");
 
   return prisma.payrollAdjustment.update({
     where: { id },
     data: {
       isApproved: true,
-      approvedBy: (session.user as any).id,
+      approvedBy: session.user.id,
       approvedAt: new Date(),
     },
   });
@@ -71,10 +72,63 @@ export async function deletePayrollAdjustment(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!["super_admin", "admin"].includes(role)) throw new Error("Forbidden");
 
   return prisma.payrollAdjustment.delete({ where: { id } });
+}
+
+// Oylik (baza + KPI bonus/jarima) hisoblangan summani tasdiqlash — natija
+// PayrollAdjustment jadvaliga 'payment' turi bilan yoziladi.
+export async function approveEmployeeSalary(data: {
+  employeeId: string;
+  month: string;
+  baseSalary: number;
+  kpiBonus: number;
+  kpiPenalty: number;
+  totalSalary: number;
+}) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const role = session.user.role as string;
+  if (!isSeniorRole(role)) throw new Error("Forbidden");
+
+  const existing = await prisma.payrollAdjustment.findFirst({
+    where: {
+      employeeId: data.employeeId,
+      month: data.month,
+      adjustmentType: "payment",
+    },
+  });
+  if (existing) {
+    throw new Error("Bu oy uchun oylik allaqachon tasdiqlangan");
+  }
+
+  const userId = session.user.id as string;
+
+  const adjustment = await prisma.payrollAdjustment.create({
+    data: {
+      month: data.month,
+      employeeId: data.employeeId,
+      adjustmentType: "payment",
+      amount: data.totalSalary,
+      reason: `Oylik tasdiqlandi: baza ${data.baseSalary.toFixed(0)}, bonus ${data.kpiBonus.toFixed(0)}, jarima ${data.kpiPenalty.toFixed(0)}`,
+      createdBy: userId,
+      isApproved: true,
+      approvedBy: userId,
+      approvedAt: new Date(),
+    },
+  });
+
+  await createAuditLog({
+    action: "create",
+    tableName: "PayrollAdjustment",
+    recordId: adjustment.id,
+    newData: data,
+  });
+
+  return adjustment;
 }
 
 // =====================================================
@@ -85,7 +139,7 @@ export async function getPayrollSummary(month: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
   // Get all active users
@@ -165,7 +219,7 @@ export async function getContractAssignments(companyId?: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = (session.user as any).role as string;
+  const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
   return prisma.contractAssignment.findMany({
@@ -192,7 +246,7 @@ export async function upsertContractAssignment(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userRole = (session.user as any).role as string;
+  const userRole = session.user.role as string;
   if (!["super_admin", "admin"].includes(userRole)) throw new Error("Forbidden");
 
   // Deactivate existing same role assignment

@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Company, Staff, TaxType, StatsType, Language, CompanyStatus, RiskLevel, OperationEntry } from '@/types';
+import { Company, Staff, TaxType, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
-import { Plus, Search, Edit3, Trash2, X, Check, LayoutGrid, List, Eye, EyeOff, ChevronLeft, ChevronRight, Download, Filter, AlertTriangle, Building2, Server, Calculator, Users, DollarSign, ArrowRight } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, LayoutGrid, List, Eye, EyeOff, ChevronLeft, ChevronRight, Download, Filter, Building2, Calculator, Users, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import OnboardingWizard from './OnboardingWizard';
 import { MonthPicker } from './ui/MonthPicker';
@@ -240,19 +240,19 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
       {/* Header Section */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center dashboard-card p-5 gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0" style={{ background: 'var(--primary)' }}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0" style={{ background: 'var(--accent-blue)' }}>
             <Building2 size={24} />
           </div>
           <div className="min-w-0">
             <h2 className="text-lg font-black uppercase tracking-wider truncate" style={{ color: 'var(--text)' }}>{t.organizations}</h2>
-            <p className="text-[11px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>
-              {t.totalFirms}: <span className="tabular-nums" style={{ color: 'var(--primary)' }}>{filtered.length}</span>
+            <p className="text-[11px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>
+              {t.totalFirms}: <span className="tabular-nums" style={{ color: 'var(--accent-blue)' }}>{filtered.length}</span>
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto">
-          <div className="flex p-1 rounded-lg transition-colors" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+          <div className="flex p-1 rounded-lg transition-colors" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
             {[
               { label: 'Faol', value: true },
               { label: 'Arxiv', value: false },
@@ -262,18 +262,18 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 key={String(opt.value)}
                 onClick={() => setFilterActive(opt.value)}
                 className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold uppercase tracking-widest ${filterActive === opt.value ? 'shadow-sm' : ''}`}
-                style={filterActive === opt.value ? { background: 'var(--surface)', color: 'var(--primary)', border: '1px solid var(--border)' } : { color: 'var(--text-2)', border: '1px solid transparent' }}
+                style={filterActive === opt.value ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--card-border)' } : { color: 'var(--text-secondary)', border: '1px solid transparent' }}
               >
                 {opt.label}
               </button>
             ))}
           </div>
 
-          <div className="flex p-1 rounded-lg transition-colors" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+          <div className="flex p-1 rounded-lg transition-colors" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
             <button
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'shadow-sm' : ''}`}
-              style={viewMode === 'grid' ? { background: 'var(--surface)', color: 'var(--primary)', border: '1px solid var(--border)' } : { color: 'var(--text-2)', border: '1px solid transparent' }}
+              style={viewMode === 'grid' ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--card-border)' } : { color: 'var(--text-secondary)', border: '1px solid transparent' }}
               title={t.gridView}
             >
               <LayoutGrid size={15} />
@@ -281,14 +281,14 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             <button
               onClick={() => setViewMode('table')}
               className={`p-1.5 rounded-md transition-all ${viewMode === 'table' ? 'shadow-sm' : ''}`}
-              style={viewMode === 'table' ? { background: 'var(--surface)', color: 'var(--primary)', border: '1px solid var(--border)' } : { color: 'var(--text-2)', border: '1px solid transparent' }}
+              style={viewMode === 'table' ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--card-border)' } : { color: 'var(--text-secondary)', border: '1px solid transparent' }}
               title={t.tableView}
             >
               <List size={15} />
             </button>
           </div>
 
-          <div className="h-8 w-px mx-1 hidden sm:block" style={{ background: 'var(--border)' }} />
+          <div className="h-8 w-px mx-1 hidden sm:block" style={{ background: 'var(--card-border)' }} />
 
           <MonthPicker
             selectedPeriod={selectedPeriod}
@@ -300,9 +300,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             <button
               onClick={handleExport}
               className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
-              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-ghost)'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.background = 'var(--surface-2)'; }}
+              style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; }}
               title="Excelga eksport"
             >
               <Download size={16} />
@@ -311,9 +311,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
-              style={showFilters ? { background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' } : { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-              onMouseEnter={e => { if (!showFilters) { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-ghost)'; } }}
-              onMouseLeave={e => { if (!showFilters) { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.background = 'var(--surface-2)'; } }}
+              style={showFilters ? { background: 'var(--accent-blue-light)', border: '1px solid var(--accent-blue)', color: 'var(--accent-blue)' } : { background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
+              onMouseEnter={e => { if (!showFilters) { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; } }}
+              onMouseLeave={e => { if (!showFilters) { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; } }}
               title="Filtrlar"
             >
               <Filter size={16} />
@@ -449,10 +449,10 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                     </div>
                     <div className="min-w-0 flex-1">
                       <h4 className="text-[13px] font-bold truncate mb-0.5" style={{ color: 'var(--text)' }} title={c.name}>{c.name}</h4>
-                      {c.brandName && <p className="text-[10px] font-bold uppercase truncate mb-1" style={{ color: 'var(--text-3)' }}>{c.brandName}</p>}
+                      {c.brandName && <p className="text-[10px] font-bold uppercase truncate mb-1" style={{ color: 'var(--text-muted)' }}>{c.brandName}</p>}
                       <div className="flex gap-1.5 mt-1">
-                        <span className="c1-badge" style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }}>INN: {c.inn}</span>
-                        <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-light)' : 'var(--primary-ghost)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--primary)' }}>
+                        <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>INN: {c.inn}</span>
+                        <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)' }}>
                           {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'AYLANMA' : (c.taxType?.toUpperCase() || 'FIX'))}
                         </span>
                       </div>
@@ -464,8 +464,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                       { label: t.accountant, val: c.accountantName, icon: <Users size={12} /> },
                       { label: 'Soliq Rejimi', val: c.taxRegime || 'Standard', icon: <Calculator size={12} /> }
                     ].map((stat, i) => (
-                      <div key={i} className="p-2 rounded-lg" style={{ background: 'var(--surface-2)' }}>
-                        <div className="flex items-center gap-1.5 mb-1" style={{ color: 'var(--text-3)' }}>
+                      <div key={i} className="p-2 rounded-lg" style={{ background: 'var(--input-bg)' }}>
+                        <div className="flex items-center gap-1.5 mb-1" style={{ color: 'var(--text-muted)' }}>
                           {stat.icon}
                           <p className="text-[9px] font-bold uppercase tracking-widest">{stat.label}</p>
                         </div>
@@ -474,25 +474,25 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 mt-auto pl-2" style={{ borderTop: '1px solid var(--border)' }}>
+                  <div className="flex items-center justify-between pt-3 mt-auto pl-2" style={{ borderTop: '1px solid var(--card-border)' }}>
                     <div className="min-w-0 flex-1">
                       {(c.login || c.password) ? (
                         <div className="flex items-center gap-1.5 cursor-help" onClick={(e) => { e.stopPropagation(); togglePassword(c.id); }}>
-                          <div style={{ color: 'var(--text-3)' }}>
+                          <div style={{ color: 'var(--text-muted)' }}>
                             {showPasswords[c.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                           </div>
-                          <p className="text-[11px] font-bold font-mono whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--primary)' }}>
+                          <p className="text-[11px] font-bold font-mono whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--accent-blue)' }}>
                             {showPasswords[c.id] ? `${c.login || '—'} / ${c.password || '—'}` : '•••• / ••••'}
                           </p>
                         </div>
                       ) : (
-                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Login yo'q</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Login yo&apos;q</span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-1 ml-2">
-                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--primary)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-ghost)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Edit3 size={15} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Trash2 size={15} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Edit3 size={15} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Trash2 size={15} /></button>
                     </div>
                   </div>
                 </div>
@@ -507,21 +507,21 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                   <tr>
                     <th className="w-[40px] text-center">№</th>
                     <th
-                      className="w-[240px] sticky left-0 z-20 cursor-pointer hover:bg-[var(--primary-ghost)] transition-colors"
+                      className="w-[240px] sticky left-0 z-20 cursor-pointer hover:bg-[var(--accent-blue-light)] transition-colors"
                       onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       <div className="flex items-center gap-1.5">
-                        <Building2 size={12} style={{ color: 'var(--text-3)' }} />
+                        <Building2 size={12} style={{ color: 'var(--text-muted)' }} />
                         <span>{t.companyName} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
                       </div>
                     </th>
                     <th
-                      className="w-[100px] cursor-pointer hover:bg-[var(--primary-ghost)] transition-colors"
+                      className="w-[100px] cursor-pointer hover:bg-[var(--accent-blue-light)] transition-colors"
                       onClick={() => { setSortField('inn'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="w-[130px]" style={{ color: 'var(--primary)' }}>
+                    <th className="w-[130px]" style={{ color: 'var(--accent-blue)' }}>
                       <div className="flex items-center justify-end gap-1"><DollarSign size={11} /> SHARTNOMA</div>
                     </th>
                     <th className="w-[110px] text-center">REJIM</th>
@@ -544,48 +544,48 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                       <tr
                         key={c.id}
                         onClick={() => onCompanySelect(c)}
-                        className="group cursor-pointer transition-colors hover:bg-[var(--primary-ghost)]"
-                        style={{ backgroundColor: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-2)' }}
+                        className="group cursor-pointer transition-colors hover:bg-[var(--accent-blue-light)]"
+                        style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)' }}
                       >
-                        <td className="text-center font-mono text-[10px] font-bold" style={{ color: 'var(--text-3)' }}>
+                        <td className="text-center font-mono text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
                           {c.originalIndex || (i + 1)}
                         </td>
                         <td className="sticky left-0 bg-inherit z-10 font-bold relative pl-3" style={{ color: 'var(--text)' }}>
                           <div className={`absolute left-0 top-0 bottom-0 w-1 ${risk.bg.replace('bg-', 'bg-')} ${risk.color.replace('text-', 'bg-')}`}></div>
                           <div className="truncate max-w-[210px] uppercase tracking-tight" title={c.name}>{c.name}</div>
-                          {c.brandName && <div className="text-[9px] font-bold truncate uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-3)' }}>{c.brandName}</div>}
+                          {c.brandName && <div className="text-[9px] font-bold truncate uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{c.brandName}</div>}
                         </td>
-                        <td className="font-mono text-[11px] font-bold" style={{ color: 'var(--text-2)' }}>
+                        <td className="font-mono text-[11px] font-bold" style={{ color: 'var(--text-secondary)' }}>
                           {c.inn}
                         </td>
                         <td className="font-bold text-right text-[12px] tabular-nums" style={{ color: 'var(--text)' }}>
-                          {displayAmount?.toLocaleString() || '0'} <span className="text-[9px] font-bold uppercase ml-0.5" style={{ color: 'var(--text-3)' }}>sum</span>
+                          {displayAmount?.toLocaleString() || '0'} <span className="text-[9px] font-bold uppercase ml-0.5" style={{ color: 'var(--text-muted)' }}>sum</span>
                         </td>
                         <td className="text-center">
-                          <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-light)' : 'var(--primary-ghost)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--primary)' }}>
+                          <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)' }}>
                             {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'AYLANMA' : (c.taxType?.toUpperCase() || 'FIX'))}
                           </span>
                         </td>
                         <td>
                           <div className="flex items-center gap-1.5 truncate">
-                            <Users size={12} style={{ color: 'var(--text-3)' }} className="shrink-0" />
+                            <Users size={12} style={{ color: 'var(--text-muted)' }} className="shrink-0" />
                             <span className="truncate text-[11px] font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{displayAccountant || '—'}</span>
                           </div>
                         </td>
                         <td>
-                          <span className="truncate block text-[11px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-2)' }}>{displaySupervisor || '—'}</span>
+                          <span className="truncate block text-[11px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>{displaySupervisor || '—'}</span>
                         </td>
                         <td>
                           <div className="flex flex-col">
                             {c.serverInfo && <span className="text-[10px] font-black uppercase tracking-widest leading-none mb-0.5" style={{ color: 'var(--success)' }}>{c.serverInfo}</span>}
-                            <span className="text-[9px] font-bold truncate uppercase tracking-tight" style={{ color: 'var(--text-3)' }} title={c.serverName}>{c.serverName || '—'}</span>
+                            <span className="text-[9px] font-bold truncate uppercase tracking-tight" style={{ color: 'var(--text-muted)' }} title={c.serverName}>{c.serverName || '—'}</span>
                           </div>
                         </td>
                         <td>
                           <div className="flex items-center justify-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--primary)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-ghost)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Batafsil"><Eye size={13} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--primary)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-ghost)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Edit"><Edit3 size={13} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Delete"><Trash2 size={13} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Batafsil"><Eye size={13} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Edit"><Edit3 size={13} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Delete"><Trash2 size={13} /></button>
                           </div>
                         </td>
                       </tr>
@@ -594,7 +594,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 </tbody>
               </table>
               {paginated.length === 0 && (
-                <div className="py-24 flex flex-col items-center justify-center" style={{ color: 'var(--text-3)' }}>
+                <div className="py-24 flex flex-col items-center justify-center" style={{ color: 'var(--text-muted)' }}>
                   <LayoutGrid size={48} className="mb-4 opacity-20" />
                   <p className="font-bold uppercase tracking-[0.2em] text-[11px] opacity-60">{t.noData}</p>
                 </div>
@@ -605,17 +605,17 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4 dashboard-card p-3">
-            <p className="text-[11px] font-bold uppercase tracking-widest pl-2" style={{ color: 'var(--text-3)' }}>
-              {t.page} <span style={{ color: 'var(--primary)' }}>{currentPage}</span> / {totalPages}
+            <p className="text-[11px] font-bold uppercase tracking-widest pl-2" style={{ color: 'var(--text-muted)' }}>
+              {t.page} <span style={{ color: 'var(--accent-blue)' }}>{currentPage}</span> / {totalPages}
             </p>
             <div className="flex gap-2 pr-1">
               <button
                 onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 disabled={currentPage === 1}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg disabled:opacity-30 text-[11px] font-bold uppercase tracking-widest transition-all disabled:cursor-not-allowed"
-                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-                onMouseEnter={e => { if (currentPage !== 1) { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-ghost)'; } }}
-                onMouseLeave={e => { if (currentPage !== 1) { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.background = 'var(--surface-2)'; } }}
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
+                onMouseEnter={e => { if (currentPage !== 1) { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; } }}
+                onMouseLeave={e => { if (currentPage !== 1) { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; } }}
               >
                 <ChevronLeft size={14} /> {t.prev}
               </button>
@@ -623,9 +623,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 disabled={currentPage === totalPages}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg disabled:opacity-30 text-[11px] font-bold uppercase tracking-widest transition-all disabled:cursor-not-allowed"
-                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-                onMouseEnter={e => { if (currentPage !== totalPages) { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-ghost)'; } }}
-                onMouseLeave={e => { if (currentPage !== totalPages) { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.background = 'var(--surface-2)'; } }}
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
+                onMouseEnter={e => { if (currentPage !== totalPages) { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; } }}
+                onMouseLeave={e => { if (currentPage !== totalPages) { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; } }}
               >
                 {t.next} <ChevronRight size={14} />
               </button>
