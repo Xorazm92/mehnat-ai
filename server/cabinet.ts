@@ -3,6 +3,22 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { Prisma } from "@prisma/client";
+
+// Prisma Decimal obyektlari Server→Client Component chegarasidan o'tolmaydi.
+// Qaytarishdan oldin Decimal'larni oddiy number'ga aylantiramiz (Date'lar saqlanadi).
+function toPlain<T>(value: T): T {
+  if (value === null || value === undefined) return value;
+  if (Prisma.Decimal.isDecimal(value)) return (value as Prisma.Decimal).toNumber() as unknown as T;
+  if (value instanceof Date) return value;
+  if (Array.isArray(value)) return value.map(toPlain) as unknown as T;
+  if (typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const key in value as Record<string, unknown>) out[key] = toPlain((value as Record<string, unknown>)[key]);
+    return out as T;
+  }
+  return value;
+}
 
 // ─────────────────────────────────────────────
 // BUXGALTER KABINETI uchun ma'lumotlar
@@ -68,13 +84,13 @@ export async function getAccountantCabinetData() {
     (p) => p.status === "draft"
   ).length;
 
-  return {
+  return toPlain({
     companies,
     companiesCount: companies.length,
     kpi: { totalScore, approvedCount, pendingCount, records: recentPerformance },
     adjustments,
     currentMonth,
-  };
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -146,14 +162,14 @@ export async function getBankCabinetData() {
     .filter((k) => k.type === "expense")
     .reduce((sum, k) => sum + Number(k.amount), 0);
 
-  return {
+  return toPlain({
     assignedCompanies,
     companiesCount: assignedCompanies.length,
     kassaEntries,
     kpiRecords: myPerformance,
     balance: { income: totalIncome, expense: totalExpense, net: totalIncome - totalExpense },
     currentMonth,
-  };
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -229,14 +245,14 @@ export async function getSupervisorCabinetData() {
     }),
   ]);
 
-  return {
+  return toPlain({
     supervisedCompanies,
     companiesCount: supervisedCompanies.length,
     accountants,
     pendingKpi,
     riskStats,
     currentMonth,
-  };
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -324,7 +340,7 @@ export async function getChiefAccountantCabinetData() {
     return sum + score;
   }, 0);
 
-  return {
+  return toPlain({
     chiefCompanies,
     companiesCount: chiefCompanies.length,
     teamMembers,
@@ -332,7 +348,7 @@ export async function getChiefAccountantCabinetData() {
     payrollSummary,
     totalTeamScore,
     currentMonth,
-  };
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -379,7 +395,7 @@ export async function getAdminCabinetData() {
 
   const [activeUsers, activeCompanies, unreadNotifs, pendingKpi] = systemHealth;
 
-  return {
+  return toPlain({
     userStats,
     companyStats: companyStats._count,
     recentAudit,
@@ -389,5 +405,5 @@ export async function getAdminCabinetData() {
       unreadNotifs,
       pendingKpi,
     },
-  };
+  });
 }
