@@ -114,7 +114,11 @@ export async function createNotification(data: {
   message: string;
   link?: string;
 }) {
-  // Internal server-side only — no auth check (called from server actions)
+  // Exported = publicly reachable; require an authenticated caller.
+  // Internal server-action callers always run with a session.
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
   const result = await prisma.notification.create({ data });
   revalidateTag("notifications", "max");
   return serialize(result);

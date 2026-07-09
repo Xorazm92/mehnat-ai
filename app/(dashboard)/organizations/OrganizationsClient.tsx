@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import OrganizationModule from "@/components/OrganizationModule";
+import CompanyDrawer from "@/components/CompanyDrawer";
 import { createCompany, updateCompany, deleteCompany } from "@/server/companies";
 import { Company, Staff, OperationEntry } from "@/types";
 
@@ -13,7 +15,9 @@ interface Props {
 }
 
 export default function OrganizationsClient({ companies, staff, operations }: Props) {
+  const router = useRouter();
   const [selectedPeriod, setSelectedPeriod] = useState<string>("2026-03");
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
   const handleSave = async (company: Partial<Company>, assignments?: any[]) => {
     const isExisting = companies.some(c => c.id === company.id);
@@ -22,23 +26,37 @@ export default function OrganizationsClient({ companies, staff, operations }: Pr
     } else {
       await createCompany(company as any, assignments);
     }
+    setSelectedCompany(null);
+    router.refresh();
   };
 
   const handleDelete = async (id: string) => {
     await deleteCompany(id);
+    router.refresh();
   };
 
   return (
-    <OrganizationModule
-      companies={companies}
-      staff={staff}
-      operations={operations}
-      lang="uz"
-      selectedPeriod={selectedPeriod}
-      onPeriodChange={setSelectedPeriod}
-      onSave={handleSave}
-      onDelete={handleDelete}
-      onCompanySelect={() => {}}
-    />
+    <>
+      <OrganizationModule
+        companies={companies}
+        staff={staff}
+        operations={operations}
+        lang="uz"
+        selectedPeriod={selectedPeriod}
+        onPeriodChange={setSelectedPeriod}
+        onSave={handleSave}
+        onDelete={handleDelete}
+        onCompanySelect={setSelectedCompany}
+      />
+      <CompanyDrawer
+        company={selectedCompany}
+        operation={null}
+        payments={[]}
+        staff={staff}
+        lang="uz"
+        onClose={() => setSelectedCompany(null)}
+        onSave={handleSave}
+      />
+    </>
   );
 }

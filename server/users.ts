@@ -8,6 +8,26 @@ import bcrypt from "bcryptjs";
 import type { UserRole } from "@/lib/permissions";
 import { serialize } from "@/lib/serialize";
 
+// Safe field projection — never expose passwordHash to the client.
+const SAFE_USER_SELECT = {
+  id: true,
+  email: true,
+  fullName: true,
+  role: true,
+  avatarColor: true,
+  phone: true,
+  department: true,
+  gender: true,
+  birthDate: true,
+  education: true,
+  hiredAt: true,
+  firedAt: true,
+  status: true,
+  rating: true,
+  isActive: true,
+  createdAt: true,
+} as const;
+
 export async function getUsers() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -104,6 +124,7 @@ export async function createUser(data: {
       gender: data.gender,
       avatarColor: data.avatarColor || `hsl(${Math.floor(Math.random() * 360)}, 60%, 50%)`,
     },
+    select: SAFE_USER_SELECT,
   });
   revalidateTag("users", "max");
   return serialize(result);
@@ -141,6 +162,7 @@ export async function updateUser(
   const result = await prisma.user.update({
     where: { id },
     data,
+    select: SAFE_USER_SELECT,
   });
   revalidateTag("users", "max");
   return serialize(result);
@@ -164,7 +186,13 @@ export async function changePassword(
   if (!isValid) throw new Error("Noto'g'ri hozirgi parol");
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  return serialize(await prisma.user.update({ where: { id }, data: { passwordHash } }));
+  return serialize(
+    await prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+      select: SAFE_USER_SELECT,
+    })
+  );
 }
 
 export async function deactivateUser(id: string) {
@@ -177,6 +205,7 @@ export async function deactivateUser(id: string) {
   const result = await prisma.user.update({
     where: { id },
     data: { isActive: false, firedAt: new Date() },
+    select: SAFE_USER_SELECT,
   });
   revalidateTag("users", "max");
   return serialize(result);
