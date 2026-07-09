@@ -26,6 +26,15 @@ const KPIRulesManager: React.FC<Props> = () => {
     const handleSave = async () => {
         if (!editingRule || !editingRule.name || !editingRule.nameUz) return;
 
+        // Percent columns are Decimal(5,2): keep in range client-side so we never
+        // send a value the DB rejects (which would surface as a 500).
+        const rp = Number(editingRule.rewardPercent ?? 0);
+        const pp = Number(editingRule.penaltyPercent ?? 0);
+        if ([rp, pp].some((v) => Number.isNaN(v) || v < 0 || v > 999.99)) {
+            alert("Foiz qiymati 0 va 999.99 oralig'ida bo'lishi kerak");
+            return;
+        }
+
         try {
             if (editingRule.id) {
                 await updateKpiRule(editingRule.id, editingRule as any);

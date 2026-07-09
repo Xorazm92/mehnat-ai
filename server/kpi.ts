@@ -21,6 +21,19 @@ export async function getKpiRules() {
   );
 }
 
+// Percent columns are Decimal(5,2): value must fit -999.99..999.99, otherwise
+// Prisma throws P2020 (ValueOutOfRange) -> unhandled 500. Validate up front so
+// bad input surfaces as a clear, catchable error instead.
+function assertPercent(label: string, v: number | undefined) {
+  if (v === undefined || v === null) return;
+  if (typeof v !== "number" || Number.isNaN(v)) {
+    throw new Error(`${label} raqam bo'lishi kerak`);
+  }
+  if (v < 0 || v > 999.99) {
+    throw new Error(`${label} 0 va 999.99 oralig'ida bo'lishi kerak`);
+  }
+}
+
 export async function createKpiRule(data: {
   name: string;
   nameUz: string;
@@ -38,6 +51,9 @@ export async function createKpiRule(data: {
   const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
+  assertPercent("Mukofot foizi", data.rewardPercent);
+  assertPercent("Jarima foizi", data.penaltyPercent);
+
   return serialize(await prisma.kpiRule.create({ data }));
 }
 
@@ -54,6 +70,9 @@ export async function updateKpiRule(id: string, data: Partial<{
 
   const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
+
+  assertPercent("Mukofot foizi", data.rewardPercent);
+  assertPercent("Jarima foizi", data.penaltyPercent);
 
   return serialize(await prisma.kpiRule.update({ where: { id }, data }));
 }
