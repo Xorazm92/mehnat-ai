@@ -1,6 +1,6 @@
 // Plain (non-"use server") module so these non-function exports can be shared.
 export const SYSTEM_SETTING_DEFAULTS = {
-  appName: "UTYBI ERP",
+  appName: "ASRO",
   defaultUserPassword: "Password123!",
   features: {
     eimzo: false,

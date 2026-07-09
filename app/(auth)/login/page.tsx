@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Mail, Lock, Loader2, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,14 +15,8 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
+      const result = await signIn("credentials", { email, password, redirect: false });
       if (result?.error) {
         toast.error("Noto'g'ri email yoki parol");
       } else {
@@ -37,82 +32,143 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
-      {/* Background pattern */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMDJlM2YiIGZpbGwtb3BhY2l0eT0iMC4zIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyem0tNC00aC0ydi0yaDJ2MnptMCA0aC0ydi0yaDJ2MnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30" />
+    <div className="min-h-screen w-full flex bg-[#070A12] text-white overflow-hidden">
+      {/* Left / brand panel */}
+      <div className="hidden lg:flex flex-col justify-between w-[46%] relative p-12 overflow-hidden">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(120% 120% at 0% 0%, #1E3A8A 0%, #0B1220 45%, #070A12 100%)",
+          }}
+        />
+        <div
+          className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl opacity-40"
+          style={{ background: "radial-gradient(circle, #3B82F6, transparent 70%)" }}
+        />
+        <div
+          className="absolute bottom-0 right-0 w-[28rem] h-[28rem] rounded-full blur-3xl opacity-30"
+          style={{ background: "radial-gradient(circle, #6366F1, transparent 70%)" }}
+        />
 
-      <div className="relative w-full max-w-md">
-        {/* Logo / Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-4 shadow-lg shadow-blue-500/30">
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Mehnat ERP</h1>
-          <p className="text-slate-400 mt-1 text-sm">Korporativ boshqaruv tizimi</p>
+        <div className="relative flex items-center gap-3">
+          <Logo />
         </div>
 
-        {/* Card */}
-        <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-xl font-semibold text-white mb-6">Tizimga kirish</h2>
+        <div className="relative">
+          <h2 className="text-4xl font-black leading-tight tracking-tight">
+            Biznesingizni bir <br /> joydan boshqaring.
+          </h2>
+          <p className="mt-4 text-[15px] leading-relaxed text-slate-300/80 max-w-sm">
+            Firmalar, xodimlar, KPI, kassa va hisobotlar — ASRO korporativ
+            boshqaruv platformasida yagona, xavfsiz tizimda.
+          </p>
+          <div className="mt-8 flex items-center gap-2 text-[12px] font-semibold text-slate-400">
+            <ShieldCheck size={16} className="text-blue-400" />
+            Ma'lumotlaringiz shifrlangan va himoyalangan
+          </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1.5">
-                Email manzil
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@mehnat.uz"
-                required
-                className="w-full px-4 py-2.5 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-            </div>
+        <div className="relative text-[12px] text-slate-500">
+          © 2026 ASRO — Barcha huquqlar himoyalangan
+        </div>
+      </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-1.5">
-                Parol
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="w-full px-4 py-2.5 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-            </div>
+      {/* Right / form panel */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="lg:hidden flex justify-center mb-8">
+            <Logo />
+          </div>
+
+          <h1 className="text-2xl font-black tracking-tight">Tizimga kirish</h1>
+          <p className="mt-1.5 text-[13px] text-slate-400">
+            Davom etish uchun hisobingizga kiring.
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+            <Field label="Email manzil">
+              <div className="relative">
+                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ism@asro.uz"
+                  required
+                  className="w-full pl-10 pr-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-[14px] text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-transparent transition-all"
+                />
+              </div>
+            </Field>
+
+            <Field label="Parol">
+              <div className="relative">
+                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="w-full pl-10 pr-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-[14px] text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-transparent transition-all"
+                />
+              </div>
+            </Field>
 
             <button
               id="login-btn"
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-800 mt-2"
+              className="group w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-[14px] font-bold rounded-xl transition-all duration-200 shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Kirilmoqda...
-                </span>
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Kirilmoqda...
+                </>
               ) : (
-                "Kirish"
+                <>
+                  Kirish
+                  <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+                </>
               )}
             </button>
           </form>
-        </div>
 
-        <p className="text-center text-slate-500 text-xs mt-6">
-          © 2026 Mehnat ERP — Barcha huquqlar himoyalangan
-        </p>
+          <p className="mt-8 text-center text-[11px] text-slate-600 lg:hidden">
+            © 2026 ASRO — Barcha huquqlar himoyalangan
+          </p>
+        </div>
       </div>
     </div>
+  );
+}
+
+function Logo() {
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30"
+        style={{ background: "linear-gradient(135deg, #2563EB, #4F46E5)" }}
+      >
+        <span className="text-white text-lg font-black tracking-tighter">A</span>
+      </div>
+      <div>
+        <div className="text-[20px] font-black tracking-tight leading-none">ASRO</div>
+        <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-blue-400/80 mt-1">
+          Boshqaruv tizimi
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="text-[12px] font-semibold text-slate-300">{label}</span>
+      <div className="mt-1.5">{children}</div>
+    </label>
   );
 }

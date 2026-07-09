@@ -6,8 +6,8 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Mehnat ERP — Buxgalteriya Boshqaruv Tizimi",
-  description: "Korporativ hisobot, KPI, Kassa va xodimlarni boshqarish tizimi",
+  title: "ASRO — Korporativ Boshqaruv Tizimi",
+  description: "Firmalar, xodimlar, KPI, kassa va hisobotlarni yagona platformada boshqaring — ASRO.",
 };
 
 import { ThemeProvider } from "@/components/ThemeProvider";

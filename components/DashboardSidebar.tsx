@@ -89,20 +89,20 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
               boxShadow: "0 4px 12px rgba(37, 99, 235, 0.35)",
             }}
           >
-            U
+            A
           </div>
           <div>
             <h1
-              className="text-[15px] font-black tracking-tight leading-none"
+              className="text-[16px] font-black tracking-tight leading-none"
               style={{ color: "var(--text-primary)" }}
             >
-              UTY<span style={{ color: "var(--accent-blue)" }}>BI</span>
+              ASRO
             </h1>
             <p
               className="text-[9px] font-semibold uppercase tracking-widest leading-none mt-0.5"
               style={{ color: "var(--text-muted)" }}
             >
-              ERP Tizim
+              Boshqaruv tizimi
             </p>
           </div>
         </div>
