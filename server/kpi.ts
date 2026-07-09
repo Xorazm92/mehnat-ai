@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole, isAdminRole } from "@/lib/permissions";
+import { serialize } from "@/lib/serialize";
 
 // =====================================================
 // KPI RULES
@@ -12,10 +13,12 @@ export async function getKpiRules() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  return prisma.kpiRule.findMany({
-    where: { isActive: true },
-    orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
-  });
+  return serialize(
+    await prisma.kpiRule.findMany({
+      where: { isActive: true },
+      orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+    })
+  );
 }
 
 export async function createKpiRule(data: {
@@ -35,7 +38,7 @@ export async function createKpiRule(data: {
   const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
-  return prisma.kpiRule.create({ data });
+  return serialize(await prisma.kpiRule.create({ data }));
 }
 
 export async function updateKpiRule(id: string, data: Partial<{
@@ -52,7 +55,7 @@ export async function updateKpiRule(id: string, data: Partial<{
   const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
-  return prisma.kpiRule.update({ where: { id }, data });
+  return serialize(await prisma.kpiRule.update({ where: { id }, data }));
 }
 
 export async function deleteKpiRule(id: string) {
@@ -62,7 +65,7 @@ export async function deleteKpiRule(id: string) {
   const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
-  return prisma.kpiRule.delete({ where: { id } });
+  return serialize(await prisma.kpiRule.delete({ where: { id } }));
 }
 
 // =====================================================
@@ -79,17 +82,19 @@ export async function getMonthlyPerformance(month: string, employeeId?: string) 
   // Non-senior users can only see their own
   const targetEmployeeId = isSeniorRole(role) ? employeeId : userId;
 
-  return prisma.monthlyPerformance.findMany({
-    where: {
-      month,
-      ...(targetEmployeeId ? { employeeId: targetEmployeeId } : {}),
-    },
-    include: {
-      rule: true,
-      employee: { select: { id: true, fullName: true, role: true } },
-    },
-    orderBy: { recordedAt: "desc" },
-  });
+  return serialize(
+    await prisma.monthlyPerformance.findMany({
+      where: {
+        month,
+        ...(targetEmployeeId ? { employeeId: targetEmployeeId } : {}),
+      },
+      include: {
+        rule: true,
+        employee: { select: { id: true, fullName: true, role: true } },
+      },
+      orderBy: { recordedAt: "desc" },
+    })
+  );
 }
 
 export async function upsertPerformance(data: {
@@ -107,14 +112,16 @@ export async function upsertPerformance(data: {
 
   const submittedBy = session.user.id;
 
-  return prisma.monthlyPerformance.create({
-    data: {
-      ...data,
-      submittedBy,
-      submittedAt: new Date(),
-      status: "submitted",
-    },
-  });
+  return serialize(
+    await prisma.monthlyPerformance.create({
+      data: {
+        ...data,
+        submittedBy,
+        submittedAt: new Date(),
+        status: "submitted",
+      },
+    })
+  );
 }
 
 export async function approvePerformance(id: string) {
@@ -126,14 +133,16 @@ export async function approvePerformance(id: string) {
     throw new Error("Forbidden");
   }
 
-  return prisma.monthlyPerformance.update({
-    where: { id },
-    data: {
-      status: "approved",
-      approvedBy: session.user.id,
-      approvedAt: new Date(),
-    },
-  });
+  return serialize(
+    await prisma.monthlyPerformance.update({
+      where: { id },
+      data: {
+        status: "approved",
+        approvedBy: session.user.id,
+        approvedAt: new Date(),
+      },
+    })
+  );
 }
 
 // =====================================================
@@ -179,17 +188,19 @@ export async function getEmployeeKpiSummary(month: string) {
     byEmployee[eid].entries.push(p);
   }
 
-  return Object.values(byEmployee);
+  return serialize(Object.values(byEmployee));
 }
 
 export async function getCompanyKpiRules(companyId: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  return prisma.companyKpiRule.findMany({
-    where: { companyId, isActive: true },
-    include: { rule: true },
-  });
+  return serialize(
+    await prisma.companyKpiRule.findMany({
+      where: { companyId, isActive: true },
+      include: { rule: true },
+    })
+  );
 }
 
 export async function upsertCompanyKpiRule(data: {
@@ -208,19 +219,21 @@ export async function upsertCompanyKpiRule(data: {
     throw new Error("Forbidden");
   }
 
-  return prisma.companyKpiRule.upsert({
-    where: { companyId_ruleId: { companyId: data.companyId, ruleId: data.ruleId } },
-    update: { 
-      isActive: data.isActive, 
-      rewardPercent: data.rewardPercent ?? null,
-      penaltyPercent: data.penaltyPercent ?? null
-    },
-    create: { 
-      companyId: data.companyId, 
-      ruleId: data.ruleId, 
-      isActive: data.isActive,
-      rewardPercent: data.rewardPercent ?? null,
-      penaltyPercent: data.penaltyPercent ?? null
-    }
-  });
+  return serialize(
+    await prisma.companyKpiRule.upsert({
+      where: { companyId_ruleId: { companyId: data.companyId, ruleId: data.ruleId } },
+      update: {
+        isActive: data.isActive,
+        rewardPercent: data.rewardPercent ?? null,
+        penaltyPercent: data.penaltyPercent ?? null
+      },
+      create: {
+        companyId: data.companyId,
+        ruleId: data.ruleId,
+        isActive: data.isActive,
+        rewardPercent: data.rewardPercent ?? null,
+        penaltyPercent: data.penaltyPercent ?? null
+      }
+    })
+  );
 }

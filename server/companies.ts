@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { isSeniorRole, isAdminRole } from "@/lib/permissions";
 import { revalidateTag } from "next/cache";
 import type { TaxRegime, StatsType } from "@prisma/client";
+import { serialize } from "@/lib/serialize";
 
 interface CompanyAssignment {
   userId?: string;
@@ -22,45 +23,51 @@ export async function getCompanies() {
 
   // Super admin, admin, chief, supervisor — all companies
   if (isSeniorRole(role)) {
-    return prisma.company.findMany({
-      where: { isActive: true },
-      include: {
-        accountant: { select: { id: true, fullName: true, avatarColor: true } },
-        supervisor: { select: { id: true, fullName: true } },
-        chiefAccountant: { select: { id: true, fullName: true } },
-        bankClient: { select: { id: true, fullName: true } },
-        departmentRef: { select: { id: true, name: true } },
-      },
-      orderBy: { name: "asc" },
-    });
+    return serialize(
+      await prisma.company.findMany({
+        where: { isActive: true },
+        include: {
+          accountant: { select: { id: true, fullName: true, avatarColor: true } },
+          supervisor: { select: { id: true, fullName: true } },
+          chiefAccountant: { select: { id: true, fullName: true } },
+          bankClient: { select: { id: true, fullName: true } },
+          departmentRef: { select: { id: true, name: true } },
+        },
+        orderBy: { name: "asc" },
+      })
+    );
   }
 
   // Bank manager
   if (role === "bank_manager") {
-    return prisma.company.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          { bankClientId: userId },
-          { contractAssignments: { some: { userId, isActive: true, role: "bank_manager" } } },
-        ],
-      },
-      include: {
-        accountant: { select: { id: true, fullName: true, avatarColor: true } },
-        bankClient: { select: { id: true, fullName: true } },
-      },
-      orderBy: { name: "asc" },
-    });
+    return serialize(
+      await prisma.company.findMany({
+        where: {
+          isActive: true,
+          OR: [
+            { bankClientId: userId },
+            { contractAssignments: { some: { userId, isActive: true, role: "bank_manager" } } },
+          ],
+        },
+        include: {
+          accountant: { select: { id: true, fullName: true, avatarColor: true } },
+          bankClient: { select: { id: true, fullName: true } },
+        },
+        orderBy: { name: "asc" },
+      })
+    );
   }
 
   // Accountant — own companies only
-  return prisma.company.findMany({
-    where: { accountantId: userId, isActive: true },
-    include: {
-      accountant: { select: { id: true, fullName: true, avatarColor: true } },
-    },
-    orderBy: { name: "asc" },
-  });
+  return serialize(
+    await prisma.company.findMany({
+      where: { accountantId: userId, isActive: true },
+      include: {
+        accountant: { select: { id: true, fullName: true, avatarColor: true } },
+      },
+      orderBy: { name: "asc" },
+    })
+  );
 }
 
 export async function getCompanyById(id: string) {
@@ -94,7 +101,7 @@ export async function getCompanyById(id: string) {
     throw new Error("Forbidden");
   }
 
-  return company;
+  return serialize(company);
 }
 
 const mapTaxRegime = (val: unknown): TaxRegime => {
@@ -264,7 +271,7 @@ export async function createCompany(companyData: Record<string, unknown>, assign
   });
 
   revalidateTag("companies", "max");
-  return result;
+  return serialize(result);
 }
 
 export async function updateCompany(
@@ -366,7 +373,7 @@ export async function updateCompany(
   });
 
   revalidateTag("companies", "max");
-  return result;
+  return serialize(result);
 }
 
 export async function deleteCompany(id: string) {
@@ -381,7 +388,7 @@ export async function deleteCompany(id: string) {
     data: { isActive: false },
   });
   revalidateTag("companies", "max");
-  return result;
+  return serialize(result);
 }
 
 export async function getCompanyStats() {
@@ -409,5 +416,5 @@ export async function getCompanyStats() {
     }),
   ]);
 
-  return { total, byTaxRegime, byRisk };
+  return serialize({ total, byTaxRegime, byRisk });
 }

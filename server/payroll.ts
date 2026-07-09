@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
 import { createAuditLog } from "@/server/audit";
+import { serialize } from "@/lib/serialize";
 
 // =====================================================
 // PAYROLL ADJUSTMENTS
@@ -18,16 +19,18 @@ export async function getPayrollAdjustments(month: string, employeeId?: string) 
 
   const targetId = isSeniorRole(role) ? employeeId : userId;
 
-  return prisma.payrollAdjustment.findMany({
-    where: {
-      month,
-      ...(targetId ? { employeeId: targetId } : {}),
-    },
-    include: {
-      employee: { select: { id: true, fullName: true, role: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  return serialize(
+    await prisma.payrollAdjustment.findMany({
+      where: {
+        month,
+        ...(targetId ? { employeeId: targetId } : {}),
+      },
+      include: {
+        employee: { select: { id: true, fullName: true, role: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+  );
 }
 
 export async function createPayrollAdjustment(data: {
@@ -43,12 +46,14 @@ export async function createPayrollAdjustment(data: {
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
-  return prisma.payrollAdjustment.create({
-    data: {
-      ...data,
-      createdBy: session.user.id,
-    },
-  });
+  return serialize(
+    await prisma.payrollAdjustment.create({
+      data: {
+        ...data,
+        createdBy: session.user.id,
+      },
+    })
+  );
 }
 
 export async function approvePayrollAdjustment(id: string) {
@@ -58,14 +63,16 @@ export async function approvePayrollAdjustment(id: string) {
   const role = session.user.role as string;
   if (!["super_admin", "admin"].includes(role)) throw new Error("Forbidden");
 
-  return prisma.payrollAdjustment.update({
-    where: { id },
-    data: {
-      isApproved: true,
-      approvedBy: session.user.id,
-      approvedAt: new Date(),
-    },
-  });
+  return serialize(
+    await prisma.payrollAdjustment.update({
+      where: { id },
+      data: {
+        isApproved: true,
+        approvedBy: session.user.id,
+        approvedAt: new Date(),
+      },
+    })
+  );
 }
 
 export async function deletePayrollAdjustment(id: string) {
@@ -75,7 +82,7 @@ export async function deletePayrollAdjustment(id: string) {
   const role = session.user.role as string;
   if (!["super_admin", "admin"].includes(role)) throw new Error("Forbidden");
 
-  return prisma.payrollAdjustment.delete({ where: { id } });
+  return serialize(await prisma.payrollAdjustment.delete({ where: { id } }));
 }
 
 // Oylik (baza + KPI bonus/jarima) hisoblangan summani tasdiqlash — natija
@@ -128,7 +135,7 @@ export async function approveEmployeeSalary(data: {
     newData: data,
   });
 
-  return adjustment;
+  return serialize(adjustment);
 }
 
 // =====================================================
@@ -165,7 +172,7 @@ export async function getPayrollSummary(month: string) {
   });
 
   // Calculate for each user
-  return users.map((user) => {
+  return serialize(users.map((user) => {
     const userContracts = contracts.filter(
       (c) => c.userId === user.id && c.isActive
     );
@@ -208,7 +215,7 @@ export async function getPayrollSummary(month: string) {
       adjustments: adjustmentTotal,
       totalSalary: baseSalary + kpiBonus - kpiPenalty + adjustmentTotal,
     };
-  });
+  }));
 }
 
 // =====================================================
@@ -222,17 +229,19 @@ export async function getContractAssignments(companyId?: string) {
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
-  return prisma.contractAssignment.findMany({
-    where: {
-      isActive: true,
-      ...(companyId ? { companyId } : {}),
-    },
-    include: {
-      user: { select: { id: true, fullName: true, role: true } },
-      company: { select: { id: true, name: true, contractAmount: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  return serialize(
+    await prisma.contractAssignment.findMany({
+      where: {
+        isActive: true,
+        ...(companyId ? { companyId } : {}),
+      },
+      include: {
+        user: { select: { id: true, fullName: true, role: true } },
+        company: { select: { id: true, name: true, contractAmount: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+  );
 }
 
 export async function upsertContractAssignment(data: {
@@ -259,5 +268,5 @@ export async function upsertContractAssignment(data: {
     data: { isActive: false, endDate: new Date() },
   });
 
-  return prisma.contractAssignment.create({ data });
+  return serialize(await prisma.contractAssignment.create({ data }));
 }

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { serialize } from "@/lib/serialize";
 
 // =====================================================
 // INVENTORY (Inventar) — texnika/jihozlar
@@ -15,12 +16,14 @@ export async function getInventory() {
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
-  return prisma.inventoryItem.findMany({
-    include: {
-      assignedTo: { select: { id: true, fullName: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  return serialize(
+    await prisma.inventoryItem.findMany({
+      include: {
+        assignedTo: { select: { id: true, fullName: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+  );
 }
 
 export async function upsertInventoryItem(data: {
@@ -45,10 +48,10 @@ export async function upsertInventoryItem(data: {
   };
 
   if (id) {
-    return prisma.inventoryItem.update({ where: { id }, data: payload });
+    return serialize(await prisma.inventoryItem.update({ where: { id }, data: payload }));
   }
 
-  return prisma.inventoryItem.create({ data: payload });
+  return serialize(await prisma.inventoryItem.create({ data: payload }));
 }
 
 export async function deleteInventoryItem(id: string) {
@@ -58,5 +61,5 @@ export async function deleteInventoryItem(id: string) {
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
-  return prisma.inventoryItem.delete({ where: { id } });
+  return serialize(await prisma.inventoryItem.delete({ where: { id } }));
 }

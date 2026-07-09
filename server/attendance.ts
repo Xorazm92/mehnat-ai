@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { serialize } from "@/lib/serialize";
 
 // =====================================================
 // ATTENDANCE (Davomat)
@@ -38,16 +39,18 @@ export async function getAttendance(filters?: {
     };
   }
 
-  return prisma.attendance.findMany({
-    where: {
-      ...(targetUserId ? { userId: targetUserId } : {}),
-      ...dateFilter,
-    },
-    include: {
-      user: { select: { id: true, fullName: true, role: true } },
-    },
-    orderBy: [{ date: "desc" }],
-  });
+  return serialize(
+    await prisma.attendance.findMany({
+      where: {
+        ...(targetUserId ? { userId: targetUserId } : {}),
+        ...dateFilter,
+      },
+      include: {
+        user: { select: { id: true, fullName: true, role: true } },
+      },
+      orderBy: [{ date: "desc" }],
+    })
+  );
 }
 
 export async function upsertAttendance(data: {
@@ -84,12 +87,16 @@ export async function upsertAttendance(data: {
   };
 
   if (existing) {
-    return prisma.attendance.update({ where: { id: existing.id }, data: payload });
+    return serialize(
+      await prisma.attendance.update({ where: { id: existing.id }, data: payload })
+    );
   }
 
-  return prisma.attendance.create({
-    data: { userId: data.userId, date: day, ...payload },
-  });
+  return serialize(
+    await prisma.attendance.create({
+      data: { userId: data.userId, date: day, ...payload },
+    })
+  );
 }
 
 export async function deleteAttendance(id: string) {
@@ -99,5 +106,5 @@ export async function deleteAttendance(id: string) {
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
-  return prisma.attendance.delete({ where: { id } });
+  return serialize(await prisma.attendance.delete({ where: { id } }));
 }

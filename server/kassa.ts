@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole, isSeniorRole } from "@/lib/permissions";
+import { serialize } from "@/lib/serialize";
 
 export async function getKassaEntries(filters?: {
   type?: string;
@@ -18,24 +19,26 @@ export async function getKassaEntries(filters?: {
     throw new Error("Forbidden");
   }
 
-  return prisma.kassaEntry.findMany({
-    where: {
-      ...(filters?.type ? { type: filters.type } : {}),
-      ...(filters?.category ? { category: filters.category } : {}),
-      ...(filters?.from || filters?.to
-        ? {
-            date: {
-              ...(filters.from ? { gte: filters.from } : {}),
-              ...(filters.to ? { lte: filters.to } : {}),
-            },
-          }
-        : {}),
-    },
-    include: {
-      user: { select: { id: true, fullName: true } },
-    },
-    orderBy: { date: "desc" },
-  });
+  return serialize(
+    await prisma.kassaEntry.findMany({
+      where: {
+        ...(filters?.type ? { type: filters.type } : {}),
+        ...(filters?.category ? { category: filters.category } : {}),
+        ...(filters?.from || filters?.to
+          ? {
+              date: {
+                ...(filters.from ? { gte: filters.from } : {}),
+                ...(filters.to ? { lte: filters.to } : {}),
+              },
+            }
+          : {}),
+      },
+      include: {
+        user: { select: { id: true, fullName: true } },
+      },
+      orderBy: { date: "desc" },
+    })
+  );
 }
 
 export async function createKassaEntry(data: {
@@ -52,12 +55,14 @@ export async function createKassaEntry(data: {
   const role = session.user.role as string;
   if (!isSeniorRole(role) && role !== "bank_manager") throw new Error("Forbidden");
 
-  return prisma.kassaEntry.create({
-    data: {
-      ...data,
-      createdBy: session.user.id,
-    },
-  });
+  return serialize(
+    await prisma.kassaEntry.create({
+      data: {
+        ...data,
+        createdBy: session.user.id,
+      },
+    })
+  );
 }
 
 export async function deleteKassaEntry(id: string) {
@@ -67,7 +72,7 @@ export async function deleteKassaEntry(id: string) {
   const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
-  return prisma.kassaEntry.delete({ where: { id } });
+  return serialize(await prisma.kassaEntry.delete({ where: { id } }));
 }
 
 export async function getKassaSummary(from?: Date, to?: Date) {
@@ -115,23 +120,25 @@ export async function getExpenses(filters?: {
   const role = session.user.role as string;
   if (!isSeniorRole(role) && role !== "bank_manager") throw new Error("Forbidden");
 
-  return prisma.expense.findMany({
-    where: {
-      ...(filters?.category ? { category: filters.category } : {}),
-      ...(filters?.from || filters?.to
-        ? {
-            date: {
-              ...(filters.from ? { gte: filters.from } : {}),
-              ...(filters.to ? { lte: filters.to } : {}),
-            },
-          }
-        : {}),
-    },
-    include: {
-      user: { select: { id: true, fullName: true } },
-    },
-    orderBy: { date: "desc" },
-  });
+  return serialize(
+    await prisma.expense.findMany({
+      where: {
+        ...(filters?.category ? { category: filters.category } : {}),
+        ...(filters?.from || filters?.to
+          ? {
+              date: {
+                ...(filters.from ? { gte: filters.from } : {}),
+                ...(filters.to ? { lte: filters.to } : {}),
+              },
+            }
+          : {}),
+      },
+      include: {
+        user: { select: { id: true, fullName: true } },
+      },
+      orderBy: { date: "desc" },
+    })
+  );
 }
 
 export async function createExpense(data: {
@@ -143,12 +150,14 @@ export async function createExpense(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  return prisma.expense.create({
-    data: {
-      ...data,
-      createdBy: session.user.id,
-    },
-  });
+  return serialize(
+    await prisma.expense.create({
+      data: {
+        ...data,
+        createdBy: session.user.id,
+      },
+    })
+  );
 }
 
 export async function updateExpense(id: string, data: {
@@ -160,7 +169,7 @@ export async function updateExpense(id: string, data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  return prisma.expense.update({ where: { id }, data });
+  return serialize(await prisma.expense.update({ where: { id }, data }));
 }
 
 export async function deleteExpense(id: string) {
@@ -170,7 +179,7 @@ export async function deleteExpense(id: string) {
   const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
-  return prisma.expense.delete({ where: { id } });
+  return serialize(await prisma.expense.delete({ where: { id } }));
 }
 
 // =====================================================
@@ -186,13 +195,15 @@ export async function getPayments(period?: string) {
     throw new Error("Forbidden");
   }
 
-  return prisma.payment.findMany({
-    where: { ...(period ? { period } : {}) },
-    include: {
-      company: { select: { id: true, name: true, inn: true, contractAmount: true } },
-    },
-    orderBy: [{ period: "desc" }],
-  });
+  return serialize(
+    await prisma.payment.findMany({
+      where: { ...(period ? { period } : {}) },
+      include: {
+        company: { select: { id: true, name: true, inn: true, contractAmount: true } },
+      },
+      orderBy: [{ period: "desc" }],
+    })
+  );
 }
 
 export async function upsertPayment(data: {
@@ -217,7 +228,7 @@ export async function upsertPayment(data: {
     update: fields,
   });
 
-  return result;
+  return serialize(result);
 }
 
 export async function deletePayment(id: string) {
@@ -227,5 +238,5 @@ export async function deletePayment(id: string) {
   const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
-  return prisma.payment.delete({ where: { id } });
+  return serialize(await prisma.payment.delete({ where: { id } }));
 }

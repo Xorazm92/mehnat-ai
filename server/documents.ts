@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { serialize } from "@/lib/serialize";
 
 // =====================================================
 // DOCUMENTS (Hujjatlar) — havola/URL asosida
@@ -20,16 +21,18 @@ export async function getDocuments(companyId?: string) {
     ? {}
     : { company: { accountantId: userId } };
 
-  return prisma.document.findMany({
-    where: {
-      ...companyFilter,
-      ...(companyId ? { companyId } : {}),
-    },
-    include: {
-      company: { select: { id: true, name: true } },
-    },
-    orderBy: { uploadedAt: "desc" },
-  });
+  return serialize(
+    await prisma.document.findMany({
+      where: {
+        ...companyFilter,
+        ...(companyId ? { companyId } : {}),
+      },
+      include: {
+        company: { select: { id: true, name: true } },
+      },
+      orderBy: { uploadedAt: "desc" },
+    })
+  );
 }
 
 export async function createDocument(data: {
@@ -50,9 +53,11 @@ export async function createDocument(data: {
     if (company?.accountantId !== userId) throw new Error("Forbidden");
   }
 
-  return prisma.document.create({
-    data: { ...data, uploadedBy: userId },
-  });
+  return serialize(
+    await prisma.document.create({
+      data: { ...data, uploadedBy: userId },
+    })
+  );
 }
 
 export async function deleteDocument(id: string) {
@@ -62,5 +67,5 @@ export async function deleteDocument(id: string) {
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
-  return prisma.document.delete({ where: { id } });
+  return serialize(await prisma.document.delete({ where: { id } }));
 }

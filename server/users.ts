@@ -6,6 +6,7 @@ import { isSeniorRole } from "@/lib/permissions";
 import { revalidateTag } from "next/cache";
 import bcrypt from "bcryptjs";
 import type { UserRole } from "@/lib/permissions";
+import { serialize } from "@/lib/serialize";
 
 export async function getUsers() {
   const session = await auth();
@@ -14,27 +15,29 @@ export async function getUsers() {
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
-  return prisma.user.findMany({
-    where: { isActive: true },
-    select: {
-      id: true,
-      email: true,
-      fullName: true,
-      role: true,
-      avatarColor: true,
-      phone: true,
-      department: true,
-      gender: true,
-      birthDate: true,
-      education: true,
-      hiredAt: true,
-      status: true,
-      rating: true,
-      isActive: true,
-      createdAt: true,
-    },
-    orderBy: { fullName: "asc" },
-  });
+  return serialize(
+    await prisma.user.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        avatarColor: true,
+        phone: true,
+        department: true,
+        gender: true,
+        birthDate: true,
+        education: true,
+        hiredAt: true,
+        status: true,
+        rating: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: { fullName: "asc" },
+    })
+  );
 }
 
 export async function getUserById(id: string) {
@@ -47,27 +50,29 @@ export async function getUserById(id: string) {
   // Can only view own profile unless senior
   if (id !== userId && !isSeniorRole(role)) throw new Error("Forbidden");
 
-  return prisma.user.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      email: true,
-      fullName: true,
-      role: true,
-      avatarColor: true,
-      phone: true,
-      department: true,
-      gender: true,
-      birthDate: true,
-      education: true,
-      hiredAt: true,
-      firedAt: true,
-      status: true,
-      rating: true,
-      isActive: true,
-      createdAt: true,
-    },
-  });
+  return serialize(
+    await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        avatarColor: true,
+        phone: true,
+        department: true,
+        gender: true,
+        birthDate: true,
+        education: true,
+        hiredAt: true,
+        firedAt: true,
+        status: true,
+        rating: true,
+        isActive: true,
+        createdAt: true,
+      },
+    })
+  );
 }
 
 export async function createUser(data: {
@@ -101,7 +106,7 @@ export async function createUser(data: {
     },
   });
   revalidateTag("users", "max");
-  return result;
+  return serialize(result);
 }
 
 export async function updateUser(
@@ -138,7 +143,7 @@ export async function updateUser(
     data,
   });
   revalidateTag("users", "max");
-  return result;
+  return serialize(result);
 }
 
 export async function changePassword(
@@ -159,7 +164,7 @@ export async function changePassword(
   if (!isValid) throw new Error("Noto'g'ri hozirgi parol");
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  return prisma.user.update({ where: { id }, data: { passwordHash } });
+  return serialize(await prisma.user.update({ where: { id }, data: { passwordHash } }));
 }
 
 export async function deactivateUser(id: string) {
@@ -174,5 +179,5 @@ export async function deactivateUser(id: string) {
     data: { isActive: false, firedAt: new Date() },
   });
   revalidateTag("users", "max");
-  return result;
+  return serialize(result);
 }

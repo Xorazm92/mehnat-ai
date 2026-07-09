@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
 import { revalidateTag } from "next/cache";
 import { Prisma, type ReportStatus } from "@prisma/client";
+import { serialize } from "@/lib/serialize";
 
 // =====================================================
 // MONTHLY REPORTS
@@ -23,13 +24,15 @@ export async function getMonthlyReports(companyId: string, period?: string) {
     if (company?.accountantId !== userId) throw new Error("Forbidden");
   }
 
-  return prisma.monthlyReport.findMany({
-    where: {
-      companyId,
-      ...(period ? { period } : {}),
-    },
-    orderBy: { period: "desc" },
-  });
+  return serialize(
+    await prisma.monthlyReport.findMany({
+      where: {
+        companyId,
+        ...(period ? { period } : {}),
+      },
+      orderBy: { period: "desc" },
+    })
+  );
 }
 
 export async function upsertMonthlyReport(data: Prisma.MonthlyReportUncheckedCreateInput) {
@@ -52,7 +55,7 @@ export async function upsertMonthlyReport(data: Prisma.MonthlyReportUncheckedCre
     update: fields,
   });
   revalidateTag("operations", "max");
-  return result;
+  return serialize(result);
 }
 
 export async function clearColumnForPeriod(period: string, colKey: string) {
@@ -100,26 +103,28 @@ export async function getOperations(filters?: {
     companyFilter = { company: { accountantId: userId } };
   }
 
-  return prisma.operation.findMany({
-    where: {
-      ...companyFilter,
-      ...(filters?.companyId ? { companyId: filters.companyId } : {}),
-      ...(filters?.period ? { period: filters.period } : {}),
-    },
-    include: {
-      company: {
-        select: {
-          id: true,
-          name: true,
-          inn: true,
-          taxRegime: true,
-          accountantId: true,
-          accountant: { select: { id: true, fullName: true } },
+  return serialize(
+    await prisma.operation.findMany({
+      where: {
+        ...companyFilter,
+        ...(filters?.companyId ? { companyId: filters.companyId } : {}),
+        ...(filters?.period ? { period: filters.period } : {}),
+      },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            inn: true,
+            taxRegime: true,
+            accountantId: true,
+            accountant: { select: { id: true, fullName: true } },
+          },
         },
       },
-    },
-    orderBy: [{ period: "desc" }, { company: { name: "asc" } }],
-  });
+      orderBy: [{ period: "desc" }, { company: { name: "asc" } }],
+    })
+  );
 }
 
 export async function upsertOperation(data: {
@@ -152,7 +157,7 @@ export async function upsertOperation(data: {
     update: fields,
   });
   revalidateTag("operations", "max");
-  return result;
+  return serialize(result);
 }
 
 export async function getOperationSummary(period?: string) {
@@ -225,23 +230,25 @@ export async function getDeadlines() {
     ? {}
     : { company: { accountantId: userId } };
 
-  return prisma.operation.findMany({
-    where: {
-      ...companyFilter,
-      OR: [
-        {
-          deadlineProfitTax: { gte: today, lte: soon },
-          profitTaxStatus: { notIn: ["accepted", "not_required"] },
-        },
-        {
-          deadlineStats: { gte: today, lte: soon },
-          statsStatus: { notIn: ["accepted", "not_required"] },
-        },
-      ],
-    },
-    include: {
-      company: { select: { id: true, name: true, accountantId: true } },
-    },
-    orderBy: { deadlineProfitTax: "asc" },
-  });
+  return serialize(
+    await prisma.operation.findMany({
+      where: {
+        ...companyFilter,
+        OR: [
+          {
+            deadlineProfitTax: { gte: today, lte: soon },
+            profitTaxStatus: { notIn: ["accepted", "not_required"] },
+          },
+          {
+            deadlineStats: { gte: today, lte: soon },
+            statsStatus: { notIn: ["accepted", "not_required"] },
+          },
+        ],
+      },
+      include: {
+        company: { select: { id: true, name: true, accountantId: true } },
+      },
+      orderBy: { deadlineProfitTax: "asc" },
+    })
+  );
 }

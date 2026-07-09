@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
 import { revalidateTag } from "next/cache";
 import { Prisma, type AuditAction } from "@prisma/client";
+import { serialize } from "@/lib/serialize";
 
 export async function getAuditLogs(filters?: {
   userId?: string;
@@ -20,26 +21,28 @@ export async function getAuditLogs(filters?: {
   const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
-  return prisma.auditLog.findMany({
-    where: {
-      ...(filters?.userId ? { userId: filters.userId } : {}),
-      ...(filters?.tableName ? { tableName: filters.tableName } : {}),
-      ...(filters?.action ? { action: filters.action } : {}),
-      ...(filters?.from || filters?.to
-        ? {
-            createdAt: {
-              ...(filters.from ? { gte: filters.from } : {}),
-              ...(filters.to ? { lte: filters.to } : {}),
-            },
-          }
-        : {}),
-    },
-    include: {
-      user: { select: { id: true, fullName: true, role: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: filters?.limit || 100,
-  });
+  return serialize(
+    await prisma.auditLog.findMany({
+      where: {
+        ...(filters?.userId ? { userId: filters.userId } : {}),
+        ...(filters?.tableName ? { tableName: filters.tableName } : {}),
+        ...(filters?.action ? { action: filters.action } : {}),
+        ...(filters?.from || filters?.to
+          ? {
+              createdAt: {
+                ...(filters.from ? { gte: filters.from } : {}),
+                ...(filters.to ? { lte: filters.to } : {}),
+              },
+            }
+          : {}),
+      },
+      include: {
+        user: { select: { id: true, fullName: true, role: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: filters?.limit || 100,
+    })
+  );
 }
 
 export async function createAuditLog(data: {
@@ -55,12 +58,14 @@ export async function createAuditLog(data: {
   const userId = session?.user?.id;
 
   // Fire and forget — don't await in action handlers
-  return prisma.auditLog.create({
-    data: {
-      ...data,
-      userId,
-    },
-  });
+  return serialize(
+    await prisma.auditLog.create({
+      data: {
+        ...data,
+        userId,
+      },
+    })
+  );
 }
 
 // =====================================================
@@ -73,14 +78,16 @@ export async function getNotifications(unreadOnly = false) {
 
   const userId = session.user.id;
 
-  return prisma.notification.findMany({
-    where: {
-      userId,
-      ...(unreadOnly ? { isRead: false } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  return serialize(
+    await prisma.notification.findMany({
+      where: {
+        userId,
+        ...(unreadOnly ? { isRead: false } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    })
+  );
 }
 
 export async function markNotificationsRead(ids?: string[]) {
@@ -97,7 +104,7 @@ export async function markNotificationsRead(ids?: string[]) {
     data: { isRead: true },
   });
   revalidateTag("notifications", "max");
-  return result;
+  return serialize(result);
 }
 
 export async function createNotification(data: {
@@ -110,7 +117,7 @@ export async function createNotification(data: {
   // Internal server-side only — no auth check (called from server actions)
   const result = await prisma.notification.create({ data });
   revalidateTag("notifications", "max");
-  return result;
+  return serialize(result);
 }
 
 export async function getUnreadCount() {
