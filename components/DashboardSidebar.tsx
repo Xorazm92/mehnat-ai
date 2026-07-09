@@ -20,6 +20,7 @@ import {
   Bell,
   Banknote,
   ChevronRight,
+  ShieldCheck,
 } from "lucide-react";
 
 const ALL_NAV_ITEMS = [
@@ -37,6 +38,7 @@ const ALL_NAV_ITEMS = [
   { href: "/notifications", view: "notifications", label: "Xabarlar",    icon: Bell,            group: "boshqa" },
   { href: "/cabinet",       view: "cabinet",       label: "Kabinet",     icon: UserCircle,      group: "kabinet" },
   { href: "/cabinet/bank",  view: "cabinet_bank",  label: "Bank",        icon: Banknote,        group: "kabinet" },
+  { href: "/admin",         view: "admin",         label: "Admin Panel", icon: ShieldCheck,     group: "admin" },
   { href: "/audit-logs",    view: "audit_logs",    label: "Audit Log",   icon: ScrollText,      group: "admin" },
   { href: "/settings",      view: "settings",      label: "Sozlamalar",  icon: Settings,        group: "admin" },
 ];

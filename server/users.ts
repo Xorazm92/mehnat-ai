@@ -210,3 +210,25 @@ export async function deactivateUser(id: string) {
   revalidateTag("users", "max");
   return serialize(result);
 }
+
+// Admin-initiated password reset (no current-password check, unlike
+// changePassword which is self-service). Admin/super_admin only.
+export async function resetUserPassword(id: string, newPassword: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  if (!["super_admin", "admin"].includes(session.user.role as string)) {
+    throw new Error("Forbidden");
+  }
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error("Parol kamida 6 ta belgidan iborat bo'lishi kerak");
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  const result = await prisma.user.update({
+    where: { id },
+    data: { passwordHash },
+    select: SAFE_USER_SELECT,
+  });
+  revalidateTag("users", "max");
+  return serialize(result);
+}

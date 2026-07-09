@@ -594,3 +594,18 @@ model InventoryItem {
 
   @@index([assignedToId])
 }
+
+// =====================================================
+// SYSTEM SETTING (global admin-managed key/value config)
+// =====================================================
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([key])
+}

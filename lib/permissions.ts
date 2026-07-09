@@ -28,7 +28,8 @@ export type AppView =
   | "documents"
   | "inventory"
   | "notifications"
-  | "settings";
+  | "settings"
+  | "admin";
 
 export type Capability =
   | "view_all_companies"
@@ -117,6 +118,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "inventory",
     "notifications",
     "settings",
+    "admin",
   ],
   [ROLES.ADMIN]: [
     "dashboard",
@@ -132,6 +134,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "attendance",
     "documents",
     "notifications",
+    "admin",
   ],
   [ROLES.CHIEF_ACCOUNTANT]: [
     "dashboard",
