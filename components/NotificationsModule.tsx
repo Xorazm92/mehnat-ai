@@ -22,6 +22,21 @@ interface Props {
     onMarkRead: (ids?: string[]) => Promise<void>;
 }
 
+// Deterministic across server and client: an explicit timeZone makes the
+// SSR output and the client re-render identical, avoiding hydration mismatch.
+const DATE_FMT = new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Asia/Tashkent",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+});
+function formatCreatedAt(iso: string): string {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? "" : DATE_FMT.format(d);
+}
+
 const TYPE_META: Record<string, { color: string; bg: string; icon: React.ReactNode }> = {
     deadline: { color: 'var(--warning)', bg: 'var(--warning-bg)', icon: <Clock size={16} /> },
     status_change: { color: 'var(--accent-blue)', bg: 'var(--accent-blue-light)', icon: <Info size={16} /> },
@@ -100,7 +115,7 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
                                 <p className="text-[12px] font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>{n.message}</p>
                                 <div className="flex items-center gap-3 mt-2">
                                     <span className="text-[10px] font-bold uppercase tracking-widest tabular-nums" style={{ color: 'var(--text-muted)' }}>
-                                        {new Date(n.createdAt).toLocaleString(lang === 'uz' ? 'uz' : 'ru')}
+                                        {formatCreatedAt(n.createdAt)}
                                     </span>
                                     {n.link && (
                                         <Link href={n.link} className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1" style={{ color: 'var(--accent-blue)' }}>
