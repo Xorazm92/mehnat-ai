@@ -380,6 +380,43 @@ export async function getAdminCabinetData() {
 
   const [activeUsers, activeCompanies, unreadNotifs, pendingKpi] = systemHealth;
 
+  // ─── KPI bajarilishi % va Oylik fondi (joriy oy) ──────────
+  const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
+
+  const [kpiAgg, companiesForFund] = await Promise.all([
+    prisma.monthlyPerformance.findMany({
+      where: { month: currentMonth, status: { in: ["approved", "submitted"] } },
+      select: { selectedOption: true, calculatedScore: true },
+    }),
+    prisma.company.findMany({
+      where: { isActive: true },
+      select: {
+        contractAmount: true,
+        accountantPerc: true, accountantSum: true,
+        bankClientPerc: true, bankClientSum: true,
+        chiefAccountantPerc: true, chiefAccountantSum: true,
+        supervisorPerc: true, supervisorSum: true,
+      },
+    }),
+  ]);
+
+  // "Bajarilishi" = musbat (green/coeff>0) baholar ulushi
+  const scored = kpiAgg.filter((p) => p.selectedOption !== "yellow" && p.selectedOption !== null);
+  const positive = kpiAgg.filter((p) => Number(p.calculatedScore) > 0).length;
+  const kpiCompletionPercent = scored.length > 0 ? Math.round((positive / scored.length) * 100) : 0;
+
+  // Oylik fondi = firmalar bo'yicha rol ulushlari yig'indisi (baza)
+  const n = (v: unknown) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
+  const share = (contract: number, perc: unknown, sum: unknown) => (n(sum) > 0 ? n(sum) : (contract * n(perc)) / 100);
+  let payrollFund = 0;
+  for (const c of companiesForFund) {
+    const contract = n(c.contractAmount);
+    payrollFund += share(contract, c.accountantPerc, c.accountantSum)
+      + share(contract, c.bankClientPerc, c.bankClientSum)
+      + share(contract, c.chiefAccountantPerc, c.chiefAccountantSum)
+      + share(contract, c.supervisorPerc, c.supervisorSum);
+  }
+
   return serialize({
     userStats,
     companyStats: companyStats._count,
@@ -389,6 +426,8 @@ export async function getAdminCabinetData() {
       activeCompanies,
       unreadNotifs,
       pendingKpi,
+      kpiCompletionPercent,
+      payrollFund: Math.round(payrollFund),
     },
   });
 }

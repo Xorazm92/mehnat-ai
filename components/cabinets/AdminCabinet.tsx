@@ -4,15 +4,20 @@ import {
   Users,
   Building2,
   Shield,
-  Bell,
   Settings,
   ScrollText,
   TrendingUp,
   CheckCircle2,
   UserPlus,
-  Activity,
+  Wallet,
   Database,
 } from "lucide-react";
+
+const fmtMln = (v: number) => {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} mln`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(0)} ming`;
+  return v.toLocaleString("ru-RU");
+};
 
 interface RoleStat {
   role: string;
@@ -38,6 +43,8 @@ interface AdminCabinetProps {
     activeCompanies: number;
     unreadNotifs: number;
     pendingKpi: number;
+    kpiCompletionPercent?: number;
+    payrollFund?: number;
   };
 }
 
@@ -128,20 +135,26 @@ export function AdminCabinet({
           <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{systemHealth.activeCompanies}</div>
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Bell size={16} style={{ color: "var(--warning)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>O&apos;qilmagan Xabar</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--warning)" }}>{systemHealth.unreadNotifs}</div>
-        </div>
-
         <div className="rounded-2xl p-4" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
           <div className="flex items-center gap-2 mb-2">
-            <Activity size={16} style={{ color: "var(--success)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI Kutmoqda</span>
+            <TrendingUp size={16} style={{ color: "var(--success)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI Bajarilishi</span>
           </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>{systemHealth.pendingKpi}</div>
+          <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>{systemHealth.kpiCompletionPercent ?? 0}%</div>
+        </div>
+
+        <div className="rounded-2xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet size={16} style={{ color: "var(--warning)" }} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Oylik Fondi</span>
+          </div>
+          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+            {fmtMln(systemHealth.payrollFund ?? 0)}
+            <span className="text-xs font-bold ml-1" style={{ color: "var(--text-muted)" }}>so&apos;m</span>
+          </div>
+          {systemHealth.pendingKpi > 0 && (
+            <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{systemHealth.pendingKpi} KPI tasdiq kutmoqda</p>
+          )}
         </div>
       </div>
 

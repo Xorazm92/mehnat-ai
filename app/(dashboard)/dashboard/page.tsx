@@ -87,6 +87,8 @@ export default async function DashboardPage() {
         activeCompanies: 0,
         unreadNotifs: 0,
         pendingKpi: 0,
+        kpiCompletionPercent: 0,
+        payrollFund: 0,
       },
     }));
 
