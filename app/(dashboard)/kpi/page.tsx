@@ -26,6 +26,7 @@ export default async function KpiPage() {
         staff={JSON.parse(JSON.stringify(mappedStaff))}
         operations={JSON.parse(JSON.stringify(operations))}
         userRole={userRole}
+        userId={userId}
       />
     </div>
   );

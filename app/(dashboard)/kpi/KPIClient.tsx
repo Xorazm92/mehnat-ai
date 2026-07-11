@@ -9,9 +9,10 @@ interface Props {
   staff: Staff[];
   operations: OperationEntry[];
   userRole: string;
+  userId: string;
 }
 
-export default function KPIClient({ companies, staff, operations, userRole }: Props) {
+export default function KPIClient({ companies, staff, operations, userRole, userId }: Props) {
   return (
     <SalaryKPIModule
       companies={companies}
@@ -19,6 +20,7 @@ export default function KPIClient({ companies, staff, operations, userRole }: Pr
       operations={operations}
       lang="uz"
       currentUserRole={userRole}
+      currentUserId={userId}
     />
   );
 }

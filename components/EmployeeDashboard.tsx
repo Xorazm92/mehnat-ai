@@ -1,10 +1,13 @@
+"use client";
 import React, { useState, useEffect, useMemo } from 'react';
 import { EmployeeSalarySummary, Language, MonthlyPerformance, Company, OperationEntry, KPIRule, PayrollAdjustment } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
+import { type KpiEntryInput } from '@/lib/kpiScoring';
 import { translations } from '@/lib/translations';
 import { Wallet, TrendingUp, AlertCircle, Award, TrendingDown, Activity } from 'lucide-react';
 import { getKpiRules, getMonthlyPerformance, upsertPerformance } from '@/server/kpi';
 import { getPayrollAdjustments } from '@/server/payroll';
+import KpiEntryCard from './kpi/KpiEntryCard';
 
 interface Props {
     currentUserId: string;
@@ -103,18 +106,11 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
         );
     }, [companies, currentUserId]);
 
-    const handleEmployeeSubmit = async (company: Company, rule: KPIRule) => {
-        const employeeRole = company.accountantId === currentUserId ? 'accountant' : (company.bankClientId === currentUserId ? 'bank_client' : null);
-        if (!employeeRole || rule.role !== employeeRole) return;
-
-        if (rule.category === 'attendance') return;
-
+    // Employee self-assessment: submits a v2 three-state entry to the supervisor
+    // (source='employee', status defaults to 'submitted' → awaits approval).
+    const handleSelfAssess = async (company: Company, rule: KPIRule, input: KpiEntryInput) => {
         const existing = performances.find(p => p.companyId === company.id && p.ruleId === rule.id);
-
-        // If already approved, don't allow changing from employee side
-        if (existing?.status === 'approved') return;
-
-        const nextValue = existing?.value === 1 ? 0 : 1;
+        if (existing?.status === 'approved') return; // official supervisor entry — read-only
 
         try {
             await upsertPerformance({
@@ -122,10 +118,12 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                 companyId: company.id,
                 employeeId: currentUserId,
                 ruleId: rule.id,
-                value: nextValue,
-                calculatedScore: rule.rewardPercent ? (rule.rewardPercent * nextValue) : 0,
+                selectedOption: input.selectedOption ?? null,
+                earlyDays: input.counters?.early_days ?? 0,
+                lateMinutes: (input.counters?.late_5min ?? 0) * 5,
+                absentDays: input.counters?.absent_days ?? 0,
+                penaltyAmount: input.penaltyAmount ?? 0,
                 source: 'employee',
-                notes: ''
             });
             await loadData();
         } catch (e) {
@@ -372,68 +370,33 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                                         {roleRules.map(rule => {
                                             const perf = performances.find(p => p.companyId === company.id && p.ruleId === rule.id);
                                             const status = perf?.status;
-                                            const isApproved = status === 'approved' || !status;
-                                            const isSubmitted = status === 'submitted';
-                                            const isRejected = status === 'rejected';
-                                            const isDone = perf?.value === 1;
-
+                                            const badge = status === 'approved'
+                                                ? { t: lang === 'uz' ? 'Tasdiqlangan' : 'Одобрено', c: 'success' }
+                                                : status === 'submitted'
+                                                    ? { t: lang === 'uz' ? 'Kutilmoqda' : 'На проверке', c: 'warning' }
+                                                    : status === 'rejected'
+                                                        ? { t: lang === 'uz' ? 'Rad etildi' : 'Отклонено', c: 'danger' }
+                                                        : null;
                                             return (
-                                                <button
-                                                    key={rule.id}
-                                                    onClick={() => handleEmployeeSubmit(company, rule)}
-                                                    disabled={status === 'approved'}
-                                                    className={`text-left p-3 rounded border transition-colors flex flex-col justify-between min-h-[100px] ${isApproved && isDone
-                                                        ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800'
-                                                        : isSubmitted
-                                                            ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800'
-                                                            : isRejected
-                                                                ? 'bg-rose-50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800'
-                                                                : 'bg-white dark:bg-[#22252B] border-gray-200 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-600'
-                                                        } ${status === 'approved' ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer'}`}
-                                                >
-                                                    <div>
-                                                        <div className="flex items-start justify-between mb-2 gap-2">
-                                                            <p className="font-bold text-xs text-gray-800 dark:text-gray-200 leading-snug">
-                                                                {lang === 'uz' ? rule.nameUz : rule.name}
-                                                            </p>
-                                                            {isDone ? (
-                                                                <Award size={16} className="text-emerald-500 shrink-0" />
-                                                            ) : (
-                                                                <Activity size={16} className="text-gray-400 shrink-0" />
+                                                <div key={rule.id} className="flex flex-col gap-1.5">
+                                                    <KpiEntryCard
+                                                        rule={rule}
+                                                        perf={perf}
+                                                        lang={lang}
+                                                        disabled={status === 'approved'}
+                                                        onSave={(input) => handleSelfAssess(company, rule, input)}
+                                                    />
+                                                    {(badge || perf?.rejectedReason) && (
+                                                        <div className="flex items-center gap-2 px-1 flex-wrap">
+                                                            {badge && (
+                                                                <span className="c1-badge" style={{ background: `var(--${badge.c}-bg)`, color: `var(--${badge.c})`, border: `1px solid var(--${badge.c}-border)` }}>{badge.t}</span>
                                                             )}
-                                                        </div>
-
-                                                        <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                                                            {isApproved && isDone && (
-                                                                <span className="text-[9px] font-bold bg-emerald-100 dark:bg-emerald-800/40 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded uppercase">Tasdiqlandi</span>
+                                                            {perf?.rejectedReason && (
+                                                                <span className="text-[10px] font-bold" style={{ color: 'var(--danger)' }}>&quot;{perf.rejectedReason}&quot;</span>
                                                             )}
-                                                            {isSubmitted && (
-                                                                <span className="text-[9px] font-bold bg-amber-100 dark:bg-amber-800/40 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded uppercase">Kutilmoqda</span>
-                                                            )}
-                                                            {isRejected && (
-                                                                <span className="text-[9px] font-bold bg-rose-100 dark:bg-rose-800/40 text-rose-700 dark:text-rose-300 px-1.5 py-0.5 rounded uppercase">Rad etildi</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="mt-2 flex items-center justify-between border-t border-gray-200 dark:border-gray-700/50 pt-2">
-                                                        <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase ${isDone
-                                                            ? 'bg-emerald-500 text-white'
-                                                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                                                            }`}>
-                                                            {isDone ? (lang === 'uz' ? 'TOPShIRILDI' : 'СДАНО') : (lang === 'uz' ? 'TOPShIRISH' : 'СДАТЬ')}
-                                                        </span>
-                                                        <span className="text-[10px] font-bold text-gray-500">
-                                                            {Number(rule.rewardPercent) || 0}%
-                                                        </span>
-                                                    </div>
-
-                                                    {perf?.rejectedReason && (
-                                                        <div className="mt-2 pt-2 border-t border-rose-200 dark:border-rose-800/50">
-                                                            <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400">&quot;{perf.rejectedReason}&quot;</p>
                                                         </div>
                                                     )}
-                                                </button>
+                                                </div>
                                             );
                                         })}
 
