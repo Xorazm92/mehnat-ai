@@ -355,6 +355,14 @@ model KpiRule {
   isActive       Boolean @default(true)
   sortOrder      Int     @default(0)
 
+  // --- KPI v2 (uch holatli tizim: bonus / neytral / jarima) ---
+  descriptionUz String? // O'zbekcha batafsil izoh
+  options       Json     @default("[]") // [{ key, label_uz, color, coeff | coeff_per_unit, max_coeff, note }]
+  inputTypeV2   String   @default("select") // 'select' | 'counter' | 'checkbox_bonus' | 'checkbox_penalty' | 'amount_penalty'
+  scope         String   @default("global") // 'global' | 'per_company' | 'per_group'
+  maxBonus      Decimal? @db.Decimal(6, 2)
+  maxPenalty    Decimal? @db.Decimal(6, 2)
+
   performances MonthlyPerformance[]
   companyRules CompanyKpiRule[]
 }
@@ -387,6 +395,12 @@ model MonthlyPerformance {
   calculatedScore        Decimal   @db.Decimal(10, 2)
   rewardPercentOverride  Decimal?  @db.Decimal(5, 2)
   penaltyPercentOverride Decimal?  @db.Decimal(5, 2)
+  // --- KPI v2 kirish maydonlari ---
+  selectedOption         String? // Nazoratchi tanlagan option key (green/yellow/red holati)
+  earlyDays              Int       @default(0) // 08:30 gacha kelgan kunlar (bonus counter)
+  lateMinutes            Int       @default(0) // Kechikkan daqiqalar (counter qoidalar uchun)
+  absentDays             Int       @default(0) // Uzrsiz kelmagan kunlar soni
+  penaltyAmount          Decimal   @default(0) @db.Decimal(12, 2) // Qo'lda kiritilgan jarima summasi (amount_penalty)
   source                 String? // 'employee' | 'supervisor' | 'chief' | 'system'
   status                 String    @default("draft")
   submittedBy            String?

@@ -1,5 +1,6 @@
 
 import { Company, OperationEntry, ContractRole, MonthlyPerformance, KPIRule } from '@/types';
+import { capKpiPercent } from '@/lib/kpiScoring';
 
 export interface SalaryResult {
     role: ContractRole | 'chief_accountant' | 'supervisor';
@@ -88,7 +89,13 @@ export const calculateCompanySalaries = (
     rules: KPIRule[] = []
 ): SalaryResult[] => {
     const results: SalaryResult[] = [];
-    const contract = (operation as any)?.contract_amount || company.contractAmount || (company as any).contract_amount || 0;
+    // Prisma Decimal fields can arrive as strings across the RSC/JSON boundary —
+    // coerce everything numeric so arithmetic never string-concatenates.
+    const toNum = (v: unknown): number => {
+        const n = typeof v === 'number' ? v : Number(v);
+        return Number.isFinite(n) ? n : 0;
+    };
+    const contract = toNum((operation as any)?.contract_amount ?? company.contractAmount ?? (company as any).contract_amount ?? 0);
 
     const companyPerf = performances.filter(p => {
         if (p.companyId !== company.id) return false;
@@ -101,9 +108,11 @@ export const calculateCompanySalaries = (
         role: SalaryResult['role'],
         staffId?: string,
         staffName?: string,
-        perc?: number,
-        sum?: number
+        percRaw?: number,
+        sumRaw?: number
     ) => {
+        const perc = toNum(percRaw);
+        const sum = toNum(sumRaw);
         if (!staffId && !sum && !perc) return;
 
         let base = 0;
@@ -121,8 +130,11 @@ export const calculateCompanySalaries = (
 
         // KPI Calculation (percent-based)
         let sumPercent = 0;
+        // True once v2 performance records drive this role — makes the legacy
+        // operation-status path below a no-op so nothing is double-counted.
+        let hasPerfRecords = false;
 
-        // 1) Manual KPI rules impact
+        // 1) KPI from monthly performance records (v2: options-based score)
         if (staffId) {
             const myRolePerf = companyPerf.filter(p => p.employeeId === staffId);
             const typedRole =
@@ -145,25 +157,32 @@ export const calculateCompanySalaries = (
                 return p.ruleRole === typedRole;
             });
 
+            const kpiPercents: number[] = [];
             for (const p of myRolePerfFiltered) {
-                if (p.value === 1) {
-                    const inc = Number(p.rewardPercentOverride ?? 0);
-                    if (inc !== 0) {
-                        sumPercent += inc;
-                        details.push(`KPI +${inc}%: ${p.ruleNameUz || p.ruleName || p.ruleId}`);
-                    }
-                } else if (p.value === -1) {
-                    const dec = Number(p.penaltyPercentOverride ?? 0);
-                    if (dec !== 0) {
-                        sumPercent -= Math.abs(dec);
-                        details.push(`KPI -${Math.abs(dec)}%: ${p.ruleNameUz || p.ruleName || p.ruleId}`);
-                    }
+                // Prefer the v2 precomputed percent (calculatedScore); fall back to the
+                // legacy binary value×override model only when it is absent.
+                const cs = (p as { calculatedScore?: number }).calculatedScore;
+                let sc = typeof cs === 'number' ? cs : NaN;
+                if (!Number.isFinite(sc)) {
+                    sc = p.value === 1
+                        ? Number(p.rewardPercentOverride ?? 0)
+                        : p.value === -1
+                            ? -Math.abs(Number(p.penaltyPercentOverride ?? 0))
+                            : 0;
+                }
+                if (sc !== 0) {
+                    kpiPercents.push(sc);
+                    details.push(`KPI ${sc > 0 ? '+' : ''}${sc}%: ${p.ruleNameUz || p.ruleName || p.ruleId}`);
                 }
             }
+            // Cap the bonus side at the role's KPI max (5% / 2.5% / 1%); penalties accumulate.
+            sumPercent += capKpiPercent(kpiPercents, typedRole);
+            if (myRolePerfFiltered.length > 0) hasPerfRecords = true;
         }
 
-        // 2) Report Status Impact (Oylar/Operations) - NOW DYNAMIC
-        if (operation) {
+        // 2) Report Status Impact (Oylar/Operations) — legacy fallback only when
+        //    there are no v2 performance records for this role (else double-counts).
+        if (operation && !hasPerfRecords) {
             // Find all automation rules (including reports)
             const autoRules = rules.filter(r => r.category === 'automation' || r.category === 'reports');
 

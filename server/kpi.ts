@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole, isAdminRole } from "@/lib/permissions";
 import { serialize } from "@/lib/serialize";
+import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
+import { Prisma } from "@prisma/client";
 
 // =====================================================
 // KPI RULES
@@ -34,6 +36,16 @@ function assertPercent(label: string, v: number | undefined) {
   }
 }
 
+// KPI v2 rule fields (three-state options-based)
+export interface KpiRuleV2Input {
+  descriptionUz?: string;
+  inputTypeV2?: string; // 'select' | 'counter' | 'checkbox_bonus' | 'checkbox_penalty' | 'amount_penalty'
+  scope?: string; // 'global' | 'per_company' | 'per_group'
+  maxBonus?: number | null;
+  maxPenalty?: number | null;
+  options?: unknown; // KpiOption[]
+}
+
 export async function createKpiRule(data: {
   name: string;
   nameUz: string;
@@ -44,7 +56,7 @@ export async function createKpiRule(data: {
   category: string;
   description?: string;
   sortOrder?: number;
-}) {
+} & KpiRuleV2Input) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
@@ -54,7 +66,17 @@ export async function createKpiRule(data: {
   assertPercent("Mukofot foizi", data.rewardPercent);
   assertPercent("Jarima foizi", data.penaltyPercent);
 
-  return serialize(await prisma.kpiRule.create({ data }));
+  const { options, maxBonus, maxPenalty, ...rest } = data;
+  return serialize(
+    await prisma.kpiRule.create({
+      data: {
+        ...rest,
+        ...(options !== undefined ? { options: options as Prisma.InputJsonValue } : {}),
+        ...(maxBonus !== undefined ? { maxBonus: maxBonus === null ? null : new Prisma.Decimal(maxBonus) } : {}),
+        ...(maxPenalty !== undefined ? { maxPenalty: maxPenalty === null ? null : new Prisma.Decimal(maxPenalty) } : {}),
+      },
+    })
+  );
 }
 
 export async function updateKpiRule(id: string, data: Partial<{
@@ -64,7 +86,8 @@ export async function updateKpiRule(id: string, data: Partial<{
   isActive: boolean;
   sortOrder: number;
   description: string;
-}>) {
+  category: string;
+}> & KpiRuleV2Input) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
@@ -74,7 +97,18 @@ export async function updateKpiRule(id: string, data: Partial<{
   assertPercent("Mukofot foizi", data.rewardPercent);
   assertPercent("Jarima foizi", data.penaltyPercent);
 
-  return serialize(await prisma.kpiRule.update({ where: { id }, data }));
+  const { options, maxBonus, maxPenalty, ...rest } = data;
+  return serialize(
+    await prisma.kpiRule.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(options !== undefined ? { options: options as Prisma.InputJsonValue } : {}),
+        ...(maxBonus !== undefined ? { maxBonus: maxBonus === null ? null : new Prisma.Decimal(maxBonus) } : {}),
+        ...(maxPenalty !== undefined ? { maxPenalty: maxPenalty === null ? null : new Prisma.Decimal(maxPenalty) } : {}),
+      },
+    })
+  );
 }
 
 export async function deleteKpiRule(id: string) {
@@ -121,26 +155,87 @@ export async function upsertPerformance(data: {
   companyId: string;
   employeeId: string;
   ruleId: string;
-  value: number;
-  calculatedScore: number;
+  // KPI v2 inputs (score is computed server-side from these)
+  selectedOption?: string | null;
+  earlyDays?: number;
+  lateMinutes?: number;
+  absentDays?: number;
+  penaltyAmount?: number;
   source?: string;
   notes?: string;
+  status?: string; // 'submitted' (default) | 'approved' — supervisor entries are authoritative
+  // Legacy fallbacks (used only if the rule has no v2 options)
+  value?: number;
+  calculatedScore?: number;
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
   const submittedBy = session.user.id;
 
-  return serialize(
-    await prisma.monthlyPerformance.create({
-      data: {
-        ...data,
-        submittedBy,
-        submittedAt: new Date(),
-        status: "submitted",
-      },
-    })
-  );
+  const rule = await prisma.kpiRule.findUnique({ where: { id: data.ruleId } });
+  if (!rule) throw new Error("KPI qoidasi topilmadi");
+
+  // Compute the score from the v2 rule options when available.
+  const opts = Array.isArray(rule.options) ? rule.options : [];
+  const useV2 = opts.length > 0;
+
+  const input: KpiEntryInput = {
+    selectedOption: data.selectedOption ?? null,
+    counters: {
+      early_days: data.earlyDays ?? 0,
+      late_5min: Math.floor((data.lateMinutes ?? 0) / 5),
+      absent_days: data.absentDays ?? 0,
+    },
+    penaltyAmount: data.penaltyAmount ?? 0,
+  };
+  const score = useV2 ? computeRuleScore(rule as never, input) : null;
+
+  const calculatedScore = score ? score.percent : data.calculatedScore ?? 0;
+  const value =
+    data.value ??
+    (score ? (score.color === "green" ? 1 : score.color === "red" ? -1 : 0) : 0);
+
+  const payload = {
+    month: data.month,
+    companyId: data.companyId,
+    employeeId: data.employeeId,
+    ruleId: data.ruleId,
+    selectedOption: data.selectedOption ?? null,
+    earlyDays: data.earlyDays ?? 0,
+    lateMinutes: data.lateMinutes ?? 0,
+    absentDays: data.absentDays ?? 0,
+    penaltyAmount: new Prisma.Decimal(data.penaltyAmount ?? 0),
+    value: new Prisma.Decimal(value),
+    calculatedScore: new Prisma.Decimal(calculatedScore),
+    source: data.source ?? "supervisor",
+    notes: data.notes,
+    submittedBy,
+    submittedAt: new Date(),
+    status: data.status ?? "submitted",
+    ...(data.status === "approved"
+      ? { approvedBy: session.user.id, approvedAt: new Date() }
+      : {}),
+  };
+
+  // Natural-key upsert (no DB unique constraint): avoid duplicate rows per
+  // month+company+employee+rule by updating an existing non-approved record.
+  const existing = await prisma.monthlyPerformance.findFirst({
+    where: {
+      month: data.month,
+      companyId: data.companyId,
+      employeeId: data.employeeId,
+      ruleId: data.ruleId,
+      status: { not: "approved" },
+    },
+    select: { id: true },
+  });
+
+  const saved = existing
+    ? await prisma.monthlyPerformance.update({ where: { id: existing.id }, data: payload })
+    : await prisma.monthlyPerformance.create({ data: payload });
+
+  return serialize(saved);
 }
 
 export async function approvePerformance(id: string) {
@@ -159,6 +254,28 @@ export async function approvePerformance(id: string) {
         status: "approved",
         approvedBy: session.user.id,
         approvedAt: new Date(),
+      },
+    })
+  );
+}
+
+export async function rejectPerformance(id: string, reason: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const role = session.user.role as string;
+  if (!["super_admin", "admin", "chief_accountant", "supervisor"].includes(role)) {
+    throw new Error("Forbidden");
+  }
+
+  return serialize(
+    await prisma.monthlyPerformance.update({
+      where: { id },
+      data: {
+        status: "rejected",
+        approvedBy: session.user.id,
+        approvedAt: new Date(),
+        rejectedReason: reason,
       },
     })
   );

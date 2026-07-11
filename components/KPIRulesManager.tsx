@@ -1,354 +1,273 @@
-import React, { useState, useEffect } from 'react';
-import { KPIRule, Language, KPIRoleType, KPIInputType } from '@/types';
-import { Settings, Plus, Edit3, Trash2, X } from 'lucide-react';
-import { getKpiRules, createKpiRule, updateKpiRule, deleteKpiRule } from '@/server/kpi';
+"use client";
+import React, { useState, useEffect, useMemo } from 'react';
+import { KPIRule, KpiRuleOption, Language, KPIRoleType } from '@/types';
+import { Settings, Edit3, Trash2, X, Shield, Landmark, Calculator } from 'lucide-react';
+import { getKpiRules, updateKpiRule, deleteKpiRule } from '@/server/kpi';
 
-interface Props {
-    lang: Language;
-}
+interface Props { lang: Language; }
+
+const ROLE_META: { key: KPIRoleType; label: string; icon: React.ElementType; accent: string; base: string; kpi: string }[] = [
+    { key: 'accountant', label: 'Buxgalter', icon: Calculator, accent: 'var(--success)', base: '20%', kpi: '5%' },
+    { key: 'bank_client', label: 'Bank-klient', icon: Landmark, accent: 'var(--accent-indigo)', base: '5%', kpi: '2.5%' },
+    { key: 'supervisor', label: 'Nazoratchi', icon: Shield, accent: 'var(--warning)', base: '5%', kpi: '1%' },
+];
+
+const COLOR: Record<string, { fg: string; bg: string; bd: string }> = {
+    green: { fg: 'var(--success)', bg: 'var(--success-bg)', bd: 'var(--success-border)' },
+    yellow: { fg: 'var(--warning)', bg: 'var(--warning-bg)', bd: 'var(--warning-border)' },
+    red: { fg: 'var(--danger)', bg: 'var(--danger-bg)', bd: 'var(--danger-border)' },
+};
+
+const Badge: React.FC<{ children: React.ReactNode; tone?: 'muted' | 'blue' }> = ({ children, tone = 'muted' }) => (
+    <span className="text-[8.5px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+        style={tone === 'blue'
+            ? { background: 'var(--accent-blue-light)', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)' }
+            : { background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
+        {children}
+    </span>
+);
 
 const KPIRulesManager: React.FC<Props> = () => {
     const [rules, setRules] = useState<KPIRule[]>([]);
-    const [, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [editingRule, setEditingRule] = useState<Partial<KPIRule> | null>(null);
 
-    useEffect(() => {
-        loadRules();
-    }, []);
+    useEffect(() => { loadRules(); }, []);
 
     const loadRules = async () => {
         setLoading(true);
-        const data = await getKpiRules();
-        setRules(data as any);
-        setLoading(false);
+        try {
+            const data = await getKpiRules();
+            setRules(data as unknown as KPIRule[]);
+        } finally { setLoading(false); }
+    };
+
+    const byRole = useMemo(() => {
+        const map: Record<string, KPIRule[]> = {};
+        for (const r of rules.filter(r => r.isActive)) (map[r.role] ??= []).push(r);
+        for (const k in map) map[k].sort((a, b) => a.sortOrder - b.sortOrder);
+        return map;
+    }, [rules]);
+
+    const archived = rules.filter(r => !r.isActive);
+
+    const toggleActive = async (rule: KPIRule) => { await updateKpiRule(rule.id, { isActive: !rule.isActive }); loadRules(); };
+    const handleDelete = async (id: string, name: string) => {
+        if (!confirm(`${name} qoidasini o'chirishni tasdiqlaysizmi?`)) return;
+        try { await deleteKpiRule(id); loadRules(); } catch (e) { alert((e as Error).message); }
     };
 
     const handleSave = async () => {
-        if (!editingRule || !editingRule.name || !editingRule.nameUz) return;
-
-        // Percent columns are Decimal(5,2): keep in range client-side so we never
-        // send a value the DB rejects (which would surface as a 500).
-        const rp = Number(editingRule.rewardPercent ?? 0);
-        const pp = Number(editingRule.penaltyPercent ?? 0);
-        if ([rp, pp].some((v) => Number.isNaN(v) || v < 0 || v > 999.99)) {
-            alert("Foiz qiymati 0 va 999.99 oralig'ida bo'lishi kerak");
-            return;
-        }
-
+        if (!editingRule?.id) return;
+        const mb = editingRule.maxBonus == null ? null : Number(editingRule.maxBonus);
+        const mp = editingRule.maxPenalty == null ? null : Number(editingRule.maxPenalty);
         try {
-            if (editingRule.id) {
-                await updateKpiRule(editingRule.id, editingRule as any);
-            } else {
-                await createKpiRule(editingRule as any);
-            }
+            await updateKpiRule(editingRule.id, {
+                nameUz: editingRule.nameUz,
+                descriptionUz: editingRule.descriptionUz,
+                category: editingRule.category,
+                scope: editingRule.scope,
+                inputTypeV2: editingRule.inputTypeV2,
+                maxBonus: mb,
+                maxPenalty: mp,
+                isActive: editingRule.isActive,
+            });
             setEditingRule(null);
             loadRules();
-        } catch (e) {
-            console.error(e);
-            alert((e as any)?.message || 'Error saving rule');
-        }
+        } catch (e) { alert((e as Error).message); }
     };
 
-    const toggleActive = async (rule: KPIRule) => {
-        await updateKpiRule(rule.id, { isActive: !rule.isActive });
-        loadRules();
-    };
-
-    const handleDelete = async (id: string, name: string) => {
-        if (confirm(`${name} qoidasini o'chirishni tasdiqlaysizmi?`)) {
-            try {
-                await deleteKpiRule(id);
-                loadRules();
-            } catch (e) {
-                console.error(e);
-                alert('Xatolik yuz berdi');
-            }
+    const OptionPills: React.FC<{ rule: KPIRule }> = ({ rule }) => {
+        const opts = (rule.options ?? []) as KpiRuleOption[];
+        if (rule.inputTypeV2 === 'counter') {
+            return (
+                <div className="flex flex-wrap gap-1.5">
+                    {opts.map(o => {
+                        const per = o.coeff_per_unit ?? 0;
+                        const c = COLOR[o.color || (per >= 0 ? 'green' : 'red')];
+                        return (
+                            <span key={o.key} className="text-[9.5px] font-bold px-2 py-1 rounded-lg" style={{ background: c.bg, color: c.fg, border: `1px solid ${c.bd}` }}>
+                                {o.label_uz} · {per > 0 ? '+' : ''}{per}%{o.max_coeff != null ? ` (max ${o.max_coeff}%)` : '/birlik'}
+                            </span>
+                        );
+                    })}
+                </div>
+            );
         }
+        if (rule.inputTypeV2 === 'amount_penalty') {
+            return <span className="text-[9.5px] font-bold px-2 py-1 rounded-lg" style={{ background: COLOR.red.bg, color: COLOR.red.fg, border: `1px solid ${COLOR.red.bd}` }}>So&apos;mda jarima (qo&apos;lda)</span>;
+        }
+        return (
+            <div className="flex flex-wrap gap-1.5">
+                {opts.map(o => {
+                    const c = COLOR[o.color || 'yellow'];
+                    return (
+                        <span key={o.key} className="text-[9.5px] font-bold px-2 py-1 rounded-lg" style={{ background: c.bg, color: c.fg, border: `1px solid ${c.bd}` }}>
+                            {o.label_uz}{typeof o.coeff === 'number' && o.coeff !== 0 ? ` (${o.coeff > 0 ? '+' : ''}${o.coeff}%)` : ''}
+                        </span>
+                    );
+                })}
+            </div>
+        );
     };
 
     return (
-        <div className="space-y-4 animate-fade-in p-4 bg-[#F0F2F5] dark:bg-[#1A1D23] min-h-screen font-inter">
-            {/* KPI Header */}
-            <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] p-3 rounded-sm shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3 transition-colors">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-sm bg-[#F2F7FF] dark:bg-[#1C2531] flex items-center justify-center border border-[#DEE2E6] dark:border-[#3A3D44] text-[#3366CC] shrink-0">
-                        <Settings size={18} />
+        <div className="space-y-5 animate-fade-in p-4">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 p-5 rounded-xl"
+                style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+                <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white"
+                        style={{ background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-indigo))' }}>
+                        <Settings size={20} />
                     </div>
                     <div>
-                        <h2 className="text-base font-bold text-gray-800 dark:text-white leading-none uppercase tracking-tight">
-                            KPI Qoidalari
-                        </h2>
-                        <p className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">
-                            Metrika va mukofotlar konfiguratsiyasi
-                        </p>
+                        <h2 className="text-[15px] font-bold leading-none" style={{ color: 'var(--text-primary)' }}>KPI Qoidalari (v2)</h2>
+                        <p className="text-[11px] mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>Uch holatli tizim — bonus / neytral / jarima</p>
                     </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setEditingRule({
-                            id: undefined,
-                            isActive: true,
-                            inputType: 'checkbox',
-                            role: 'accountant',
-                            category: 'reports',
-                            sortOrder: rules.length + 1
-                        })}
-                        className="c1-btn c1-btn-primary px-4 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-2"
-                    >
-                        <Plus size={14} />
-                        Yangi Qoida
-                    </button>
+                <div className="flex gap-2">
+                    {ROLE_META.map(m => (
+                        <div key={m.key} className="px-3 py-2 rounded-lg text-center" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
+                            <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: m.accent }}>{m.label}</p>
+                            <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{m.base} + KPI {m.kpi}</p>
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            <div className="space-y-6">
-                {['automation', 'manual'].map(category => (
-                    <div key={category} className="animate-fade-in">
-                        <div className="mb-2">
-                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                <span className="w-1 h-3 bg-[#3366CC] rounded-sm"></span>
-                                {category === 'automation' ? "Avtomatik Operatsiyalar" : "Manual Baholash"}
-                            </h3>
-                        </div>
+            {loading && <p className="text-center text-[12px] py-4" style={{ color: 'var(--text-muted)' }}>Yuklanmoqda…</p>}
 
-                        <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden text-xs">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-[#F8F9FA] dark:bg-[#1e2025] text-[9px] font-bold uppercase tracking-widest text-gray-500 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
-                                        <th className="px-4 py-2 w-16 text-center">Status</th>
-                                        <th className="px-4 py-2">Qoida Nomi</th>
-                                        <th className="px-4 py-2">Rol / Tip</th>
-                                        <th className="px-4 py-2 text-center text-[#28A745]">Bonus %</th>
-                                        <th className="px-4 py-2 text-center text-[#DC3545]">Jarima %</th>
-                                        <th className="px-4 py-2 text-right">Amallar</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44]">
-                                    {rules.filter(r => r.category === category && r.isActive).map(rule => (
-                                        <tr key={rule.id} className="hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] transition-colors group">
-                                            <td className="px-4 py-2 text-center">
-                                                <div
-                                                    onClick={() => toggleActive(rule)}
-                                                    className={`w-9 h-5 rounded-sm relative cursor-pointer transition-all duration-300 inline-block align-middle border border-black/5 ${rule.isActive ? 'bg-[#28A745]' : 'bg-[#DEE2E6] dark:bg-[#3A3D44]'}`}
-                                                >
-                                                    <div className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-white rounded-sm transition-transform duration-300 shadow-sm ${rule.isActive ? 'translate-x-4' : 'translate-x-0'}`}></div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-2">
-                                                <p className="font-bold text-gray-800 dark:text-gray-100 uppercase tracking-tight">{rule.nameUz}</p>
-                                                <p className="text-[8px] font-bold text-gray-400 uppercase font-mono mt-0.5">{rule.name}</p>
-                                            </td>
-                                            <td className="px-4 py-2">
-                                                <div className="flex gap-2">
-                                                    <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-[#F8F9FA] dark:bg-[#1e2025] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] text-gray-500 dark:text-gray-400">{rule.role}</span>
-                                                    <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-[#F2F7FF] dark:bg-[#1C2531] border border-[#DEE2E6] dark:border-[#3A3D44] text-[#3366CC] dark:text-[#4DA3FF] rounded-sm">{rule.inputType}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-2 text-center font-bold text-[#28A745] tabular-nums border-l border-[#DEE2E6] dark:border-[#3A3D44]">
-                                                +{rule.rewardPercent}%
-                                            </td>
-                                            <td className="px-4 py-2 text-center font-bold text-[#DC3545] tabular-nums border-l border-[#DEE2E6] dark:border-[#3A3D44]">
-                                                {rule.penaltyPercent}%
-                                            </td>
-                                            <td className="px-4 py-2 text-right border-l border-[#DEE2E6] dark:border-[#3A3D44]">
-                                                <button
-                                                    onClick={() => setEditingRule(rule)}
-                                                    className="p-1 px-2 text-gray-500 hover:text-[#3366CC] hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] rounded-sm border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44] transition-colors inline-flex text-[10px] font-bold uppercase tracking-widest"
-                                                    title="Tahrirlash"
-                                                >
-                                                    <Edit3 size={12} className="mr-1" /> Edit
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {rules.filter(r => r.category === category && r.isActive).length === 0 && (
-                                        <tr>
-                                            <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest">
-                                                Bu turkumda faol qoidalar yo&apos;q.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                ))}
-
-                {rules.filter(r => !r.isActive).length > 0 && (
-                    <div className="pt-4 mt-6 border-t border-[#DEE2E6] dark:border-[#3A3D44]">
-                        <details className="group/archived">
-                            <summary className="text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#3366CC] transition-colors mb-3 flex items-center gap-2 list-none outline-none">
-                                <div className="w-5 h-5 rounded-sm bg-[#F8F9FA] dark:bg-[#1e2025] border border-[#DEE2E6] dark:border-[#3A3D44] flex items-center justify-center group-open/archived:rotate-180 transition-transform">
-                                    <Plus size={10} />
-                                </div>
-                                Arxivlangan Qoidalar ({rules.filter(r => !r.isActive).length})
-                            </summary>
-                            <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden text-xs">
-                                <table className="w-full text-left border-collapse">
-                                    <tbody className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44]">
-                                        {rules.filter(r => !r.isActive).map(rule => (
-                                            <tr key={rule.id} className="hover:bg-[#F8F9FA] dark:hover:bg-[#1e2025] transition-colors opacity-60 hover:opacity-100">
-                                                <td className="px-4 py-2">
-                                                    <p className="font-bold text-gray-700 dark:text-gray-300 uppercase tracking-tight">{rule.nameUz}</p>
-                                                    <p className="text-[8px] font-bold text-gray-400 uppercase font-mono mt-0.5">{rule.name}</p>
-                                                </td>
-                                                <td className="px-4 py-2 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <button
-                                                            onClick={() => toggleActive(rule)}
-                                                            className="text-[9px] font-bold uppercase tracking-widest text-[#28A745] px-2.5 py-1 bg-[#F2FFF7] dark:bg-[#1C3123] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm hover:opacity-80 transition-all uppercase tracking-widest"
-                                                        >
-                                                            Restore
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(rule.id, rule.nameUz)}
-                                                            className="w-7 h-7 flex items-center justify-center text-[#DC3545] bg-[#FEEBF0] dark:bg-[#311C21] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm hover:opacity-80 transition-all"
-                                                            title="O'chirish"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+            {/* Rules grouped by role */}
+            {ROLE_META.map(meta => {
+                const list = byRole[meta.key] || [];
+                if (list.length === 0) return null;
+                return (
+                    <div key={meta.key} className="rounded-xl overflow-hidden" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+                        <div className="px-5 py-3 flex items-center gap-2" style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--card-border)' }}>
+                            <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white" style={{ background: meta.accent }}>
+                                <meta.icon size={13} />
                             </div>
-                        </details>
-                    </div>
-                )}
-            </div>
-
-            {/* Edit Modal */}
-            {editingRule && (
-                <div className="fixed inset-0 bg-[#000]/60 z-[100] flex items-center justify-center p-4 animate-fade-in" onClick={() => setEditingRule(null)}>
-                    <div className="bg-white dark:bg-[#22252B] w-full max-w-3xl rounded-sm shadow-2xl border border-[#DEE2E6] dark:border-[#3A3D44] flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                        <div className="px-4 py-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] flex justify-between items-center bg-[#F8F9FA] dark:bg-[#1e2025]">
-                            <h3 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-widest">
-                                {editingRule.id ? 'Qoidani Tahrirlash' : 'Yangi KPI Qoidasi'}
-                            </h3>
-                            <button onClick={() => setEditingRule(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                                <X size={20} />
-                            </button>
+                            <h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>{meta.label}</h3>
+                            <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>{list.length} qoida</span>
                         </div>
-
-                        <div className="flex-1 overflow-y-auto p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Nomi (Internal ID)</label>
-                                        <input
-                                            type="text"
-                                            className="c1-input w-full font-bold uppercase"
-                                            value={editingRule.name || ''}
-                                            onChange={e => setEditingRule({ ...editingRule, name: e.target.value })}
-                                            placeholder="e.g. QUARTERLY_AUDIT"
-                                        />
+                        <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
+                            {list.map(rule => (
+                                <div key={rule.id} className="px-5 py-3.5 flex items-start gap-4 transition-colors"
+                                    style={{ borderColor: 'var(--card-border)' }}>
+                                    {/* toggle */}
+                                    <div onClick={() => toggleActive(rule)} className="mt-0.5 w-9 h-5 rounded-full relative cursor-pointer transition-all shrink-0"
+                                        style={{ background: rule.isActive ? 'var(--success)' : 'var(--card-border)' }}>
+                                        <div className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform" style={{ left: 2, transform: rule.isActive ? 'translateX(16px)' : 'translateX(0)' }} />
                                     </div>
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Nomi (O&apos;zbekcha)</label>
-                                        <input
-                                            type="text"
-                                            className="c1-input w-full font-bold"
-                                            value={editingRule.nameUz || ''}
-                                            onChange={e => setEditingRule({ ...editingRule, nameUz: e.target.value })}
-                                            placeholder="e.g. Choraklik Audit"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Maso&apos;ul Role</label>
-                                        <select
-                                            className="c1-input w-full font-bold uppercase"
-                                            value={editingRule.role || 'accountant'}
-                                            onChange={e => setEditingRule({ ...editingRule, role: e.target.value as KPIRoleType })}
-                                        >
-                                            <option value="accountant">Accountant</option>
-                                            <option value="bank_client">Bank Client</option>
-                                            <option value="supervisor">Supervisor</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Turkum (Category)</label>
-                                        <input
-                                            type="text"
-                                            className="c1-input w-full font-bold uppercase"
-                                            value={editingRule.category || ''}
-                                            onChange={e => setEditingRule({ ...editingRule, category: e.target.value })}
-                                            placeholder="manual / automation"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-[#28A745] mb-1 block">Bonus % (+)</label>
-                                        <input
-                                            type="number" step="0.01"
-                                            className="c1-input w-full font-bold text-[#28A745] border-[#EBFBF0]"
-                                            value={editingRule.rewardPercent ?? ''}
-                                            onChange={e => {
-                                                const v = e.target.value;
-                                                setEditingRule({
-                                                    ...editingRule,
-                                                    rewardPercent: v === '' ? undefined : Number(v)
-                                                });
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-[#DC3545] mb-1 block">Jarima % (-)</label>
-                                        <input
-                                            type="number" step="0.01"
-                                            className="c1-input w-full font-bold text-[#DC3545] border-[#FEEBF0]"
-                                            value={editingRule.penaltyPercent ?? ''}
-                                            onChange={e => {
-                                                const v = e.target.value;
-                                                setEditingRule({
-                                                    ...editingRule,
-                                                    penaltyPercent: v === '' ? undefined : Number(v)
-                                                });
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1 block">Input Tur (Input Type)</label>
-                                        <select
-                                            className="c1-input w-full font-bold uppercase"
-                                            value={editingRule.inputType || 'checkbox'}
-                                            onChange={e => setEditingRule({ ...editingRule, inputType: e.target.value as KPIInputType })}
-                                        >
-                                            <option value="checkbox">Checkbox (Ha/Yo&apos;q)</option>
-                                            <option value="counter">Counter (Soni)</option>
-                                            <option value="number">Number</option>
-                                        </select>
-                                    </div>
-                                    <div
-                                        onClick={() => setEditingRule({ ...editingRule, isActive: !editingRule.isActive })}
-                                        className={`px-4 py-2 rounded-sm border transition-all cursor-pointer flex items-center justify-between ${editingRule.isActive ? 'bg-[#EBFBF0] dark:bg-[#1C2F23] border-[#DEE2E6]' : 'bg-[#F8F9FA] dark:bg-[#1e2025] border-[#DEE2E6]'}`}
-                                    >
-                                        <span className={`font-bold uppercase tracking-widest text-[9px] ${editingRule.isActive ? 'text-[#28A745]' : 'text-gray-400'}`}>Qoida Holati</span>
-                                        <div className={`w-9 h-5 rounded-sm relative transition-all duration-300 border border-black/5 ${editingRule.isActive ? 'bg-[#28A745]' : 'bg-[#DEE2E6] dark:bg-[#3A3D44]'}`}>
-                                            <div className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-white rounded-sm transition-transform duration-300 shadow-sm ${editingRule.isActive ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                    {/* body */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                                            <p className="font-bold text-[12.5px]" style={{ color: 'var(--text-primary)' }}>{rule.nameUz}</p>
+                                            <span className="text-[8px] font-mono font-bold" style={{ color: 'var(--text-muted)' }}>{rule.name}</span>
+                                            <Badge tone="blue">{rule.inputTypeV2 || rule.inputType}</Badge>
+                                            <Badge>{rule.category}</Badge>
+                                            <Badge>{rule.scope}</Badge>
                                         </div>
+                                        {rule.descriptionUz && <p className="text-[10px] mb-2 leading-snug" style={{ color: 'var(--text-muted)' }}>{rule.descriptionUz}</p>}
+                                        <OptionPills rule={rule} />
+                                    </div>
+                                    {/* caps + edit */}
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <div className="text-right">
+                                            <p className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--success)' }}>+{rule.maxBonus ?? 0}%</p>
+                                            <p className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--danger)' }}>{rule.maxPenalty ?? 0}%</p>
+                                        </div>
+                                        <button onClick={() => setEditingRule(rule)} className="p-2 rounded-lg transition-colors"
+                                            style={{ color: 'var(--text-muted)', border: '1px solid var(--card-border)' }} title="Tahrirlash">
+                                            <Edit3 size={13} />
+                                        </button>
                                     </div>
                                 </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+
+            {/* Archived */}
+            {archived.length > 0 && (
+                <details className="rounded-xl overflow-hidden" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
+                    <summary className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest cursor-pointer" style={{ color: 'var(--text-muted)' }}>
+                        Arxivlangan qoidalar ({archived.length})
+                    </summary>
+                    <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
+                        {archived.map(rule => (
+                            <div key={rule.id} className="px-5 py-2.5 flex items-center justify-between" style={{ borderColor: 'var(--card-border)' }}>
+                                <p className="font-bold text-[12px]" style={{ color: 'var(--text-secondary)' }}>{rule.nameUz} <span className="text-[8px] font-mono" style={{ color: 'var(--text-muted)' }}>{rule.name}</span></p>
+                                <div className="flex gap-2">
+                                    <button onClick={() => toggleActive(rule)} className="text-[9px] font-bold uppercase px-2.5 py-1 rounded-lg" style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }}>Tiklash</button>
+                                    <button onClick={() => handleDelete(rule.id, rule.nameUz)} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger-border)' }}><Trash2 size={12} /></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </details>
+            )}
+
+            {/* Edit modal */}
+            {editingRule && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }} onClick={() => setEditingRule(null)}>
+                    <div className="w-full max-w-2xl rounded-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col"
+                        style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: '0 25px 60px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)', background: 'var(--table-header-bg)' }}>
+                            <div>
+                                <h3 className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>{editingRule.nameUz}</h3>
+                                <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>{editingRule.name}</p>
+                            </div>
+                            <button onClick={() => setEditingRule(null)} style={{ color: 'var(--text-muted)' }}><X size={20} /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                            <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Nomi (O&apos;zbekcha)</label>
+                                <input className="erp-input font-bold" value={editingRule.nameUz || ''} onChange={e => setEditingRule({ ...editingRule, nameUz: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Izoh</label>
+                                <textarea className="erp-input min-h-[70px] resize-none" value={editingRule.descriptionUz || ''} onChange={e => setEditingRule({ ...editingRule, descriptionUz: e.target.value })} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Scope</label>
+                                    <select className="erp-input font-bold" value={editingRule.scope || 'per_company'} onChange={e => setEditingRule({ ...editingRule, scope: e.target.value as KPIRule['scope'] })}>
+                                        <option value="global">global</option>
+                                        <option value="per_company">per_company</option>
+                                        <option value="per_group">per_group</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Kirish turi</label>
+                                    <select className="erp-input font-bold" value={editingRule.inputTypeV2 || 'select'} onChange={e => setEditingRule({ ...editingRule, inputTypeV2: e.target.value as KPIRule['inputTypeV2'] })}>
+                                        <option value="select">select</option>
+                                        <option value="counter">counter</option>
+                                        <option value="checkbox_bonus">checkbox_bonus</option>
+                                        <option value="checkbox_penalty">checkbox_penalty</option>
+                                        <option value="amount_penalty">amount_penalty</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--success)' }}>Max Bonus %</label>
+                                    <input type="number" step="0.01" className="erp-input font-bold" value={editingRule.maxBonus ?? ''} onChange={e => setEditingRule({ ...editingRule, maxBonus: e.target.value === '' ? null : Number(e.target.value) })} />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--danger)' }}>Max Jarima %</label>
+                                    <input type="number" step="0.01" className="erp-input font-bold" value={editingRule.maxPenalty ?? ''} onChange={e => setEditingRule({ ...editingRule, maxPenalty: e.target.value === '' ? null : Number(e.target.value) })} />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest mb-1.5 block" style={{ color: 'var(--text-muted)' }}>Holatlar (options)</label>
+                                <OptionPills rule={editingRule as KPIRule} />
+                                <p className="text-[9px] mt-1.5" style={{ color: 'var(--text-muted)' }}>Holat koeffitsiyentlari seed skript orqali boshqariladi.</p>
                             </div>
                         </div>
-
-                        <div className="p-3 border-t border-[#DEE2E6] dark:border-[#3A3D44] flex gap-3 bg-[#F8F9FA] dark:bg-[#1e2025]">
-                            <button
-                                onClick={() => setEditingRule(null)}
-                                className="c1-btn c1-btn-secondary flex-1 py-1.5 text-[10px] uppercase tracking-widest font-bold"
-                            >
-                                Bekor qilish
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                className="c1-btn c1-btn-primary flex-1 py-1.5 text-[10px] uppercase tracking-widest font-bold"
-                            >
-                                Qoidani Saqlash
-                            </button>
+                        <div className="p-4 flex gap-3" style={{ borderTop: '1px solid var(--card-border)', background: 'var(--table-header-bg)' }}>
+                            <button onClick={() => setEditingRule(null)} className="btn-secondary flex-1">Bekor qilish</button>
+                            <button onClick={handleSave} className="btn-primary flex-1">Saqlash</button>
                         </div>
                     </div>
                 </div>

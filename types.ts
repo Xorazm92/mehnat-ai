@@ -415,6 +415,20 @@ export interface Config {
 // KPI Input Type
 export type KPIInputType = 'checkbox' | 'counter' | 'number' | 'rating';
 
+// KPI v2 — three-state input type
+export type KPIInputTypeV2 = 'select' | 'counter' | 'checkbox_bonus' | 'checkbox_penalty' | 'amount_penalty';
+
+// KPI v2 — one selectable option (bonus / neutral / penalty)
+export interface KpiRuleOption {
+  key: string;
+  label_uz?: string;
+  color?: 'green' | 'yellow' | 'red';
+  coeff?: number | null;        // select/checkbox: direct percent
+  coeff_per_unit?: number;      // counter: percent per unit
+  max_coeff?: number | null;    // counter: cap on this option's contribution
+  note?: string;
+}
+
 // KPI Role Type
 export type KPIRoleType = 'accountant' | 'bank_client' | 'supervisor' | 'all';
 
@@ -431,6 +445,13 @@ export interface KPIRule {
   description?: string;
   isActive: boolean;
   sortOrder: number;
+  // --- KPI v2 (three-state options-based) ---
+  descriptionUz?: string;
+  options?: KpiRuleOption[];
+  inputTypeV2?: KPIInputTypeV2;
+  scope?: 'global' | 'per_company' | 'per_group';
+  maxBonus?: number | null;
+  maxPenalty?: number | null;
 }
 
 export interface CompanyKPIRule {
@@ -460,6 +481,12 @@ export interface MonthlyPerformance {
   penaltyPercentOverride?: number;
   value: number;                   // 1=Ha, 0=Yo'q, 5=5 ta kechikish
   calculatedScore: number;         // Avtomat hisoblangan foiz
+  // --- KPI v2 inputs ---
+  selectedOption?: string | null;  // tanlangan holat key (green/yellow/red)
+  earlyDays?: number;              // 08:30 gacha kelgan kunlar
+  lateMinutes?: number;            // kechikkan daqiqalar
+  absentDays?: number;             // uzrsiz kelmagan kunlar
+  penaltyAmount?: number;          // qo'lda kiritilgan jarima (so'm)
   source?: 'employee' | 'supervisor' | 'chief' | 'system';
   status?: 'draft' | 'submitted' | 'approved' | 'rejected';
   submittedBy?: string;
