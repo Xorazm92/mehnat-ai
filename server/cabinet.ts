@@ -417,6 +417,37 @@ export async function getAdminCabinetData() {
       + share(contract, c.supervisorPerc, c.supervisorSum);
   }
 
+  // ─── Pul oqimi (so'nggi 6 oy: kirim vs chiqim) ────────────
+  const months: string[] = [];
+  const base = new Date();
+  base.setDate(1);
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  const rangeStart = new Date(base.getFullYear(), base.getMonth() - 5, 1);
+  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+  const [paidPayments, kassaEntries, expenses] = await Promise.all([
+    prisma.payment.groupBy({ by: ["period"], where: { status: "paid", period: { in: months } }, _sum: { amount: true } }),
+    prisma.kassaEntry.findMany({ where: { date: { gte: rangeStart } }, select: { type: true, amount: true, date: true } }),
+    prisma.expense.findMany({ where: { date: { gte: rangeStart } }, select: { amount: true, date: true } }),
+  ]);
+
+  const income: Record<string, number> = {};
+  const outflow: Record<string, number> = {};
+  for (const m of months) { income[m] = 0; outflow[m] = 0; }
+  for (const p of paidPayments) income[p.period] = (income[p.period] ?? 0) + n(p._sum.amount);
+  for (const k of kassaEntries) {
+    const m = monthKey(k.date);
+    if (!(m in income)) continue;
+    if (k.type === "income") income[m] += n(k.amount);
+    else outflow[m] += n(k.amount);
+  }
+  for (const e of expenses) { const m = monthKey(e.date); if (m in outflow) outflow[m] += n(e.amount); }
+
+  const monthlyCashFlow = months.map((m) => ({ month: m, income: Math.round(income[m]), expense: Math.round(outflow[m]) }));
+
   return serialize({
     userStats,
     companyStats: companyStats._count,
@@ -429,5 +460,6 @@ export async function getAdminCabinetData() {
       kpiCompletionPercent,
       payrollFund: Math.round(payrollFund),
     },
+    monthlyCashFlow,
   });
 }

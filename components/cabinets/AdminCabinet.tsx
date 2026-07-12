@@ -12,6 +12,7 @@ import {
   Wallet,
   Database,
 } from "lucide-react";
+import { CashFlowChart } from "./CashFlowChart";
 
 const fmtMln = (v: number) => {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} mln`;
@@ -46,6 +47,7 @@ interface AdminCabinetProps {
     kpiCompletionPercent?: number;
     payrollFund?: number;
   };
+  monthlyCashFlow?: { month: string; income: number; expense: number }[];
 }
 
 const roleLabelsMap: Record<string, string> = {
@@ -80,6 +82,7 @@ export function AdminCabinet({
   userStats,
   recentAudit,
   systemHealth,
+  monthlyCashFlow = [],
 }: AdminCabinetProps) {
   const firstName = userName.split(" ")[0];
   const isSuperAdmin = userRole === "super_admin";
@@ -158,7 +161,12 @@ export function AdminCabinet({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Pul oqimi + Rollar bo'yicha (ASRO prototip layout) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <CashFlowChart data={monthlyCashFlow} />
+        </div>
+
         {/* Rol bo'yicha foydalanuvchilar */}
         <div className="glass-card p-5">
           <div className="flex items-center gap-2 mb-5">
@@ -190,9 +198,10 @@ export function AdminCabinet({
             <span className="font-bold text-lg" style={{ color: "var(--text-primary)" }}>{totalUsers}</span>
           </div>
         </div>
+      </div>
 
-        {/* Audit Log */}
-        <div className="glass-card overflow-hidden">
+      {/* Audit Log — full width */}
+      <div className="glass-card overflow-hidden">
           <div className="flex items-center justify-between p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
             <div className="flex items-center gap-2">
               <ScrollText size={18} style={{ color: "var(--warning)" }} />
@@ -239,7 +248,6 @@ export function AdminCabinet({
             )}
           </div>
         </div>
-      </div>
 
       {/* Tezkor havolalar */}
       <div className="glass-card p-5">
