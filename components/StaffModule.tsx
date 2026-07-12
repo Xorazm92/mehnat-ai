@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Staff, Company, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
 import { ROLE_LABELS, ROLE_COLORS, type UserRole } from '@/lib/permissions';
+import StaffDrawer from './StaffDrawer';
 import {
   UserPlus, Phone, Briefcase, Trash2, Edit3, X, Check, Search, Filter,
   ShieldCheck, Mail, IdCard, GraduationCap, CalendarDays, Building, KeyRound, Loader2,
@@ -35,6 +36,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<Partial<Staff>>({});
+  const [selected, setSelected] = useState<Staff | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -312,7 +314,8 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
                 return (
                   <tr
                     key={person.id}
-                    className="transition-colors group"
+                    onClick={() => setSelected(person)}
+                    className="transition-colors group cursor-pointer"
                     style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--table-row-hover)'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)'}
@@ -355,10 +358,10 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openEdit(person)} className="w-9 h-9 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Tahrirlash">
+                        <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="w-9 h-9 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Tahrirlash">
                           <Edit3 size={16} />
                         </button>
-                        <button onClick={() => { if (confirm(person.name + (t.confirmDelete || " ni o'chirasizmi?"))) onDelete(person.id); }} className="w-9 h-9 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="O'chirish">
+                        <button onClick={(e) => { e.stopPropagation(); if (confirm(person.name + (t.confirmDelete || " ni o'chirasizmi?"))) onDelete(person.id); }} className="w-9 h-9 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="O'chirish">
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -378,6 +381,16 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           </table>
         </div>
       </div>
+
+      {/* XODIM DETAL DRAWER */}
+      {selected && (
+        <StaffDrawer
+          person={selected}
+          companies={companies}
+          onClose={() => setSelected(null)}
+          onEdit={(p) => { setSelected(null); openEdit(p); }}
+        />
+      )}
     </div>
   );
 };

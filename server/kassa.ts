@@ -147,6 +147,7 @@ export async function createExpense(data: {
   date: Date;
   category: string;
   description?: string;
+  paymentMethod?: string;
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -194,6 +195,7 @@ export async function updateExpense(id: string, data: {
   date: Date;
   category: string;
   description?: string;
+  paymentMethod?: string;
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -241,6 +243,7 @@ export async function upsertPayment(data: {
   amount: number;
   status: string;
   paymentDate?: Date;
+  paymentMethod?: string;
   comment?: string;
 }) {
   const session = await auth();

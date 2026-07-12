@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ALLOWED_VIEWS, type UserRole } from "@/lib/permissions";
 import { useMobileNav } from "@/components/MobileNavContext";
@@ -89,15 +90,14 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
         style={{ borderBottom: "1px solid var(--sidebar-border)" }}
       >
         <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-md"
-            style={{
-              background: "linear-gradient(135deg, #2563EB, #4F46E5)",
-              boxShadow: "0 4px 12px rgba(37, 99, 235, 0.35)",
-            }}
-          >
-            A
-          </div>
+          <Image
+            src="/asro-logo-192.png"
+            alt="ASRO"
+            width={34}
+            height={34}
+            priority
+            className="w-[34px] h-[34px] object-contain shrink-0"
+          />
           <div>
             <h1
               className="text-[16px] font-black tracking-tight leading-none"

@@ -328,6 +328,7 @@ model Payment {
   amount      Decimal  @db.Decimal(12, 2)
   paymentDate DateTime?
   status      String   @default("pending") // 'paid' | 'pending' | 'partial' | 'overdue'
+  paymentMethod String @default("naqd") // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
   comment     String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -532,6 +533,7 @@ model Expense {
   amount      Decimal   @db.Decimal(12, 2)
   date        DateTime
   category    String
+  paymentMethod String  @default("naqd") // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
   description String?
   // Tasdiqlash oqimi: <1mln avto, 1-10mln Bosh Buxgalter, >10mln + Superadmin
   status      String    @default("pending") // pending | approved | rejected

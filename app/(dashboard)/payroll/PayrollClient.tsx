@@ -40,7 +40,7 @@ export default function PayrollClient({ companies, staff, operations, userRole }
         </button>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {activeTab === 'drafts' ? (
           <PayrollDrafts
             companies={companies}

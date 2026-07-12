@@ -179,7 +179,8 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
         ref={buttonRef}
         onClick={() => !readOnly && setIsOpen(!isOpen)}
         disabled={readOnly}
-        className={`w-full h-6 min-w-[24px] px-1 rounded-sm flex items-center justify-center text-[10px] font-bold transition-all border border-black/5 dark:border-white/5 ${style.bg} ${style.text} hover:opacity-80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+        className="w-full h-6 min-w-[24px] px-1 rounded-sm flex items-center justify-center text-[10px] font-bold transition-all border border-black/5 dark:border-white/5 hover:opacity-80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ background: style.bg, color: style.text }}
         title={style.tooltip}
       >
         <span className="truncate w-full text-center block uppercase">{style.icon}</span>
@@ -782,7 +783,7 @@ const OperationModule: React.FC<Props> = ({
                   return [...groupCounts.entries()].map(([name, count]) => {
                     const style = groupColors[name] || { bg: 'var(--surface-2)', color: 'var(--text-3)' };
                     return (
-                      <th key={name} colSpan={count} className="sticky top-0 px-1 py-1.5 text-center text-[10px] font-black uppercase tracking-wider" style={{ background: style.bg, color: style.color, borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>
+                      <th key={name} colSpan={count} className="sticky top-0 px-1 py-1.5 text-center text-[10px] font-black uppercase tracking-wider" style={{ background: `linear-gradient(${style.bg}, ${style.bg}), var(--surface-2)`, color: style.color, borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>
                         {name}
                       </th>
                     );
@@ -801,7 +802,7 @@ const OperationModule: React.FC<Props> = ({
                       <React.Fragment key={col.key}>
                         <th
                           className="sticky top-[28px] px-0.5 py-2 text-center w-10 text-[9px] cursor-help"
-                          style={{ background: 'rgba(52, 208, 88, 0.08)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
+                          style={{ background: 'linear-gradient(rgba(52, 208, 88, 0.08), rgba(52, 208, 88, 0.08)), var(--surface)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
                           title={col.label}
                         >
                           <span className="text-[10px] font-black tracking-widest" style={{ color: '#34d058' }}>{col.short}</span>
@@ -809,7 +810,7 @@ const OperationModule: React.FC<Props> = ({
                         </th>
                         <th
                           className="sticky top-[28px] px-0.5 py-2 text-center w-10 cursor-help"
-                          style={{ background: 'rgba(255, 215, 0, 0.08)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
+                          style={{ background: 'linear-gradient(rgba(255, 215, 0, 0.08), rgba(255, 215, 0, 0.08)), var(--surface)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
                           title={`${col.label} to'lov`}
                         >
                           <span className="text-[10px] font-black tracking-widest" style={{ color: '#ffd700' }}>{(col as any).payShort}</span>

@@ -2,14 +2,17 @@
 
 import { signOut } from "next-auth/react";
 import {
-  LogOut, User, Sun, Moon, Building2, ChevronDown, Globe,
-  Bell, Settings, Search, Command, Menu
+  LogOut, User, Sun, Moon, ChevronDown, Globe,
+  Bell, Settings, Menu
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { toast } from "sonner";
 import { useMobileNav } from "@/components/MobileNavContext";
 import { useTheme } from "next-themes";
+import GlobalSearch from "@/components/GlobalSearch";
+import FinanceAssistant from "@/components/FinanceAssistant";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin:      "Super Admin",
@@ -94,62 +97,16 @@ export function DashboardTopBar({
         >
           <Menu size={20} />
         </button>
-        <div className="relative hidden md:flex items-center max-w-xs w-full">
-          <Search
-            size={15}
-            className="absolute left-3.5 pointer-events-none"
-            style={{ color: "var(--text-muted)" }}
-          />
-          <input
-            type="text"
-            placeholder="Qidirish..."
-            className="w-full pl-10 pr-10 py-2 text-sm rounded-lg outline-none transition-all"
-            style={{
-              background: "var(--input-bg)",
-              border: "1px solid var(--input-border)",
-              color: "var(--text-primary)",
-              fontSize: "13px",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--input-focus-border)";
-              e.currentTarget.style.boxShadow = `0 0 0 3px var(--input-focus-ring)`;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--input-border)";
-              e.currentTarget.style.boxShadow = "";
-            }}
-          />
-          <div
-            className="absolute right-3 flex items-center gap-0.5 pointer-events-none"
-            style={{ color: "var(--text-muted)" }}
-          >
-            <Command size={11} />
-            <span style={{ fontSize: "11px", fontWeight: 600 }}>K</span>
-          </div>
-        </div>
+        {/* Mobil brend belgisi (sidebar yashiringanda) */}
+        <Link href="/dashboard" className="md:hidden flex items-center gap-2" aria-label="ASRO">
+          <Image src="/asro-logo-192.png" alt="ASRO" width={28} height={28} priority className="w-7 h-7 object-contain" />
+          <span className="text-[15px] font-black tracking-tight" style={{ color: "var(--text-primary)" }}>ASRO</span>
+        </Link>
+        {/* Global qidiruv */}
+        <GlobalSearch />
 
-        {/* Company selector */}
-        <button
-          className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all"
-          style={{
-            background: "var(--input-bg)",
-            border: "1px solid var(--input-border)",
-            color: "var(--text-secondary)",
-            fontSize: "13px",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "var(--accent-blue)";
-            e.currentTarget.style.color = "var(--text-primary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "var(--input-border)";
-            e.currentTarget.style.color = "var(--text-secondary)";
-          }}
-        >
-          <Building2 size={14} style={{ flexShrink: 0 }} />
-          <span className="font-medium max-w-[160px] truncate">&quot;O&apos;ztemiryo&apos;lxisob&quot;</span>
-          <ChevronDown size={13} className="flex-shrink-0 opacity-60" />
-        </button>
+        {/* AI moliyachi yordamchi */}
+        <FinanceAssistant />
       </div>
 
       {/* Right: Actions */}

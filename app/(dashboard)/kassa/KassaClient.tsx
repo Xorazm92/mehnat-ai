@@ -21,6 +21,7 @@ export default function KassaClient({ companies, payments }: Props) {
       amount: Number(payment.amount || 0),
       status: payment.status as string,
       paymentDate: payment.paymentDate ? new Date(payment.paymentDate) : undefined,
+      paymentMethod: payment.paymentMethod || "naqd",
       comment: payment.comment,
     });
     router.refresh();

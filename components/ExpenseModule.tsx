@@ -5,6 +5,7 @@ import { Expense, Language } from '@/types';
 import { translations } from '@/lib/translations';
 import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { canApproveExpense } from '@/lib/expenseApproval';
+import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_COLORS } from '@/lib/constants';
 
 interface ExpenseModuleProps {
     expenses: Expense[];
@@ -207,7 +208,8 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         setEditingExpense({
                             date: new Date().toISOString().split('T')[0],
                             category: 'Office',
-                            amount: 0
+                            amount: 0,
+                            paymentMethod: 'naqd'
                         });
                         setIsModalOpen(true);
                     }}
@@ -228,6 +230,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[120px]" style={{ color: 'var(--text-muted)' }}>Sana</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[150px]" style={{ color: 'var(--text-muted)' }}>Kategoriya</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Izoh</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[130px]" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[150px]" style={{ color: 'var(--text-muted)' }}>Summa</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[130px]" style={{ color: 'var(--text-muted)' }}>Holat</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[100px]" style={{ color: 'var(--text-muted)' }}>Amallar</th>
@@ -242,6 +245,17 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     </td>
                                     <td className="px-6 py-4 text-[13px] font-bold truncate max-w-[300px] tracking-tight" style={{ color: 'var(--text)' }}>
                                         {expense.description || "—"}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {(() => {
+                                            const pm = expense.paymentMethod || 'naqd';
+                                            const c = PAYMENT_METHOD_COLORS[pm] || '#64748b';
+                                            return (
+                                                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md whitespace-nowrap" style={{ color: c, background: `${c}1a`, border: `1px solid ${c}40` }}>
+                                                    {PAYMENT_METHOD_LABELS[pm] || pm}
+                                                </span>
+                                            );
+                                        })()}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <span className="font-bold text-[13px] tabular-nums" style={{ color: 'var(--danger)' }}>
@@ -297,7 +311,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                             ))}
                             {filteredExpenses.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-24 text-center">
+                                    <td colSpan={7} className="px-6 py-24 text-center">
                                         <div className="flex flex-col items-center" style={{ color: 'var(--text-muted)' }}>
                                             <Search size={48} className="mb-4 opacity-20" />
                                             <span className="text-[11px] uppercase font-bold tracking-[0.2em] opacity-60">Ma&apos;lumot topilmadi</span>
@@ -360,6 +374,17 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     </select>
                                 </div>
                                 <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</label>
+                                    <select
+                                        value={editingExpense?.paymentMethod || 'naqd'}
+                                        onChange={(e) => setEditingExpense(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
+                                    >
+                                        {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label.toUpperCase()}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
                                     <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
                                     <input
                                         type="text"

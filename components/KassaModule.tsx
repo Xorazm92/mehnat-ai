@@ -5,6 +5,7 @@ import { Company, Payment, PaymentStatus, Language } from '@/types';
 import { translations } from '@/lib/translations';
 import { Wallet, Search, Plus, CheckCircle2, Clock, Trash2, CreditCard, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_COLORS } from '@/lib/constants';
 
 interface KassaModuleProps {
     companies: Company[];
@@ -57,6 +58,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                 amount: item.contractAmount,
                 period: selectedPeriod,
                 status: PaymentStatus.PAID,
+                paymentMethod: 'naqd',
                 paymentDate: new Date().toISOString().split('T')[0],
             }
         );
@@ -182,6 +184,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.inn}</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>{t.status}</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right" style={{ color: 'var(--text-muted)' }}>{t.actions}</th>
                             </tr>
                         </thead>
@@ -215,6 +218,17 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                                 Kutilmoqda
                                             </span>
                                         )}
+                                    </td>
+                                    <td className="px-6 py-3 text-center">
+                                        {item.payment ? (() => {
+                                            const pm = item.payment.paymentMethod || 'naqd';
+                                            const c = PAYMENT_METHOD_COLORS[pm] || '#64748b';
+                                            return (
+                                                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md whitespace-nowrap" style={{ color: c, background: `${c}1a`, border: `1px solid ${c}40` }}>
+                                                    {PAYMENT_METHOD_LABELS[pm] || pm}
+                                                </span>
+                                            );
+                                        })() : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                                     </td>
                                     <td className="px-6 py-3 text-right">
                                         <div className="flex items-center justify-end gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
@@ -311,6 +325,17 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                     </select>
                                 </div>
                                 <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</label>
+                                    <select
+                                        value={editingPayment?.paymentMethod || 'naqd'}
+                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
+                                    >
+                                        {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label.toUpperCase()}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
                                     <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
                                     <input
                                         type="text"

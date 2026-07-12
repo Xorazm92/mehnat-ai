@@ -16,6 +16,7 @@ export interface Payment {
   period: string;
   paymentDate: string;
   status: PaymentStatus;
+  paymentMethod?: string; // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
   comment: string;
   createdAt: string;
 }
@@ -25,6 +26,7 @@ export interface Expense {
   amount: number;
   date: string;
   category: string;
+  paymentMethod?: string; // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
   description: string;
   createdAt: string;
   status?: string; // pending | approved | rejected

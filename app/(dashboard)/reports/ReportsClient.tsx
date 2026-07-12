@@ -28,8 +28,8 @@ export default function ReportsClient({ companies, operations, staff, userRole }
   ];
 
   return (
-    <div className="space-y-0">
-      <div className="flex gap-1 overflow-x-auto border-b bg-white dark:bg-[#1a1d23] pt-2 px-2 shadow-sm rounded-t"
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex gap-1 overflow-x-auto border-b bg-white dark:bg-[#1a1d23] pt-2 px-2 shadow-sm rounded-t flex-shrink-0"
         style={{ borderColor: "var(--card-border)" }}>
         {tabs.map((t) => {
           const active = tab === t.id;
@@ -42,7 +42,7 @@ export default function ReportsClient({ companies, operations, staff, userRole }
           );
         })}
       </div>
-      <div>
+      <div className={`flex-1 min-h-0 ${tab === "matrix" ? "flex flex-col" : "overflow-auto"}`}>
         {tab === "reports" ? (
           <HisobotlarModule companies={companies} staff={staff} lang="uz" />
         ) : (

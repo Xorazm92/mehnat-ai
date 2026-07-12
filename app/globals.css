@@ -60,6 +60,11 @@
   --border: #E2E8F0;
   --danger-dark: #B91C1C;
   --warning-light: rgba(217, 119, 6, 0.1);
+  /* Surface/text scale — amallar matritsasi (OperationModule) uchun */
+  --surface: #FFFFFF;
+  --surface-2: #F1F5F9;
+  --text-2: #475569;
+  --text-3: #94A3B8;
 
   /* Sidebar */
   --sidebar-bg: #FFFFFF;
@@ -156,6 +161,12 @@
   --border: rgba(255, 255, 255, 0.08);
   --danger-dark: #EF4444;
   --warning-light: rgba(251, 191, 36, 0.12);
+  /* Surface/text scale — amallar matritsasi (OperationModule) uchun.
+     --surface-2 noshaffof: sticky sarlavha ostidan kontent ko'rinmasligi uchun */
+  --surface: #1A1E2A;
+  --surface-2: #242938;
+  --text-2: #94A3B8;
+  --text-3: #64748B;
 
   /* Sidebar */
   --sidebar-bg: #13161F;

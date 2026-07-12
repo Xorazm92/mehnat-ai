@@ -141,3 +141,23 @@ export const getBackoffDelay = (attempt: number): number => {
 export const isFeatureEnabled = (feature: keyof typeof FEATURES): boolean => {
   return FEATURES[feature];
 };
+
+// ============= TO'LOV USULLARI (kirim / xarajat) =============
+// Naqd, plastik, hisob raqamdan (schyot), terminal (POS), boshqa
+export const PAYMENT_METHODS = [
+  { value: "naqd", label: "Naqd pul", color: "#10b981" },
+  { value: "plastik", label: "Plastik karta", color: "#3b82f6" },
+  { value: "schyot", label: "Hisob raqamdan", color: "#8b5cf6" },
+  { value: "terminal", label: "Terminal (POS)", color: "#f59e0b" },
+  { value: "boshqa", label: "Boshqa", color: "#64748b" },
+] as const;
+
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]["value"];
+
+export const PAYMENT_METHOD_LABELS: Record<string, string> = Object.fromEntries(
+  PAYMENT_METHODS.map((m) => [m.value, m.label])
+);
+
+export const PAYMENT_METHOD_COLORS: Record<string, string> = Object.fromEntries(
+  PAYMENT_METHODS.map((m) => [m.value, m.color])
+);

@@ -20,6 +20,7 @@ export default function ExpensesClient({ expenses, userRole }: Props) {
       date: new Date(expense.date as string),
       category: expense.category as string,
       description: expense.description,
+      paymentMethod: expense.paymentMethod || "naqd",
     };
     if (expense.id) {
       await updateExpense(expense.id, data);

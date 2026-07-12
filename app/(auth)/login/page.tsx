@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -148,12 +149,14 @@ export default function LoginPage() {
 function Logo() {
   return (
     <div className="flex items-center gap-3">
-      <div
-        className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30"
-        style={{ background: "linear-gradient(135deg, #2563EB, #4F46E5)" }}
-      >
-        <span className="text-white text-lg font-black tracking-tighter">A</span>
-      </div>
+      <Image
+        src="/asro-logo-192.png"
+        alt="ASRO"
+        width={48}
+        height={48}
+        priority
+        className="w-12 h-12 object-contain drop-shadow-[0_4px_12px_rgba(37,99,235,0.35)]"
+      />
       <div>
         <div className="text-[20px] font-black tracking-tight leading-none">ASRO</div>
         <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-blue-400/80 mt-1">
