@@ -6,6 +6,133 @@ import { isSeniorRole } from "@/lib/permissions";
 import { serialize } from "@/lib/serialize";
 
 // ─────────────────────────────────────────────
+// SHAXSIY KABINET ("Mening kabinetim") — har qanday rol uchun
+// Profil + biriktirilgan firmalar + KPI/oylik + davomat
+// ─────────────────────────────────────────────
+export async function getMyCabinet() {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const userId = session.user.id;
+  const currentMonth = new Date().toISOString().slice(0, 7); // "2026-07"
+  const sixtyDaysAgo = new Date();
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+  const [profile, companies, kpiRecords, adjustments, attendance] = await Promise.all([
+    // Shaxsiy profil (parolsiz)
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        avatarColor: true,
+        phone: true,
+        pinfl: true,
+        department: true,
+        gender: true,
+        birthDate: true,
+        education: true,
+        hiredAt: true,
+        status: true,
+        rating: true,
+        createdAt: true,
+      },
+    }),
+
+    // Xodim istalgan rol bilan biriktirilgan firmalar
+    prisma.company.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { accountantId: userId },
+          { chiefAccountantId: userId },
+          { supervisorId: userId },
+          { bankClientId: userId },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        inn: true,
+        taxRegime: true,
+        riskLevel: true,
+        accountantId: true,
+        chiefAccountantId: true,
+        supervisorId: true,
+        bankClientId: true,
+      },
+      orderBy: { name: "asc" },
+    }),
+
+    // Joriy oy KPI ko'rsatkichlari
+    prisma.monthlyPerformance.findMany({
+      where: { employeeId: userId, month: { startsWith: currentMonth } },
+      include: { rule: { select: { nameUz: true, category: true } } },
+      orderBy: { recordedAt: "desc" },
+      take: 20,
+    }),
+
+    // Joriy oy oylik tuzatmalari (bonus / avans / jarima)
+    prisma.payrollAdjustment.findMany({
+      where: { employeeId: userId, month: { startsWith: currentMonth } },
+      orderBy: { createdAt: "desc" },
+    }),
+
+    // So'nggi 60 kunlik davomat
+    prisma.attendance.findMany({
+      where: { userId, date: { gte: sixtyDaysAgo } },
+      orderBy: { date: "desc" },
+      take: 60,
+    }),
+  ]);
+
+  // Har bir firma uchun xodimning roli
+  const myRole = (c: {
+    accountantId: string | null;
+    chiefAccountantId: string | null;
+    supervisorId: string | null;
+    bankClientId: string | null;
+  }) => {
+    if (c.accountantId === userId) return "accountant";
+    if (c.chiefAccountantId === userId) return "chief_accountant";
+    if (c.supervisorId === userId) return "supervisor";
+    if (c.bankClientId === userId) return "bank_manager";
+    return "";
+  };
+
+  const companiesWithRole = companies.map((c) => ({ ...c, myRole: myRole(c) }));
+
+  const totalScore = kpiRecords.reduce((s, p) => s + Number(p.calculatedScore), 0);
+  const approvedCount = kpiRecords.filter((p) => p.status === "approved").length;
+  const pendingCount = kpiRecords.filter((p) => p.status !== "approved").length;
+
+  const bonusTotal = adjustments
+    .filter((a) => a.adjustmentType === "bonus")
+    .reduce((s, a) => s + Number(a.amount), 0);
+  const penaltyTotal = adjustments
+    .filter((a) => a.adjustmentType === "jarima")
+    .reduce((s, a) => s + Number(a.amount), 0);
+
+  const presentDays = attendance.filter((a) => a.status === "present").length;
+  const lateDays = attendance.filter((a) => a.status === "late").length;
+  const absentDays = attendance.filter((a) => a.status === "absent").length;
+
+  return serialize({
+    profile,
+    companies: companiesWithRole,
+    companiesCount: companiesWithRole.length,
+    kpi: { totalScore, approvedCount, pendingCount, records: kpiRecords },
+    adjustments,
+    payrollSummary: { bonusTotal, penaltyTotal, net: bonusTotal - penaltyTotal },
+    attendance,
+    attendanceSummary: { presentDays, lateDays, absentDays, total: attendance.length },
+    currentMonth,
+  });
+}
+
+// ─────────────────────────────────────────────
 // BUXGALTER KABINETI uchun ma'lumotlar
 // ─────────────────────────────────────────────
 export async function getAccountantCabinetData() {

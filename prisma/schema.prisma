@@ -67,6 +67,7 @@ model User {
   role         UserRole  @default(accountant)
   avatarColor  String?   @default("hsl(200, 50%, 50%)")
   phone        String?
+  pinfl        String? // JSHSHIR — 14 raqamli shaxsiy identifikatsiya raqami
   department   String?
   gender       String? // 'erkak' | 'ayol'
   birthDate    DateTime?

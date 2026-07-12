@@ -1,0 +1,650 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  User as UserIcon,
+  Building2,
+  TrendingUp,
+  CalendarCheck,
+  ShieldCheck,
+  Mail,
+  GraduationCap,
+  Briefcase,
+  CalendarDays,
+  Save,
+  Loader2,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Award,
+  Wallet,
+} from "lucide-react";
+import { updateUser, changePassword } from "@/server/users";
+import { ROLE_LABELS, ROLE_COLORS, type UserRole } from "@/lib/permissions";
+
+// ─── Tiplar ────────────────────────────────────────────────
+interface Profile {
+  id: string;
+  email: string;
+  fullName: string;
+  role: string;
+  avatarColor: string | null;
+  phone: string | null;
+  pinfl: string | null;
+  department: string | null;
+  gender: string | null;
+  birthDate: string | null;
+  education: string | null;
+  hiredAt: string | null;
+  status: string | null;
+  rating: number | null;
+  createdAt: string;
+}
+interface CabinetCompany {
+  id: string;
+  name: string;
+  inn: string;
+  taxRegime: string;
+  riskLevel: string | null;
+  myRole: string;
+}
+interface KpiRecord {
+  id: string;
+  calculatedScore: number;
+  status: string;
+  rule: { nameUz: string; category: string };
+  month: string;
+}
+interface Adjustment {
+  id: string;
+  adjustmentType: string;
+  amount: number;
+  reason: string;
+  isApproved: boolean;
+}
+interface AttendanceRow {
+  id: string;
+  date: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  status: string;
+  notes: string | null;
+}
+
+export interface MyCabinetProps {
+  profile: Profile;
+  companies: CabinetCompany[];
+  companiesCount: number;
+  kpi: { totalScore: number; approvedCount: number; pendingCount: number; records: KpiRecord[] };
+  adjustments: Adjustment[];
+  payrollSummary: { bonusTotal: number; penaltyTotal: number; net: number };
+  attendance: AttendanceRow[];
+  attendanceSummary: { presentDays: number; lateDays: number; absentDays: number; total: number };
+  currentMonth: string;
+}
+
+const TABS = [
+  { id: "profile", label: "Profil", icon: UserIcon },
+  { id: "companies", label: "Firmalarim", icon: Building2 },
+  { id: "kpi", label: "KPI & Oylik", icon: TrendingUp },
+  { id: "attendance", label: "Davomat", icon: CalendarCheck },
+  { id: "security", label: "Xavfsizlik", icon: ShieldCheck },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
+const EDUCATION_LABELS: Record<string, string> = {
+  oliy: "Oliy",
+  orta: "O'rta / O'rta-maxsus",
+  magistratura: "Magistratura",
+};
+const STATUS_LABELS: Record<string, string> = {
+  active: "Faol (ishda)",
+  vacation: "Mehnat ta'tilida",
+  sick: "Betob / kasal",
+};
+
+const fmtMoney = (n: number) => new Intl.NumberFormat("uz-UZ").format(Math.round(n));
+const fmtDate = (s: string | null) =>
+  s ? new Date(s).toLocaleDateString("uz-UZ", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+const fmtTime = (s: string | null) =>
+  s ? new Date(s).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }) : "—";
+
+export default function MyCabinet(props: MyCabinetProps) {
+  const { profile, companies, kpi, adjustments, payrollSummary, attendance, attendanceSummary, currentMonth } = props;
+  const router = useRouter();
+  const [tab, setTab] = useState<TabId>("profile");
+
+  const roleLabel = ROLE_LABELS[profile.role as UserRole] || profile.role;
+  const roleColor = ROLE_COLORS[profile.role as UserRole] || "#64748b";
+  const monthLabel = new Date(`${currentMonth}-01`).toLocaleDateString("uz-UZ", { month: "long", year: "numeric" });
+
+  return (
+    <div className="space-y-6 animate-fade-in pb-20">
+      {/* ─── HEADER ─────────────────────────────── */}
+      <div className="dashboard-card p-6 flex flex-col lg:flex-row lg:items-center gap-6">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div
+            className="w-16 h-16 rounded-2xl shrink-0 flex items-center justify-center text-2xl font-black text-white shadow-md"
+            style={{ backgroundColor: profile.avatarColor || roleColor }}
+          >
+            {profile.fullName.charAt(0)}
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-lg font-black tracking-tight truncate" style={{ color: "var(--text)" }}>
+              {profile.fullName}
+            </h2>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <span
+                className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg"
+                style={{ color: roleColor, background: `${roleColor}1a`, border: `1px solid ${roleColor}40` }}
+              >
+                {roleLabel}
+              </span>
+              <span className="text-[11px] font-bold flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
+                <Mail size={12} /> {profile.email}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* stat chips */}
+        <div className="grid grid-cols-3 gap-3 shrink-0">
+          <HeaderStat icon={Building2} value={companies.length} label="Firmalar" color="var(--accent-blue)" />
+          <HeaderStat icon={Award} value={Math.round(kpi.totalScore)} label="KPI ball" color="#8b5cf6" />
+          <HeaderStat icon={CalendarCheck} value={attendanceSummary.presentDays} label="Kelgan kun" color="#10b981" />
+        </div>
+      </div>
+
+      {/* ─── TABS ───────────────────────────────── */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className="px-4 py-2.5 rounded-xl text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 whitespace-nowrap transition-all shrink-0"
+              style={
+                active
+                  ? { background: "var(--accent-blue)", color: "#fff", boxShadow: "0 4px 12px rgba(37,99,235,.25)" }
+                  : { background: "var(--card-bg)", color: "var(--text-secondary)", border: "1px solid var(--card-border)" }
+              }
+            >
+              <Icon size={15} /> {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ─── CONTENT ────────────────────────────── */}
+      {tab === "profile" && <ProfileTab profile={profile} onSaved={() => router.refresh()} />}
+      {tab === "companies" && <CompaniesTab companies={companies} />}
+      {tab === "kpi" && (
+        <KpiTab kpi={kpi} adjustments={adjustments} payrollSummary={payrollSummary} monthLabel={monthLabel} />
+      )}
+      {tab === "attendance" && <AttendanceTab attendance={attendance} summary={attendanceSummary} />}
+      {tab === "security" && <SecurityTab userId={profile.id} />}
+    </div>
+  );
+}
+
+// ─── Header stat chip ──────────────────────────────────────
+function HeaderStat({
+  icon: Icon,
+  value,
+  label,
+  color,
+}: {
+  icon: React.ElementType;
+  value: number;
+  label: string;
+  color: string;
+}) {
+  return (
+    <div
+      className="px-4 py-2.5 rounded-xl flex flex-col items-center justify-center min-w-[92px]"
+      style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}
+    >
+      <Icon size={16} style={{ color }} />
+      <span className="text-lg font-black tabular-nums mt-0.5" style={{ color: "var(--text)" }}>
+        {value}
+      </span>
+      <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ─── PROFIL TAB ────────────────────────────────────────────
+function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    fullName: profile.fullName || "",
+    phone: profile.phone || "",
+    pinfl: profile.pinfl || "",
+    department: profile.department || "",
+    gender: profile.gender || "",
+    birthDate: profile.birthDate ? profile.birthDate.slice(0, 10) : "",
+    education: profile.education || "",
+    avatarColor: profile.avatarColor || "#2563eb",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!form.fullName.trim()) {
+      toast.error("F.I.SH bo'sh bo'lishi mumkin emas");
+      return;
+    }
+    if (form.pinfl && !/^\d{14}$/.test(form.pinfl)) {
+      toast.error("JSHSHIR 14 ta raqamdan iborat bo'lishi kerak");
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateUser(profile.id, form);
+      toast.success("Profil saqlandi");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Xatolik yuz berdi");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Editable card */}
+      <div className="dashboard-card p-6 lg:col-span-2 space-y-5">
+        <SectionTitle icon={UserIcon} title="Shaxsiy ma'lumotlar" hint="O'zingiz tahrirlashingiz mumkin" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField label="F.I.SH *">
+            <input className="erp-input" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+          </FormField>
+          <FormField label="Telefon">
+            <input className="erp-input" placeholder="+998 90 123 45 67" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          </FormField>
+          <FormField label="JSHSHIR (14 raqam)">
+            <input
+              className="erp-input font-mono tracking-wider"
+              placeholder="12345678901234"
+              maxLength={14}
+              value={form.pinfl}
+              onChange={(e) => setForm({ ...form, pinfl: e.target.value.replace(/\D/g, "") })}
+            />
+          </FormField>
+          <FormField label="Bo'lim">
+            <input className="erp-input" placeholder="Masalan: Buxgalteriya" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
+          </FormField>
+          <FormField label="Jinsi">
+            <select className="erp-input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+              <option value="">Tanlanmagan</option>
+              <option value="erkak">Erkak</option>
+              <option value="ayol">Ayol</option>
+            </select>
+          </FormField>
+          <FormField label="Tug'ilgan sana">
+            <input type="date" className="erp-input" value={form.birthDate} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
+          </FormField>
+          <FormField label="Ma'lumoti">
+            <select className="erp-input" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })}>
+              <option value="">Tanlanmagan</option>
+              <option value="orta">O&apos;rta / O&apos;rta-maxsus</option>
+              <option value="oliy">Oliy</option>
+              <option value="magistratura">Magistratura</option>
+            </select>
+          </FormField>
+          <FormField label="Avatar rangi">
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                className="w-12 h-11 rounded-lg cursor-pointer border"
+                style={{ borderColor: "var(--card-border)", background: "var(--input-bg)" }}
+                value={form.avatarColor}
+                onChange={(e) => setForm({ ...form, avatarColor: e.target.value })}
+              />
+              <span className="text-[12px] font-mono" style={{ color: "var(--text-muted)" }}>{form.avatarColor}</span>
+            </div>
+          </FormField>
+        </div>
+        <div className="flex justify-end pt-2">
+          <button onClick={save} disabled={saving} className="c1-btn c1-btn-primary flex items-center gap-2 px-8 py-3 text-[12px]">
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {saving ? "Saqlanmoqda..." : "Saqlash"}
+          </button>
+        </div>
+      </div>
+
+      {/* Read-only card */}
+      <div className="dashboard-card p-6 space-y-4 h-fit">
+        <SectionTitle icon={ShieldCheck} title="Hisob ma'lumotlari" hint="Faqat admin o'zgartiradi" />
+        <InfoRow icon={Mail} label="Login (email)" value={profile.email} />
+        <InfoRow icon={Briefcase} label="Lavozim" value={ROLE_LABELS[profile.role as UserRole] || profile.role} />
+        <InfoRow icon={CalendarDays} label="Ishga kirgan" value={fmtDate(profile.hiredAt)} />
+        <InfoRow icon={GraduationCap} label="Ma'lumoti" value={profile.education ? EDUCATION_LABELS[profile.education] || profile.education : "—"} />
+        <InfoRow icon={CheckCircle2} label="Holati" value={profile.status ? STATUS_LABELS[profile.status] || profile.status : "—"} />
+        <InfoRow icon={Award} label="Reyting" value={profile.rating != null ? String(profile.rating) : "—"} />
+      </div>
+    </div>
+  );
+}
+
+// ─── FIRMALARIM TAB ────────────────────────────────────────
+function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
+  const riskColors: Record<string, { c: string; bg: string }> = {
+    low: { c: "#10b981", bg: "rgba(16,185,129,.12)" },
+    medium: { c: "#f59e0b", bg: "rgba(245,158,11,.12)" },
+    high: { c: "#ef4444", bg: "rgba(239,68,68,.12)" },
+  };
+  if (companies.length === 0) {
+    return <EmptyState icon={Building2} text="Sizga hali firma biriktirilmagan" />;
+  }
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {companies.map((c) => {
+        const risk = c.riskLevel ? riskColors[c.riskLevel] : null;
+        const roleC = ROLE_COLORS[c.myRole as UserRole] || "#64748b";
+        return (
+          <div key={c.id} className="dashboard-card p-5 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-[14px] font-black truncate" style={{ color: "var(--text)" }}>{c.name}</div>
+                <div className="text-[11px] font-mono mt-0.5" style={{ color: "var(--text-muted)" }}>INN: {c.inn}</div>
+              </div>
+              {risk && (
+                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg shrink-0" style={{ color: risk.c, background: risk.bg }}>
+                  {c.riskLevel === "low" ? "Past" : c.riskLevel === "medium" ? "O'rta" : "Yuqori"} risk
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: "var(--text-secondary)", background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
+                {c.taxRegime}
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: roleC, background: `${roleC}1a`, border: `1px solid ${roleC}40` }}>
+                {ROLE_LABELS[c.myRole as UserRole] || c.myRole}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── KPI & OYLIK TAB ───────────────────────────────────────
+function KpiTab({
+  kpi,
+  adjustments,
+  payrollSummary,
+  monthLabel,
+}: {
+  kpi: MyCabinetProps["kpi"];
+  adjustments: Adjustment[];
+  payrollSummary: MyCabinetProps["payrollSummary"];
+  monthLabel: string;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={TrendingUp} value={Math.round(kpi.totalScore)} label={`KPI ball · ${monthLabel}`} color="#8b5cf6" />
+        <StatCard icon={CheckCircle2} value={kpi.approvedCount} label="Tasdiqlangan" color="#10b981" />
+        <StatCard icon={Clock} value={kpi.pendingCount} label="Kutilmoqda" color="#f59e0b" />
+        <StatCard icon={Wallet} value={fmtMoney(payrollSummary.net)} label="Bonus − jarima (so'm)" color="var(--accent-blue)" small />
+      </div>
+
+      <div className="dashboard-card overflow-hidden">
+        <div className="p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
+          <SectionTitle icon={TrendingUp} title="KPI ko'rsatkichlari" hint={monthLabel} />
+        </div>
+        {kpi.records.length === 0 ? (
+          <EmptyState icon={TrendingUp} text="Bu oy uchun KPI yozuvi yo'q" inline />
+        ) : (
+          <div className="divide-y" style={{ borderColor: "var(--card-border)" }}>
+            {kpi.records.map((r) => (
+              <div key={r.id} className="flex items-center justify-between px-5 py-3.5 gap-4">
+                <div className="min-w-0">
+                  <div className="text-[13px] font-bold truncate" style={{ color: "var(--text)" }}>{r.rule?.nameUz || "—"}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>{r.rule?.category || ""}</div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[15px] font-black tabular-nums" style={{ color: Number(r.calculatedScore) >= 0 ? "#10b981" : "#ef4444" }}>
+                    {Number(r.calculatedScore) > 0 ? "+" : ""}{Number(r.calculatedScore)}
+                  </span>
+                  <KpiStatusBadge status={r.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="dashboard-card overflow-hidden">
+        <div className="p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
+          <SectionTitle icon={Wallet} title="Oylik tuzatmalari" hint="Bonus · avans · jarima" />
+        </div>
+        {adjustments.length === 0 ? (
+          <EmptyState icon={Wallet} text="Bu oy uchun tuzatma yo'q" inline />
+        ) : (
+          <div className="divide-y" style={{ borderColor: "var(--card-border)" }}>
+            {adjustments.map((a) => {
+              const isNeg = a.adjustmentType === "jarima" || a.adjustmentType === "avans";
+              return (
+                <div key={a.id} className="flex items-center justify-between px-5 py-3.5 gap-4">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-bold capitalize" style={{ color: "var(--text)" }}>{a.adjustmentType}</div>
+                    <div className="text-[11px] truncate" style={{ color: "var(--text-muted)" }}>{a.reason}</div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-[13px] font-black tabular-nums" style={{ color: isNeg ? "#ef4444" : "#10b981" }}>
+                      {isNeg ? "−" : "+"}{fmtMoney(a.amount)}
+                    </span>
+                    <span
+                      className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md"
+                      style={a.isApproved ? { color: "#10b981", background: "rgba(16,185,129,.12)" } : { color: "#f59e0b", background: "rgba(245,158,11,.12)" }}
+                    >
+                      {a.isApproved ? "Tasdiqlangan" : "Kutilmoqda"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── DAVOMAT TAB ───────────────────────────────────────────
+function AttendanceTab({
+  attendance,
+  summary,
+}: {
+  attendance: AttendanceRow[];
+  summary: MyCabinetProps["attendanceSummary"];
+}) {
+  const statusMap: Record<string, { label: string; c: string; bg: string; Icon: React.ElementType }> = {
+    present: { label: "Kelgan", c: "#10b981", bg: "rgba(16,185,129,.12)", Icon: CheckCircle2 },
+    late: { label: "Kechikkan", c: "#f59e0b", bg: "rgba(245,158,11,.12)", Icon: Clock },
+    absent: { label: "Kelmagan", c: "#ef4444", bg: "rgba(239,68,68,.12)", Icon: XCircle },
+    excused: { label: "Uzrli", c: "#6366f1", bg: "rgba(99,102,241,.12)", Icon: CalendarCheck },
+  };
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard icon={CheckCircle2} value={summary.presentDays} label="Kelgan kun" color="#10b981" />
+        <StatCard icon={Clock} value={summary.lateDays} label="Kechikkan" color="#f59e0b" />
+        <StatCard icon={XCircle} value={summary.absentDays} label="Kelmagan" color="#ef4444" />
+      </div>
+      <div className="dashboard-card overflow-hidden">
+        <div className="p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
+          <SectionTitle icon={CalendarCheck} title="Davomat tarixi" hint="So'nggi 60 kun" />
+        </div>
+        {attendance.length === 0 ? (
+          <EmptyState icon={CalendarCheck} text="Davomat yozuvi yo'q" inline />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[520px]">
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--card-border)" }}>
+                  {["Sana", "Kelish", "Ketish", "Holat"].map((h) => (
+                    <th key={h} className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y" style={{ borderColor: "var(--card-border)" }}>
+                {attendance.map((a) => {
+                  const st = statusMap[a.status] || statusMap.present;
+                  const StIcon = st.Icon;
+                  return (
+                    <tr key={a.id}>
+                      <td className="px-5 py-3 text-[12px] font-bold" style={{ color: "var(--text)" }}>{fmtDate(a.date)}</td>
+                      <td className="px-5 py-3 text-[12px] tabular-nums" style={{ color: "var(--text-secondary)" }}>{fmtTime(a.checkIn)}</td>
+                      <td className="px-5 py-3 text-[12px] tabular-nums" style={{ color: "var(--text-secondary)" }}>{fmtTime(a.checkOut)}</td>
+                      <td className="px-5 py-3">
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md" style={{ color: st.c, background: st.bg }}>
+                          <StIcon size={12} /> {st.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── XAVFSIZLIK TAB ────────────────────────────────────────
+function SecurityTab({ userId }: { userId: string }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (next.length < 6) {
+      toast.error("Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak");
+      return;
+    }
+    if (next !== confirm) {
+      toast.error("Yangi parollar mos kelmadi");
+      return;
+    }
+    setSaving(true);
+    try {
+      await changePassword(userId, current, next);
+      toast.success("Parol muvaffaqiyatli o'zgartirildi");
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Xatolik yuz berdi");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="dashboard-card p-6 max-w-lg space-y-5">
+      <SectionTitle icon={ShieldCheck} title="Parolni o'zgartirish" hint="Xavfsizlik uchun kuchli parol tanlang" />
+      <FormField label="Hozirgi parol">
+        <input type="password" className="erp-input" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="••••••••" />
+      </FormField>
+      <FormField label="Yangi parol">
+        <input type="password" className="erp-input" value={next} onChange={(e) => setNext(e.target.value)} placeholder="Kamida 6 ta belgi" />
+      </FormField>
+      <FormField label="Yangi parolni takrorlang">
+        <input type="password" className="erp-input" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" />
+      </FormField>
+      <div className="flex justify-end">
+        <button onClick={submit} disabled={saving || !current || !next} className="c1-btn c1-btn-primary flex items-center gap-2 px-8 py-3 text-[12px]">
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
+          {saving ? "O'zgartirilmoqda..." : "Parolni yangilash"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Umumiy kichik komponentlar ────────────────────────────
+function SectionTitle({ icon: Icon, title, hint }: { icon: React.ElementType; title: string; hint?: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--accent-blue-light)", color: "var(--accent-blue)" }}>
+        <Icon size={18} />
+      </div>
+      <div>
+        <h3 className="text-[13px] font-black uppercase tracking-widest" style={{ color: "var(--text)" }}>{title}</h3>
+        {hint && <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>{hint}</p>}
+      </div>
+    </div>
+  );
+}
+
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={{ color: "var(--text-muted)" }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}>
+        <Icon size={15} />
+      </div>
+      <div className="min-w-0">
+        <div className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</div>
+        <div className="text-[13px] font-bold truncate" style={{ color: "var(--text)" }}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, value, label, color, small }: { icon: React.ElementType; value: number | string; label: string; color: string; small?: boolean }) {
+  return (
+    <div className="dashboard-card p-5 flex flex-col gap-2">
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color === "var(--accent-blue)" ? "var(--accent-blue-light)" : color + "1a"}`, color }}>
+        <Icon size={18} />
+      </div>
+      <div className={`${small ? "text-lg" : "text-2xl"} font-black tabular-nums`} style={{ color: "var(--text)" }}>{value}</div>
+      <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</div>
+    </div>
+  );
+}
+
+function KpiStatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; c: string; bg: string }> = {
+    approved: { label: "Tasdiqlangan", c: "#10b981", bg: "rgba(16,185,129,.12)" },
+    submitted: { label: "Yuborilgan", c: "#3b82f6", bg: "rgba(59,130,246,.12)" },
+    draft: { label: "Qoralama", c: "#f59e0b", bg: "rgba(245,158,11,.12)" },
+    rejected: { label: "Rad etilgan", c: "#ef4444", bg: "rgba(239,68,68,.12)" },
+  };
+  const s = map[status] || map.draft;
+  return (
+    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: s.c, background: s.bg }}>
+      {s.label}
+    </span>
+  );
+}
+
+function EmptyState({ icon: Icon, text, inline }: { icon: React.ElementType; text: string; inline?: boolean }) {
+  const body = (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Icon size={40} className="opacity-20 mb-3" style={{ color: "var(--text-muted)" }} />
+      <span className="text-[11px] font-black uppercase tracking-[0.2em] opacity-60" style={{ color: "var(--text-muted)" }}>{text}</span>
+    </div>
+  );
+  return inline ? body : <div className="dashboard-card">{body}</div>;
+}

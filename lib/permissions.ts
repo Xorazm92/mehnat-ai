@@ -167,6 +167,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "notifications",
   ],
   [ROLES.BANK_MANAGER]: [
+    "cabinet",
     "cabinet_bank",
     "kassa",
     "expenses",

@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import StaffModule from "@/components/StaffModule";
-import { createUser, updateUser, deactivateUser } from "@/server/users";
+import { createUser, updateUser, deactivateUser, resetUserPassword } from "@/server/users";
 import { Staff, Company, OperationEntry } from "@/types";
+import type { UserRole } from "@/lib/permissions";
 
 interface Props {
   staff: Staff[];
@@ -12,6 +14,7 @@ interface Props {
 }
 
 export default function StaffClient({ staff, companies, operations }: Props) {
+  const router = useRouter();
   const [, setSelectedStaff] = useState<Staff | null>(null);
 
   const handleSave = async (s: Partial<Staff>) => {
@@ -19,23 +22,43 @@ export default function StaffClient({ staff, companies, operations }: Props) {
       await updateUser(s.id, {
         fullName: s.name,
         phone: s.phone,
-        role: s.role as any,
+        pinfl: s.pinfl,
+        department: s.department,
+        gender: s.gender,
+        birthDate: s.birthDate,
+        education: s.education,
+        hiredAt: s.hiredAt,
+        status: s.status,
+        role: s.role as UserRole,
         avatarColor: s.avatarColor,
       });
     } else {
       await createUser({
-        email: s.email || `${s.name?.replace(/\s+/g, "").toLowerCase()}@mehnat.uz`,
+        email: (s.email || "").trim(),
         fullName: s.name || "Unknown",
-        password: s.password || "Password123!",
-        role: s.role as any,
+        password: s.password || "",
+        role: s.role as UserRole,
         phone: s.phone,
+        pinfl: s.pinfl,
+        department: s.department,
+        gender: s.gender,
+        birthDate: s.birthDate,
+        education: s.education,
+        hiredAt: s.hiredAt,
+        status: s.status,
         avatarColor: s.avatarColor,
       });
     }
+    router.refresh();
   };
 
   const handleDelete = async (id: string) => {
     await deactivateUser(id);
+    router.refresh();
+  };
+
+  const handleResetPassword = async (id: string, newPassword: string) => {
+    await resetUserPassword(id, newPassword);
   };
 
   return (
@@ -44,8 +67,9 @@ export default function StaffClient({ staff, companies, operations }: Props) {
       companies={companies}
       operations={operations}
       lang="uz"
-      onSave={handleSave as any}
+      onSave={handleSave as (s: Staff) => Promise<void>}
       onDelete={handleDelete}
+      onResetPassword={handleResetPassword}
       onStaffSelect={setSelectedStaff}
     />
   );

@@ -383,6 +383,8 @@ export interface Staff {
   role: string;
   avatarColor: string;
   phone?: string;
+  pinfl?: string; // JSHSHIR — 14 raqamli shaxsiy identifikatsiya raqami
+  department?: string;
   gender?: 'erkak' | 'ayol';
   birthDate?: string;
   education?: 'oliy' | 'orta' | 'magistratura';

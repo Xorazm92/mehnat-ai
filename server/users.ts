@@ -16,6 +16,7 @@ const SAFE_USER_SELECT = {
   role: true,
   avatarColor: true,
   phone: true,
+  pinfl: true,
   department: true,
   gender: true,
   birthDate: true,
@@ -27,6 +28,14 @@ const SAFE_USER_SELECT = {
   isActive: true,
   createdAt: true,
 } as const;
+
+// Sanani xavfsiz Date'ga aylantirish (bo'sh satr → undefined)
+function toDate(v: string | Date | undefined | null): Date | undefined {
+  if (!v) return undefined;
+  if (v instanceof Date) return v;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? undefined : d;
+}
 
 export async function getUsers() {
   const session = await auth();
@@ -45,6 +54,7 @@ export async function getUsers() {
         role: true,
         avatarColor: true,
         phone: true,
+        pinfl: true,
         department: true,
         gender: true,
         birthDate: true,
@@ -73,24 +83,20 @@ export async function getUserById(id: string) {
   return serialize(
     await prisma.user.findUnique({
       where: { id },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        avatarColor: true,
-        phone: true,
-        department: true,
-        gender: true,
-        birthDate: true,
-        education: true,
-        hiredAt: true,
-        firedAt: true,
-        status: true,
-        rating: true,
-        isActive: true,
-        createdAt: true,
-      },
+      select: SAFE_USER_SELECT,
+    })
+  );
+}
+
+// Joriy foydalanuvchining o'z profili (har qanday autentifikatsiyalangan xodim ko'ra oladi)
+export async function getMyProfile() {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  return serialize(
+    await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: SAFE_USER_SELECT,
     })
   );
 }
@@ -101,8 +107,13 @@ export async function createUser(data: {
   password: string;
   role: UserRole;
   phone?: string;
+  pinfl?: string;
   department?: string;
   gender?: string;
+  birthDate?: string | Date;
+  education?: string;
+  hiredAt?: string | Date;
+  status?: string;
   avatarColor?: string;
 }) {
   const session = await auth();
@@ -110,6 +121,15 @@ export async function createUser(data: {
 
   const role = session.user.role as string;
   if (!["super_admin", "admin"].includes(role)) throw new Error("Forbidden");
+
+  if (!data.email?.trim()) throw new Error("Email (login) kiritilishi shart");
+  if (!data.password || data.password.length < 6) {
+    throw new Error("Parol kamida 6 ta belgidan iborat bo'lishi kerak");
+  }
+
+  // Email band emasligini tekshirish — ochiq xato xabari bilan
+  const existing = await prisma.user.findUnique({ where: { email: data.email } });
+  if (existing) throw new Error("Bu email (login) allaqachon band");
 
   const passwordHash = await bcrypt.hash(data.password, 12);
 
@@ -119,9 +139,14 @@ export async function createUser(data: {
       fullName: data.fullName,
       passwordHash,
       role: data.role,
-      phone: data.phone,
-      department: data.department,
-      gender: data.gender,
+      phone: data.phone || null,
+      pinfl: data.pinfl || null,
+      department: data.department || null,
+      gender: data.gender || null,
+      birthDate: toDate(data.birthDate) ?? null,
+      education: data.education || null,
+      hiredAt: toDate(data.hiredAt) ?? new Date(),
+      status: data.status || "active",
       avatarColor: data.avatarColor || `hsl(${Math.floor(Math.random() * 360)}, 60%, 50%)`,
     },
     select: SAFE_USER_SELECT,
@@ -135,10 +160,12 @@ export async function updateUser(
   data: Partial<{
     fullName: string;
     phone: string;
+    pinfl: string;
     department: string;
     gender: string;
-    birthDate: Date;
+    birthDate: string | Date;
     education: string;
+    hiredAt: string | Date;
     status: string;
     avatarColor: string;
     role: UserRole;
@@ -156,12 +183,18 @@ export async function updateUser(
     throw new Error("Forbidden");
   }
 
-  // Can only update own profile unless admin
+  // Can only update own profile unless senior
   if (id !== userId && !isSeniorRole(role)) throw new Error("Forbidden");
+
+  // Sana maydonlarini xavfsiz Date'ga aylantirish
+  const { birthDate, hiredAt, ...rest } = data;
+  const updateData: Record<string, unknown> = { ...rest };
+  if (birthDate !== undefined) updateData.birthDate = toDate(birthDate) ?? null;
+  if (hiredAt !== undefined) updateData.hiredAt = toDate(hiredAt) ?? null;
 
   const result = await prisma.user.update({
     where: { id },
-    data,
+    data: updateData,
     select: SAFE_USER_SELECT,
   });
   revalidateTag("users", "max");
