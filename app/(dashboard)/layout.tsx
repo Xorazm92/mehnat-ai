@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { DashboardTopBar } from "@/components/DashboardTopBar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { MobileNavProvider } from "@/components/MobileNavContext";
 import { getCachedUnreadCount } from "@/lib/cached-queries";
 
 export default async function DashboardLayout({
@@ -18,6 +19,7 @@ export default async function DashboardLayout({
 
   return (
     <SessionProvider session={session}>
+      <MobileNavProvider>
       <div
         style={{
           display: "flex",
@@ -54,6 +56,7 @@ export default async function DashboardLayout({
           </main>
         </div>
       </div>
+      </MobileNavProvider>
     </SessionProvider>
   );
 }

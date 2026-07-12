@@ -3,11 +3,12 @@
 import { signOut } from "next-auth/react";
 import {
   LogOut, User, Sun, Moon, Building2, ChevronDown, Globe,
-  Bell, Settings, Search, Command
+  Bell, Settings, Search, Command, Menu
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useMobileNav } from "@/components/MobileNavContext";
 import { useTheme } from "next-themes";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -46,6 +47,7 @@ export function DashboardTopBar({
   const [loggingOut, setLoggingOut] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { toggle } = useMobileNav();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -84,6 +86,14 @@ export function DashboardTopBar({
     >
       {/* Left: Search */}
       <div className="flex items-center gap-4 flex-1">
+        <button
+          onClick={toggle}
+          aria-label="Menyu"
+          className="md:hidden p-2 rounded-lg transition-all"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          <Menu size={20} />
+        </button>
         <div className="relative hidden md:flex items-center max-w-xs w-full">
           <Search
             size={15}

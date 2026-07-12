@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ALLOWED_VIEWS, type UserRole } from "@/lib/permissions";
+import { useMobileNav } from "@/components/MobileNavContext";
 import {
   LayoutDashboard,
   Building2,
@@ -57,6 +58,7 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const { open, setOpen } = useMobileNav();
   const role = userRole as UserRole;
   const allowedViews = ALLOWED_VIEWS[role] || [];
 
@@ -68,8 +70,13 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
   const groups = ["asosiy", "moliya", "boshqa", "kabinet", "admin"];
 
   return (
+    <>
+    {/* Mobil backdrop */}
+    {open && (
+      <div className="fixed inset-0 z-30 md:hidden" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setOpen(false)} />
+    )}
     <aside
-      className="flex-shrink-0 h-screen flex flex-col z-20 relative overflow-hidden transition-all duration-300"
+      className={`flex-shrink-0 h-screen flex flex-col z-40 md:z-20 overflow-hidden transition-transform duration-300 fixed md:relative top-0 left-0 md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
       style={{
         width: "var(--sidebar-width)",
         background: "var(--sidebar-bg)",
@@ -129,6 +136,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={() => setOpen(false)}
                     className={`sidebar-nav-item ${isActive ? "active" : ""}`}
                     style={
                       isActive
@@ -199,5 +207,6 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
         </div>
       </div>
     </aside>
+    </>
   );
 }
