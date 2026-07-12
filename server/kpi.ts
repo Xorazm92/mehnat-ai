@@ -451,6 +451,33 @@ export async function getKpiLeaderboard(month: string) {
     .filter((c) => c.scored > 0)
     .sort((a, b) => b.passPercent - a.passPercent);
 
+  // 6-month team-average ball trend (jamoa dinamikasi)
+  const months: string[] = [];
+  const baseD = new Date(month + "T00:00:00");
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(baseD.getFullYear(), baseD.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`);
+  }
+  const trendPerfs = await prisma.monthlyPerformance.findMany({
+    where: { month: { in: months }, status: { in: ["approved", "submitted"] } },
+    select: { month: true, employeeId: true, calculatedScore: true, selectedOption: true },
+  });
+  const perMonthEmp = new Map<string, Map<string, { green: number; red: number }>>();
+  for (const p of trendPerfs) {
+    const em = perMonthEmp.get(p.month) ?? perMonthEmp.set(p.month, new Map()).get(p.month)!;
+    const a = em.get(p.employeeId) ?? em.set(p.employeeId, { green: 0, red: 0 }).get(p.employeeId)!;
+    const sc = Number(p.calculatedScore);
+    if (sc > 0) a.green++;
+    else if (sc < 0 || p.selectedOption === "red") a.red++;
+  }
+  const monthlyTrend = months.map((mo) => {
+    const em = perMonthEmp.get(mo);
+    if (!em || em.size === 0) return { month: mo, avgBall: 0 };
+    let sum = 0;
+    for (const a of em.values()) { const sc2 = a.green + a.red; sum += sc2 > 0 ? (a.green / sc2) * 100 : 100; }
+    return { month: mo, avgBall: Math.round(sum / em.size) };
+  });
+
   return serialize({
     leaderboard,
     stats: {
@@ -461,5 +488,6 @@ export async function getKpiLeaderboard(month: string) {
       total: withScores.length,
     },
     criteria,
+    monthlyTrend,
   });
 }

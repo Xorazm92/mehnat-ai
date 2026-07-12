@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { Language } from "@/types";
 import { getKpiLeaderboard } from "@/server/kpi";
-import { Trophy, TrendingUp, Award, AlertTriangle, Wallet } from "lucide-react";
+import { Trophy, TrendingUp, Award, AlertTriangle, Wallet, Activity } from "lucide-react";
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import { MONTHS_UZ } from "@/lib/periods";
 
 interface Props { lang: Language; }
 
@@ -14,6 +16,7 @@ interface Data {
   leaderboard: LeaderRow[];
   stats: { avgBall: number; excellent: number; poor: number; bonusFund: number; total: number };
   criteria: { category: string; passPercent: number; scored: number }[];
+  monthlyTrend?: { month: string; avgBall: number }[];
 }
 
 const DARAJA: Record<LeaderRow["daraja"], { label: string; fg: string; bg: string; bd: string }> = {
@@ -119,6 +122,29 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
           </div>
         </div>
 
+        <div className="space-y-5">
+        {/* Jamoa dinamikasi (6 oy) */}
+        {(() => {
+          const trend = (data?.monthlyTrend || []).filter((t) => t.avgBall > 0);
+          if (trend.length < 2) return null;
+          const chartData = trend.map((t) => ({ name: MONTHS_UZ[Number(t.month.split("-")[1]) - 1]?.slice(0, 3) || t.month, ball: t.avgBall }));
+          return (
+            <div className="rounded-xl p-5" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
+              <div className="flex items-center gap-2 mb-3"><Activity size={15} style={{ color: "var(--accent-blue)" }} /><h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>Jamoa dinamikasi · 6 oy</h3></div>
+              <div style={{ width: "100%", height: 140 }}>
+                <ResponsiveContainer>
+                  <LineChart data={chartData} margin={{ top: 5, right: 8, left: -20, bottom: 0 }}>
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: "var(--text-muted)" }} />
+                    <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: "var(--text-muted)" }} width={28} />
+                    <Tooltip contentStyle={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", borderRadius: 10, fontSize: 12 }} formatter={(v) => `${v} ball`} />
+                    <Line type="monotone" dataKey="ball" stroke="var(--accent-blue)" strokeWidth={2.5} dot={{ r: 3, fill: "var(--accent-blue)" }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Criteria breakdown */}
         <div className="rounded-xl p-5" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
           <h3 className="text-[12px] font-bold uppercase tracking-widest mb-4" style={{ color: "var(--text-primary)" }}>Mezonlar kesimi · jamoa</h3>
@@ -139,6 +165,7 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
               ))}
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
