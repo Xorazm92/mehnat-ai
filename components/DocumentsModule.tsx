@@ -127,7 +127,7 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
                                                 <ExternalLink size={16} />
                                             </a>
                                             {canEdit && (
-                                                <button onClick={() => handleDelete(d.id)} className="w-8 h-8 flex items-center justify-center rounded-lg opacity-20 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--danger)' }} title={t.delete}>
+                                                <button onClick={() => handleDelete(d.id)} className="w-8 h-8 flex items-center justify-center rounded-lg opacity-60 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--danger)' }} title={t.delete}>
                                                     <Trash2 size={16} />
                                                 </button>
                                             )}

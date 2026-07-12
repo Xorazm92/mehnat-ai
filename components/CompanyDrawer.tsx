@@ -80,26 +80,71 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
     }
   }, [company?.id, company?.login, company?.password]);
 
+  // Yagona manba: rol uchun haq turi/qiymatini bitta qoidaga ko'ra aniqlaydi.
+  // Jamoa va Shartnoma tablari SHU yordamchidan foydalanadi — ikki xil
+  // ko'rinish (takrorlanish) bo'lmasligi uchun.
+  const deriveRoleComp = (perc?: any, sum?: any): { type: 'percent' | 'fixed'; value: number } =>
+    sum != null && Number(sum) > 0
+      ? { type: 'fixed', value: Number(sum) }
+      : { type: 'percent', value: Number(perc || 0) };
+
+  const ROLE_LABELS: Record<string, string> = {
+    accountant: 'Buxgalter',
+    controller: 'Nazoratchi',
+    bank_manager: 'Bank Menejer',
+    chief: 'Bosh Buxgalter',
+    chief_accountant: 'Bosh Buxgalter'
+  };
+
   const teamFallbackAssignments = () => {
     const res: any[] = [];
     if (!company) return res;
 
-    const push = (role: string, userIdValue?: string, salary_type?: string, salary_value?: any) => {
+    const push = (role: string, userIdValue?: string, perc?: any, sum?: any) => {
       if (!userIdValue) return;
+      const comp = deriveRoleComp(perc, sum);
       res.push({
         id: `fallback-${role}-${userIdValue}`,
         role,
         user_id: userIdValue,
-        salary_type,
-        salary_value
+        salary_type: comp.type,
+        salary_value: comp.value
       });
     };
 
-    push('accountant', company.accountantId, 'percent', company.accountantPerc);
-    push('controller', company.supervisorId, 'percent', company.supervisorPerc);
-    push('bank_manager', company.bankClientId, 'fixed', company.bankClientSum);
-    push('chief_accountant', company.chiefAccountantId, 'fixed', company.chiefAccountantSum);
+    push('accountant', company.accountantId, company.accountantPerc, company.accountantSum);
+    push('controller', company.supervisorId, company.supervisorPerc, company.supervisorSum);
+    push('bank_manager', company.bankClientId, company.bankClientPerc, company.bankClientSum);
+    push('chief_accountant', company.chiefAccountantId, company.chiefAccountantPerc, company.chiefAccountantSum);
     return res;
+  };
+
+  // Jamoa tahririni company maydonlariga ham ko'chiradi — Shartnoma tabi
+  // saqlashdan keyin darhol bir xil qiymat ko'rsatishi uchun.
+  const mergeAssignmentsIntoCompany = (base: Company, list: any[]): Company => {
+    const merged: any = { ...base };
+    for (const a of list) {
+      if (!a.userId) continue;
+      const isPercent = a.salaryType === 'percent';
+      if (a.role === 'accountant') {
+        merged.accountantId = a.userId;
+        merged.accountantPerc = isPercent ? a.salaryValue : null;
+        merged.accountantSum = isPercent ? null : a.salaryValue;
+      } else if (a.role === 'controller') {
+        merged.supervisorId = a.userId;
+        merged.supervisorPerc = isPercent ? a.salaryValue : null;
+        merged.supervisorSum = isPercent ? null : a.salaryValue;
+      } else if (a.role === 'bank_manager') {
+        merged.bankClientId = a.userId;
+        merged.bankClientPerc = isPercent ? a.salaryValue : null;
+        merged.bankClientSum = isPercent ? null : a.salaryValue;
+      } else if (a.role === 'chief' || a.role === 'chief_accountant') {
+        merged.chiefAccountantId = a.userId;
+        merged.chiefAccountantPerc = isPercent ? a.salaryValue : null;
+        merged.chiefAccountantSum = isPercent ? null : a.salaryValue;
+      }
+    }
+    return merged as Company;
   };
 
   if (!company) return null;
@@ -331,11 +376,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
           {activeTab === 'loginlar' && (
             <div className="space-y-4 animate-fade-in">
-              <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm transition-colors">
+              <div className="bg-[var(--card-bg)] p-4 rounded-sm border border-[var(--card-border)] shadow-sm transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Globe size={12} className="text-gray-400" />
-                    <h4 className="text-[10px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Soliq.uz (Asosiy)</h4>
+                    <Globe size={12} className="text-[var(--text-muted)]" />
+                    <h4 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">Soliq.uz (Asosiy)</h4>
                   </div>
                   {isEditingMainLogin ? (
                     <div className="flex gap-1.5">
@@ -345,7 +390,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           setTempLogin(company.login || '');
                           setTempPassword(company.password || '');
                         }}
-                        className="px-2.5 py-1 text-[8px] font-bold text-gray-400 uppercase rounded-sm border border-[#DEE2E6] hover:bg-[#F8F9FA] dark:hover:bg-[#1e2025] transition-all"
+                        className="px-2.5 py-1 text-[10px] font-bold text-[var(--text-muted)] uppercase rounded-sm border border-[var(--card-border)] hover:bg-[var(--bg-hover)] transition-all"
                       >
                         Bekor qilish
                       </button>
@@ -356,7 +401,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           }
                           setIsEditingMainLogin(false);
                         }}
-                        className="px-2.5 py-1 bg-[#28A745] hover:bg-[#218838] text-white text-[8px] font-bold uppercase rounded-sm border border-[#218838] transition-all shadow-sm"
+                        className="px-2.5 py-1 bg-[var(--success)] hover:opacity-90 text-white text-[10px] font-bold uppercase rounded-sm border border-[var(--success-border)] transition-all shadow-sm"
                       >
                         Saqlash
                       </button>
@@ -364,7 +409,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   ) : (
                     <button
                       onClick={() => setIsEditingMainLogin(true)}
-                      className="px-2.5 py-1 bg-[#F8F9FA] dark:bg-[#1e2025] hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-all hover:text-[#3366CC]"
+                      className="px-2.5 py-1 bg-[var(--input-bg)] hover:bg-[var(--bg-hover)] text-[10px] font-bold text-[var(--text-secondary)] uppercase rounded-sm border border-[var(--card-border)] transition-all hover:text-[var(--accent-blue)]"
                     >
                       Tahrirlash
                     </button>
@@ -372,34 +417,34 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1">
-                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Login</p>
+                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Login</p>
                     {isEditingMainLogin ? (
                       <input
                         type="text"
-                        className="w-full bg-[#FAFAFA] dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-mono text-[11px] uppercase outline-none focus:border-[#3366CC] transition-colors"
+                        className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] font-mono text-[11px] uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
                         value={tempLogin}
                         onChange={(e) => setTempLogin(e.target.value)}
                       />
                     ) : (
-                      <p className="text-[11px] font-mono font-bold text-gray-800 dark:text-white uppercase bg-[#F8F9FA] dark:bg-[#1e2025] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors">{company.login || '—'}</p>
+                      <p className="text-[11px] font-mono font-bold text-[var(--text)] uppercase bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] transition-colors">{company.login || '—'}</p>
                     )}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Parol</p>
+                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Parol</p>
                     <div className="relative">
                       {isEditingMainLogin ? (
                         <input
                           type="text"
-                          className="w-full bg-[#FAFAFA] dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-mono text-[11px] outline-none focus:border-[#3366CC] transition-colors"
+                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] font-mono text-[11px] outline-none focus:border-[var(--accent-blue)] transition-colors"
                           value={tempPassword}
                           onChange={(e) => setTempPassword(e.target.value)}
                         />
                       ) : (
-                        <div className="flex items-center justify-between bg-[#F8F9FA] dark:bg-[#1e2025] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors">
-                          <p className="text-[11px] font-mono font-bold text-gray-800 dark:text-white tracking-widest leading-none">
+                        <div className="flex items-center justify-between bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] transition-colors">
+                          <p className="text-[11px] font-mono font-bold text-[var(--text)] tracking-widest leading-none">
                             {showPasswords['main'] ? company.password || '—' : '••••••••'}
                           </p>
-                          <button onClick={() => setShowPasswords(prev => ({ ...prev, main: !prev.main }))} className="text-gray-400 hover:text-[#3366CC] transition-all">
+                          <button onClick={() => setShowPasswords(prev => ({ ...prev, main: !prev.main }))} className="text-[var(--text-muted)] hover:text-[var(--accent-blue)] transition-all">
                             {showPasswords['main'] ? <EyeOff size={12} /> : <Eye size={12} />}
                           </button>
                         </div>
@@ -409,59 +454,59 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#22252B] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] shadow-sm overflow-hidden transition-colors">
-                <div className="bg-[#F8F9FA] dark:bg-[#1e2025] px-3 py-2 flex items-center justify-between border-b border-[#DEE2E6] dark:border-[#3A3D44]">
-                  <h4 className="text-[9px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Qo&apos;shimcha Kirish Ma&apos;lumotlari</h4>
+              <div className="bg-[var(--card-bg)] rounded-sm border border-[var(--card-border)] shadow-sm overflow-hidden transition-colors">
+                <div className="bg-[var(--input-bg)] px-3 py-2 flex items-center justify-between border-b border-[var(--card-border)]">
+                  <h4 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">Qo&apos;shimcha Kirish Ma&apos;lumotlari</h4>
                   <button
                     onClick={() => setIsAddingCredential(true)}
-                    className="flex items-center gap-1 text-[8px] font-bold text-[#3366CC] uppercase py-1 px-2.5 bg-[#F2F7FF] dark:bg-[#1C2531] rounded-sm border border-[#DEE2E6] hover:bg-white transition-all shadow-sm"
+                    className="flex items-center gap-1 text-[10px] font-bold text-[var(--accent-blue)] uppercase py-1 px-2.5 bg-[var(--accent-blue-light)] rounded-sm border border-[var(--card-border)] hover:bg-[var(--bg-hover)] transition-all shadow-sm"
                   >
                     <Plus size={10} /> Yangi Qo&apos;shish
                   </button>
                 </div>
 
                 {isAddingCredential && (
-                  <div className="p-3 border-b border-[#DEE2E6] dark:border-[#3A3D44] bg-[#F2F7FF]/50 dark:bg-[#1C2531]/30 transition-colors">
+                  <div className="p-3 border-b border-[var(--card-border)] bg-[var(--accent-blue-light)] transition-colors">
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div className="col-span-2">
-                        <label className="text-[8px] font-bold text-gray-400 uppercase mb-1 block tracking-widest">Xizmat nomi (Didox, Bank...)</label>
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block tracking-widest">Xizmat nomi (Didox, Bank...)</label>
                         <input
                           type="text"
-                          className="w-full bg-white dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] text-[11px] font-bold outline-none focus:border-[#3366CC] transition-colors"
+                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] text-[11px] font-bold outline-none focus:border-[var(--accent-blue)] transition-colors"
                           value={newCred.serviceName}
                           onChange={e => setNewCred({ ...newCred, serviceName: e.target.value })}
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-[8px] font-bold text-gray-400 uppercase block tracking-widest whitespace-nowrap">Login</label>
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block tracking-widest whitespace-nowrap">Login</label>
                         <input
                           type="text"
-                          className="w-full bg-white dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-mono text-[11px] uppercase outline-none focus:border-[#3366CC] transition-colors"
+                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] font-mono text-[11px] uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
                           value={newCred.loginId}
                           onChange={e => setNewCred({ ...newCred, loginId: e.target.value })}
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-[8px] font-bold text-gray-400 uppercase block tracking-widest whitespace-nowrap">Parol</label>
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block tracking-widest whitespace-nowrap">Parol</label>
                         <input
                           type="text"
-                          className="w-full bg-white dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] font-mono text-[11px] outline-none focus:border-[#3366CC] transition-colors"
+                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] font-mono text-[11px] outline-none focus:border-[var(--accent-blue)] transition-colors"
                           value={newCred.password}
                           onChange={e => setNewCred({ ...newCred, password: e.target.value })}
                         />
                       </div>
                       <div className="col-span-2">
-                        <label className="text-[8px] font-bold text-gray-400 uppercase mb-1 block tracking-widest">Izoh</label>
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block tracking-widest">Izoh</label>
                         <input
                           type="text"
-                          className="w-full bg-white dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] text-[11px] font-bold outline-none focus:border-[#3366CC] transition-colors"
+                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] text-[11px] font-bold outline-none focus:border-[var(--accent-blue)] transition-colors"
                           value={newCred.notes}
                           onChange={e => setNewCred({ ...newCred, notes: e.target.value })}
                         />
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2 text-[8px] uppercase font-bold">
-                      <button onClick={() => setIsAddingCredential(false)} className="px-2.5 py-1 text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest">Bekor qilish</button>
+                    <div className="flex justify-end gap-2 text-[10px] uppercase font-bold">
+                      <button onClick={() => setIsAddingCredential(false)} className="px-2.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors uppercase tracking-widest">Bekor qilish</button>
                       <button
                         disabled={!newCred.serviceName || !newCred.loginId}
                         onClick={async () => {
@@ -479,7 +524,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           setIsAddingCredential(false);
                           setNewCred({ serviceName: '', loginId: '', password: '', notes: '' });
                         }}
-                        className="px-2.5 py-1 bg-[#3366CC] text-white rounded-sm border border-[#3366CC] disabled:opacity-50 shadow-sm transition-all"
+                        className="px-2.5 py-1 bg-[var(--accent-blue)] text-white rounded-sm border border-[var(--accent-blue)] disabled:opacity-50 shadow-sm transition-all"
                       >
                         Qo&apos;shish
                       </button>
@@ -487,13 +532,13 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   </div>
                 )}
 
-                <div className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44]">
+                <div className="divide-y divide-[var(--card-border)]">
                   {credentials.map((cred) => (
-                    <div key={cred.id} className="p-3 hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] transition-colors relative group/cred">
+                    <div key={cred.id} className="p-3 hover:bg-[var(--bg-hover)] transition-colors relative group/cred">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">
-                          <Key size={10} className="text-gray-400" />
-                          <p className="text-[10px] font-bold text-gray-800 dark:text-white uppercase tracking-tight">{cred.serviceName}</p>
+                          <Key size={10} className="text-[var(--text-muted)]" />
+                          <p className="text-[10px] font-bold text-[var(--text)] uppercase tracking-tight">{cred.serviceName}</p>
                         </div>
                         <button
                           onClick={() => {
@@ -502,27 +547,27 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               setCredentials(prev => prev.filter(c => c.id !== cred.id));
                             }
                           }}
-                          className="p-1 text-gray-400 hover:text-[#DC3545] hover:bg-[#FEEBF0] rounded-sm opacity-0 group-hover/cred:opacity-100 transition-all"
+                          className="p-1 text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] rounded-sm opacity-0 group-hover/cred:opacity-100 transition-all"
                         >
                           <Trash2 size={10} />
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-3 mt-1">
-                        <div className="bg-[#F8F9FA] dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] transition-colors">
-                          <p className="text-[8px] font-bold text-gray-400 uppercase mb-0.5 tracking-widest">Login</p>
-                          <p className="font-mono text-[11px] font-bold text-gray-800 dark:text-gray-200 uppercase truncate leading-none mt-1">{cred.loginId || '—'}</p>
+                        <div className="bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] transition-colors">
+                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-0.5 tracking-widest">Login</p>
+                          <p className="font-mono text-[11px] font-bold text-[var(--text)] uppercase truncate leading-none mt-1">{cred.loginId || '—'}</p>
                         </div>
-                        <div className="bg-[#F8F9FA] dark:bg-[#111318] p-1.5 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] flex justify-between items-center transition-colors">
+                        <div className="bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] flex justify-between items-center transition-colors">
                           <div className="flex-1 min-w-0 pr-2">
-                            <p className="text-[8px] font-bold text-gray-400 uppercase mb-0.5 tracking-widest">Parol</p>
-                            <p className="font-mono text-[11px] font-bold text-gray-800 dark:text-gray-200 tracking-widest leading-none mt-1">{showPasswords[cred.id] ? cred.encryptedPassword || '—' : '••••••••'}</p>
+                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-0.5 tracking-widest">Parol</p>
+                            <p className="font-mono text-[11px] font-bold text-[var(--text)] tracking-widest leading-none mt-1">{showPasswords[cred.id] ? cred.encryptedPassword || '—' : '••••••••'}</p>
                           </div>
-                          <button onClick={() => handleShowPassword(cred.id)} className="text-gray-400 hover:text-[#3366CC] transition-all shrink-0">
+                          <button onClick={() => handleShowPassword(cred.id)} className="text-[var(--text-muted)] hover:text-[var(--accent-blue)] transition-all shrink-0">
                             {showPasswords[cred.id] ? <EyeOff size={11} /> : <Eye size={11} />}
                           </button>
                         </div>
                       </div>
-                      {cred.notes && <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-tight italic opacity-70">Izoh: {cred.notes}</p>}
+                      {cred.notes && <p className="text-[10px] font-bold text-[var(--text-muted)] mt-2 uppercase tracking-tight italic opacity-70">Izoh: {cred.notes}</p>}
                     </div>
                   ))}
                 </div>
@@ -532,9 +577,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
           {activeTab === 'jamoa' && (
             <div className="space-y-4 animate-fade-in">
-              <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden transition-colors">
-                <div className="bg-[#F8F9FA] dark:bg-[#1e2025] px-3 py-2 flex items-center justify-between border-b border-[#DEE2E6] dark:border-[#3A3D44]">
-                  <h4 className="text-[9px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Amaldagi Jamoa</h4>
+              <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-sm shadow-sm overflow-hidden transition-colors">
+                <div className="bg-[var(--input-bg)] px-3 py-2 flex items-center justify-between border-b border-[var(--card-border)]">
+                  <h4 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">Amaldagi Jamoa</h4>
                   {onSave && !isEditingJamoa && (
                     <button
                       onClick={() => {
@@ -547,7 +592,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         })));
                         setIsEditingJamoa(true);
                       }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[#DEE2E6] bg-[#F8F9FA] dark:bg-[#1e2025] text-gray-500 dark:text-gray-400 text-[8px] font-bold uppercase transition-all hover:text-[#3366CC] hover:bg-[#F2F7FF]"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-secondary)] text-[10px] font-bold uppercase transition-all hover:text-[var(--accent-blue)] hover:bg-[var(--accent-blue-light)]"
                     >
                       <Pencil size={10} /> Tahrirlash
                     </button>
@@ -556,7 +601,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => setIsEditingJamoa(false)}
-                        className="px-2.5 py-1 rounded-sm border border-[#DEE2E6] bg-[#F8F9FA] dark:bg-[#1e2025] text-gray-400 text-[8px] font-bold uppercase transition-all"
+                        className="px-2.5 py-1 rounded-sm border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] text-[10px] font-bold uppercase transition-all"
                       >
                         Bekor
                       </button>
@@ -566,7 +611,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           if (!company || !onSave) return;
                           setIsSavingJamoa(true);
                           try {
-                            await onSave(company, editAssignments);
+                            await onSave(mergeAssignmentsIntoCompany(company, editAssignments), editAssignments);
                             setAssignments(editAssignments.map((a, i) => ({
                               id: `edited-${i}`, role: a.role, user_id: a.userId, salary_type: a.salaryType, salary_value: a.salaryValue
                             })));
@@ -577,7 +622,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             setIsSavingJamoa(false);
                           }
                         }}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[#218838] bg-[#28A745] hover:bg-[#218838] text-white text-[8px] font-bold uppercase transition-all shadow-sm disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[var(--success-border)] bg-[var(--success)] hover:opacity-90 text-white text-[10px] font-bold uppercase transition-all shadow-sm disabled:opacity-50"
                       >
                         {isSavingJamoa ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} Saqlash
                       </button>
@@ -586,80 +631,77 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
 
                 {assignmentsError && (
-                  <div className="m-3 p-3 rounded-sm border border-[#FFEEBA] bg-[#FFF3CD] text-[#856404]">
-                    <p className="text-[9px] font-bold uppercase tracking-widest leading-none">contract_assignments xatoligi</p>
-                    <p className="text-[9px] uppercase mt-1 opacity-80">{assignmentsError}</p>
+                  <div className="m-3 p-3 rounded-sm border border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning)]">
+                    <p className="text-[10px] font-bold uppercase tracking-widest leading-none">contract_assignments xatoligi</p>
+                    <p className="text-[10px] uppercase mt-1 opacity-80">{assignmentsError}</p>
                   </div>
                 )}
 
                 {!isEditingJamoa ? (
-                  <div className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44]">
+                  <div className="divide-y divide-[var(--card-border)]">
                     {(() => {
                       const displayedAssignments = assignments.length > 0 ? assignments : teamFallbackAssignments();
                       return displayedAssignments.length > 0 ? displayedAssignments.map((asgn: any) => {
                         const member = staff.find(s => s.id === asgn.user_id);
                         return (
-                          <div key={asgn.id} className="p-3 flex items-center justify-between hover:bg-[#F2F7FF] dark:hover:bg-[#2A2D33] transition-colors group">
-                            <div className="flex gap-3 items-center">
-                              <div className="w-8 h-8 rounded-sm bg-[#F8F9FA] dark:bg-[#1e2025] border border-[#DEE2E6] dark:border-[#3A3D44] flex items-center justify-center text-gray-400 text-[10px] font-bold shrink-0 transition-colors uppercase">
+                          <div key={asgn.id} className="px-4 py-3.5 flex items-center justify-between hover:bg-[var(--bg-hover)] transition-colors group">
+                            <div className="flex gap-3.5 items-center">
+                              <div className="w-10 h-10 rounded-lg bg-[var(--accent-blue-light)] border border-[var(--card-border)] flex items-center justify-center text-[var(--accent-blue)] text-[14px] font-black shrink-0 transition-colors uppercase">
                                 {member?.name?.charAt(0) || '?'}
                               </div>
-                              <div className="flex flex-col gap-0.5">
-                                <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200 uppercase tracking-tight">{member?.name || 'Mavjud emas'}</p>
-                                <p className="text-[8px] font-bold text-[#3366CC] tracking-widest uppercase opacity-70">{asgn.role.replace(/_/g, ' ')}</p>
+                              <div className="flex flex-col gap-1">
+                                <p className="text-[13px] font-bold text-[var(--text)] tracking-tight leading-none">{member?.name?.toUpperCase() || 'Mavjud emas'}</p>
+                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wide leading-none">{ROLE_LABELS[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
                               </div>
                             </div>
-                            <div className="text-right flex flex-col gap-1">
-                              <span className="px-2 py-0.5 bg-white dark:bg-black/20 rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] text-[9px] font-bold text-gray-600 dark:text-gray-300 whitespace-nowrap shadow-sm">
+                            <div className="text-right flex flex-col gap-1 items-end">
+                              <span className="px-2.5 py-1 bg-[var(--input-bg)] rounded-md border border-[var(--card-border)] text-[12px] font-bold text-[var(--text)] tabular-nums whitespace-nowrap shadow-sm">
                                 {asgn.salary_type === 'percent' ? `${asgn.salary_value}%` : `${asgn.salary_value?.toLocaleString()} so'm`}
                               </span>
-                              {asgn.start_date && <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tight">Sana: {new Date(asgn.start_date).toLocaleDateString()}</p>}
+                              {asgn.start_date && <p className="text-[10px] text-[var(--text-muted)] font-semibold tracking-tight">Sana: {new Date(asgn.start_date).toLocaleDateString()}</p>}
                             </div>
                           </div>
                         );
                       }) : (
-                        <div className="p-8 text-center bg-[#F8F9FA] dark:bg-[#111318] transition-colors">
-                          <Users size={20} className="mx-auto mb-2 text-gray-300" />
-                          <p className="text-[9px] font-bold uppercase text-gray-400 tracking-widest opacity-50">Jamoa a&apos;zolari tayinlanmagan</p>
+                        <div className="p-8 text-center bg-[var(--input-bg)] transition-colors">
+                          <Users size={20} className="mx-auto mb-2 text-[var(--text-muted)]" />
+                          <p className="text-[10px] font-bold uppercase text-[var(--text-muted)] tracking-widest opacity-50">Jamoa a&apos;zolari tayinlanmagan</p>
                         </div>
                       );
                     })()}
                   </div>
                 ) : (
-                  <div className="p-3 bg-[#F2F7FF]/30 dark:bg-[#1C2531]/20 space-y-3 transition-colors">
+                  <div className="p-3 bg-[var(--accent-blue-light)] space-y-3 transition-colors">
                     {editAssignments.map((asgn, idx) => {
-                      const roleLabels: Record<string, string> = {
-                        accountant: 'Buxgalter', controller: 'Nazoratchi', bank_manager: 'Bank Menejer', chief_accountant: 'Bosh Buxgalter'
-                      };
                       return (
-                        <div key={asgn.role} className="p-3 bg-white dark:bg-[#22252B] rounded-sm border border-[#DEE2E6] dark:border-[#3A3D44] space-y-2.5 shadow-sm transition-colors">
-                          <p className="text-[8px] font-bold text-[#3366CC] dark:text-[#4D80E6] uppercase tracking-widest">{roleLabels[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
+                        <div key={asgn.role} className="p-3 bg-[var(--card-bg)] rounded-sm border border-[var(--card-border)] space-y-2.5 shadow-sm transition-colors">
+                          <p className="text-[10px] font-bold text-[var(--accent-blue)] uppercase tracking-widest">{ROLE_LABELS[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="sm:col-span-2">
-                              <label className="text-[8px] font-bold text-gray-400 uppercase block mb-1 tracking-widest">Xodim</label>
+                              <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1 tracking-widest">Xodim</label>
                               <select
                                 value={asgn.userId || ''}
                                 onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, userId: e.target.value } : a))}
-                                className="w-full bg-[#FAFAFA] dark:bg-[#111318] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm px-2 py-1.5 text-[10px] font-bold uppercase outline-none focus:border-[#3366CC] transition-colors"
+                                className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-sm px-2 py-1.5 text-[10px] font-bold uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
                               >
                                 <option value="">— Tanlanmagan —</option>
                                 {staff.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
                               </select>
                             </div>
                             <div className="flex flex-col">
-                              <label className="text-[8px] font-bold text-gray-400 uppercase block mb-1 tracking-widest whitespace-nowrap">
+                              <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1 tracking-widest whitespace-nowrap">
                                 {asgn.salaryType === 'percent' ? 'Foiz (%)' : 'Summa (so\'m)'}
                               </label>
-                              <div className="flex border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm overflow-hidden shadow-sm transition-colors">
+                              <div className="flex border border-[var(--card-border)] rounded-sm overflow-hidden shadow-sm transition-colors">
                                 <input
                                   type="number"
-                                  value={asgn.salaryValue}
+                                  value={asgn.salaryValue ?? 0}
                                   onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, salaryValue: Number(e.target.value) } : a))}
-                                  className="w-full bg-[#FAFAFA] dark:bg-[#111318] px-2 py-1.5 text-[10px] font-bold outline-none"
+                                  className="w-full bg-[var(--input-bg)] px-2 py-1.5 text-[10px] font-bold outline-none"
                                 />
                                 <button
                                   onClick={() => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, salaryType: a.salaryType === 'percent' ? 'fixed' : 'percent' } : a))}
-                                  className="px-2 py-1.5 bg-[#F8F9FA] dark:bg-[#1e2025] text-[8px] font-bold uppercase text-gray-500 shrink-0 border-l border-[#DEE2E6] dark:border-[#3A3D44] hover:bg-[#F2F7FF] transition-all hover:text-[#3366CC]"
+                                  className="px-2 py-1.5 bg-[var(--input-bg)] text-[10px] font-bold uppercase text-[var(--text-secondary)] shrink-0 border-l border-[var(--card-border)] hover:bg-[var(--accent-blue-light)] transition-all hover:text-[var(--accent-blue)]"
                                 >
                                   {asgn.salaryType === 'percent' ? '%' : 'UZS'}
                                 </button>
@@ -674,19 +716,19 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               </div>
 
               {clientHistory.length > 0 && (
-                <div className="bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm shadow-sm overflow-hidden transition-colors">
-                  <div className="bg-[#F8F9FA] dark:bg-[#1e2025] px-3 py-2 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
-                    <h4 className="text-[9px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Tayinlovlar Tarixi</h4>
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-sm shadow-sm overflow-hidden transition-colors">
+                  <div className="bg-[var(--input-bg)] px-3 py-2 border-b border-[var(--card-border)]">
+                    <h4 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">Tayinlovlar Tarixi</h4>
                   </div>
-                  <div className="divide-y divide-[#DEE2E6] dark:divide-[#3A3D44] max-h-[250px] overflow-y-auto">
+                  <div className="divide-y divide-[var(--card-border)] max-h-[250px] overflow-y-auto">
                     {clientHistory.filter(h => h.changeType === 'assign_role' || h.changeType === 'remove_role').map((h, i) => (
-                      <div key={i} className="flex gap-2.5 p-2.5 hover:bg-[#F8F9FA] dark:hover:bg-[#2A2D33] transition-colors group">
-                        <div className={`mt-0.5 w-6 h-6 rounded-sm shrink-0 flex items-center justify-center border transition-colors ${h.changeType === 'assign_role' ? 'bg-[#EBFBF0] text-[#28A745] border-[#DEE2E6]' : 'bg-[#FEEBF0] text-[#DC3545] border-[#DEE2E6]'}`}>
+                      <div key={i} className="flex gap-2.5 p-2.5 hover:bg-[var(--bg-hover)] transition-colors group">
+                        <div className={`mt-0.5 w-6 h-6 rounded-sm shrink-0 flex items-center justify-center border transition-colors ${h.changeType === 'assign_role' ? 'bg-[var(--success-bg)] text-[var(--success)] border-[var(--card-border)]' : 'bg-[var(--danger-bg)] text-[var(--danger)] border-[var(--card-border)]'}`}>
                           {h.changeType === 'assign_role' ? <Check size={10} /> : <X size={10} />}
                         </div>
                         <div className="flex flex-col gap-0.5 min-w-0">
-                          <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase truncate pr-2 tracking-tight leading-tight">{h.notes || 'Rol o\'zgarishi'}</p>
-                          <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest opacity-60 leading-none mt-0.5">{new Date(h.changedAt).toLocaleString()} • {h.changedByName || 'Tizim'}</p>
+                          <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase truncate pr-2 tracking-tight leading-tight">{h.notes || 'Rol o\'zgarishi'}</p>
+                          <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest opacity-60 leading-none mt-0.5">{new Date(h.changedAt).toLocaleString()} • {h.changedByName || 'Tizim'}</p>
                         </div>
                       </div>
                     ))}
@@ -702,7 +744,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 {company.internalContractor && (
                   <div className="col-span-2 dashboard-card p-5 !shadow-sm flex items-center justify-between" style={{ background: 'var(--accent-blue-light)' }}>
                     <div>
-                      <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 opacity-70" style={{ color: 'var(--accent-blue)' }}>Ichki Pudratchi (Ijrochi)</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5 opacity-70" style={{ color: 'var(--accent-blue)' }}>Ichki Pudratchi (Ijrochi)</p>
                       <div className="flex items-center gap-3">
                         <Building2 size={16} style={{ color: 'var(--accent-blue)' }} />
                         <p className="text-[14px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.internalContractor}</p>
@@ -712,11 +754,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 )}
 
                 <div className="dashboard-card p-5 !shadow-sm">
-                  <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Shartnoma Raqami</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Shartnoma Raqami</p>
                   <p className="text-[13px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.contractNumber || '—'}</p>
                 </div>
                 <div className="dashboard-card p-5 !shadow-sm">
-                  <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Sana</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Sana</p>
                   <p className="text-[13px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.contractDate || '—'}</p>
                 </div>
               </div>
@@ -726,51 +768,56 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <h4 className="text-[10px] font-bold uppercase tracking-widest mb-5" style={{ color: 'var(--text-muted)' }}>Moliyaviy Holat</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
-                      <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xizmat Narxi</p>
-                      <p className="text-[18px] font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{Number(company.contractAmount || 0).toLocaleString()} <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>so&apos;m</span></p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xizmat Narxi</p>
+                      <p className="text-[18px] font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{Number(company.contractAmount || 0).toLocaleString()} <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>so&apos;m</span></p>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Joriy Balans</p>
-                      <p className={`text-[18px] font-black tabular-nums tracking-tight leading-none uppercase`} style={{ color: Number(company.currentBalance || 0) < 0 ? '#ff6b6b' : '#34d058' }}>
-                        {Number(company.currentBalance || 0).toLocaleString()} <span className="text-[9px] font-bold uppercase tracking-widest">so&apos;m</span>
+                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Joriy Balans</p>
+                      <p className={`text-[18px] font-black tabular-nums tracking-tight leading-none uppercase`} style={{ color: Number(company.currentBalance || 0) < 0 ? 'var(--danger)' : 'var(--success)' }}>
+                        {Number(company.currentBalance || 0).toLocaleString()} <span className="text-[10px] font-bold uppercase tracking-widest">so&apos;m</span>
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="p-5">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest mb-4 opacity-70" style={{ color: 'var(--text-muted)' }}>Kaskadli Taqsimot (Oylik prognozi)</h4>
-                  <div className="divide-y rounded-xl overflow-hidden border" style={{ borderColor: 'var(--card-border)' }}>
-                    {[
-                      { label: 'Bosh Buxgalter', perc: Number(company.chiefAccountantPerc || 0), sum: company.chiefAccountantSum ? Number(company.chiefAccountantSum) : null, type: 'head' },
-                      { label: 'Nazoratchi', perc: Number(company.supervisorPerc || 0), type: 'sup' },
-                      { label: 'Bank Klient', perc: Number(company.bankClientPerc || 0), sum: company.bankClientSum ? Number(company.bankClientSum) : null, type: 'bank' },
-                      { label: 'Buxgalter', perc: Number(company.accountantPerc || 0), type: 'acc' }
-                    ].map((item, i) => {
-                      const amount = Number(company.contractAmount || 0);
-                      const val = item.sum || (amount * (item.perc / 100));
-                      return (
-                        <div key={i} className="flex items-center justify-between p-3.5 transition-colors group hover:bg-[var(--input-bg)]" style={{ background: 'var(--card-bg)' }}>
-                          <span className="text-[11px] font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{item.label}</span>
-                          <div className="text-right flex items-center gap-4">
-                            <p className="text-[9px] font-bold px-2 py-1 rounded-md border uppercase tracking-tight" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>{item.sum ? 'Fiks.' : `${item.perc}%`}</p>
-                            <p className="text-[13px] font-black tabular-nums tracking-tight uppercase leading-none" style={{ color: 'var(--text)' }}>{val.toLocaleString()} <span className="text-[9px] font-bold opacity-70 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>UZS</span></p>
-                          </div>
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Kaskadli Taqsimot (Oylik prognozi)</h4>
+                  {(() => {
+                    // Jamoa tabi bilan bir xil manba (deriveRoleComp) — qiymatlar
+                    // ikkala tabda doim mos keladi.
+                    const amount = Number(company.contractAmount || 0);
+                    const cascade = [
+                      { label: 'Bosh Buxgalter', ...deriveRoleComp(company.chiefAccountantPerc, company.chiefAccountantSum) },
+                      { label: 'Nazoratchi', ...deriveRoleComp(company.supervisorPerc, company.supervisorSum) },
+                      { label: 'Bank Klient', ...deriveRoleComp(company.bankClientPerc, company.bankClientSum) },
+                      { label: 'Buxgalter', ...deriveRoleComp(company.accountantPerc, company.accountantSum) }
+                    ].map(item => ({
+                      ...item,
+                      amountValue: item.type === 'fixed' ? item.value : amount * (item.value / 100)
+                    }));
+                    const remainder = amount - cascade.reduce((s, i) => s + i.amountValue, 0);
+                    return (
+                      <>
+                        <div className="divide-y rounded-xl overflow-hidden border" style={{ borderColor: 'var(--card-border)' }}>
+                          {cascade.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between px-4 py-3.5 transition-colors group hover:bg-[var(--input-bg)]" style={{ background: 'var(--card-bg)' }}>
+                              <span className="text-[13px] font-bold tracking-tight uppercase" style={{ color: 'var(--text)' }}>{item.label}</span>
+                              <div className="text-right flex items-center gap-4">
+                                <p className="text-[11px] font-bold px-2.5 py-1 rounded-md border tabular-nums" style={{ color: 'var(--text-secondary)', background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>{item.type === 'fixed' ? 'Fiks' : `${item.value}%`}</p>
+                                <p className="text-[14px] font-black tabular-nums tracking-tight leading-none min-w-[90px]" style={{ color: 'var(--text)' }}>{item.amountValue.toLocaleString()} <span className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>UZS</span></p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      )
-                    })}
-                  </div>
-                  <div className="mt-4 flex items-center justify-between p-4 rounded-xl shadow-sm" style={{ background: 'rgba(52, 208, 88, 0.1)', border: '1px solid rgba(52, 208, 88, 0.2)' }}>
-                    <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: '#34d058' }}>Kompaniya Qoldig&apos;i</span>
-                    <span className="text-[14px] font-black tabular-nums tracking-tight uppercase leading-none" style={{ color: '#34d058' }}>
-                      {(Number(company.contractAmount || 0) - (
-                        (company.chiefAccountantSum ? Number(company.chiefAccountantSum) : (Number(company.contractAmount || 0) * Number(company.chiefAccountantPerc || 0) / 100)) +
-                        (company.supervisorPerc ? Number(company.contractAmount || 0) * Number(company.supervisorPerc || 0) / 100 : 0) +
-                        (company.bankClientSum ? Number(company.bankClientSum) : (Number(company.contractAmount || 0) * Number(company.bankClientPerc || 0) / 100)) +
-                        (Number(company.contractAmount || 0) * Number(company.accountantPerc || 0) / 100)
-                      )).toLocaleString()} <span className="text-[10px] font-bold">UZS</span>
-                    </span>
-                  </div>
+                        <div className="mt-4 flex items-center justify-between p-4 rounded-xl shadow-sm" style={{ background: 'var(--success-bg)', border: '1px solid var(--success-border)' }}>
+                          <span className="text-[12px] font-black uppercase tracking-widest" style={{ color: 'var(--success)' }}>Kompaniya Qoldig&apos;i</span>
+                          <span className="text-[15px] font-black tabular-nums tracking-tight leading-none" style={{ color: remainder < 0 ? 'var(--danger)' : 'var(--success)' }}>
+                            {remainder.toLocaleString()} <span className="text-[10px] font-bold">UZS</span>
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -792,7 +839,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           onSave({ ...company, activeServices: allKeys });
                         }
                       }}
-                      className="px-3 py-2 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
+                      className="px-3 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
                       style={{ color: '#34d058', background: 'rgba(52, 208, 88, 0.1)', border: '1px solid rgba(52, 208, 88, 0.2)' }}
                     >
                       Hammasini yoqish
@@ -801,7 +848,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                       onClick={() => {
                         if (onSave) onSave({ ...company, activeServices: [] });
                       }}
-                      className="px-3 py-2 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
+                      className="px-3 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
                       style={{ color: '#ff6b6b', background: 'rgba(255, 107, 107, 0.1)', border: '1px solid rgba(255, 107, 107, 0.2)' }}
                     >
                       Hammasini o&apos;chirish
@@ -890,8 +937,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             <div className="min-w-0 flex-1">
                               <p className="text-[11px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{rule.nameUz}</p>
                               <div className="flex items-center gap-3 mt-1.5">
-                                <span className="text-[9px] font-bold uppercase tracking-tight opacity-70" style={{ color: 'var(--text-muted)' }}>{rule.role}</span>
-                                <span className="px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border" style={{
+                                <span className="text-[10px] font-bold uppercase tracking-tight opacity-70" style={{ color: 'var(--text-muted)' }}>{rule.role}</span>
+                                <span className="px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border" style={{
                                   background: rule.category === 'automation' ? 'rgba(77, 163, 255, 0.1)' : 'rgba(255, 215, 0, 0.1)',
                                   color: rule.category === 'automation' ? '#4da3ff' : '#ffd700',
                                   borderColor: rule.category === 'automation' ? 'rgba(77, 163, 255, 0.2)' : 'rgba(255, 215, 0, 0.2)'
@@ -901,14 +948,14 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               </div>
                             </div>
                             <div className="ml-5 text-right">
-                              <p className="text-[9px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-muted)' }}>Standart</p>
+                              <p className="text-[10px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-muted)' }}>Standart</p>
                               <p className="text-[10px] font-black tracking-tight mt-0.5" style={{ color: 'var(--accent-blue)' }}>+{rule.rewardPercent}/-{rule.penaltyPercent}%</p>
                             </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-4 mt-4">
                             <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>
-                              <label className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: '#34d058' }}>Bonus %:</label>
+                              <label className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: '#34d058' }}>Bonus %:</label>
                               <input
                                 type="number"
                                 step="0.1"
@@ -949,7 +996,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               />
                             </div>
                             <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>
-                              <label className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: '#ff6b6b' }}>Jarima %:</label>
+                              <label className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: '#ff6b6b' }}>Jarima %:</label>
                               <input
                                 type="number"
                                 step="0.1"

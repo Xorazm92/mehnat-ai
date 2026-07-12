@@ -223,25 +223,43 @@ export async function createCompany(companyData: Record<string, unknown>, assign
   if (assignments && assignments.length > 0) {
     for (const asgn of assignments) {
       if (!asgn.userId) continue;
+      // Qarama-qarshi maydonni null qilamiz — aks holda eski perc/sum qolib,
+      // Jamoa va Shartnoma tablari ikki xil qiymat ko'rsatadi.
       if (asgn.role === "accountant") {
         data.accountantId = asgn.userId;
         if (asgn.salaryType === "percent") {
           data.accountantPerc = asgn.salaryValue;
+          data.accountantSum = null;
+        } else {
+          data.accountantSum = asgn.salaryValue;
+          data.accountantPerc = null;
         }
-      } else if (asgn.role === "chief") {
+      } else if (asgn.role === "chief" || asgn.role === "chief_accountant") {
         data.chiefAccountantId = asgn.userId;
         if (asgn.salaryType === "percent") {
           data.chiefAccountantPerc = asgn.salaryValue;
+          data.chiefAccountantSum = null;
+        } else {
+          data.chiefAccountantSum = asgn.salaryValue;
+          data.chiefAccountantPerc = null;
         }
       } else if (asgn.role === "controller") {
         data.supervisorId = asgn.userId;
         if (asgn.salaryType === "percent") {
           data.supervisorPerc = asgn.salaryValue;
+          data.supervisorSum = null;
+        } else {
+          data.supervisorSum = asgn.salaryValue;
+          data.supervisorPerc = null;
         }
       } else if (asgn.role === "bank_manager") {
         data.bankClientId = asgn.userId;
         if (asgn.salaryType === "percent") {
           data.bankClientPerc = asgn.salaryValue;
+          data.bankClientSum = null;
+        } else {
+          data.bankClientSum = asgn.salaryValue;
+          data.bankClientPerc = null;
         }
       }
     }
@@ -298,25 +316,43 @@ export async function updateCompany(
   if (assignments && assignments.length > 0) {
     for (const asgn of assignments) {
       if (!asgn.userId) continue;
+      // Qarama-qarshi maydonni null qilamiz — aks holda eski perc/sum qolib,
+      // Jamoa va Shartnoma tablari ikki xil qiymat ko'rsatadi.
       if (asgn.role === "accountant") {
         data.accountantId = asgn.userId;
         if (asgn.salaryType === "percent") {
           data.accountantPerc = asgn.salaryValue;
+          data.accountantSum = null;
+        } else {
+          data.accountantSum = asgn.salaryValue;
+          data.accountantPerc = null;
         }
-      } else if (asgn.role === "chief") {
+      } else if (asgn.role === "chief" || asgn.role === "chief_accountant") {
         data.chiefAccountantId = asgn.userId;
         if (asgn.salaryType === "percent") {
           data.chiefAccountantPerc = asgn.salaryValue;
+          data.chiefAccountantSum = null;
+        } else {
+          data.chiefAccountantSum = asgn.salaryValue;
+          data.chiefAccountantPerc = null;
         }
       } else if (asgn.role === "controller") {
         data.supervisorId = asgn.userId;
         if (asgn.salaryType === "percent") {
           data.supervisorPerc = asgn.salaryValue;
+          data.supervisorSum = null;
+        } else {
+          data.supervisorSum = asgn.salaryValue;
+          data.supervisorPerc = null;
         }
       } else if (asgn.role === "bank_manager") {
         data.bankClientId = asgn.userId;
         if (asgn.salaryType === "percent") {
           data.bankClientPerc = asgn.salaryValue;
+          data.bankClientSum = null;
+        } else {
+          data.bankClientSum = asgn.salaryValue;
+          data.bankClientPerc = null;
         }
       }
     }

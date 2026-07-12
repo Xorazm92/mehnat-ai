@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; background: #e9ebef; color: #14171d; }
+  a { color: #3565d9; text-decoration: none; }
+  a:hover { color: #3565d9; text-decoration: underline; }
+</style>
+</helmet>
+<div style="padding:48px 56px 96px; font-size:14px; line-height:1.45;">
+
+  <div style="margin-bottom:40px;">
+    <h1 style="margin:0; font-size:26px; font-weight:700; letter-spacing:-.02em;">ASRO · Mobil ilova</h1>
+    <div style="color:#6a7180; font-size:13.5px; margin-top:4px;">Bottom nav · Home · modullar · profil · skaner · tasdiqlar · offline · push · vidjetlar</div>
+  </div>
+
+  <!-- ============ NAV + HOME ============ -->
+  <div style="font-size:12px; font-weight:600; color:#3565d9; letter-spacing:.08em; margin-bottom:14px;">BOTTOM NAVIGATION · HOME</div>
+  <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; margin-bottom:56px;">
+
+    <!-- Bottom nav anatomy -->
+    <div data-screen-label="Bottom Navigation">
+      <div style="font-size:12px; font-weight:600; color:#6a7180; margin-bottom:8px;">Bottom Navigation · anatomiya</div>
+      <div style="width:300px; background:#fff; border:1px solid #e6e8ee; border-radius:12px; padding:14px; box-shadow:0 8px 24px rgba(16,20,28,.08);">
+        <div style="border:1px solid #e6e8ee; border-radius:10px; overflow:hidden; margin-bottom:11px;">
+          <div style="display:flex; background:#fff; padding:8px 4px 10px; position:relative;">
+            <span style="flex:1; text-align:center; color:#3565d9;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg><span style="display:block; font-size:7px; font-weight:600; margin-top:1px;">Bosh</span></span>
+            <span style="flex:1; text-align:center; color:#9aa1ae;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 21h16M6 21V4h9v17M9 8h3M9 12h3M9 16h3"></path></svg><span style="display:block; font-size:7px; margin-top:1px;">Firmalar</span></span>
+            <span style="flex:1; text-align:center;"><span style="width:38px; height:38px; margin-top:-16px; border-radius:50%; background:#3565d9; color:#fff; display:inline-flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(53,101,217,.4); font-size:17px;">+</span></span>
+            <span style="flex:1; text-align:center; color:#9aa1ae; position:relative;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg><span style="display:block; font-size:7px; margin-top:1px;">Tasdiqlar</span><span style="position:absolute; top:-3px; right:12px; min-width:13px; height:13px; border-radius:999px; background:#c9403e; color:#fff; font-size:7px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; padding:0 3px;">3</span></span>
+            <span style="flex:1; text-align:center; color:#9aa1ae;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg><span style="display:block; font-size:7px; margin-top:1px;">Yana</span></span>
+          </div>
+        </div>
+        <ul style="margin:0; padding-left:16px; color:#6a7180; font-size:11px; display:flex; flex-direction:column; gap:3px;">
+          <li>5 pozitsiya: Bosh · Firmalar · <strong>+ (markaziy FAB)</strong> · Tasdiqlar · Yana</li>
+          <li>FAB kontekstli: Kassada → operatsiya, Xarajatda → chek skaner</li>
+          <li>Badge — faqat Tasdiqlar va bildirishnomada, maks "9+"</li>
+          <li>"Yana" → to'liq modul ro'yxati (Oylik, KPI, Hisobotlar...)</li>
+          <li>Balandlik 56px + home-indicator zonasi · faol rang accent</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Home -->
+    <div data-screen-label="Mobile Home">
+      <div style="font-size:12px; font-weight:600; color:#6a7180; margin-bottom:8px;">Home · shaxsiylashtirilgan</div>
+      <div style="width:220px; height:460px; background:#f5f6f8; border:1px solid #d9dde5; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 8px 24px rgba(16,20,28,.08);">
+        <div style="display:flex; align-items:center; gap:7px; padding:10px 12px; background:#fff; border-bottom:1px solid #e6e8ee;">
+          <span style="width:22px; height:22px; border-radius:50%; background:#3565d9; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:8px; font-weight:600;">TS</span>
+          <span><span style="display:block; font-size:9.5px; font-weight:700;">Xayrli kun, Timur!</span><span style="display:block; font-size:7px; color:#6a7180;">Juma, 10-iyul</span></span>
+          <span style="flex:1;"></span>
+          <span style="position:relative;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6a7180" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg><span style="position:absolute; top:-2px; right:-2px; width:6px; height:6px; border-radius:50%; background:#c9403e;"></span></span>
+        </div>
+        <div style="flex:1; padding:10px; overflow:hidden;">
+          <span style="display:block; background:#3565d9; color:#fff; border-radius:11px; padding:11px 13px; margin-bottom:8px;">
+            <span style="display:block; font-size:7px; opacity:.75; font-weight:600;">BUGUNGI HOLAT · O'ZTEMIRYO'LXISOB</span>
+            <span style="display:flex; align-items:baseline; gap:5px; margin-top:2px;"><span style="font-size:16px; font-weight:700;">+32.4 mln</span><span style="font-size:8px; opacity:.8;">bugungi kirim</span></span>
+            <span style="display:block; font-size:7.5px; opacity:.8; margin-top:3px;">Qoldiq: 184.2 mln · kutilayotgan chiqim: 12.5 mln</span>
+          </span>
+          <span style="display:block; background:#fff; border:1px solid rgba(201,64,62,.3); border-radius:10px; padding:9px 11px; margin-bottom:8px;">
+            <span style="display:flex; gap:5px; font-size:8.5px;"><span style="color:#c9403e;">●</span><span><strong>QQS deklaratsiyasi</strong> — 5 kun qoldi</span></span>
+            <span style="display:flex; gap:5px; font-size:8.5px; margin-top:3px;"><span style="color:#b7791f;">●</span><span><strong>3 tasdiq</strong> sizni kutmoqda</span></span>
+          </span>
+          <span style="display:block; font-size:7.5px; font-weight:600; color:#9aa1ae; margin-bottom:5px;">TEZKOR AMALLAR</span>
+          <span style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;">
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:9px; padding:9px; text-align:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span style="display:block; font-size:8px; font-weight:600; margin-top:3px;">Operatsiya</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:9px; padding:9px; text-align:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"></path><circle cx="12" cy="13" r="4"></circle></svg><span style="display:block; font-size:8px; font-weight:600; margin-top:3px;">Chek skaner</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:9px; padding:9px; text-align:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg><span style="display:block; font-size:8px; font-weight:600; margin-top:3px;">Tasdiqlar · 3</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:9px; padding:9px; text-align:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6"></path></svg><span style="display:block; font-size:8px; font-weight:600; margin-top:3px;">Hisobotlar</span></span>
+          </span>
+          <span style="display:block; font-size:7.5px; font-weight:600; color:#9aa1ae; margin-bottom:5px;">SO'NGGI</span>
+          <span style="display:block; background:#fff; border:1px solid #e6e8ee; border-radius:9px; padding:8px 10px;">
+            <span style="display:block; font-size:8px; color:#6a7180; margin-bottom:3px;"><strong style="color:#14171d;">Abdugani</strong> hisobot yukladi · 12:42</span>
+            <span style="display:block; font-size:8px; color:#6a7180;"><strong style="color:#14171d;">+32.4 mln</strong> Mehnat Trans · 12:04</span>
+          </span>
+        </div>
+        <div style="display:flex; background:#fff; border-top:1px solid #e6e8ee; padding:6px 4px 10px;">
+          <span style="flex:1; text-align:center; color:#3565d9;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg><span style="display:block; font-size:6px; font-weight:600;">Bosh</span></span>
+          <span style="flex:1; text-align:center; color:#9aa1ae;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 21h16M6 21V4h9v17M9 8h3M9 12h3M9 16h3"></path></svg><span style="display:block; font-size:6px;">Firmalar</span></span>
+          <span style="flex:1; text-align:center;"><span style="width:30px; height:30px; margin-top:-13px; border-radius:50%; background:#3565d9; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:14px; box-shadow:0 3px 9px rgba(53,101,217,.4);">+</span></span>
+          <span style="flex:1; text-align:center; color:#9aa1ae; position:relative;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg><span style="display:block; font-size:6px;">Tasdiqlar</span><span style="position:absolute; top:-3px; right:8px; min-width:11px; height:11px; border-radius:999px; background:#c9403e; color:#fff; font-size:6px; font-weight:700; display:inline-flex; align-items:center; justify-content:center;">3</span></span>
+          <span style="flex:1; text-align:center; color:#9aa1ae;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg><span style="display:block; font-size:6px;">Yana</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Yana menu -->
+    <div data-screen-label="Yana Menyu">
+      <div style="font-size:12px; font-weight:600; color:#6a7180; margin-bottom:8px;">"Yana" menyusi · barcha modullar</div>
+      <div style="width:220px; height:460px; background:#f5f6f8; border:1px solid #d9dde5; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 8px 24px rgba(16,20,28,.08);">
+        <div style="display:flex; align-items:center; gap:7px; padding:11px 12px; background:#fff; border-bottom:1px solid #e6e8ee;">
+          <span style="font-size:11px; font-weight:700;">Barcha modullar</span>
+        </div>
+        <div style="flex:1; padding:10px;">
+          <span style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;">
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:10px 4px; text-align:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"></path></svg><span style="display:block; font-size:7.5px; font-weight:600; margin-top:3px;">Dashboard</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:10px 4px; text-align:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linecap="round"><path d="M4 21h16M6 21V4h9v17M9 8h3M9 12h3M9 16h3"></path></svg><span style="display:block; font-size:7.5px; font-weight:600; margin-top:3px;">Firmalar</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:10px 4px; text-align:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8"></path></svg><span style="display:block; font-size:7.5px; font-weight:600; margin-top:3px;">Xodimlar</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:10px 4px; text-align:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linejoin="round"><path d="M2 7h20v13H2zM2 7l3-4h14l3 4M16 13h4"></path></svg><span style="display:block; font-size:7.5px; font-weight:600; margin-top:3px;">Oylik</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:10px 4px; text-align:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7l-8.5 8.5-5-5L2 17M16 7h6v6"></path></svg><span style="display:block; font-size:7.5px; font-weight:600; margin-top:3px;">KPI</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:10px 4px; text-align:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8"><path d="M1 5h22v14H1zM1 10h22"></path></svg><span style="display:block; font-size:7.5px; font-weight:600; margin-top:3px;">Kassa</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:10px 4px; text-align:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6"></path></svg><span style="display:block; font-size:7.5px; font-weight:600; margin-top:3px;">Hisobotlar</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:10px 4px; text-align:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path></svg><span style="display:block; font-size:7.5px; font-weight:600; margin-top:3px;">Xarajatlar</span></span>
+            <span style="background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:10px 4px; text-align:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3565d9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg><span style="display:block; font-size:7.5px; font-weight:600; margin-top:3px;">Xabarlar</span></span>
+          </span>
+          <span style="display:block; background:#fff; border:1px solid #e6e8ee; border-radius:10px; overflow:hidden;">
+            <span style="display:flex; align-items:center; gap:8px; padding:9px 11px; border-bottom:1px solid #eef0f4; font-size:9px; font-weight:600;"><span style="width:20px; height:20px; border-radius:50%; background:#3565d9; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:7px;">TS</span>Profil<span style="margin-left:auto; color:#9aa1ae;">›</span></span>
+            <span style="display:flex; align-items:center; gap:8px; padding:9px 11px; border-bottom:1px solid #eef0f4; font-size:9px; font-weight:600;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6a7180" stroke-width="1.8" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"></path></svg>Sozlamalar<span style="margin-left:auto; color:#9aa1ae;">›</span></span>
+            <span style="display:flex; align-items:center; gap:8px; padding:9px 11px; font-size:9px; font-weight:600;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6a7180" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg>Bildirishnomalar<span style="margin-left:auto; background:#c9403e; color:#fff; border-radius:999px; font-size:6.5px; font-weight:700; padding:1px 5px;">3</span></span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approvals -->
+    <div data-screen-label="Approvals Mobile">
+      <div style="font-size:12px; font-weight:600; color:#6a7180; margin-bottom:8px;">Approvals · svaypli tasdiqlash</div>
+      <div style="width:220px; height:460px; background:#f5f6f8; border:1px solid #d9dde5; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 8px 24px rgba(16,20,28,.08);">
+        <div style="display:flex; align-items:center; gap:7px; padding:11px 12px; background:#fff; border-bottom:1px solid #e6e8ee;">
+          <span style="font-size:11px; font-weight:700;">Tasdiqlar</span>
+          <span style="background:rgba(201,64,62,.12); color:#c9403e; border-radius:999px; padding:1px 6px; font-size:7.5px; font-weight:700;">3</span>
+        </div>
+        <div style="flex:1; padding:10px;">
+          <span style="display:block; background:#fff; border:1px solid #e6e8ee; border-radius:11px; padding:11px 12px; margin-bottom:8px; box-shadow:0 2px 8px rgba(16,20,28,.06);">
+            <span style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-size:8px; font-weight:600; color:#6a7180;">CHIQIM · KASSA</span><span style="font-size:7.5px; color:#9aa1ae;">09:15</span></span>
+            <span style="display:block; font-size:12px; font-weight:700;">−12 500 000 so'm</span>
+            <span style="display:block; font-size:8.5px; color:#6a7180; margin:2px 0 7px;">Ofis ijarasi — iyul · Azizbek · 📎 shartnoma.pdf</span>
+            <span style="display:flex; gap:6px;">
+              <span style="flex:1; text-align:center; background:#157f4d; color:#fff; border-radius:7px; padding:7px; font-size:9px; font-weight:600;">✓ Tasdiqlash</span>
+              <span style="flex:1; text-align:center; border:1px solid rgba(201,64,62,.4); color:#c9403e; border-radius:7px; padding:7px; font-size:9px; font-weight:600;">✕ Rad</span>
+            </span>
+          </span>
+          <span style="display:block; background:#fff; border:1px solid #e6e8ee; border-radius:11px; padding:11px 12px; margin-bottom:8px;">
+            <span style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-size:8px; font-weight:600; color:#6a7180;">XARAJAT · IT</span><span style="font-size:7.5px; color:#9aa1ae;">10:02</span></span>
+            <span style="display:block; font-size:12px; font-weight:700;">−3 300 000 so'm</span>
+            <span style="display:block; font-size:8.5px; color:#6a7180; margin:2px 0 7px;">Server ijarasi Q3 · limitning 73% ishlatilgan</span>
+            <span style="display:flex; gap:6px;">
+              <span style="flex:1; text-align:center; background:#157f4d; color:#fff; border-radius:7px; padding:7px; font-size:9px; font-weight:600;">✓ Tasdiqlash</span>
+              <span style="flex:1; text-align:center; border:1px solid rgba(201,64,62,.4); color:#c9403e; border-radius:7px; padding:7px; font-size:9px; font-weight:600;">✕ Rad</span>
+            </span>
+          </span>
+          <span style="display:block; background:#fff; border:1px solid #e6e8ee; border-radius:11px; padding:11px 12px;">
+            <span style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-size:8px; font-weight:600; color:#6a7180;">OKLAD O'ZGARISHI</span><span style="font-size:7.5px; color:#9aa1ae;">14:20</span></span>
+            <span style="display:block; font-size:11px; font-weight:700;">Abdugani: 9.5 → 9.8 mln</span>
+            <span style="display:block; font-size:8.5px; color:#6a7180; margin:2px 0 7px;">Bosh Buxgalter taklif qildi · KPI #1 asosida</span>
+            <span style="display:flex; gap:6px;">
+              <span style="flex:1; text-align:center; background:#157f4d; color:#fff; border-radius:7px; padding:7px; font-size:9px; font-weight:600;">✓ Tasdiqlash</span>
+              <span style="flex:1; text-align:center; border:1px solid #e6e8ee; color:#6a7180; border-radius:7px; padding:7px; font-size:9px; font-weight:600;">Batafsil</span>
+            </span>
+          </span>
+          <span style="display:block; text-align:center; font-size:7.5px; color:#9aa1ae; margin-top:9px;">← chapga svayp: rad · o'ngga svayp: tasdiq →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCANNER / OFFLINE / PUSH / WIDGETS / PROFILE / SETTINGS / NOTIFS ============ -->
+  <div style="font-size:12px; font-weight:600; color:#3565d9; letter-spacing:.08em; margin-bottom:14px;">SKANER · OFFLINE · PUSH · VIDJETLAR · PROFIL</div>
+  <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;">
+
+    <!-- Scanner -->
+    <div data-screen-label="Chek Skaner">
+      <div style="font-size:12px; font-weight:600; color:#6a7180; margin-bottom:8px;">Scanner · chekdan xarajat</div>
+      <div style="width:220px; height:460px; background:#14171d; border:1px solid #d9dde5; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 8px 24px rgba(16,20,28,.15);">
+        <div style="display:flex; align-items:center; gap:7px; padding:11px 12px; color:#fff;">
+          <span style="font-size:11px; font-weight:700;">Chek skaneri</span>
+          <span style="flex:1;"></span>
+          <span style="color:rgba(255,255,255,.6); font-size:11px;">✕</span>
+        </div>
+        <div style="flex:1; position:relative; margin:0 14px; display:flex; align-items:center; justify-content:center;">
+          <span style="position:absolute; inset:0; border:2px solid rgba(53,101,217,.9); border-radius:14px;"></span>
+          <span style="position:absolute; top:-1px; left:-1px; width:24px; height:24px; border-top:4px solid #7ea1ec; border-left:4px solid #7ea1ec; border-radius:14px 0 0 0;"></span>
+          <span style="position:absolute; top:-1px; right:-1px; width:24px; height:24px; border-top:4px solid #7ea1ec; border-right:4px solid #7ea1ec; border-radius:0 14px 0 0;"></span>
+          <span style="position:absolute; bottom:-1px; left:-1px; width:24px; height:24px; border-bottom:4px solid #7ea1ec; border-left:4px solid #7ea1ec; border-radius:0 0 0 14px;"></span>
+          <span style="position:absolute; bottom:-1px; right:-1px; width:24px; height:24px; border-bottom:4px solid #7ea1ec; border-right:4px solid #7ea1ec; border-radius:0 0 14px 0;"></span>
+          <span style="width:110px; background:#fff; border-radius:6px; padding:10px 9px; transform:rotate(-2deg); box-shadow:0 8px 20px rgba(0,0,0,.4);">
+            <span style="display:block; font-size:6px; font-weight:700; text-align:center; margin-bottom:4px;">OOO "KANSTOVARY"</span>
+            <span style="display:block; height:1px; background:#e6e8ee; margin-bottom:4px;"></span>
+            <span style="display:flex; justify-content:space-between; font-size:5.5px; color:#6a7180;"><span>Qog'oz A4 x10</span><span>420 000</span></span>
+            <span style="display:flex; justify-content:space-between; font-size:5.5px; color:#6a7180;"><span>Ruchka x50</span><span>250 000</span></span>
+            <span style="display:flex; justify-content:space-between; font-size:5.5px; color:#6a7180; margin-bottom:4px;"><span>Papka x20</span><span>170 000</span></span>
+            <span style="display:block; height:1px; background:#e6e8ee; margin-bottom:4px;"></span>
+            <span style="display:flex; justify-content:space-between; font-size:6.5px; font-weight:700;"><span>JAMI</span><span>840 000</span></span>
+          </span>
+        </div>
+        <div style="padding:12px 14px;">
+          <span style="display:block; background:rgba(21,127,77,.2); border:1px solid rgba(63,191,127,.4); border-radius:9px; padding:8px 10px; margin-bottom:9px;">
+            <span style="display:block; font-size:8px; font-weight:600; color:#3fbf7f;">✓ Aniqlandi: 840 000 so'm · Ofis kategoriyasi</span>
+            <span style="display:block; font-size:7px; color:rgba(255,255,255,.6); margin-top:1px;">STIR: 302 445 118 · 10.07.2026 · QQS ajratildi</span>
+          </span>
+          <span style="display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:4px;">
+            <span style="width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; display:inline-flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"></path></svg></span>
+            <span style="width:46px; height:46px; border-radius:50%; background:#fff; border:4px solid rgba(255,255,255,.3); display:inline-flex;"></span>
+            <span style="width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:10px;">⚡</span>
+          </span>
+          <span style="display:block; text-align:center; font-size:7px; color:rgba(255,255,255,.5);">Galereya · Suratga olish · Flash</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Offline -->
+    <div data-screen-label="Offline Rejim">
+      <div style="font-size:12px; font-weight:600; color:#6a7180; margin-bottom:8px;">Offline · navbat bilan sinxron</div>
+      <div style="width:220px; height:460px; background:#f5f6f8; border:1px solid #d9dde5; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 8px 24px rgba(16,20,28,.08);">
+        <span style="display:block; background:#14171d; color:#fff; text-align:center; padding:5px; font-size:8px; font-weight:600;">⚡ Offline rejim — ma'lumotlar keshdan</span>
+        <div style="display:flex; align-items:center; gap:7px; padding:10px 12px; background:#fff; border-bottom:1px solid #e6e8ee;">
+          <span style="font-size:11px; font-weight:700;">Kassa / Bank</span>
+          <span style="flex:1;"></span>
+          <span style="font-size:7px; color:#9aa1ae;">yangilangan: 12:04</span>
+        </div>
+        <div style="flex:1; padding:10px;">
+          <span style="display:block; background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:9px 11px; margin-bottom:8px; opacity:.75;">
+            <span style="display:block; font-size:7px; color:#6a7180; font-weight:600;">ASOSIY HISOB · KESH</span>
+            <span style="display:block; font-size:13px; font-weight:700;">184.2 mln</span>
+          </span>
+          <span style="display:block; font-size:7.5px; font-weight:600; color:#9aa1ae; margin-bottom:5px;">YUBORISH NAVBATI · 2</span>
+          <span style="display:block; background:#fff; border:1px solid rgba(183,121,31,.35); border-radius:10px; padding:9px 11px; margin-bottom:6px;">
+            <span style="display:flex; justify-content:space-between;"><span style="font-size:9px; font-weight:600;">Xarajat: kantselyariya</span><span style="font-size:9px; font-weight:700;">−840 000</span></span>
+            <span style="display:flex; align-items:center; gap:4px; font-size:7.5px; color:#b7791f; font-weight:600; margin-top:2px;"><span style="width:6px; height:6px; border-radius:50%; border:1.5px solid #b7791f; border-top-color:transparent;"></span>Internet kutilmoqda · saqlangan 12:31</span>
+          </span>
+          <span style="display:block; background:#fff; border:1px solid rgba(183,121,31,.35); border-radius:10px; padding:9px 11px; margin-bottom:10px;">
+            <span style="display:flex; justify-content:space-between;"><span style="font-size:9px; font-weight:600;">Chek skaneri: 3 surat</span><span style="font-size:9px; color:#6a7180;">2.1 MB</span></span>
+            <span style="display:block; font-size:7.5px; color:#b7791f; font-weight:600; margin-top:2px;">Wi-Fi'da yuboriladi (sozlama)</span>
+          </span>
+          <span style="display:block; background:#eef0f4; border-radius:10px; padding:9px 11px; font-size:7.5px; color:#6a7180;">
+            <strong style="color:#14171d;">Offline'da mumkin:</strong> ko'rish (kesh), xarajat kiritish, chek skanerlash, qoralama izohlar.<br><br>
+            <strong style="color:#14171d;">Bloklangan:</strong> to'lov tasdiqlash, oylik hisoblash, E-imzo — server talab qiladi.
+          </span>
+        </div>
+        <span style="display:block; background:#3565d9; color:#fff; text-align:center; border-radius:8px; margin:0 10px 10px; padding:8px; font-size:9px; font-weight:600;">Aloqa tiklanganda avto-sinxron ✓</span>
+      </div>
+    </div>
+
+    <!-- Push + Widgets -->
+    <div data-screen-label="Push Widgets">
+      <div style="font-size:12px; font-weight:600; color:#6a7180; margin-bottom:8px;">Push · lock-screen</div>
+      <div style="width:250px; display:flex; flex-direction:column; gap:8px; margin-bottom:18px;">
+        <span style="display:block; background:rgba(255,255,255,.92); border:1px solid #e6e8ee; border-radius:14px; padding:10px 12px; box-shadow:0 8px 24px rgba(16,20,28,.14);">
+          <span style="display:flex; align-items:center; gap:7px; margin-bottom:3px;"><span style="width:16px; height:16px; border-radius:4px; background:#3565d9; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:8px; font-weight:700;">A</span><span style="font-size:8px; font-weight:600; color:#6a7180;">ASRO</span><span style="margin-left:auto; font-size:7px; color:#9aa1ae;">hozir</span></span>
+          <span style="display:block; font-size:9.5px; font-weight:700;">Tasdiq kutilmoqda — 12.5 mln chiqim</span>
+          <span style="display:block; font-size:8.5px; color:#6a7180;">Ofis ijarasi · Azizbek kiritdi. Bosib tasdiqlang.</span>
+          <span style="display:flex; gap:6px; margin-top:6px;">
+            <span style="flex:1; text-align:center; background:#eef0f4; border-radius:6px; padding:5px; font-size:8px; font-weight:600; color:#157f4d;">Tasdiqlash</span>
+            <span style="flex:1; text-align:center; background:#eef0f4; border-radius:6px; padding:5px; font-size:8px; font-weight:600; color:#c9403e;">Rad etish</span>
+          </span>
+        </span>
+        <span style="display:block; background:rgba(255,255,255,.92); border:1px solid #e6e8ee; border-radius:14px; padding:10px 12px; box-shadow:0 8px 24px rgba(16,20,28,.14);">
+          <span style="display:flex; align-items:center; gap:7px; margin-bottom:3px;"><span style="width:16px; height:16px; border-radius:4px; background:#3565d9; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:8px; font-weight:700;">A</span><span style="font-size:8px; font-weight:600; color:#6a7180;">ASRO</span><span style="margin-left:auto; font-size:7px; color:#9aa1ae;">09:00</span></span>
+          <span style="display:block; font-size:9.5px; font-weight:700;">⚠ QQS deklaratsiyasi — 5 kun qoldi</span>
+          <span style="display:block; font-size:8.5px; color:#6a7180;">12 firma hali topshirmagan · muddat 15.07</span>
+        </span>
+      </div>
+      <div style="font-size:12px; font-weight:600; color:#6a7180; margin-bottom:8px;">Home-screen Widgets</div>
+      <div style="display:flex; gap:10px;">
+        <span style="display:block; width:120px; background:#fff; border:1px solid #e6e8ee; border-radius:16px; padding:11px 12px; box-shadow:0 8px 24px rgba(16,20,28,.1);">
+          <span style="display:flex; align-items:center; gap:5px; margin-bottom:5px;"><span style="width:12px; height:12px; border-radius:3px; background:#3565d9; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:6px; font-weight:700;">A</span><span style="font-size:6.5px; font-weight:600; color:#6a7180;">QOLDIQ</span></span>
+          <span style="display:block; font-size:14px; font-weight:700; letter-spacing:-.02em;">184.2 mln</span>
+          <span style="display:block; font-size:7px; color:#157f4d; margin-top:1px;">bugun +32.4 mln</span>
+          <span style="display:flex; align-items:flex-end; gap:2px; height:20px; margin-top:6px;">
+            <span style="flex:1; height:50%; background:#eef0f4; border-radius:1px;"></span><span style="flex:1; height:65%; background:#eef0f4; border-radius:1px;"></span><span style="flex:1; height:55%; background:#eef0f4; border-radius:1px;"></span><span style="flex:1; height:75%; background:#9db8ec; border-radius:1px;"></span><span style="flex:1; height:100%; background:#3565d9; border-radius:1px;"></span>
+          </span>
+        </span>
+        <span style="display:block; width:120px; background:#14171d; color:#fff; border-radius:16px; padding:11px 12px; box-shadow:0 8px 24px rgba(16,20,28,.15);">
+          <span style="display:flex; align-items:center; gap:5px; margin-bottom:5px;"><span style="width:12px; height:12px; border-radius:3px; background:#3565d9; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:6px; font-weight:700;">A</span><span style="font-size:6.5px; font-weight:600; color:#8b93a2;">TASDIQLAR</span></span>
+          <span style="display:block; font-size:14px; font-weight:700;">3 ta kutmoqda</span>
+          <span style="display:block; font-size:7px; color:#8b93a2; margin-top:1px;">jami 16.6 mln so'm</span>
+          <span style="display:block; background:rgba(53,101,217,.25); color:#7ea1ec; text-align:center; border-radius:6px; padding:4px; font-size:7px; font-weight:600; margin-top:7px;">Ochish →</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Profile + Settings + Notifications -->
+    <div data-screen-label="Profil Sozlamalar">
+      <div style="font-size:12px; font-weight:600; color:#6a7180; margin-bottom:8px;">Profile · Settings · Notifications</div>
+      <div style="display:flex; gap:16px;">
+        <div style="width:220px; height:460px; background:#f5f6f8; border:1px solid #d9dde5; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 8px 24px rgba(16,20,28,.08);">
+          <div style="display:flex; align-items:center; gap:7px; padding:11px 12px; background:#fff; border-bottom:1px solid #e6e8ee;">
+            <span style="color:#6a7180;">←</span><span style="font-size:11px; font-weight:700;">Profil va sozlamalar</span>
+          </div>
+          <div style="flex:1; padding:10px;">
+            <span style="display:block; background:#fff; border:1px solid #e6e8ee; border-radius:11px; padding:12px; text-align:center; margin-bottom:8px;">
+              <span style="width:38px; height:38px; border-radius:50%; background:#3565d9; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:600;">TS</span>
+              <span style="display:block; font-size:10.5px; font-weight:700; margin-top:4px;">TEST Super Admin</span>
+              <span style="display:block; font-size:7.5px; color:#6a7180;">superadmin@asro.uz · Super Admin</span>
+              <span style="display:inline-block; background:rgba(21,127,77,.12); color:#157f4d; border-radius:999px; padding:2px 8px; font-size:7px; font-weight:600; margin-top:4px;">✓ E-imzo ulangan · 2027 gacha</span>
+            </span>
+            <span style="display:block; background:#fff; border:1px solid #e6e8ee; border-radius:11px; overflow:hidden; margin-bottom:8px;">
+              <span style="display:flex; align-items:center; justify-content:space-between; padding:9px 11px; border-bottom:1px solid #eef0f4; font-size:9px;"><span style="font-weight:600;">Tungi rejim</span><span style="font-size:7.5px; color:#6a7180;">Auto ▾</span></span>
+              <span style="display:flex; align-items:center; justify-content:space-between; padding:9px 11px; border-bottom:1px solid #eef0f4; font-size:9px;"><span style="font-weight:600;">Til</span><span style="font-size:7.5px; color:#6a7180;">O'zbekcha ▾</span></span>
+              <span style="display:flex; align-items:center; justify-content:space-between; padding:9px 11px; border-bottom:1px solid #eef0f4; font-size:9px;"><span style="font-weight:600;">Face ID bilan kirish</span><span style="width:24px; height:14px; border-radius:999px; background:#3565d9; position:relative; display:inline-flex;"><span style="position:absolute; right:2px; top:2px; width:10px; height:10px; border-radius:50%; background:#fff;"></span></span></span>
+              <span style="display:flex; align-items:center; justify-content:space-between; padding:9px 11px; font-size:9px;"><span style="font-weight:600;">Faqat Wi-Fi'da sinxron</span><span style="width:24px; height:14px; border-radius:999px; background:#e6e8ee; position:relative; display:inline-flex;"><span style="position:absolute; left:2px; top:2px; width:10px; height:10px; border-radius:50%; background:#fff;"></span></span></span>
+            </span>
+            <span style="display:block; background:#fff; border:1px solid #e6e8ee; border-radius:11px; overflow:hidden;">
+              <span style="display:block; padding:8px 11px 4px; font-size:7px; font-weight:600; color:#9aa1ae;">PUSH BILDIRISHNOMALAR</span>
+              <span style="display:flex; align-items:center; justify-content:space-between; padding:7px 11px; border-bottom:1px solid #eef0f4; font-size:9px;"><span>Tasdiq so'rovlari</span><span style="width:24px; height:14px; border-radius:999px; background:#3565d9; position:relative; display:inline-flex;"><span style="position:absolute; right:2px; top:2px; width:10px; height:10px; border-radius:50%; background:#fff;"></span></span></span>
+              <span style="display:flex; align-items:center; justify-content:space-between; padding:7px 11px; border-bottom:1px solid #eef0f4; font-size:9px;"><span>Muddat ogohlantirishlari</span><span style="width:24px; height:14px; border-radius:999px; background:#3565d9; position:relative; display:inline-flex;"><span style="position:absolute; right:2px; top:2px; width:10px; height:10px; border-radius:50%; background:#fff;"></span></span></span>
+              <span style="display:flex; align-items:center; justify-content:space-between; padding:7px 11px; font-size:9px;"><span>Jamoa faoliyati</span><span style="width:24px; height:14px; border-radius:999px; background:#e6e8ee; position:relative; display:inline-flex;"><span style="position:absolute; left:2px; top:2px; width:10px; height:10px; border-radius:50%; background:#fff;"></span></span></span>
+            </span>
+          </div>
+        </div>
+        <div style="width:220px; height:460px; background:#f5f6f8; border:1px solid #d9dde5; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 8px 24px rgba(16,20,28,.08);">
+          <div style="display:flex; align-items:center; gap:7px; padding:11px 12px; background:#fff; border-bottom:1px solid #e6e8ee;">
+            <span style="font-size:11px; font-weight:700;">Bildirishnomalar</span>
+            <span style="flex:1;"></span>
+            <span style="font-size:7.5px; color:#3565d9; font-weight:600;">Barchasini o'qish</span>
+          </div>
+          <div style="flex:1; padding:10px;">
+            <span style="display:block; font-size:7.5px; font-weight:600; color:#9aa1ae; margin-bottom:5px;">BUGUN</span>
+            <span style="display:flex; gap:8px; background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:9px 11px; margin-bottom:6px;">
+              <span style="width:22px; height:22px; border-radius:6px; background:rgba(201,64,62,.1); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#c9403e" stroke-width="1.8" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"></path></svg></span>
+              <span><span style="display:block; font-size:8.5px;"><strong>QQS deklaratsiyasi</strong> — 5 kun qoldi</span><span style="display:block; font-size:7px; color:#9aa1ae;">09:00 · Soliq muddati</span></span>
+            </span>
+            <span style="display:flex; gap:8px; background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:9px 11px; margin-bottom:6px;">
+              <span style="width:22px; height:22px; border-radius:6px; background:rgba(183,121,31,.1); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#b7791f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></span>
+              <span><span style="display:block; font-size:8.5px;"><strong>3 tasdiq</strong> sizni kutmoqda · 16.6 mln</span><span style="display:block; font-size:7px; color:#9aa1ae;">09:15 · Tasdiqlar</span></span>
+            </span>
+            <span style="display:flex; gap:8px; background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:9px 11px; margin-bottom:9px;">
+              <span style="width:22px; height:22px; border-radius:6px; background:rgba(21,127,77,.1); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#157f4d" stroke-width="1.8"><path d="M1 5h22v14H1zM1 10h22"></path></svg></span>
+              <span><span style="display:block; font-size:8.5px;"><strong>+32.4 mln</strong> kirim — Mehnat Trans</span><span style="display:block; font-size:7px; color:#9aa1ae;">12:04 · Kassa</span></span>
+            </span>
+            <span style="display:block; font-size:7.5px; font-weight:600; color:#9aa1ae; margin-bottom:5px;">KECHA</span>
+            <span style="display:flex; gap:8px; background:#fff; border:1px solid #e6e8ee; border-radius:10px; padding:9px 11px; opacity:.7;">
+              <span style="width:22px; height:22px; border-radius:6px; background:#eef0f4; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6a7180" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6"></path></svg></span>
+              <span><span style="display:block; font-size:8.5px; color:#6a7180;">Abdugani "Foyda va zarar" yukladi</span><span style="display:block; font-size:7px; color:#9aa1ae;">12:42</span></span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

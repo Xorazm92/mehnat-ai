@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import OrganizationModule from "@/components/OrganizationModule";
 import CompanyDrawer from "@/components/CompanyDrawer";
@@ -19,14 +19,26 @@ export default function OrganizationsClient({ companies, staff, operations }: Pr
   const [selectedPeriod, setSelectedPeriod] = useState<string>("2026-03");
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
+  // router.refresh() dan keyin drawer'dagi ma'lumot server holati bilan
+  // sinxron bo'lsin — aks holda tahrirdan keyin eski qiymatlar ko'rinadi.
+  useEffect(() => {
+    setSelectedCompany(prev =>
+      prev ? companies.find(c => c.id === prev.id) ?? prev : prev
+    );
+  }, [companies]);
+
   const handleSave = async (company: Partial<Company>, assignments?: any[]) => {
     const isExisting = companies.some(c => c.id === company.id);
     if (isExisting) {
       await updateCompany(company.id as string, company as any, assignments);
+      // Drawer ochiq qolsin — faqat ko'rsatilayotgan ma'lumotni yangilaymiz.
+      // Aks holda xizmat checkboxini belgilash drawerni yopib yuborardi.
+      setSelectedCompany(prev =>
+        prev && prev.id === company.id ? { ...prev, ...company } as Company : prev
+      );
     } else {
       await createCompany(company as any, assignments);
     }
-    setSelectedCompany(null);
     router.refresh();
   };
 

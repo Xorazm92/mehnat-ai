@@ -1,6 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+/* next-themes `.dark` klassi bilan ishlashi uchun — aks holda `dark:`
+   utilitilar OS prefers-color-scheme ga qarab qoladi va tema tugmasi
+   bilan mos kelmay, light/dark aralashib ketadi. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-bg-primary: var(--bg-primary);
   --color-bg-secondary: var(--bg-secondary);
@@ -438,9 +443,15 @@ body {
 .erp-table tbody tr {
   border-bottom: 1px solid var(--table-border);
   transition: background-color 0.15s ease;
+  background: var(--table-row-even);
 }
 
-.erp-table tbody tr:hover {
+.erp-table tbody tr:nth-child(odd) {
+  background: var(--table-row-odd);
+}
+
+.erp-table tbody tr:hover,
+.erp-table tbody tr:nth-child(odd):hover {
   background: var(--table-row-hover);
 }
 
@@ -482,9 +493,15 @@ body {
 }
 
 /* Animations */
+/* NOTE: the end state intentionally has NO transform. A lingering
+   `transform` (via animation-fill-mode: forwards) turns the animated
+   wrapper into a containing block for position:fixed descendants, which
+   pushes any modal inside it off-screen. Ending on `opacity` only keeps
+   the fade while leaving `transform: none`, so fixed modals pin to the
+   viewport correctly. */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slide-in-right {
@@ -610,6 +627,93 @@ body {
   opacity: 0.6;
 }
 
+/* Legacy component classes used in older components (wizard, drawer, KPI manager).
+   Hammasi theme o'zgaruvchilariga bog'langan — light/dark avtomatik mos keladi. */
+.c1-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+.c1-section-header {
+  padding: 0.75rem 1.25rem;
+  background: var(--input-bg);
+  border-bottom: 1px solid var(--card-border);
+  color: var(--text-secondary);
+}
+
+.c1-input {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--input-text);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.c1-input:focus {
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px var(--input-focus-ring);
+}
+
+.c1-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Legacy glass inputs/cards — theme tokenlarga bog'langan soddalashtirilgan variant */
+.liquid-glass-input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--input-text);
+}
+
+.liquid-glass-input:focus {
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px var(--input-focus-ring);
+}
+
+.liquid-glass-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+/* Primary CTA (masalan, "Yangi qo'shish") */
+.ai-button-glow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.ai-button-glow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+}
+
+.ai-button-glow:active {
+  transform: translateY(0);
+}
+
+/* Legacy animation aliases */
+.animate-macos { animation: fade-in 0.25s ease-out forwards; }
+.animate-in.slide-in-from-right { animation: slide-in-right 0.3s ease-out forwards; }
+
 /* Legacy button classes used in older components */
 .c1-btn {
   display: inline-flex;
@@ -650,6 +754,28 @@ body {
   background: var(--bg-hover);
   color: var(--text-primary);
   border-color: var(--accent-blue);
+}
+
+.c1-btn-success {
+  background: var(--success);
+  color: #FFFFFF;
+  padding: 0.5rem 1rem;
+}
+
+.c1-btn-success:hover {
+  filter: brightness(0.92);
+  transform: translateY(-1px);
+}
+
+.c1-btn-danger {
+  background: var(--danger);
+  color: #FFFFFF;
+  padding: 0.5rem 1rem;
+}
+
+.c1-btn-danger:hover {
+  filter: brightness(0.92);
+  transform: translateY(-1px);
 }
 
 /* KPI status colors — semantic reusable */

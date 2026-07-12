@@ -72,12 +72,12 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const getRiskIndicator = (company: Company) => {
     const risk = company.riskLevel || 'low';
     if (risk === 'high' || company.companyStatus === 'problem' || company.companyStatus === 'debtor') {
-      return { emoji: '🔴', color: 'text-rose-600', bg: 'bg-[#FEEBF0]', border: 'border-[#F5C6CB]' };
+      return { emoji: '🔴', stripe: 'var(--danger)' };
     }
     if (risk === 'medium' || company.companyStatus === 'suspended') {
-      return { emoji: '🟡', color: 'text-amber-600', bg: 'bg-[#FFF3CD]', border: 'border-[#FFEEBA]' };
+      return { emoji: '🟡', stripe: 'var(--warning)' };
     }
-    return { emoji: '🟢', color: 'text-emerald-600', bg: 'bg-[#EBFBF0]', border: 'border-[#C3E6CB]' };
+    return { emoji: '🟢', stripe: 'var(--success)' };
   };
 
   const filtered = useMemo(() => {
@@ -172,11 +172,20 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
       setForm(c);
       setEditingId(c.id);
 
-      // Use props-passed assignments or defaults (Server Action called from page)
+      // Kompaniyaning amaldagi qiymatlaridan boshlang'ich assignments yasaymiz
       const defaultAssignments = [
-        { role: 'accountant', userId: c.accountantId || '', salaryType: 'percent', salaryValue: 70 },
-        { role: 'controller', userId: c.supervisorId || '', salaryType: 'fixed', salaryValue: 50000 },
-        { role: 'bank_manager', userId: c.bankClientId || '', salaryType: 'fixed', salaryValue: 50000 }
+        c.accountantSum
+          ? { role: 'accountant', userId: c.accountantId || '', salaryType: 'fixed', salaryValue: Number(c.accountantSum) }
+          : { role: 'accountant', userId: c.accountantId || '', salaryType: 'percent', salaryValue: Number(c.accountantPerc ?? 0) },
+        c.chiefAccountantSum
+          ? { role: 'chief', userId: c.chiefAccountantId || '', salaryType: 'fixed', salaryValue: Number(c.chiefAccountantSum) }
+          : { role: 'chief', userId: c.chiefAccountantId || '', salaryType: 'percent', salaryValue: Number(c.chiefAccountantPerc ?? 0) },
+        c.supervisorSum
+          ? { role: 'controller', userId: c.supervisorId || '', salaryType: 'fixed', salaryValue: Number(c.supervisorSum) }
+          : { role: 'controller', userId: c.supervisorId || '', salaryType: 'percent', salaryValue: Number(c.supervisorPerc ?? 0) },
+        c.bankClientSum
+          ? { role: 'bank_manager', userId: c.bankClientId || '', salaryType: 'fixed', salaryValue: Number(c.bankClientSum) }
+          : { role: 'bank_manager', userId: c.bankClientId || '', salaryType: 'percent', salaryValue: Number(c.bankClientPerc ?? 0) }
       ];
 
       setEditingAssignments(defaultAssignments);
@@ -231,8 +240,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   return (
     <div className="w-full space-y-4 animate-fade-in pb-24 min-w-0">
       {companies.length === 0 && (
-        <div className="bg-[#FEEBF0] border border-[#F5C6CB] rounded-sm p-6 text-center shadow-sm">
-          <p className="text-rose-700 font-bold text-[11px] uppercase tracking-widest leading-relaxed">
+        <div className="rounded-lg p-6 text-center shadow-sm" style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)' }}>
+          <p className="font-bold text-[11px] uppercase tracking-widest leading-relaxed" style={{ color: 'var(--danger)' }}>
             ⚠️ Hech qanday firma yuklanmadi. Sahifani yangilang yoki administratorga murojaat qiling.
           </p>
         </div>
@@ -332,10 +341,10 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
       {/* Smart Filters Panel */}
       {showFilters && (
-        <div className="bg-white dark:bg-[#22252B] p-4 rounded-sm shadow-sm border border-[#DEE2E6] dark:border-[#3A3D44] animate-fade-in transition-colors">
-          <div className="flex items-center gap-2 mb-4 border-b border-[#F0F2F5] dark:border-[#1e2025] pb-3">
-            <Filter size={14} className="text-[#3366CC]" />
-            <h3 className="text-[10px] font-bold text-gray-800 dark:text-white uppercase tracking-widest">Aqlli Filtrlar</h3>
+        <div className="dashboard-card p-4 animate-fade-in">
+          <div className="flex items-center gap-2 mb-4 pb-3" style={{ borderBottom: '1px solid var(--card-border)' }}>
+            <Filter size={14} style={{ color: 'var(--accent-blue)' }} />
+            <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Aqlli Filtrlar</h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
@@ -365,11 +374,11 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               { label: 'KPI', value: filterKpi, onChange: setFilterKpi, options: [{ label: 'Barchasi', val: 'all' }, { label: 'Yoqilgan', val: 'yes' }, { label: "O'chirilgan", val: 'no' }] }
             ].map((f, idx) => (
               <div key={idx} className="space-y-1">
-                <label className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{f.label}</label>
+                <label className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{f.label}</label>
                 <select
                   value={f.value}
                   onChange={(e) => { f.onChange(e.target.value); setCurrentPage(1); }}
-                  className="w-full px-2 py-1.5 rounded-sm bg-[#F8F9FA] dark:bg-[#1A1D23] border border-[#DEE2E6] dark:border-[#3A3D44] outline-none focus:border-[#3366CC] text-[10px] font-bold text-gray-700 dark:text-gray-300 transition-all uppercase tracking-tight"
+                  className="c1-input text-[10px] font-bold uppercase tracking-tight"
                 >
                   {f.options.map((o, i) => <option key={i} value={o.val}>{o.label}</option>)}
                 </select>
@@ -377,14 +386,17 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             ))}
           </div>
 
-          <div className="flex justify-end mt-4 pt-3 border-t border-[#F0F2F5] dark:border-[#1e2025]">
+          <div className="flex justify-end mt-4 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
             <button
               onClick={() => {
                 setFilterTaxType('all'); setFilterStatus('all'); setFilterEmployee('all');
                 setFilterRisk('all'); setFilterServer('all'); setFilterItPark('all');
                 setFilterKpi('all'); setCurrentPage(1);
               }}
-              className="px-3 py-1 text-[8px] font-bold text-gray-400 hover:text-red-500 transition-colors uppercase tracking-widest"
+              className="px-3 py-1 text-[9px] font-bold transition-colors uppercase tracking-widest"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
             >
               Reset
             </button>
@@ -394,11 +406,11 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
       {/* Search Bar */}
       <div className="relative w-full max-w-xl">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 z-10" size={14} style={{ color: 'var(--text-muted)' }} />
         <input
           type="text"
-          placeholder="INN, FIRMA NOMI YOKI DIREKTOR..."
-          className="w-full pl-9 pr-4 py-2 bg-white dark:bg-[#22252B] border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm text-[11px] font-bold text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:border-[#3366CC] transition-all shadow-sm uppercase tracking-tight"
+          placeholder="INN, firma nomi yoki direktor..."
+          className="erp-input !pl-9 text-[12px] font-semibold"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
         />
@@ -406,8 +418,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
       <div className="space-y-4">
         {isAdding && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 transition-colors animate-fade-in">
-            <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-sm border border-[#DEE2E6] bg-[#F0F2F5] dark:bg-[#111318] shadow-2xl">
+          <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 sm:p-8 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="relative w-full max-w-4xl my-auto rounded-xl shadow-2xl overflow-hidden" style={{ background: 'var(--bg-primary)', border: '1px solid var(--card-border)' }}>
               <OnboardingWizard
                 staff={staff}
                 initialData={form}
@@ -422,8 +434,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 }}
               />
               {isSaving && (
-                <div className="absolute inset-0 z-[110] flex items-center justify-center bg-white/50 dark:bg-black/50">
-                  <div className="w-8 h-8 border-3 border-[#3366CC] border-t-transparent rounded-full animate-spin"></div>
+                <div className="absolute inset-0 z-[110] flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--bg-primary) 60%, transparent)' }}>
+                  <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
                 </div>
               )}
             </div>
@@ -441,8 +453,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                   className={`dashboard-card p-4 transition-all cursor-pointer flex flex-col group relative overflow-hidden`}
                   onClick={() => onCompanySelect(c)}
                 >
-                  <div className={`absolute top-0 left-0 bottom-0 w-1 ${risk.bg.replace('bg-', 'bg-')} ${risk.color.replace('text-', 'bg-')}`}></div>
-                  
+                  <div className="absolute top-0 left-0 bottom-0 w-1" style={{ background: risk.stripe }}></div>
+
                   <div className="flex gap-3 mb-4 pl-2">
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-black shrink-0 shadow-sm transition-transform group-hover:scale-105" style={{ background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}99)` }}>
                       {c.name.charAt(0)}
@@ -502,12 +514,13 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         ) : (
           <div className="dashboard-card overflow-hidden relative">
             <div ref={bottomScrollRef} className="w-full overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1000px]">
+              <table className="erp-table w-full text-left min-w-[1000px]">
                 <thead>
                   <tr>
                     <th className="w-[40px] text-center">№</th>
                     <th
-                      className="w-[240px] sticky left-0 z-20 cursor-pointer hover:bg-[var(--accent-blue-light)] transition-colors"
+                      className="w-[240px] sticky left-0 z-20 cursor-pointer transition-colors"
+                      style={{ background: 'var(--table-header-bg)' }}
                       onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       <div className="flex items-center gap-1.5">
@@ -516,7 +529,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                       </div>
                     </th>
                     <th
-                      className="w-[100px] cursor-pointer hover:bg-[var(--accent-blue-light)] transition-colors"
+                      className="w-[100px] cursor-pointer transition-colors"
                       onClick={() => { setSortField('inn'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
                     >
                       {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -544,14 +557,13 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                       <tr
                         key={c.id}
                         onClick={() => onCompanySelect(c)}
-                        className="group cursor-pointer transition-colors hover:bg-[var(--accent-blue-light)]"
-                        style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)' }}
+                        className="group cursor-pointer transition-colors"
                       >
                         <td className="text-center font-mono text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
                           {c.originalIndex || (i + 1)}
                         </td>
-                        <td className="sticky left-0 bg-inherit z-10 font-bold relative pl-3" style={{ color: 'var(--text)' }}>
-                          <div className={`absolute left-0 top-0 bottom-0 w-1 ${risk.bg.replace('bg-', 'bg-')} ${risk.color.replace('text-', 'bg-')}`}></div>
+                        <td className="sticky left-0 z-10 font-bold relative !pl-3" style={{ color: 'var(--text)', background: 'var(--card-bg)' }}>
+                          <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: risk.stripe }}></div>
                           <div className="truncate max-w-[210px] uppercase tracking-tight" title={c.name}>{c.name}</div>
                           {c.brandName && <div className="text-[9px] font-bold truncate uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{c.brandName}</div>}
                         </td>
@@ -582,7 +594,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                           </div>
                         </td>
                         <td>
-                          <div className="flex items-center justify-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                             <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Batafsil"><Eye size={13} /></button>
                             <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Edit"><Edit3 size={13} /></button>
                             <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Delete"><Trash2 size={13} /></button>

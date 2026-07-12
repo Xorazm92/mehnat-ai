@@ -50,6 +50,19 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
         };
     }, [companies, payments, selectedPeriod, filteredData]);
 
+    const openPayment = (item: { id: string; contractAmount?: number; payment?: Partial<Payment> | null }) => {
+        setEditingPayment(
+            item.payment || {
+                companyId: item.id,
+                amount: item.contractAmount,
+                period: selectedPeriod,
+                status: PaymentStatus.PAID,
+                paymentDate: new Date().toISOString().split('T')[0],
+            }
+        );
+        setIsModalOpen(true);
+    };
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (editingPayment && !isSaving) {
@@ -174,7 +187,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                         </thead>
                         <tbody>
                             {filteredData.map((item, i) => (
-                                <tr key={item.id} className="transition-colors group hover:bg-[var(--accent-blue-light)] cursor-pointer" style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
+                                <tr key={item.id} onClick={() => openPayment(item)} className="transition-colors group hover:bg-[var(--accent-blue-light)] cursor-pointer" style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
                                     <td className="px-6 py-3">
                                         <div className="font-bold text-[13px] uppercase tracking-tight truncate max-w-[250px]" style={{ color: 'var(--text)' }}>
                                             {item.name}
@@ -204,29 +217,21 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                         )}
                                     </td>
                                     <td className="px-6 py-3 text-right">
-                                        <div className="flex items-center justify-end gap-2 opacity-20 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
                                             <button
-                                                onClick={() => {
-                                                    setEditingPayment(item.payment || {
-                                                        companyId: item.id,
-                                                        amount: item.contractAmount,
-                                                        period: selectedPeriod,
-                                                        status: PaymentStatus.PAID,
-                                                        paymentDate: new Date().toISOString().split('T')[0]
-                                                    });
-                                                    setIsModalOpen(true);
-                                                }}
-                                                className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
-                                                style={{ color: 'var(--accent-blue)' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                onClick={(e) => { e.stopPropagation(); openPayment(item); }}
+                                                className="h-8 px-3 flex items-center gap-1.5 rounded-lg text-white text-[11px] font-bold uppercase tracking-wider transition-all"
+                                                style={{ background: 'var(--accent-blue)' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-hover)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-blue)'}
                                                 title="To'lov / Tahrirlash"
                                             >
-                                                <CreditCard size={16} />
+                                                <CreditCard size={14} />
+                                                {item.payment ? 'Tahrir' : "To'lov"}
                                             </button>
                                             {item.payment && (
                                                 <button
-                                                    onClick={() => { if (confirm('To\'lovni o\'chirishni tasdiqlaysizmi?')) onDeletePayment(item.payment!.id); }}
+                                                    onClick={(e) => { e.stopPropagation(); if (confirm('To\'lovni o\'chirishni tasdiqlaysizmi?')) onDeletePayment(item.payment!.id); }}
                                                     className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
                                                     style={{ color: 'var(--danger)' }}
                                                     onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'}

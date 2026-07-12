@@ -1,0 +1,385 @@
+{
+  "version": 2,
+  "description": "Mehnat-AI KPI qoidalari — Uch holat tizimi (bonus / neytral / jarima)",
+  "roles": ["accountant", "bank_client", "supervisor"],
+  "rules": [
+
+    {
+      "id": "acc_attendance",
+      "name_uz": "Ishga kelish (08:30 gacha)",
+      "role": "accountant",
+      "category": "attendance",
+      "input_type": "counter",
+      "sort_order": 1,
+      "description_uz": "Har kuni 08:30 gacha kelish uchun +0.04% (max +1%). Uzrli sababsiz 09:00 dan kech kelish: har 5 daqiqa uchun -0.1%.",
+      "options": [
+        { "key": "early_days",   "label_uz": "08:30 gacha kelgan kunlar soni",        "color": "green",  "coeff_per_unit": 0.04, "max_coeff": 1.0,  "note": "Har kun uchun +0.04%, max +1%" },
+        { "key": "late_5min",    "label_uz": "Kechikkan har 5 daqiqa (09:00 dan keyin)", "color": "red", "coeff_per_unit": -0.1, "max_coeff": null, "note": "Har 5 daqiqa uchun -0.1%, cheksiz" }
+      ],
+      "max_bonus": 1.0,
+      "max_penalty": null,
+      "scope": "global"
+    },
+
+    {
+      "id": "acc_group_response",
+      "name_uz": "Guruhda javob berish (10 daqiqa reglament)",
+      "role": "accountant",
+      "category": "communication",
+      "input_type": "select",
+      "sort_order": 2,
+      "description_uz": "Oy davomida uzluksiz 10 daqiqada javob berish. Topshiriq bajarish muddati guruhga yoziladi (max 30 daqiqa).",
+      "options": [
+        { "key": "full",    "label_uz": "Oy davomida uzluksiz bajarildi",  "color": "green",  "coeff": 1.0  },
+        { "key": "partial", "label_uz": "Ba'zi holatlar o'tkazildi",        "color": "yellow", "coeff": 0.0  },
+        { "key": "failed",  "label_uz": "Tizimli kechikish (har saf -0.5%)","color": "red",   "coeff": -0.5, "note": "Har bir 10 daqiqa+ kechikish uchun o'sha firmadan -0.5%" }
+      ],
+      "max_bonus": 1.0,
+      "max_penalty": -0.5,
+      "scope": "per_company"
+    },
+
+    {
+      "id": "acc_1c_base",
+      "name_uz": "1C Baza (o'tgan oy)",
+      "role": "accountant",
+      "category": "automation",
+      "input_type": "select",
+      "sort_order": 3,
+      "description_uz": "O'tgan oyning 1C bazasi oy boshidan 5-sanagacha tayyor bo'lishi kerak.",
+      "options": [
+        { "key": "by_5th",      "label_uz": "5-sanagacha tayyor",      "color": "green",  "coeff": 1.0  },
+        { "key": "by_15th",     "label_uz": "5–15 sana orasida tayyor","color": "yellow", "coeff": 0.0  },
+        { "key": "after_15th",  "label_uz": "15-dan keyin yoki yo'q",  "color": "red",    "coeff": -1.0, "note": "O'sha firmadagi oylik ulushidan -1%" }
+      ],
+      "max_bonus": 1.0,
+      "max_penalty": -1.0,
+      "scope": "per_company"
+    },
+
+    {
+      "id": "acc_mehnat_didox_xatlar",
+      "name_uz": "my.mehnat + Didox + my.soliq xatlar",
+      "role": "accountant",
+      "category": "automation",
+      "input_type": "select",
+      "sort_order": 4,
+      "description_uz": "my.mehnat.uz da xodimlar vaqtida kiritilishi, Didox da shartnomalar qabul qilinishi, my.soliq.uz da xatlar o'qilishi.",
+      "sub_items": [
+        {
+          "id": "acc_mehnat",
+          "name_uz": "my.mehnat.uz (xodimlar vaqtida)",
+          "options": [
+            { "key": "ok",      "label_uz": "Hammasi vaqtida",    "color": "green",  "coeff": 0.33  },
+            { "key": "partial", "label_uz": "Ba'zilari kechikdi", "color": "yellow", "coeff": 0.0   },
+            { "key": "failed",  "label_uz": "Vaqtida kiritilmadi","color": "red",    "coeff": -0.33 }
+          ]
+        },
+        {
+          "id": "acc_didox",
+          "name_uz": "Didox.uz (shartnomalar, s/f)",
+          "options": [
+            { "key": "ok",      "label_uz": "Hammasi qabul qilindi",  "color": "green",  "coeff": 0.33  },
+            { "key": "partial", "label_uz": "Ba'zilari qoldi",         "color": "yellow", "coeff": 0.0   },
+            { "key": "failed",  "label_uz": "Qabul qilinmagan bor",   "color": "red",    "coeff": -0.33 }
+          ]
+        },
+        {
+          "id": "acc_soliq_xat",
+          "name_uz": "my.soliq.uz (o'qilmagan xatlar)",
+          "options": [
+            { "key": "ok",      "label_uz": "Xatlar o'qilgan/javob berilgan", "color": "green",  "coeff": 0.34  },
+            { "key": "partial", "label_uz": "Ba'zilari qolgan",                "color": "yellow", "coeff": 0.0   },
+            { "key": "failed",  "label_uz": "O'qilmagan xatlar bor",          "color": "red",    "coeff": -0.34 }
+          ]
+        }
+      ],
+      "max_bonus": 1.0,
+      "max_penalty": -1.0,
+      "scope": "per_company"
+    },
+
+    {
+      "id": "acc_reports",
+      "name_uz": "Belgilangan hisobotlar",
+      "role": "accountant",
+      "category": "reports",
+      "input_type": "select",
+      "sort_order": 5,
+      "description_uz": "Pul oqimi, debitor-kreditor, soliqlar hisobi, ish haqi rasчёти, foyda va zarar, material hisobotlari — guruhga vaqtida yuborilishi.",
+      "sub_items": [
+        { "id": "acc_cashflow",    "name_uz": "Pul oqimi",          "bonus": 0.2,  "neutral": 0.0, "penalty": -0.2 },
+        { "id": "acc_debitor",     "name_uz": "Debitor-kreditor",    "bonus": 0.2,  "neutral": 0.0, "penalty": -0.2 },
+        { "id": "acc_taxes",       "name_uz": "Soliqlar hisobi",     "bonus": 0.2,  "neutral": 0.0, "penalty": -0.2 },
+        { "id": "acc_payroll",     "name_uz": "Ish haqi rasчёти",    "bonus": 0.2,  "neutral": 0.0, "penalty": -0.2 },
+        { "id": "acc_pnl",         "name_uz": "Foyda va zarar",      "bonus": 0.1,  "neutral": 0.0, "penalty": -0.1 },
+        { "id": "acc_materials",   "name_uz": "Material hisobotlari","bonus": 0.1,  "neutral": 0.0, "penalty": -0.1 }
+      ],
+      "options": [
+        { "key": "all_on_time", "label_uz": "Barchasi o'z vaqtida topshirildi", "color": "green",  "coeff": 1.0  },
+        { "key": "partial",     "label_uz": "Ba'zilari kechikdi",               "color": "yellow", "coeff": 0.0  },
+        { "key": "late",        "label_uz": "Ko'pchiligi yoki hammasi kechikdi", "color": "red",   "coeff": -1.0, "note": "O'sha firmadagi oylik ulushidan -1%" }
+      ],
+      "max_bonus": 1.0,
+      "max_penalty": -1.0,
+      "scope": "per_company"
+    },
+
+    {
+      "id": "acc_critical_error",
+      "name_uz": "Tuzatib bo'lmaydigan xato",
+      "role": "accountant",
+      "category": "penalty_only",
+      "input_type": "checkbox_penalty",
+      "sort_order": 6,
+      "description_uz": "Firmaga tuzatib bo'lmaydigan zarar keltiruvchi xatolar.",
+      "options": [
+        { "key": "none",     "label_uz": "Xato yo'q",    "color": "green", "coeff": 0.0  },
+        { "key": "occurred", "label_uz": "Xato bo'ldi",  "color": "red",   "coeff": -1.0, "note": "O'sha firmadagi oylik ulushidan -1%" }
+      ],
+      "max_bonus": 0.0,
+      "max_penalty": -1.0,
+      "scope": "per_company"
+    },
+
+    {
+      "id": "acc_absence",
+      "name_uz": "Ish kuni kelmay qolish (uzrsiz)",
+      "role": "accountant",
+      "category": "attendance",
+      "input_type": "counter",
+      "sort_order": 7,
+      "description_uz": "Uzrli sababsiz kelmagan har kun uchun -1%. O'sha kund ish qilgan nazoratchi/buxgalterga o'tkaziladi.",
+      "options": [
+        { "key": "absent_days", "label_uz": "Kelmagan kunlar soni", "color": "red", "coeff_per_unit": -1.0, "max_coeff": null, "note": "Kelmagan kunda ish qilgan nazoratchi maoshiga qo'shiladi" }
+      ],
+      "max_bonus": 0.0,
+      "max_penalty": null,
+      "scope": "global"
+    },
+
+    {
+      "id": "bank_attendance",
+      "name_uz": "Ishga kelish (08:30 gacha)",
+      "role": "bank_client",
+      "category": "attendance",
+      "input_type": "counter",
+      "sort_order": 10,
+      "description_uz": "Har kuni 08:30 gacha kelish +0.04% (max +1%). Uzrsiz 09:00 dan kech kelish: har 5 daqiqa uchun -0.2%.",
+      "options": [
+        { "key": "early_days", "label_uz": "08:30 gacha kelgan kunlar",          "color": "green", "coeff_per_unit": 0.04, "max_coeff": 1.0,  "note": "Max +1%" },
+        { "key": "late_5min",  "label_uz": "Kechikkan har 5 daqiqa (09:00 dan)","color": "red",   "coeff_per_unit": -0.2, "max_coeff": null, "note": "Har 5 daqiqa -0.2%" }
+      ],
+      "max_bonus": 1.0,
+      "max_penalty": null,
+      "scope": "global"
+    },
+
+    {
+      "id": "bank_group_response",
+      "name_uz": "Guruhda javob berish (5 daqiqa reglament)",
+      "role": "bank_client",
+      "category": "communication",
+      "input_type": "select",
+      "sort_order": 11,
+      "description_uz": "Oy davomida uzluksiz 5 daqiqada javob berish. Topshiriq bajarish max 30 daqiqa (Swift bundan mustasno).",
+      "options": [
+        { "key": "full",    "label_uz": "Oy davomida uzluksiz bajarildi",   "color": "green",  "coeff": 1.0  },
+        { "key": "partial", "label_uz": "Ba'zi holatlar o'tkazildi",         "color": "yellow", "coeff": 0.0  },
+        { "key": "failed",  "label_uz": "Tizimli kechikish (har saf -0.5%)","color": "red",    "coeff": -0.5, "note": "10 daqiqa+ har bir kechikish uchun o'sha firmadan -0.5%" }
+      ],
+      "max_bonus": 1.0,
+      "max_penalty": -0.5,
+      "scope": "per_company"
+    },
+
+    {
+      "id": "bank_personal_responsibility",
+      "name_uz": "Shaxsiy mas'uliyat",
+      "role": "bank_client",
+      "category": "bonus_only",
+      "input_type": "checkbox_bonus",
+      "sort_order": 12,
+      "description_uz": "Vypisklarni vaqtida olish, muammoga yechim topish, buxgalter bilan aloqa. Bosh hisob-kitobchi tavsiya etadi.",
+      "options": [
+        { "key": "recommended", "label_uz": "Bosh hisob-kitobchi tavsiyasi bor", "color": "green",  "coeff": 0.5 },
+        { "key": "not_given",   "label_uz": "Tavsiya berilmagan",                 "color": "yellow", "coeff": 0.0 }
+      ],
+      "max_bonus": 0.5,
+      "max_penalty": 0.0,
+      "scope": "global"
+    },
+
+    {
+      "id": "bank_wrong_transfer",
+      "name_uz": "Noto'g'ri pul o'tkazma",
+      "role": "bank_client",
+      "category": "penalty_only",
+      "input_type": "amount_penalty",
+      "sort_order": 13,
+      "description_uz": "Noto'g'ri pul o'tkazma uchun xatoni bartaraf etish uchun ketgan xarajat miqdorida jarima.",
+      "options": [
+        { "key": "no_error",   "label_uz": "Xato yo'q",                       "color": "green", "coeff": 0.0  },
+        { "key": "error_amount","label_uz": "Xato miqdori (so'mda kiritiladi)","color": "red",   "coeff": null, "note": "Xato miqdori aniq kiritiladi, o'sha miqdor qo'lda jarima sifatida qo'shiladi" }
+      ],
+      "max_bonus": 0.0,
+      "max_penalty": null,
+      "scope": "per_company"
+    },
+
+    {
+      "id": "bank_absence",
+      "name_uz": "Ish kuni kelmay qolish (uzrsiz)",
+      "role": "bank_client",
+      "category": "attendance",
+      "input_type": "counter",
+      "sort_order": 14,
+      "description_uz": "Uzrsiz kelmagan har kun uchun -0.25%. O'sha kunda ish qilgan xodimga o'tkaziladi.",
+      "options": [
+        { "key": "absent_days", "label_uz": "Kelmagan kunlar soni", "color": "red", "coeff_per_unit": -0.25, "max_coeff": null }
+      ],
+      "max_bonus": 0.0,
+      "max_penalty": null,
+      "scope": "global"
+    },
+
+    {
+      "id": "sup_group_response",
+      "name_uz": "Guruhda javob berish (5-10 daqiqa)",
+      "role": "supervisor",
+      "category": "communication",
+      "input_type": "select",
+      "sort_order": 20,
+      "description_uz": "Buxgalter va bank-klient bilan birga 5-10 daqiqada javob berish reglamentini ushlab turish.",
+      "options": [
+        { "key": "full",    "label_uz": "Oy davomida ushlab turildi",        "color": "green",  "coeff": 0.5  },
+        { "key": "partial", "label_uz": "Ba'zi o'tkazishlar bo'ldi",         "color": "yellow", "coeff": 0.0  },
+        { "key": "failed",  "label_uz": "Tizimli muammolar (jarima -0.5%)", "color": "red",    "coeff": -0.5 }
+      ],
+      "max_bonus": 0.5,
+      "max_penalty": -0.5,
+      "scope": "per_group"
+    },
+
+    {
+      "id": "sup_reports_deadline",
+      "name_uz": "Oy/kvartal hisobotlarni 12 va 18-sanada tugatish",
+      "role": "supervisor",
+      "category": "reports",
+      "input_type": "select",
+      "sort_order": 21,
+      "description_uz": "Oylik hisobotlar 12-sanada, kvartal hisobotlar 18-sanada tugallanishi kerak.",
+      "options": [
+        { "key": "on_time",   "label_uz": "O'z vaqtida (12/18-sanada) tugatildi","color": "green",  "coeff": 0.5  },
+        { "key": "partial",   "label_uz": "Ba'zilari kechikdi",                   "color": "yellow", "coeff": 0.0  },
+        { "key": "late",      "label_uz": "Ko'pchiligi kechikdi",                 "color": "red",    "coeff": -0.5 }
+      ],
+      "max_bonus": 0.5,
+      "max_penalty": -0.5,
+      "scope": "per_group"
+    },
+
+    {
+      "id": "sup_tax_and_reports",
+      "name_uz": "Guruhda hisobotlar va soliqlar vaqtida",
+      "role": "supervisor",
+      "category": "reports",
+      "input_type": "select",
+      "sort_order": 22,
+      "description_uz": "Guruhida hisobotlar va soliqlar o'z vaqtida topshirilmasa jarima.",
+      "options": [
+        { "key": "all_ok",  "label_uz": "Hammasi vaqtida topshirildi", "color": "green",  "coeff": 0.0  },
+        { "key": "failed",  "label_uz": "Guruhda kechikish bo'ldi",    "color": "red",    "coeff": -0.5, "note": "Guruhidagi firmalardan -0.5%" }
+      ],
+      "max_bonus": 0.0,
+      "max_penalty": -0.5,
+      "scope": "per_group"
+    },
+
+    {
+      "id": "sup_attendance",
+      "name_uz": "Ishga kelish (09:00 gacha)",
+      "role": "supervisor",
+      "category": "attendance",
+      "input_type": "counter",
+      "sort_order": 23,
+      "description_uz": "Uzrsiz 09:00 dan kech kelish: har 5 daqiqa uchun -0.1%.",
+      "options": [
+        { "key": "late_5min", "label_uz": "Kechikkan har 5 daqiqa", "color": "red", "coeff_per_unit": -0.1, "max_coeff": null }
+      ],
+      "max_bonus": 0.0,
+      "max_penalty": null,
+      "scope": "global"
+    },
+
+    {
+      "id": "sup_unresolved_issues",
+      "name_uz": "Guruhda muammolarni yechimisiz qoldirish",
+      "role": "supervisor",
+      "category": "communication",
+      "input_type": "select",
+      "sort_order": 24,
+      "description_uz": "Guruhida vaqtida javob bermaslik yoki muammolarni yechimisiz qoldirish.",
+      "options": [
+        { "key": "all_resolved", "label_uz": "Barcha muammolar hal qilindi", "color": "green",  "coeff": 0.0  },
+        { "key": "some_pending", "label_uz": "Ba'zilari yechilmadi",         "color": "red",    "coeff": -0.5 }
+      ],
+      "max_bonus": 0.0,
+      "max_penalty": -0.5,
+      "scope": "per_group"
+    },
+
+    {
+      "id": "sup_absence",
+      "name_uz": "Ish kuni kelmay qolish (uzrsiz)",
+      "role": "supervisor",
+      "category": "attendance",
+      "input_type": "counter",
+      "sort_order": 25,
+      "description_uz": "Uzrsiz kelmagan har kun uchun -0.25%. O'sha kunda ish qilgan bosh hisob-kitobchiga o'tkaziladi.",
+      "options": [
+        { "key": "absent_days", "label_uz": "Kelmagan kunlar soni", "color": "red", "coeff_per_unit": -0.25, "max_coeff": null }
+      ],
+      "max_bonus": 0.0,
+      "max_penalty": null,
+      "scope": "global"
+    }
+  ],
+
+  "salary_structure": {
+    "accountant": {
+      "base_percent": 20,
+      "kpi_max_percent": 5,
+      "vacation_days": 15,
+      "vacation_pay_kept": 0.5,
+      "vacation_remaining_goes_to": "substitute_accountant_or_supervisor",
+      "training": "free (2 yil ishlash sharti bilan)"
+    },
+    "bank_client": {
+      "base_percent": 5,
+      "kpi_max_percent": 2.5,
+      "vacation_days": 15,
+      "vacation_pay_kept": 0.5,
+      "vacation_remaining_goes_to": "substitute_employee"
+    },
+    "supervisor": {
+      "base_percent": 5,
+      "kpi_max_percent": 1,
+      "vacation_days": 15,
+      "vacation_pay_kept": 0.5,
+      "vacation_remaining_goes_to": "chief_accountant",
+      "training": "free (2 yil ishlash sharti bilan)",
+      "can_also_work_as": "accountant"
+    }
+  },
+
+  "general_rules": [
+    "Firma bo'yicha savollar avval o'sha firmaning nazoratchiiga yuboriladi. Bosh hisob-kitobchiga faqat zarur holatlarda nazoratchi murojaat qiladi.",
+    "Guruhda javob berganda topshiriqni bajarishga ketadigan vaqt yozib qo'yiladi (masalan: '10 daqiqada o'tkazaman').",
+    "Reglamentlar 09:00–13:00 va 14:00–18:00 oralig'ida amal qiladi. Boshqa paytlarda imkon qadar javob berilishi mumkin.",
+    "Telefonda javob berilsa, guruhga 'telefonda javob berildi' deb yozilishi shart.",
+    "Buxgalter noroziligi bo'lsa, keyingi oy boshidan boshqa nazoratchi tanlashi mumkin. Qayta o'zgartirish 3 oydan keyin.",
+    "Nazoratchi asosli sabab ko'rsatsa, buxgalter boshqa nazoratchi guruhiga o'tkazilishi mumkin.",
+    "Qo'shimcha qoidalar talab va takliflardan kelib chiqib kiritilishi yoki o'zgartirilishi mumkin."
+  ]
+}

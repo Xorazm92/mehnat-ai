@@ -184,7 +184,7 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                                         </td>
                                         <td className="px-6 py-4 text-[12px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>{it.assignedToName || '—'}</td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-20 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                                                 <button onClick={() => openEdit(it)} className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: 'var(--accent-blue)' }} title={t.edit}>
                                                     <Edit3 size={16} />
                                                 </button>

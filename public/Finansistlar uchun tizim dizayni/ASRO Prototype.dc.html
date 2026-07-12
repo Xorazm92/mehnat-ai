@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    --bg: #f5f6f8; --surface: #ffffff; --surface2: #eef0f4; --border: #e6e8ee; --border2: #d9dde5;
+    --text: #14171d; --muted: #5d6472; --faint: #7c8494;
+    --accent: #3565d9; --green: #157f4d; --red: #c9403e; --amber: #b7791f; --violet: #6d5bd0;
+    --shadow: 0 1px 2px rgba(16,20,28,.05);
+    --rowpad: 12px; --r: 12px;
+  }
+  body[data-theme="dark"] {
+    --bg: #0b0d11; --surface: #12151b; --surface2: #1a1e26; --border: #222733; --border2: #2d3341;
+    --text: #e7eaf0; --muted: #99a1b0; --faint: #7d8595;
+    --green: #3fbf7f; --red: #e5645f; --amber: #d9a144; --violet: #9487e8;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+  body[data-density="compact"] { --rowpad: 8px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent); text-decoration: underline; }
+  input { font-family: inherit; }
+  input::placeholder { color: var(--faint); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  button:focus-visible { outline-offset: 1px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+  ::selection { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+</style>
+</helmet>
+<div style="display:flex; height:100vh; background:var(--bg); color:var(--text); font-size:14px; overflow:hidden; line-height:1.45;">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="width:{{ sbWidth }}; flex-shrink:0; display:{{ sbDisplay }}; flex-direction:column; background:var(--surface); border-right:1px solid var(--border); transition:width .18s ease; overflow:hidden;">
+    <div style="display:flex; align-items:center; gap:10px; padding:14px 14px 12px; border-bottom:1px solid var(--border); min-height:57px;">
+      <div style="width:30px; height:30px; flex-shrink:0; border-radius:8px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;">A</div>
+      <div style="display:{{ labelDisplay }}; min-width:0;">
+        <div style="font-weight:700; font-size:14px; letter-spacing:-.01em;">ASRO</div>
+        <div style="font-size:10.5px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase;">Boshqaruv tizimi</div>
+      </div>
+      <div onClick="{{ toggleSidebar }}" role="button" tabIndex="0" title="Yon menyuni yig'ish/ochish" style="margin-left:auto; width:26px; height:26px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:6px; cursor:pointer; color:var(--muted);" style-hover="background:var(--surface2); color:var(--text);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate({{ sbChev }}deg); transition:transform .18s;"><path d="M15 18l-6-6 6-6"></path></svg>
+      </div>
+    </div>
+    <nav style="flex:1; overflow-y:auto; overflow-x:hidden; padding:6px 10px 16px;">
+      <sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="4">
+        <div style="padding-top:14px;">
+          <div style="display:{{ labelDisplay }}; font-size:10.5px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--faint); padding:0 10px 6px;">{{ g.label }}</div>
+          <div style="display:flex; flex-direction:column; gap:1px;">
+            <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+              <div onClick="{{ it.onClick }}" role="button" tabIndex="0" title="{{ it.name }}" aria-current="{{ it.ariaCurrent }}" style="display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:7px; cursor:pointer; font-size:13.5px; font-weight:{{ it.fw }}; color:{{ it.color }}; background:{{ it.bg }}; white-space:nowrap; transition:background .1s;" style-hover="background:{{ it.hoverBg }};">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="{{ it.icon }}"></path></svg>
+                <span style="display:{{ labelDisplay }};">{{ it.name }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </nav>
+    <div style="border-top:1px solid var(--border); padding:12px 14px; display:flex; align-items:center; gap:10px;">
+      <div style="width:28px; height:28px; flex-shrink:0; border-radius:50%; background:var(--surface2); border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:var(--muted);">TS</div>
+      <div style="display:{{ labelDisplay }}; min-width:0;">
+        <div style="font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">TEST Super Admin</div>
+        <div style="font-size:11px; color:var(--muted);">Super Admin</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+    <!-- Topbar -->
+    <header style="display:flex; align-items:center; gap:12px; padding:0 20px; height:57px; flex-shrink:0; background:var(--surface); border-bottom:1px solid var(--border);">
+      <div onClick="{{ openPalette }}" role="button" tabIndex="0" title="Qidirish (⌘K)" style="display:flex; align-items:center; gap:8px; width:320px; max-width:34vw; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--muted); cursor:pointer;" style-hover="border-color:var(--border2);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35"></path></svg>
+        <span style="flex:1; min-width:0; font-size:13px; color:var(--faint);">Qidirish...</span>
+        <span style="font-size:11px; color:var(--faint); border:1px solid var(--border2); border-radius:4px; padding:1px 5px;">⌘K</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:8px; padding:7px 12px; font-size:13px; font-weight:500; cursor:pointer;" style-hover="background:var(--surface2);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h16M6 21V4h9v17M9 8h3M9 12h3M9 16h3"></path></svg>
+        <span>"O'ztemiryo'lxisob"</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); cursor:pointer; padding:6px 10px; border-radius:7px;" style-hover="background:var(--surface2); color:var(--text);">O'zbekcha</div>
+      <div onClick="{{ toggleTheme }}" role="button" tabIndex="0" title="Tungi/kunduzgi rejim" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:pointer; color:var(--muted);" style-hover="background:var(--surface2); color:var(--text);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ themeIcon }}"></path></svg>
+      </div>
+      <div onClick="{{ toggleNotif }}" role="button" tabIndex="0" title="Bildirishnomalar" style="position:relative; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:pointer; color:var(--muted);" style-hover="background:var(--surface2); color:var(--text);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg>
+        <span style="display:{{ notifBadgeDisplay }}; position:absolute; top:6px; right:7px; width:7px; height:7px; border-radius:50%; background:var(--red); border:1.5px solid var(--surface);"></span>
+      </div>
+      <div style="width:1px; height:24px; background:var(--border);"></div>
+      <div style="display:flex; align-items:center; gap:9px; cursor:pointer; padding:4px 8px; border-radius:8px;" style-hover="background:var(--surface2);">
+        <div style="width:30px; height:30px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600;">TS</div>
+        <div>
+          <div style="font-size:13px; font-weight:600; line-height:1.2;">TEST Super Admin</div>
+          <div style="font-size:11px; color:var(--muted); line-height:1.2;">Super Admin</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main style="flex:1; overflow:auto; padding:{{ mainPad }};">
+      <div style="max-width:1240px; margin:0 auto;">
+
+        <!-- ============ DASHBOARD ============ -->
+        <sc-if value="{{ pgDashboard }}" hint-placeholder-val="{{ true }}">
+          <div data-screen-label="Dashboard">
+            <div style="margin-bottom:24px;">
+              <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">Boshqaruv paneli</h1>
+              <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">10-iyul, 2026 · "O'ztemiryo'lxisob" bo'yicha umumiy holat</div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:16px;">
+              <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+                <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 20px;">
+                  <div style="font-size:12px; font-weight:600; color:var(--muted); letter-spacing:.05em; text-transform:uppercase;">{{ s.label }}</div>
+                  <div style="font-size:27px; font-weight:700; letter-spacing:-.02em; margin-top:6px; font-feature-settings:'tnum';">{{ s.value }}</div>
+                  <div style="font-size:12.5px; margin-top:4px; color:{{ s.deltaColor }};">{{ s.delta }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px; align-items:start;">
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:20px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+                  <div style="font-size:15px; font-weight:600;">Pul oqimi</div>
+                  <div style="display:flex; gap:16px; font-size:12px; color:var(--muted);">
+                    <span style="display:flex; align-items:center; gap:6px;"><span style="width:9px; height:9px; border-radius:3px; background:var(--accent);"></span>Kirim</span>
+                    <span style="display:flex; align-items:center; gap:6px;"><span style="width:9px; height:9px; border-radius:3px; background:var(--border2);"></span>Chiqim</span>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:flex-end; gap:0; height:150px;">
+                  <sc-for list="{{ months }}" as="m" hint-placeholder-count="6">
+                    <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end;">
+                      <div style="display:flex; align-items:flex-end; gap:5px; flex:1;">
+                        <div style="width:16px; border-radius:4px 4px 2px 2px; background:var(--accent); height:{{ m.inH }}px; align-self:flex-end;"></div>
+                        <div style="width:16px; border-radius:4px 4px 2px 2px; background:var(--border2); height:{{ m.outH }}px; align-self:flex-end;"></div>
+                      </div>
+                      <div style="font-size:11.5px; color:var(--muted);">{{ m.name }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex; gap:24px; margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
+                  <div><div style="font-size:11.5px; color:var(--muted);">Iyul kirim</div><div style="font-size:16px; font-weight:600; font-feature-settings:'tnum'; color:var(--green);">+88 400 000</div></div>
+                  <div><div style="font-size:11.5px; color:var(--muted);">Iyul chiqim</div><div style="font-size:16px; font-weight:600; font-feature-settings:'tnum'; color:var(--red);">−74 390 000</div></div>
+                  <div><div style="font-size:11.5px; color:var(--muted);">Sof oqim</div><div style="font-size:16px; font-weight:600; font-feature-settings:'tnum';">+14 010 000</div></div>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:16px;">
+                <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 20px;">
+                  <div style="font-size:13px; font-weight:600; margin-bottom:12px;">Rollar bo'yicha</div>
+                  <div style="display:flex; flex-direction:column; gap:9px;">
+                    <sc-for list="{{ roles }}" as="r" hint-placeholder-count="5">
+                      <div style="display:flex; align-items:center; justify-content:space-between; font-size:13px;">
+                        <span style="color:var(--muted);">{{ r.name }}</span>
+                        <span style="font-weight:600; font-feature-settings:'tnum';">{{ r.count }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 20px;">
+                  <div style="font-size:13px; font-weight:600; margin-bottom:12px;">So'nggi harakatlar</div>
+                  <div style="display:flex; flex-direction:column; gap:12px;">
+                    <sc-for list="{{ recent }}" as="a" hint-placeholder-count="4">
+                      <div style="display:flex; gap:10px; font-size:12.5px;">
+                        <div style="width:6px; height:6px; border-radius:50%; background:var(--accent); margin-top:6px; flex-shrink:0;"></div>
+                        <div style="min-width:0;">
+                          <div><span style="font-weight:600;">{{ a.user }}</span> <span style="color:var(--muted);">{{ a.action }}</span></div>
+                          <div style="color:var(--faint); font-size:11.5px; margin-top:1px;">{{ a.time }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ XODIMLAR ============ -->
+        <sc-if value="{{ pgXodimlar }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Xodimlar">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px;">
+              <div>
+                <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">Xodimlar</h1>
+                <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">{{ empCount }} ta xodim · 6 tasi hozir tizimda</div>
+              </div>
+              <button onClick="{{ openXodimModal }}" style="display:flex; align-items:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;" style-hover="filter:brightness(1.08);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                Xodim qo'shish
+              </button>
+            </div>
+            <div style="display:flex; gap:10px; margin-bottom:14px;">
+              <div style="display:flex; align-items:center; gap:8px; flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 12px; color:var(--muted);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35"></path></svg>
+                <input placeholder="Xodimlarni qidirish..." aria-label="Xodimlarni qidirish" style="border:none; outline:none; background:transparent; color:var(--text); font-size:13px; flex:1;">
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:13px; font-weight:500; cursor:pointer;" style-hover="background:var(--surface2);">Barcha lavozimlar <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+              <div style="display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:13px; font-weight:500; cursor:pointer;" style-hover="background:var(--surface2);">Barcha holatlar <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden;">
+              <div style="display:grid; grid-template-columns:2.4fr 1fr 2fr .8fr .6fr; gap:16px; padding:11px 20px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--surface2);">
+                <div>Xodim</div><div>Lavozim</div><div>Aloqa</div><div style="text-align:center;">Firmalar</div><div style="text-align:right;">Amallar</div>
+              </div>
+              <sc-for list="{{ employees }}" as="e" hint-placeholder-count="8">
+                <div onClick="{{ e.open }}" role="button" tabIndex="0" style="display:grid; grid-template-columns:2.4fr 1fr 2fr .8fr .6fr; gap:16px; align-items:center; padding:var(--rowpad) 20px; border-top:1px solid var(--border); font-size:13.5px; cursor:pointer;" style-hover="background:var(--surface2);">
+                  <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                    <div style="position:relative; flex-shrink:0;">
+                      <div style="width:34px; height:34px; border-radius:50%; background:{{ e.tint }}; color:{{ e.hue }}; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600;">{{ e.initial }}</div>
+                      <span style="position:absolute; bottom:0; right:0; width:9px; height:9px; border-radius:50%; background:{{ e.dot }}; border:2px solid var(--surface);"></span>
+                    </div>
+                    <div style="min-width:0;">
+                      <div style="font-weight:600;">{{ e.name }}</div>
+                      <div style="font-size:12px; color:var(--faint); font-feature-settings:'tnum';">{{ e.code }}</div>
+                    </div>
+                  </div>
+                  <div><span style="background:var(--surface2); border:1px solid var(--border2); border-radius:999px; padding:3px 10px; font-size:12px; font-weight:500;">{{ e.role }}</span></div>
+                  <div style="color:var(--muted); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ e.email }}</div>
+                  <div style="text-align:center;"><span style="display:inline-block; min-width:28px; background:color-mix(in srgb, var(--accent) 10%, transparent); color:var(--accent); border-radius:7px; padding:3px 7px; font-size:12.5px; font-weight:600; font-feature-settings:'tnum';">{{ e.firms }}</span></div>
+                  <div style="display:flex; gap:4px; justify-content:flex-end;">
+                    <div role="button" tabIndex="0" title="Tahrirlash" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; cursor:pointer; color:var(--muted);" style-hover="background:var(--surface2); color:var(--text);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"></path></svg></div>
+                    <div role="button" tabIndex="0" title="O'chirish" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; cursor:pointer; color:var(--muted);" style-hover="background:color-mix(in srgb, var(--red) 10%, transparent); color:var(--red);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6"></path></svg></div>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:11px 20px; border-top:1px solid var(--border); font-size:12.5px; color:var(--muted);">
+                <span>8 tadan 1–8 ko'rsatilmoqda</span>
+                <div style="display:flex; gap:4px;">
+                  <span style="padding:4px 10px; border-radius:6px; background:var(--surface2); font-weight:600; color:var(--text);">1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ HISOBOTLAR ============ -->
+        <sc-if value="{{ pgHisobotlar }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Hisobotlar">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px;">
+              <div>
+                <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">Hisobotlar</h1>
+                <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">Moliyaviy va soliq hisobotlari · 2026</div>
+              </div>
+              <button style="display:flex; align-items:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;" style-hover="filter:brightness(1.08);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                Yangi hisobot
+              </button>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden;">
+              <div style="display:grid; grid-template-columns:2.2fr 1fr 1.2fr 1fr 1fr .7fr; gap:16px; padding:11px 20px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--surface2);">
+                <div>Hisobot</div><div>Davr</div><div>Mas'ul</div><div>Holat</div><div>Sana</div><div style="text-align:right;">Fayl</div>
+              </div>
+              <sc-for list="{{ reports }}" as="r" hint-placeholder-count="6">
+                <div style="display:grid; grid-template-columns:2.2fr 1fr 1.2fr 1fr 1fr .7fr; gap:16px; align-items:center; padding:var(--rowpad) 20px; border-top:1px solid var(--border); font-size:13.5px;" style-hover="background:var(--surface2);">
+                  <div style="display:flex; align-items:center; gap:11px; font-weight:600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8"></path></svg>
+                    {{ r.name }}
+                  </div>
+                  <div style="color:var(--muted);">{{ r.period }}</div>
+                  <div style="color:var(--muted);">{{ r.owner }}</div>
+                  <div><span style="background:{{ r.stBg }}; color:{{ r.stFg }}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:600;">{{ r.status }}</span></div>
+                  <div style="color:var(--muted); font-feature-settings:'tnum';">{{ r.date }}</div>
+                  <div style="text-align:right;"><span style="color:var(--accent); font-size:12.5px; font-weight:600; cursor:pointer;">{{ r.fileAction }}</span></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ KASSA / BANK ============ -->
+        <sc-if value="{{ pgKassa }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Kassa / Bank">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px;">
+              <div>
+                <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">Kassa / Bank</h1>
+                <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">Hisoblar va so'nggi operatsiyalar</div>
+              </div>
+              <button onClick="{{ openOpModal }}" style="display:flex; align-items:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;" style-hover="filter:brightness(1.08);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                Operatsiya kiritish
+              </button>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:16px;">
+              <sc-for list="{{ accounts }}" as="a" hint-placeholder-count="3">
+                <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 20px;">
+                  <div style="display:flex; align-items:center; gap:9px; margin-bottom:10px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5h22v14H1zM1 10h22"></path></svg>
+                    <span style="font-size:13px; font-weight:600;">{{ a.name }}</span>
+                  </div>
+                  <div style="font-size:21px; font-weight:700; letter-spacing:-.01em; font-feature-settings:'tnum';">{{ a.balance }}</div>
+                  <div style="font-size:12px; color:var(--faint); margin-top:4px; font-feature-settings:'tnum';">{{ a.info }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden;">
+              <div style="display:grid; grid-template-columns:.8fr 2.4fr 1.1fr .8fr 1.2fr; gap:16px; padding:11px 20px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--surface2);">
+                <div>Sana</div><div>Tavsif</div><div>Hisob</div><div>Turi</div><div style="text-align:right;">Summa</div>
+              </div>
+              <sc-for list="{{ transactions }}" as="t" hint-placeholder-count="7">
+                <div style="display:grid; grid-template-columns:.8fr 2.4fr 1.1fr .8fr 1.2fr; gap:16px; align-items:center; padding:var(--rowpad) 20px; border-top:1px solid var(--border); font-size:13.5px;" style-hover="background:var(--surface2);">
+                  <div style="color:var(--muted); font-feature-settings:'tnum';">{{ t.date }}</div>
+                  <div style="font-weight:500;">{{ t.desc }}</div>
+                  <div style="color:var(--muted); font-size:12.5px;">{{ t.account }}</div>
+                  <div><span style="background:{{ t.stBg }}; color:{{ t.stFg }}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:600;">{{ t.type }}</span></div>
+                  <div style="text-align:right; font-weight:600; font-feature-settings:'tnum'; color:{{ t.amtColor }};">{{ t.amount }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ XARAJATLAR ============ -->
+        <sc-if value="{{ pgXarajatlar }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Xarajatlar">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px;">
+              <div>
+                <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">Xarajatlar</h1>
+                <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">Iyul 2026 · operatsion xarajatlar</div>
+              </div>
+              <button onClick="{{ openXarajatModal }}" style="display:flex; align-items:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;" style-hover="filter:brightness(1.08);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                Xarajat qo'shish
+              </button>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 20px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+                <div><span style="font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em;">Iyul jami</span> <span style="font-size:19px; font-weight:700; font-feature-settings:'tnum'; margin-left:8px;">17 970 000 so'm</span></div>
+                <div style="font-size:12.5px; color:var(--muted); font-feature-settings:'tnum';">Byudjet: 25 000 000 so'm · Qoldiq: <span style="color:var(--green); font-weight:600;">7 030 000</span></div>
+              </div>
+              <div style="height:8px; border-radius:999px; background:var(--surface2); overflow:hidden;">
+                <div style="width:72%; height:100%; border-radius:999px; background:var(--accent);"></div>
+              </div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden;">
+              <div style="display:grid; grid-template-columns:.8fr 2.2fr 1fr 1.4fr 1.2fr 1fr; gap:16px; padding:11px 20px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--surface2);">
+                <div>Sana</div><div>Tavsif</div><div>Kategoriya</div><div>Firma</div><div style="text-align:right;">Summa</div><div>Holat</div>
+              </div>
+              <sc-for list="{{ expenses }}" as="x" hint-placeholder-count="6">
+                <div style="display:grid; grid-template-columns:.8fr 2.2fr 1fr 1.4fr 1.2fr 1fr; gap:16px; align-items:center; padding:var(--rowpad) 20px; border-top:1px solid var(--border); font-size:13.5px;" style-hover="background:var(--surface2);">
+                  <div style="color:var(--muted); font-feature-settings:'tnum';">{{ x.date }}</div>
+                  <div style="font-weight:500;">{{ x.desc }}</div>
+                  <div><span style="background:var(--surface2); border:1px solid var(--border2); border-radius:999px; padding:3px 10px; font-size:12px; font-weight:500;">{{ x.cat }}</span></div>
+                  <div style="color:var(--muted); font-size:12.5px;">{{ x.firm }}</div>
+                  <div style="text-align:right; font-weight:600; font-feature-settings:'tnum';">{{ x.amount }}</div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="background:{{ x.stBg }}; color:{{ x.stFg }}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:600;">{{ x.status }}</span>
+                    <span onClick="{{ x.approve }}" role="button" tabIndex="0" title="Tasdiqlash" style="display:{{ x.actDisplay }}; width:24px; height:24px; align-items:center; justify-content:center; border-radius:6px; cursor:pointer; background:color-mix(in srgb, var(--green) 12%, transparent); color:var(--green); font-size:12px; font-weight:700;">✓</span>
+                    <span onClick="{{ x.reject }}" role="button" tabIndex="0" title="Rad etish" style="display:{{ x.actDisplay }}; width:24px; height:24px; align-items:center; justify-content:center; border-radius:6px; cursor:pointer; background:color-mix(in srgb, var(--red) 10%, transparent); color:var(--red); font-size:12px; font-weight:700;">✕</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ OYLIK ============ -->
+        <sc-if value="{{ pgOylik }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Oylik">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px;">
+              <div>
+                <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">Oylik (ish haqi)</h1>
+                <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">Iyul 2026 hisob-kitobi</div>
+              </div>
+              <div style="display:flex; gap:10px;">
+                <div style="display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:13px; font-weight:500; cursor:pointer;" style-hover="background:var(--surface2);">Iyul 2026 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                <button style="background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;" style-hover="filter:brightness(1.08);">Oylik hisoblash</button>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:16px;">
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:16px 20px;"><div style="font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em;">Jami fond</div><div style="font-size:21px; font-weight:700; font-feature-settings:'tnum'; margin-top:4px;">60 632 000 so'm</div></div>
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:16px 20px;"><div style="font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em;">To'langan</div><div style="font-size:21px; font-weight:700; font-feature-settings:'tnum'; margin-top:4px; color:var(--green);">33 704 000 so'm</div></div>
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:16px 20px;"><div style="font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em;">Kutilmoqda</div><div style="font-size:21px; font-weight:700; font-feature-settings:'tnum'; margin-top:4px; color:var(--amber);">26 928 000 so'm</div></div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden;">
+              <div style="display:grid; grid-template-columns:1.8fr 1fr 1.1fr 1fr 1.1fr 1.2fr 1fr; gap:14px; padding:11px 20px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--surface2);">
+                <div>Xodim</div><div>Lavozim</div><div style="text-align:right;">Oklad</div><div style="text-align:right;">Bonus</div><div style="text-align:right;">Ushlanma</div><div style="text-align:right;">Jami</div><div>Holat</div>
+              </div>
+              <sc-for list="{{ payroll }}" as="p" hint-placeholder-count="8">
+                <div style="display:grid; grid-template-columns:1.8fr 1fr 1.1fr 1fr 1.1fr 1.2fr 1fr; gap:14px; align-items:center; padding:var(--rowpad) 20px; border-top:1px solid var(--border); font-size:13.5px;" style-hover="background:var(--surface2);">
+                  <div style="display:flex; align-items:center; gap:10px; font-weight:600;">
+                    <div style="width:28px; height:28px; border-radius:50%; background:{{ p.tint }}; color:{{ p.hue }}; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:600; flex-shrink:0;">{{ p.initial }}</div>
+                    {{ p.name }}
+                  </div>
+                  <div style="color:var(--muted); font-size:12.5px;">Buxgalter</div>
+                  <div style="text-align:right; font-feature-settings:'tnum';">{{ p.base }}</div>
+                  <div style="text-align:right; font-feature-settings:'tnum'; color:var(--green);">{{ p.bonus }}</div>
+                  <div style="text-align:right; font-feature-settings:'tnum'; color:var(--red);">{{ p.deduct }}</div>
+                  <div style="text-align:right; font-weight:600; font-feature-settings:'tnum';">{{ p.total }}</div>
+                  <div><span style="background:{{ p.stBg }}; color:{{ p.stFg }}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:600;">{{ p.status }}</span></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ KPI ============ -->
+        <sc-if value="{{ pgKpi }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="KPI">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px;">
+              <div>
+                <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">KPI tizimi</h1>
+                <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">Iyun 2026 baholash natijalari</div>
+              </div>
+              <button style="background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;" style-hover="filter:brightness(1.08);">Qoida qo'shish</button>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1.8fr; gap:16px; align-items:start;">
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 20px;">
+                <div style="font-size:13px; font-weight:600; margin-bottom:14px;">Baholash mezonlari</div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                  <sc-for list="{{ kpiRules }}" as="k" hint-placeholder-count="4">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:13px;">
+                      <span>{{ k.name }}</span>
+                      <span style="background:color-mix(in srgb, var(--accent) 10%, transparent); color:var(--accent); border-radius:7px; padding:2px 8px; font-size:12px; font-weight:600; flex-shrink:0; font-feature-settings:'tnum';">{{ k.weight }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden;">
+                <div style="display:grid; grid-template-columns:1.6fr 2fr .7fr .9fr; gap:16px; padding:11px 20px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--surface2);">
+                  <div>Xodim</div><div>Bajarilish</div><div style="text-align:right;">Ball</div><div>Daraja</div>
+                </div>
+                <sc-for list="{{ kpiScores }}" as="s" hint-placeholder-count="6">
+                  <div style="display:grid; grid-template-columns:1.6fr 2fr .7fr .9fr; gap:16px; align-items:center; padding:var(--rowpad) 20px; border-top:1px solid var(--border); font-size:13.5px;" style-hover="background:var(--surface2);">
+                    <div style="display:flex; align-items:center; gap:10px; font-weight:600;">
+                      <div style="width:28px; height:28px; border-radius:50%; background:{{ s.tint }}; color:{{ s.hue }}; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:600; flex-shrink:0;">{{ s.initial }}</div>
+                      {{ s.name }}
+                    </div>
+                    <div style="height:7px; border-radius:999px; background:var(--surface2); overflow:hidden;"><div style="width:{{ s.score }}%; height:100%; border-radius:999px; background:{{ s.barColor }};"></div></div>
+                    <div style="text-align:right; font-weight:700; font-feature-settings:'tnum';">{{ s.score }}</div>
+                    <div><span style="background:{{ s.stBg }}; color:{{ s.stFg }}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:600;">{{ s.grade }}</span></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ FIRMALAR ============ -->
+        <sc-if value="{{ pgFirmalar }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Firmalar">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px;">
+              <div>
+                <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">Firmalar</h1>
+                <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">212 ta mijoz firma · 6 tasi ko'rsatilmoqda</div>
+              </div>
+              <button onClick="{{ openFirmaModal }}" style="display:flex; align-items:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;" style-hover="filter:brightness(1.08);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                Firma qo'shish
+              </button>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden;">
+              <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1.4fr 1fr; gap:16px; padding:11px 20px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--surface2);">
+                <div>Firma</div><div>STIR</div><div>Tarif</div><div>Buxgalter</div><div>Holat</div>
+              </div>
+              <sc-for list="{{ firms }}" as="f" hint-placeholder-count="6">
+                <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1.4fr 1fr; gap:16px; align-items:center; padding:var(--rowpad) 20px; border-top:1px solid var(--border); font-size:13.5px;" style-hover="background:var(--surface2);">
+                  <div style="font-weight:600;">{{ f.name }}</div>
+                  <div style="color:var(--muted); font-feature-settings:'tnum';">{{ f.inn }}</div>
+                  <div><span style="background:var(--surface2); border:1px solid var(--border2); border-radius:999px; padding:3px 10px; font-size:12px; font-weight:500;">{{ f.plan }}</span></div>
+                  <div style="color:var(--muted);">{{ f.acc }}</div>
+                  <div><span style="background:{{ f.stBg }}; color:{{ f.stFg }}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:600;">{{ f.status }}</span></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ ADMIN ============ -->
+        <sc-if value="{{ pgAdmin }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Admin panel">
+            <div style="margin-bottom:24px;">
+              <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">Admin panel</h1>
+              <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">Tizim boshqaruvi va tezkor havolalar</div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:24px;">
+              <sc-for list="{{ adminStats }}" as="s" hint-placeholder-count="4">
+                <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:16px 20px;">
+                  <div style="font-size:12px; font-weight:600; color:var(--muted); letter-spacing:.05em; text-transform:uppercase;">{{ s.label }}</div>
+                  <div style="font-size:25px; font-weight:700; margin-top:4px; font-feature-settings:'tnum';">{{ s.value }}</div>
+                  <div style="font-size:12px; color:var(--faint); margin-top:2px;">{{ s.sub }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px; align-items:start;">
+              <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;">
+                <sc-for list="{{ adminCards }}" as="c" hint-placeholder-count="6">
+                  <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 20px; cursor:pointer; transition:border-color .12s;" style-hover="border-color:var(--accent);">
+                    <div style="width:36px; height:36px; border-radius:9px; background:color-mix(in srgb, var(--accent) 9%, transparent); color:var(--accent); display:flex; align-items:center; justify-content:center; margin-bottom:12px;">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg>
+                    </div>
+                    <div style="font-size:14px; font-weight:600;">{{ c.name }}</div>
+                    <div style="font-size:12.5px; color:var(--muted); margin-top:3px;">{{ c.desc }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 20px;">
+                <div style="font-size:13px; font-weight:600; margin-bottom:12px;">Rollar bo'yicha</div>
+                <div style="display:flex; flex-direction:column; gap:9px;">
+                  <sc-for list="{{ roles }}" as="r" hint-placeholder-count="6">
+                    <div style="display:flex; align-items:center; justify-content:space-between; font-size:13px;">
+                      <span style="color:var(--muted);">{{ r.name }}</span>
+                      <span style="font-weight:600; font-feature-settings:'tnum';">{{ r.count }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ AUDIT LOG ============ -->
+        <sc-if value="{{ pgAudit }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Audit jurnali">
+            <div style="margin-bottom:20px;">
+              <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">Audit jurnali</h1>
+              <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">Tizimdagi barcha o'zgarishlar tarixi</div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden;">
+              <div style="display:grid; grid-template-columns:1fr 1.3fr 1.2fr 2fr 1fr; gap:16px; padding:11px 20px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--surface2);">
+                <div>Vaqt</div><div>Foydalanuvchi</div><div>Amal</div><div>Obyekt</div><div>IP</div>
+              </div>
+              <sc-for list="{{ audit }}" as="a" hint-placeholder-count="5">
+                <div style="display:grid; grid-template-columns:1fr 1.3fr 1.2fr 2fr 1fr; gap:16px; align-items:center; padding:var(--rowpad) 20px; border-top:1px solid var(--border); font-size:13.5px;" style-hover="background:var(--surface2);">
+                  <div style="color:var(--muted); font-feature-settings:'tnum';">{{ a.time }}</div>
+                  <div style="font-weight:600;">{{ a.user }}</div>
+                  <div><span style="background:var(--surface2); border:1px solid var(--border2); border-radius:999px; padding:3px 10px; font-size:12px; font-weight:500;">{{ a.action }}</span></div>
+                  <div style="color:var(--muted);">{{ a.object }}</div>
+                  <div style="color:var(--faint); font-size:12.5px; font-feature-settings:'tnum';">{{ a.ip }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ SOZLAMALAR ============ -->
+        <sc-if value="{{ pgSozlamalar }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Sozlamalar" style="max-width:680px;">
+            <div style="margin-bottom:20px;">
+              <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">Sozlamalar</h1>
+              <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">Tizim va profil sozlamalari</div>
+            </div>
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; margin-bottom:16px;">
+              <div style="padding:14px 20px; font-size:13px; font-weight:600;">Umumiy</div>
+              <sc-for list="{{ settings }}" as="s" hint-placeholder-count="4">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 20px; border-top:1px solid var(--border); font-size:13.5px;">
+                  <div>
+                    <div style="font-weight:500;">{{ s.name }}</div>
+                    <div style="font-size:12px; color:var(--muted); margin-top:1px;">{{ s.desc }}</div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px; background:var(--bg); border:1px solid var(--border); border-radius:7px; padding:6px 12px; font-size:12.5px; font-weight:500; cursor:pointer;" style-hover="background:var(--surface2);">{{ s.value }} <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ EMPTY MODULES ============ -->
+        <sc-if value="{{ pgEmpty }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="{{ emptyTitle }}">
+            <div style="margin-bottom:20px;">
+              <h1 style="margin:0; font-size:22px; font-weight:700; letter-spacing:-.02em;">{{ emptyTitle }}</h1>
+            </div>
+            <div style="background:var(--surface); border:1px dashed var(--border2); border-radius:var(--r); padding:64px 24px; display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center;">
+              <div style="width:44px; height:44px; border-radius:11px; background:var(--surface2); color:var(--muted); display:flex; align-items:center; justify-content:center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ emptyIcon }}"></path></svg>
+              </div>
+              <div style="font-size:15px; font-weight:600;">{{ emptyDesc }}</div>
+              <div style="font-size:13px; color:var(--muted); max-width:380px;">Bu bo'limda hali yozuvlar yo'q. Birinchi yozuvni qo'shing yoki import qiling.</div>
+              <button style="margin-top:8px; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;" style-hover="filter:brightness(1.08);">{{ emptyAction }}</button>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ BOTTOM NAV (mobil) ============ -->
+  <nav aria-label="Asosiy navigatsiya" style="display:{{ bottomNavDisplay }}; position:fixed; left:0; right:0; bottom:0; background:var(--surface); border-top:1px solid var(--border); padding:6px 4px calc(8px + env(safe-area-inset-bottom)); z-index:40;">
+    <sc-for list="{{ bottomNav }}" as="b" hint-placeholder-count="5">
+      <div onClick="{{ b.onClick }}" role="button" tabIndex="0" style="flex:1; text-align:center; cursor:pointer; color:{{ b.color }}; padding:4px 0; min-height:44px;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ b.icon }}"></path></svg>
+        <div style="font-size:9.5px; font-weight:600; margin-top:1px;">{{ b.name }}</div>
+      </div>
+    </sc-for>
+  </nav>
+
+  <!-- ============ NOTIFICATIONS PANEL ============ -->
+  <sc-if value="{{ notifOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeAll }}" style="position:fixed; inset:0; z-index:50;">
+      <div onClick="{{ stop }}" role="dialog" aria-label="Bildirishnomalar" style="position:absolute; top:62px; right:16px; width:min(340px, calc(100vw - 24px)); background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 24px rgba(10,13,18,.18); overflow:hidden;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border);">
+          <span style="font-size:13px; font-weight:600;">Bildirishnomalar</span>
+          <span onClick="{{ markAllRead }}" role="button" tabIndex="0" style="font-size:12px; color:var(--accent); font-weight:600; cursor:pointer;">Barchasini o'qish</span>
+        </div>
+        <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="3">
+          <div onClick="{{ n.run }}" role="button" tabIndex="0" style="display:flex; gap:10px; padding:11px 16px; border-bottom:1px solid var(--border); cursor:pointer; background:{{ n.bg }};" style-hover="background:var(--surface2);">
+            <span style="width:26px; height:26px; flex-shrink:0; border-radius:7px; background:{{ n.tint }}; color:{{ n.fg }}; display:flex; align-items:center; justify-content:center;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg>
+            </span>
+            <span style="min-width:0;">
+              <span style="display:block; font-size:12.5px;">{{ n.text }}</span>
+              <span style="display:block; font-size:11px; color:var(--faint); margin-top:1px;">{{ n.meta }}</span>
+            </span>
+          </div>
+        </sc-for>
+        <div onClick="{{ goXabarlar }}" role="button" tabIndex="0" style="padding:11px 16px; text-align:center; font-size:12.5px; color:var(--accent); font-weight:600; cursor:pointer;" style-hover="background:var(--surface2);">Barcha xabarlarni ko'rish</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ COMMAND PALETTE ============ -->
+  <sc-if value="{{ paletteOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeAll }}" style="position:fixed; inset:0; background:rgba(10,13,18,.45); z-index:60; display:flex; align-items:flex-start; justify-content:center; padding:12vh 16px 0;">
+      <div onClick="{{ stop }}" role="dialog" aria-label="Buyruqlar oynasi" style="width:min(520px, 100%); background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 16px 48px rgba(10,13,18,.3); overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:10px; padding:13px 16px; border-bottom:1px solid var(--border);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35"></path></svg>
+          <input value="{{ paletteQ }}" onChange="{{ setPaletteQ }}" placeholder="Sahifa yoki amal qidiring..." aria-label="Buyruq qidirish" autoFocus="{{ true }}" style="border:none; outline:none; background:transparent; color:var(--text); font-size:14px; flex:1; min-width:0;">
+          <span style="font-size:11px; color:var(--faint); border:1px solid var(--border2); border-radius:4px; padding:1px 5px;">esc</span>
+        </div>
+        <div style="padding:6px; max-height:320px; overflow:auto;">
+          <sc-for list="{{ paletteItems }}" as="p" hint-placeholder-count="6">
+            <div onClick="{{ p.run }}" role="button" tabIndex="0" style="display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; cursor:pointer; font-size:13.5px;" style-hover="background:var(--surface2);">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="{{ p.icon }}"></path></svg>
+              <span style="flex:1; font-weight:500;">{{ p.name }}</span>
+              <span style="font-size:11px; color:var(--faint);">{{ p.hint }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex; gap:14px; padding:9px 16px; border-top:1px solid var(--border); background:var(--bg); font-size:11px; color:var(--faint);">
+          <span>↵ ochish</span><span>esc yopish</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ MODAL ============ -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeAll }}" style="position:fixed; inset:0; background:rgba(10,13,18,.45); z-index:60; display:flex; align-items:center; justify-content:center; padding:16px;">
+      <div onClick="{{ stop }}" role="dialog" aria-modal="true" aria-label="{{ modalTitle }}" style="width:min(440px, 100%); background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:0 16px 48px rgba(10,13,18,.3); overflow:hidden;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 20px; border-bottom:1px solid var(--border);">
+          <span style="font-size:15px; font-weight:600;">{{ modalTitle }}</span>
+          <span onClick="{{ closeAll }}" role="button" tabIndex="0" title="Yopish" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:pointer; color:var(--muted);" style-hover="background:var(--surface2);">✕</span>
+        </div>
+        <div style="padding:18px 20px; display:flex; flex-direction:column; gap:14px;">
+          <sc-if value="{{ modalIsOp }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; font-size:13px; text-align:center;">
+              <div onClick="{{ setOpKirim }}" role="button" tabIndex="0" style="flex:1; padding:9px; cursor:pointer; font-weight:600; background:{{ kirimBg }}; color:{{ kirimFg }};">↓ Kirim</div>
+              <div onClick="{{ setOpChiqim }}" role="button" tabIndex="0" style="flex:1; padding:9px; cursor:pointer; font-weight:600; background:{{ chiqimBg }}; color:{{ chiqimFg }}; border-left:1px solid var(--border);">↑ Chiqim</div>
+            </div>
+          </sc-if>
+          <div>
+            <div style="font-size:12.5px; font-weight:600; margin-bottom:5px;">{{ modalF1Label }} <span style="color:var(--red);">*</span></div>
+            <input value="{{ f1 }}" onChange="{{ setF1 }}" placeholder="{{ modalF1Ph }}" style="width:100%; border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:13.5px; background:var(--bg); color:var(--text); outline:none;">
+          </div>
+          <div>
+            <div style="font-size:12.5px; font-weight:600; margin-bottom:5px;">{{ modalF2Label }}</div>
+            <input value="{{ f2 }}" onChange="{{ setF2 }}" placeholder="{{ modalF2Ph }}" style="width:100%; border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:13.5px; background:var(--bg); color:var(--text); outline:none; font-feature-settings:'tnum';">
+          </div>
+          <sc-if value="{{ formErrShow }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:12.5px; color:var(--red);">✕ {{ formErr }}</div>
+          </sc-if>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; padding:14px 20px; border-top:1px solid var(--border); background:var(--bg);">
+          <button onClick="{{ closeAll }}" style="background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:9px 16px; font-size:13px; font-weight:500; font-family:inherit; cursor:pointer;" style-hover="background:var(--surface2);">Bekor qilish</button>
+          <button onClick="{{ submitModal }}" style="background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;" style-hover="filter:brightness(1.08);">{{ modalSubmit }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ DRAWER: XODIM ============ -->
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeAll }}" style="position:fixed; inset:0; background:rgba(10,13,18,.35); z-index:55; display:flex; justify-content:flex-end;">
+      <div onClick="{{ stop }}" role="dialog" aria-label="Xodim tafsiloti" style="width:min(360px, 100%); height:100%; background:var(--surface); border-left:1px solid var(--border); box-shadow:-12px 0 32px rgba(10,13,18,.18); display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 20px; border-bottom:1px solid var(--border);">
+          <span style="font-size:14px; font-weight:600;">Xodim tafsiloti</span>
+          <span onClick="{{ closeAll }}" role="button" tabIndex="0" title="Yopish" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:pointer; color:var(--muted);" style-hover="background:var(--surface2);">✕</span>
+        </div>
+        <div style="padding:20px; flex:1; overflow:auto;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
+            <div style="width:44px; height:44px; border-radius:50%; background:{{ dTint }}; color:{{ dHue }}; display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:600;">{{ dInitial }}</div>
+            <div style="min-width:0;">
+              <div style="font-size:15px; font-weight:700;">{{ dName }}</div>
+              <div style="font-size:12px; color:var(--muted);">Buxgalter · {{ dCode }}</div>
+            </div>
+            <span style="margin-left:auto; background:{{ dStBg }}; color:{{ dStFg }}; border-radius:999px; padding:3px 10px; font-size:11.5px; font-weight:600; flex-shrink:0;">{{ dStatus }}</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+            <div style="background:var(--bg); border-radius:10px; padding:12px 14px;"><div style="font-size:10.5px; color:var(--muted); font-weight:600; letter-spacing:.05em;">FIRMALAR</div><div style="font-size:19px; font-weight:700; margin-top:2px; font-feature-settings:'tnum';">{{ dFirms }}</div></div>
+            <div style="background:var(--bg); border-radius:10px; padding:12px 14px;"><div style="font-size:10.5px; color:var(--muted); font-weight:600; letter-spacing:.05em;">KPI · IYUN</div><div style="font-size:19px; font-weight:700; margin-top:2px; color:var(--green); font-feature-settings:'tnum';">{{ dKpi }}</div></div>
+          </div>
+          <div style="font-size:12.5px; font-weight:600; margin-bottom:7px;">Aloqa</div>
+          <div style="font-size:13px; color:var(--muted); margin-bottom:3px; overflow:hidden; text-overflow:ellipsis;">{{ dEmail }}</div>
+          <div style="font-size:13px; color:var(--muted); margin-bottom:16px;">+998 90 123 45 67</div>
+          <div style="font-size:12.5px; font-weight:600; margin-bottom:7px;">So'nggi faoliyat</div>
+          <div style="display:flex; gap:9px; font-size:12.5px; color:var(--muted); margin-bottom:6px;"><span style="color:var(--accent);">●</span><span>Hisobot yukladi — Foyda va zarar<span style="display:block; font-size:11px; color:var(--faint);">bugun 12:42</span></span></div>
+          <div style="display:flex; gap:9px; font-size:12.5px; color:var(--muted);"><span style="color:var(--accent);">●</span><span>To'lov tasdiqladi — 8.5 mln<span style="display:block; font-size:11px; color:var(--faint);">kecha 16:10</span></span></div>
+        </div>
+        <div style="display:flex; gap:8px; padding:14px 20px; border-top:1px solid var(--border);">
+          <button onClick="{{ drawerEdit }}" style="flex:1; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:10px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;" style-hover="filter:brightness(1.08);">Tahrirlash</button>
+          <button onClick="{{ closeAll }}" style="flex:1; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:13px; font-weight:500; font-family:inherit; cursor:pointer;" style-hover="background:var(--surface2);">Yopish</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ TOAST ============ -->
+  <sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position:fixed; left:50%; transform:translateX(-50%); bottom:{{ toastBottom }}; z-index:70; background:#14171d; color:#fff; border-radius:10px; padding:11px 16px; display:flex; align-items:center; gap:10px; box-shadow:0 8px 24px rgba(0,0,0,.35); font-size:13px; max-width:calc(100vw - 32px);">
+      <span style="width:20px; height:20px; flex-shrink:0; border-radius:50%; background:rgba(63,191,127,.2); color:#3fbf7f; display:flex; align-items:center; justify-content:center; font-size:11px;">✓</span>
+      <span>{{ toastText }}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#3565d9&quot;,&quot;options&quot;:[&quot;#3565d9&quot;,&quot;#0f766e&quot;,&quot;#5b5bd6&quot;,&quot;#0f2b46&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Ko'rinish&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;compact&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Ko'rinish&quot;},&quot;radius&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:10,&quot;min&quot;:4,&quot;max&quot;:18,&quot;step&quot;:1,&quot;unit&quot;:&quot;px&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Ko'rinish&quot;},&quot;defaultTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;light&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Ko'rinish&quot;}}">
+class Component extends DCLogic {
+  state = { page: 'dashboard', theme: 'light', collapsed: false,
+    modal: null, drawerEmp: null, paletteOpen: false, paletteQ: '', notifOpen: false,
+    toast: null, f1: '', f2: '', opType: 'Kirim', formErr: '',
+    addedEmps: [], addedTx: [], addedXp: [], addedFirms: [], xpStatus: {},
+    notifRead: false, winW: (typeof window !== 'undefined' ? window.innerWidth : 1440) };
+
+  componentDidMount() {
+    let saved = null;
+    try { saved = localStorage.getItem('asro-theme'); } catch (e) {}
+    const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    let t = this.props.defaultTheme ?? 'auto';
+    if (saved === 'light' || saved === 'dark') t = saved;
+    if (t === 'auto') t = (mq && mq.matches) ? 'dark' : 'light';
+    document.body.dataset.theme = t;
+    this.setState({ theme: t });
+    if (mq) {
+      this._onMq = (e) => {
+        let s = null;
+        try { s = localStorage.getItem('asro-theme'); } catch (err) {}
+        if (!s) {
+          document.body.dataset.theme = e.matches ? 'dark' : 'light';
+          this.setState({ theme: e.matches ? 'dark' : 'light' });
+        }
+      };
+      mq.addEventListener('change', this._onMq);
+      this._mq = mq;
+    }
+    this._onResize = () => this.setState({ winW: window.innerWidth });
+    window.addEventListener('resize', this._onResize);
+    this._onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        this.setState({ paletteOpen: true, paletteQ: '', notifOpen: false, modal: null });
+      } else if (e.key === 'Escape') {
+        this.setState({ paletteOpen: false, notifOpen: false, modal: null, drawerEmp: null });
+      }
+    };
+    window.addEventListener('keydown', this._onKey);
+    this.applyProps();
+  }
+
+  componentWillUnmount() {
+    if (this._mq && this._onMq) this._mq.removeEventListener('change', this._onMq);
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    if (this._onKey) window.removeEventListener('keydown', this._onKey);
+    clearTimeout(this._toastT);
+  }
+
+  showToast(text) {
+    clearTimeout(this._toastT);
+    this.setState({ toast: text });
+    this._toastT = setTimeout(() => this.setState({ toast: null }), 3200);
+  }
+
+  closeAll() {
+    this.setState({ modal: null, drawerEmp: null, paletteOpen: false, notifOpen: false, formErr: '' });
+  }
+
+  openModal(type) {
+    this.setState({ modal: type, f1: '', f2: '', opType: 'Kirim', formErr: '', paletteOpen: false, notifOpen: false, drawerEmp: null });
+  }
+
+  fmtAmount(v) {
+    const n = (v + '').replace(/[^0-9]/g, '');
+    return n.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  submitModal() {
+    const m = this.state.modal;
+    const f1 = this.state.f1.trim(), f2 = this.state.f2.trim();
+    if (!f1) { this.setState({ formErr: "Majburiy maydonni to'ldiring" }); return; }
+    if ((m === 'op' || m === 'xarajat') && !this.fmtAmount(f2)) { this.setState({ formErr: 'Summani kiriting' }); return; }
+    const amt = this.fmtAmount(f2);
+    const today = '11.07';
+    if (m === 'xodim') {
+      const emp = [f1, 'YANGI', f1.toLowerCase().replace(/\s+/g, '_') + '@mehnat.uz', 0, false];
+      this.setState({ addedEmps: this.state.addedEmps.concat([emp]) });
+      this.showToast("Xodim qo'shildi — taklif SMS yuborildi: " + f1);
+    } else if (m === 'op') {
+      const inc = this.state.opType === 'Kirim';
+      this.setState({ addedTx: [[today, f1, 'Asosiy hisob', this.state.opType, (inc ? '+' : '−') + amt]].concat(this.state.addedTx) });
+      this.showToast('Operatsiya saqlandi: ' + (inc ? '+' : '−') + amt + " so'm");
+    } else if (m === 'xarajat') {
+      this.setState({ addedXp: [[today, f1, 'Boshqa', "O'ztemiryo'lxisob", amt, 'Kutilmoqda']].concat(this.state.addedXp) });
+      this.showToast('Xarajat tasdiqqa yuborildi: ' + amt + " so'm");
+    } else if (m === 'firma') {
+      this.setState({ addedFirms: [['"' + f1 + '" MChJ', f2 || '—', 'Bazaviy', 'Biriktirilmagan', true]].concat(this.state.addedFirms) });
+      this.showToast("Firma qo'shildi: " + f1);
+    }
+    this.closeAll();
+  }
+
+  componentDidUpdate() { this.applyProps(); }
+
+  applyProps() {
+    document.body.style.setProperty('--accent', this.props.accent ?? '#3565d9');
+    document.body.style.setProperty('--r', (this.props.radius ?? 12) + 'px');
+    document.body.dataset.density = this.props.density ?? 'comfortable';
+  }
+
+  chip(color) {
+    return {
+      bg: 'color-mix(in srgb, var(--' + color + ') 12%, transparent)',
+      fg: 'var(--' + color + ')'
+    };
+  }
+
+  renderVals() {
+    const page = this.state.page;
+    const collapsed = this.state.collapsed;
+    const isMobile = this.state.winW < 768;
+    const isCollapsed = collapsed || (this.state.winW < 1100 && !isMobile);
+    const go = (id) => () => this.setState({ page: id, paletteOpen: false, notifOpen: false, drawerEmp: null, modal: null });
+
+    const groups = [
+      { label: 'Asosiy', items: [
+        { id: 'dashboard', name: 'Dashboard', icon: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z' },
+        { id: 'firmalar', name: 'Firmalar', icon: 'M4 21h16M6 21V4h9v17M9 8h3M9 12h3M9 16h3' },
+        { id: 'xodimlar', name: 'Xodimlar', icon: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M22 21v-2a4 4 0 00-3-3.9M15 3.1a4 4 0 010 7.8' },
+        { id: 'kpi', name: 'KPI', icon: 'M22 7l-8.5 8.5-5-5L2 17M16 7h6v6' }
+      ]},
+      { label: 'Moliya', items: [
+        { id: 'hisobotlar', name: 'Hisobotlar', icon: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8' },
+        { id: 'kassa', name: 'Kassa / Bank', icon: 'M1 5h22v14H1zM1 10h22' },
+        { id: 'xarajatlar', name: 'Xarajatlar', icon: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6' },
+        { id: 'oylik', name: 'Oylik', icon: 'M2 7h20v13H2zM2 7l3-4h14l3 4M16 13h4' }
+      ]},
+      { label: 'Boshqa', items: [
+        { id: 'davomat', name: 'Davomat', icon: 'M3 5h18v16H3zM16 2v6M8 2v6M3 10h18' },
+        { id: 'hujjatlar', name: 'Hujjatlar', icon: 'M22 19V7a2 2 0 00-2-2h-8l-2-2H4a2 2 0 00-2 2v14a2 2 0 002 2h16a2 2 0 002-2z' },
+        { id: 'inventar', name: 'Inventar', icon: 'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8' },
+        { id: 'xabarlar', name: 'Xabarlar', icon: 'M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0' }
+      ]},
+      { label: 'Admin', items: [
+        { id: 'admin', name: 'Admin panel', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+        { id: 'audit', name: 'Audit jurnali', icon: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01' },
+        { id: 'sozlamalar', name: 'Sozlamalar', icon: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6' }
+      ]}
+    ];
+
+    const navGroups = groups.map((g) => ({
+      label: g.label,
+      items: g.items.map((it) => {
+        const active = it.id === page;
+        return Object.assign({}, it, {
+          onClick: go(it.id),
+          ariaCurrent: active ? 'page' : undefined,
+          fw: active ? '600' : '500',
+          color: active ? 'var(--accent)' : 'var(--muted)',
+          bg: active ? 'color-mix(in srgb, var(--accent) 9%, transparent)' : 'transparent',
+          hoverBg: active ? 'color-mix(in srgb, var(--accent) 9%, transparent)' : 'var(--surface2)'
+        });
+      })
+    }));
+
+    const palette = ['#3565d9', '#0f766e', '#b45309', '#7c3aed', '#c2410c', '#0e7490', '#be185d', '#4d7c0f'];
+    const av = (i) => ({
+      tint: 'color-mix(in srgb, ' + palette[i % 8] + ' 14%, var(--surface))',
+      hue: palette[i % 8]
+    });
+
+    const empData = [
+      ['Abdugani', '657913B3', 'abdugani_6579@mehnat.uz', 15, true],
+      ['Abrorbek', '75E39E2F', 'abrorbek_75e3@mehnat.uz', 17, true],
+      ['Adxam', 'F6F88196', 'adxam_f6f8@mehnat.uz', 11, true],
+      ['Axmadjon', 'D49A8021', 'axmadjon_d49a@mehnat.uz', 1, false],
+      ['Azizbek', '629C37A1', 'azizbek_629c@mehnat.uz', 0, true],
+      ['Bekzod', 'FFA54F71', 'bekzod_ffa5@mehnat.uz', 0, false],
+      ['Dilhush', 'DD2AFDB7', 'dilhush_dd2a@mehnat.uz', 9, true],
+      ['Dilmurod', '8C1E44A0', 'dilmurod_8c1e@mehnat.uz', 1, true]
+    ];
+    const allEmps = empData.concat(this.state.addedEmps);
+    const employees = allEmps.map((e, i) => {
+      const emp = Object.assign({
+        name: e[0], code: e[1], email: e[2], firms: e[3], role: 'Buxgalter',
+        initial: e[0][0], dot: e[4] ? 'var(--green)' : 'var(--faint)', online: e[4]
+      }, av(i));
+      emp.open = () => this.setState({ drawerEmp: emp, notifOpen: false, paletteOpen: false });
+      return emp;
+    });
+
+    const green = this.chip('green'), red = this.chip('red'), amber = this.chip('amber'), blue = this.chip('accent');
+    const st = (label, c) => ({ status: label, stBg: c.bg, stFg: c.fg });
+
+    const reports = [
+      Object.assign({ name: 'Foyda va zarar hisoboti', period: '2026 H1', owner: 'Abdugani', date: '05.07.2026', fileAction: 'Yuklab olish' }, st('Tayyor', green)),
+      Object.assign({ name: 'Balans hisoboti', period: '2026 Q2', owner: 'Dilhush', date: '04.07.2026', fileAction: 'Yuklab olish' }, st('Tayyor', green)),
+      Object.assign({ name: 'QQS deklaratsiyasi', period: 'Iyun 2026', owner: 'Abrorbek', date: '15.06.2026', fileAction: 'Yuklab olish' }, st('Yuborilgan', blue)),
+      Object.assign({ name: "Daromad solig'i hisoboti", period: 'Iyun 2026', owner: 'Adxam', date: '—', fileAction: 'Ochish' }, st('Tayyorlanmoqda', amber)),
+      Object.assign({ name: 'Pul oqimi hisoboti', period: '2026 Q2', owner: 'Azizbek', date: '02.07.2026', fileAction: 'Yuklab olish' }, st('Tayyor', green)),
+      Object.assign({ name: 'KPI hisoboti', period: 'Iyun 2026', owner: 'Bekzod', date: '—', fileAction: 'Ochish' }, st('Tayyorlanmoqda', amber))
+    ];
+
+    const accounts = [
+      { name: 'Asosiy hisob', balance: "184 250 000 so'm", info: 'Ipoteka Bank · 20208 000 9004 8712 001' },
+      { name: 'Kassa', balance: "6 420 000 so'm", info: "Naqd pul · mas'ul: Abdugani" },
+      { name: 'Valyuta hisobi', balance: '$12 480', info: 'Ipoteka Bank · USD hisob' }
+    ];
+
+    const txData = [
+      ['09.07', 'Ofis ijarasi — iyul', 'Asosiy hisob', 'Chiqim', '−12 500 000'],
+      ['08.07', '"Mehnat Trans" MChJ — xizmat haqi', 'Asosiy hisob', 'Kirim', '+45 000 000'],
+      ['08.07', 'Kantselyariya xaridi', 'Kassa', 'Chiqim', '−840 000'],
+      ['07.07', '"Agro Invest" — shartnoma №214', 'Asosiy hisob', 'Kirim', '+28 400 000'],
+      ['05.07', "Iyun oyligi to'lovi", 'Asosiy hisob', 'Chiqim', '−58 900 000'],
+      ['03.07', "Kommunal to'lovlar", 'Kassa', 'Chiqim', '−2 150 000'],
+      ['01.07', '"Temir Yo\'l Servis" — avans', 'Valyuta hisobi', 'Kirim', '+15 000 000']
+    ];
+    const allTx = this.state.addedTx.concat(txData);
+    const transactions = allTx.map((t) => {
+      const inc = t[3] === 'Kirim';
+      const c = inc ? green : red;
+      return { date: t[0], desc: t[1], account: t[2], type: t[3], amount: t[4],
+        stBg: c.bg, stFg: c.fg, amtColor: inc ? 'var(--green)' : 'var(--text)' };
+    });
+
+    const xpData = [
+      ['09.07', 'Ofis ijarasi', 'Ijara', "O'ztemiryo'lxisob", '12 500 000', 'Tasdiqlangan'],
+      ['08.07', 'Kantselyariya xaridi', 'Ofis', "O'ztemiryo'lxisob", '840 000', 'Tasdiqlangan'],
+      ['06.07', "Taksi va yo'l xarajatlari", 'Transport', 'Mehnat Trans', '420 000', 'Kutilmoqda'],
+      ['03.07', "Kommunal to'lovlar", 'Kommunal', "O'ztemiryo'lxisob", '2 150 000', 'Tasdiqlangan'],
+      ['02.07', 'Server ijarasi', 'IT', "O'ztemiryo'lxisob", '1 100 000', 'Tasdiqlangan'],
+      ['01.07', 'Xodimlar tushligi', 'Boshqa', 'Agro Invest', '960 000', 'Rad etilgan']
+    ];
+    const allXp = this.state.addedXp.concat(xpData);
+    const expenses = allXp.map((x) => {
+      const key = x[0] + '|' + x[1];
+      const status = this.state.xpStatus[key] ?? x[5];
+      const c = status === 'Tasdiqlangan' ? green : (status === 'Kutilmoqda' ? amber : red);
+      const setSt = (s, msg) => () => {
+        this.setState({ xpStatus: Object.assign({}, this.state.xpStatus, { [key]: s }) });
+        this.showToast(msg + ': ' + x[1]);
+      };
+      return { date: x[0], desc: x[1], cat: x[2], firm: x[3], amount: x[4],
+        status, stBg: c.bg, stFg: c.fg,
+        actDisplay: status === 'Kutilmoqda' ? 'inline-flex' : 'none',
+        approve: setSt('Tasdiqlangan', 'Xarajat tasdiqlandi'),
+        reject: setSt('Rad etilgan', 'Xarajat rad etildi') };
+    });
+
+    const payData = [
+      ['Abdugani', '9 500 000', '1 200 000', '1 284 000', '9 416 000', true],
+      ['Abrorbek', '8 800 000', '900 000', '1 164 000', '8 536 000', true],
+      ['Adxam', '8 200 000', '600 000', '1 056 000', '7 744 000', false],
+      ['Axmadjon', '7 500 000', '—', '900 000', '6 600 000', false],
+      ['Azizbek', '7 000 000', '400 000', '888 000', '6 512 000', true],
+      ['Bekzod', '6 800 000', '—', '816 000', '5 984 000', false],
+      ['Dilhush', '9 000 000', '1 500 000', '1 260 000', '9 240 000', true],
+      ['Dilmurod', '7 200 000', '300 000', '900 000', '6 600 000', false]
+    ];
+    const payroll = payData.map((p, i) => {
+      const c = p[5] ? green : amber;
+      return Object.assign({ name: p[0], initial: p[0][0], base: p[1], bonus: p[2],
+        deduct: p[3], total: p[4], status: p[5] ? "To'langan" : 'Kutilmoqda',
+        stBg: c.bg, stFg: c.fg }, av(i));
+    });
+
+    const kpiRules = [
+      { name: "Hisobotlarni o'z vaqtida topshirish", weight: '40%' },
+      { name: "Firma hujjatlari to'liqligi", weight: '25%' },
+      { name: 'Mijoz murojaatlariga javob tezligi', weight: '20%' },
+      { name: 'Xatoliklar soni', weight: '15%' }
+    ];
+
+    const kpiData = [['Abdugani', 92, 0], ['Dilhush', 88, 6], ['Abrorbek', 84, 1], ['Adxam', 76, 2], ['Azizbek', 71, 4], ['Bekzod', 64, 5]];
+    const kpiScores = kpiData.map((k) => {
+      const grade = k[1] >= 85 ? "A'lo" : (k[1] >= 70 ? 'Yaxshi' : 'Qoniqarli');
+      const c = k[1] >= 85 ? green : (k[1] >= 70 ? blue : amber);
+      return Object.assign({ name: k[0], initial: k[0][0], score: k[1], grade,
+        stBg: c.bg, stFg: c.fg,
+        barColor: k[1] >= 85 ? 'var(--green)' : (k[1] >= 70 ? 'var(--accent)' : 'var(--amber)') }, av(k[2]));
+    });
+
+    const firmData = [
+      ['"O\'ztemiryo\'lxisob" AJ', '305 481 214', 'Premium', 'Abdugani', true],
+      ['"Mehnat Trans" MChJ', '302 114 587', 'Standart', 'Abrorbek', true],
+      ['"Agro Invest" MChJ', '306 774 120', 'Standart', 'Adxam', true],
+      ['"Temir Yo\'l Servis" MChJ', '304 220 981', 'Premium', 'Dilhush', true],
+      ['"Qurilish Lux" MChJ', '301 558 442', 'Bazaviy', 'Azizbek', false],
+      ['"Nur Logistika" MChJ', '307 991 305', 'Standart', 'Bekzod', true]
+    ];
+    const allFirms = this.state.addedFirms.concat(firmData);
+    const firms = allFirms.map((f) => {
+      const c = f[4] ? green : amber;
+      return { name: f[0], inn: f[1], plan: f[2], acc: f[3],
+        status: f[4] ? 'Faol' : "To'xtatilgan", stBg: c.bg, stFg: c.fg };
+    });
+
+    const audit = [
+      { time: '10.07 12:42', user: 'Abdugani', action: 'Hisobot yukladi', object: 'Foyda va zarar — 2026 H1', ip: '195.158.12.4' },
+      { time: '10.07 11:18', user: 'TEST Super Admin', action: "Rol o'zgartirdi", object: 'Bekzod → Buxgalter', ip: '195.158.12.4' },
+      { time: '10.07 09:55', user: 'Dilhush', action: "Firma qo'shdi", object: '"Nur Logistika" MChJ', ip: '84.54.71.22' },
+      { time: '09.07 17:30', user: 'Abrorbek', action: "To'lov kiritdi", object: "45 000 000 so'm — Mehnat Trans", ip: '84.54.70.118' },
+      { time: '09.07 14:02', user: 'TEST Super Admin', action: 'Tizimga kirdi', object: 'Web · Chrome', ip: '195.158.12.4' }
+    ];
+
+    const stats = [
+      { label: 'Foydalanuvchilar', value: '33', delta: '+3 bu oy', deltaColor: 'var(--green)' },
+      { label: 'Firmalar', value: '212', delta: 'barchasi faol', deltaColor: 'var(--muted)' },
+      { label: 'KPI bajarilishi', value: '87%', delta: "+4% o'tgan oyga nisbatan", deltaColor: 'var(--green)' },
+      { label: 'Oylik fondi', value: '60.6 mln', delta: 'iyul · 26.9 mln kutilmoqda', deltaColor: 'var(--amber)' }
+    ];
+
+    const mData = [['Fev', 210, 168], ['Mar', 245, 190], ['Apr', 232, 205], ['May', 268, 214], ['Iyn', 291, 230], ['Iyl', 88, 74]];
+    const months = mData.map((m) => ({ name: m[0], inH: Math.round(m[1] * 0.42), outH: Math.round(m[2] * 0.42) }));
+
+    const roles = [
+      { name: 'Buxgalter', count: 22 }, { name: 'Superadmin', count: 6 },
+      { name: 'Bosh Buxgalter', count: 2 }, { name: 'Admin', count: 1 },
+      { name: 'Bank-Klient', count: 1 }, { name: 'Nazoratchi', count: 1 }
+    ];
+
+    const recent = audit.slice(0, 4).map((a) => ({ user: a.user, action: a.action.toLowerCase() + ' · ' + a.object, time: a.time }));
+
+    const adminStats = [
+      { label: 'Foydalanuvchilar', value: '33', sub: '33 faol' },
+      { label: 'Firmalar', value: '212', sub: 'faol' },
+      { label: 'KPI qoidalari', value: '4', sub: 'tizimda' },
+      { label: 'Rollar', value: '6', sub: 'tizimda' }
+    ];
+
+    const adminCards = [
+      { name: 'Foydalanuvchilar', desc: 'Xodimlar, rollar, parollar', icon: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M22 21v-2a4 4 0 00-3-3.9M15 3.1a4 4 0 010 7.8' },
+      { name: "Bo'limlar", desc: "Bo'lim va bosh buxgalter tayinlash", icon: 'M4 21h16M6 21V4h9v17M9 8h3M9 12h3M9 16h3' },
+      { name: 'Rollar & Ruxsatlar', desc: 'Rol-ruxsat matritsasi', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+      { name: 'Tizim sozlamalari', desc: 'Global konfiguratsiya va modullar', icon: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6' },
+      { name: 'Audit jurnali', desc: "O'zgarishlar tarixi", icon: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01' },
+      { name: 'Integratsiyalar', desc: 'E-imzo, 1C, Didox, Soliq.uz', icon: 'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71' }
+    ];
+
+    const settings = [
+      { name: 'Tizim tili', desc: 'Interfeys tili', value: "O'zbekcha" },
+      { name: 'Asosiy valyuta', desc: 'Hisobotlarda ishlatiladi', value: "So'm (UZS)" },
+      { name: 'Vaqt mintaqasi', desc: 'Sana va vaqt uchun', value: 'Toshkent (UTC+5)' },
+      { name: 'Sana formati', desc: 'Jadval va hisobotlarda', value: 'DD.MM.YYYY' }
+    ];
+
+    const emptyPages = {
+      davomat: { title: 'Davomat', desc: "Davomat ma'lumotlari yo'q", action: 'Davomat boshlash', icon: 'M3 5h18v16H3zM16 2v6M8 2v6M3 10h18' },
+      hujjatlar: { title: 'Hujjatlar', desc: "Hujjatlar hali yuklanmagan", action: 'Hujjat yuklash', icon: 'M22 19V7a2 2 0 00-2-2h-8l-2-2H4a2 2 0 00-2 2v14a2 2 0 002 2h16a2 2 0 002-2z' },
+      inventar: { title: 'Inventar', desc: "Inventar ro'yxati bo'sh", action: "Inventar qo'shish", icon: 'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8' },
+      xabarlar: { title: 'Xabarlar', desc: 'Yangi xabarlar yo\u2018q', action: 'Xabar yozish', icon: 'M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0' }
+    };
+    const ep = emptyPages[page];
+
+    return {
+      pgDashboard: page === 'dashboard',
+      pgXodimlar: page === 'xodimlar',
+      pgHisobotlar: page === 'hisobotlar',
+      pgKassa: page === 'kassa',
+      pgXarajatlar: page === 'xarajatlar',
+      pgOylik: page === 'oylik',
+      pgKpi: page === 'kpi',
+      pgFirmalar: page === 'firmalar',
+      pgAdmin: page === 'admin',
+      pgAudit: page === 'audit',
+      pgSozlamalar: page === 'sozlamalar',
+      pgEmpty: !!ep,
+      emptyTitle: ep ? ep.title : '',
+      emptyDesc: ep ? ep.desc : '',
+      emptyAction: ep ? ep.action : '',
+      emptyIcon: ep ? ep.icon : '',
+      navGroups,
+      employees, reports, accounts, transactions, expenses, payroll,
+      kpiRules, kpiScores, firms, audit, stats, months, roles, recent,
+      adminStats, adminCards, settings,
+      sbWidth: isCollapsed ? '64px' : '240px',
+      sbDisplay: isMobile ? 'none' : 'flex',
+      labelDisplay: isCollapsed ? 'none' : 'block',
+      sbChev: isCollapsed ? 180 : 0,
+      mainPad: isMobile ? '20px 16px 96px' : '28px 32px',
+      bottomNavDisplay: isMobile ? 'flex' : 'none',
+      bottomNav: [
+        { id: 'dashboard', name: 'Bosh', icon: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z' },
+        { id: 'firmalar', name: 'Firmalar', icon: 'M4 21h16M6 21V4h9v17M9 8h3M9 12h3M9 16h3' },
+        { id: 'kassa', name: 'Kassa', icon: 'M1 5h22v14H1zM1 10h22' },
+        { id: 'xarajatlar', name: 'Xarajat', icon: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6' },
+        { id: 'xodimlar', name: 'Xodimlar', icon: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8' }
+      ].map((b) => ({ name: b.name, icon: b.icon, onClick: go(b.id),
+        color: page === b.id ? 'var(--accent)' : 'var(--muted)' })),
+      empCount: allEmps.length,
+
+      // Overlay holatlari
+      notifOpen: this.state.notifOpen,
+      paletteOpen: this.state.paletteOpen,
+      modalOpen: !!this.state.modal,
+      drawerOpen: !!this.state.drawerEmp,
+      toastShow: !!this.state.toast,
+      toastText: this.state.toast || '',
+      toastBottom: isMobile ? '88px' : '28px',
+      notifBadgeDisplay: this.state.notifRead ? 'none' : 'block',
+
+      // Bildirishnomalar
+      notifs: [
+        { icon: 'M12 8v5M12 16.5v.5M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z', c: 'red', text: 'QQS deklaratsiyasi — 5 kun qoldi', meta: '09:00 · Soliq muddati', page: 'hisobotlar' },
+        { icon: 'M20 6L9 17l-5-5', c: 'amber', text: "Xarajat tasdig'i kutilmoqda — 420 000 so'm", meta: '09:15 · Xarajatlar', page: 'xarajatlar' },
+        { icon: 'M1 5h22v14H1zM1 10h22', c: 'green', text: '+45 000 000 kirim — Mehnat Trans', meta: 'kecha 17:30 · Kassa', page: 'kassa' }
+      ].map((n) => ({ icon: n.icon, text: n.text, meta: n.meta,
+        tint: 'color-mix(in srgb, var(--' + n.c + ') 12%, transparent)', fg: 'var(--' + n.c + ')',
+        bg: this.state.notifRead ? 'transparent' : 'color-mix(in srgb, var(--accent) 4%, transparent)',
+        run: () => { this.setState({ page: n.page, notifOpen: false }); } })),
+      toggleNotif: () => this.setState({ notifOpen: !this.state.notifOpen, paletteOpen: false, modal: null, drawerEmp: null }),
+      markAllRead: () => { this.setState({ notifRead: true }); this.showToast("Barcha bildirishnomalar o'qildi"); },
+      goXabarlar: go('xabarlar'),
+
+      // Command palette
+      paletteQ: this.state.paletteQ,
+      setPaletteQ: (e) => this.setState({ paletteQ: e.target.value }),
+      openPalette: () => this.setState({ paletteOpen: true, paletteQ: '', notifOpen: false, modal: null, drawerEmp: null }),
+      paletteItems: (() => {
+        const q = this.state.paletteQ.toLowerCase();
+        const acts = [
+          { name: "Xodim qo'shish", hint: 'Amal', icon: 'M12 5v14M5 12h14', run: () => this.openModal('xodim') },
+          { name: 'Operatsiya kiritish', hint: 'Amal', icon: 'M12 5v14M5 12h14', run: () => this.openModal('op') },
+          { name: "Xarajat qo'shish", hint: 'Amal', icon: 'M12 5v14M5 12h14', run: () => this.openModal('xarajat') },
+          { name: "Firma qo'shish", hint: 'Amal', icon: 'M12 5v14M5 12h14', run: () => this.openModal('firma') }
+        ];
+        const pages = groups.flatMap((g) => g.items).map((it) => ({
+          name: it.name, hint: 'Sahifa', icon: it.icon, run: go(it.id) }));
+        return acts.concat(pages).filter((p) => !q || p.name.toLowerCase().includes(q)).slice(0, 9);
+      })(),
+
+      // Modal
+      modalTitle: ({ xodim: "Yangi xodim qo'shish", op: 'Operatsiya kiritish', xarajat: "Xarajat qo'shish", firma: "Yangi firma qo'shish" })[this.state.modal] || '',
+      modalSubmit: ({ xodim: 'Taklif yuborish', op: 'Saqlash', xarajat: 'Tasdiqqa yuborish', firma: "Qo'shish" })[this.state.modal] || 'Saqlash',
+      modalIsOp: this.state.modal === 'op',
+      modalF1Label: ({ xodim: 'F.I.Sh.', op: 'Tavsif', xarajat: 'Tavsif', firma: 'Firma nomi' })[this.state.modal] || '',
+      modalF1Ph: ({ xodim: 'Masalan: Jasur Karimov', op: 'Masalan: Shartnoma №215 to\u2018lovi', xarajat: 'Masalan: Ofis jihozlari', firma: 'Masalan: Yangi Yo\u2018l' })[this.state.modal] || '',
+      modalF2Label: ({ xodim: 'Telefon', op: "Summa (so'm)", xarajat: "Summa (so'm)", firma: 'STIR' })[this.state.modal] || '',
+      modalF2Ph: ({ xodim: '+998 90 000 00 00', op: '10 000 000', xarajat: '500 000', firma: '300 000 000' })[this.state.modal] || '',
+      f1: this.state.f1, f2: this.state.f2,
+      setF1: (e) => this.setState({ f1: e.target.value, formErr: '' }),
+      setF2: (e) => this.setState({ f2: e.target.value, formErr: '' }),
+      formErr: this.state.formErr,
+      formErrShow: !!this.state.formErr,
+      setOpKirim: () => this.setState({ opType: 'Kirim' }),
+      setOpChiqim: () => this.setState({ opType: 'Chiqim' }),
+      kirimBg: this.state.opType === 'Kirim' ? 'color-mix(in srgb, var(--green) 12%, transparent)' : 'transparent',
+      kirimFg: this.state.opType === 'Kirim' ? 'var(--green)' : 'var(--muted)',
+      chiqimBg: this.state.opType === 'Chiqim' ? 'color-mix(in srgb, var(--red) 10%, transparent)' : 'transparent',
+      chiqimFg: this.state.opType === 'Chiqim' ? 'var(--red)' : 'var(--muted)',
+      submitModal: () => this.submitModal(),
+      openXodimModal: () => this.openModal('xodim'),
+      openOpModal: () => this.openModal('op'),
+      openXarajatModal: () => this.openModal('xarajat'),
+      openFirmaModal: () => this.openModal('firma'),
+
+      // Drawer
+      dName: (this.state.drawerEmp || {}).name || '',
+      dCode: (this.state.drawerEmp || {}).code || '',
+      dEmail: (this.state.drawerEmp || {}).email || '',
+      dInitial: (this.state.drawerEmp || {}).initial || '',
+      dTint: (this.state.drawerEmp || {}).tint || 'var(--surface2)',
+      dHue: (this.state.drawerEmp || {}).hue || 'var(--muted)',
+      dFirms: (this.state.drawerEmp || {}).firms ?? 0,
+      dKpi: '87',
+      dStatus: (this.state.drawerEmp || {}).online ? 'Onlayn' : 'Oflayn',
+      dStBg: (this.state.drawerEmp || {}).online ? 'color-mix(in srgb, var(--green) 12%, transparent)' : 'var(--surface2)',
+      dStFg: (this.state.drawerEmp || {}).online ? 'var(--green)' : 'var(--muted)',
+      drawerEdit: () => { this.closeAll(); this.showToast('Tahrirlash rejimi — prototipda namoyish uchun'); },
+
+      closeAll: () => this.closeAll(),
+      stop: (e) => e.stopPropagation(),
+      themeIcon: this.state.theme === 'dark'
+        ? 'M12 17a5 5 0 100-10 5 5 0 000 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4'
+        : 'M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z',
+      toggleTheme: () => {
+        const t = this.state.theme === 'dark' ? 'light' : 'dark';
+        document.body.dataset.theme = t;
+        try { localStorage.setItem('asro-theme', t); } catch (e) {}
+        this.setState({ theme: t });
+      },
+      toggleSidebar: () => this.setState({ collapsed: !this.state.collapsed })
+    };
+  }
+}
+</script>
+<template id="__bundler_thumbnail">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#3565d9"/><text x="50" y="50" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="central">A</text></svg>
+</template>
+</body>
+</html>
