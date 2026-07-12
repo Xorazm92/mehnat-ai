@@ -39,6 +39,28 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
         };
     }, [expenses]);
 
+    // Oylik byudjet + kategoriya limitlari (ASRO Xarajatlar prototipi)
+    const budget = useMemo(() => {
+        const cm = new Date().toISOString().slice(0, 7);
+        const monthExp = expenses.filter(e => e.date.startsWith(cm));
+        const spentOf = (keys: string[]) =>
+            monthExp.filter(e => keys.some(k => (e.category || '').toLowerCase().includes(k))).reduce((s, e) => s + (e.amount || 0), 0);
+        const cats = [
+            { label: 'Ijara', keys: ['ijara', 'rent'], limit: 12_500_000 },
+            { label: 'IT', keys: ['it', 'server', 'software'], limit: 6_000_000 },
+            { label: 'Kommunal', keys: ['kommunal', 'utilit'], limit: 3_000_000 },
+            { label: 'Transport', keys: ['transport'], limit: 2_000_000 },
+            { label: 'Ofis', keys: ['office', 'ofis', 'kanstel', 'other'], limit: 1_500_000 },
+        ].map(c => ({ label: c.label, limit: c.limit, spent: spentOf(c.keys) }));
+        const totalSpent = monthExp.reduce((s, e) => s + (e.amount || 0), 0);
+        const totalBudget = cats.reduce((s, c) => s + c.limit, 0);
+        return { cats, totalSpent, totalBudget, remaining: totalBudget - totalSpent };
+    }, [expenses]);
+
+    const som = (v: number) => Math.round(v).toLocaleString('ru-RU');
+    const pct = (a: number, b: number) => (b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0);
+    const limitColor = (p: number) => (p >= 100 ? 'var(--danger)' : p >= 90 ? 'var(--warning)' : 'var(--accent-blue)');
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (editingExpense) {
@@ -106,6 +128,43 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                 </div>
             </div>
 
+            {/* Byudjet paneli + kategoriya limitlari (ASRO prototip) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <div className="lg:col-span-2 dashboard-card p-5">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>Oylik byudjet</h3>
+                        <span className="text-[13px] font-black tabular-nums" style={{ color: 'var(--text-primary)' }}>
+                            {som(budget.totalSpent)} <span className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>/ {som(budget.totalBudget)} so&apos;m</span>
+                        </span>
+                    </div>
+                    <div className="h-3 w-full rounded-full overflow-hidden" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
+                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct(budget.totalSpent, budget.totalBudget)}%`, background: limitColor(pct(budget.totalSpent, budget.totalBudget)) }} />
+                    </div>
+                    <p className="text-[11px] font-bold mt-2" style={{ color: budget.remaining >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                        Qoldiq: {som(Math.abs(budget.remaining))} so&apos;m {budget.remaining < 0 ? '(oshib ketdi)' : ''}
+                    </p>
+                </div>
+                <div className="dashboard-card p-5">
+                    <h3 className="text-[12px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-primary)' }}>Kategoriya limitlari</h3>
+                    <div className="space-y-3">
+                        {budget.cats.map(c => {
+                            const p = pct(c.spent, c.limit);
+                            return (
+                                <div key={c.label}>
+                                    <div className="flex justify-between text-[11px] font-bold mb-1">
+                                        <span style={{ color: 'var(--text-secondary)' }}>{c.label}</span>
+                                        <span style={{ color: limitColor(p) }}>{(c.spent / 1_000_000).toFixed(1)}<span style={{ color: 'var(--text-muted)' }}> / {c.limit / 1_000_000} mln</span></span>
+                                    </div>
+                                    <div className="h-1.5 rounded-full" style={{ background: 'var(--input-bg)' }}>
+                                        <div className="h-1.5 rounded-full" style={{ width: `${p}%`, background: limitColor(p) }} />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={18} style={{ color: 'var(--text-muted)' }} />
@@ -164,7 +223,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-2 opacity-20 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => { setEditingExpense(expense); setIsModalOpen(true); }}
                                                 className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
