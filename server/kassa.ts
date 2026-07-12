@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole, isSeniorRole } from "@/lib/permissions";
+import { canApproveExpense } from "@/lib/expenseApproval";
 import { serialize } from "@/lib/serialize";
 
 export async function getKassaEntries(filters?: {
@@ -150,13 +151,41 @@ export async function createExpense(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
+  const autoApprove = data.amount < 1_000_000; // kichik xarajatlar avtomatik tasdiqlanadi
   return serialize(
     await prisma.expense.create({
       data: {
         ...data,
         createdBy: session.user.id,
+        status: autoApprove ? "approved" : "pending",
+        ...(autoApprove ? { approvedBy: session.user.id, approvedAt: new Date() } : {}),
       },
     })
+  );
+}
+
+export async function approveExpense(id: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  const role = session.user.role as string;
+
+  const exp = await prisma.expense.findUnique({ where: { id }, select: { amount: true } });
+  if (!exp) throw new Error("Xarajat topilmadi");
+  if (!canApproveExpense(role, Number(exp.amount))) {
+    throw new Error(Number(exp.amount) > 10_000_000 ? "10 mln dan yuqori — faqat Superadmin tasdiqlaydi" : "Tasdiqlash huquqi yo'q");
+  }
+
+  return serialize(
+    await prisma.expense.update({ where: { id }, data: { status: "approved", approvedBy: session.user.id, approvedAt: new Date(), rejectedReason: null } })
+  );
+}
+
+export async function rejectExpense(id: string, reason: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  if (!isSeniorRole(session.user.role as string)) throw new Error("Forbidden");
+  return serialize(
+    await prisma.expense.update({ where: { id }, data: { status: "rejected", approvedBy: session.user.id, approvedAt: new Date(), rejectedReason: reason } })
   );
 }
 

@@ -527,17 +527,23 @@ model KassaEntry {
 // =====================================================
 
 model Expense {
-  id          String   @id @default(uuid())
-  amount      Decimal  @db.Decimal(12, 2)
+  id          String    @id @default(uuid())
+  amount      Decimal   @db.Decimal(12, 2)
   date        DateTime
   category    String
   description String?
-  createdAt   DateTime @default(now())
+  // Tasdiqlash oqimi: <1mln avto, 1-10mln Bosh Buxgalter, >10mln + Superadmin
+  status      String    @default("pending") // pending | approved | rejected
+  approvedBy  String?
+  approvedAt  DateTime?
+  rejectedReason String?
+  createdAt   DateTime  @default(now())
   createdBy   String?
-  user        User?    @relation(fields: [createdBy], references: [id])
+  user        User?     @relation(fields: [createdBy], references: [id])
 
   @@index([date])
   @@index([category])
+  @@index([status])
 }
 
 // =====================================================

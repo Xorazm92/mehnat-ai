@@ -3,16 +3,26 @@
 import React, { useState, useMemo } from 'react';
 import { Expense, Language } from '@/types';
 import { translations } from '@/lib/translations';
-import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown } from 'lucide-react';
+import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { canApproveExpense } from '@/lib/expenseApproval';
 
 interface ExpenseModuleProps {
     expenses: Expense[];
     lang: Language;
+    userRole?: string;
     onSaveExpense: (expense: Partial<Expense>) => Promise<void>;
     onDeleteExpense?: (id: string) => Promise<void>;
+    onApproveExpense?: (id: string) => Promise<void>;
+    onRejectExpense?: (id: string) => Promise<void>;
 }
 
-const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExpense, onDeleteExpense }) => {
+const EXP_STATUS: Record<string, { label: string; fg: string; bg: string; bd: string }> = {
+    approved: { label: 'Tasdiqlangan', fg: 'var(--success)', bg: 'var(--success-bg)', bd: 'var(--success-border)' },
+    pending: { label: 'Kutilmoqda', fg: 'var(--warning)', bg: 'var(--warning-bg)', bd: 'var(--warning-border)' },
+    rejected: { label: 'Rad etildi', fg: 'var(--danger)', bg: 'var(--danger-bg)', bd: 'var(--danger-border)' },
+};
+
+const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole = '', onSaveExpense, onDeleteExpense, onApproveExpense, onRejectExpense }) => {
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -165,6 +175,21 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                 </div>
             </div>
 
+            {/* Tasdiqlash oqimi banner */}
+            {(() => {
+                const pending = expenses.filter(e => e.status === 'pending');
+                if (pending.length === 0) return null;
+                return (
+                    <div className="p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2" style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)' }}>
+                        <div className="flex items-center gap-2">
+                            <Clock size={16} style={{ color: 'var(--warning)' }} />
+                            <span className="text-[12px] font-bold" style={{ color: 'var(--warning)' }}>{pending.length} ta xarajat tasdiq kutmoqda</span>
+                        </div>
+                        <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>&lt;1 mln avto · 1–10 mln Bosh Buxgalter · &gt;10 mln Superadmin</span>
+                    </div>
+                );
+            })()}
+
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={18} style={{ color: 'var(--text-muted)' }} />
@@ -204,6 +229,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[150px]" style={{ color: 'var(--text-muted)' }}>Kategoriya</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Izoh</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[150px]" style={{ color: 'var(--text-muted)' }}>Summa</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[130px]" style={{ color: 'var(--text-muted)' }}>Holat</th>
                                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[100px]" style={{ color: 'var(--text-muted)' }}>Amallar</th>
                             </tr>
                         </thead>
@@ -221,6 +247,25 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                                         <span className="font-bold text-[13px] tabular-nums" style={{ color: 'var(--danger)' }}>
                                             -{expense.amount.toLocaleString()} <span className="text-[10px] font-bold uppercase ml-1 opacity-60">sum</span>
                                         </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {(() => {
+                                            const st = EXP_STATUS[expense.status || 'approved'] || EXP_STATUS.approved;
+                                            const canApr = expense.status === 'pending' && canApproveExpense(userRole, expense.amount);
+                                            return (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[9px] font-bold px-2 py-1 rounded uppercase inline-flex items-center gap-1" style={{ background: st.bg, color: st.fg, border: `1px solid ${st.bd}` }}>
+                                                        {expense.status === 'approved' ? <CheckCircle2 size={10} /> : expense.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />} {st.label}
+                                                    </span>
+                                                    {canApr && onApproveExpense && (
+                                                        <div className="flex gap-1">
+                                                            <button onClick={() => onApproveExpense(expense.id)} className="w-6 h-6 flex items-center justify-center rounded-md text-white" style={{ background: 'var(--success)' }} title="Tasdiqlash"><CheckCircle2 size={13} /></button>
+                                                            {onRejectExpense && <button onClick={() => onRejectExpense(expense.id)} className="w-6 h-6 flex items-center justify-center rounded-md text-white" style={{ background: 'var(--danger)' }} title="Rad etish"><XCircle size={13} /></button>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
@@ -252,7 +297,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, onSaveExp
                             ))}
                             {filteredExpenses.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-24 text-center">
+                                    <td colSpan={6} className="px-6 py-24 text-center">
                                         <div className="flex flex-col items-center" style={{ color: 'var(--text-muted)' }}>
                                             <Search size={48} className="mb-4 opacity-20" />
                                             <span className="text-[11px] uppercase font-bold tracking-[0.2em] opacity-60">Ma&apos;lumot topilmadi</span>

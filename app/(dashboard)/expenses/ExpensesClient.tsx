@@ -4,13 +4,14 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import ExpenseModule from "@/components/ExpenseModule";
 import { Expense } from "@/types";
-import { createExpense, updateExpense, deleteExpense } from "@/server/kassa";
+import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
 
 interface Props {
   expenses: Expense[];
+  userRole?: string;
 }
 
-export default function ExpensesClient({ expenses }: Props) {
+export default function ExpensesClient({ expenses, userRole }: Props) {
   const router = useRouter();
 
   const handleSave = async (expense: Partial<Expense>) => {
@@ -33,12 +34,26 @@ export default function ExpensesClient({ expenses }: Props) {
     router.refresh();
   };
 
+  const handleApprove = async (id: string) => {
+    try { await approveExpense(id); router.refresh(); }
+    catch (e) { alert((e as Error).message); }
+  };
+  const handleReject = async (id: string) => {
+    const reason = window.prompt("Rad etish sababi:") || "";
+    if (!reason) return;
+    try { await rejectExpense(id, reason); router.refresh(); }
+    catch (e) { alert((e as Error).message); }
+  };
+
   return (
     <ExpenseModule
       expenses={expenses}
       lang="uz"
+      userRole={userRole}
       onSaveExpense={handleSave}
       onDeleteExpense={handleDelete}
+      onApproveExpense={handleApprove}
+      onRejectExpense={handleReject}
     />
   );
 }

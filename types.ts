@@ -27,6 +27,9 @@ export interface Expense {
   category: string;
   description: string;
   createdAt: string;
+  status?: string; // pending | approved | rejected
+  approvedBy?: string | null;
+  rejectedReason?: string | null;
 }
 
 export enum TaxType {
