@@ -373,3 +373,93 @@ export async function upsertCompanyKpiRule(data: {
     })
   );
 }
+
+// =====================================================
+// KPI LEADERBOARD / REYTING (derived 0-100 score)
+// =====================================================
+
+export interface KpiLeaderRow {
+  employeeId: string;
+  name: string;
+  role: string;
+  ball: number; // 0-100
+  daraja: "excellent" | "good" | "fair" | "poor";
+  green: number;
+  red: number;
+  entries: number;
+  bonus: number; // so'm
+}
+
+const darajaOf = (ball: number): KpiLeaderRow["daraja"] =>
+  ball >= 85 ? "excellent" : ball >= 70 ? "good" : ball >= 60 ? "fair" : "poor";
+
+export async function getKpiLeaderboard(month: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  if (!isSeniorRole(session.user.role as string)) throw new Error("Forbidden");
+
+  const [perfs, companies] = await Promise.all([
+    prisma.monthlyPerformance.findMany({
+      where: { month, status: { in: ["approved", "submitted"] } },
+      select: {
+        employeeId: true,
+        companyId: true,
+        selectedOption: true,
+        calculatedScore: true,
+        employee: { select: { fullName: true, role: true } },
+        rule: { select: { category: true } },
+      },
+    }),
+    prisma.company.findMany({ select: { id: true, contractAmount: true } }),
+  ]);
+
+  const contractOf = new Map(companies.map((c) => [c.id, Number(c.contractAmount) || 0]));
+
+  type Agg = { name: string; role: string; green: number; red: number; entries: number; bonus: number };
+  const byEmp = new Map<string, Agg>();
+  const catAgg = new Map<string, { green: number; scored: number }>();
+
+  for (const p of perfs) {
+    const a =
+      byEmp.get(p.employeeId) ??
+      byEmp.set(p.employeeId, { name: p.employee.fullName, role: p.employee.role, green: 0, red: 0, entries: 0, bonus: 0 }).get(p.employeeId)!;
+    a.entries++;
+    const sc = Number(p.calculatedScore);
+    if (sc > 0) {
+      a.green++;
+      a.bonus += ((contractOf.get(p.companyId) ?? 0) * sc) / 100;
+    } else if (sc < 0 || p.selectedOption === "red") a.red++;
+
+    const cat = p.rule.category || "other";
+    const c = catAgg.get(cat) ?? catAgg.set(cat, { green: 0, scored: 0 }).get(cat)!;
+    if (sc > 0) { c.green++; c.scored++; }
+    else if (sc < 0 || p.selectedOption === "red") c.scored++;
+  }
+
+  const leaderboard: KpiLeaderRow[] = [...byEmp.entries()].map(([employeeId, a]) => {
+    const scored = a.green + a.red;
+    const ball = scored > 0 ? Math.round((a.green / scored) * 100) : a.entries > 0 ? 100 : 0;
+    return { employeeId, name: a.name, role: a.role, ball, daraja: darajaOf(ball), green: a.green, red: a.red, entries: a.entries, bonus: Math.round(a.bonus) };
+  });
+  leaderboard.sort((x, y) => y.ball - x.ball || y.bonus - x.bonus);
+
+  const withScores = leaderboard.filter((l) => l.entries > 0);
+  const avgBall = withScores.length ? Math.round(withScores.reduce((s, l) => s + l.ball, 0) / withScores.length) : 0;
+
+  const criteria = [...catAgg.entries()]
+    .map(([category, c]) => ({ category, passPercent: c.scored > 0 ? Math.round((c.green / c.scored) * 100) : 0, scored: c.scored }))
+    .filter((c) => c.scored > 0)
+    .sort((a, b) => b.passPercent - a.passPercent);
+
+  return serialize({
+    leaderboard,
+    stats: {
+      avgBall,
+      excellent: leaderboard.filter((l) => l.daraja === "excellent").length,
+      poor: leaderboard.filter((l) => l.daraja === "poor").length,
+      bonusFund: leaderboard.reduce((s, l) => s + l.bonus, 0),
+      total: withScores.length,
+    },
+    criteria,
+  });
+}

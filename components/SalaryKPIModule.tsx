@@ -1,13 +1,14 @@
 "use client";
 import React, { useState, useMemo } from 'react';
 import { Company, Staff, Language, OperationEntry } from '@/types';
-import { LayoutDashboard, CheckSquare, Settings, DollarSign } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Settings, DollarSign, Trophy } from 'lucide-react';
 
 // Sub-components
 import NazoratchiChecklist from './NazoratchiChecklist';
 import EmployeeDashboard from './EmployeeDashboard';
 import PayrollTable from './PayrollTable';
 import KPIRulesManager from './KPIRulesManager';
+import KpiLeaderboard from './KpiLeaderboard';
 
 interface Props {
     companies: Company[];
@@ -20,7 +21,7 @@ interface Props {
 
 const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, lang, currentUserId = 'user-1', currentUserRole = 'manager' }) => {
     // Default tab based on role could be set here
-    const [activeTab, setActiveTab] = useState<'nazoratchi' | 'employee' | 'payroll' | 'rules'>('nazoratchi');
+    const [activeTab, setActiveTab] = useState<'nazoratchi' | 'reyting' | 'employee' | 'payroll' | 'rules'>('nazoratchi');
 
     const normalizedRole = (currentUserRole || '').toLowerCase();
 
@@ -37,6 +38,13 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
                 currentUserId={currentUserId}
                 currentUserRole={currentUserRole}
             />,
+            allowedRoles: ['manager', 'supervisor', 'admin', 'chief_accountant', 'super_admin']
+        },
+        {
+            id: 'reyting',
+            label: 'Reyting',
+            icon: Trophy,
+            component: <KpiLeaderboard lang={lang} />,
             allowedRoles: ['manager', 'supervisor', 'admin', 'chief_accountant', 'super_admin']
         },
         {
