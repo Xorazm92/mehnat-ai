@@ -3,15 +3,17 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import KassaModule from "@/components/KassaModule";
-import { Company, Payment } from "@/types";
+import BalanceOverview from "@/components/BalanceOverview";
+import { Company, Payment, BalanceBreakdown } from "@/types";
 import { upsertPayment, deletePayment } from "@/server/kassa";
 
 interface Props {
   companies: Company[];
   payments: Payment[];
+  balance?: BalanceBreakdown;
 }
 
-export default function KassaClient({ companies, payments }: Props) {
+export default function KassaClient({ companies, payments, balance }: Props) {
   const router = useRouter();
 
   const handleSave = async (payment: Partial<Payment>) => {
@@ -33,12 +35,15 @@ export default function KassaClient({ companies, payments }: Props) {
   };
 
   return (
-    <KassaModule
-      companies={companies}
-      payments={payments}
-      lang="uz"
-      onSavePayment={handleSave}
-      onDeletePayment={handleDelete}
-    />
+    <div className="space-y-4">
+      {balance && <BalanceOverview breakdown={balance} />}
+      <KassaModule
+        companies={companies}
+        payments={payments}
+        lang="uz"
+        onSavePayment={handleSave}
+        onDeletePayment={handleDelete}
+      />
+    </div>
   );
 }

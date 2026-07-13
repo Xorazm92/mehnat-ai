@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { assertSufficientFunds } from "@/lib/balance";
 import { createAuditLog } from "@/server/audit";
 import { serialize } from "@/lib/serialize";
 
@@ -113,6 +114,10 @@ export async function approveEmployeeSalary(data: {
   }
 
   const userId = session.user.id as string;
+
+  // Oylik ham chiqim — mavjud balansdan oshsa oddiy foydalanuvchi bloklanadi,
+  // Admin/Superadmin o'tkaza oladi (audit logga yozilib).
+  await assertSufficientFunds({ amount: data.totalSalary, role, userId, context: "payroll" });
 
   const adjustment = await prisma.payrollAdjustment.create({
     data: {

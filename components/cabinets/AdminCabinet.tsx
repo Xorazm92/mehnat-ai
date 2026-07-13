@@ -13,6 +13,8 @@ import {
   Database,
 } from "lucide-react";
 import { CashFlowChart } from "./CashFlowChart";
+import BalanceOverview from "@/components/BalanceOverview";
+import type { BalanceBreakdown } from "@/types";
 
 const fmtMln = (v: number) => {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} mln`;
@@ -47,6 +49,7 @@ interface AdminCabinetProps {
     kpiCompletionPercent?: number;
     payrollFund?: number;
   };
+  balance?: BalanceBreakdown;
   monthlyCashFlow?: { month: string; income: number; expense: number }[];
 }
 
@@ -82,6 +85,7 @@ export function AdminCabinet({
   userStats,
   recentAudit,
   systemHealth,
+  balance,
   monthlyCashFlow = [],
 }: AdminCabinetProps) {
   const firstName = userName.split(" ")[0];
@@ -119,6 +123,9 @@ export function AdminCabinet({
           {isSuperAdmin ? "🔑 Superadmin" : "⚙️ Admin"}
         </div>
       </div>
+
+      {/* Yagona kassa balansi (butun tizim) */}
+      {balance && <BalanceOverview breakdown={balance} />}
 
       {/* Tizim holati */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

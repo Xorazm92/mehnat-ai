@@ -6,11 +6,14 @@ import { translations } from '@/lib/translations';
 import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { canApproveExpense } from '@/lib/expenseApproval';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_COLORS } from '@/lib/constants';
+import BalanceOverview from '@/components/BalanceOverview';
+import type { BalanceBreakdown } from '@/types';
 
 interface ExpenseModuleProps {
     expenses: Expense[];
     lang: Language;
     userRole?: string;
+    balance?: BalanceBreakdown;
     onSaveExpense: (expense: Partial<Expense>) => Promise<void>;
     onDeleteExpense?: (id: string) => Promise<void>;
     onApproveExpense?: (id: string) => Promise<void>;
@@ -23,7 +26,7 @@ const EXP_STATUS: Record<string, { label: string; fg: string; bg: string; bd: st
     rejected: { label: 'Rad etildi', fg: 'var(--danger)', bg: 'var(--danger-bg)', bd: 'var(--danger-border)' },
 };
 
-const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole = '', onSaveExpense, onDeleteExpense, onApproveExpense, onRejectExpense }) => {
+const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole = '', balance, onSaveExpense, onDeleteExpense, onApproveExpense, onRejectExpense }) => {
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -85,6 +88,9 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
 
     return (
         <div className="space-y-4 animate-fade-in pb-20">
+            {/* Mavjud balans — yagona kassa (kirim − chiqim − oylik) */}
+            {balance && <BalanceOverview breakdown={balance} variant="compact" />}
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div className="dashboard-card p-6 relative overflow-hidden flex flex-col justify-between">

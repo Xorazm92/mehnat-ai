@@ -90,6 +90,7 @@ export default async function DashboardPage() {
         kpiCompletionPercent: 0,
         payrollFund: 0,
       },
+      balance: undefined,
       monthlyCashFlow: [],
     }));
 
@@ -101,6 +102,7 @@ export default async function DashboardPage() {
         companyStats={data.companyStats}
         recentAudit={data.recentAudit as any}
         systemHealth={data.systemHealth}
+        balance={data.balance}
         monthlyCashFlow={(data as any).monthlyCashFlow ?? []}
       />
     );

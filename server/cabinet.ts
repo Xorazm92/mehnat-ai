@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { getAvailableBalance } from "@/lib/balance";
 import { serialize } from "@/lib/serialize";
 
 // ─────────────────────────────────────────────
@@ -555,10 +556,15 @@ export async function getAdminCabinetData() {
   const rangeStart = new Date(base.getFullYear(), base.getMonth() - 5, 1);
   const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-  const [paidPayments, kassaEntries, expenses] = await Promise.all([
+  const [paidPayments, kassaEntries, expenses, payrollOut, availableBalance] = await Promise.all([
     prisma.payment.groupBy({ by: ["period"], where: { status: "paid", period: { in: months } }, _sum: { amount: true } }),
     prisma.kassaEntry.findMany({ where: { date: { gte: rangeStart } }, select: { type: true, amount: true, date: true } }),
-    prisma.expense.findMany({ where: { date: { gte: rangeStart } }, select: { amount: true, date: true } }),
+    // Faqat TASDIQLANGAN xarajatlar chiqim sifatida sanaladi (pending/rejected emas)
+    prisma.expense.findMany({ where: { date: { gte: rangeStart }, status: "approved" }, select: { amount: true, date: true } }),
+    // Tasdiqlangan oyliklar (to'lov/avans) ham chiqim
+    prisma.payrollAdjustment.findMany({ where: { isApproved: true, adjustmentType: { in: ["payment", "avans"] } }, select: { amount: true, month: true } }),
+    // Yagona joriy balans (butun tizim bo'yicha)
+    getAvailableBalance(),
   ]);
 
   const income: Record<string, number> = {};
@@ -572,6 +578,8 @@ export async function getAdminCabinetData() {
     else outflow[m] += n(k.amount);
   }
   for (const e of expenses) { const m = monthKey(e.date); if (m in outflow) outflow[m] += n(e.amount); }
+  // PayrollAdjustment.month "YYYY-MM" yoki "YYYY-MM-01" — 7 ta belgigacha normallashtiramiz
+  for (const a of payrollOut) { const m = (a.month || "").slice(0, 7); if (m in outflow) outflow[m] += n(a.amount); }
 
   const monthlyCashFlow = months.map((m) => ({ month: m, income: Math.round(income[m]), expense: Math.round(outflow[m]) }));
 
@@ -587,6 +595,7 @@ export async function getAdminCabinetData() {
       kpiCompletionPercent,
       payrollFund: Math.round(payrollFund),
     },
+    balance: availableBalance,
     monthlyCashFlow,
   });
 }

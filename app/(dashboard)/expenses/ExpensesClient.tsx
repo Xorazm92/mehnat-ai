@@ -3,15 +3,16 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import ExpenseModule from "@/components/ExpenseModule";
-import { Expense } from "@/types";
+import { Expense, BalanceBreakdown } from "@/types";
 import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
 
 interface Props {
   expenses: Expense[];
   userRole?: string;
+  balance?: BalanceBreakdown;
 }
 
-export default function ExpensesClient({ expenses, userRole }: Props) {
+export default function ExpensesClient({ expenses, userRole, balance }: Props) {
   const router = useRouter();
 
   const handleSave = async (expense: Partial<Expense>) => {
@@ -22,12 +23,18 @@ export default function ExpensesClient({ expenses, userRole }: Props) {
       description: expense.description,
       paymentMethod: expense.paymentMethod || "naqd",
     };
-    if (expense.id) {
-      await updateExpense(expense.id, data);
-    } else {
-      await createExpense(data);
+    try {
+      if (expense.id) {
+        await updateExpense(expense.id, data);
+      } else {
+        await createExpense(data);
+      }
+      router.refresh();
+    } catch (e) {
+      // Balans yetarli emas / huquq yo'q — xabarni foydalanuvchiga ko'rsat
+      alert((e as Error).message);
+      throw e; // modal ochiq qolishi uchun xatoni yuqoriga qaytaramiz
     }
-    router.refresh();
   };
 
   const handleDelete = async (id: string) => {
@@ -51,6 +58,7 @@ export default function ExpensesClient({ expenses, userRole }: Props) {
       expenses={expenses}
       lang="uz"
       userRole={userRole}
+      balance={balance}
       onSaveExpense={handleSave}
       onDeleteExpense={handleDelete}
       onApproveExpense={handleApprove}

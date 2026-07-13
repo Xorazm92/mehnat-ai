@@ -1,11 +1,12 @@
 import { getExpenses } from "@/server/kassa";
+import { getAvailableBalance } from "@/lib/balance";
 import { auth } from "@/lib/auth";
 import ExpensesClient from "./ExpensesClient";
 
 export default async function ExpensesPage() {
   const session = await auth();
   const userRole = (session?.user?.role as string) || "";
-  const expenses = await getExpenses();
+  const [expenses, balance] = await Promise.all([getExpenses(), getAvailableBalance()]);
 
   const mappedExpenses = expenses.map((e) => ({
     id: e.id,
@@ -20,7 +21,11 @@ export default async function ExpensesPage() {
 
   return (
     <div className="h-full">
-      <ExpensesClient expenses={JSON.parse(JSON.stringify(mappedExpenses))} userRole={userRole} />
+      <ExpensesClient
+        expenses={JSON.parse(JSON.stringify(mappedExpenses))}
+        userRole={userRole}
+        balance={JSON.parse(JSON.stringify(balance))}
+      />
     </div>
   );
 }

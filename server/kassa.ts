@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole, isSeniorRole } from "@/lib/permissions";
 import { canApproveExpense } from "@/lib/expenseApproval";
+import { assertSufficientFunds } from "@/lib/balance";
 import { serialize } from "@/lib/serialize";
 
 export async function getKassaEntries(filters?: {
@@ -55,6 +56,11 @@ export async function createKassaEntry(data: {
 
   const role = session.user.role as string;
   if (!isSeniorRole(role) && role !== "bank_manager") throw new Error("Forbidden");
+
+  // Kassa chiqimi ham mavjud balansdan oshmasligi kerak (kirim shart emas — bloklanadi)
+  if (data.type === "expense") {
+    await assertSufficientFunds({ amount: data.amount, role, userId: session.user.id, context: "expense" });
+  }
 
   return serialize(
     await prisma.kassaEntry.create({
@@ -157,7 +163,13 @@ export async function createExpense(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
+  const role = session.user.role as string;
   const autoApprove = data.amount < 1_000_000; // kichik xarajatlar avtomatik tasdiqlanadi
+  // Avto-tasdiqda pul darhol chiqadi → mavjud balansdan oshmasligini tekshir.
+  // Katta (pending) xarajatlar tasdiq paytida (approveExpense) tekshiriladi.
+  if (autoApprove) {
+    await assertSufficientFunds({ amount: data.amount, role, userId: session.user.id, context: "expense" });
+  }
   return serialize(
     await prisma.expense.create({
       data: {
@@ -180,6 +192,9 @@ export async function approveExpense(id: string) {
   if (!canApproveExpense(role, Number(exp.amount))) {
     throw new Error(Number(exp.amount) > 10_000_000 ? "10 mln dan yuqori — faqat Superadmin tasdiqlaydi" : "Tasdiqlash huquqi yo'q");
   }
+
+  // Tasdiqdan keyin pul chiqadi → mavjud balans yetarli bo'lishi kerak.
+  await assertSufficientFunds({ amount: Number(exp.amount), role, userId: session.user.id, excludeExpenseId: id, context: "expense" });
 
   return serialize(
     await prisma.expense.update({ where: { id }, data: { status: "approved", approvedBy: session.user.id, approvedAt: new Date(), rejectedReason: null } })
@@ -218,6 +233,11 @@ export async function updateExpense(id: string, data: {
 
   // Tahrir tasdiq oqimini qayta boshlaydi (createExpense bilan bir xil qoida)
   const autoApprove = data.amount < 1_000_000;
+  // Avto-tasdiqlanadigan bo'lsa balansni tekshir — o'zining eski summasini
+  // ikki marta sanamaslik uchun joriy xarajat chiqim yig'indisidan chiqariladi.
+  if (autoApprove) {
+    await assertSufficientFunds({ amount: data.amount, role, userId, excludeExpenseId: id, context: "expense" });
+  }
   return serialize(
     await prisma.expense.update({
       where: { id },

@@ -34,6 +34,19 @@ export interface Expense {
   rejectedReason?: string | null;
 }
 
+// Yagona kassa balansi tafsiloti (lib/balance.ts getAvailableBalance natijasi).
+// Barcha pul jadvallari (Payment + KassaEntry + Expense + PayrollAdjustment) bitta balansga bog'lanadi.
+export interface BalanceBreakdown {
+  income: number; // jami kirim
+  outflow: number; // jami chiqim
+  balance: number; // income − outflow (mavjud mablag')
+  incomePayments: number; // to'langan shartnoma to'lovlari
+  incomeKassa: number; // kassa kirimlari
+  outflowExpenses: number; // tasdiqlangan xarajatlar
+  outflowKassa: number; // kassa chiqimlari
+  outflowPayroll: number; // tasdiqlangan oyliklar (to'lov/avans)
+}
+
 export enum TaxType {
   NDS_PROFIT = 'nds_profit',
   TURNOVER = 'turnover',
