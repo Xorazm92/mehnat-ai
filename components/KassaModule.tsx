@@ -175,7 +175,53 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                 </div>
             </div>
 
-            <div className="dashboard-card overflow-hidden">
+            {/* Mobil kartochkalar (Kassa) */}
+            <div className="md:hidden space-y-3">
+                {filteredData.map((item) => {
+                    const stt = item.payment?.status;
+                    const stColor = stt === PaymentStatus.PAID ? 'var(--success)' : stt === PaymentStatus.PENDING ? 'var(--warning)' : stt ? 'var(--danger)' : 'var(--text-muted)';
+                    const stBg = stt === PaymentStatus.PAID ? 'var(--success-bg)' : stt === PaymentStatus.PENDING ? 'var(--warning-light)' : stt ? 'var(--danger-bg)' : 'var(--input-bg)';
+                    const pm = item.payment?.paymentMethod || 'naqd';
+                    const pmc = PAYMENT_METHOD_COLORS[pm] || '#64748b';
+                    return (
+                        <div key={item.id} onClick={() => openPayment(item)} className="dashboard-card p-4 cursor-pointer active:scale-[0.99] transition-transform">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-[13px] font-black uppercase tracking-tight truncate" style={{ color: 'var(--text)' }}>{item.name}</div>
+                                    <div className="text-[11px] font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>INN: {item.inn}</div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <div className="font-black text-[14px] tabular-nums" style={{ color: 'var(--text)' }}>{(item.contractAmount || 0).toLocaleString()}</div>
+                                    <div className="text-[9px] font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: stColor, background: stBg }}>
+                                    {stt === PaymentStatus.PAID ? <CheckCircle2 size={11} /> : <Clock size={11} />} {stt || 'Kutilmoqda'}
+                                </span>
+                                {item.payment && <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: pmc, background: `${pmc}1a` }}>{PAYMENT_METHOD_LABELS[pm] || pm}</span>}
+                            </div>
+                            <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
+                                <button onClick={(e) => { e.stopPropagation(); openPayment(item); }} className="flex-1 py-2 rounded-lg text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--accent-blue)' }}>
+                                    <CreditCard size={14} /> {item.payment ? 'Tahrirlash' : "To'lov"}
+                                </button>
+                                {item.payment && (
+                                    <button onClick={(e) => { e.stopPropagation(); if (confirm('To\'lovni o\'chirishni tasdiqlaysizmi?')) onDeletePayment(item.payment!.id); }} className="w-10 py-2 rounded-lg flex items-center justify-center shrink-0" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }}><Trash2 size={14} /></button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+                {filteredData.length === 0 && (
+                    <div className="dashboard-card p-12 text-center">
+                        <Search size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
+                        <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Ma&apos;lumot topilmadi</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Payments table (desktop) */}
+            <div className="hidden md:block dashboard-card overflow-hidden">
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>

@@ -221,8 +221,59 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 </button>
             </div>
 
-            {/* Expense List */}
-            <div className="dashboard-card overflow-hidden">
+            {/* Mobil kartochkalar (Xarajatlar) */}
+            <div className="md:hidden space-y-3">
+                {filteredExpenses.map((expense) => {
+                    const st = EXP_STATUS[expense.status || 'approved'] || EXP_STATUS.approved;
+                    const canApr = expense.status === 'pending' && canApproveExpense(userRole, expense.amount);
+                    const pm = expense.paymentMethod || 'naqd';
+                    const pmc = PAYMENT_METHOD_COLORS[pm] || '#64748b';
+                    return (
+                        <div key={expense.id} className="dashboard-card p-4">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>{expense.category}</span>
+                                        <span className="text-[9px] font-bold px-2 py-1 rounded uppercase inline-flex items-center gap-1" style={{ background: st.bg, color: st.fg, border: `1px solid ${st.bd}` }}>
+                                            {expense.status === 'approved' ? <CheckCircle2 size={10} /> : expense.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />} {st.label}
+                                        </span>
+                                    </div>
+                                    <div className="text-[13px] font-bold mt-1.5 truncate" style={{ color: 'var(--text)' }}>{expense.description || '—'}</div>
+                                    <div className="flex items-center gap-2 mt-1 text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>
+                                        <span className="font-mono">{expense.date}</span>
+                                        <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ color: pmc, background: `${pmc}1a` }}>{PAYMENT_METHOD_LABELS[pm] || pm}</span>
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <div className="font-black text-[14px] tabular-nums" style={{ color: 'var(--danger)' }}>-{expense.amount.toLocaleString()}</div>
+                                    <div className="text-[9px] font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
+                                {canApr && onApproveExpense && (
+                                    <>
+                                        <button onClick={() => onApproveExpense(expense.id)} className="flex-1 py-2 rounded-lg text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--success)' }}><CheckCircle2 size={13} /> Tasdiq</button>
+                                        {onRejectExpense && <button onClick={() => onRejectExpense(expense.id)} className="flex-1 py-2 rounded-lg text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--danger)' }}><XCircle size={13} /> Rad</button>}
+                                    </>
+                                )}
+                                <button onClick={() => { setEditingExpense(expense); setIsModalOpen(true); }} className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }}><Edit3 size={13} /> Tahrir</button>
+                                {onDeleteExpense && (
+                                    <button onClick={() => { if (confirm('Xarajatni o\'chirishni tasdiqlaysizmi?')) onDeleteExpense(expense.id); }} className="w-10 py-2 rounded-lg flex items-center justify-center shrink-0" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }}><Trash2 size={14} /></button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+                {filteredExpenses.length === 0 && (
+                    <div className="dashboard-card p-12 text-center">
+                        <Search size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
+                        <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Ma&apos;lumot topilmadi</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Expense List (desktop) */}
+            <div className="hidden md:block dashboard-card overflow-hidden">
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>

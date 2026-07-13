@@ -297,8 +297,51 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                 ))}
             </div>
 
-            {/* Table */}
-            <div className="rounded-xl overflow-hidden" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
+            {/* Mobil kartochkalar (Oylik) */}
+            <div className="md:hidden space-y-3">
+                {summaries.map((s) => (
+                    <div key={s.employeeId} className="rounded-xl p-4" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ background: `hsl(${(s.employeeName.charCodeAt(0) * 37) % 360}, 60%, 50%)` }}>{s.employeeName.charAt(0)}</div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-bold leading-none truncate" style={{ color: "var(--text-primary)" }}>{s.employeeName}</p>
+                                <p className="text-[10px] mt-1 leading-none truncate" style={{ color: "var(--text-muted)" }}>{ROLE_LABELS[s.employeeRole] || s.employeeRole} • {s.companyCount} firma</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                                <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami</p>
+                                <p className="text-[15px] font-black tabular-nums leading-tight" style={{ color: "var(--accent-indigo)" }}>{s.totalSalary.toLocaleString("uz-UZ")}</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 mt-3">
+                            {[
+                                { l: "Stavka", v: s.baseSalary.toLocaleString("uz-UZ"), c: "var(--text-primary)" },
+                                { l: "Bonus", v: "+" + s.kpiBonus.toLocaleString("uz-UZ"), c: "var(--success)" },
+                                { l: "Jarima", v: s.kpiPenalty.toLocaleString("uz-UZ"), c: "var(--danger)" },
+                                { l: "Qo'shimcha", v: (s.manualBonuses > 0 ? "+" : "") + s.manualBonuses.toLocaleString("uz-UZ"), c: "var(--accent-blue)" },
+                                { l: "Avans", v: Math.abs(s.totalReceived).toLocaleString("uz-UZ"), c: "var(--warning)" },
+                                { l: "Qolgan", v: s.remainingBalance.toLocaleString("uz-UZ"), c: s.remainingBalance <= 0 ? "var(--success)" : "var(--warning)" },
+                            ].map((x, i) => (
+                                <div key={i} className="rounded-lg px-2 py-1.5 text-center" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
+                                    <div className="text-[8px] font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{x.l}</div>
+                                    <div className="text-[11px] font-black tabular-nums mt-0.5 truncate" style={{ color: x.c }}>{x.v}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                            <button onClick={() => setEditingAdj({ empId: s.employeeId, type: "avans", amount: 0, reason: "" })} className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}><HandCoins size={13} /> Avans</button>
+                            <button onClick={() => setEditingAdj({ empId: s.employeeId, type: "payment", amount: s.remainingBalance, reason: "Maosh to'lovi" })} className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}><CheckCircle2 size={13} /> To&apos;lash</button>
+                        </div>
+                    </div>
+                ))}
+                {summaries.length === 0 && (
+                    <div className="rounded-xl p-12 text-center" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+                        <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot topilmadi</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Table (desktop) */}
+            <div className="hidden md:block rounded-xl overflow-hidden" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse" style={{ minWidth: "900px" }}>
                         <thead>

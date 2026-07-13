@@ -181,8 +181,39 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                 )}
             </div>
 
-            {/* Table */}
-            <div className="dashboard-card overflow-hidden">
+            {/* Mobil kartochkalar (Davomat) */}
+            <div className="md:hidden space-y-3">
+                {dayRecords.map((r) => {
+                    const meta = STATUS_META[r.status] || STATUS_META.present;
+                    return (
+                        <div key={r.id} className="dashboard-card p-4 flex items-center gap-3">
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[13px] font-black uppercase tracking-tight truncate" style={{ color: 'var(--text)' }}>{r.userName}</div>
+                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest" style={{ background: meta.bg, color: meta.color }}>{meta.icon}{lang === 'uz' ? meta.labelUz : meta.labelRu}</span>
+                                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--text-muted)' }}>{fmtTime(r.checkIn)} – {fmtTime(r.checkOut)}</span>
+                                </div>
+                                {r.notes && <div className="text-[11px] mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>{r.notes}</div>}
+                            </div>
+                            {canEdit && (
+                                <div className="flex flex-col gap-1.5 shrink-0">
+                                    <button onClick={() => openEdit(r)} className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title={t.edit}><Edit3 size={15} /></button>
+                                    <button onClick={() => handleDelete(r.id)} className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title={t.delete}><Trash2 size={15} /></button>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+                {dayRecords.length === 0 && (
+                    <div className="dashboard-card p-12 text-center">
+                        <Calendar size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
+                        <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? "Bu kun uchun davomat yo'q" : 'Нет записей'}</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Table (desktop) */}
+            <div className="hidden md:block dashboard-card overflow-hidden">
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>

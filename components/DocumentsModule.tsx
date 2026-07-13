@@ -97,7 +97,31 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
                 )}
             </div>
 
-            <div className="dashboard-card overflow-hidden">
+            {/* Mobil kartochkalar (Hujjatlar) */}
+            <div className="md:hidden space-y-3">
+                {filtered.map((d) => (
+                    <div key={d.id} className="dashboard-card p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}><FileText size={18} /></div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-bold tracking-tight truncate" style={{ color: 'var(--text)' }}>{d.name}</div>
+                            <div className="text-[11px] font-bold uppercase tracking-tight mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{d.companyName} · <span className="font-mono">{d.uploadedAt.slice(0, 10)}</span></div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <a href={d.filePath} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title={lang === 'uz' ? 'Ochish' : 'Открыть'}><ExternalLink size={15} /></a>
+                            {canEdit && <button onClick={() => handleDelete(d.id)} className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title={t.delete}><Trash2 size={15} /></button>}
+                        </div>
+                    </div>
+                ))}
+                {filtered.length === 0 && (
+                    <div className="dashboard-card p-12 text-center">
+                        <FileText size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
+                        <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? "Hujjatlar yo'q" : 'Нет документов'}</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Table (desktop) */}
+            <div className="hidden md:block dashboard-card overflow-hidden">
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[720px]">
                         <thead>

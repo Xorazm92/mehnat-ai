@@ -442,8 +442,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           </div>
         )}
 
-        {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Kartochkalar — mobilда doim, desktopда faqat 'grid' rejimida */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${viewMode === 'table' ? 'md:hidden' : ''}`}>
             {paginated.map(c => {
               const risk = getRiskIndicator(c);
               const avatarColor = `hsl(${(c.name.charCodeAt(0) * 15) % 360}, 70%, 60%)`;
@@ -511,8 +511,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               );
             })}
           </div>
-        ) : (
-          <div className="dashboard-card overflow-hidden relative">
+        {/* Jadval — faqat desktop 'table' rejimida */}
+        {viewMode === 'table' && (
+          <div className="hidden md:block dashboard-card overflow-hidden relative">
             <div ref={bottomScrollRef} className="w-full overflow-x-auto">
               <table className="erp-table w-full text-left min-w-[1000px]">
                 <thead>

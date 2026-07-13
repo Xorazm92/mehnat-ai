@@ -94,8 +94,47 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                 </div>
             </div>
 
-            {/* Audit Table */}
-            <div className="dashboard-card overflow-hidden">
+            {/* Mobil kartochkalar (Audit) */}
+            <div className="md:hidden space-y-3">
+                {loading ? (
+                    <div className="dashboard-card p-12 flex flex-col items-center gap-3">
+                        <div className="w-9 h-9 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
+                        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.loadingAudit}</p>
+                    </div>
+                ) : filteredLogs.length === 0 ? (
+                    <div className="dashboard-card p-12 text-center">
+                        <History size={36} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--text-muted)' }} />
+                        <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-60" style={{ color: 'var(--text-muted)' }}>{t.noDataFound}</span>
+                    </div>
+                ) : filteredLogs.map((log) => {
+                    const isDel = log.action.includes('delete');
+                    const isNew = log.action.includes('create') || log.action.includes('insert');
+                    const isUpd = log.action.includes('update');
+                    const ac = isDel ? '#ff6b6b' : isNew ? '#34d058' : isUpd ? '#ffd700' : 'var(--accent-blue)';
+                    return (
+                        <div key={log.id} className="dashboard-card p-4">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }}><User size={15} /></div>
+                                    <div className="min-w-0">
+                                        <div className="text-[12px] font-black uppercase tracking-tight truncate" style={{ color: 'var(--text)' }}>{log.profiles?.full_name || 'System Auto'}</div>
+                                        <div className="text-[10px] font-bold tabular-nums" style={{ color: 'var(--text-muted)' }}>{new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString()}</div>
+                                    </div>
+                                </div>
+                                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md shrink-0" style={{ color: ac, background: `${ac}1a` }}>{log.action.replace('_', ' ')}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>{(log.entity_type || '').replace('_', ' ')}</span>
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>ID: {log.entity_id?.slice(0, 8) || 'N/A'}</span>
+                            </div>
+                            <div className="text-[10px] font-mono mt-2 px-2 py-1.5 rounded truncate" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }} title={JSON.stringify(log.details)}>{JSON.stringify(log.details)}</div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Audit Table (desktop) */}
+            <div className="hidden md:block dashboard-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-[12px] uppercase tracking-widest">
                         <thead>
