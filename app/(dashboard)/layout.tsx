@@ -4,6 +4,7 @@ import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { DashboardTopBar } from "@/components/DashboardTopBar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MobileNavProvider } from "@/components/MobileNavContext";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { getCachedUnreadCount } from "@/lib/cached-queries";
 
 export default async function DashboardLayout({
@@ -45,16 +46,15 @@ export default async function DashboardLayout({
 
           {/* Main content */}
           <main
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "1.5rem",
-              background: "var(--bg-primary)",
-            }}
+            className="flex-1 overflow-y-auto p-3 md:p-6 pb-[76px] md:pb-6"
+            style={{ minWidth: 0, background: "var(--bg-primary)" }}
           >
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </div>
+
+        {/* Mobil pastki navigatsiya (faqat kichik ekranlarда) */}
+        <MobileBottomNav userRole={userRole} />
       </div>
       </MobileNavProvider>
     </SessionProvider>

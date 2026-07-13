@@ -158,10 +158,10 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           />
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
         </div>
-        <div className="flex gap-4">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
             <select
-              className="pl-12 pr-10 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none appearance-none min-w-[200px]"
+              className="w-full pl-12 pr-10 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none appearance-none sm:min-w-[200px]"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
@@ -171,9 +171,9 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
             </select>
             <Briefcase size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
           </div>
-          <div className="relative">
+          <div className="relative flex-1">
             <select
-              className="pl-12 pr-10 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none appearance-none min-w-[170px]"
+              className="w-full pl-12 pr-10 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none appearance-none sm:min-w-[170px]"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -316,8 +316,56 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
         </div>
       )}
 
-      {/* STAFF TABLE */}
-      <div className="dashboard-card overflow-hidden">
+      {/* MOBIL KARTOCHKA RO'YXATI (kichik ekranlar) */}
+      <div className="md:hidden space-y-3">
+        {filteredStaff.map((person) => {
+          const myCompanies = companies.filter(c => {
+            const cc = c as { accountantId?: string; accountantName?: string };
+            return cc.accountantId === person.id || cc.accountantName === person.name;
+          });
+          const status = person.status || 'active';
+          const sm = STATUS_META[status] || STATUS_META.active;
+          const roleColor = ROLE_COLORS[person.role as UserRole] || '#64748b';
+          return (
+            <div key={person.id} onClick={() => setSelected(person)} className="dashboard-card p-4 flex items-center gap-3 cursor-pointer active:scale-[0.99] transition-transform">
+              <div className="relative shrink-0">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-black text-white shadow-sm" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
+                  {person.name.charAt(0)}
+                </div>
+                <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 rounded-full ${sm.dot}`} style={{ borderColor: 'var(--card-bg)' }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[14px] font-black tracking-tight truncate" style={{ color: 'var(--text)' }}>{person.name}</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md" style={{ color: roleColor, background: `${roleColor}1a` }}>{ROLE_LABELS[person.role as UserRole] || person.role}</span>
+                </div>
+                <div className="text-[11px] font-bold mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{person.phone || person.email || '—'}</div>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md" style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
+                  <span className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{myCompanies.length} firma</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title="Tahrirlash">
+                  <Edit3 size={15} />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); if (confirm(person.name + (t.confirmDelete || " ni o'chirasizmi?"))) onDelete(person.id); }} className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title="O'chirish">
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {filteredStaff.length === 0 && (
+          <div className="dashboard-card p-12 text-center">
+            <Search size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
+            <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>MA&apos;LUMOT TOPILMADI</span>
+          </div>
+        )}
+      </div>
+
+      {/* STAFF TABLE (desktop) */}
+      <div className="hidden md:block dashboard-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[960px]">
             <thead>

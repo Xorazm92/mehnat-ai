@@ -89,7 +89,7 @@ export function DashboardTopBar({
       }}
     >
       {/* Left: Search */}
-      <div className="flex items-center gap-4 flex-1">
+      <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
         <button
           onClick={toggle}
           aria-label="Menyu"
@@ -99,9 +99,9 @@ export function DashboardTopBar({
           <Menu size={20} />
         </button>
         {/* Mobil brend belgisi (sidebar yashiringanda) — rolga mos boshlang'ich sahifa */}
-        <Link href={getHomeRoute(userRole)} className="md:hidden flex items-center gap-2" aria-label="ASRO">
+        <Link href={getHomeRoute(userRole)} className="md:hidden flex items-center gap-2 shrink-0" aria-label="ASRO">
           <Image src="/asro-logo-192.png" alt="ASRO" width={28} height={28} priority className="w-7 h-7 object-contain" />
-          <span className="text-[15px] font-black tracking-tight" style={{ color: "var(--text-primary)" }}>ASRO</span>
+          <span className="text-[15px] font-black tracking-tight whitespace-nowrap" style={{ color: "var(--text-primary)" }}>ASRO</span>
         </Link>
         {/* Global qidiruv */}
         <GlobalSearch userRole={userRole} />
