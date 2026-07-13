@@ -56,6 +56,8 @@
 
   /* Aliases for legacy components */
   --primary: #2563EB;
+  --primary-dark: #1D4ED8;
+  --primary-ghost: rgba(37, 99, 235, 0.08);
   --text: #0F172A;
   --border: #E2E8F0;
   --danger-dark: #B91C1C;
@@ -157,6 +159,8 @@
 
   /* Aliases for legacy components */
   --primary: #3B82F6;
+  --primary-dark: #2563EB;
+  --primary-ghost: rgba(59, 130, 246, 0.14);
   --text: #F1F5F9;
   --border: rgba(255, 255, 255, 0.08);
   --danger-dark: #EF4444;

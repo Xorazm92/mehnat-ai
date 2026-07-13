@@ -118,7 +118,7 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
                                         {formatCreatedAt(n.createdAt)}
                                     </span>
                                     {n.link && (
-                                        <Link href={n.link} className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1" style={{ color: 'var(--accent-blue)' }}>
+                                        <Link href={n.link} onClick={() => { if (!n.isRead) onMarkRead([n.id]); }} className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1" style={{ color: 'var(--accent-blue)' }}>
                                             <ExternalLink size={11} /> {lang === 'uz' ? 'Ochish' : 'Открыть'}
                                         </Link>
                                     )}

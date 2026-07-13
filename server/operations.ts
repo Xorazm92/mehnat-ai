@@ -6,6 +6,8 @@ import { isSeniorRole } from "@/lib/permissions";
 import { revalidateTag } from "next/cache";
 import { Prisma, type ReportStatus } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
+import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
+import type { OperationFieldKey } from "@/types";
 
 // =====================================================
 // MONTHLY REPORTS
@@ -47,12 +49,22 @@ export async function upsertMonthlyReport(data: Prisma.MonthlyReportUncheckedCre
     if (company?.accountantId !== userId) throw new Error("Forbidden");
   }
 
-  const { companyId, period, ...fields } = data;
+  const { companyId, period, ...rawFields } = data;
+
+  // Matritsa ustun kalitlari snake_case (masalan "my_mehnat", "one_c") keladi,
+  // Prisma MonthlyReport ustunlari esa camelCase ("myMehnat", "oneC"). Prisma
+  // noto'g'ri nomlarda "Unknown field" xatosi beradi, shuning uchun bu yerda
+  // kalitlarni haqiqiy ustun nomlariga o'giramiz.
+  const fields: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(rawFields)) {
+    const mapped = FIELD_TO_DB_COLUMN[k as OperationFieldKey] ?? k;
+    fields[mapped] = v;
+  }
 
   const result = await prisma.monthlyReport.upsert({
     where: { companyId_period: { companyId, period } },
-    create: { companyId, period, ...fields },
-    update: fields,
+    create: { companyId, period, ...fields } as Prisma.MonthlyReportUncheckedCreateInput,
+    update: fields as Prisma.MonthlyReportUncheckedUpdateInput,
   });
   revalidateTag("operations", "max");
   return serialize(result);

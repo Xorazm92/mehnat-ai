@@ -12,11 +12,17 @@ interface Props {
   operations: OperationEntry[];
   staff: Staff[];
   userRole: string;
+  currentUserId?: string;
+  userName?: string;
+  focusCompany?: string | null;
+  focusCol?: string | null;
+  focusPeriod?: string | null;
 }
 
-export default function ReportsClient({ companies, operations, staff, userRole }: Props) {
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("2026-03");
-  const [tab, setTab] = useState<"reports" | "matrix">("reports");
+export default function ReportsClient({ companies, operations, staff, userRole, currentUserId, userName, focusCompany, focusCol, focusPeriod }: Props) {
+  const hasFocus = !!(focusCompany && focusCol);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(focusPeriod || "2026-03");
+  const [tab, setTab] = useState<"reports" | "matrix">(hasFocus ? "matrix" : "reports");
 
   const handleUpdate = async (data: unknown) => {
     await upsertMonthlyReport(data as Parameters<typeof upsertMonthlyReport>[0]);
@@ -52,6 +58,9 @@ export default function ReportsClient({ companies, operations, staff, userRole }
             staff={staff}
             lang="uz"
             userRole={userRole}
+            currentUserId={currentUserId}
+            userName={userName}
+            focusProof={hasFocus ? { companyId: focusCompany as string, colKey: focusCol as string } : null}
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
             onCompanySelect={() => {}}

@@ -2,10 +2,16 @@ import { auth } from "@/lib/auth";
 import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
 import ReportsClient from "./ReportsClient";
 
-export default async function ReportsPage() {
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ company?: string; col?: string; period?: string }>;
+}) {
+  const sp = await searchParams;
   const session = await auth();
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role || "employee";
+  const userName = session?.user?.name ?? "";
 
   const [companies, staff, operations] = await Promise.all([
     getCachedCompanies(userId, userRole),
@@ -26,6 +32,11 @@ export default async function ReportsPage() {
         staff={JSON.parse(JSON.stringify(mappedStaff))}
         operations={JSON.parse(JSON.stringify(operations))}
         userRole={userRole}
+        currentUserId={userId}
+        userName={userName}
+        focusCompany={sp.company ?? null}
+        focusCol={sp.col ?? null}
+        focusPeriod={sp.period ?? null}
       />
     </div>
   );

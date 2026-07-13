@@ -9,6 +9,8 @@ import { periodsEqual } from '@/lib/periods';
 import { toast } from 'sonner';
 import { upsertMonthlyReport, clearColumnForPeriod } from '@/server/operations';
 import { createNotification } from '@/server/audit';
+import { getReportProofsMeta } from '@/server/proofs';
+import ReportProofModal, { ProofModalState } from './ReportProofModal';
 // ── Report Column Definitions ──────────────────────────────────
 // isSplit columns have a paired _tolov key for the payment column
 const REPORT_COLUMNS = [
@@ -101,10 +103,20 @@ interface StatusCellProps {
   onUpdate: (newValue: string) => void;
   readOnly?: boolean;
   userRole: string;
+  proofStatus?: string; // 'pending' | 'approved' | 'rejected'
+  onRequestSubmit?: () => void;
+  onViewProof?: () => void;
 }
 
-const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, userRole }) => {
+const PROOF_DOT: Record<string, string> = {
+  pending: '#4da3ff',
+  approved: '#34d058',
+  rejected: '#ff6b6b',
+};
+
+const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, userRole, proofStatus, onRequestSubmit, onViewProof }) => {
   const style = getStatusStyle(value);
+  const isAccountant = userRole === 'accountant';
   const [isOpen, setIsOpen] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -153,15 +165,31 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
       return;
     }
 
-    let finalValue = statusValue;
-
-    // Role-based logic: Accountant cannot set "+" directly, it becomes "topshirildi"
-    if (userRole === 'accountant' && statusValue === '+') {
-      finalValue = 'topshirildi';
+    // Buxgalter "Tasdiqlash"/"Topshirildi" ni tanlasa — to'g'ridan-to'g'ri
+    // o'zgartirmaydi, avval skrinshot yuklash oynasini ochamiz. Faqat skrinshot
+    // yuklangandan keyin katak "topshirildi" bo'ladi va nazoratchiga xabar boradi.
+    if (isAccountant && (statusValue === '+' || statusValue === 'topshirildi')) {
+      setIsOpen(false);
+      onRequestSubmit?.();
+      return;
     }
 
-    onUpdate(finalValue);
+    // Nazoratchi kutilayotgan dalilli katakni "+" yoki "-" qilsa — bevosita
+    // o'zgartirmasdan, tekshirish oynasini ochamiz. Shunda qaror reviewReportProof
+    // orqali o'tadi: dalil holati yangilanadi va buxgalterga xabar boradi.
+    if (!isAccountant && proofStatus === 'pending' && onViewProof && (statusValue === '+' || statusValue === '-')) {
+      setIsOpen(false);
+      onViewProof();
+      return;
+    }
+
+    onUpdate(statusValue);
     setIsOpen(false);
+  };
+
+  const handleViewProof = () => {
+    setIsOpen(false);
+    onViewProof?.();
   };
 
   const handleCustomSubmit = (e: React.FormEvent) => {
@@ -174,17 +202,27 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
   };
 
   return (
-    <div className="flex items-center justify-center w-full h-full p-0.5">
+    <div className="relative flex items-center justify-center w-full h-full p-0.5">
       <button
         ref={buttonRef}
-        onClick={() => !readOnly && setIsOpen(!isOpen)}
-        disabled={readOnly}
+        onClick={() => {
+          if (!readOnly) setIsOpen(!isOpen);
+          else if (proofStatus) handleViewProof();
+        }}
+        disabled={readOnly && !proofStatus}
         className="w-full h-6 min-w-[24px] px-1 rounded-sm flex items-center justify-center text-[10px] font-bold transition-all border border-black/5 dark:border-white/5 hover:opacity-80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         style={{ background: style.bg, color: style.text }}
-        title={style.tooltip}
+        title={proofStatus ? `${style.tooltip} · 📎 Skrinshot biriktirilgan` : style.tooltip}
       >
         <span className="truncate w-full text-center block uppercase">{style.icon}</span>
       </button>
+      {proofStatus && (
+        <span
+          className="absolute top-0 right-0 w-2 h-2 rounded-full ring-1 ring-white dark:ring-[#1a1d23] pointer-events-none"
+          style={{ background: PROOF_DOT[proofStatus] || '#4da3ff' }}
+          title="Skrinshot biriktirilgan"
+        />
+      )}
 
       {isOpen && createPortal(
         <div
@@ -199,6 +237,20 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
         >
           {!showInput ? (
             <div className="grid grid-cols-1">
+              {proofStatus && onViewProof && (
+                <>
+                  <button
+                    onClick={handleViewProof}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-[#F8F9FA] dark:hover:bg-[#2A2D33] transition-colors w-full text-left group"
+                  >
+                    <span className="w-5 h-5 flex items-center justify-center rounded-sm" style={{ background: 'var(--primary-ghost)' }}>
+                      <span className="w-2 h-2 rounded-full" style={{ background: PROOF_DOT[proofStatus] || '#4da3ff' }} />
+                    </span>
+                    <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 group-hover:text-[#3366CC]">Skrinshotni ko&apos;rish</span>
+                  </button>
+                  <div className="h-px my-1" style={{ background: 'var(--border)' }} />
+                </>
+              )}
               {AVAILABLE_STATUSES.map((status) => (
                 <button
                   key={status.value}
@@ -233,7 +285,7 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
       )}
     </div>
   );
-}, (prev, next) => prev.value === next.value && prev.readOnly === next.readOnly);
+}, (prev, next) => prev.value === next.value && prev.readOnly === next.readOnly && prev.proofStatus === next.proofStatus);
 
 // ── Memoized Table Row ─────────────────────────────────────────
 const OperationRow = React.memo<{
@@ -242,10 +294,14 @@ const OperationRow = React.memo<{
   visibleColumns: typeof REPORT_COLUMNS;
   userRole: string;
   activeServices: string[];
+  proofMeta: Map<string, string>;
   onCellUpdate: (companyId: string, colKey: string, newValue: string) => void;
   onCompanySelect: (companyId: string) => void;
-}>(({ row, idx, visibleColumns, userRole, activeServices, onCellUpdate, onCompanySelect }) => {
+  onRequestSubmit: (companyId: string, colKey: string) => void;
+  onViewProof: (companyId: string, colKey: string) => void;
+}>(({ row, idx, visibleColumns, userRole, activeServices, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
+  const proofOf = (colKey: string) => (row.companyId ? proofMeta.get(`${row.companyId}::${colKey}`) : undefined);
 
   return (
     <tr className="group transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -272,7 +328,7 @@ const OperationRow = React.memo<{
         </div>
       </td>
       {visibleColumns.map(col => {
-        const isReadOnly = !row.companyId || (userRole !== 'super_admin' && userRole !== 'admin' && userRole !== 'supervisor' && userRole !== 'accountant');
+        const isReadOnly = !row.companyId || (userRole !== 'super_admin' && userRole !== 'admin' && userRole !== 'supervisor' && userRole !== 'chief_accountant' && userRole !== 'accountant');
         const serviceDisabled = !isServiceEnabled(col.key);
 
         if ((col as any).isSplit) {
@@ -289,6 +345,9 @@ const OperationRow = React.memo<{
                     onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId as string, col.key as string, String(newValue))}
                     readOnly={isReadOnly}
                     userRole={userRole}
+                    proofStatus={proofOf(col.key)}
+                    onRequestSubmit={() => row.companyId && onRequestSubmit(row.companyId as string, col.key as string)}
+                    onViewProof={() => row.companyId && onViewProof(row.companyId as string, col.key as string)}
                   />
                 )}
               </td>
@@ -301,6 +360,9 @@ const OperationRow = React.memo<{
                     onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId as string, payKey as string, String(newValue))}
                     readOnly={isReadOnly}
                     userRole={userRole}
+                    proofStatus={proofOf(payKey)}
+                    onRequestSubmit={() => row.companyId && onRequestSubmit(row.companyId as string, payKey as string)}
+                    onViewProof={() => row.companyId && onViewProof(row.companyId as string, payKey as string)}
                   />
                 )}
               </td>
@@ -318,6 +380,9 @@ const OperationRow = React.memo<{
                 onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId as string, col.key as string, String(newValue))}
                 readOnly={isReadOnly}
                 userRole={userRole}
+                proofStatus={proofOf(col.key)}
+                onRequestSubmit={() => row.companyId && onRequestSubmit(row.companyId as string, col.key as string)}
+                onViewProof={() => row.companyId && onViewProof(row.companyId as string, col.key as string)}
               />
             )}
           </td>
@@ -342,6 +407,7 @@ interface Props {
   userRole: string;
   currentUserId?: string;
   userName?: string;
+  focusProof?: { companyId: string; colKey: string } | null;
 }
 
 interface ReportRow {
@@ -369,7 +435,8 @@ const OperationModule: React.FC<Props> = ({
   onCompanySelect,
   userRole,
   currentUserId,
-  userName
+  userName,
+  focusProof
 }) => {
   const t = translations[lang as keyof typeof translations];
   const [search, setSearch] = useState('');
@@ -392,6 +459,63 @@ const OperationModule: React.FC<Props> = ({
   useEffect(() => { staffRef.current = staff; }, [staff]);
   useEffect(() => { userNameRef.current = userName; }, [userName]);
   useEffect(() => { currentUserIdRef.current = currentUserId; }, [currentUserId]);
+
+  // ── Report Proofs (skrinshot dalillari) ───────────────────────
+  const [proofMeta, setProofMeta] = useState<Map<string, string>>(new Map());
+  const [proofModal, setProofModal] = useState<ProofModalState | null>(null);
+  const canReview = userRole === 'super_admin' || userRole === 'admin' || userRole === 'chief_accountant' || userRole === 'supervisor';
+
+  const reloadProofMeta = useCallback(async () => {
+    try {
+      const list = await getReportProofsMeta(selectedPeriod);
+      const m = new Map<string, string>();
+      (list as Array<{ companyId: string; colKey: string; status: string }>).forEach((p) => {
+        m.set(`${p.companyId}::${p.colKey}`, p.status);
+      });
+      setProofMeta(m);
+    } catch (e) {
+      console.error('Proof meta load error:', e);
+    }
+  }, [selectedPeriod]);
+
+  useEffect(() => { reloadProofMeta(); }, [reloadProofMeta]);
+
+  const colLabelFor = (colKey: string) => {
+    const col = REPORT_COLUMNS.find(c => c.key === colKey || (c as any).payKey === colKey);
+    if (!col) return colKey;
+    return col.key === colKey ? col.label : `${col.label} (to'lov)`;
+  };
+
+  const openSubmitModal = useCallback((companyId: string, colKey: string) => {
+    const company = companiesRef.current.find(c => c.id === companyId);
+    setProofModal({ mode: 'upload', companyId, companyName: company?.name || '', colKey, colLabel: colLabelFor(colKey) });
+  }, []);
+
+  const openViewModal = useCallback((companyId: string, colKey: string) => {
+    const company = companiesRef.current.find(c => c.id === companyId);
+    setProofModal({ mode: 'review', companyId, companyName: company?.name || '', colKey, colLabel: colLabelFor(colKey) });
+  }, []);
+
+  const handleProofSubmitted = useCallback((companyId: string, colKey: string) => {
+    skipNextSyncRef.current = true;
+    setRows(prev => prev.map(r => (r.companyId === companyId ? { ...r, [colKey]: 'topshirildi' } : r)));
+    setProofMeta(prev => new Map(prev).set(`${companyId}::${colKey}`, 'pending'));
+  }, []);
+
+  const handleProofReviewed = useCallback((companyId: string, colKey: string, cellValue: string) => {
+    skipNextSyncRef.current = true;
+    setRows(prev => prev.map(r => (r.companyId === companyId ? { ...r, [colKey]: cellValue } : r)));
+    setProofMeta(prev => new Map(prev).set(`${companyId}::${colKey}`, cellValue === '+' ? 'approved' : 'rejected'));
+  }, []);
+
+  // Notifikatsiyadan kelgan chuqur havola: bevosita shu katak dalilini ochamiz.
+  const focusHandledRef = useRef(false);
+  useEffect(() => {
+    if (focusHandledRef.current) return;
+    if (!focusProof || !companies.length) return;
+    focusHandledRef.current = true;
+    openViewModal(focusProof.companyId, focusProof.colKey);
+  }, [focusProof, companies.length, openViewModal]);
 
   // ── Build Rows from DB Props (companies + operations) ──────────
   // ── Build Rows from DB Props (companies + operations) ──────────
@@ -854,11 +978,14 @@ const OperationModule: React.FC<Props> = ({
                   visibleColumns={visibleColumns as any}
                   userRole={userRole}
                   activeServices={row.activeServices}
+                  proofMeta={proofMeta}
                   onCellUpdate={handleCellUpdate}
                   onCompanySelect={(id) => {
                     const comp = companies.find(c => c.id === id);
                     if (comp) onCompanySelect(comp);
                   }}
+                  onRequestSubmit={openSubmitModal}
+                  onViewProof={openViewModal}
                 />
               ))}
             </tbody>
@@ -926,6 +1053,15 @@ const OperationModule: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      <ReportProofModal
+        state={proofModal}
+        period={selectedPeriod}
+        canReview={canReview}
+        onClose={() => setProofModal(null)}
+        onSubmitted={handleProofSubmitted}
+        onReviewed={handleProofReviewed}
+      />
     </div>
   );
 };

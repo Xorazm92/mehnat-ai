@@ -189,6 +189,7 @@ model Company {
   documents           Document[]
   credentials         ClientCredential[]
   payments            Payment[]
+  reportProofs        ReportProof[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -290,6 +291,39 @@ model MonthlyReport {
   @@unique([companyId, period])
   @@index([companyId])
   @@index([period])
+}
+
+// =====================================================
+// REPORT PROOF (Buxgalter topshirgan skrinshot dalili + nazoratchi tasdig'i)
+// Har bir katak = (firma + davr + ustun) uchun bitta joriy dalil.
+// =====================================================
+model ReportProof {
+  id     String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period String // "2026-03"
+  colKey String // OperationModule REPORT_COLUMNS kaliti, masalan "didox"
+
+  imageData String  @db.Text // skrinshot (base64 data URL, klient tomonda siqilgan)
+  note      String? // buxgalterning izohi
+
+  status String @default("pending") // pending | approved | rejected
+
+  submittedById   String
+  submittedByName String
+  submittedAt     DateTime @default(now())
+
+  reviewedById   String?
+  reviewedByName String?
+  reviewedAt     DateTime?
+  rejectReason   String?
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, period, colKey])
+  @@index([companyId])
+  @@index([period])
+  @@index([status])
 }
 
 // =====================================================
