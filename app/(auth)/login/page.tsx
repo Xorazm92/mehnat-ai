@@ -3,12 +3,10 @@
 import { useState } from "react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Mail, Lock, Loader2, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,8 +20,12 @@ export default function LoginPage() {
         toast.error("Noto'g'ri email yoki parol");
       } else {
         toast.success("Xush kelibsiz!");
-        router.push("/dashboard");
-        router.refresh();
+        // callbackUrl bo'lsa o'sha yerga, aks holda "/" ga — proxy rolga mos
+        // boshlang'ich sahifaga yo'naltiradi (accountant → /cabinet va h.k.).
+        // Faqat ichki yo'llar qabul qilinadi (open-redirect himoyasi).
+        const cb = new URLSearchParams(window.location.search).get("callbackUrl");
+        const target = cb && cb.startsWith("/") && !cb.startsWith("//") ? cb : "/";
+        window.location.href = target;
       }
     } catch {
       toast.error("Xatolik yuz berdi");
@@ -66,7 +68,7 @@ export default function LoginPage() {
           </p>
           <div className="mt-8 flex items-center gap-2 text-[12px] font-semibold text-slate-400">
             <ShieldCheck size={16} className="text-blue-400" />
-            Ma'lumotlaringiz shifrlangan va himoyalangan
+            Ma&apos;lumotlaringiz shifrlangan va himoyalangan
           </div>
         </div>
 

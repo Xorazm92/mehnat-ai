@@ -172,6 +172,15 @@ export async function upsertPerformance(data: {
   if (!session) throw new Error("Unauthorized");
 
   const submittedBy = session.user.id;
+  const callerRole = session.user.role as string;
+
+  // Senior bo'lmagan xodim faqat O'ZI uchun, faqat 'submitted' holatda yozadi —
+  // boshqa xodimga baho qo'yish yoki o'z bahosini 'approved' qilish mumkin emas.
+  if (!isSeniorRole(callerRole)) {
+    if (data.employeeId !== submittedBy) throw new Error("Forbidden");
+    data.status = "submitted";
+    data.source = "employee";
+  }
 
   const rule = await prisma.kpiRule.findUnique({ where: { id: data.ruleId } });
   if (!rule) throw new Error("KPI qoidasi topilmadi");

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { canSeeView, getHomeRoute, type AppView } from "@/lib/permissions";
 
 // Himoyalangan yo'llar
 const PROTECTED_ROUTES = [
+  "/admin",
   "/dashboard",
   "/organizations",
   "/reports",
@@ -21,65 +23,33 @@ const PROTECTED_ROUTES = [
   "/settings",
 ];
 
-// Rolga mos boshlang'ich sahifa
-const ROLE_HOME: Record<string, string> = {
-  super_admin: "/dashboard",
-  admin: "/dashboard",
-  chief_accountant: "/dashboard",
-  supervisor: "/dashboard",
-  accountant: "/cabinet",
-  bank_manager: "/cabinet/bank",
-};
+// URL yo'lini AppView'ga moslashtirish (aniqrog'i birinchi — /cabinet/bank /cabinet dan oldin)
+function pathToView(path: string): AppView | null {
+  if (path.startsWith("/admin")) return "admin";
+  if (path.startsWith("/audit-logs")) return "audit_logs";
+  if (path.startsWith("/organizations")) return "organizations";
+  if (path.startsWith("/staff")) return "staff";
+  if (path.startsWith("/reports")) return "reports";
+  if (path.startsWith("/kpi")) return "kpi";
+  if (path.startsWith("/kassa")) return "kassa";
+  if (path.startsWith("/expenses")) return "expenses";
+  if (path.startsWith("/payroll")) return "payroll";
+  if (path.startsWith("/attendance")) return "attendance";
+  if (path.startsWith("/documents")) return "documents";
+  if (path.startsWith("/inventory")) return "inventory";
+  if (path.startsWith("/notifications")) return "notifications";
+  if (path.startsWith("/settings")) return "settings";
+  if (path.startsWith("/cabinet/bank")) return "cabinet_bank";
+  if (path.startsWith("/cabinet")) return "cabinet";
+  if (path.startsWith("/dashboard")) return "dashboard";
+  return null;
+}
 
-// Rol uchun ruxsat borligini tekshirish
+// Ruxsat — yagona manba: lib/permissions.ts ALLOWED_VIEWS (sidebar bilan bir xil)
 function isAllowed(path: string, role: string): boolean {
-  // Settings — faqat super_admin
-  if (path.startsWith("/settings") && role !== "super_admin") return false;
-
-  // Bank kabineti — faqat bank_manager
-  if (path.startsWith("/cabinet/bank") && role !== "bank_manager") return false;
-
-  // Asosiy kabinet — accountant uchun
-  if (path === "/cabinet" && role === "bank_manager") return false;
-
-  // Accountant va bank_manager dashboard/organizations va h.k. ga kirmasin
-  if (
-    ["accountant", "bank_manager"].includes(role) &&
-    [
-      "/dashboard",
-      "/organizations",
-      "/staff",
-      "/kpi",
-      "/payroll",
-      "/audit-logs",
-      "/attendance",
-      "/documents",
-      "/inventory",
-    ].some((r) => path.startsWith(r))
-  ) {
-    return false;
-  }
-
-  // bank_manager kassa va expenses ko'ra oladi
-  if (role === "bank_manager") {
-    if (path.startsWith("/kassa") || path.startsWith("/expenses") || path.startsWith("/notifications")) {
-      return true;
-    }
-  }
-
-  // accountant — faqat cabinet, reports, notifications
-  if (role === "accountant") {
-    if (
-      path.startsWith("/cabinet") ||
-      path.startsWith("/reports") ||
-      path.startsWith("/notifications")
-    ) {
-      return true;
-    }
-    return false;
-  }
-
-  return true;
+  const view = pathToView(path);
+  if (!view) return true; // moslik topilmasa to'sib qo'ymaymiz
+  return canSeeView(role as never, view);
 }
 
 export async function proxy(req: NextRequest) {
@@ -99,10 +69,9 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Login bo'lgan → login/root sahifasidan yo'naltir
+  // Login bo'lgan → login/root sahifasidan rolga mos boshlang'ich sahifaga
   if (token && (path === "/login" || path === "/" || path === "")) {
-    const role = token.role as string;
-    const home = ROLE_HOME[role] || "/dashboard";
+    const home = getHomeRoute(token.role as string);
     return NextResponse.redirect(new URL(home, req.url));
   }
 

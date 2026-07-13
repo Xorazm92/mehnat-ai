@@ -80,6 +80,11 @@ export async function getKassaSummary(from?: Date, to?: Date) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
+  const role = session.user.role as string;
+  if (!["super_admin", "admin", "chief_accountant", "bank_manager"].includes(role)) {
+    throw new Error("Forbidden");
+  }
+
   const dateFilter = from || to
     ? { date: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
     : {};
@@ -200,7 +205,31 @@ export async function updateExpense(id: string, data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  return serialize(await prisma.expense.update({ where: { id }, data }));
+  const role = session.user.role as string;
+  const userId = session.user.id;
+
+  const existing = await prisma.expense.findUnique({ where: { id } });
+  if (!existing) throw new Error("Xarajat topilmadi");
+
+  // Faqat senior rollar yoki (kutilayotgan xarajatning) muallifi tahrirlaydi
+  if (!isSeniorRole(role) && !(existing.createdBy === userId && existing.status === "pending")) {
+    throw new Error("Forbidden");
+  }
+
+  // Tahrir tasdiq oqimini qayta boshlaydi (createExpense bilan bir xil qoida)
+  const autoApprove = data.amount < 1_000_000;
+  return serialize(
+    await prisma.expense.update({
+      where: { id },
+      data: {
+        ...data,
+        status: autoApprove ? "approved" : "pending",
+        approvedBy: autoApprove ? session.user.id : null,
+        approvedAt: autoApprove ? new Date() : null,
+        rejectedReason: null,
+      },
+    })
+  );
 }
 
 export async function deleteExpense(id: string) {

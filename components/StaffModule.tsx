@@ -4,10 +4,12 @@ import React, { useState } from 'react';
 import { Staff, Company, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
 import { ROLE_LABELS, ROLE_COLORS, type UserRole } from '@/lib/permissions';
+import { generateMemorablePassword } from '@/lib/passwordUtils';
 import StaffDrawer from './StaffDrawer';
 import {
   UserPlus, Phone, Briefcase, Trash2, Edit3, X, Check, Search, Filter,
   ShieldCheck, Mail, IdCard, GraduationCap, CalendarDays, Building, KeyRound, Loader2,
+  Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
 
 interface Props {
@@ -38,6 +40,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
   const [form, setForm] = useState<Partial<Staff>>({});
   const [selected, setSelected] = useState<Staff | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -94,7 +97,19 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
         }
         await onResetPassword(form.id!, newPassword);
       }
-      import('sonner').then(({ toast }) => toast.success(isEditing ? "Xodim yangilandi" : "Yangi xodim qo'shildi"));
+      const createdEmail = form.email;
+      const createdPw = form.password;
+      import('sonner').then(({ toast }) => {
+        if (isEditing) {
+          toast.success("Xodim yangilandi");
+        } else {
+          // Yangi xodimning login/parolini ko'rsatamiz — admin xodimga beradi
+          toast.success("Yangi xodim qo'shildi", {
+            description: `Login: ${createdEmail}\nParol: ${createdPw}\n(bu ma'lumotni xodimga bering)`,
+            duration: 15000,
+          });
+        }
+      });
       closeForm();
     } catch (e) {
       import('sonner').then(({ toast }) => toast.error(e instanceof Error ? e.message : "Xatolik yuz berdi"));
@@ -245,11 +260,25 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
             </Field>
             {isEditing ? (
               <Field label="Yangi parol (ixtiyoriy — tiklash)" icon={KeyRound}>
-                <input className="erp-input tracking-widest" type="password" placeholder="Bo'sh qoldiring — o'zgarmaydi" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                <PasswordInput
+                  value={newPassword}
+                  onChange={setNewPassword}
+                  show={showPw}
+                  onToggle={() => setShowPw(s => !s)}
+                  onGenerate={() => { setNewPassword(generateMemorablePassword(form.name)); setShowPw(true); }}
+                  placeholder="Bo'sh qoldiring — o'zgarmaydi"
+                />
               </Field>
             ) : (
-              <Field label="Parol *" icon={KeyRound}>
-                <input className="erp-input tracking-widest" type="password" placeholder="Kamida 6 ta belgi" value={form.password || ''} onChange={e => set('password', e.target.value)} />
+              <Field label="Parol * (xodimga beriladi)" icon={KeyRound}>
+                <PasswordInput
+                  value={form.password || ''}
+                  onChange={(v) => set('password', v)}
+                  show={showPw}
+                  onToggle={() => setShowPw(s => !s)}
+                  onGenerate={() => { set('password', generateMemorablePassword(form.name)); setShowPw(true); }}
+                  placeholder="Kamida 6 ta belgi — yoki 🔄 bilan yarating"
+                />
               </Field>
             )}
           </FormSection>
@@ -389,6 +418,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           companies={companies}
           onClose={() => setSelected(null)}
           onEdit={(p) => { setSelected(null); openEdit(p); }}
+          onResetPassword={onResetPassword}
         />
       )}
     </div>
@@ -405,6 +435,29 @@ function FormSection({ icon: Icon, title, children }: { icon: React.ElementType;
         <div className="flex-1 h-px ml-2" style={{ background: 'var(--card-border)' }} />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">{children}</div>
+    </div>
+  );
+}
+
+function PasswordInput({ value, onChange, show, onToggle, onGenerate, placeholder }: {
+  value: string; onChange: (v: string) => void; show: boolean; onToggle: () => void; onGenerate: () => void; placeholder?: string;
+}) {
+  const btn: React.CSSProperties = { background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' };
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        className="erp-input tracking-wider font-mono"
+        type={show ? 'text' : 'password'}
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+      />
+      <button type="button" onClick={onToggle} className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg transition-all" style={btn} title={show ? 'Yashirish' : "Ko'rsatish"}>
+        {show ? <EyeOff size={15} /> : <Eye size={15} />}
+      </button>
+      <button type="button" onClick={onGenerate} className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg transition-all" style={btn} title="Parol yaratish">
+        <RefreshCw size={15} />
+      </button>
     </div>
   );
 }

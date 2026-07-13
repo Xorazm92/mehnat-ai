@@ -1,5 +1,5 @@
 /**
- * Seed real monthly KPI records from public/kerak/kpi-oylik.json (212 rows).
+ * Seed real monthly KPI records from data/kerak/kpi-oylik.json (212 rows).
  *
  * Each row is one company's monthly KPI snapshot with a `kpi_states` map keyed by
  * rule name (acc_* / bank_* / sup_*). We attribute each state to the company's
@@ -73,7 +73,7 @@ async function main() {
   ): string | null =>
     role === "accountant" ? c.accountantId : role === "bank_client" ? c.bankClientId : c.supervisorId;
 
-  const file = path.join(process.cwd(), "public/kerak/kpi-oylik.json");
+  const file = path.join(process.cwd(), "data/kerak/kpi-oylik.json");
   const json = JSON.parse(fs.readFileSync(file, "utf8"));
   const rows: Array<Record<string, unknown> & { kpi_states?: Record<string, State> }> = json.KPI || json;
 

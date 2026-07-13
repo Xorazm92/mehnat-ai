@@ -1,8 +1,8 @@
 /**
  * Seed the KPI v2 rule set (three-state: bonus / neutral / penalty).
  *
- * Source of truth: public/kerak/public/kpi-rules-v2.json (spec) reconciled with
- * the real monthly data in public/kerak/kpi-oylik.json (212 rows). Where the
+ * Source of truth: data/kerak/public/kpi-rules-v2.json (spec) reconciled with
+ * the real monthly data in data/kerak/kpi-oylik.json (212 rows). Where the
  * spec and the real data disagree on coefficients, the REAL DATA wins so the
  * seeded rules stay consistent with the historical KPI records:
  *   - automation items (didox/mehnat/soliq_xat/avtokameral) use ±0.25 (4×0.25 = 1.0

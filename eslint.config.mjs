@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Migratsiya manba-materiallari (eski Supabase davri skriptlari) — kod emas
+    "data/**",
   ]),
 ]);
 

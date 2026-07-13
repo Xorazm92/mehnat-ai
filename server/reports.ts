@@ -117,50 +117,16 @@ export async function deleteFinancialReport(id: string) {
   return { ok: true };
 }
 
-// Representative line items per report type (for the viewer)
+// Yangi hisobot bo'sh satrlar bilan yaratiladi — raqamlar buxgalteriya
+// tizimidan (1C integratsiyasi kelgach) yoki qo'lda kiritiladi. Ilgari bu yerda
+// namunaviy (soxta) raqamlar bo'lgan; real firma hisobotiga to'qima summalarni
+// yozish chalg'ituvchi bo'lgani uchun olib tashlandi.
 function buildTemplateData(type: string) {
-  if (type === "profit_loss") {
-    return {
-      title: "Foyda va zarar hisoboti",
-      lines: [
-        { label: "Sof tushum", cur: 486_200_000, prev: 412_800_000 },
-        { label: "Sotilgan mahsulot tannarxi", cur: -298_400_000, prev: -260_100_000 },
-        { label: "Yalpi foyda", cur: 187_800_000, prev: 152_700_000, bold: true },
-        { label: "Operatsion xarajatlar", cur: -96_300_000, prev: -88_900_000 },
-        { label: "Soliqlar", cur: -21_400_000, prev: -17_200_000 },
-        { label: "Sof foyda", cur: 70_100_000, prev: 46_600_000, bold: true, positive: true },
-      ],
-    };
-  }
-  if (type === "balance") {
-    return {
-      title: "Balans hisoboti (F-1)",
-      lines: [
-        { label: "Aylanma aktivlar", cur: 320_000_000, prev: 280_000_000 },
-        { label: "Uzoq muddatli aktivlar", cur: 180_000_000, prev: 175_000_000 },
-        { label: "Jami aktivlar", cur: 500_000_000, prev: 455_000_000, bold: true },
-        { label: "Majburiyatlar", cur: 210_000_000, prev: 205_000_000 },
-        { label: "Kapital", cur: 290_000_000, prev: 250_000_000, bold: true, positive: true },
-      ],
-    };
-  }
-  if (type === "qqs") {
-    return {
-      title: "QQS deklaratsiyasi",
-      lines: [
-        { label: "Soliqqa tortiladigan aylanma", cur: 486_200_000, prev: 0 },
-        { label: "Hisoblangan QQS (12%)", cur: 58_344_000, prev: 0 },
-        { label: "Hisobga olinadigan QQS", cur: -41_200_000, prev: 0 },
-        { label: "To'lanadigan QQS", cur: 17_144_000, prev: 0, bold: true, positive: true },
-      ],
-    };
-  }
-  return {
-    title: "Pul oqimi hisoboti",
-    lines: [
-      { label: "Operatsion faoliyatdan", cur: 88_400_000, prev: 71_200_000 },
-      { label: "Investitsion faoliyatdan", cur: -24_000_000, prev: -12_000_000 },
-      { label: "Sof pul oqimi", cur: 64_400_000, prev: 59_200_000, bold: true, positive: true },
-    ],
+  const titles: Record<string, string> = {
+    profit_loss: "Foyda va zarar hisoboti",
+    balance: "Balans hisoboti (F-1)",
+    qqs: "QQS deklaratsiyasi",
+    cashflow: "Pul oqimi hisoboti",
   };
+  return { title: titles[type] ?? "Hisobot", lines: [] };
 }

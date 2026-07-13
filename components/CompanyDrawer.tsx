@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Company, OperationEntry, Payment, Language, ClientCredential, ClientHistory, Staff } from '@/types';
 import { X, Shield, FileText, Lock, Globe, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Check, Calculator, Trash2, Plus, Pencil, Save, Loader2, Phone } from 'lucide-react';
 import { getKpiRules, getCompanyKpiRules, upsertCompanyKpiRule } from '@/server/kpi';
+import { getClientCredentials, createClientCredential, deleteClientCredential } from '@/server/credentials';
 
 interface DrawerProps {
   company: Company | null;
@@ -47,10 +48,16 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
       setAssignmentsError(null);
       (async () => {
         try {
-          // Documents & credentials loaded via server actions in future iterations
           setDocuments([]);
-          setCredentials([]);
           setClientHistory([]);
+          // Kirish ma'lumotlari (credentials) — serverdan
+          try {
+            const creds = await getClientCredentials(company.id);
+            setCredentials(creds as unknown as ClientCredential[]);
+          } catch (e) {
+            console.warn('[CompanyDrawer] getClientCredentials failed:', e);
+            setCredentials([]);
+          }
           // Assignments derived from company props (server action on page saves to DB)
           setAssignments(teamFallbackAssignments());
         } finally {
@@ -511,18 +518,20 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         disabled={!newCred.serviceName || !newCred.loginId}
                         onClick={async () => {
                           if (!newCred.serviceName || !newCred.loginId) return;
-                          // Add to local state (page saves to DB via server action on next onSave call)
-                          const tempCred: any = {
-                            id: `temp-${Date.now()}`,
-                            companyId: company.id,
-                            serviceName: newCred.serviceName,
-                            loginId: newCred.loginId,
-                            encryptedPassword: newCred.password,
-                            notes: newCred.notes,
-                          };
-                          setCredentials(prev => [...prev, tempCred]);
-                          setIsAddingCredential(false);
-                          setNewCred({ serviceName: '', loginId: '', password: '', notes: '' });
+                          try {
+                            const saved = await createClientCredential({
+                              companyId: company.id,
+                              serviceName: newCred.serviceName,
+                              loginId: newCred.loginId,
+                              password: newCred.password,
+                              notes: newCred.notes,
+                            });
+                            setCredentials(prev => [saved as unknown as ClientCredential, ...prev]);
+                            setIsAddingCredential(false);
+                            setNewCred({ serviceName: '', loginId: '', password: '', notes: '' });
+                          } catch (e) {
+                            alert((e as Error).message || "Saqlashda xatolik");
+                          }
                         }}
                         className="px-2.5 py-1 bg-[var(--accent-blue)] text-white rounded-sm border border-[var(--accent-blue)] disabled:opacity-50 shadow-sm transition-all"
                       >
@@ -541,10 +550,14 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           <p className="text-[10px] font-bold text-[var(--text)] uppercase tracking-tight">{cred.serviceName}</p>
                         </div>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             if (confirm(`${cred.serviceName} o'chirilsinmi?`)) {
-                              // Remove from local state
-                              setCredentials(prev => prev.filter(c => c.id !== cred.id));
+                              try {
+                                await deleteClientCredential(cred.id);
+                                setCredentials(prev => prev.filter(c => c.id !== cred.id));
+                              } catch (e) {
+                                alert((e as Error).message || "O'chirishda xatolik");
+                              }
                             }
                           }}
                           className="p-1 text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] rounded-sm opacity-0 group-hover/cred:opacity-100 transition-all"

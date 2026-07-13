@@ -212,6 +212,10 @@ export async function changePassword(
   const userId = session.user.id;
   if (id !== userId) throw new Error("Forbidden");
 
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error("Parol kamida 6 ta belgidan iborat bo'lishi kerak");
+  }
+
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) throw new Error("User not found");
 

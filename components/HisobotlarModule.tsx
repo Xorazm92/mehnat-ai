@@ -179,6 +179,14 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
               <button onClick={() => setViewing(null)} style={{ color: "var(--text-muted)" }}><X size={20} /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
+              {(viewing.data?.lines || []).length === 0 && (
+                <div className="text-center py-10">
+                  <FileText size={28} className="mx-auto mb-2 opacity-30" style={{ color: "var(--text-muted)" }} />
+                  <p className="text-[12px] font-bold" style={{ color: "var(--text-secondary)" }}>Hisobot satrlari hali kiritilmagan</p>
+                  <p className="text-[11px] mt-1" style={{ color: "var(--text-muted)" }}>Raqamlar buxgalteriya tizimidan yuklanadi yoki mas&apos;ul xodim tomonidan kiritiladi.</p>
+                </div>
+              )}
+              {(viewing.data?.lines || []).length > 0 && (
               <table className="w-full text-[12px]">
                 <thead><tr className="text-[9px] font-bold uppercase" style={{ color: "var(--text-muted)" }}><th className="text-left pb-2">Ko&apos;rsatkich</th><th className="text-right pb-2">{viewing.period}</th><th className="text-right pb-2">O&apos;tgan</th><th className="text-right pb-2">Δ</th></tr></thead>
                 <tbody>
@@ -195,10 +203,11 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
                   })}
                 </tbody>
               </table>
+              )}
               {viewing.status === "signing" && (
-                <div className="mt-5 p-4 rounded-xl" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
-                  <div className="flex items-center gap-2"><ShieldCheck size={16} style={{ color: "var(--success)" }} /><p className="text-[12px] font-bold" style={{ color: "var(--success)" }}>Tekshiruv o&apos;tdi — kontrol nisbatlar 24/24, xato yo&apos;q</p></div>
-                  <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>E-imzo kaliti ulangan · Soliq.uz&apos;ga yuborishga tayyor</p>
+                <div className="mt-5 p-4 rounded-xl" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
+                  <div className="flex items-center gap-2"><ShieldCheck size={16} style={{ color: "var(--accent-blue)" }} /><p className="text-[12px] font-bold" style={{ color: "var(--accent-blue)" }}>Imzolash bosqichida</p></div>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>E-imzo integratsiyasi hali ulanmagan — hujjat Soliq.uz kabinetida imzolanadi, so&apos;ng bu yerda &quot;yuborilgan&quot; deb belgilanadi.</p>
                 </div>
               )}
               {viewing.rejectedReason && <p className="mt-4 text-[11px] font-bold" style={{ color: "var(--danger)" }}>Rad sababi: {viewing.rejectedReason}</p>}

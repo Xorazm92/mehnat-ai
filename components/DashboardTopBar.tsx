@@ -13,6 +13,7 @@ import { useMobileNav } from "@/components/MobileNavContext";
 import { useTheme } from "next-themes";
 import GlobalSearch from "@/components/GlobalSearch";
 import FinanceAssistant from "@/components/FinanceAssistant";
+import { getHomeRoute } from "@/lib/permissions";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin:      "Super Admin",
@@ -97,13 +98,13 @@ export function DashboardTopBar({
         >
           <Menu size={20} />
         </button>
-        {/* Mobil brend belgisi (sidebar yashiringanda) */}
-        <Link href="/dashboard" className="md:hidden flex items-center gap-2" aria-label="ASRO">
+        {/* Mobil brend belgisi (sidebar yashiringanda) — rolga mos boshlang'ich sahifa */}
+        <Link href={getHomeRoute(userRole)} className="md:hidden flex items-center gap-2" aria-label="ASRO">
           <Image src="/asro-logo-192.png" alt="ASRO" width={28} height={28} priority className="w-7 h-7 object-contain" />
           <span className="text-[15px] font-black tracking-tight" style={{ color: "var(--text-primary)" }}>ASRO</span>
         </Link>
         {/* Global qidiruv */}
-        <GlobalSearch />
+        <GlobalSearch userRole={userRole} />
 
         {/* AI moliyachi yordamchi */}
         <FinanceAssistant />

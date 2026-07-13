@@ -1,7 +1,7 @@
 /**
  * YORQINOY BO'LIMI — firmalarni import qilish (idempotent, qayta ishga tushirsa bo'ladi).
  *
- * Manba: public/umumiy malumot firmalar.json (212 qator, JSON emas — `{...}, {...}` ketma-ketligi,
+ * Manba: data/umumiy malumot firmalar.json (212 qator, JSON emas — `{...}, {...}` ketma-ketligi,
  * tashqi `[ ]` yo'q — shuning uchun avval o'rab olinadi).
  *
  * Pipeline: JSON parse → Userlarni upsert (Buxgalter/Bank-klient/Назоратчи) →
@@ -40,7 +40,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(new Pool({ connectionStr
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const REBUILD = process.argv.includes("--rebuild");
-const SOURCE_FILE = path.join(__dirname, "../public/umumiy malumot firmalar.json");
+const SOURCE_FILE = path.join(__dirname, "../data/umumiy malumot firmalar.json");
 const CHIEF_EMAIL = "yorqinoy@mehnat.uz";
 const CHIEF_NAME = "Yorqinoy";
 const DEPT_NAME = "Yorqinoy bo'limi";

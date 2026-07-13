@@ -7,22 +7,27 @@ import {
   FileText, Wallet, Receipt, CreditCard, Calendar, Loader2, CornerDownLeft,
 } from "lucide-react";
 import { globalSearch, type SearchResults } from "@/server/search";
-import { ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { ROLE_LABELS, canSeeView, type UserRole, type AppView } from "@/lib/permissions";
 
-const PAGES = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, keys: "dashboard bosh sahifa" },
-  { label: "Firmalar", href: "/organizations", icon: Building2, keys: "firmalar korxona kompaniya" },
-  { label: "Xodimlar", href: "/staff", icon: Users, keys: "xodimlar hodim kadr" },
-  { label: "KPI", href: "/kpi", icon: TrendingUp, keys: "kpi reyting ball" },
-  { label: "Hisobotlar", href: "/reports", icon: FileText, keys: "hisobot matritsa" },
-  { label: "Kassa", href: "/kassa", icon: Wallet, keys: "kassa kirim to'lov" },
-  { label: "Xarajatlar", href: "/expenses", icon: Receipt, keys: "xarajat chiqim" },
-  { label: "Oylik", href: "/payroll", icon: CreditCard, keys: "oylik maosh zarplata" },
-  { label: "Davomat", href: "/attendance", icon: Calendar, keys: "davomat kelish" },
+const PAGES: { label: string; href: string; icon: React.ElementType; keys: string; view: AppView }[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, keys: "dashboard bosh sahifa", view: "dashboard" },
+  { label: "Firmalar", href: "/organizations", icon: Building2, keys: "firmalar korxona kompaniya", view: "organizations" },
+  { label: "Xodimlar", href: "/staff", icon: Users, keys: "xodimlar hodim kadr", view: "staff" },
+  { label: "KPI", href: "/kpi", icon: TrendingUp, keys: "kpi reyting ball", view: "kpi" },
+  { label: "Hisobotlar", href: "/reports", icon: FileText, keys: "hisobot matritsa", view: "reports" },
+  { label: "Kassa", href: "/kassa", icon: Wallet, keys: "kassa kirim to'lov", view: "kassa" },
+  { label: "Xarajatlar", href: "/expenses", icon: Receipt, keys: "xarajat chiqim", view: "expenses" },
+  { label: "Oylik", href: "/payroll", icon: CreditCard, keys: "oylik maosh zarplata", view: "payroll" },
+  { label: "Davomat", href: "/attendance", icon: Calendar, keys: "davomat kelish", view: "attendance" },
+  { label: "Kabinet", href: "/cabinet", icon: LayoutDashboard, keys: "kabinet profil mening", view: "cabinet" },
 ];
 
-export default function GlobalSearch() {
+export default function GlobalSearch({ userRole }: { userRole: string }) {
   const router = useRouter();
+  // Faqat foydalanuvchi kira oladigan sahifalar
+  const allowedPages = PAGES.filter((p) => canSeeView(userRole as UserRole, p.view));
+  // Firma natijasi — rol /organizations'ga kira olsa o'sha yerga, aks holda kabinetga
+  const companyHref = canSeeView(userRole as UserRole, "organizations") ? "/organizations" : "/cabinet";
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -85,8 +90,8 @@ export default function GlobalSearch() {
   }, [router]);
 
   const pageMatches = query.trim().length >= 1
-    ? PAGES.filter((p) => (p.label + " " + p.keys).toLowerCase().includes(query.trim().toLowerCase()))
-    : PAGES.slice(0, 5);
+    ? allowedPages.filter((p) => (p.label + " " + p.keys).toLowerCase().includes(query.trim().toLowerCase()))
+    : allowedPages.slice(0, 5);
 
   const hasResults = results.companies.length > 0 || results.staff.length > 0 || pageMatches.length > 0;
 
@@ -143,7 +148,7 @@ export default function GlobalSearch() {
                   icon={<Building2 size={15} />}
                   label={c.name}
                   sub={`INN: ${c.inn}`}
-                  onClick={() => go("/organizations")}
+                  onClick={() => go(companyHref)}
                 />
               ))}
             </Section>

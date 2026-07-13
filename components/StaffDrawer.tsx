@@ -1,11 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { toast } from "sonner";
 import { Staff, Company } from "@/types";
 import { ROLE_LABELS, ROLE_COLORS, type UserRole } from "@/lib/permissions";
 import {
   X, Edit3, Phone, Mail, IdCard, Briefcase, Building, GraduationCap,
   CalendarDays, User as UserIcon, Award, CheckCircle2, Hash, Building2, Percent,
+  KeyRound, Copy, Check, RefreshCw, Loader2,
 } from "lucide-react";
 
 interface Props {
@@ -13,6 +15,7 @@ interface Props {
   companies: Company[];
   onClose: () => void;
   onEdit: (person: Staff) => void;
+  onResetPassword?: (id: string, newPassword: string) => Promise<void>;
 }
 
 const EDUCATION_LABELS: Record<string, string> = {
@@ -44,7 +47,7 @@ function companyRoleFor(c: Company, personId: string, personName: string): { rol
   return null;
 }
 
-export default function StaffDrawer({ person, companies, onClose, onEdit }: Props) {
+export default function StaffDrawer({ person, companies, onClose, onEdit, onResetPassword }: Props) {
   const roleColor = ROLE_COLORS[person.role as UserRole] || "#64748b";
   const status = person.status || "active";
   const sm = STATUS_META[status] || STATUS_META.active;
@@ -106,6 +109,9 @@ export default function StaffDrawer({ person, companies, onClose, onEdit }: Prop
 
         {/* Body */}
         <div className="p-6 space-y-7 flex-1">
+          {/* Login va parol — xodim tizimga shu bilan kiradi */}
+          <CredentialsSection person={person} onResetPassword={onResetPassword} />
+
           {/* Shaxsiy */}
           <Section title="Shaxsiy ma'lumotlar" icon={IdCard}>
             <InfoRow icon={IdCard} label="JSHSHIR" value={person.pinfl || "—"} mono />
@@ -175,6 +181,111 @@ export default function StaffDrawer({ person, companies, onClose, onEdit }: Prop
 }
 
 // ─── Yordamchi komponentlar ────────────────────────────────
+// Login va parol boshqaruvi — admin xodimga kirish ma'lumotini beradi
+function CredentialsSection({ person, onResetPassword }: { person: Staff; onResetPassword?: (id: string, pw: string) => Promise<void> }) {
+  const [mode, setMode] = useState<"idle" | "editing" | "saved">("idle");
+  const [pw, setPw] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const genPw = () => {
+    const base = (person.name.split(" ")[0] || "asro").replace(/[^a-zA-Z]/g, "") || "Asro";
+    const cap = base.charAt(0).toUpperCase() + base.slice(1).toLowerCase();
+    return `${cap}${Math.floor(1000 + Math.random() * 9000)}!`;
+  };
+  const copy = (text: string, key: string) => {
+    navigator.clipboard?.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 1500);
+  };
+  const startReset = () => { setPw(genPw()); setMode("editing"); };
+  const save = async () => {
+    if (!onResetPassword) return;
+    if (pw.length < 6) { toast.error("Parol kamida 6 ta belgidan iborat bo'lishi kerak"); return; }
+    setSaving(true);
+    try {
+      await onResetPassword(person.id, pw);
+      setMode("saved");
+      toast.success("Parol o'rnatildi — xodimga bering");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Xatolik yuz berdi");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <KeyRound size={15} style={{ color: "var(--accent-blue)" }} />
+        <span className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: "var(--text-secondary)" }}>Login va parol</span>
+        <span className="text-[9px] font-bold" style={{ color: "var(--text-muted)" }}>· xodim shu bilan kiradi</span>
+        <div className="flex-1 h-px ml-1" style={{ background: "var(--card-border)" }} />
+      </div>
+
+      <div className="rounded-xl overflow-hidden" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+        {/* Login (email) */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--card-border)" }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}><Mail size={15} /></div>
+          <div className="text-[10px] font-bold uppercase tracking-widest w-24 shrink-0" style={{ color: "var(--text-muted)" }}>Login</div>
+          <div className="text-[13px] font-bold font-mono truncate flex-1" style={{ color: "var(--text)" }}>{person.email || "—"}</div>
+          {person.email && (
+            <button onClick={() => copy(person.email!, "login")} className="shrink-0 p-1.5 rounded-md transition-colors" style={{ color: copied === "login" ? "var(--success)" : "var(--text-muted)" }} title="Nusxa olish">
+              {copied === "login" ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+          )}
+        </div>
+
+        {/* Parol */}
+        <div className="px-4 py-3">
+          {mode === "idle" && (
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}><KeyRound size={15} /></div>
+              <div className="text-[10px] font-bold uppercase tracking-widest flex-1" style={{ color: "var(--text-muted)" }}>Parol · ••••••••</div>
+              {onResetPassword && (
+                <button onClick={startReset} className="shrink-0 text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all" style={{ color: "var(--accent-blue)", background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
+                  Parol o&apos;rnatish
+                </button>
+              )}
+            </div>
+          )}
+
+          {mode === "editing" && (
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Yangi parol</label>
+              <div className="flex items-center gap-2">
+                <input value={pw} onChange={(e) => setPw(e.target.value)} className="erp-input font-mono tracking-wider" placeholder="Kamida 6 ta belgi" />
+                <button onClick={() => setPw(genPw())} className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }} title="Yangi parol taklif qilish">
+                  <RefreshCw size={15} />
+                </button>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setMode("idle")} className="px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Bekor</button>
+                <button onClick={save} disabled={saving} className="px-5 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center gap-2 text-white" style={{ background: "linear-gradient(135deg, var(--primary), var(--accent-blue-hover))" }}>
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Saqlash
+                </button>
+              </div>
+            </div>
+          )}
+
+          {mode === "saved" && (
+            <div className="rounded-lg p-3" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
+              <div className="text-[10px] font-black uppercase tracking-widest mb-1.5" style={{ color: "var(--success)" }}>Parol o&apos;rnatildi — xodimga bering</div>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-[14px] font-mono font-bold px-3 py-2 rounded-md" style={{ background: "var(--card-bg)", color: "var(--text)", border: "1px solid var(--card-border)" }}>{pw}</code>
+                <button onClick={() => copy(pw, "pw")} className="shrink-0 px-3 py-2 rounded-md flex items-center gap-1.5 text-[11px] font-bold" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: copied === "pw" ? "var(--success)" : "var(--text-secondary)" }}>
+                  {copied === "pw" ? <Check size={13} /> : <Copy size={13} />} {copied === "pw" ? "Olindi" : "Nusxa"}
+                </button>
+              </div>
+              <button onClick={() => setMode("idle")} className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: "var(--text-muted)" }}>Yopish</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Section({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
     <div>
