@@ -4,7 +4,6 @@ import {
   ROLES,
   ROLE_LABELS,
   ROLE_PERMISSIONS,
-  ALLOWED_VIEWS,
   type UserRole,
   type Capability,
 } from "@/lib/permissions";
@@ -32,9 +31,10 @@ export function RolePermissionMatrix() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Rollar & Ruxsatlar</h1>
+        <h2 className="text-lg font-black" style={{ color: "var(--text-primary)" }}>Qobiliyatlar (server xavfsizligi)</h2>
         <p className="text-[12px] font-medium" style={{ color: "var(--text-muted)" }}>
-          Kod bilan belgilangan (RBAC) — faqat ko&apos;rish uchun. O&apos;zgartirish: <span className="font-mono">lib/permissions.ts</span>
+          Kod bilan belgilangan RBAC — ma&apos;lumot uchun. Bu qobiliyatlar server tekshiruvlarini ta&apos;minlaydi
+          (<span className="font-mono">lib/permissions.ts</span>). Menyu ko&apos;rinishini yuqoridagi jadvaldan sozlang.
         </p>
       </div>
 
@@ -74,21 +74,6 @@ export function RolePermissionMatrix() {
         </div>
       </div>
 
-      <div className="rounded-xl p-4" style={card}>
-        <div className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--text-muted)" }}>Ko&apos;rinadigan bo&apos;limlar (views)</div>
-        <div className="space-y-2">
-          {ROLE_LIST.map((r) => (
-            <div key={r} className="flex flex-wrap items-center gap-2">
-              <span className="text-[12px] font-bold w-40 shrink-0" style={{ color: "var(--text-secondary)" }}>{ROLE_LABELS[r]}</span>
-              <div className="flex flex-wrap gap-1">
-                {(ALLOWED_VIEWS[r] || []).map((v) => (
-                  <span key={v} className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ background: "var(--input-bg)", color: "var(--text-muted)" }}>{v}</span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import OperationModule from "@/components/OperationModule";
 import HisobotlarModule from "@/components/HisobotlarModule";
 import { upsertMonthlyReport } from "@/server/operations";
 import { Company, Staff, OperationEntry } from "@/types";
+import type { ReportColumn } from "@/lib/reportColumns";
 import { FileText, Grid3x3 } from "lucide-react";
 
 interface Props {
@@ -17,9 +18,10 @@ interface Props {
   focusCompany?: string | null;
   focusCol?: string | null;
   focusPeriod?: string | null;
+  reportColumns?: ReportColumn[];
 }
 
-export default function ReportsClient({ companies, operations, staff, userRole, currentUserId, userName, focusCompany, focusCol, focusPeriod }: Props) {
+export default function ReportsClient({ companies, operations, staff, userRole, currentUserId, userName, focusCompany, focusCol, focusPeriod, reportColumns }: Props) {
   const hasFocus = !!(focusCompany && focusCol);
   const [selectedPeriod, setSelectedPeriod] = useState<string>(focusPeriod || "2026-03");
   const [tab, setTab] = useState<"reports" | "matrix">(hasFocus ? "matrix" : "reports");
@@ -61,6 +63,7 @@ export default function ReportsClient({ companies, operations, staff, userRole, 
             currentUserId={currentUserId}
             userName={userName}
             focusProof={hasFocus ? { companyId: focusCompany as string, colKey: focusCol as string } : null}
+            reportColumns={reportColumns}
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
             onCompanySelect={() => {}}

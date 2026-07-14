@@ -41,6 +41,13 @@ export default function AdminUsersClient({ users }: { users: AdminUser[] }) {
               password: d.password || "Password123!",
               role: d.role as never,
               phone: d.phone,
+              pinfl: d.pinfl,
+              department: d.department,
+              gender: d.gender,
+              birthDate: d.birthDate || undefined,
+              education: d.education,
+              hiredAt: d.hiredAt || undefined,
+              status: d.status,
             }),
           "Foydalanuvchi qo'shildi"
         )
@@ -52,6 +59,13 @@ export default function AdminUsersClient({ users }: { users: AdminUser[] }) {
               fullName: d.fullName,
               phone: d.phone,
               role: d.role as never,
+              pinfl: d.pinfl,
+              department: d.department,
+              gender: d.gender,
+              birthDate: d.birthDate || undefined,
+              education: d.education,
+              hiredAt: d.hiredAt || undefined,
+              status: d.status,
             }),
           "Saqlandi"
         )

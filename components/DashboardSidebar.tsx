@@ -55,16 +55,18 @@ const GROUP_LABELS: Record<string, string> = {
 
 interface DashboardSidebarProps {
   userRole: string;
+  /** Admin RBAC editoridan kelgan amaldagi view'lar; berilmasa kod default'i. */
+  allowedViews?: string[];
 }
 
-export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
+export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: DashboardSidebarProps) {
   const pathname = usePathname();
   const { open, setOpen } = useMobileNav();
   const role = userRole as UserRole;
-  const allowedViews = ALLOWED_VIEWS[role] || [];
+  const allowedViews: string[] = allowedViewsProp ?? ALLOWED_VIEWS[role] ?? [];
 
   const visibleItems = ALL_NAV_ITEMS.filter((item) =>
-    allowedViews.includes(item.view as any)
+    allowedViews.includes(item.view as string)
   );
 
   // Group items

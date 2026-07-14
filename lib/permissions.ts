@@ -205,8 +205,77 @@ export const ROLE_COLORS: Record<UserRole, string> = {
   [ROLES.BANK_MANAGER]: "#06b6d4", // moviy
 };
 
+// Barcha view'lar ro'yxati (AppView union bilan mos) — admin RBAC editori uchun
+export const ALL_VIEWS: AppView[] = [
+  "dashboard",
+  "organizations",
+  "staff",
+  "reports",
+  "kpi",
+  "kassa",
+  "expenses",
+  "cabinet",
+  "cabinet_bank",
+  "payroll",
+  "audit_logs",
+  "attendance",
+  "documents",
+  "inventory",
+  "notifications",
+  "settings",
+  "admin",
+];
+
+export const VIEW_LABELS: Record<AppView, string> = {
+  dashboard: "Boshqaruv paneli",
+  organizations: "Firmalar",
+  staff: "Xodimlar",
+  reports: "Hisobotlar",
+  kpi: "KPI",
+  kassa: "Kassa",
+  expenses: "Xarajatlar",
+  cabinet: "Kabinet",
+  cabinet_bank: "Bank kabineti",
+  payroll: "Oylik",
+  audit_logs: "Audit jurnali",
+  attendance: "Davomat",
+  documents: "Hujjatlar",
+  inventory: "Inventar",
+  notifications: "Xabarlar",
+  settings: "Sozlamalar",
+  admin: "Admin panel",
+};
+
+// Admin tomonidan tahrirlanadigan rol→view override'lari (SystemSetting: "roleViews")
+export type RoleViewOverrides = Partial<Record<UserRole, AppView[]>>;
+
+/**
+ * Rol uchun AMALDAGI view'lar: override bo'lsa o'sha, aks holda kodдаgi default.
+ * Bu faqat KO'RINISHNI (menyu/nav) boshqaradi — server xavfsizlik tekshiruvlari
+ * (isSeniorRole/isAdminRole/rol massivlari) o'z kuchida qoladi.
+ */
+export const effectiveViewsForRole = (
+  role: UserRole,
+  overrides?: RoleViewOverrides | null
+): AppView[] => {
+  // Superadmin hamma narsani ko'radi — hech qachon cheklanmaydi (o'zini bloklamaslik)
+  if (role === "super_admin") return ALL_VIEWS;
+  const ov = overrides?.[role];
+  if (ov && Array.isArray(ov)) return ov;
+  return ALLOWED_VIEWS[role] || [];
+};
+
 export const canSeeView = (role: UserRole, viewId: string): boolean => {
   return ALLOWED_VIEWS[role]?.includes(viewId as AppView) || false;
+};
+
+// Override'larni hisobga oluvchi variant (server komponent/gate'lar uchun)
+export const canSeeViewWith = (
+  role: UserRole,
+  viewId: string,
+  overrides?: RoleViewOverrides | null
+): boolean => {
+  return effectiveViewsForRole(role, overrides).includes(viewId as AppView);
 };
 
 export const hasPermission = (

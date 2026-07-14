@@ -6,12 +6,7 @@ import {
   ShieldCheck,
   Settings,
   ScrollText,
-  Building,
-  CreditCard,
-  Wallet,
   FileText,
-  TrendingUp,
-  FolderArchive,
   KeyRound,
   Boxes,
   FileSignature,
@@ -62,14 +57,10 @@ export const ADMIN_MODULES: AdminModule[] = [
   { id: "roles", labelUz: "Rollar & Ruxsatlar", icon: ShieldCheck, href: "/admin/roles", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Rol-ruxsat matritsasi" },
   { id: "settings", labelUz: "Tizim sozlamalari", icon: Settings, href: "/admin/settings", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Global konfiguratsiya va modullar" },
   { id: "audit", labelUz: "Audit jurnali", icon: ScrollText, href: "/admin/audit", group: "tizim", status: "ready", requiredCapability: "view_audit_logs", descUz: "Tizimdagi o'zgarishlar tarixi" },
+  { id: "operation_matrix", labelUz: "Amallar matritsasi", icon: FileText, href: "/admin/operation-matrix", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Hisobot ustunlarini yoqish/o'chirish, tartiblash, nomlash" },
 
-  // --- Moliya (launchers to existing, working pages) ---
-  { id: "companies", labelUz: "Firmalar", icon: Building, href: "/organizations", group: "moliya", status: "ready", requiredCapability: "view_all_companies", descUz: "Mijozlar va shartnomalar" },
-  { id: "payroll", labelUz: "Ish haqi", icon: CreditCard, href: "/payroll", group: "moliya", status: "ready", requiredCapability: "view_salaries", descUz: "Oylik hisob-kitobi" },
-  { id: "kassa", labelUz: "Bank / Kassa", icon: Wallet, href: "/kassa", group: "moliya", status: "ready", requiredCapability: "process_payments", descUz: "To'lovlar va operatsiyalar" },
-  { id: "reports", labelUz: "Soliq hisobotlari", icon: FileText, href: "/reports", group: "moliya", status: "ready", requiredCapability: "submit_reports", descUz: "Amallar matritsasi" },
-  { id: "kpi", labelUz: "KPI tizimi", icon: TrendingUp, href: "/kpi", group: "moliya", status: "ready", requiredCapability: "approve_kpi", descUz: "KPI qoidalari va baholash" },
-  { id: "documents", labelUz: "Hujjatlar arxivi", icon: FolderArchive, href: "/documents", group: "moliya", status: "ready", descUz: "Firma hujjatlari" },
+  // NOTE: Moliya sahifalari (Firmalar, Kassa, Hisobotlar, Oylik, KPI, Hujjatlar)
+  // asosiy menyuда bor — bu yerda takrorlanmaydi. Admin panel = tizim boshqaruvi.
 
   // --- Integratsiyalar & kelajakdagi modullar (placeholder, drop-in) ---
   { id: "eimzo", labelUz: "E-imzo", icon: KeyRound, href: "/admin/m/eimzo", group: "integratsiya", status: "soon", featureFlag: "eimzo", descUz: "Elektron imzo integratsiyasi" },

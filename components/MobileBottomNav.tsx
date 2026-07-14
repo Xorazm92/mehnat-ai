@@ -23,12 +23,13 @@ const CANDIDATES: { view: AppView; href: string; label: string; icon: React.Elem
   { view: "notifications", href: "/notifications", label: "Xabar", icon: Bell },
 ];
 
-export function MobileBottomNav({ userRole }: { userRole: string }) {
+export function MobileBottomNav({ userRole, allowedViews }: { userRole: string; allowedViews?: string[] }) {
   const pathname = usePathname();
   const { toggle } = useMobileNav();
   const role = userRole as UserRole;
 
-  const items = CANDIDATES.filter((c) => canSeeView(role, c.view)).slice(0, 4);
+  const canSee = (v: AppView) => (allowedViews ? allowedViews.includes(v) : canSeeView(role, v));
+  const items = CANDIDATES.filter((c) => canSee(c.view)).slice(0, 4);
 
   const isActive = (href: string) =>
     pathname === href || (href !== "/cabinet" && pathname.startsWith(href + "/")) ||

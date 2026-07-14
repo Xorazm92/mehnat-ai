@@ -1,8 +1,16 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
 import { KPIRule, KpiRuleOption, Language, KPIRoleType } from '@/types';
-import { Settings, Edit3, Trash2, X, Shield, Landmark, Calculator } from 'lucide-react';
-import { getKpiRules, updateKpiRule, deleteKpiRule } from '@/server/kpi';
+import { Settings, Edit3, Trash2, X, Shield, Landmark, Calculator, Plus } from 'lucide-react';
+import { getKpiRules, createKpiRule, updateKpiRule, deleteKpiRule } from '@/server/kpi';
+
+// inputTypeV2 → legacy inputType (yangi qoida yaratishда talab qilinadi)
+const LEGACY_INPUT: Record<string, string> = {
+    select: 'checkbox', counter: 'counter', checkbox_bonus: 'checkbox',
+    checkbox_penalty: 'checkbox', amount_penalty: 'number',
+};
+const slugify = (s: string) =>
+    s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `rule_${Date.now()}`;
 
 interface Props { lang: Language; }
 
@@ -57,21 +65,47 @@ const KPIRulesManager: React.FC<Props> = () => {
         try { await deleteKpiRule(id); loadRules(); } catch (e) { alert((e as Error).message); }
     };
 
+    const openCreate = () => setEditingRule({
+        name: '', nameUz: '', role: 'accountant', category: 'general',
+        inputTypeV2: 'select', scope: 'per_company', maxBonus: null, maxPenalty: null,
+        descriptionUz: '', options: [], isActive: true,
+    });
+
     const handleSave = async () => {
-        if (!editingRule?.id) return;
+        if (!editingRule) return;
         const mb = editingRule.maxBonus == null ? null : Number(editingRule.maxBonus);
         const mp = editingRule.maxPenalty == null ? null : Number(editingRule.maxPenalty);
+        const v2 = editingRule.inputTypeV2 || 'select';
         try {
-            await updateKpiRule(editingRule.id, {
-                nameUz: editingRule.nameUz,
-                descriptionUz: editingRule.descriptionUz,
-                category: editingRule.category,
-                scope: editingRule.scope,
-                inputTypeV2: editingRule.inputTypeV2,
-                maxBonus: mb,
-                maxPenalty: mp,
-                isActive: editingRule.isActive,
-            });
+            if (editingRule.id) {
+                await updateKpiRule(editingRule.id, {
+                    nameUz: editingRule.nameUz,
+                    descriptionUz: editingRule.descriptionUz,
+                    category: editingRule.category,
+                    scope: editingRule.scope,
+                    inputTypeV2: editingRule.inputTypeV2,
+                    maxBonus: mb,
+                    maxPenalty: mp,
+                    isActive: editingRule.isActive,
+                });
+            } else {
+                if (!editingRule.nameUz?.trim()) { alert("Nomi (o'zbekcha) kiritilishi shart"); return; }
+                await createKpiRule({
+                    name: (editingRule.name?.trim() || slugify(editingRule.nameUz)),
+                    nameUz: editingRule.nameUz.trim(),
+                    role: editingRule.role || 'accountant',
+                    category: editingRule.category || 'general',
+                    rewardPercent: mb ?? 0,
+                    penaltyPercent: mp ?? 0,
+                    inputType: LEGACY_INPUT[v2] || 'checkbox',
+                    inputTypeV2: v2,
+                    scope: editingRule.scope || 'per_company',
+                    descriptionUz: editingRule.descriptionUz,
+                    maxBonus: mb,
+                    maxPenalty: mp,
+                    options: [],
+                });
+            }
             setEditingRule(null);
             loadRules();
         } catch (e) { alert((e as Error).message); }
@@ -126,13 +160,17 @@ const KPIRulesManager: React.FC<Props> = () => {
                         <p className="text-[11px] mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>Uch holatli tizim — bonus / neytral / jarima</p>
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     {ROLE_META.map(m => (
                         <div key={m.key} className="px-3 py-2 rounded-lg text-center" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                             <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: m.accent }}>{m.label}</p>
                             <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{m.base} + KPI {m.kpi}</p>
                         </div>
                     ))}
+                    <button onClick={openCreate} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest text-white"
+                        style={{ background: 'var(--accent-blue)' }}>
+                        <Plus size={14} /> Yangi qoida
+                    </button>
                 </div>
             </div>
 
@@ -217,8 +255,8 @@ const KPIRulesManager: React.FC<Props> = () => {
                         style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: '0 25px 60px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}>
                         <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)', background: 'var(--table-header-bg)' }}>
                             <div>
-                                <h3 className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>{editingRule.nameUz}</h3>
-                                <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>{editingRule.name}</p>
+                                <h3 className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>{editingRule.id ? editingRule.nameUz : 'Yangi KPI qoidasi'}</h3>
+                                <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>{editingRule.id ? editingRule.name : "rol va nom tanlang"}</p>
                             </div>
                             <button onClick={() => setEditingRule(null)} style={{ color: 'var(--text-muted)' }}><X size={20} /></button>
                         </div>
@@ -227,6 +265,23 @@ const KPIRulesManager: React.FC<Props> = () => {
                                 <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Nomi (O&apos;zbekcha)</label>
                                 <input className="erp-input font-bold" value={editingRule.nameUz || ''} onChange={e => setEditingRule({ ...editingRule, nameUz: e.target.value })} />
                             </div>
+                            {!editingRule.id && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Rol</label>
+                                        <select className="erp-input font-bold" value={editingRule.role || 'accountant'} onChange={e => setEditingRule({ ...editingRule, role: e.target.value as KPIRule['role'] })}>
+                                            <option value="accountant">Buxgalter</option>
+                                            <option value="bank_client">Bank-klient</option>
+                                            <option value="supervisor">Nazoratchi</option>
+                                            <option value="all">Hammasi</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Internal nom (ixtiyoriy)</label>
+                                        <input className="erp-input font-mono text-[12px]" placeholder="avto (nomdan)" value={editingRule.name || ''} onChange={e => setEditingRule({ ...editingRule, name: e.target.value })} />
+                                    </div>
+                                </div>
+                            )}
                             <div>
                                 <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Izoh</label>
                                 <textarea className="erp-input min-h-[70px] resize-none" value={editingRule.descriptionUz || ''} onChange={e => setEditingRule({ ...editingRule, descriptionUz: e.target.value })} />

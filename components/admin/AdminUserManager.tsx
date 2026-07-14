@@ -11,6 +11,12 @@ export interface AdminUser {
   role: string;
   phone?: string | null;
   department?: string | null;
+  pinfl?: string | null;
+  gender?: string | null;
+  birthDate?: string | null;
+  education?: string | null;
+  hiredAt?: string | null;
+  status?: string | null;
   isActive: boolean;
   createdAt?: string;
 }
@@ -22,7 +28,17 @@ interface FormData {
   phone?: string;
   role: string;
   password?: string;
+  department?: string;
+  pinfl?: string;
+  gender?: string;
+  birthDate?: string;
+  education?: string;
+  hiredAt?: string;
+  status?: string;
 }
+
+// DateTime ISO → input[type=date] uchun YYYY-MM-DD
+const toDateInput = (v?: string | null) => (v ? String(v).slice(0, 10) : "");
 
 interface Props {
   users: AdminUser[];
@@ -68,9 +84,14 @@ export function AdminUserManager({
   }, [users, search, roleFilter]);
 
   const openCreate = () =>
-    setForm({ fullName: "", email: "", phone: "", role: ROLES.ACCOUNTANT, password: "" });
+    setForm({ fullName: "", email: "", phone: "", role: ROLES.ACCOUNTANT, password: "", department: "", pinfl: "", gender: "", birthDate: "", education: "", hiredAt: "", status: "active" });
   const openEdit = (u: AdminUser) =>
-    setForm({ id: u.id, fullName: u.fullName, email: u.email, phone: u.phone || "", role: u.role });
+    setForm({
+      id: u.id, fullName: u.fullName, email: u.email, phone: u.phone || "", role: u.role,
+      department: u.department || "", pinfl: u.pinfl || "", gender: u.gender || "",
+      birthDate: toDateInput(u.birthDate), education: u.education || "",
+      hiredAt: toDateInput(u.hiredAt), status: u.status || "active",
+    });
 
   const submit = () => {
     if (!form) return;
@@ -182,6 +203,43 @@ export function AdminUserManager({
             </Field>
             <Field label="Telefon">
               <input className={inputCls} style={inputStyle} value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="JSHSHIR (PINFL)">
+                <input className={inputCls} style={inputStyle} inputMode="numeric" maxLength={14} value={form.pinfl || ""} onChange={(e) => setForm({ ...form, pinfl: e.target.value })} />
+              </Field>
+              <Field label="Bo'lim">
+                <input className={inputCls} style={inputStyle} value={form.department || ""} onChange={(e) => setForm({ ...form, department: e.target.value })} />
+              </Field>
+              <Field label="Jinsi">
+                <select className={inputCls} style={inputStyle} value={form.gender || ""} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+                  <option value="">—</option>
+                  <option value="erkak">Erkak</option>
+                  <option value="ayol">Ayol</option>
+                </select>
+              </Field>
+              <Field label="Ma'lumoti">
+                <select className={inputCls} style={inputStyle} value={form.education || ""} onChange={(e) => setForm({ ...form, education: e.target.value })}>
+                  <option value="">—</option>
+                  <option value="orta">O&apos;rta</option>
+                  <option value="orta_maxsus">O&apos;rta maxsus</option>
+                  <option value="oliy">Oliy</option>
+                  <option value="magistratura">Magistratura</option>
+                </select>
+              </Field>
+              <Field label="Tug'ilgan sana">
+                <input type="date" className={inputCls} style={inputStyle} value={form.birthDate || ""} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
+              </Field>
+              <Field label="Ishga kirgan sana">
+                <input type="date" className={inputCls} style={inputStyle} value={form.hiredAt || ""} onChange={(e) => setForm({ ...form, hiredAt: e.target.value })} />
+              </Field>
+            </div>
+            <Field label="Holati">
+              <select className={inputCls} style={inputStyle} value={form.status || "active"} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                <option value="active">Faol (ishда)</option>
+                <option value="vacation">Ta&apos;tilда</option>
+                <option value="sick">Kasallik</option>
+              </select>
             </Field>
             <Field label="Rol">
               <select className={inputCls} style={inputStyle} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>

@@ -6,6 +6,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MobileNavProvider } from "@/components/MobileNavContext";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { getCachedUnreadCount } from "@/lib/cached-queries";
+import { getRoleViewOverrides } from "@/server/rbac";
+import { effectiveViewsForRole, type UserRole } from "@/lib/permissions";
 
 export default async function DashboardLayout({
   children,
@@ -16,7 +18,12 @@ export default async function DashboardLayout({
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role ?? "";
   const avatarColor = session?.user?.avatarColor ?? undefined;
-  const unreadCount = userId ? await getCachedUnreadCount(userId) : 0;
+  const [unreadCount, roleViewOverrides] = await Promise.all([
+    userId ? getCachedUnreadCount(userId) : Promise.resolve(0),
+    userId ? getRoleViewOverrides().catch(() => ({})) : Promise.resolve({}),
+  ]);
+  // Admin tomonidan sozlangan menyu ko'rinishi (override) — bo'lmasa kod default'i
+  const allowedViews = effectiveViewsForRole(userRole as UserRole, roleViewOverrides) as string[];
 
   return (
     <SessionProvider session={session}>
@@ -42,7 +49,7 @@ export default async function DashboardLayout({
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           {/* Sidebar */}
-          <DashboardSidebar userRole={userRole} />
+          <DashboardSidebar userRole={userRole} allowedViews={allowedViews} />
 
           {/* Main content */}
           <main
@@ -54,7 +61,7 @@ export default async function DashboardLayout({
         </div>
 
         {/* Mobil pastki navigatsiya (faqat kichik ekranlarда) */}
-        <MobileBottomNav userRole={userRole} />
+        <MobileBottomNav userRole={userRole} allowedViews={allowedViews} />
       </div>
       </MobileNavProvider>
     </SessionProvider>

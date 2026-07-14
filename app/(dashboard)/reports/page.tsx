@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
+import { getEffectiveReportColumns } from "@/server/report-columns";
 import ReportsClient from "./ReportsClient";
 
 export default async function ReportsPage({
@@ -13,10 +14,11 @@ export default async function ReportsPage({
   const userRole = session?.user?.role || "employee";
   const userName = session?.user?.name ?? "";
 
-  const [companies, staff, operations] = await Promise.all([
+  const [companies, staff, operations, reportColumns] = await Promise.all([
     getCachedCompanies(userId, userRole),
     getCachedUsers(),
     getCachedOperations(userId, userRole),
+    getEffectiveReportColumns(),
   ]);
 
   const mappedStaff = staff.map((u) => ({
@@ -37,6 +39,7 @@ export default async function ReportsPage({
         focusCompany={sp.company ?? null}
         focusCol={sp.col ?? null}
         focusPeriod={sp.period ?? null}
+        reportColumns={reportColumns}
       />
     </div>
   );
