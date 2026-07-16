@@ -125,6 +125,34 @@ export async function deleteKpiRule(id: string) {
 // MONTHLY PERFORMANCE (KPI entries)
 // =====================================================
 
+async function findPerformance(opts: {
+  month: string;
+  employeeId?: string;
+  approvedOnly: boolean;
+}) {
+  return serialize(
+    await prisma.monthlyPerformance.findMany({
+      where: {
+        month: opts.month,
+        ...(opts.employeeId ? { employeeId: opts.employeeId } : {}),
+        ...(opts.approvedOnly ? { status: "approved" } : {}),
+      },
+      include: {
+        rule: true,
+        employee: { select: { id: true, fullName: true, role: true } },
+      },
+      orderBy: { recordedAt: "desc" },
+    })
+  );
+}
+
+/**
+ * Monthly Performance as CONTEXT.md defines it — "the record that payroll reads".
+ * Approved only. Drafts and self-assessments are proposals, not performance, and
+ * ADR-0001 is explicit that nothing pays on them.
+ *
+ * Reviewing proposals is a different question: use getPerformanceForReview.
+ */
 export async function getMonthlyPerformance(month: string, employeeId?: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -135,19 +163,22 @@ export async function getMonthlyPerformance(month: string, employeeId?: string) 
   // Non-senior users can only see their own
   const targetEmployeeId = isSeniorRole(role) ? employeeId : userId;
 
-  return serialize(
-    await prisma.monthlyPerformance.findMany({
-      where: {
-        month,
-        ...(targetEmployeeId ? { employeeId: targetEmployeeId } : {}),
-      },
-      include: {
-        rule: true,
-        employee: { select: { id: true, fullName: true, role: true } },
-      },
-      orderBy: { recordedAt: "desc" },
-    })
-  );
+  return findPerformance({ month, employeeId: targetEmployeeId, approvedOnly: true });
+}
+
+/**
+ * Every Monthly Performance row for the month whatever its status — the Supervisor's
+ * checklist needs to see a proposal in order to act on it. Never feed this to payroll.
+ */
+export async function getPerformanceForReview(month: string, employeeId?: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const userId = session.user.id;
+  const role = session.user.role as string;
+  const targetEmployeeId = isSeniorRole(role) ? employeeId : userId;
+
+  return findPerformance({ month, employeeId: targetEmployeeId, approvedOnly: false });
 }
 
 export async function upsertPerformance(data: {
@@ -333,7 +364,8 @@ export async function getEmployeeKpiSummary(month: string) {
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
   const performances = await prisma.monthlyPerformance.findMany({
-    where: { month, status: { in: ["submitted", "approved"] } },
+    // Approved only — ADR-0001: nothing pays on 'submitted'.
+    where: { month, status: "approved" },
     include: {
       employee: { select: { id: true, fullName: true, role: true } },
       rule: { select: { nameUz: true, category: true } },
@@ -440,7 +472,9 @@ export async function getKpiLeaderboard(month: string) {
 
   const [perfs, companies] = await Promise.all([
     prisma.monthlyPerformance.findMany({
-      where: { month, status: { in: ["approved", "submitted"] } },
+      // Approved only. A self-assessed 'submitted' row counting toward the
+      // leaderboard's bonusFund would let an employee inflate it unreviewed.
+      where: { month, status: "approved" },
       select: {
         employeeId: true,
         companyId: true,
@@ -499,7 +533,8 @@ export async function getKpiLeaderboard(month: string) {
     months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`);
   }
   const trendPerfs = await prisma.monthlyPerformance.findMany({
-    where: { month: { in: months }, status: { in: ["approved", "submitted"] } },
+    // Approved only — the 6-month trend must match what was actually paid.
+    where: { month: { in: months }, status: "approved" },
     select: { month: true, employeeId: true, calculatedScore: true, selectedOption: true },
   });
   const perMonthEmp = new Map<string, Map<string, { green: number; red: number }>>();

@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Staff, Company, Language, EmployeeSalarySummary, OperationEntry, MonthlyPerformance, KPIRule, CompanyKPIRule, EmployeeSalary } from '@/types';
-import { calculateCompanySalaries } from '@/lib/kpiLogic';
+import { calculateEmployeeSalary } from '@/lib/kpiLogic';
 import { DollarSign, CheckCircle2, AlertCircle, FileText, X, TrendingUp, TrendingDown } from 'lucide-react';
-import { periodsEqual } from '@/lib/periods';
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
 import { getPayrollAdjustments, approveEmployeeSalary } from '@/server/payroll';
 import { toast } from 'sonner';
@@ -57,142 +56,20 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
     }, [companies]);
 
     // Calculate drafts with per-company breakdowns
+    // The aggregation lives in lib/kpiLogic so the server can run the exact same
+    // calculation when the salary is approved. This table is a preview of it.
     const drafts = useMemo(() => {
         const results: Record<string, DraftWithBreakdowns> = {};
-        const checkMonth = month;
 
-        // 1. Indexing & Pre-filtering (O(N))
-        const opsByCompany = new Map<string, OperationEntry>();
-        const staffInOps = new Map<string, Set<string>>(); // companyId -> Set of staff IDs found in operations
-
-        operations.forEach(op => {
-            if (periodsEqual(op.period, checkMonth)) {
-                opsByCompany.set(op.companyId, op);
-
-                const sids = new Set<string>();
-                if (op.assigned_accountant_id) sids.add(op.assigned_accountant_id);
-                if (op.assigned_bank_manager_id) sids.add(op.assigned_bank_manager_id);
-                if (op.assigned_supervisor_id) sids.add(op.assigned_supervisor_id);
-                staffInOps.set(op.companyId, sids);
-            }
-        });
-
-        const perfsByCompany = new Map<string, MonthlyPerformance[]>();
-        performanceList.forEach(p => {
-            // Only approved KPI affects payroll. Backward compatible status check.
-            if (!p.status || p.status === 'approved') {
-                const arr = perfsByCompany.get(p.companyId) || [];
-                arr.push(p);
-                perfsByCompany.set(p.companyId, arr);
-            }
-        });
-
-        const overridesByCompany = new Map<string, CompanyKPIRule[]>();
-        companyOverrides.forEach(o => {
-            const arr = overridesByCompany.get(o.companyId) || [];
-            arr.push(o);
-            overridesByCompany.set(o.companyId, arr);
-        });
-
-        // Index companies by staff assignment for faster lookup
-        const staffCompaniesMap = new Map<string, Company[]>();
-        const staffNameMap = new Map<string, Company[]>(); // For name-based fallbacks
-
-        companies.forEach(c => {
-            const ids = [c.accountantId, c.bankClientId, c.supervisorId].filter(Boolean) as string[];
-            ids.forEach(id => {
-                const arr = staffCompaniesMap.get(id) || [];
-                arr.push(c);
-                staffCompaniesMap.set(id, arr);
-            });
-
-            if (c.bankClientName) {
-                const name = c.bankClientName.trim().toLowerCase();
-                const arr = staffNameMap.get(name) || [];
-                arr.push(c);
-                staffNameMap.set(name, arr);
-            }
-            if (c.supervisorName) {
-                const name = c.supervisorName.trim().toLowerCase();
-                const arr = staffNameMap.get(name) || [];
-                arr.push(c);
-                staffNameMap.set(name, arr);
-            }
-        });
-
-        // 2. Optimized Calculation Loop (O(N_staff * N_comp_per_staff))
         staff.forEach(s => {
-            let totalBase = 0;
-            let totalKpiBonus = 0;
-            let totalKpiPenalty = 0;
-            const companyBreakdowns: CompanyBreakdown[] = [];
-            const sNameLower = s.name.trim().toLowerCase();
-
-            // Collect all companies for this staff member (ID and Name matches)
-            const myCompaniesSet = new Set<Company>();
-
-            // Direct ID matches
-            (staffCompaniesMap.get(s.id) || []).forEach(c => myCompaniesSet.add(c));
-
-            // Name matches (fallbacks)
-            (staffNameMap.get(sNameLower) || []).forEach(c => {
-                if ((!c.bankClientId && c.bankClientName?.trim().toLowerCase() === sNameLower) ||
-                    (!c.supervisorId && c.supervisorName?.trim().toLowerCase() === sNameLower)) {
-                    myCompaniesSet.add(c);
-                }
-            });
-
-            // Matches from operations assignment
-            opsByCompany.forEach((op, cid) => {
-                const sids = staffInOps.get(cid);
-                if (sids?.has(s.id)) {
-                    const comp = companies.find(c => c.id === cid);
-                    if (comp) myCompaniesSet.add(comp);
-                }
-            });
-
-            myCompaniesSet.forEach(c => {
-                const op = opsByCompany.get(c.id);
-                const perf = perfsByCompany.get(c.id) || [];
-                const cOverrides = overridesByCompany.get(c.id) || [];
-
-                // Fast rule merge
-                const mergedRules = kpiRules.map(r => {
-                    const override = cOverrides.find(o => o.ruleId === r.id);
-                    if (override) {
-                        return {
-                            ...r,
-                            rewardPercent: override.rewardPercent ?? r.rewardPercent,
-                            penaltyPercent: override.penaltyPercent ?? r.penaltyPercent
-                        };
-                    }
-                    return r;
-                });
-
-                const roleResults = calculateCompanySalaries(c, op, perf, mergedRules);
-
-                roleResults.filter(r =>
-                    r.staffId === s.id ||
-                    (r.staffName && r.staffName.trim().toLowerCase() === sNameLower)
-                ).forEach(res => {
-                    const companyBonus = res.finalAmount > res.baseAmount ? (res.finalAmount - res.baseAmount) : 0;
-                    const companyPenalty = res.finalAmount < res.baseAmount ? (res.baseAmount - res.finalAmount) : 0;
-
-                    totalBase += res.baseAmount;
-                    totalKpiBonus += companyBonus;
-                    totalKpiPenalty += companyPenalty;
-
-                    companyBreakdowns.push({
-                        companyId: c.id,
-                        companyName: c.name,
-                        contractAmount: (op as any)?.contract_amount || c.contractAmount || 0,
-                        role: res.role,
-                        baseAmount: res.baseAmount,
-                        kpiBonus: companyBonus,
-                        kpiPenalty: companyPenalty,
-                        details: res.details
-                    });
-                });
+            const draft = calculateEmployeeSalary({
+                employee: s,
+                companies,
+                operations,
+                performances: performanceList,
+                rules: kpiRules,
+                overrides: companyOverrides,
+                month,
             });
 
             results[s.id] = {
@@ -200,14 +77,14 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                 employeeName: s.name,
                 employeeRole: s.role,
                 month,
-                companyCount: myCompaniesSet.size,
-                baseSalary: totalBase,
-                kpiBonus: totalKpiBonus,
-                kpiPenalty: -totalKpiPenalty,
+                companyCount: draft.companyCount,
+                baseSalary: draft.baseSalary,
+                kpiBonus: draft.kpiBonus,
+                kpiPenalty: draft.kpiPenalty,
                 adjustments: 0,
-                totalSalary: totalBase - totalKpiPenalty + totalKpiBonus,
+                totalSalary: draft.totalSalary,
                 performanceDetails: performanceList.filter(p => p.employeeId === s.id),
-                companyBreakdowns
+                companyBreakdowns: draft.companyBreakdowns
             };
         });
         return results;
@@ -278,13 +155,11 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
 
         setSavingId(employeeId);
         try {
+            // Only who and when — the server computes the amount itself and ignores
+            // whatever this component thinks it is. The figures above are a preview.
             const adjustment = await approveEmployeeSalary({
                 employeeId: draft.employeeId,
                 month: draft.month,
-                baseSalary: draft.baseSalary,
-                kpiBonus: draft.kpiBonus,
-                kpiPenalty: draft.kpiPenalty,
-                totalSalary: draft.totalSalary,
             });
             setApprovedSalaries(prev => [...prev, {
                 id: adjustment.id,

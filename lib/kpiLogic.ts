@@ -1,6 +1,7 @@
 
-import { Company, OperationEntry, ContractRole, MonthlyPerformance, KPIRule } from '@/types';
+import { Company, OperationEntry, ContractRole, MonthlyPerformance, KPIRule, Staff, CompanyKPIRule, CompanyBreakdown } from '@/types';
 import { capKpiPercent } from '@/lib/kpiScoring';
+import { periodsEqual } from '@/lib/periods';
 
 export interface SalaryResult {
     role: ContractRole | 'chief_accountant' | 'supervisor';
@@ -9,6 +10,10 @@ export interface SalaryResult {
     baseAmount: number;
     kpiScore: number; // percent sum (e.g. +0.5 means +0.5%)
     finalAmount: number;
+    // Pre-floor amount. finalAmount clamps at 0, which turns "penalties exceeded
+    // this person's entire base pay" into an ordinary-looking zero — that is how
+    // ADR-0004's defect stayed invisible. Callers check this to see the clamp fire.
+    rawAmount: number;
     details: string[];
 }
 
@@ -223,7 +228,8 @@ export const calculateCompanySalaries = (
         // Calculation: Salary = Base + (Contract * KPI% / 100)
         // This ensures KPI depends on total contract value, not the person's share.
         const kpiBonus = (contract * sumPercent) / 100;
-        const finalAmount = Math.max(0, base + kpiBonus);
+        const rawAmount = base + kpiBonus;
+        const finalAmount = Math.max(0, rawAmount);
 
         results.push({
             role,
@@ -232,6 +238,7 @@ export const calculateCompanySalaries = (
             baseAmount: base,
             kpiScore: sumPercent,
             finalAmount,
+            rawAmount,
             details: [
                 ...details,
                 `KPI Bonus: ${kpiBonus.toLocaleString()} so'm (${sumPercent.toFixed(2)}% of Contract)`
@@ -257,4 +264,146 @@ export const calculateCompanySalaries = (
     calculateForRole('supervisor', company.supervisorId, company.supervisorName, company.supervisorPerc, company.supervisorSum);
 
     return results;
+};
+
+export interface EmployeeSalaryDraft {
+    employeeId: string;
+    month: string;
+    companyCount: number;
+    baseSalary: number;
+    kpiBonus: number;
+    kpiPenalty: number; // negative
+    totalSalary: number;
+    // Sum of the per-company pre-floor amounts. totalSalary is built from clamped
+    // per-company figures, so a rawTotal below zero means penalties exceeded this
+    // person's whole base pay and the clamp is hiding it. The payroll write refuses
+    // on this — see ADR-0004.
+    rawTotal: number;
+    companyBreakdowns: CompanyBreakdown[];
+}
+
+/**
+ * One employee's salary for one month, across every Company they work.
+ *
+ * Pure: hand it the same inputs and it returns the same number, in a browser or on
+ * a server. The payroll write and the draft table both go through here so the figure
+ * a Supervisor approves is the figure that gets paid.
+ */
+export const calculateEmployeeSalary = ({
+    employee,
+    companies,
+    operations,
+    performances,
+    rules,
+    overrides,
+    month,
+}: {
+    employee: Staff;
+    companies: Company[];
+    operations: OperationEntry[];
+    performances: MonthlyPerformance[];
+    rules: KPIRule[];
+    overrides: CompanyKPIRule[];
+    month: string;
+}): EmployeeSalaryDraft => {
+    const nameLower = employee.name.trim().toLowerCase();
+
+    const opsByCompany = new Map<string, OperationEntry>();
+    const staffInOps = new Map<string, Set<string>>();
+    operations.forEach(op => {
+        if (!periodsEqual(op.period, month)) return;
+        opsByCompany.set(op.companyId, op);
+        const sids = new Set<string>();
+        if (op.assigned_accountant_id) sids.add(op.assigned_accountant_id);
+        if (op.assigned_bank_manager_id) sids.add(op.assigned_bank_manager_id);
+        if (op.assigned_supervisor_id) sids.add(op.assigned_supervisor_id);
+        staffInOps.set(op.companyId, sids);
+    });
+
+    // Only approved Monthly Performance affects pay (ADR-0001). The read module
+    // already filters, but this stays as a backstop for legacy rows with no status.
+    const perfsByCompany = new Map<string, MonthlyPerformance[]>();
+    performances.forEach(p => {
+        if (p.status && p.status !== 'approved') return;
+        const arr = perfsByCompany.get(p.companyId) || [];
+        arr.push(p);
+        perfsByCompany.set(p.companyId, arr);
+    });
+
+    const overridesByCompany = new Map<string, CompanyKPIRule[]>();
+    overrides.forEach(o => {
+        const arr = overridesByCompany.get(o.companyId) || [];
+        arr.push(o);
+        overridesByCompany.set(o.companyId, arr);
+    });
+
+    // A Company counts if the employee is named on it by id, matched by name where
+    // no id was ever set, or assigned through that month's operation.
+    const mine = new Set<Company>();
+    companies.forEach(c => {
+        const byId =
+            c.accountantId === employee.id ||
+            c.bankClientId === employee.id ||
+            c.supervisorId === employee.id ||
+            c.chiefAccountantId === employee.id;
+        const byName =
+            (!c.bankClientId && c.bankClientName?.trim().toLowerCase() === nameLower) ||
+            (!c.supervisorId && c.supervisorName?.trim().toLowerCase() === nameLower);
+        const byOperation = staffInOps.get(c.id)?.has(employee.id) ?? false;
+        if (byId || byName || byOperation) mine.add(c);
+    });
+
+    let baseSalary = 0;
+    let kpiBonus = 0;
+    let kpiPenalty = 0;
+    let rawTotal = 0;
+    const companyBreakdowns: CompanyBreakdown[] = [];
+
+    mine.forEach(c => {
+        const op = opsByCompany.get(c.id);
+        const perf = perfsByCompany.get(c.id) || [];
+        const cOverrides = overridesByCompany.get(c.id) || [];
+
+        const mergedRules = rules.map(r => {
+            const o = cOverrides.find(x => x.ruleId === r.id);
+            return o
+                ? { ...r, rewardPercent: o.rewardPercent ?? r.rewardPercent, penaltyPercent: o.penaltyPercent ?? r.penaltyPercent }
+                : r;
+        });
+
+        calculateCompanySalaries(c, op, perf, mergedRules)
+            .filter(r => r.staffId === employee.id || r.staffName?.trim().toLowerCase() === nameLower)
+            .forEach(res => {
+                const bonus = res.finalAmount > res.baseAmount ? res.finalAmount - res.baseAmount : 0;
+                const penalty = res.finalAmount < res.baseAmount ? res.baseAmount - res.finalAmount : 0;
+
+                baseSalary += res.baseAmount;
+                kpiBonus += bonus;
+                kpiPenalty += penalty;
+                rawTotal += res.rawAmount;
+
+                companyBreakdowns.push({
+                    companyId: c.id,
+                    companyName: c.name,
+                    contractAmount: Number((op as { contract_amount?: number } | undefined)?.contract_amount ?? c.contractAmount ?? 0),
+                    role: res.role,
+                    baseAmount: res.baseAmount,
+                    kpiBonus: bonus,
+                    kpiPenalty: penalty,
+                    details: res.details,
+                });
+            });
+    });
+
+    return {
+        employeeId: employee.id,
+        month,
+        companyCount: mine.size,
+        baseSalary,
+        kpiBonus,
+        kpiPenalty: -kpiPenalty,
+        totalSalary: baseSalary - kpiPenalty + kpiBonus,
+        rawTotal,
+        companyBreakdowns,
+    };
 };

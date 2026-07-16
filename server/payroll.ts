@@ -6,6 +6,9 @@ import { isSeniorRole } from "@/lib/permissions";
 import { assertSufficientFunds } from "@/lib/balance";
 import { createAuditLog } from "@/server/audit";
 import { serialize } from "@/lib/serialize";
+import { calculateEmployeeSalary } from "@/lib/kpiLogic";
+import { mapMonthlyReportToOperationEntry } from "@/lib/operationTemplates";
+import type { Company, CompanyKPIRule, KPIRule, MonthlyPerformance, Staff } from "@/types";
 
 // =====================================================
 // PAYROLL ADJUSTMENTS
@@ -86,16 +89,66 @@ export async function deletePayrollAdjustment(id: string) {
   return serialize(await prisma.payrollAdjustment.delete({ where: { id } }));
 }
 
+/**
+ * Load what the salary calculation needs and run it. Deliberately assembles the
+ * same inputs the payroll screen renders from, and calls the same pure function,
+ * so the figure a Supervisor approves is the figure that gets written.
+ */
+async function computeEmployeeSalary(employeeId: string, month: string) {
+  const employee = await prisma.user.findUnique({
+    where: { id: employeeId },
+    select: { id: true, fullName: true, role: true },
+  });
+  if (!employee) throw new Error("Xodim topilmadi");
+
+  const [companies, reports, performances, rules, overrides] = await Promise.all([
+    prisma.company.findMany({
+      where: {
+        OR: [
+          { accountantId: employeeId },
+          { bankClientId: employeeId },
+          { supervisorId: employeeId },
+          { chiefAccountantId: employeeId },
+        ],
+      },
+    }),
+    prisma.monthlyReport.findMany({ where: { period: month.slice(0, 7) } }),
+    prisma.monthlyPerformance.findMany({
+      where: { month, employeeId, status: "approved" },
+    }),
+    prisma.kpiRule.findMany({ where: { isActive: true } }),
+    prisma.companyKpiRule.findMany({ where: { isActive: true } }),
+  ]);
+
+  const draft = calculateEmployeeSalary({
+    employee: { id: employee.id, name: employee.fullName, role: employee.role } as Staff,
+    companies: serialize(companies) as unknown as Company[],
+    operations: reports.map(mapMonthlyReportToOperationEntry),
+    performances: serialize(performances) as unknown as MonthlyPerformance[],
+    rules: serialize(rules) as unknown as KPIRule[],
+    overrides: serialize(overrides) as unknown as CompanyKPIRule[],
+    month: month.slice(0, 7),
+  });
+
+  return { ...draft, employeeName: employee.fullName };
+}
+
 // Oylik (baza + KPI bonus/jarima) hisoblangan summani tasdiqlash — natija
 // PayrollAdjustment jadvaliga 'payment' turi bilan yoziladi.
-export async function approveEmployeeSalary(data: {
-  employeeId: string;
-  month: string;
-  baseSalary: number;
-  kpiBonus: number;
-  kpiPenalty: number;
-  totalSalary: number;
-}) {
+/**
+ * Approve one employee's salary for one month.
+ *
+ * Takes only who and when: the amount is computed here, from approved Monthly
+ * Performance, and the caller's opinion of the total is not accepted. It used to
+ * take baseSalary/kpiBonus/kpiPenalty/totalSalary and write them verbatim, which
+ * meant a React component in the Supervisor's browser decided what people were
+ * paid — that is the path ADR-0004's defect took to reach real salary.
+ *
+ * Throws rather than paying zero when penalties exceed base pay: silently clamping
+ * to zero is the harshest possible docking, and ADR-0001 says an unreviewed error
+ * must never reach someone's salary.
+ */
+export async function approveEmployeeSalary(data: { employeeId: string; month: string }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
@@ -114,18 +167,27 @@ export async function approveEmployeeSalary(data: {
   }
 
   const userId = session.user.id as string;
+  const draft = await computeEmployeeSalary(data.employeeId, data.month);
+
+  if (draft.rawTotal < 0) {
+    throw new Error(
+      `${draft.employeeName} uchun ${data.month} oyida jarimalar asosiy oylikdan oshib ketdi ` +
+        `(${Math.round(draft.rawTotal).toLocaleString()} so'm). Oylik nolga tushirilmadi — ` +
+        `KPI yozuvlarini tekshiring.`
+    );
+  }
 
   // Oylik ham chiqim — mavjud balansdan oshsa oddiy foydalanuvchi bloklanadi,
   // Admin/Superadmin o'tkaza oladi (audit logga yozilib).
-  await assertSufficientFunds({ amount: data.totalSalary, role, userId, context: "payroll" });
+  await assertSufficientFunds({ amount: draft.totalSalary, role, userId, context: "payroll" });
 
   const adjustment = await prisma.payrollAdjustment.create({
     data: {
       month: data.month,
       employeeId: data.employeeId,
       adjustmentType: "payment",
-      amount: data.totalSalary,
-      reason: `Oylik tasdiqlandi: baza ${data.baseSalary.toFixed(0)}, bonus ${data.kpiBonus.toFixed(0)}, jarima ${data.kpiPenalty.toFixed(0)}`,
+      amount: draft.totalSalary,
+      reason: `Oylik tasdiqlandi: baza ${draft.baseSalary.toFixed(0)}, bonus ${draft.kpiBonus.toFixed(0)}, jarima ${draft.kpiPenalty.toFixed(0)}`,
       createdBy: userId,
       isApproved: true,
       approvedBy: userId,
@@ -141,86 +203,6 @@ export async function approveEmployeeSalary(data: {
   });
 
   return serialize(adjustment);
-}
-
-// =====================================================
-// PAYROLL SUMMARY (calculated)
-// =====================================================
-
-export async function getPayrollSummary(month: string) {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-
-  const role = session.user.role as string;
-  if (!isSeniorRole(role)) throw new Error("Forbidden");
-
-  // Get all active users
-  const users = await prisma.user.findMany({
-    where: { isActive: true, role: { notIn: ["super_admin", "admin"] } },
-    select: { id: true, fullName: true, role: true },
-  });
-
-  // Get contract assignments for base salary
-  const contracts = await prisma.contractAssignment.findMany({
-    where: { isActive: true },
-    include: { company: { select: { contractAmount: true } } },
-  });
-
-  // Get performance scores
-  const performances = await prisma.monthlyPerformance.findMany({
-    where: { month, status: { in: ["approved", "submitted"] } },
-  });
-
-  // Get adjustments
-  const adjustments = await prisma.payrollAdjustment.findMany({
-    where: { month },
-  });
-
-  // Calculate for each user
-  return serialize(users.map((user) => {
-    const userContracts = contracts.filter(
-      (c) => c.userId === user.id && c.isActive
-    );
-    
-    const baseSalary = userContracts.reduce((sum, c) => {
-      const contractAmt = Number(c.company.contractAmount || 0);
-      if (c.salaryType === "percent") {
-        return sum + (contractAmt * Number(c.salaryValue)) / 100;
-      }
-      return sum + Number(c.salaryValue);
-    }, 0);
-
-    const userPerformances = performances.filter(
-      (p) => p.employeeId === user.id
-    );
-    const kpiBonus = userPerformances
-      .filter((p) => Number(p.calculatedScore) > 0)
-      .reduce((sum, p) => sum + (baseSalary * Number(p.calculatedScore)) / 100, 0);
-    const kpiPenalty = userPerformances
-      .filter((p) => Number(p.calculatedScore) < 0)
-      .reduce((sum, p) => sum + (baseSalary * Math.abs(Number(p.calculatedScore))) / 100, 0);
-
-    const userAdjustments = adjustments.filter(
-      (a) => a.employeeId === user.id && a.isApproved
-    );
-    const adjustmentTotal = userAdjustments.reduce(
-      (sum, a) => sum + Number(a.amount),
-      0
-    );
-
-    return {
-      employeeId: user.id,
-      employeeName: user.fullName,
-      employeeRole: user.role,
-      month,
-      companyCount: userContracts.length,
-      baseSalary,
-      kpiBonus,
-      kpiPenalty,
-      adjustments: adjustmentTotal,
-      totalSalary: baseSalary + kpiBonus - kpiPenalty + adjustmentTotal,
-    };
-  }));
 }
 
 // =====================================================

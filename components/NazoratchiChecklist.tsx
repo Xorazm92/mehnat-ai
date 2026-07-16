@@ -4,7 +4,7 @@ import { Company, KPIRule, MonthlyPerformance, Staff, Language, OperationEntry }
 import { Search, Shield, CheckCircle2, XCircle } from 'lucide-react';
 import { translations } from '@/lib/translations';
 import { capKpiPercent, type KpiEntryInput, type KpiSalaryRole } from '@/lib/kpiScoring';
-import { getKpiRules, getMonthlyPerformance, upsertPerformance, approvePerformance, rejectPerformance } from '@/server/kpi';
+import { getKpiRules, getPerformanceForReview, upsertPerformance, approvePerformance, rejectPerformance } from '@/server/kpi';
 import KpiEntryCard from './kpi/KpiEntryCard';
 
 interface Props {
@@ -38,7 +38,9 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
         try {
             const [rulesData, perfData] = await Promise.all([
                 getKpiRules(),
-                getMonthlyPerformance(`${month}-01`),
+                // The checklist reviews proposals, so it needs every status —
+                // getMonthlyPerformance is approved-only by design.
+                getPerformanceForReview(`${month}-01`),
             ]);
             setRules((rulesData as unknown as KPIRule[]).filter(r => ['accountant', 'bank_client', 'supervisor', 'all'].includes(r.role)));
             setPerformances(perfData as unknown as MonthlyPerformance[]);
