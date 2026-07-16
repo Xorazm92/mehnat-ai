@@ -227,24 +227,55 @@ export async function upsertPerformance(data: {
       : {}),
   };
 
-  // Natural-key upsert (no DB unique constraint): avoid duplicate rows per
-  // month+company+employee+rule by updating an existing non-approved record.
-  const existing = await prisma.monthlyPerformance.findFirst({
-    where: {
-      month: data.month,
-      companyId: data.companyId,
-      employeeId: data.employeeId,
-      ruleId: data.ruleId,
-      status: { not: "approved" },
-    },
-    select: { id: true },
+  // One row per (month, company, employee, rule) — enforced by @@unique. Who may
+  // mutate an existing row depends on the WRITER, not on the row's status (ADR-0001:
+  // the rollup "may only ever touch rows that are still draft-and-system", while
+  // "a Supervisor's edit mutates that same row"). Keying this guard on status instead
+  // of source is what produced 281 duplicate rows and paid an accountant zero — ADR-0004.
+  const naturalKey = {
+    month: data.month,
+    companyId: data.companyId,
+    employeeId: data.employeeId,
+    ruleId: data.ruleId,
+  };
+
+  const existing = await prisma.monthlyPerformance.findUnique({
+    where: { month_companyId_employeeId_ruleId: naturalKey },
+    select: { id: true, status: true, source: true },
   });
 
-  const saved = existing
-    ? await prisma.monthlyPerformance.update({ where: { id: existing.id }, data: payload })
-    : await prisma.monthlyPerformance.create({ data: payload });
+  if (existing) {
+    const writerIsSystem = payload.source === "system";
+    // The bot proposes; it never overrides a human. It may only revise a draft it owns.
+    if (writerIsSystem && !(existing.status === "draft" && existing.source === "system")) {
+      return serialize(await prisma.monthlyPerformance.findUniqueOrThrow({ where: { id: existing.id } }));
+    }
+    // A self-assessment must not overwrite the Supervisor's approved judgment. The old
+    // status-keyed guard enforced this by accident (it inserted a duplicate instead);
+    // now that writes update in place, it has to be explicit.
+    if (!isSeniorRole(callerRole) && existing.status === "approved") {
+      throw new Error("Tasdiqlangan KPI yozuvini o'zgartirib bo'lmaydi");
+    }
+    return serialize(
+      await prisma.monthlyPerformance.update({ where: { id: existing.id }, data: payload })
+    );
+  }
 
-  return serialize(saved);
+  try {
+    return serialize(await prisma.monthlyPerformance.create({ data: payload }));
+  } catch (e) {
+    // Two concurrent clicks can both miss the findUnique above and race to insert;
+    // the constraint rejects the loser, which then behaves as the update it meant to be.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return serialize(
+        await prisma.monthlyPerformance.update({
+          where: { month_companyId_employeeId_ruleId: naturalKey },
+          data: payload,
+        })
+      );
+    }
+    throw e;
+  }
 }
 
 export async function approvePerformance(id: string) {

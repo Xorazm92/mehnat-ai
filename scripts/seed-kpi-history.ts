@@ -48,7 +48,9 @@ async function main() {
         submittedAt: now, approvedAt: now, recordedAt: now,
       };
     });
-    const res = await prisma.monthlyPerformance.createMany({ data: rows });
+    // skipDuplicates: the clear above only removes source='system' rows, so a real
+    // entry on the same natural key must survive — and that key is UNIQUE since ADR-0004.
+    const res = await prisma.monthlyPerformance.createMany({ data: rows, skipDuplicates: true });
     total += res.count;
   }
 

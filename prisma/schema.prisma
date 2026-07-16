@@ -473,6 +473,11 @@ model MonthlyPerformance {
   changeReason           String?
   recordedAt             DateTime  @default(now())
 
+  // One Monthly Performance per rule, per employee, per Company, per month.
+  // Payroll sums every approved row and penalties are uncapped, so a duplicate
+  // is not a cosmetic issue — it multiplies a penalty into someone's salary.
+  // See ADR-0004 and ADR-0001.
+  @@unique([month, companyId, employeeId, ruleId])
   @@index([employeeId])
   @@index([companyId])
   @@index([month])

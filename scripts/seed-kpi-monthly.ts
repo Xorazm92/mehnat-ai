@@ -139,9 +139,12 @@ async function main() {
     }
   }
 
-  // Idempotent: clear prior system-seeded records for this month, then insert
+  // Idempotent: clear prior system-seeded records for this month, then insert.
+  // skipDuplicates because the clear above only removes source='system' rows: a real
+  // supervisor entry on the same (month, company, employee, rule) must survive, and
+  // since ADR-0004 that key is UNIQUE, so an unskipped insert would throw P2002.
   const cleared = await prisma.monthlyPerformance.deleteMany({ where: { month: MONTH, source: "system" } });
-  const result = await prisma.monthlyPerformance.createMany({ data: records });
+  const result = await prisma.monthlyPerformance.createMany({ data: records, skipDuplicates: true });
 
   console.log(`Month: ${MONTH}`);
   console.log(`Rows: ${stats.rows} (no-company ${stats.noCompany}) | states ${stats.states}`);
