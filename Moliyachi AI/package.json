@@ -1,0 +1,33 @@
+{
+  "name": "finlex-ai-bot",
+  "version": "2.0.0",
+  "description": "Finco AI - Uzbekistan Accounting & Finance RAG Bot",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.4.5",
+    "sucrase": "^3.35.1",
+    "telegraf": "^4.16.3"
+  },
+  "keywords": [
+    "ai",
+    "telegram",
+    "bhms",
+    "gemini",
+    "fintech",
+    "accounting"
+  ],
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "lucide-react": "^0.562.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  }
+}

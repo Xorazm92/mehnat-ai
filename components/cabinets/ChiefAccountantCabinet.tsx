@@ -129,7 +129,10 @@ export function ChiefAccountantCabinet({
             {totalTeamScore.toFixed(0)}
           </div>
         </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      </div>
+
+      {/* Jamoa ko'rsatkichlari + KPI tasdiqlash */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Jamoa a'zolari */}
         <div className="glass-card overflow-hidden">
           <div className="flex items-center justify-between p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
@@ -340,7 +343,7 @@ export function ChiefAccountantCabinet({
             +{companiesCount - 9} ta firma ko&apos;rsatilmadi
           </div>
         )}
-      </div>  </div>
+      </div>
     </div>
   );
 }

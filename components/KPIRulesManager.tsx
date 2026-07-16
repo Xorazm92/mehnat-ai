@@ -27,7 +27,7 @@ const COLOR: Record<string, { fg: string; bg: string; bd: string }> = {
 };
 
 const Badge: React.FC<{ children: React.ReactNode; tone?: 'muted' | 'blue' }> = ({ children, tone = 'muted' }) => (
-    <span className="text-[8.5px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+    <span className="text-2xs font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
         style={tone === 'blue'
             ? { background: 'var(--accent-blue-light)', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)' }
             : { background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
@@ -120,7 +120,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                         const per = o.coeff_per_unit ?? 0;
                         const c = COLOR[o.color || (per >= 0 ? 'green' : 'red')];
                         return (
-                            <span key={o.key} className="text-[9.5px] font-bold px-2 py-1 rounded-lg" style={{ background: c.bg, color: c.fg, border: `1px solid ${c.bd}` }}>
+                            <span key={o.key} className="text-2xs font-bold px-2 py-1 rounded-lg" style={{ background: c.bg, color: c.fg, border: `1px solid ${c.bd}` }}>
                                 {o.label_uz} · {per > 0 ? '+' : ''}{per}%{o.max_coeff != null ? ` (max ${o.max_coeff}%)` : '/birlik'}
                             </span>
                         );
@@ -129,14 +129,14 @@ const KPIRulesManager: React.FC<Props> = () => {
             );
         }
         if (rule.inputTypeV2 === 'amount_penalty') {
-            return <span className="text-[9.5px] font-bold px-2 py-1 rounded-lg" style={{ background: COLOR.red.bg, color: COLOR.red.fg, border: `1px solid ${COLOR.red.bd}` }}>So&apos;mda jarima (qo&apos;lda)</span>;
+            return <span className="text-2xs font-bold px-2 py-1 rounded-lg" style={{ background: COLOR.red.bg, color: COLOR.red.fg, border: `1px solid ${COLOR.red.bd}` }}>So&apos;mda jarima (qo&apos;lda)</span>;
         }
         return (
             <div className="flex flex-wrap gap-1.5">
                 {opts.map(o => {
                     const c = COLOR[o.color || 'yellow'];
                     return (
-                        <span key={o.key} className="text-[9.5px] font-bold px-2 py-1 rounded-lg" style={{ background: c.bg, color: c.fg, border: `1px solid ${c.bd}` }}>
+                        <span key={o.key} className="text-2xs font-bold px-2 py-1 rounded-lg" style={{ background: c.bg, color: c.fg, border: `1px solid ${c.bd}` }}>
                             {o.label_uz}{typeof o.coeff === 'number' && o.coeff !== 0 ? ` (${o.coeff > 0 ? '+' : ''}${o.coeff}%)` : ''}
                         </span>
                     );
@@ -201,8 +201,8 @@ const KPIRulesManager: React.FC<Props> = () => {
                                     {/* body */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                                            <p className="font-bold text-[12.5px]" style={{ color: 'var(--text-primary)' }}>{rule.nameUz}</p>
-                                            <span className="text-[8px] font-mono font-bold" style={{ color: 'var(--text-muted)' }}>{rule.name}</span>
+                                            <p className="font-bold text-xs" style={{ color: 'var(--text-primary)' }}>{rule.nameUz}</p>
+                                            <span className="text-2xs font-mono font-bold" style={{ color: 'var(--text-muted)' }}>{rule.name}</span>
                                             <Badge tone="blue">{rule.inputTypeV2 || rule.inputType}</Badge>
                                             <Badge>{rule.category}</Badge>
                                             <Badge>{rule.scope}</Badge>
@@ -237,7 +237,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                     <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
                         {archived.map(rule => (
                             <div key={rule.id} className="px-5 py-2.5 flex items-center justify-between" style={{ borderColor: 'var(--card-border)' }}>
-                                <p className="font-bold text-[12px]" style={{ color: 'var(--text-secondary)' }}>{rule.nameUz} <span className="text-[8px] font-mono" style={{ color: 'var(--text-muted)' }}>{rule.name}</span></p>
+                                <p className="font-bold text-[12px]" style={{ color: 'var(--text-secondary)' }}>{rule.nameUz} <span className="text-2xs font-mono" style={{ color: 'var(--text-muted)' }}>{rule.name}</span></p>
                                 <div className="flex gap-2">
                                     <button onClick={() => toggleActive(rule)} className="text-[9px] font-bold uppercase px-2.5 py-1 rounded-lg" style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }}>Tiklash</button>
                                     <button onClick={() => handleDelete(rule.id, rule.nameUz)} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger-border)' }}><Trash2 size={12} /></button>

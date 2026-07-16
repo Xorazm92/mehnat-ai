@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Finco AI - Buxgalteriya va Moliya Eksperti</title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+
+  <script>
+    // Suppress Tailwind warning
+    const originalWarn = console.warn;
+    console.warn = function (...args) {
+      if (args[0] && args[0].includes && args[0].includes('cdn.tailwindcss.com')) return;
+      originalWarn.apply(console, args);
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+
+
+
+  <!-- Import Map for Modules -->
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.2.3",
+    "react-dom/client": "https://esm.sh/react-dom@19.2.3/client",
+    "@google/generative-ai": "https://esm.sh/@google/generative-ai",
+    "lucide-react": "https://esm.sh/lucide-react@0.562.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+  <link rel="stylesheet" href="/index.css">
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <!-- Main Entry Point -->
+  <script type="module" src="./index.tsx"></script>
+</body>
+
+</html>

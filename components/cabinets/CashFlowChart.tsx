@@ -45,7 +45,7 @@ export function CashFlowChart({ data }: { data: Point[] }) {
       {hasData ? (
         <>
           <div style={{ width: "100%", height: 210 }}>
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={210}>
               <BarChart data={chartData} barGap={4} barCategoryGap="25%">
                 <CartesianGrid vertical={false} stroke="var(--card-border)" strokeDasharray="3 3" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: "var(--text-muted)" }} />

@@ -77,7 +77,7 @@ export function AdminSidebar({ userRole }: { userRole: string }) {
                       <span className="truncate">{m.labelUz}</span>
                       {m.status === "soon" && (
                         <span
-                          className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
+                          className="ml-auto text-2xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
                           style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
                         >
                           Soon

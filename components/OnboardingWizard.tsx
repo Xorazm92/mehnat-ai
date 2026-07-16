@@ -117,7 +117,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)' }}>{step.title}</span>
-                                    <span className="text-[8px] font-bold uppercase tracking-widest" style={fieldLabelStyle}>{idx + 1}-QADAM</span>
+                                    <span className="text-2xs font-bold uppercase tracking-widest" style={fieldLabelStyle}>{idx + 1}-QADAM</span>
                                 </div>
                                 {idx < steps.length - 1 && <div className="mx-2 w-8 h-px" style={{ background: 'var(--card-border)' }} />}
                             </div>

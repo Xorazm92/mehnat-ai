@@ -308,7 +308,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                 <p className="text-[10px] mt-1 leading-none truncate" style={{ color: "var(--text-muted)" }}>{ROLE_LABELS[s.employeeRole] || s.employeeRole} • {s.companyCount} firma</p>
                             </div>
                             <div className="text-right shrink-0">
-                                <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami</p>
+                                <p className="text-2xs font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami</p>
                                 <p className="text-[15px] font-black tabular-nums leading-tight" style={{ color: "var(--accent-indigo)" }}>{s.totalSalary.toLocaleString("uz-UZ")}</p>
                             </div>
                         </div>
@@ -322,7 +322,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                 { l: "Qolgan", v: s.remainingBalance.toLocaleString("uz-UZ"), c: s.remainingBalance <= 0 ? "var(--success)" : "var(--warning)" },
                             ].map((x, i) => (
                                 <div key={i} className="rounded-lg px-2 py-1.5 text-center" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
-                                    <div className="text-[8px] font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{x.l}</div>
+                                    <div className="text-2xs font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{x.l}</div>
                                     <div className="text-[11px] font-black tabular-nums mt-0.5 truncate" style={{ color: x.c }}>{x.v}</div>
                                 </div>
                             ))}

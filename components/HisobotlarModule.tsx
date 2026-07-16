@@ -127,7 +127,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
                   return (
                     <tr key={r.id} className="transition-colors cursor-pointer" style={{ borderBottom: "1px solid var(--card-border)" }} onClick={() => setViewing(r)}
                       onMouseEnter={(e) => (e.currentTarget.style.background = "var(--table-row-hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
-                      <td className="px-4 py-3"><p className="text-[12.5px] font-bold" style={{ color: "var(--text-primary)" }}>{r.typeLabel}</p><p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{r.companyName}</p></td>
+                      <td className="px-4 py-3"><p className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>{r.typeLabel}</p><p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{r.companyName}</p></td>
                       <td className="px-4 py-3 text-[11px] font-bold" style={{ color: "var(--text-secondary)" }}>{r.period}</td>
                       <td className="px-4 py-3 text-[11px]" style={{ color: "var(--text-secondary)" }}>{r.assigneeName || "—"}</td>
                       <td className="px-4 py-3"><span className="text-[9px] font-bold px-2 py-1 rounded uppercase" style={{ background: s.bg, color: s.fg, border: `1px solid ${s.bd}` }}>{s.label}</span></td>

@@ -87,7 +87,7 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
       {/* Title + live score */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-bold text-[12.5px] leading-tight" style={{ color: "var(--text-primary)" }}>
+          <p className="font-bold text-xs leading-tight" style={{ color: "var(--text-primary)" }}>
             {rule.nameUz || rule.name}
           </p>
           {rule.descriptionUz && (
@@ -120,7 +120,7 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
                 type="button"
                 disabled={disabled}
                 onClick={() => { setSelectedOption(o.key); save({ selectedOption: o.key }); }}
-                className="px-2.5 py-1.5 rounded-lg text-[10.5px] font-bold transition-all"
+                className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all"
                 style={{
                   background: isSel ? col.fg : col.bg,
                   color: isSel ? "#fff" : col.fg,

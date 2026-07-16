@@ -878,7 +878,7 @@ const OperationModule: React.FC<Props> = ({
                           title={col.label}
                         >
                           <span className="text-[10px] font-black tracking-widest" style={{ color: '#34d058' }}>{col.short}</span>
-                          <div className="text-[7px] font-black uppercase tracking-tighter" style={{ color: 'rgba(52, 208, 88, 0.7)' }}>Xis.</div>
+                          <div className="text-2xs font-black uppercase tracking-tighter" style={{ color: 'rgba(52, 208, 88, 0.7)' }}>Xis.</div>
                         </th>
                         <th
                           className="sticky top-[28px] px-0.5 py-2 text-center w-10 cursor-help"
@@ -886,7 +886,7 @@ const OperationModule: React.FC<Props> = ({
                           title={`${col.label} to'lov`}
                         >
                           <span className="text-[10px] font-black tracking-widest" style={{ color: '#ffd700' }}>{(col as any).payShort}</span>
-                          <div className="text-[7px] font-black uppercase tracking-tighter" style={{ color: 'rgba(255, 215, 0, 0.7)' }}>To&apos;l</div>
+                          <div className="text-2xs font-black uppercase tracking-tighter" style={{ color: 'rgba(255, 215, 0, 0.7)' }}>To&apos;l</div>
                         </th>
                       </React.Fragment>
                     );

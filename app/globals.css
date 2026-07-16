@@ -17,6 +17,15 @@
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --blur-glass: 12px;
+
+  /* Density floor for this data-dense ERP: 10px, below Tailwind's smallest
+     step (text-xs, 12px). ADDITIVE ONLY — Tailwind's built-in scale is left
+     exactly as it is, because text-xs/sm/base/lg/xl/2xl are already used in
+     ~213 places and redefining them would silently resize all of them.
+     This is the floor, not a replacement scale: nothing in the UI may be
+     smaller than this. See design-system/MASTER.md. */
+  --text-2xs: 0.625rem;      /* 10px — table micro-labels, badges */
+  --text-2xs--line-height: 1.4;
 }
 
 /* =============================================
@@ -248,6 +257,121 @@ body {
 }
 
 /* =============================================
+   NUMERALS
+   ============================================= */
+
+/* Inter's default figures are proportional: '1' is narrower than '8', so a
+   money column visibly reshuffles as digits change and decimal points stop
+   lining up. Every number a user compares against another number — salary,
+   contract amount, KPI percent, counters — belongs in tabular figures.
+   Applies to the elements that are numeric by definition; use .tabular for
+   individual cells (e.g. a total inside a <p>). */
+.tabular,
+.erp-table td,
+input[type="number"],
+time {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* =============================================
+   OPTICAL ALIGNMENT
+   ============================================= */
+
+/* Lucide icons are drawn on a 24px grid with the glyph inset from the box, so
+   an icon set flush against text sits visually low against the cap height even
+   when the boxes align. A ~1px lift is what makes icon+label pairs read as one
+   object rather than two stacked things. Opt-in — only where an icon sits
+   inline with text. */
+.icon-optical {
+  transform: translateY(-1px);
+}
+
+/* Uppercase micro-labels ('QIDIRISH...', '1-QADAM') look cramped at small sizes
+   because Inter's default tracking is tuned for lowercase at reading size.
+   Widening tracking as size drops is what keeps them legible. */
+.label-caps {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+/* Numbers right-align so decimal points and thousands stack; headers must
+   follow the data or the column reads broken. */
+.col-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* =============================================
+   FOCUS — visible ring on every interactive element
+   ============================================= */
+
+/* :focus-visible was used 0 times before this; components set `outline: none`
+   with an inline style object that cannot express :focus, leaving keyboard
+   focus completely invisible (design-system/ACCESSIBILITY.md A4).
+   :where() keeps specificity at 0 so a component can still override it, and
+   :focus-visible means mouse users never see a ring on click. */
+:where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--input-focus-border);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* =============================================
+   IMAGE OUTLINES
+   ============================================= */
+
+/* A white avatar or a light screenshot on a light card has no edge — the image
+   bleeds into the surface and its bounds become guesswork. A hairline inset
+   ring reads as a contour in both themes without adding a heavy border, and
+   inset means it never changes the element's box. */
+.img-outline {
+  box-shadow: inset 0 0 0 1px var(--border-glass);
+}
+
+.img-framed {
+  border-radius: var(--card-radius);
+  box-shadow: inset 0 0 0 1px var(--border-glass), var(--card-shadow);
+  background-color: var(--bg-hover); /* holds the space while loading */
+}
+
+/* =============================================
+   REDUCED MOTION
+   ============================================= */
+
+/* prefers-reduced-motion was honoured nowhere, while .animate-spin,
+   .animate-pulse-glow, .animate-float and .animate-shimmer run infinitely and
+   every modal opens with animate-fade-in/scale-in. Vestibular disorders make
+   that actively unpleasant, not merely busy.
+   Motion is reduced to near-zero rather than 0s: instant-but-present keeps
+   transitionend/animationend handlers firing, so nothing that waits on an
+   animation callback silently hangs. Spinners keep turning (slowly) because a
+   frozen spinner reads as a crashed app. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* A loading indicator must still indicate loading. */
+  .animate-spin {
+    animation-duration: 1.5s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  /* Purely decorative — stop entirely. */
+  .animate-float,
+  .animate-pulse-glow,
+  .animate-shimmer {
+    animation: none !important;
+  }
+}
+
+/* =============================================
    CUSTOM SCROLLBAR
    ============================================= */
 ::-webkit-scrollbar {
@@ -298,6 +422,18 @@ body {
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
   box-shadow: var(--card-shadow);
+  /* .glass-card (14 uses) had this and .dashboard-card (80 uses) did not, so the
+     dominant card was the one that never responded. Shadow + border only — the
+     card must not move, or a table of them ripples under the cursor. */
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Only cards that are themselves a control (open a drawer, select a row) lift.
+   A static card that lifts is a lie about what's clickable. */
+.dashboard-card:where(a, button, [role="button"]):hover,
+.dashboard-card.is-interactive:hover {
+  box-shadow: var(--card-shadow-hover);
+  border-color: var(--border-strong);
 }
 
 /* Stat Card */
@@ -367,24 +503,31 @@ body {
   gap: 0.5rem;
   padding: 0.625rem 1.25rem;
   background: var(--accent-blue);
-  color: #FFFFFF;
+  color: var(--text-white);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--text-base);
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  /* Was `all`, which tweens layout properties too — any width/padding change
+     would animate and force reflow. Name only what actually moves. */
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   white-space: nowrap;
 }
 
 .btn-primary:hover {
   background: var(--accent-blue-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  /* Was hardcoded rgba(37, 99, 235, .3) — light-mode blue, so the glow stayed
+     the wrong blue in dark mode. Derived from the token, it follows the theme. */
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-blue) 30%, transparent);
 }
 
+/* Press settles back to rest — the button meets the cursor. Faster than the
+   hover so it feels like contact rather than a second animation. */
 .btn-primary:active {
   transform: translateY(0);
+  transition-duration: 0.05s;
 }
 
 .btn-secondary {

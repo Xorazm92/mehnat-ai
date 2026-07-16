@@ -104,7 +104,7 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
                   <div key={r.employeeId} className="px-5 py-3 grid grid-cols-[40px_1fr_120px_90px_110px] gap-2 items-center" style={{ borderBottom: "1px solid var(--card-border)" }}>
                     <span className="text-[12px] font-bold tabular-nums" style={{ color: i < 3 ? "var(--accent-blue)" : "var(--text-muted)" }}>{i === 0 ? "🏆" : i + 1}</span>
                     <div className="min-w-0">
-                      <p className="text-[12.5px] font-bold truncate" style={{ color: "var(--text-primary)" }}>{r.name}</p>
+                      <p className="text-xs font-bold truncate" style={{ color: "var(--text-primary)" }}>{r.name}</p>
                       <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{ROLE_UZ[r.role] || r.role}</p>
                     </div>
                     <div className="rounded-full h-2" style={{ background: "var(--input-bg)" }}>
@@ -112,7 +112,7 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
                     </div>
                     <div className="flex items-center justify-center gap-1.5">
                       <span className="text-[13px] font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{r.ball}</span>
-                      <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded" style={{ background: d.bg, color: d.fg, border: `1px solid ${d.bd}` }}>{d.label}</span>
+                      <span className="text-2xs font-bold px-1.5 py-0.5 rounded" style={{ background: d.bg, color: d.fg, border: `1px solid ${d.bd}` }}>{d.label}</span>
                     </div>
                     <span className="text-[12px] font-bold tabular-nums text-right" style={{ color: r.bonus > 0 ? "var(--success)" : "var(--text-muted)" }}>{r.bonus > 0 ? "+" + fmt(r.bonus) : "—"}</span>
                   </div>
@@ -132,7 +132,7 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
             <div className="rounded-xl p-5" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
               <div className="flex items-center gap-2 mb-3"><Activity size={15} style={{ color: "var(--accent-blue)" }} /><h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>Jamoa dinamikasi · 6 oy</h3></div>
               <div style={{ width: "100%", height: 140 }}>
-                <ResponsiveContainer>
+                <ResponsiveContainer width="100%" height={140}>
                   <LineChart data={chartData} margin={{ top: 5, right: 8, left: -20, bottom: 0 }}>
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: "var(--text-muted)" }} />
                     <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: "var(--text-muted)" }} width={28} />
