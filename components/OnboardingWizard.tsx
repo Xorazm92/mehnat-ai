@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Company, Staff, TaxType, ServerInfo } from '@/types';
 import { ChevronRight, ChevronLeft, Check, X, Building2, Server, Calculator, Users } from 'lucide-react';
+import { groupDigits, ungroupDigits } from '@/lib/format';
 
 interface Props {
     staff: Staff[];
@@ -219,10 +220,10 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shartnoma Summasi</label>
                                 <input
-                                    type="number"
+                                    type="text" inputMode="numeric"
                                     className="erp-input tabular-nums"
-                                    value={formData.contractAmount || 0}
-                                    onChange={e => setFormData({ ...formData, contractAmount: Number(e.target.value) })}
+                                    value={groupDigits(formData.contractAmount || 0)}
+                                    onChange={e => setFormData({ ...formData, contractAmount: Number(ungroupDigits(e.target.value)) })}
                                 />
                             </div>
                             <div className="space-y-1.5">

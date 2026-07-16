@@ -97,7 +97,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
             const c = done ? STATUS.submitted : urgent ? STATUS.rejected : STATUS.ready;
             return (
               <div key={d.id} className="p-4 rounded-xl" style={{ background: c.bg, border: `1px solid ${c.bd}` }}>
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: c.fg }}>{done ? "Bajarildi" : d.daysLeft != null ? `${d.daysLeft} kun qoldi` : "Muddat"}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: c.fg }}>{done ? "Bajarildi" : d.daysLeft == null ? "Muddat" : d.daysLeft < 0 ? `${Math.abs(d.daysLeft)} kun kechikdi` : d.daysLeft === 0 ? "Bugun oxirgi kun" : `${d.daysLeft} kun qoldi`}</p>
                 <p className="text-[13px] font-bold" style={{ color: "var(--text-primary)" }}>{d.typeLabel}</p>
                 <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>{d.companyName}{d.deadline ? ` · ${new Date(d.deadline).toLocaleDateString("uz-UZ", { day: "numeric", month: "short" })}` : ""}</p>
               </div>

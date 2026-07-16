@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AttendanceModule, { AttendanceRecord } from "@/components/AttendanceModule";
 import { Staff } from "@/types";
 import { upsertAttendance, deleteAttendance } from "@/server/attendance";
+import { syncEjurnalAttendance } from "@/server/ejurnal";
 
 interface Props {
   records: AttendanceRecord[];
@@ -32,6 +33,12 @@ export default function AttendanceClient({ records, staff, canEdit }: Props) {
     router.refresh();
   };
 
+  const handleSyncEjurnal = async (date: string) => {
+    const res = await syncEjurnalAttendance(date);
+    router.refresh();
+    return res;
+  };
+
   return (
     <AttendanceModule
       records={records}
@@ -40,6 +47,7 @@ export default function AttendanceClient({ records, staff, canEdit }: Props) {
       canEdit={canEdit}
       onSave={handleSave}
       onDelete={handleDelete}
+      onSyncEjurnal={canEdit ? handleSyncEjurnal : undefined}
     />
   );
 }

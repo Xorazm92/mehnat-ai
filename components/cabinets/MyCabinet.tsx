@@ -228,7 +228,7 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
     pinfl: profile.pinfl || "",
     department: profile.department || "",
     gender: profile.gender || "",
-    birthDate: profile.birthDate ? profile.birthDate.slice(0, 10) : "",
+    birthDate: profile.birthDate ? new Date(profile.birthDate).toISOString().slice(0, 10) : "",
     education: profile.education || "",
     avatarColor: profile.avatarColor || "#2563eb",
   });
@@ -362,7 +362,7 @@ function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: "var(--text-secondary)", background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
-                {c.taxRegime}
+                {c.taxRegime === 'turnover' ? 'Aylanma' : c.taxRegime === 'fixed' ? 'Belgilangan' : c.taxRegime === 'nds_profit' ? 'QQS' : c.taxRegime}
               </span>
               <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: roleC, background: `${roleC}1a`, border: `1px solid ${roleC}40` }}>
                 {ROLE_LABELS[c.myRole as UserRole] || c.myRole}

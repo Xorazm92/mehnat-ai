@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom';
 import { Company, OperationEntry, Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
-import { ChevronDown, Download, Search, RefreshCw, Info } from 'lucide-react';
+import { ChevronDown, Download, Search, RefreshCw, Info, SlidersHorizontal } from 'lucide-react';
 import { MonthPicker } from './ui/MonthPicker';
 import { periodsEqual } from '@/lib/periods';
 import { toast } from 'sonner';
@@ -393,6 +393,9 @@ const OperationModule: React.FC<Props> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [filterGroup, setFilterGroup] = useState<string>('all');
   const [filterAccountant, setFilterAccountant] = useState<string>('all');
+  // Per-user column show/hide, persisted per browser (no DB needed).
+  const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
+  const [colPanelOpen, setColPanelOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 100;
 
@@ -624,10 +627,29 @@ const OperationModule: React.FC<Props> = ({
     setCurrentPage(1);
   }, [debouncedSearch, filterAccountant, filterGroup, selectedPeriod]);
 
+  // Load / persist the hidden-column set for this browser.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('opmatrix-hidden-cols');
+      if (saved) setHiddenCols(new Set(JSON.parse(saved) as string[]));
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem('opmatrix-hidden-cols', JSON.stringify([...hiddenCols])); } catch { /* ignore */ }
+  }, [hiddenCols]);
+
+  const toggleCol = useCallback((key: string) => {
+    setHiddenCols(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
   const visibleColumns = useMemo(() => {
-    if (filterGroup === 'all') return [...REPORT_COLUMNS];
-    return REPORT_COLUMNS.filter(c => c.group === filterGroup);
-  }, [filterGroup, REPORT_COLUMNS]);
+    const base = filterGroup === 'all' ? REPORT_COLUMNS : REPORT_COLUMNS.filter(c => c.group === filterGroup);
+    return base.filter(c => !hiddenCols.has(c.key));
+  }, [filterGroup, REPORT_COLUMNS, hiddenCols]);
 
   // Stats
   const stats = useMemo(() => {
@@ -774,7 +796,39 @@ const OperationModule: React.FC<Props> = ({
               className="z-20 h-full"
             />
 
-            <button onClick={handleExport} 
+            {/* Column visibility (per-user, saved in this browser) */}
+            <div className="relative">
+              <button onClick={() => setColPanelOpen(o => !o)}
+                className="font-bold px-4 py-2 rounded-xl text-[11px] flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}>
+                <SlidersHorizontal size={14} /> Ustunlar{hiddenCols.size > 0 ? ` (${hiddenCols.size})` : ''}
+              </button>
+              {colPanelOpen && (
+                <>
+                  <div className="fixed inset-0 z-[90]" onClick={() => setColPanelOpen(false)} />
+                  <div className="absolute right-0 mt-2 z-[100] w-64 max-h-[60vh] overflow-y-auto rounded-xl p-3 shadow-2xl"
+                    style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                    <div className="flex items-center justify-between mb-2 sticky top-0 pb-2" style={{ background: 'var(--surface)' }}>
+                      <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-2)' }}>Ustunlar</span>
+                      <button onClick={() => setHiddenCols(new Set())} className="text-[10px] font-bold uppercase" style={{ color: 'var(--primary)' }}>Hammasi</button>
+                    </div>
+                    {uniqueGroups.map(g => (
+                      <div key={g} className="mb-2">
+                        <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--text-3)' }}>{g}</p>
+                        {REPORT_COLUMNS.filter(c => c.group === g).map(c => (
+                          <label key={c.key} className="flex items-center gap-2 py-1 px-1 rounded cursor-pointer text-[11px]" style={{ color: 'var(--text)' }}>
+                            <input type="checkbox" checked={!hiddenCols.has(c.key)} onChange={() => toggleCol(c.key)} />
+                            <span className="truncate">{c.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button onClick={handleExport}
               className="font-bold px-4 py-2 rounded-xl text-[11px] flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest"
               style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
               onMouseEnter={e => { e.currentTarget.style.color = '#34d058'; e.currentTarget.style.borderColor = '#34d058'; }}

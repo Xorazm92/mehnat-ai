@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Staff, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance, KPIRule, CompanyKPIRule } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
-import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2 } from 'lucide-react';
+import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2, SlidersHorizontal } from 'lucide-react';
 import { periodsEqual } from '@/lib/periods';
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
 import { getPayrollAdjustments, createPayrollAdjustment } from '@/server/payroll';
+import { groupDigits, ungroupDigits, submitOnCtrlEnter } from '@/lib/format';
 
 interface Props {
     staff: Staff[];
@@ -23,6 +24,23 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
     const [performanceList, setPerformanceList] = useState<MonthlyPerformance[]>([]);
     const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
     const [companyOverrides, setCompanyOverrides] = useState<CompanyKPIRule[]>([]);
+    // Per-user column show/hide for the salary table, saved in this browser.
+    const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
+    const [colPanelOpen, setColPanelOpen] = useState(false);
+    useEffect(() => {
+        try { const s = localStorage.getItem('payroll-hidden-cols'); if (s) setHiddenCols(new Set(JSON.parse(s) as string[])); } catch { /* ignore */ }
+    }, []);
+    useEffect(() => {
+        try { localStorage.setItem('payroll-hidden-cols', JSON.stringify([...hiddenCols])); } catch { /* ignore */ }
+    }, [hiddenCols]);
+    const toggleCol = (key: string) => setHiddenCols(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+    const HIDEABLE_COLS = [
+        { key: 'bonus', label: 'KPI Bonus' },
+        { key: 'penalty', label: 'Jarima' },
+        { key: 'manual', label: "Qo'shimcha" },
+        { key: 'avans', label: 'Avans' },
+        { key: 'remaining', label: 'Qolgan' },
+    ];
 
     const loadMonthlyData = async () => {
         try {
@@ -341,22 +359,50 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
             </div>
 
             {/* Table (desktop) */}
+            {/* Column visibility toggle (desktop salary table) */}
+            <div className="hidden md:flex justify-end mb-2">
+                <div className="relative">
+                    <button onClick={() => setColPanelOpen(o => !o)}
+                        className="font-bold px-4 py-2 rounded-xl text-[11px] flex items-center gap-2 uppercase tracking-widest"
+                        style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>
+                        <SlidersHorizontal size={14} /> Ustunlar{hiddenCols.size > 0 ? ` (${hiddenCols.size})` : ''}
+                    </button>
+                    {colPanelOpen && (
+                        <>
+                            <div className="fixed inset-0 z-[90]" onClick={() => setColPanelOpen(false)} />
+                            <div className="absolute right-0 mt-2 z-[100] w-56 rounded-xl p-3 shadow-2xl" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-secondary)" }}>Ustunlar</span>
+                                    <button onClick={() => setHiddenCols(new Set())} className="text-[10px] font-bold uppercase" style={{ color: "var(--accent-blue)" }}>Hammasi</button>
+                                </div>
+                                {HIDEABLE_COLS.map(c => (
+                                    <label key={c.key} className="flex items-center gap-2 py-1 px-1 rounded cursor-pointer text-[12px]" style={{ color: "var(--text-primary)" }}>
+                                        <input type="checkbox" checked={!hiddenCols.has(c.key)} onChange={() => toggleCol(c.key)} />
+                                        <span>{c.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+
             <div className="hidden md:block rounded-xl overflow-hidden" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse" style={{ minWidth: "900px" }}>
                         <thead>
                             <tr style={{ background: "var(--table-header-bg)", borderBottom: "2px solid var(--table-border)" }}>
                                 {[
-                                    { label: "Xodim", align: "left" },
-                                    { label: "Stavka (so'm)", align: "right", color: "var(--text-primary)" },
-                                    { label: "KPI Bonus", align: "right", color: "var(--success)" },
-                                    { label: "Jarima", align: "right", color: "var(--danger)" },
-                                    { label: "Qo'shimcha", align: "right", color: "var(--accent-blue)" },
-                                    { label: "Avans", align: "right", color: "var(--warning)" },
-                                    { label: "Jami maosh", align: "right", color: "var(--accent-indigo)" },
-                                    { label: "Qolgan", align: "right", color: "var(--success)" },
-                                    { label: "Amallar", align: "center" },
-                                ].map((h, i) => (
+                                    { key: 'name', label: "Xodim", align: "left" },
+                                    { key: 'base', label: "Stavka (so'm)", align: "right", color: "var(--text-primary)" },
+                                    { key: 'bonus', label: "KPI Bonus", align: "right", color: "var(--success)" },
+                                    { key: 'penalty', label: "Jarima", align: "right", color: "var(--danger)" },
+                                    { key: 'manual', label: "Qo'shimcha", align: "right", color: "var(--accent-blue)" },
+                                    { key: 'avans', label: "Avans", align: "right", color: "var(--warning)" },
+                                    { key: 'total', label: "Jami maosh", align: "right", color: "var(--accent-indigo)" },
+                                    { key: 'remaining', label: "Qolgan", align: "right", color: "var(--success)" },
+                                    { key: 'actions', label: "Amallar", align: "center" },
+                                ].filter(h => !hiddenCols.has(h.key)).map((h, i) => (
                                     <th key={i} className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"
                                         style={{ color: h.color || "var(--text-muted)", textAlign: h.align as any }}>
                                         {h.label}
@@ -398,29 +444,37 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                         </span>
                                     </td>
                                     {/* KPI Bonus */}
+                                    {!hiddenCols.has('bonus') && (
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--success)" }}>
                                             +{s.kpiBonus.toLocaleString("uz-UZ")}
                                         </span>
                                     </td>
+                                    )}
                                     {/* Jarima */}
+                                    {!hiddenCols.has('penalty') && (
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--danger)" }}>
                                             {s.kpiPenalty.toLocaleString("uz-UZ")}
                                         </span>
                                     </td>
+                                    )}
                                     {/* Qo'shimcha */}
+                                    {!hiddenCols.has('manual') && (
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--accent-blue)" }}>
                                             {s.manualBonuses > 0 ? "+" : ""}{s.manualBonuses.toLocaleString("uz-UZ")}
                                         </span>
                                     </td>
+                                    )}
                                     {/* Avans */}
+                                    {!hiddenCols.has('avans') && (
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--warning)" }}>
                                             {Math.abs(s.totalReceived).toLocaleString("uz-UZ")}
                                         </span>
                                     </td>
+                                    )}
                                     {/* Jami */}
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[14px] font-black tabular-nums whitespace-nowrap" style={{ color: "var(--accent-indigo)" }}>
@@ -428,6 +482,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                         </span>
                                     </td>
                                     {/* Qolgan */}
+                                    {!hiddenCols.has('remaining') && (
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold tabular-nums whitespace-nowrap"
                                             style={{
@@ -438,6 +493,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                             {s.remainingBalance.toLocaleString("uz-UZ")}
                                         </span>
                                     </td>
+                                    )}
                                     {/* Actions */}
                                     <td className="px-4 py-3.5 text-center">
                                         <div className="flex gap-1.5 justify-center opacity-30 group-hover:opacity-100 transition-opacity">
@@ -481,7 +537,8 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                     onClick={() => setEditingAdj(null)}>
                     <div className="w-full max-w-md rounded-2xl overflow-hidden animate-scale-in"
                         style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}
-                        onClick={e => e.stopPropagation()}>
+                        onClick={e => e.stopPropagation()}
+                        onKeyDown={submitOnCtrlEnter(handleAddAdjustment)}>
                         <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: "1px solid var(--card-border)" }}>
                             <div>
                                 <h3 className="text-[15px] font-bold" style={{ color: "var(--text-primary)" }}>
@@ -502,10 +559,10 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                         <div className="p-6 space-y-4">
                             <div>
                                 <label className="block text-[11px] font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Summa (so&apos;m)</label>
-                                <input type="number"
+                                <input type="text" inputMode="numeric"
                                     className="erp-input text-[15px] font-bold"
-                                    value={editingAdj.amount || ""}
-                                    onChange={e => setEditingAdj({ ...editingAdj, amount: Number(e.target.value) })}
+                                    value={groupDigits(editingAdj.amount || "")}
+                                    onChange={e => setEditingAdj({ ...editingAdj, amount: Number(ungroupDigits(e.target.value)) })}
                                     placeholder="0" />
                             </div>
                             <div>

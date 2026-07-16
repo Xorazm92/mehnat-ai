@@ -196,7 +196,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                             Oylik Xomcho&apos;t
                         </h2>
                         <p className="text-[11px] mt-1 font-medium" style={{ color: "var(--text-muted)" }}>
-                            Qoralamalar (Drafts)
+                            Qoralamalar
                         </p>
                     </div>
                 </div>
@@ -261,7 +261,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                     ) : (
                                         <span className="c1-badge px-2.5 py-1 rounded-lg text-[10px]"
                                             style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>
-                                            Draft
+                                            Qoralama
                                         </span>
                                     )}
                                 </div>

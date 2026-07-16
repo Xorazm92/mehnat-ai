@@ -17,6 +17,17 @@ import { prisma } from "@/lib/prisma";
 import { isSeniorRole } from "@/lib/permissions";
 import { mapMonthlyReportToOperationEntry } from "@/lib/operationTemplates";
 
+// A firm "belongs" to an accountant either as the primary accountantId or via a
+// JAMOA-tab team assignment (contractAssignment). A firm can have several
+// accountants but only the last one becomes accountantId, so both must be
+// checked or team accountants see nothing. Use for Company-level `where`.
+const accountantCompanyWhere = (userId: string) => ({
+  OR: [
+    { accountantId: userId },
+    { contractAssignments: { some: { userId, isActive: true, role: "accountant" } } },
+  ],
+});
+
 // ─────────────────────────────────────────────
 // COMPANIES
 // ─────────────────────────────────────────────
@@ -63,7 +74,7 @@ const _getCachedCompaniesForBankManager = unstable_cache(
 const _getCachedCompaniesForAccountant = unstable_cache(
   async (userId: string) => {
     return prisma.company.findMany({
-      where: { accountantId: userId, isActive: true },
+      where: { isActive: true, ...accountantCompanyWhere(userId) },
       include: {
         accountant: { select: { id: true, fullName: true, avatarColor: true } },
       },
@@ -147,7 +158,7 @@ const _getCachedOperationsForSenior = unstable_cache(
 const _getCachedOperationsForAccountant = unstable_cache(
   async (userId: string) => {
     const reports = await prisma.monthlyReport.findMany({
-      where: { company: { accountantId: userId } },
+      where: { company: accountantCompanyWhere(userId) },
       orderBy: [{ period: "desc" }],
     });
     return reports.map(mapMonthlyReportToOperationEntry);
@@ -193,7 +204,7 @@ const _getCachedCompanyStatsForSenior = unstable_cache(
 
 const _getCachedCompanyStatsForAccountant = unstable_cache(
   async (userId: string) => {
-    const where = { accountantId: userId, isActive: true };
+    const where = { isActive: true, ...accountantCompanyWhere(userId) };
     const [total, byTaxRegime, byRisk] = await Promise.all([
       prisma.company.count({ where }),
       prisma.company.groupBy({
@@ -251,7 +262,7 @@ const _getCachedOperationSummaryForSenior = unstable_cache(
 
 const _getCachedOperationSummaryForAccountant = unstable_cache(
   async (userId: string) => {
-    const companyFilter = { company: { accountantId: userId } };
+    const companyFilter = { company: accountantCompanyWhere(userId) };
     const [total, accepted, rejected, blocked, inProgress] = await Promise.all([
       prisma.operation.count({ where: { ...companyFilter } }),
       prisma.operation.count({

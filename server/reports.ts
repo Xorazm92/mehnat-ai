@@ -11,12 +11,32 @@ import { Prisma } from "@prisma/client";
 // FINANCIAL REPORTS (Moliyaviy hisobotlar) — ASRO Hisobotlar moduli
 // =====================================================
 
+// Senior rollar barcha hisobotlarni ko'radi; buxgalter faqat o'ziga tegishli
+// (asosiy accountantId yoki JAMOA orqali biriktirilgan) firmalar hisobotini.
+function reportScopeWhere(userId: string, role: string): Prisma.FinancialReportWhereInput {
+  if (isSeniorRole(role)) return {};
+  return {
+    company: {
+      OR: [
+        { accountantId: userId },
+        { contractAssignments: { some: { userId, isActive: true, role: "accountant" } } },
+      ],
+    },
+  };
+}
+
 export async function getFinancialReports(period?: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
+  const userId = session.user.id as string;
+  const role = session.user.role as string;
+
   const reports = await prisma.financialReport.findMany({
-    where: period ? { period } : undefined,
+    where: {
+      ...(period ? { period } : {}),
+      ...reportScopeWhere(userId, role),
+    },
     orderBy: [{ deadline: "asc" }, { createdAt: "desc" }],
     include: { company: { select: { name: true, inn: true } } },
   });
@@ -43,9 +63,16 @@ export async function getReportDeadlines() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
+  const userId = session.user.id as string;
+  const role = session.user.role as string;
+
   const now = new Date();
   const soon = await prisma.financialReport.findMany({
-    where: { deadline: { not: null }, status: { notIn: ["submitted"] } },
+    where: {
+      deadline: { not: null },
+      status: { notIn: ["submitted"] },
+      ...reportScopeWhere(userId, role),
+    },
     orderBy: { deadline: "asc" },
     take: 6,
     include: { company: { select: { name: true } } },

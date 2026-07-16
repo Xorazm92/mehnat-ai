@@ -3,10 +3,12 @@
 import React, { useState, useMemo } from 'react';
 import { Expense, Language } from '@/types';
 import { translations } from '@/lib/translations';
-import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/exportExcel';
 import { canApproveExpense } from '@/lib/expenseApproval';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_COLORS } from '@/lib/constants';
 import BalanceOverview from '@/components/BalanceOverview';
+import { groupDigits, ungroupDigits } from '@/lib/format';
 import type { BalanceBreakdown } from '@/types';
 
 interface ExpenseModuleProps {
@@ -29,15 +31,17 @@ const EXP_STATUS: Record<string, { label: string; fg: string; bg: string; bd: st
 const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole = '', balance, onSaveExpense, onDeleteExpense, onApproveExpense, onRejectExpense }) => {
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Partial<Expense> | null>(null);
 
     const filteredExpenses = useMemo(() => {
+        const q = searchTerm.toLowerCase();
         return expenses.filter(e =>
-            e.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            e.description?.toLowerCase().includes(searchTerm.toLowerCase())
+            (e.category.toLowerCase().includes(q) || (e.description?.toLowerCase().includes(q) ?? false))
+            && (statusFilter === 'all' || (e.status || 'approved') === statusFilter)
         );
-    }, [expenses, searchTerm]);
+    }, [expenses, searchTerm, statusFilter]);
 
     const stats = useMemo(() => {
         const currentMonth = new Date().toISOString().slice(0, 7);
@@ -72,6 +76,19 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
     }, [expenses]);
 
     const som = (v: number) => Math.round(v).toLocaleString('ru-RU');
+    const fmtDate = (d: string) => (d ? new Date(d).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
+    const STATUS_UZ: Record<string, string> = { approved: 'Tasdiqlangan', pending: 'Kutilmoqda', rejected: 'Rad etilgan' };
+    const handleExport = () => {
+        const rows = filteredExpenses.map(e => ({
+            Sana: fmtDate(e.date),
+            Kategoriya: e.category,
+            Izoh: e.description || '',
+            "To'lov usuli": PAYMENT_METHOD_LABELS[(e.paymentMethod as string)] || e.paymentMethod || '',
+            Summa: e.amount || 0,
+            Holat: STATUS_UZ[e.status || 'approved'] || e.status || '',
+        }));
+        exportToExcel(rows, `xarajatlar-${new Date().toISOString().slice(0, 10)}`, 'Xarajatlar');
+    };
     const pct = (a: number, b: number) => (b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0);
     const limitColor = (p: number) => (p >= 100 ? 'var(--danger)' : p >= 90 ? 'var(--warning)' : 'var(--accent-blue)');
 
@@ -209,6 +226,26 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="rounded-xl py-3 px-4 text-[12px] font-bold uppercase tracking-widest outline-none transition-all"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
+                >
+                    <option value="all">Barcha holat</option>
+                    <option value="approved">Tasdiqlangan</option>
+                    <option value="pending">Kutilmoqda</option>
+                    <option value="rejected">Rad etilgan</option>
+                </select>
+                <button
+                    onClick={handleExport}
+                    disabled={filteredExpenses.length === 0}
+                    className="font-bold px-5 py-3 rounded-xl text-[12px] flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md disabled:opacity-40"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--success)' }}
+                >
+                    <FileDown size={16} />
+                    <span>Excel</span>
+                </button>
                 <button
                     onClick={() => {
                         setEditingExpense({
@@ -246,7 +283,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     </div>
                                     <div className="text-[13px] font-bold mt-1.5 truncate" style={{ color: 'var(--text)' }}>{expense.description || '—'}</div>
                                     <div className="flex items-center gap-2 mt-1 text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>
-                                        <span className="font-mono">{expense.date}</span>
+                                        <span className="font-mono">{fmtDate(expense.date)}</span>
                                         <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ color: pmc, background: `${pmc}1a` }}>{PAYMENT_METHOD_LABELS[pm] || pm}</span>
                                     </div>
                                 </div>
@@ -296,7 +333,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         <tbody>
                             {filteredExpenses.map((expense, i) => (
                                 <tr key={expense.id} className="transition-colors group hover:bg-[var(--danger-bg)] cursor-pointer" style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                                    <td className="px-6 py-4 text-[11px] font-bold uppercase tracking-tight font-mono" style={{ color: 'var(--text-secondary)' }}>{expense.date}</td>
+                                    <td className="px-6 py-4 text-[11px] font-bold uppercase tracking-tight font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtDate(expense.date)}</td>
                                     <td className="px-6 py-4">
                                         <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>{expense.category}</span>
                                     </td>
@@ -392,15 +429,16 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                 <Plus size={20} className="rotate-45" />
                             </button>
                         </div>
-                        <form onSubmit={handleSave} className="p-6 space-y-5">
+                        <form onSubmit={handleSave} className="p-6 space-y-5"
+                            onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); e.currentTarget.requestSubmit(); } }}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</label>
                                     <div className="relative">
                                         <input
-                                            type="number"
-                                            value={editingExpense?.amount || ''}
-                                            onChange={(e) => setEditingExpense(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                                            type="text" inputMode="numeric"
+                                            value={groupDigits(editingExpense?.amount || '')}
+                                            onChange={(e) => setEditingExpense(prev => ({ ...prev, amount: Number(ungroupDigits(e.target.value)) }))}
                                             className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
                                             style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                             required

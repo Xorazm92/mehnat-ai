@@ -61,7 +61,7 @@ export async function createKpiRule(data: {
   if (!session) throw new Error("Unauthorized");
 
   const role = session.user.role as string;
-  if (!isAdminRole(role)) throw new Error("Forbidden");
+  if (!isAdminRole(role)) throw new Error("KPI qoidalarini faqat administrator tahrirlashi mumkin");
 
   assertPercent("Mukofot foizi", data.rewardPercent);
   assertPercent("Jarima foizi", data.penaltyPercent);
@@ -92,7 +92,7 @@ export async function updateKpiRule(id: string, data: Partial<{
   if (!session) throw new Error("Unauthorized");
 
   const role = session.user.role as string;
-  if (!isAdminRole(role)) throw new Error("Forbidden");
+  if (!isAdminRole(role)) throw new Error("KPI qoidalarini faqat administrator tahrirlashi mumkin");
 
   assertPercent("Mukofot foizi", data.rewardPercent);
   assertPercent("Jarima foizi", data.penaltyPercent);
@@ -116,7 +116,7 @@ export async function deleteKpiRule(id: string) {
   if (!session) throw new Error("Unauthorized");
 
   const role = session.user.role as string;
-  if (!isAdminRole(role)) throw new Error("Forbidden");
+  if (!isAdminRole(role)) throw new Error("KPI qoidalarini faqat administrator tahrirlashi mumkin");
 
   return serialize(await prisma.kpiRule.delete({ where: { id } }));
 }

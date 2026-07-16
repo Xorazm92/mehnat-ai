@@ -58,10 +58,16 @@ export async function getCompanies() {
     );
   }
 
-  // Accountant — own companies only
+  // Accountant — own companies (primary accountantId or JAMOA-tab team assignment)
   return serialize(
     await prisma.company.findMany({
-      where: { accountantId: userId, isActive: true },
+      where: {
+        isActive: true,
+        OR: [
+          { accountantId: userId },
+          { contractAssignments: { some: { userId, isActive: true, role: "accountant" } } },
+        ],
+      },
       include: {
         accountant: { select: { id: true, fullName: true, avatarColor: true } },
       },

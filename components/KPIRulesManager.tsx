@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { KPIRule, KpiRuleOption, Language, KPIRoleType } from '@/types';
 import { Settings, Edit3, Trash2, X, Shield, Landmark, Calculator, Plus } from 'lucide-react';
 import { getKpiRules, createKpiRule, updateKpiRule, deleteKpiRule } from '@/server/kpi';
+import { submitOnCtrlEnter } from '@/lib/format';
 
 // inputTypeV2 → legacy inputType (yangi qoida yaratishда talab qilinadi)
 const LEGACY_INPUT: Record<string, string> = {
@@ -252,7 +253,8 @@ const KPIRulesManager: React.FC<Props> = () => {
             {editingRule && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }} onClick={() => setEditingRule(null)}>
                     <div className="w-full max-w-2xl rounded-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col"
-                        style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: '0 25px 60px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}>
+                        style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: '0 25px 60px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}
+                        onKeyDown={submitOnCtrlEnter(handleSave)}>
                         <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)', background: 'var(--table-header-bg)' }}>
                             <div>
                                 <h3 className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>{editingRule.id ? editingRule.nameUz : 'Yangi KPI qoidasi'}</h3>

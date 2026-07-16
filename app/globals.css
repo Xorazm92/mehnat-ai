@@ -32,6 +32,7 @@
    LIGHT THEME - Premium Design System
    ============================================= */
 :root {
+  color-scheme: light;
   /* Backgrounds */
   --bg-primary: #F1F5F9;
   --bg-secondary: #FFFFFF;
@@ -135,6 +136,7 @@
    DARK THEME - Premium Design System
    ============================================= */
 .dark {
+  color-scheme: dark;
   /* Backgrounds */
   --bg-primary: #0C0E14;
   --bg-secondary: #13161F;
@@ -335,6 +337,31 @@ time {
   border-radius: var(--card-radius);
   box-shadow: inset 0 0 0 1px var(--border-glass), var(--card-shadow);
   background-color: var(--bg-hover); /* holds the space while loading */
+}
+
+/* =============================================
+   FORM CONTROLS — native <select> popup + checkboxes
+   ============================================= */
+
+/* The <select> option list and checkbox ticks are painted by the browser, not
+   by our inline styles. With no color-scheme the dark theme drew the option
+   popup as (near-white) inherited text on the UA's white popup — the "oq-qora"
+   bug reported on Xodimlar / Firmalar / Organizations / KPI. color-scheme on
+   :root/.dark fixes the popup, date pickers and scrollbars; the explicit option
+   rule below is a solid-background fallback for engines that ignore it. Note we
+   use a solid color, not var(--input-bg) which is translucent and renders white
+   over the popup. */
+.dark select option,
+.dark select optgroup {
+  background-color: #1A1E2A;
+  color: #F1F5F9;
+}
+
+/* Checkbox/radio ticks defaulted to the UA pale grey, barely visible on a light
+   card ("darker qilish galochkani"). accent-color paints them brand-blue. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent-blue);
 }
 
 /* =============================================

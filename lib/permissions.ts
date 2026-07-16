@@ -134,6 +134,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "attendance",
     "documents",
     "notifications",
+    "settings",
     "admin",
   ],
   [ROLES.CHIEF_ACCOUNTANT]: [
@@ -149,6 +150,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "attendance",
     "documents",
     "notifications",
+    "settings",
   ],
   [ROLES.SUPERVISOR]: [
     "dashboard",
@@ -160,11 +162,13 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "cabinet",
     "attendance",
     "notifications",
+    "settings",
   ],
   [ROLES.ACCOUNTANT]: [
     "cabinet",
     "reports",
     "notifications",
+    "settings",
   ],
   [ROLES.BANK_MANAGER]: [
     "cabinet",
@@ -172,6 +176,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "kassa",
     "expenses",
     "notifications",
+    "settings",
   ],
 };
 

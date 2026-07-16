@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
-import { Calendar, Plus, Search, Edit3, Trash2, CheckCircle2, XCircle, Clock, UserCheck } from 'lucide-react';
+import { Calendar, Plus, Search, Edit3, Trash2, CheckCircle2, XCircle, Clock, UserCheck, DownloadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 
 export interface AttendanceRecord {
@@ -31,6 +31,7 @@ interface Props {
         notes?: string;
     }) => Promise<void>;
     onDelete: (id: string) => Promise<void>;
+    onSyncEjurnal?: (date: string) => Promise<{ imported: number; total: number; unmatched: string[] }>;
 }
 
 const STATUS_META: Record<string, { labelUz: string; labelRu: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -47,8 +48,26 @@ const fmtTime = (iso?: string) => {
     return d.toTimeString().slice(0, 5);
 };
 
-const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSave, onDelete }) => {
+const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSave, onDelete, onSyncEjurnal }) => {
     const t = translations[lang];
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSyncEjurnal = async () => {
+        if (!onSyncEjurnal) return;
+        setIsSyncing(true);
+        try {
+            const res = await onSyncEjurnal(selectedDate);
+            if (res.unmatched.length > 0) {
+                toast.warning(`${res.imported}/${res.total} import qilindi. Topilmadi: ${res.unmatched.slice(0, 5).join(', ')}${res.unmatched.length > 5 ? '…' : ''}`);
+            } else {
+                toast.success(`${res.imported} ta davomat e-jurnaldan import qilindi`);
+            }
+        } catch (e) {
+            toast.error((e as Error).message);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -169,6 +188,18 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+                {canEdit && onSyncEjurnal && (
+                    <button
+                        onClick={handleSyncEjurnal}
+                        disabled={isSyncing}
+                        className="font-bold px-5 py-3 rounded-xl text-[12px] flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md disabled:opacity-50"
+                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--accent-blue)' }}
+                        title="E-jurnaldan tanlangan kun davomatini yuklab olish"
+                    >
+                        <DownloadCloud size={16} />
+                        <span>{isSyncing ? 'Yuklanmoqda…' : 'E-jurnaldan'}</span>
+                    </button>
+                )}
                 {canEdit && (
                     <button
                         onClick={openNew}
