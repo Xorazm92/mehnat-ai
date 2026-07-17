@@ -76,9 +76,14 @@ model User {
   firedAt      DateTime?
   status       String?   @default("active") // 'active' | 'vacation' | 'sick'
   rating       Int?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+
+  // --- Telegram identity (KPI bot ↔ mehnat-ai user mapping) ---
+  telegramUserId   BigInt? @unique
+  telegramUsername String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   assignedCompanies   Company[]            @relation("AccountantCompanies")
@@ -107,19 +112,19 @@ model User {
 // =====================================================
 
 model Company {
-  id                String    @id @default(uuid())
+  id                String      @id @default(uuid())
   name              String
   inn               String
-  taxRegime         TaxRegime @default(vat)
+  taxRegime         TaxRegime   @default(vat)
   department        String?
   departmentId      String?
   departmentRef     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   accountantId      String?
-  accountant        User?     @relation("AccountantCompanies", fields: [accountantId], references: [id], onDelete: SetNull)
+  accountant        User?       @relation("AccountantCompanies", fields: [accountantId], references: [id], onDelete: SetNull)
   supervisorId      String?
-  supervisor        User?     @relation("SupervisorCompanies", fields: [supervisorId], references: [id], onDelete: SetNull)
+  supervisor        User?       @relation("SupervisorCompanies", fields: [supervisorId], references: [id], onDelete: SetNull)
   chiefAccountantId String?
-  chiefAccountant   User?     @relation("ChiefAccountantCompanies", fields: [chiefAccountantId], references: [id], onDelete: SetNull)
+  chiefAccountant   User?       @relation("ChiefAccountantCompanies", fields: [chiefAccountantId], references: [id], onDelete: SetNull)
 
   // Login credentials
   login    String?
@@ -190,6 +195,8 @@ model Company {
   credentials         ClientCredential[]
   payments            Payment[]
   reportProofs        ReportProof[]
+  telegramGroups      TelegramGroup[]
+  paymentReminders    PaymentReminder[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -271,19 +278,19 @@ model MonthlyReport {
   stat1Akt         String?
 
   // Qo'shimcha soliqlar / IT Park / Komunalka
-  aksizSoligi     String?
-  nedroSoligi     String?
-  norezidentFoyda String?
-  norezidentNds   String?
-  aylanmaQqsTolov String?
+  aksizSoligi       String?
+  nedroSoligi       String?
+  norezidentFoyda   String?
+  norezidentNds     String?
+  aylanmaQqsTolov   String?
   daromadSoliqTolov String?
-  inpsTolov       String?
-  foydaSoliqTolov String?
-  itparkOylik     String?
-  itparkChorak    String?
-  komSuv          String?
-  komGaz          String?
-  komSvet         String?
+  inpsTolov         String?
+  foydaSoliqTolov   String?
+  itparkOylik       String?
+  itparkChorak      String?
+  komSuv            String?
+  komGaz            String?
+  komSvet           String?
 
   comment   String?
   updatedAt DateTime @updatedAt
@@ -298,11 +305,11 @@ model MonthlyReport {
 // Har bir katak = (firma + davr + ustun) uchun bitta joriy dalil.
 // =====================================================
 model ReportProof {
-  id     String  @id @default(uuid())
+  id        String  @id @default(uuid())
   companyId String
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  period String // "2026-03"
-  colKey String // OperationModule REPORT_COLUMNS kaliti, masalan "didox"
+  period    String // "2026-03"
+  colKey    String // OperationModule REPORT_COLUMNS kaliti, masalan "didox"
 
   imageData String  @db.Text // skrinshot (base64 data URL, klient tomonda siqilgan)
   note      String? // buxgalterning izohi
@@ -355,19 +362,19 @@ model FinancialReport {
 }
 
 model Payment {
-  id          String   @id @default(uuid())
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  period      String // "2026-07"
-  amount      Decimal  @db.Decimal(12, 2)
-  paymentDate DateTime?
-  status      String   @default("pending") // 'paid' | 'pending' | 'partial' | 'overdue'
-  paymentMethod String @default("naqd") // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
-  comment     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  user        User?    @relation(fields: [createdBy], references: [id])
+  id            String    @id @default(uuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period        String // "2026-07"
+  amount        Decimal   @db.Decimal(12, 2)
+  paymentDate   DateTime?
+  status        String    @default("pending") // 'paid' | 'pending' | 'partial' | 'overdue'
+  paymentMethod String    @default("naqd") // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
+  comment       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy     String?
+  user          User?     @relation(fields: [createdBy], references: [id])
 
   @@unique([companyId, period])
   @@index([companyId])
@@ -568,20 +575,20 @@ model KassaEntry {
 // =====================================================
 
 model Expense {
-  id          String    @id @default(uuid())
-  amount      Decimal   @db.Decimal(12, 2)
-  date        DateTime
-  category    String
-  paymentMethod String  @default("naqd") // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
-  description String?
+  id             String    @id @default(uuid())
+  amount         Decimal   @db.Decimal(12, 2)
+  date           DateTime
+  category       String
+  paymentMethod  String    @default("naqd") // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
+  description    String?
   // Tasdiqlash oqimi: <1mln avto, 1-10mln Bosh Buxgalter, >10mln + Superadmin
-  status      String    @default("pending") // pending | approved | rejected
-  approvedBy  String?
-  approvedAt  DateTime?
+  status         String    @default("pending") // pending | approved | rejected
+  approvedBy     String?
+  approvedAt     DateTime?
   rejectedReason String?
-  createdAt   DateTime  @default(now())
-  createdBy   String?
-  user        User?     @relation(fields: [createdBy], references: [id])
+  createdAt      DateTime  @default(now())
+  createdBy      String?
+  user           User?     @relation(fields: [createdBy], references: [id])
 
   @@index([date])
   @@index([category])
@@ -653,16 +660,18 @@ model Document {
 // =====================================================
 
 model Attendance {
-  id        String    @id @default(uuid())
-  userId    String
-  user      User      @relation("UserAttendance", fields: [userId], references: [id], onDelete: Cascade)
-  date      DateTime
-  checkIn   DateTime?
-  checkOut  DateTime?
-  status    String    @default("present") // present, absent, late, excused
-  notes     String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation("UserAttendance", fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime
+  checkIn     DateTime?
+  checkOut    DateTime?
+  status      String    @default("present") // present, absent, late, excused
+  notes       String?
+  source      String?   @default("manual") // 'manual' | 'ejurnal' — where the record came from
+  lateMinutes Int?      @default(0) // minutes the check-in is past the 09:00 threshold
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([userId])
   @@index([date])
@@ -695,4 +704,143 @@ model SystemSetting {
   createdAt DateTime @default(now())
 
   @@index([key])
+}
+
+// =====================================================
+// TELEGRAM KPI BOT
+// Signal-capture + question/answer + immutable KPI ledger.
+// The bot writes here; the existing KPI engine (KpiRule /
+// MonthlyPerformance / PayrollAdjustment) and dashboards read it.
+// See KPI_BOT_BLUEPRINT.md and bot/README.md.
+// =====================================================
+
+// Firma ↔ Telegram guruh. One company may map to several chats.
+model TelegramGroup {
+  id        String   @id @default(uuid())
+  chatId    BigInt   @unique
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  title     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// Idempotency ledger: Telegram delivers at-least-once, so each update_id is
+// processed exactly once. The webhook/worker upserts here before doing work.
+model ProcessedUpdate {
+  updateId    BigInt   @id
+  processedAt DateTime @default(now())
+
+  @@index([processedAt]) // for periodic cleanup of old dedup rows
+}
+
+// Full message capture (text / reply / edit / delete / reaction / media / voice).
+// No @@unique([chatId, messageId]): edits & reactions are appended as separate
+// rows (message history), and dedup is guaranteed upstream by ProcessedUpdate.
+model TelegramMessage {
+  id              String   @id @default(uuid())
+  updateId        BigInt? // source Telegram update_id (trace)
+  chatId          BigInt
+  messageId       BigInt
+  fromUserId      BigInt? // Telegram numeric id of the sender
+  userId          String? // mapped mehnat-ai User id, when known
+  text            String?  @db.Text
+  kind            String // 'text'|'reply'|'edit'|'delete'|'reaction'|'media'|'voice'|'file'
+  replyToId       BigInt?
+  mediaType       String?
+  voiceTranscript String?  @db.Text // STT result
+  createdAt       DateTime // Telegram message time
+  loggedAt        DateTime @default(now()) // when the bot captured it
+
+  @@index([chatId, createdAt]) // scale / future partitioning key
+  @@index([chatId, messageId]) // reply resolution
+  @@index([userId, createdAt])
+}
+
+// Question state machine. Deadline = ResponseWindow × WorkingHours (domain layer).
+model Question {
+  id                String    @id @default(uuid())
+  chatId            BigInt
+  companyId         String?
+  messageId         BigInt
+  askedByUserId     BigInt?
+  text              String?   @db.Text
+  responsibleRole   String // 'accountant'|'bank_client'|'controller'
+  responsibleUserId String? // resolved mehnat-ai User, when known
+  status            String    @default("pending") // pending|answered|late|closed
+  deadlineAt        DateTime
+  answeredAt        DateTime?
+  aiConfidence      Decimal?  @db.Decimal(4, 3) // AI classifier confidence 0.000–1.000
+  createdAt         DateTime  @default(now())
+  answers           Answer[]
+
+  @@index([status, deadlineAt]) // critical for the pending-only deadline sweep
+  @@index([companyId])
+  @@index([chatId, messageId])
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  byUserId   String?
+  messageId  BigInt
+  createdAt  DateTime @default(now())
+
+  @@index([questionId])
+}
+
+// Immutable KPI ledger — every bonus/penalty is a signed, append-only row.
+// Rolled up into MonthlyPerformance; never mutated (corrections = new rows).
+model KpiEvent {
+  id          String   @id @default(uuid())
+  employeeId  String // mehnat-ai User id
+  companyId   String?
+  ruleId      String? // which KpiRule was applied
+  periodMonth String // "2026-07"
+  type        String // 'response'|'attendance'|'report'|'manual'
+  points      Decimal  @db.Decimal(10, 4) // signed: + bonus / − penalty
+  sourceRef   String? // Question.id / Attendance.id / ...
+  meta        Json     @default("{}")
+  createdBy   String? // for manual adjustments: who
+  createdAt   DateTime @default(now())
+
+  @@index([employeeId, periodMonth])
+  @@index([companyId, periodMonth])
+  @@index([periodMonth])
+}
+
+// Escalation delivery record (🟡🟠🔴) for a Notification over a channel.
+model NotificationDelivery {
+  id             String    @id @default(uuid())
+  notificationId String?
+  channel        String // 'telegram'|'inapp'
+  level          String // 'yellow'|'orange'|'red'
+  targetChatId   BigInt?
+  status         String    @default("pending") // pending|sent|failed
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([status])
+}
+
+// Payment-reminder trail. @@unique([companyId, period, level]) makes each
+// escalation step fire once per company+period — no spam, restart-safe.
+model PaymentReminder {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period    String // "2026-07" (matches Payment.period)
+  level     String // 'yellow'|'orange'|'red'
+  amountDue Decimal  @db.Decimal(12, 2) // debt at reminder time
+  chatId    BigInt? // which group it was sent to
+  status    String   @default("sent") // sent|failed|skipped
+  sentAt    DateTime @default(now())
+
+  @@unique([companyId, period, level])
+  @@index([period])
+  @@index([status])
 }

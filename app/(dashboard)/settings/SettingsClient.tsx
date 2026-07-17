@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import SettingsModule, { ProfileData } from "@/components/SettingsModule";
 import { updateUser, changePassword } from "@/server/users";
 
@@ -11,6 +12,7 @@ interface Props {
 
 export default function SettingsClient({ profile }: Props) {
   const router = useRouter();
+  useAutoRefresh();
 
   const handleSaveProfile = async (data: {
     fullName: string;

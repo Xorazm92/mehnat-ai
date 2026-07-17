@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
 import { serialize } from "@/lib/serialize";
+import { classifyArrival, aggregateMonthlyAttendance } from "@/lib/attendance";
 
 // =====================================================
 // ATTENDANCE (Davomat)
@@ -79,10 +80,15 @@ export async function upsertAttendance(data: {
     },
   });
 
+  const checkIn = toDateTime(data.checkIn);
   const payload = {
     status: data.status,
-    checkIn: toDateTime(data.checkIn),
+    checkIn,
     checkOut: toDateTime(data.checkOut),
+    // Derive lateness from the check-in so KPI aggregation is consistent whether
+    // the row came from e-jurnal or a manual entry.
+    lateMinutes: checkIn ? classifyArrival(checkIn).lateMinutes : 0,
+    source: "manual",
     notes: data.notes,
   };
 
@@ -107,4 +113,32 @@ export async function deleteAttendance(id: string) {
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
   return serialize(await prisma.attendance.delete({ where: { id } }));
+}
+
+/**
+ * Bir oy uchun xodimning davomatidan KPI ko'rsatkichlarini (earlyDays,
+ * lateMinutes, absentDays, ...) HISOBLAB beradi — nazoratchi qo'lda sanamasligi
+ * uchun. Manba: e-jurnal (yoki qo'lda) to'ldirgan `Attendance` jadvali. Read-only
+ * — MonthlyPerformance'ga yozmaydi; nazoratchi KPI kiritishда shundan foydalanadi.
+ */
+export async function deriveAttendanceKpi(employeeId: string, month: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  const role = session.user.role as string;
+  if (!isSeniorRole(role) && session.user.id !== employeeId) {
+    throw new Error("Forbidden");
+  }
+
+  const [y, m] = month.split("-").map(Number);
+  if (!y || !m) throw new Error("Noto'g'ri oy formati (YYYY-MM kutiladi)");
+  const from = new Date(y, m - 1, 1);
+  const to = new Date(y, m, 1);
+
+  const rows = await prisma.attendance.findMany({
+    where: { userId: employeeId, date: { gte: from, lt: to } },
+    select: { status: true, checkIn: true, lateMinutes: true },
+    orderBy: { date: "asc" },
+  });
+
+  return aggregateMonthlyAttendance(rows);
 }

@@ -5,6 +5,7 @@ import { Search, Shield, History, User } from 'lucide-react';
 import { translations } from '@/lib/translations';
 
 import { getAuditLogs } from '@/server/audit';
+import { formatUzDateNumeric, formatUzTime } from '@/lib/format';
 
 interface AuditLog {
     id: string;
@@ -118,7 +119,7 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                                     <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }}><User size={15} /></div>
                                     <div className="min-w-0">
                                         <div className="text-[12px] font-black uppercase tracking-tight truncate" style={{ color: 'var(--text)' }}>{log.profiles?.full_name || 'System Auto'}</div>
-                                        <div className="text-[10px] font-bold tabular-nums" style={{ color: 'var(--text-muted)' }}>{new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString()}</div>
+                                        <div className="text-[10px] font-bold tabular-nums" style={{ color: 'var(--text-muted)' }}>{formatUzDateNumeric(log.created_at)} {formatUzTime(log.created_at)}</div>
                                     </div>
                                 </div>
                                 <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md shrink-0" style={{ color: ac, background: `${ac}1a` }}>{log.action.replace('_', ' ')}</span>
@@ -170,10 +171,10 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex flex-col gap-1.5">
                                             <span className="font-bold text-[12px]" style={{ color: 'var(--text)' }}>
-                                                {new Date(log.created_at).toLocaleDateString()}
+                                                {formatUzDateNumeric(log.created_at)}
                                             </span>
                                             <span className="text-[10px] font-bold tabular-nums uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                                                {new Date(log.created_at).toLocaleTimeString()}
+                                                {formatUzTime(log.created_at)}
                                             </span>
                                         </div>
                                     </td>

@@ -6,7 +6,7 @@ import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2, SlidersHorizontal }
 import { periodsEqual } from '@/lib/periods';
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
 import { getPayrollAdjustments, createPayrollAdjustment } from '@/server/payroll';
-import { groupDigits, ungroupDigits, submitOnCtrlEnter } from '@/lib/format';
+import { groupDigits, ungroupDigits, submitOnCtrlEnter, formatNum } from '@/lib/format';
 
 interface Props {
     staff: Staff[];
@@ -290,7 +290,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                     <div className="px-5 py-2.5 rounded-xl" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
                         <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--success)" }}>Jami to&apos;lov</p>
                         <p className="text-[18px] font-black tabular-nums leading-none" style={{ color: "var(--success)" }}>
-                            {summaries.reduce((a, b) => a + b.totalSalary, 0).toLocaleString("uz-UZ")}
+                            {formatNum(summaries.reduce((a, b) => a + b.totalSalary, 0))}
                             <span className="text-[11px] font-bold ml-1.5" style={{ color: "var(--success)", opacity: 0.7 }}>so&apos;m</span>
                         </p>
                     </div>
@@ -301,9 +301,9 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
                     { label: "Xodimlar", value: summaries.length, icon: "👥", color: "var(--accent-blue)", bg: "var(--info-bg)" },
-                    { label: "Jami stavka", value: summaries.reduce((a, b) => a + b.baseSalary, 0).toLocaleString("uz-UZ") + " so'm", icon: "💼", color: "var(--accent-indigo)", bg: "var(--accent-indigo-light)" },
-                    { label: "KPI bonus", value: "+" + summaries.reduce((a, b) => a + b.kpiBonus, 0).toLocaleString("uz-UZ") + " so'm", icon: "📈", color: "var(--success)", bg: "var(--success-bg)" },
-                    { label: "Jami jarima", value: summaries.reduce((a, b) => a + Math.abs(b.kpiPenalty), 0).toLocaleString("uz-UZ") + " so'm", icon: "⚠️", color: "var(--danger)", bg: "var(--danger-bg)" },
+                    { label: "Jami stavka", value: formatNum(summaries.reduce((a, b) => a + b.baseSalary, 0)) + " so'm", icon: "💼", color: "var(--accent-indigo)", bg: "var(--accent-indigo-light)" },
+                    { label: "KPI bonus", value: "+" + formatNum(summaries.reduce((a, b) => a + b.kpiBonus, 0)) + " so'm", icon: "📈", color: "var(--success)", bg: "var(--success-bg)" },
+                    { label: "Jami jarima", value: formatNum(summaries.reduce((a, b) => a + Math.abs(b.kpiPenalty), 0)) + " so'm", icon: "⚠️", color: "var(--danger)", bg: "var(--danger-bg)" },
                 ].map((card, i) => (
                     <div key={i} className="p-4 rounded-xl" style={{ background: card.bg, border: `1px solid ${card.color}22` }}>
                         <div className="flex items-center gap-2 mb-2">
@@ -327,17 +327,17 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                             </div>
                             <div className="text-right shrink-0">
                                 <p className="text-2xs font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami</p>
-                                <p className="text-[15px] font-black tabular-nums leading-tight" style={{ color: "var(--accent-indigo)" }}>{s.totalSalary.toLocaleString("uz-UZ")}</p>
+                                <p className="text-[15px] font-black tabular-nums leading-tight" style={{ color: "var(--accent-indigo)" }}>{formatNum(s.totalSalary)}</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 mt-3">
                             {[
-                                { l: "Stavka", v: s.baseSalary.toLocaleString("uz-UZ"), c: "var(--text-primary)" },
-                                { l: "Bonus", v: "+" + s.kpiBonus.toLocaleString("uz-UZ"), c: "var(--success)" },
-                                { l: "Jarima", v: s.kpiPenalty.toLocaleString("uz-UZ"), c: "var(--danger)" },
-                                { l: "Qo'shimcha", v: (s.manualBonuses > 0 ? "+" : "") + s.manualBonuses.toLocaleString("uz-UZ"), c: "var(--accent-blue)" },
-                                { l: "Avans", v: Math.abs(s.totalReceived).toLocaleString("uz-UZ"), c: "var(--warning)" },
-                                { l: "Qolgan", v: s.remainingBalance.toLocaleString("uz-UZ"), c: s.remainingBalance <= 0 ? "var(--success)" : "var(--warning)" },
+                                { l: "Stavka", v: formatNum(s.baseSalary), c: "var(--text-primary)" },
+                                { l: "Bonus", v: "+" + formatNum(s.kpiBonus), c: "var(--success)" },
+                                { l: "Jarima", v: formatNum(s.kpiPenalty), c: "var(--danger)" },
+                                { l: "Qo'shimcha", v: (s.manualBonuses > 0 ? "+" : "") + formatNum(s.manualBonuses), c: "var(--accent-blue)" },
+                                { l: "Avans", v: formatNum(Math.abs(s.totalReceived)), c: "var(--warning)" },
+                                { l: "Qolgan", v: formatNum(s.remainingBalance), c: s.remainingBalance <= 0 ? "var(--success)" : "var(--warning)" },
                             ].map((x, i) => (
                                 <div key={i} className="rounded-lg px-2 py-1.5 text-center" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
                                     <div className="text-2xs font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{x.l}</div>
@@ -440,14 +440,14 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                     {/* Stavka */}
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
-                                            {s.baseSalary.toLocaleString("uz-UZ")}
+                                            {formatNum(s.baseSalary)}
                                         </span>
                                     </td>
                                     {/* KPI Bonus */}
                                     {!hiddenCols.has('bonus') && (
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--success)" }}>
-                                            +{s.kpiBonus.toLocaleString("uz-UZ")}
+                                            +{formatNum(s.kpiBonus)}
                                         </span>
                                     </td>
                                     )}
@@ -455,7 +455,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                     {!hiddenCols.has('penalty') && (
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--danger)" }}>
-                                            {s.kpiPenalty.toLocaleString("uz-UZ")}
+                                            {formatNum(s.kpiPenalty)}
                                         </span>
                                     </td>
                                     )}
@@ -463,7 +463,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                     {!hiddenCols.has('manual') && (
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--accent-blue)" }}>
-                                            {s.manualBonuses > 0 ? "+" : ""}{s.manualBonuses.toLocaleString("uz-UZ")}
+                                            {s.manualBonuses > 0 ? "+" : ""}{formatNum(s.manualBonuses)}
                                         </span>
                                     </td>
                                     )}
@@ -471,14 +471,14 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                     {!hiddenCols.has('avans') && (
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--warning)" }}>
-                                            {Math.abs(s.totalReceived).toLocaleString("uz-UZ")}
+                                            {formatNum(Math.abs(s.totalReceived))}
                                         </span>
                                     </td>
                                     )}
                                     {/* Jami */}
                                     <td className="px-4 py-3.5 text-right">
                                         <span className="text-[14px] font-black tabular-nums whitespace-nowrap" style={{ color: "var(--accent-indigo)" }}>
-                                            {s.totalSalary.toLocaleString("uz-UZ")}
+                                            {formatNum(s.totalSalary)}
                                         </span>
                                     </td>
                                     {/* Qolgan */}
@@ -490,7 +490,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                                 color: s.remainingBalance <= 0 ? "var(--success)" : "var(--warning)",
                                                 border: `1px solid ${s.remainingBalance <= 0 ? "var(--success-border)" : "var(--warning-border)"}`,
                                             }}>
-                                            {s.remainingBalance.toLocaleString("uz-UZ")}
+                                            {formatNum(s.remainingBalance)}
                                         </span>
                                     </td>
                                     )}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import PayrollDrafts from "@/components/PayrollDrafts";
 import PayrollTable from "@/components/PayrollTable";
 import { Company, Staff, OperationEntry } from "@/types";
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function PayrollClient({ companies, staff, operations, userRole }: Props) {
+  useAutoRefresh();
   const [activeTab, setActiveTab] = useState<'drafts' | 'history'>('drafts');
 
   return (

@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Wallet,
 } from "lucide-react";
+import { formatUzMonthYear, formatUzDateNumeric, formatNum } from "@/lib/format";
 
 interface AssignedCompany {
   id: string;
@@ -60,10 +61,7 @@ export function BankCabinet({
   currentMonth,
 }: BankCabinetProps) {
   const firstName = userName.split(" ")[0];
-  const monthLabel = new Date(`${currentMonth}-01`).toLocaleDateString("uz-UZ", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = formatUzMonthYear(`${currentMonth}-01`);
 
   const categoryLabels: Record<string, string> = {
     salary: "Maosh",
@@ -99,7 +97,7 @@ export function BankCabinet({
             <span className="text-sm" style={{ color: "var(--text-muted)" }}>Kirim</span>
           </div>
           <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>
-            {balance.income.toLocaleString()}
+            {formatNum(balance.income)}
           </div>
           <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>so&apos;m</div>
         </div>
@@ -112,7 +110,7 @@ export function BankCabinet({
             <span className="text-sm" style={{ color: "var(--text-muted)" }}>Chiqim</span>
           </div>
           <div className="text-2xl font-bold" style={{ color: "var(--danger)" }}>
-            {balance.expense.toLocaleString()}
+            {formatNum(balance.expense)}
           </div>
           <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>so&apos;m</div>
         </div>
@@ -138,7 +136,7 @@ export function BankCabinet({
             style={{ color: balance.net >= 0 ? "var(--accent-blue)" : "var(--danger)" }}
           >
             {balance.net >= 0 ? "+" : ""}
-            {balance.net.toLocaleString()}
+            {formatNum(balance.net)}
           </div>
           <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>so&apos;m</div>
         </div>
@@ -187,7 +185,7 @@ export function BankCabinet({
                         <span className="text-xs font-medium" style={{ color: "var(--success)" }}>
                           {assignment.salaryType === "percent"
                             ? `${assignment.salaryValue}%`
-                            : `${Number(assignment.salaryValue).toLocaleString()} so'm`}
+                            : `${formatNum(Number(assignment.salaryValue))} so'm`}
                         </span>
                       )}
                       <ChevronRight
@@ -243,7 +241,7 @@ export function BankCabinet({
                         {entry.description || categoryLabels[entry.category] || entry.category}
                       </p>
                       <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                        <span suppressHydrationWarning>{new Date(entry.date).toLocaleDateString("uz-UZ")}</span>
+                        <span>{formatUzDateNumeric(entry.date)}</span>
                       </p>
                     </div>
                     <span
@@ -251,7 +249,7 @@ export function BankCabinet({
                       style={{ color: entry.type === "income" ? "var(--success)" : "var(--danger)" }}
                     >
                       {entry.type === "income" ? "+" : "-"}
-                      {Number(entry.amount).toLocaleString()}
+                      {formatNum(Number(entry.amount))}
                     </span>
                   </div>
                 ))

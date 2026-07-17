@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // The Telegram webhook route (app/api/telegram/webhook) imports the BullMQ
+  // producer. Keep these native-ish server deps out of the bundler so they load
+  // via Node require at runtime.
+  serverExternalPackages: ["bullmq", "ioredis"],
   // Skrinshot dalillari (base64) Server Action orqali yuboriladi — standart 1MB
   // chegara ba'zi rasmlar uchun kam bo'lishi mumkin, shuning uchun oshiramiz.
   // Klient tomonda rasm siqiladi, bu faqat zaxira uchun keng chegara.

@@ -10,6 +10,7 @@ import {
   DollarSign,
   FileCheck,
 } from "lucide-react";
+import { formatUzMonthYear, formatNum } from "@/lib/format";
 
 interface TeamMember {
   id: string;
@@ -67,10 +68,7 @@ export function ChiefAccountantCabinet({
   currentMonth,
 }: ChiefAccountantCabinetProps) {
   const firstName = userName.split(" ")[0];
-  const monthLabel = new Date(`${currentMonth}-01`).toLocaleDateString("uz-UZ", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = formatUzMonthYear(`${currentMonth}-01`);
 
   const roleLabels: Record<string, string> = {
     accountant: "Buxgalter",
@@ -286,7 +284,7 @@ export function ChiefAccountantCabinet({
                       style={{ color: item.adjustmentType === "jarima" ? "var(--danger)" : "var(--success)" }}
                     >
                       {item.adjustmentType === "jarima" ? "-" : "+"}
-                      {Number(item.amount).toLocaleString()}
+                      {formatNum(Number(item.amount))}
                     </span>
                   </div>
                 ))

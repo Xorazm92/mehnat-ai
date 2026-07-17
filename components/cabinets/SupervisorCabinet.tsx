@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   TrendingUp,
 } from "lucide-react";
+import { formatUzMonthYear } from "@/lib/format";
 
 interface SupervisedCompany {
   id: string;
@@ -63,10 +64,7 @@ export function SupervisorCabinet({
   currentMonth,
 }: SupervisorCabinetProps) {
   const firstName = userName.split(" ")[0];
-  const monthLabel = new Date(`${currentMonth}-01`).toLocaleDateString("uz-UZ", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = formatUzMonthYear(`${currentMonth}-01`);
 
   const highRisk = riskStats.find((r) => r.riskLevel === "high")?._count || 0;
   const mediumRisk = riskStats.find((r) => r.riskLevel === "medium")?._count || 0;

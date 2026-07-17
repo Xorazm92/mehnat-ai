@@ -3,6 +3,7 @@ import { Company, OperationEntry, Payment, Language, ClientCredential, ClientHis
 import { X, Shield, FileText, Lock, Globe, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Check, Calculator, Trash2, Plus, Pencil, Save, Loader2, Phone } from 'lucide-react';
 import { getKpiRules, getCompanyKpiRules, upsertCompanyKpiRule } from '@/server/kpi';
 import { getClientCredentials, createClientCredential, deleteClientCredential } from '@/server/credentials';
+import { formatUzDate, formatUzDateTime, formatNum } from '@/lib/format';
 
 interface DrawerProps {
   company: Company | null;
@@ -669,9 +670,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             </div>
                             <div className="text-right flex flex-col gap-1 items-end">
                               <span className="px-2.5 py-1 bg-[var(--input-bg)] rounded-md border border-[var(--card-border)] text-[12px] font-bold text-[var(--text)] tabular-nums whitespace-nowrap shadow-sm">
-                                {asgn.salary_type === 'percent' ? `${asgn.salary_value}%` : `${asgn.salary_value?.toLocaleString()} so'm`}
+                                {asgn.salary_type === 'percent' ? `${asgn.salary_value}%` : `${formatNum(asgn.salary_value)} so'm`}
                               </span>
-                              {asgn.start_date && <p className="text-[10px] text-[var(--text-muted)] font-semibold tracking-tight">Sana: {new Date(asgn.start_date).toLocaleDateString()}</p>}
+                              {asgn.start_date && <p className="text-[10px] text-[var(--text-muted)] font-semibold tracking-tight">Sana: {formatUzDate(asgn.start_date)}</p>}
                             </div>
                           </div>
                         );
@@ -741,7 +742,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         </div>
                         <div className="flex flex-col gap-0.5 min-w-0">
                           <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase truncate pr-2 tracking-tight leading-tight">{h.notes || 'Rol o\'zgarishi'}</p>
-                          <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest opacity-60 leading-none mt-0.5">{new Date(h.changedAt).toLocaleString()} • {h.changedByName || 'Tizim'}</p>
+                          <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest opacity-60 leading-none mt-0.5">{formatUzDateTime(h.changedAt)} • {h.changedByName || 'Tizim'}</p>
                         </div>
                       </div>
                     ))}
@@ -782,12 +783,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
                       <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xizmat Narxi</p>
-                      <p className="text-[18px] font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{Number(company.contractAmount || 0).toLocaleString()} <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>so&apos;m</span></p>
+                      <p className="text-[18px] font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{formatNum(Number(company.contractAmount || 0))} <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>so&apos;m</span></p>
                     </div>
                     <div className="flex flex-col gap-2">
                       <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Joriy Balans</p>
                       <p className={`text-[18px] font-black tabular-nums tracking-tight leading-none uppercase`} style={{ color: Number(company.currentBalance || 0) < 0 ? 'var(--danger)' : 'var(--success)' }}>
-                        {Number(company.currentBalance || 0).toLocaleString()} <span className="text-[10px] font-bold uppercase tracking-widest">so&apos;m</span>
+                        {formatNum(Number(company.currentBalance || 0))} <span className="text-[10px] font-bold uppercase tracking-widest">so&apos;m</span>
                       </p>
                     </div>
                   </div>
@@ -817,7 +818,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               <span className="text-[13px] font-bold tracking-tight uppercase" style={{ color: 'var(--text)' }}>{item.label}</span>
                               <div className="text-right flex items-center gap-4">
                                 <p className="text-[11px] font-bold px-2.5 py-1 rounded-md border tabular-nums" style={{ color: 'var(--text-secondary)', background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>{item.type === 'fixed' ? 'Fiks' : `${item.value}%`}</p>
-                                <p className="text-[14px] font-black tabular-nums tracking-tight leading-none min-w-[90px]" style={{ color: 'var(--text)' }}>{item.amountValue.toLocaleString()} <span className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>UZS</span></p>
+                                <p className="text-[14px] font-black tabular-nums tracking-tight leading-none min-w-[90px]" style={{ color: 'var(--text)' }}>{formatNum(item.amountValue)} <span className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>UZS</span></p>
                               </div>
                             </div>
                           ))}
@@ -825,7 +826,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         <div className="mt-4 flex items-center justify-between p-4 rounded-xl shadow-sm" style={{ background: 'var(--success-bg)', border: '1px solid var(--success-border)' }}>
                           <span className="text-[12px] font-black uppercase tracking-widest" style={{ color: 'var(--success)' }}>Kompaniya Qoldig&apos;i</span>
                           <span className="text-[15px] font-black tabular-nums tracking-tight leading-none" style={{ color: remainder < 0 ? 'var(--danger)' : 'var(--success)' }}>
-                            {remainder.toLocaleString()} <span className="text-[10px] font-bold">UZS</span>
+                            {formatNum(remainder)} <span className="text-[10px] font-bold">UZS</span>
                           </span>
                         </div>
                       </>

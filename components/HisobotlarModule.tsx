@@ -4,6 +4,7 @@ import { Company, Staff, Language } from "@/types";
 import { FileText, Plus, X, Calendar, ShieldCheck, Download, Trash2, PenLine, Send, CheckCircle2 } from "lucide-react";
 import { getFinancialReports, getReportDeadlines, createFinancialReport, setReportStatus, deleteFinancialReport } from "@/server/reports";
 import { REPORT_TYPES } from "@/lib/reportTypes";
+import { formatUzDayShort, formatNum } from "@/lib/format";
 
 interface Props { companies: Company[]; staff: Staff[]; lang: Language; }
 
@@ -22,7 +23,7 @@ const STATUS: Record<string, { label: string; fg: string; bg: string; bd: string
   submitted: { label: "Yuborilgan", fg: "var(--success)", bg: "var(--success-bg)", bd: "var(--success-border)" },
   rejected: { label: "Rad etildi", fg: "var(--danger)", bg: "var(--danger-bg)", bd: "var(--danger-border)" },
 };
-const som = (v: number) => (v < 0 ? "−" : "") + Math.abs(Math.round(v)).toLocaleString("ru-RU");
+const som = (v: number) => (v < 0 ? "−" : "") + formatNum(Math.abs(Math.round(v)));
 const MONTHS_UZ = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentyabr","Oktyabr","Noyabr","Dekabr"];
 
 const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
@@ -99,7 +100,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
               <div key={d.id} className="p-4 rounded-xl" style={{ background: c.bg, border: `1px solid ${c.bd}` }}>
                 <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: c.fg }}>{done ? "Bajarildi" : d.daysLeft == null ? "Muddat" : d.daysLeft < 0 ? `${Math.abs(d.daysLeft)} kun kechikdi` : d.daysLeft === 0 ? "Bugun oxirgi kun" : `${d.daysLeft} kun qoldi`}</p>
                 <p className="text-[13px] font-bold" style={{ color: "var(--text-primary)" }}>{d.typeLabel}</p>
-                <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>{d.companyName}{d.deadline ? ` · ${new Date(d.deadline).toLocaleDateString("uz-UZ", { day: "numeric", month: "short" })}` : ""}</p>
+                <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>{d.companyName}{d.deadline ? ` · ${formatUzDayShort(d.deadline)}` : ""}</p>
               </div>
             );
           })}
@@ -131,7 +132,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
                       <td className="px-4 py-3 text-[11px] font-bold" style={{ color: "var(--text-secondary)" }}>{r.period}</td>
                       <td className="px-4 py-3 text-[11px]" style={{ color: "var(--text-secondary)" }}>{r.assigneeName || "—"}</td>
                       <td className="px-4 py-3"><span className="text-[9px] font-bold px-2 py-1 rounded uppercase" style={{ background: s.bg, color: s.fg, border: `1px solid ${s.bd}` }}>{s.label}</span></td>
-                      <td className="px-4 py-3 text-[11px] font-bold" style={{ color: days != null && days <= 5 && r.status !== "submitted" ? "var(--danger)" : "var(--text-muted)" }}>{r.deadline ? new Date(r.deadline).toLocaleDateString("uz-UZ", { day: "numeric", month: "short" }) : "—"}{days != null && days >= 0 && r.status !== "submitted" ? ` · ${days} kun` : ""}</td>
+                      <td className="px-4 py-3 text-[11px] font-bold" style={{ color: days != null && days <= 5 && r.status !== "submitted" ? "var(--danger)" : "var(--text-muted)" }}>{r.deadline ? formatUzDayShort(r.deadline) : "—"}{days != null && days >= 0 && r.status !== "submitted" ? ` · ${days} kun` : ""}</td>
                       <td className="px-4 py-3"><span className="inline-flex items-center gap-1 text-[10px] font-bold" style={{ color: "var(--accent-blue)" }}><Download size={11} /> {r.fileFormat || "PDF"}</span></td>
                     </tr>
                   );
@@ -161,7 +162,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
           </div>
           <div className="mt-4 pt-3 space-y-1.5" style={{ borderTop: "1px solid var(--card-border)" }}>
             {deadlines.slice(0, 4).map((d) => (
-              <div key={d.id} className="flex items-center gap-2 text-[10px]"><span className="w-1.5 h-1.5 rounded-full" style={{ background: d.status === "submitted" ? "var(--success)" : "var(--danger)" }} /><span className="font-bold" style={{ color: "var(--text-secondary)" }}>{d.deadline ? new Date(d.deadline).toLocaleDateString("uz-UZ", { day: "numeric", month: "short" }) : "—"}</span><span style={{ color: "var(--text-muted)" }}>— {d.typeLabel}</span></div>
+              <div key={d.id} className="flex items-center gap-2 text-[10px]"><span className="w-1.5 h-1.5 rounded-full" style={{ background: d.status === "submitted" ? "var(--success)" : "var(--danger)" }} /><span className="font-bold" style={{ color: "var(--text-secondary)" }}>{d.deadline ? formatUzDayShort(d.deadline) : "—"}</span><span style={{ color: "var(--text-muted)" }}>— {d.typeLabel}</span></div>
             ))}
           </div>
         </div>

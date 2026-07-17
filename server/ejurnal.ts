@@ -5,6 +5,8 @@
 // =====================================================
 // E-jurnal — Hikvision yuz-skaneri asosidagi davomat tizimi. Bu modul undan
 // kunlik davomatni olib, ASRO xodimlariga moslab, Attendance jadvaliga yozadi.
+// Sof mantiq (status xaritasi, kechikish hisobi, moslashtirish) lib/ejurnal.ts
+// da — bu yerda faqat API adapteri va DB yozuvi.
 //
 // SOZLASH (.env yoki .env.local):
 //   EJURNAL_API_URL=https://usp.ejurnal.uz/api      # e-jurnal API bazaviy manzili
@@ -16,22 +18,20 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import {
+  normalizeEjurnalRows,
+  buildEjurnalPayload,
+  matchUserId,
+  digitsOnly,
+  type EjurnalRecord,
+} from "@/lib/ejurnal";
 
 const EJURNAL_API_URL = process.env.EJURNAL_API_URL;
 const EJURNAL_API_TOKEN = process.env.EJURNAL_API_TOKEN;
 
-/** E-jurnaldan kelgan bitta davomat yozuvi (normallashtirilgan). */
-export interface EjurnalRecord {
-  fullName: string;
-  phone?: string;
-  status: string; // e-jurnal xom holati
-  checkIn?: string; // "HH:mm" yoki ISO
-  checkOut?: string;
-}
-
 // ─── ADAPTER — e-jurnalning haqiqiy API spetsifikatsiyasini kutadigan YAGONA joy ───
-// .env da URL/token to'ldirilgach, quyidagi endpoint yo'li va `.map()` ichidagi
-// maydon nomlarini e-jurnal javobiga qarab moslang.
+// .env da URL/token to'ldirilgach, endpoint yo'lini e-jurnal hujjatiga qarab
+// moslang. JSON maydon nomlari lib/ejurnal.ts `normalizeEjurnalRows` da moslanadi.
 async function fetchEjurnalAttendance(date: string): Promise<EjurnalRecord[]> {
   if (!EJURNAL_API_URL || !EJURNAL_API_TOKEN) {
     throw new Error(
@@ -50,43 +50,13 @@ async function fetchEjurnalAttendance(date: string): Promise<EjurnalRecord[]> {
     throw new Error(`E-jurnal API xatosi: ${res.status} ${res.statusText}`);
   }
 
-  const data = await res.json();
-  // Javob to'g'ridan-to'g'ri massiv, yoki { data: [...] } / { results: [...] } bo'lishi mumkin.
-  const rows: Record<string, unknown>[] = Array.isArray(data)
-    ? data
-    : ((data.data ?? data.results ?? []) as Record<string, unknown>[]);
-
-  return rows.map((r) => ({
-    fullName: String(r.full_name ?? r.fullName ?? r.name ?? "").trim(),
-    phone: r.phone ? String(r.phone) : undefined,
-    status: String(r.status ?? "present"),
-    checkIn: (r.check_in ?? r.checkIn ?? undefined) as string | undefined,
-    checkOut: (r.check_out ?? r.checkOut ?? undefined) as string | undefined,
-  }));
-}
-
-/** E-jurnal holatini ASRO holatiga o'giradi: present | late | excused | absent. */
-function mapStatus(raw: string): string {
-  const v = raw.toLowerCase();
-  if (["late", "kech", "kechikdi"].some((k) => v.includes(k))) return "late";
-  if (["excused", "sababli", "ta'til", "tatil", "otpusk"].some((k) => v.includes(k))) return "excused";
-  if (["absent", "kelmadi", "yo'q", "yoq"].some((k) => v.includes(k))) return "absent";
-  if (["present", "keldi", "ishda", "attend", "in"].some((k) => v.includes(k))) return "present";
-  return "present";
-}
-
-const digitsOnly = (s?: string) => (s ?? "").replace(/\D/g, "");
-
-/** "HH:mm", "HH:mm:ss" yoki ISO ichidan "HH:mm" ni ajratadi. */
-function timeOnly(t?: string): string | undefined {
-  if (!t) return undefined;
-  const m = t.match(/(\d{1,2}):(\d{2})/);
-  return m ? `${m[1].padStart(2, "0")}:${m[2]}` : undefined;
+  return normalizeEjurnalRows(await res.json());
 }
 
 /**
  * E-jurnaldan berilgan kun uchun davomatni olib, ASRO xodimlariga (telefon →
- * to'liq ism bo'yicha) moslab, Attendance jadvaliga yozadi (upsert).
+ * to'liq ism bo'yicha) moslab, Attendance jadvaliga yozadi (upsert). Kelish
+ * vaqtidan status va kechikish daqiqasi hisoblanadi; manba `source='ejurnal'`.
  * Faqat senior rollar ishlata oladi. Natija: nechta yozildi va kim topilmadi.
  */
 export async function syncEjurnalAttendance(date: string) {
@@ -98,7 +68,6 @@ export async function syncEjurnalAttendance(date: string) {
 
   const records = await fetchEjurnalAttendance(date);
 
-  // ASRO xodimlarini telefon va ism bo'yicha indekslash.
   const users = await prisma.user.findMany({
     select: { id: true, fullName: true, phone: true },
   });
@@ -112,23 +81,13 @@ export async function syncEjurnalAttendance(date: string) {
   const unmatched: string[] = [];
 
   for (const rec of records) {
-    const userId =
-      (rec.phone ? byPhone.get(digitsOnly(rec.phone)) : undefined) ??
-      byName.get(rec.fullName.toLowerCase());
-
+    const userId = matchUserId(rec, byPhone, byName);
     if (!userId) {
       unmatched.push(rec.fullName || rec.phone || "?");
       continue;
     }
 
-    const ci = timeOnly(rec.checkIn);
-    const co = timeOnly(rec.checkOut);
-    const payload = {
-      status: mapStatus(rec.status),
-      checkIn: ci ? new Date(`${date}T${ci}:00`) : null,
-      checkOut: co ? new Date(`${date}T${co}:00`) : null,
-      notes: "E-jurnaldan import qilingan",
-    };
+    const payload = buildEjurnalPayload(rec, date);
 
     const existing = await prisma.attendance.findFirst({
       where: { userId, date: { gte: day, lt: new Date(day.getTime() + 86400000) } },

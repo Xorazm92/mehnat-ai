@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import AttendanceModule, { AttendanceRecord } from "@/components/AttendanceModule";
 import { Staff } from "@/types";
 import { upsertAttendance, deleteAttendance } from "@/server/attendance";
@@ -15,6 +16,7 @@ interface Props {
 
 export default function AttendanceClient({ records, staff, canEdit }: Props) {
   const router = useRouter();
+  useAutoRefresh();
 
   const handleSave = async (data: {
     userId: string;

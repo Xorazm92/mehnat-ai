@@ -7,6 +7,7 @@ import { translations } from '@/lib/translations';
 import { Wallet, TrendingUp, AlertCircle, Award, TrendingDown, Activity } from 'lucide-react';
 import { getKpiRules, getMonthlyPerformance, upsertPerformance } from '@/server/kpi';
 import { getPayrollAdjustments } from '@/server/payroll';
+import { formatUzDate, formatNum } from '@/lib/format';
 import KpiEntryCard from './kpi/KpiEntryCard';
 
 interface Props {
@@ -157,7 +158,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                         <div>
                             <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">{(t as any).currentMonthEst || 'Joriy oy'}</p>
                             <h3 className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
-                                {summary.totalSalary.toLocaleString()} <span className="text-sm font-bold text-gray-400">UZS</span>
+                                {formatNum(summary.totalSalary)} <span className="text-sm font-bold text-gray-400">UZS</span>
                             </h3>
                         </div>
                         <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded flex items-center justify-center border border-indigo-100 dark:border-indigo-800">
@@ -167,15 +168,15 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                     <div className="grid grid-cols-3 gap-2">
                         <div className="p-2 bg-gray-50 dark:bg-[#1e2025] border border-gray-200 dark:border-gray-700 rounded">
                             <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Bazaviy</p>
-                            <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{summary.baseSalary.toLocaleString()}</p>
+                            <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{formatNum(summary.baseSalary)}</p>
                         </div>
                         <div className="p-2 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 rounded">
                             <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Bonus</p>
-                            <p className="text-xs font-bold text-emerald-600">+{summary.kpiBonus.toLocaleString()}</p>
+                            <p className="text-xs font-bold text-emerald-600">+{formatNum(summary.kpiBonus)}</p>
                         </div>
                         <div className="p-2 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-900/30 rounded">
                             <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mb-1">Qo&apos;shimcha</p>
-                            <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{summary.adjustments.toLocaleString()}</p>
+                            <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{formatNum(summary.adjustments)}</p>
                         </div>
                     </div>
                 </div>
@@ -216,7 +217,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                     <div>
                         <div className="flex items-baseline gap-2 mb-1">
                             <h3 className="text-2xl font-bold text-rose-600 tabular-nums">
-                                {summary.kpiPenalty.toLocaleString()}
+                                {formatNum(summary.kpiPenalty)}
                             </h3>
                             <span className="text-[10px] font-bold text-gray-500 uppercase">UZS</span>
                         </div>
@@ -254,7 +255,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                                     <div className="flex items-center gap-2">
                                         <p className="text-[10px] font-bold text-gray-500 uppercase">{p.companyName}</p>
                                         <span className="text-gray-300 dark:text-gray-600">•</span>
-                                        <p className="text-[10px] font-bold text-emerald-500/80">{new Date(p.submittedAt || '').toLocaleDateString()}</p>
+                                        <p className="text-[10px] font-bold text-emerald-500/80">{formatUzDate(p.submittedAt)}</p>
                                     </div>
                                     <p className="text-[9px] font-bold text-gray-400 uppercase">Oylikka ta&apos;sir</p>
                                 </div>
@@ -293,7 +294,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                                     <div className="flex items-center gap-2">
                                         <p className="text-[10px] font-bold text-gray-500 uppercase">{p.companyName}</p>
                                         <span className="text-gray-300 dark:text-gray-600">•</span>
-                                        <p className="text-[10px] font-bold text-rose-500/80">{new Date(p.submittedAt || '').toLocaleDateString()}</p>
+                                        <p className="text-[10px] font-bold text-rose-500/80">{formatUzDate(p.submittedAt)}</p>
                                     </div>
                                     <p className="text-[9px] font-bold text-gray-400 uppercase">Chegirildi</p>
                                 </div>

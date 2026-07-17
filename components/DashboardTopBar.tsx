@@ -3,7 +3,7 @@
 import { signOut } from "next-auth/react";
 import {
   LogOut, User, Sun, Moon, ChevronDown, Globe,
-  Bell, Settings, Menu
+  Bell, Settings, Menu, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -51,7 +51,7 @@ export function DashboardTopBar({
   const [loggingOut, setLoggingOut] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { theme, setTheme } = useTheme();
-  const { toggle } = useMobileNav();
+  const { toggle, toggleCollapsed, collapsed } = useMobileNav();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -88,8 +88,26 @@ export function DashboardTopBar({
         boxShadow: "0 1px 0 0 var(--topbar-border)",
       }}
     >
-      {/* Left: Search */}
-      <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+      {/* Left: sidebar toggle + Search */}
+      <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+        {/* Desktop: yon panelni yig'ish/ochish */}
+        <button
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Yon panelni ochish" : "Yon panelni yig'ish"}
+          className="hidden md:flex p-2 rounded-lg transition-all flex-shrink-0"
+          style={{ color: "var(--text-secondary)" }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--bg-hover)";
+            e.currentTarget.style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "";
+            e.currentTarget.style.color = "var(--text-secondary)";
+          }}
+        >
+          {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+        </button>
+        {/* Mobil: menyu */}
         <button
           onClick={toggle}
           aria-label="Menyu"
@@ -103,11 +121,11 @@ export function DashboardTopBar({
           <Image src="/asro-logo-192.png" alt="ASRO" width={28} height={28} priority className="w-7 h-7 object-contain" />
           <span className="text-[15px] font-black tracking-tight whitespace-nowrap" style={{ color: "var(--text-primary)" }}>ASRO</span>
         </Link>
-        {/* Global qidiruv */}
-        <GlobalSearch userRole={userRole} />
-
-        {/* AI moliyachi yordamchi */}
-        <FinanceAssistant />
+        {/* Qidiruv + AI */}
+        <div className="flex items-center gap-2 md:gap-3">
+          <GlobalSearch userRole={userRole} />
+          <FinanceAssistant />
+        </div>
       </div>
 
       {/* Right: Actions */}

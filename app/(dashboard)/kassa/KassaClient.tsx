@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import KassaModule from "@/components/KassaModule";
 import BalanceOverview from "@/components/BalanceOverview";
 import { Company, Payment, BalanceBreakdown } from "@/types";
@@ -15,6 +16,7 @@ interface Props {
 
 export default function KassaClient({ companies, payments, balance }: Props) {
   const router = useRouter();
+  useAutoRefresh();
 
   const handleSave = async (payment: Partial<Payment>) => {
     await upsertPayment({

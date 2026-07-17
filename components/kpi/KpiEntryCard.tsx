@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { KPIRule, KpiRuleOption, Language, MonthlyPerformance } from "@/types";
 import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
+import { formatNum } from "@/lib/format";
 
 interface Props {
   rule: KPIRule;
@@ -11,6 +12,9 @@ interface Props {
   lang: Language;
   disabled?: boolean;
   onSave: (input: KpiEntryInput) => void | Promise<void>;
+  /** When set (attendance counter rules), shows a button to fill the counters
+   *  from e-jurnal-derived attendance. Returns null if nothing to fill. */
+  onPrefill?: () => Promise<{ earlyDays?: number; lateMinutes?: number; absentDays?: number } | null>;
 }
 
 // color -> ASRO CSS vars
@@ -21,11 +25,12 @@ const C = {
 } as const;
 
 const fmtPct = (n: number) => `${n > 0 ? "+" : ""}${Number(n.toFixed(2))}%`;
-const fmtSom = (n: number) => Math.round(n).toLocaleString("ru-RU");
+const fmtSom = (n: number) => formatNum(Math.round(n));
 
-const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSave }) => {
+const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSave, onPrefill }) => {
   const options = (rule.options ?? []) as KpiRuleOption[];
   const type = rule.inputTypeV2 ?? "select";
+  const [prefilling, setPrefilling] = useState(false);
 
   // local input state seeded from the existing performance record
   const [selectedOption, setSelectedOption] = useState<string | null>(perf?.selectedOption ?? null);
@@ -73,6 +78,25 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
     if (key === "late_5min") return { label: lang === "uz" ? "daqiqa" : "минут", value: lateMinutes, set: (v: number) => { setLateMinutes(v); save({ lateMinutes: v }); } };
     if (key === "absent_days") return { label: lang === "uz" ? "kunlar" : "дней", value: absentDays, set: (v: number) => { setAbsentDays(v); save({ absentDays: v }); } };
     return null;
+  };
+
+  const runPrefill = async () => {
+    if (!onPrefill || disabled || prefilling) return;
+    setPrefilling(true);
+    try {
+      const r = await onPrefill();
+      if (r) {
+        const e = r.earlyDays ?? earlyDays;
+        const l = r.lateMinutes ?? lateMinutes;
+        const a = r.absentDays ?? absentDays;
+        setEarlyDays(e); setLateMinutes(l); setAbsentDays(a);
+        save({ earlyDays: e, lateMinutes: l, absentDays: a });
+      }
+    } catch {
+      /* silent — pre-fill is a convenience */
+    } finally {
+      setPrefilling(false);
+    }
   };
 
   return (
@@ -137,7 +161,19 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
       )}
 
       {type === "counter" && (
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {onPrefill && (
+            <button
+              type="button"
+              disabled={disabled || prefilling}
+              onClick={runPrefill}
+              title={lang === "uz" ? "E-jurnal davomatidan to'ldirish" : "Заполнить из e-jurnal"}
+              className="text-[10px] font-bold px-2 py-1.5 rounded-lg transition-all"
+              style={{ background: "var(--input-bg)", color: "var(--text-secondary)", border: "1px solid var(--input-border)", cursor: disabled || prefilling ? "not-allowed" : "pointer" }}
+            >
+              {prefilling ? "…" : lang === "uz" ? "⭳ e-jurnal" : "⭳ e-jurnal"}
+            </button>
+          )}
           {options.map((o) => {
             const f = counterFieldFor(o.key);
             if (!f) return null;

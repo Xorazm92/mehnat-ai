@@ -11,6 +11,7 @@ import {
   ShieldCheck, Mail, IdCard, GraduationCap, CalendarDays, Building, KeyRound, Loader2,
   Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
+import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 
 interface Props {
   staff: Staff[];
@@ -44,6 +45,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const isEditing = Boolean(form.id);
 
@@ -186,6 +188,9 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
             <Filter size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
           </div>
         </div>
+        <div className="flex items-center justify-end">
+          <TableToolbar view={viewMode} onViewChange={setViewMode} />
+        </div>
       </div>
 
       {/* ANKETA — kengaytirilgan forma */}
@@ -317,7 +322,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       )}
 
       {/* MOBIL KARTOCHKA RO'YXATI (kichik ekranlar) */}
-      <div className="md:hidden space-y-3">
+      <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" : "hidden"}>
         {filteredStaff.map((person) => {
           const myCompanies = companies.filter(c => {
             const cc = c as { accountantId?: string; accountantName?: string };
@@ -365,7 +370,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       </div>
 
       {/* STAFF TABLE (desktop) */}
-      <div className="hidden md:block dashboard-card overflow-hidden">
+      <div className={viewMode === 'list' ? "dashboard-card overflow-hidden overflow-x-auto" : "hidden"}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[960px]">
             <thead>

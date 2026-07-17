@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import StaffModule from "@/components/StaffModule";
 import { createUser, updateUser, deactivateUser, resetUserPassword } from "@/server/users";
 import { Staff, Company, OperationEntry } from "@/types";
@@ -15,6 +16,7 @@ interface Props {
 
 export default function StaffClient({ staff, companies, operations }: Props) {
   const router = useRouter();
+  useAutoRefresh();
   const [, setSelectedStaff] = useState<Staff | null>(null);
 
   const handleSave = async (s: Partial<Staff>) => {

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import InventoryModule, { InventoryRecord } from "@/components/InventoryModule";
 import { Staff } from "@/types";
 import { upsertInventoryItem, deleteInventoryItem } from "@/server/inventory";
@@ -13,6 +14,7 @@ interface Props {
 
 export default function InventoryClient({ items, staff }: Props) {
   const router = useRouter();
+  useAutoRefresh();
 
   const handleSave = async (data: {
     id?: string;

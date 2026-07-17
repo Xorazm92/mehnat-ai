@@ -3,6 +3,7 @@
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { MONTHS_UZ } from "@/lib/periods";
 import { TrendingUp } from "lucide-react";
+import { formatNum } from "@/lib/format";
 
 interface Point {
   month: string; // "2026-07"
@@ -10,7 +11,7 @@ interface Point {
   expense: number;
 }
 
-const fmt = (v: number) => Math.round(v).toLocaleString("ru-RU");
+const fmt = (v: number) => formatNum(Math.round(v));
 
 function monthLabel(m: string) {
   const mm = Number(m.split("-")[1]);

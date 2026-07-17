@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import OnboardingWizard from './OnboardingWizard';
 import { MonthPicker } from './ui/MonthPicker';
 import { periodsEqual } from '@/lib/periods';
+import { formatNum } from "@/lib/format";
 
 interface Props {
   companies: Company[];
@@ -572,7 +573,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                           {c.inn}
                         </td>
                         <td className="font-bold text-right text-[12px] tabular-nums" style={{ color: 'var(--text)' }}>
-                          {displayAmount?.toLocaleString() || '0'} <span className="text-[9px] font-bold uppercase ml-0.5" style={{ color: 'var(--text-muted)' }}>sum</span>
+                          {formatNum(displayAmount) || '0'} <span className="text-[9px] font-bold uppercase ml-0.5" style={{ color: 'var(--text-muted)' }}>sum</span>
                         </td>
                         <td className="text-center">
                           <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)' }}>

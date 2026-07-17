@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import NotificationsModule, { NotificationRecord } from "@/components/NotificationsModule";
 import { markNotificationsRead } from "@/server/audit";
 
@@ -11,6 +12,7 @@ interface Props {
 
 export default function NotificationsClient({ notifications }: Props) {
   const router = useRouter();
+  useAutoRefresh();
 
   const handleMarkRead = async (ids?: string[]) => {
     await markNotificationsRead(ids);

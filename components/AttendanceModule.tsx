@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
 import { Calendar, Plus, Search, Edit3, Trash2, CheckCircle2, XCircle, Clock, UserCheck, DownloadCloud } from 'lucide-react';
+import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 import { toast } from 'sonner';
 
 export interface AttendanceRecord {
@@ -69,6 +70,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
         }
     };
     const [searchTerm, setSearchTerm] = useState('');
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -210,10 +212,11 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                         <span>{lang === 'uz' ? 'Davomat qo\'shish' : 'Добавить'}</span>
                     </button>
                 )}
+                <div className="flex items-center justify-end">
+                    <TableToolbar view={viewMode} onViewChange={setViewMode} />
+                </div>
             </div>
-
-            {/* Mobil kartochkalar (Davomat) */}
-            <div className="md:hidden space-y-3">
+            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" : "hidden"}>
                 {dayRecords.map((r) => {
                     const meta = STATUS_META[r.status] || STATUS_META.present;
                     return (
@@ -244,7 +247,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
             </div>
 
             {/* Table (desktop) */}
-            <div className="hidden md:block dashboard-card overflow-hidden">
+            <div className={viewMode === 'list' ? "dashboard-card overflow-hidden overflow-x-auto" : "hidden"}>
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>

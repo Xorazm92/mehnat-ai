@@ -4,8 +4,10 @@ import React, { useState, useMemo } from 'react';
 import { Company, Payment, PaymentStatus, Language } from '@/types';
 import { translations } from '@/lib/translations';
 import { Wallet, Search, Plus, CheckCircle2, Clock, Trash2, CreditCard, Loader2 } from 'lucide-react';
+import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 import { toast } from 'sonner';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_COLORS } from '@/lib/constants';
+import { formatNum } from "@/lib/format";
 
 interface KassaModuleProps {
     companies: Company[];
@@ -18,6 +20,7 @@ interface KassaModuleProps {
 const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, onSavePayment, onDeletePayment }) => {
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPayment, setEditingPayment] = useState<Partial<Payment> | null>(null);
@@ -109,13 +112,13 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                         <div className="min-w-0">
                             <span className="text-[11px] font-bold uppercase tracking-widest mb-2 block" style={{ color: 'var(--text-muted)' }}>Kutilayotgan</span>
                             <div className="stat-metric text-2xl font-black tabular-nums leading-none" style={{ color: 'var(--text-primary)' }}>
-                                {stats.totalExpected.toLocaleString()} <span className="text-[12px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                                {formatNum(stats.totalExpected)} <span className="text-[12px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
                             </div>
                         </div>
                         <div className="min-w-0">
                             <span className="text-[11px] font-bold uppercase tracking-widest mb-2 block" style={{ color: 'var(--success)' }}>To&apos;langan</span>
                             <div className="stat-metric text-2xl font-black tabular-nums leading-none" style={{ color: 'var(--success)' }}>
-                                {stats.totalPaid.toLocaleString()} <span className="text-[12px] font-bold ml-1 uppercase opacity-60">sum</span>
+                                {formatNum(stats.totalPaid)} <span className="text-[12px] font-bold ml-1 uppercase opacity-60">sum</span>
                             </div>
                         </div>
                     </div>
@@ -173,10 +176,11 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                     />
                     <Clock className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" size={18} style={{ color: 'var(--text-muted)' }} />
                 </div>
+                <div className="flex items-center justify-end">
+                    <TableToolbar view={viewMode} onViewChange={setViewMode} />
+                </div>
             </div>
-
-            {/* Mobil kartochkalar (Kassa) */}
-            <div className="md:hidden space-y-3">
+            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" : "hidden"}>
                 {filteredData.map((item) => {
                     const stt = item.payment?.status;
                     const stColor = stt === PaymentStatus.PAID ? 'var(--success)' : stt === PaymentStatus.PENDING ? 'var(--warning)' : stt ? 'var(--danger)' : 'var(--text-muted)';
@@ -191,7 +195,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                     <div className="text-[11px] font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>INN: {item.inn}</div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <div className="font-black text-[14px] tabular-nums" style={{ color: 'var(--text)' }}>{(item.contractAmount || 0).toLocaleString()}</div>
+                                    <div className="font-black text-[14px] tabular-nums" style={{ color: 'var(--text)' }}>{formatNum((item.contractAmount || 0))}</div>
                                     <div className="text-[9px] font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
                                 </div>
                             </div>
@@ -221,7 +225,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
             </div>
 
             {/* Payments table (desktop) */}
-            <div className="hidden md:block dashboard-card overflow-hidden">
+            <div className={viewMode === 'list' ? "dashboard-card overflow-hidden overflow-x-auto" : "hidden"}>
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
@@ -246,7 +250,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                     <td className="px-6 py-3 font-mono text-[11px] font-bold" style={{ color: 'var(--text-secondary)' }}>{item.inn}</td>
                                     <td className="px-6 py-3">
                                         <div className="font-bold text-[13px] tabular-nums" style={{ color: 'var(--text)' }}>
-                                            {(item.contractAmount || 0).toLocaleString()} <span className="text-[10px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                                            {formatNum((item.contractAmount || 0))} <span className="text-[10px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-3 text-center">

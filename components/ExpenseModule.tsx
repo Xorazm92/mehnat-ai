@@ -3,11 +3,13 @@
 import React, { useState, useMemo } from 'react';
 import { Expense, Language } from '@/types';
 import { translations } from '@/lib/translations';
-import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock, FileDown } from 'lucide-react';
+import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { exportToExcel } from '@/lib/exportExcel';
 import { canApproveExpense } from '@/lib/expenseApproval';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_COLORS } from '@/lib/constants';
 import BalanceOverview from '@/components/BalanceOverview';
+import { TableToolbar, type ViewMode } from '@/components/ui/TableToolbar';
+import { formatUzDateNumeric, formatNum } from '@/lib/format';
 import { groupDigits, ungroupDigits } from '@/lib/format';
 import type { BalanceBreakdown } from '@/types';
 
@@ -32,6 +34,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Partial<Expense> | null>(null);
 
@@ -75,8 +78,8 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
         return { cats, totalSpent, totalBudget, remaining: totalBudget - totalSpent };
     }, [expenses]);
 
-    const som = (v: number) => Math.round(v).toLocaleString('ru-RU');
-    const fmtDate = (d: string) => (d ? new Date(d).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
+    const som = (v: number) => formatNum(Math.round(v));
+    const fmtDate = (d: string) => (d ? formatUzDateNumeric(d) : '—');
     const STATUS_UZ: Record<string, string> = { approved: 'Tasdiqlangan', pending: 'Kutilmoqda', rejected: 'Rad etilgan' };
     const handleExport = () => {
         const rows = filteredExpenses.map(e => ({
@@ -122,7 +125,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                             <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>SHU OYDA</span>
                         </div>
                         <div className="text-3xl font-black tabular-nums leading-none mb-4" style={{ color: 'var(--text)' }}>
-                            {stats.totalMonth.toLocaleString()} <span className="text-[14px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                            {formatNum(stats.totalMonth)} <span className="text-[14px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
                         </div>
                         <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                             <div className="h-full w-3/4 rounded-full" style={{ background: 'var(--danger)' }}></div>
@@ -141,7 +144,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         </div>
                     </div>
                     <div className="text-2xl font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-                        {stats.totalAll.toLocaleString()} <span className="text-[12px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                        {formatNum(stats.totalAll)} <span className="text-[12px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
                     </div>
                 </div>
 
@@ -214,38 +217,32 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 );
             })()}
 
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={18} style={{ color: 'var(--text-muted)' }} />
-                    <input
-                        type="text"
-                        placeholder="QIDIRISH..."
-                        className="w-full rounded-xl py-3 pl-12 pr-4 text-[12px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20"
-                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="rounded-xl py-3 px-4 text-[12px] font-bold uppercase tracking-widest outline-none transition-all"
-                    style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-                >
-                    <option value="all">Barcha holat</option>
-                    <option value="approved">Tasdiqlangan</option>
-                    <option value="pending">Kutilmoqda</option>
-                    <option value="rejected">Rad etilgan</option>
-                </select>
-                <button
-                    onClick={handleExport}
-                    disabled={filteredExpenses.length === 0}
-                    className="font-bold px-5 py-3 rounded-xl text-[12px] flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md disabled:opacity-40"
-                    style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--success)' }}
-                >
-                    <FileDown size={16} />
-                    <span>Excel</span>
-                </button>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+                <TableToolbar
+                    view={viewMode}
+                    onViewChange={setViewMode}
+                    search={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    searchPlaceholder="Qidirish..."
+                    onExport={filteredExpenses.length ? handleExport : undefined}
+                    filterCount={statusFilter !== 'all' ? 1 : 0}
+                    filter={
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Holat</span>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="rounded-lg py-2 px-3 text-[12px] font-bold outline-none"
+                                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                            >
+                                <option value="all">Barcha holat</option>
+                                <option value="approved">Tasdiqlangan</option>
+                                <option value="pending">Kutilmoqda</option>
+                                <option value="rejected">Rad etilgan</option>
+                            </select>
+                        </div>
+                    }
+                />
                 <button
                     onClick={() => {
                         setEditingExpense({
@@ -264,8 +261,8 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 </button>
             </div>
 
-            {/* Mobil kartochkalar (Xarajatlar) */}
-            <div className="md:hidden space-y-3">
+            {/* Kartochka ko'rinishi (grid) */}
+            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" : "hidden"}>
                 {filteredExpenses.map((expense) => {
                     const st = EXP_STATUS[expense.status || 'approved'] || EXP_STATUS.approved;
                     const canApr = expense.status === 'pending' && canApproveExpense(userRole, expense.amount);
@@ -288,7 +285,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <div className="font-black text-[14px] tabular-nums" style={{ color: 'var(--danger)' }}>-{expense.amount.toLocaleString()}</div>
+                                    <div className="font-black text-[14px] tabular-nums" style={{ color: 'var(--danger)' }}>-{formatNum(expense.amount)}</div>
                                     <div className="text-[9px] font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
                                 </div>
                             </div>
@@ -316,7 +313,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
             </div>
 
             {/* Expense List (desktop) */}
-            <div className="hidden md:block dashboard-card overflow-hidden">
+            <div className={viewMode === 'list' ? "dashboard-card overflow-hidden overflow-x-auto" : "hidden"}>
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
@@ -353,7 +350,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <span className="font-bold text-[13px] tabular-nums" style={{ color: 'var(--danger)' }}>
-                                            -{expense.amount.toLocaleString()} <span className="text-[10px] font-bold uppercase ml-1 opacity-60">sum</span>
+                                            -{formatNum(expense.amount)} <span className="text-[10px] font-bold uppercase ml-1 opacity-60">sum</span>
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">

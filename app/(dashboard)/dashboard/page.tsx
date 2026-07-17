@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { formatUzDateFull, formatNum } from "@/lib/format";
 import {
   getCachedCompanyStats,
   getCachedOperationSummary,
@@ -134,12 +135,7 @@ export default async function DashboardPage() {
           Xush kelibsiz, {userName.split(" ")[0]}! 👋
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-          {new Date().toLocaleDateString("uz-UZ", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
+          {formatUzDateFull(new Date())}
         </p>
       </div>
 
@@ -203,7 +199,7 @@ function StatCard({
       <div className="flex items-center justify-between mb-3">
         <span className="text-2xl">{icon}</span>
       </div>
-      <div className="text-3xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>{value.toLocaleString()}</div>
+      <div className="text-3xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>{formatNum(value)}</div>
       <div className="text-sm" style={{ color: "var(--text-muted)" }}>{title}</div>
     </div>
   );

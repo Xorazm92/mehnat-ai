@@ -1,7 +1,29 @@
 # KPI Telegram Bot — mehnat-ai integratsiya blueprinti
 
-> **Holat:** Loyihalash (kod yozilmagan). Tasdiqlangandan keyin implementatsiya boshlanadi.
-> **Qarorlar (qat'iy):** Webhook · BullMQ+Redis · DDD · bitta repo + bitta Postgres/Prisma.
+> **Holat (2026-07-16):** Faza A **to'liq bajarildi va tekshirildi** — (poydevor) domain kernel
+> + 8 Prisma model dev DB'da; (infra) BullMQ `message` navbati · webhook route (`app/api/telegram/webhook`) ·
+> `bot/main.ts` (worker + polling ingress) · Monitoring **Message worker** (dedup + atomik capture).
+> Uchdan-uchgacha tekshirildi: 31 test yashil + Redis→worker→Postgres round-trip + idempotentlik.
+>
+> **Faza B (Identity) ham bajarildi va tekshirildi:** Telegram↔xodim (`/link`), chat↔korxona (`/bind`),
+> `/whoami`, admin avtorizatsiya (bootstrap `TELEGRAM_ADMIN_TELEGRAM_ID` yoki admin-rol) + AuditLog;
+> capture xabarlari `userId` bilan boyitiladi. Jonli bot: **@kpinazoratbot**.
+>
+> **Faza C (Question Engine) ham bajarildi va tekshirildi:** `looksLikeQuestion` evristika darvozasi →
+> `message` worker `question` navbatiga fan-out → Question worker klassifikatsiya (**Gemini** `@google/genai`,
+> evristika zaxira) + `ResponseWindow × WorkingHours` deadline; reply orqali javob; 1-daqiqali cron sweep
+> (kechikkanlarni `late`). **76 test yashil** + ikki-navbatli worker round-trip. `GEMINI_API_KEY` bilan Gemini yoqiladi.
+> **Davomat = e-jurnal** (Telegram EMAS) — §9 bo'yicha bajarildi.
+>
+> **Faza E (KPI ledger) bajarildi va tekshirildi:** `KpiEvent` append-only ledger (`appendKpiEvent`
+> idempotent), atribut (`resolveResponsibleUserId`: korxona+rol → xodim), savol natijalari →
+> hodisa (on-time +1 / late −1, worker+cron), qo'lда `/kpi_award` `/kpi_penalty` → manual + AuditLog,
+> `rollupLedger` read-model. **97 test yashil.** Ledger **additiv** — jonli payroll `MonthlyPerformance`
+> ga yozmaydi (bu — alohida, tasdiqlash-siyosati qarori). Keyingi: **payroll proyeksiya qarori** →
+> **Faza F** (Notifications + to'lov eslatmalari).
+> Batafsil: [`bot/README.md`](bot/README.md).
+> **Qarorlar (qat'iy):** Integratsiya (bitta repo + bitta Postgres/Prisma) · sof-TS DDD
+> (NestJS **emas**) · Prisma (TypeORM **emas**) · Webhook `app/api/telegram/webhook` · BullMQ+Redis.
 > **Maqsad:** Telegram bot mehnat-ai ichidagi KPI tizimining ma'lumot manbai bo'ladi —
 > u xabar/savol/davomat/hisobot signallarini yig'adi, mavjud KPI dvigatelini oziqlantiradi.
 > **Qo'shimcha rol:** (a) ma'lumotlarni tahlil qiladi, (b) Telegram guruhlarni nazorat qiladi,
@@ -133,7 +155,7 @@ command'ga aylantiradi → saqlaydi → navbatga qo'yadi.
 |---|---|---|---|
 | 1 | **Identity & Admin** | User↔Telegram bog'lash, firma↔chat, ruxsatlar, `/assign_role`, base salary/ulush | `User`✅ `Company`✅ / `TelegramGroup`🆕 `TelegramIdentity`🆕 |
 | 2 | **Monitoring** | Xabar capture (text/reply/edit/delete/reaction/media/voice), Question Engine | `TelegramMessage`🆕 `Question`🆕 `Answer`🆕 |
-| 3 | **Attendance** | Kelish/ketish, 08:30/09:00 chegarasi, kechikish | `Attendance`✅ (kengaytiriladi) |
+| 3 | **Attendance** (bot EMAS) | e-jurnal → `Attendance` (Next.js `server/ejurnal.ts`); bot davomatni kuzatmaydi | `Attendance`✅ + `lib/attendance.ts` |
 | 4 | **Reports** | Deadline oynalari, on-time/late (soliq matritsasi bilan reconciliation) | `MonthlyReport`/`Operation`/`ReportProof`✅ / `ReportDeadline`🆕 — §11 |
 | 5 | **KPI Engine** | Rule Engine + Ledger + oylik rollup + qo'lda tuzatish | `KpiRule`✅ `CompanyKpiRule`✅ `MonthlyPerformance`✅ `PayrollAdjustment`✅ / `KpiEvent`🆕 |
 | 6 | **Notifications** | 🟡🟠🔴 eskalatsiya, Telegram yetkazish | `Notification`✅ / `NotificationDelivery`🆕 |
@@ -163,7 +185,7 @@ model Company {
 model Attendance {
   // ... mavjud (userId, date, checkIn, checkOut, status, notes) ...
   source     String?  @default("manual")  // 'manual' | 'telegram'
-  lateMinutes Int?    @default(0)          // Telegram kelish signalidan
+  lateMinutes Int?    @default(0)          // e-jurnal check-in 09:00 dan keyin
 }
 ```
 
@@ -319,7 +341,7 @@ Barcha yozish async (navbat orqali) — webhook handler hech qachon bloklanmaydi
 | Navbat | Producer | Worker vazifasi | Concurrency |
 |---|---|---|---|
 | `message` | webhook | capture, dedup, STT, savol/kelish aniqlash | Yuqori (10x scale) |
-| `attendance` | message worker | 08:30/09:00 baholash, Attendance yozish | O'rta |
+| ~~`attendance`~~ | — | **olib tashlandi** — davomat e-jurnaldan (§9), botda emas | — |
 | `question` | message worker | AI marshrut, Question + deadline | O'rta |
 | `kpi` | question/attendance/report | KpiRule → KpiEvent | O'rta |
 | `notification` | eskalatsiya cron/kpi | 🟡🟠🔴 Telegram yetkazish | Past |
@@ -350,13 +372,24 @@ Barcha yozish async (navbat orqali) — webhook handler hech qachon bloklanmaydi
 
 ---
 
-## 9. Attendance workflow (mavjud `Attendance` reuse)
+## 9. Attendance workflow — **e-jurnal, Telegram EMAS** ✅ bajarildi
 
-- Signal: guruhда birinchi xabar / "keldim" / kirish → `attendance` queue.
-- `WorkingHours` value object: 08:30 (bonus chegarasi), 09:00 (kechikish chegarasi).
-- Worker `Attendance` yozadi (`source='telegram'`, `status`, `lateMinutes`) → `KpiEvent`.
-- Kunlik cron: uzrsiz kelmaganlarни aniqlaydi (`absentDays` → MonthlyPerformance).
-- **Reuse:** UI'даgi Davomat sahifasi shu `Attendance`ni ko'rsatadi.
+> **Qaror (2026-07-17):** Davomat **Telegram orqali olib borilmaydi**. U **e-jurnal
+> (ejurnal.uz — Hikvision yuz-skaneri)** dan keladi. Botда attendance konteksti/queue
+> YO'Q. KPI dvigateli `Attendance` jadvalini manbaidan qat'i nazar iste'mol qiladi.
+
+- **Manba:** [`server/ejurnal.ts`](server/ejurnal.ts) `syncEjurnalAttendance(date)` (senior-only) →
+  e-jurnaldan kunlik davomatni oladi, xodimга (telefon → ism) moslaydi, `Attendance` jadvaliga
+  yozadi (`source='ejurnal'`, `checkIn/checkOut`, `lateMinutes`).
+- **Sof mantiq (test qilingan):** [`lib/attendance.ts`](lib/attendance.ts) — 08:30 (erta bonus) /
+  09:00 (kechikish) chegaralari, `classifyArrival`, `aggregateMonthlyAttendance`;
+  [`lib/ejurnal.ts`](lib/ejurnal.ts) — status xaritasi, normalizatsiya, moslashtirish.
+- **KPI ga ko'prik:** `deriveAttendanceKpi(employeeId, month)` `Attendance`dan `earlyDays /
+  lateMinutes / absentDays` ni HISOBLAB beradi — nazoratchi qo'lда sanamaydi. Read-only;
+  supervisor KPI kiritishда pre-fill qiladi (jonli payroll write yo'liга tegmaydi).
+- **Qolgan yagona ish:** e-jurnal API endpoint/token (`.env`: `EJURNAL_API_URL`, `EJURNAL_API_TOKEN`)
+  va `fetchEjurnalAttendance` dagi endpoint yo'lini haqiqiy API'ga moslash.
+- **UI:** mavjud Davomat sahifasi shu `Attendance`ni ko'rsatadi (o'zgarmaydi).
 
 ---
 
@@ -528,13 +561,18 @@ Barchasi Postgres holatidan o'qiydi (restart-safe); BullMQ repeatable jobs orqal
 
 ## 18. Ochiq qarorlar (tasdiq/tanlash kerak)
 
-1. **Bot framework:** NestJS (yo'l xaritaga mos, DI/modul) *yoki* sof TS DDD qatlamlar?
-   *(Ikkalasi ham Prisma ishlatadi — TypeORM emas.)*
+> **✅ Hal qilingan (2026-07-16):** (1) framework — **sof-TS DDD**, NestJS emas (repo `tsconfig`
+> dekoratorlarni yoqmagan, Next build'ni xatarga qo'ymaslik uchun); (4) webhook — **Next.js
+> `app/api/telegram/webhook`**. **Keyinroq (bloklamaydi):** (2) report reconciliation → Faza G
+> (`ReportDeadline` + `ReportProof`ga moyillik), (3) STT → Faza H, (5) deploy → Faza J.
+> **Sizdan kerak (Faza F2 dan oldin):** (6) to'lov eslatmasi eskalatsiya kunlari + matn shablonlari,
+> (7) 🔴 eslatma kimga boradi.
+
+1. ~~**Bot framework:** NestJS *yoki* sof TS DDD?~~ → **sof-TS DDD** (yuqoridagi izoh).
 2. **Report reconciliation (§11):** bot report-SLA sini mavjud `ReportProof`ga bog'laymizmi,
    yoki yangi `ReportDeadline` qo'shamizmi?
 3. **STT provayderi:** OpenAI Whisper (`uz`) yoki Google Cloud STT (`uz-UZ`)? (Ovoz hajmiga qarab.)
-4. **Webhook joylashuvi:** Next.js `app/api/telegram/webhook` (tavsiya) yoki bot jarayonида
-   alohida HTTP receiver?
+4. ~~**Webhook joylashuvi:**~~ → **Next.js `app/api/telegram/webhook`** (yuqoridagi izoh).
 5. **Deploy:** PM2 yoki Docker Compose (web + bot + redis + postgres + pgBouncer)?
 6. **To'lov eslatmasi jadvali (§11-B):** eskalatsiya kunlari (🟡 paymentDay · 🟠 +? kun · 🔴 +? kun)
    va matn shablonlari — sizning qiymatlaringiz qanday? Kim `SystemSetting`дан tahrirlaydi?
@@ -549,10 +587,10 @@ Barchasi Postgres holatidan o'qiydi (restart-safe); BullMQ repeatable jobs orqal
 | **A** | Infra: Prisma schema qo'shimchalari (§5), Redis/BullMQ setup, webhook skeleti, `bot/main.ts`, DomainEventBus, value objects (+ testlar) |
 | **B** | Identity: `TelegramGroup`/`TelegramIdentity`, `/assign_role`, User↔Telegram mapping |
 | **C** | Monitoring + Question Engine: capture, evristika, Claude klassifikator, deadline cron |
-| **D** | Attendance: `Attendance` kengaytmasi, 08:30/09:00 logikasi |
-| **E** | KPI Engine: `KpiEvent` ledger, trigger→KpiRule, oylik rollup → `MonthlyPerformance` |
+| **D** | ~~Attendance (Telegram)~~ → **e-jurnal integratsiyasi** (Next.js): `lib/attendance.ts` + `lib/ejurnal.ts` + `deriveAttendanceKpi` — ✅ bajarildi |
+| **E** | ✅ KPI **ledger**: `KpiEvent` (idempotent append), atribut, savol→hodisa, `/kpi_award`/`/kpi_penalty`, `rollupLedger`. ✅ **payroll proyeksiya**: `projectResponseKpiToPerformance` → `submitted` `MonthlyPerformance` (approval-gated, approved qatorni bezovta qilmaydi) |
 | **F** | Notifications: eskalatsiya + grammY yuborish |
-| **F2** | **Billing & To'lov eslatmalari** (§11-B): `PaymentReminder`, kunlik cron, guruhga 🟡🟠🔴, mas'ulga in-app, inkasso analytics |
+| **F2** | **Billing & To'lov eslatmalari** (§11-B): ✅ detection engine (`assessDebt` sof+test, `detectPeriodDebts`, `recordPaymentReminder` idempotent). ⏳ guruhga 🟡🟠🔴 **yuborish** + matn shablonlari + kunlik cron + mas'ulga in-app — sizning biznes-qoidalaringiz kutilmoqda (§18.6/18.7) |
 | **G** | Reports reconciliation (§11 qarorига ko'ra) |
 | **H** | STT (ovoz), AI cost tuning, prompt caching |
 | **I** | Dashboard read-model (mavjud UI ga bot metrikalari), yuklama testi |

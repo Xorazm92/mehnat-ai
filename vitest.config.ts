@@ -9,7 +9,9 @@ dotenv.config({ path: ".env.local", override: true });
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["test/**/*.test.ts"],
+    // test/**/*.test.ts  → integration tests that share one Postgres.
+    // bot/**/*.spec.ts    → pure, DB-free domain unit tests (DDD domain layer).
+    include: ["test/**/*.test.ts", "bot/**/*.spec.ts"],
     // Integration tests share one Postgres; parallel files would race on fixtures.
     fileParallelism: false,
     testTimeout: 30_000,

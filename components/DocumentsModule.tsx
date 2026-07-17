@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Language, Company } from '@/types';
 import { translations } from '@/lib/translations';
 import { FileText, Plus, Search, Trash2, ExternalLink, Building2 } from 'lucide-react';
+import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 import { toast } from 'sonner';
 
 export interface DocumentRecord {
@@ -28,6 +29,7 @@ interface Props {
 const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit, onSave, onDelete }) => {
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [form, setForm] = useState<{ companyId: string; name: string; filePath: string }>({ companyId: '', name: '', filePath: '' });
@@ -95,10 +97,11 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
                         <span>{lang === 'uz' ? 'Hujjat qo\'shish' : 'Добавить документ'}</span>
                     </button>
                 )}
+                <div className="flex items-center justify-end">
+                    <TableToolbar view={viewMode} onViewChange={setViewMode} />
+                </div>
             </div>
-
-            {/* Mobil kartochkalar (Hujjatlar) */}
-            <div className="md:hidden space-y-3">
+            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" : "hidden"}>
                 {filtered.map((d) => (
                     <div key={d.id} className="dashboard-card p-4 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}><FileText size={18} /></div>
@@ -121,7 +124,7 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
             </div>
 
             {/* Table (desktop) */}
-            <div className="hidden md:block dashboard-card overflow-hidden">
+            <div className={viewMode === 'list' ? "dashboard-card overflow-hidden overflow-x-auto" : "hidden"}>
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[720px]">
                         <thead>

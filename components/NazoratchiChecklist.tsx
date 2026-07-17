@@ -5,7 +5,10 @@ import { Search, Shield, CheckCircle2, XCircle } from 'lucide-react';
 import { translations } from '@/lib/translations';
 import { capKpiPercent, type KpiEntryInput, type KpiSalaryRole } from '@/lib/kpiScoring';
 import { getKpiRules, getPerformanceForReview, upsertPerformance, approvePerformance, rejectPerformance } from '@/server/kpi';
+import { deriveAttendanceKpi } from '@/server/attendance';
 import KpiEntryCard from './kpi/KpiEntryCard';
+import { formatNum } from "@/lib/format";
+import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 
 interface Props {
     companies: Company[];
@@ -27,6 +30,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     const [performances, setPerformances] = useState<MonthlyPerformance[]>([]);
     const [search, setSearch] = useState('');
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+    const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [loading, setLoading] = useState(false);
 
     const canApprove = ['super_admin', 'admin', 'chief_accountant', 'supervisor'].includes((currentUserRole || '').toLowerCase());
@@ -184,15 +188,21 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                             <div>
                                 <h2 className="text-[17px] font-bold uppercase mb-1" style={{ color: 'var(--text-primary)' }}>{selectedCompany.name}</h2>
                                 <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>
-                                    {lang === 'uz' ? 'Shartnoma' : 'Договор'}: {contractAmount.toLocaleString('ru-RU')} {lang === 'uz' ? "so'm" : 'сум'}
+                                    {lang === 'uz' ? 'Shartnoma' : 'Договор'}: {formatNum(contractAmount)} {lang === 'uz' ? "so'm" : 'сум'}
                                 </p>
                             </div>
-                            <div className="flex flex-col items-start md:items-end">
-                                <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Oy' : 'Месяц'}</p>
-                                <input type="month" value={month} onChange={e => setMonth(e.target.value)}
-                                    className="rounded-lg px-3 py-2 text-[13px] font-bold outline-none cursor-pointer"
-                                    style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--accent-blue)' }} />
-                            </div>
+                            <TableToolbar
+                                view={viewMode}
+                                onViewChange={setViewMode}
+                                month={
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Oy' : 'Месяц'}</span>
+                                        <input type="month" value={month} onChange={e => setMonth(e.target.value)}
+                                            className="rounded-lg px-3 py-2 text-[13px] font-bold outline-none cursor-pointer"
+                                            style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--accent-blue)' }} />
+                                    </div>
+                                }
+                            />
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-5 space-y-8">
@@ -218,7 +228,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                             </span>
                                         </div>
                                         {group.employeeId ? (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" : "grid grid-cols-1 gap-3"}>
                                                 {groupRules.map(rule => {
                                                     const perf = findPerf(selectedCompany.id, group.employeeId!, rule.id);
                                                     const needsApproval = perf?.source === 'employee' && perf?.status === 'submitted';
@@ -231,6 +241,14 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                                 lang={lang}
                                                                 disabled={needsApproval}
                                                                 onSave={(input) => handleSaveEntry(rule, selectedCompany.id, group.employeeId!, input)}
+                                                                onPrefill={
+                                                                    rule.category === 'attendance'
+                                                                        ? async () => {
+                                                                            const s = await deriveAttendanceKpi(group.employeeId!, month);
+                                                                            return { earlyDays: s.earlyDays, lateMinutes: s.lateMinutes, absentDays: s.absentDays };
+                                                                        }
+                                                                        : undefined
+                                                                }
                                                             />
                                                             {needsApproval && perf && canApprove && (
                                                                 <div className="flex gap-2">

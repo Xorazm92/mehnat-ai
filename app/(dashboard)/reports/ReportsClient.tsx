@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import OperationModule from "@/components/OperationModule";
 import HisobotlarModule from "@/components/HisobotlarModule";
 import { upsertMonthlyReport } from "@/server/operations";
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export default function ReportsClient({ companies, operations, staff, userRole, currentUserId, userName, focusCompany, focusCol, focusPeriod, reportColumns }: Props) {
+  useAutoRefresh();
   const hasFocus = !!(focusCompany && focusCol);
   const [selectedPeriod, setSelectedPeriod] = useState<string>(focusPeriod || "2026-03");
   const [tab, setTab] = useState<"reports" | "matrix">(hasFocus ? "matrix" : "reports");

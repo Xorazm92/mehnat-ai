@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import ExpenseModule from "@/components/ExpenseModule";
 import { Expense, BalanceBreakdown } from "@/types";
 import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
@@ -14,6 +15,7 @@ interface Props {
 
 export default function ExpensesClient({ expenses, userRole, balance }: Props) {
   const router = useRouter();
+  useAutoRefresh();
 
   const handleSave = async (expense: Partial<Expense>) => {
     const data = {

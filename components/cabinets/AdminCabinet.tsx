@@ -14,12 +14,13 @@ import {
 } from "lucide-react";
 import { CashFlowChart } from "./CashFlowChart";
 import BalanceOverview from "@/components/BalanceOverview";
+import { formatUzDateTime, formatNum } from "@/lib/format";
 import type { BalanceBreakdown } from "@/types";
 
 const fmtMln = (v: number) => {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} mln`;
   if (v >= 1_000) return `${(v / 1_000).toFixed(0)} ming`;
-  return v.toLocaleString("ru-RU");
+  return formatNum(v);
 };
 
 interface RoleStat {
@@ -80,7 +81,6 @@ const actionLabels: Record<string, string> = {
 };
 
 export function AdminCabinet({
-  userName,
   userRole,
   userStats,
   recentAudit,
@@ -88,7 +88,6 @@ export function AdminCabinet({
   balance,
   monthlyCashFlow = [],
 }: AdminCabinetProps) {
-  const firstName = userName.split(" ")[0];
   const isSuperAdmin = userRole === "super_admin";
   const totalUsers = userStats.reduce((s, r) => s + r._count, 0);
 
@@ -105,25 +104,6 @@ export function AdminCabinet({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {isSuperAdmin ? "🔑" : "⚙️"} Salom, {firstName}!
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {isSuperAdmin ? "Superadmin" : "Admin"} kabinetingiz
-          </p>
-        </div>
-        <div className="px-4 py-2 rounded-xl text-[12px] font-bold border"
-          style={isSuperAdmin
-            ? { background: "var(--danger-bg)", border: "1px solid var(--danger-border)", color: "var(--danger)" }
-            : { background: "var(--warning-bg)", border: "1px solid var(--warning-border)", color: "var(--warning)" }}
-        >
-          {isSuperAdmin ? "🔑 Superadmin" : "⚙️ Admin"}
-        </div>
-      </div>
-
       {/* Yagona kassa balansi (butun tizim) */}
       {balance && <BalanceOverview breakdown={balance} />}
 
@@ -247,7 +227,7 @@ export function AdminCabinet({
                     </p>
                     <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>
                       {log.tableName} ·{" "}
-                      {new Date(log.createdAt).toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}
+                      {formatUzDateTime(log.createdAt)}
                     </p>
                   </div>
                 </div>

@@ -31,25 +31,33 @@ export default async function DashboardLayout({
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
           height: "100vh",
           background: "var(--bg-primary)",
           color: "var(--text-primary)",
           overflow: "hidden",
         }}
       >
-        {/* TopBar */}
-        <DashboardTopBar
-          userName={session?.user?.name || ""}
-          userEmail={session?.user?.email || ""}
-          userRole={userRole}
-          avatarColor={avatarColor}
-          unreadCount={unreadCount}
-        />
+        {/* Sidebar — to'liq balandlik (chapda) */}
+        <DashboardSidebar userRole={userRole} allowedViews={allowedViews} />
 
-        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-          {/* Sidebar */}
-          <DashboardSidebar userRole={userRole} allowedViews={allowedViews} />
+        {/* O'ng ustun: topbar + kontent */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            minWidth: 0,
+            overflow: "hidden",
+          }}
+        >
+          {/* TopBar (faqat kontent ustida) */}
+          <DashboardTopBar
+            userName={session?.user?.name || ""}
+            userEmail={session?.user?.email || ""}
+            userRole={userRole}
+            avatarColor={avatarColor}
+            unreadCount={unreadCount}
+          />
 
           {/* Main content */}
           <main

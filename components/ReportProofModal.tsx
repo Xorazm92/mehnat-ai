@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { X, Upload, Clipboard, Check, Ban, Loader2, ImageIcon, Clock } from "lucide-react";
 import { compressImageFile, compressDataUrl } from "@/lib/imageCompress";
 import { saveReportProof, getReportProof, reviewReportProof } from "@/server/proofs";
+import { formatUzDateNumeric, formatUzTime } from "@/lib/format";
 
 interface ProofFull {
   id: string;
@@ -44,7 +45,7 @@ interface Props {
 const fmtDate = (iso?: string | null) => {
   if (!iso) return "";
   try {
-    return new Date(iso).toLocaleString("uz-UZ", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    return `${formatUzDateNumeric(iso)}, ${formatUzTime(iso)}`;
   } catch {
     return iso;
   }

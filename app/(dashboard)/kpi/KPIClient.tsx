@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import SalaryKPIModule from "@/components/SalaryKPIModule";
 import { Company, Staff, OperationEntry } from "@/types";
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function KPIClient({ companies, staff, operations, userRole, userId }: Props) {
+  useAutoRefresh();
   return (
     <SalaryKPIModule
       companies={companies}

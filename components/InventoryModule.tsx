@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
 import { Package, Plus, Search, Edit3, Trash2, User, CheckCircle2, Wrench, Archive } from 'lucide-react';
+import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 import { toast } from 'sonner';
 
 export interface InventoryRecord {
@@ -50,6 +51,7 @@ interface InventoryForm {
 const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete }) => {
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [form, setForm] = useState<InventoryForm>({ id: undefined, name: '', serialNumber: '', status: 'available', condition: 'good', assignedToId: '' });
@@ -148,10 +150,11 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                     <Plus size={16} />
                     <span>{lang === 'uz' ? 'Yangi jihoz' : 'Новый предмет'}</span>
                 </button>
+                <div className="flex items-center justify-end">
+                    <TableToolbar view={viewMode} onViewChange={setViewMode} />
+                </div>
             </div>
-
-            {/* Mobil kartochkalar (Inventar) */}
-            <div className="md:hidden space-y-3">
+            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" : "hidden"}>
                 {filtered.map((it) => {
                     const meta = STATUS_META[it.status] || STATUS_META.available;
                     return (
@@ -181,7 +184,7 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
             </div>
 
             {/* Table (desktop) */}
-            <div className="hidden md:block dashboard-card overflow-hidden">
+            <div className={viewMode === 'list' ? "dashboard-card overflow-hidden overflow-x-auto" : "hidden"}>
                 <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full text-left border-collapse min-w-[820px]">
                         <thead>

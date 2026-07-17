@@ -3,8 +3,9 @@
 import React from "react";
 import type { BalanceBreakdown } from "@/types";
 import { Wallet, AlertTriangle, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { formatNum } from "@/lib/format";
 
-const som = (v: number) => Math.round(v).toLocaleString("ru-RU");
+const som = (v: number) => formatNum(Math.round(v));
 
 interface Props {
   breakdown: BalanceBreakdown;

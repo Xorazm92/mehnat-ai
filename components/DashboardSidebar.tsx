@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ALLOWED_VIEWS, type UserRole } from "@/lib/permissions";
+import { ALLOWED_VIEWS, getHomeRoute, type UserRole } from "@/lib/permissions";
 import { useMobileNav } from "@/components/MobileNavContext";
 import {
   LayoutDashboard,
@@ -61,7 +61,7 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: DashboardSidebarProps) {
   const pathname = usePathname();
-  const { open, setOpen } = useMobileNav();
+  const { open, setOpen, collapsed } = useMobileNav();
   const role = userRole as UserRole;
   const allowedViews: string[] = allowedViewsProp ?? ALLOWED_VIEWS[role] ?? [];
 
@@ -79,19 +79,23 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
       <div className="fixed inset-0 z-30 md:hidden" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setOpen(false)} />
     )}
     <aside
-      className={`flex-shrink-0 h-screen flex flex-col z-40 md:z-20 overflow-hidden transition-transform duration-300 fixed md:relative top-0 left-0 md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+      className={`flex-shrink-0 h-screen flex flex-col z-40 md:z-20 overflow-hidden transition-all duration-300 fixed md:relative top-0 left-0 w-[var(--sidebar-width)] ${open ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "md:w-[72px] md:translate-x-0" : "md:w-[var(--sidebar-width)] md:translate-x-0"}`}
       style={{
-        width: "var(--sidebar-width)",
         background: "var(--sidebar-bg)",
         borderRight: "1px solid var(--sidebar-border)",
       }}
     >
       {/* Logo */}
       <div
-        className="h-16 flex items-center px-5 flex-shrink-0"
+        className={`h-16 flex items-center flex-shrink-0 ${collapsed ? "px-5 md:px-0 md:justify-center" : "px-5"}`}
         style={{ borderBottom: "1px solid var(--sidebar-border)" }}
       >
-        <div className="flex items-center gap-3">
+        <Link
+          href={getHomeRoute(userRole)}
+          onClick={() => setOpen(false)}
+          className={`flex items-center transition-opacity hover:opacity-80 ${collapsed ? "gap-3 md:gap-0" : "gap-3"}`}
+          aria-label="Bosh sahifa"
+        >
           <Image
             src="/asro-logo-192.png"
             alt="ASRO"
@@ -100,7 +104,7 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
             priority
             className="w-[34px] h-[34px] object-contain shrink-0"
           />
-          <div>
+          <div className={collapsed ? "md:hidden" : ""}>
             <h1
               className="text-[16px] font-black tracking-tight leading-none"
               style={{ color: "var(--text-primary)" }}
@@ -114,7 +118,7 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
               Boshqaruv tizimi
             </p>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Navigation */}
@@ -125,7 +129,7 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
 
           return (
             <div key={group}>
-              <div className="sidebar-label">{GROUP_LABELS[group]}</div>
+              <div className={`sidebar-label ${collapsed ? "md:hidden" : ""}`}>{GROUP_LABELS[group]}</div>
               {groupItems.map((item) => {
                 const Icon = item.icon;
                 const isActive =
@@ -139,7 +143,8 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className={`sidebar-nav-item ${isActive ? "active" : ""}`}
+                    title={collapsed ? item.label : undefined}
+                    className={`sidebar-nav-item ${isActive ? "active" : ""} ${collapsed ? "md:justify-center" : ""}`}
                     style={
                       isActive
                         ? {
@@ -154,11 +159,11 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
                       className="flex-shrink-0"
                       style={{ opacity: isActive ? 1 : 0.7 }}
                     />
-                    <span className="flex-1 text-[13px] font-medium">{item.label}</span>
+                    <span className={`flex-1 text-[13px] font-medium ${collapsed ? "md:hidden" : ""}`}>{item.label}</span>
                     {isActive && (
                       <ChevronRight
                         size={14}
-                        className="flex-shrink-0 opacity-60"
+                        className={`flex-shrink-0 opacity-60 ${collapsed ? "md:hidden" : ""}`}
                       />
                     )}
                   </Link>
@@ -175,7 +180,7 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
         style={{ borderTop: "1px solid var(--sidebar-border)" }}
       >
         <div
-          className="flex items-center gap-2 px-3 py-2 rounded-lg"
+          className={`flex items-center gap-2 py-2 rounded-lg ${collapsed ? "px-3 md:px-0 md:justify-center" : "px-3"}`}
           style={{ background: "var(--bg-hover)" }}
         >
           <div
@@ -184,7 +189,7 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
           >
             {userRole?.charAt(0)?.toUpperCase() || "U"}
           </div>
-          <div className="flex-1 min-w-0">
+          <div className={`flex-1 min-w-0 ${collapsed ? "md:hidden" : ""}`}>
             <p
               className="text-[11px] font-semibold truncate leading-none"
               style={{ color: "var(--text-primary)" }}

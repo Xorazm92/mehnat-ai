@@ -5,6 +5,7 @@ import { getKpiLeaderboard } from "@/server/kpi";
 import { Trophy, TrendingUp, Award, AlertTriangle, Wallet, Activity } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { MONTHS_UZ } from "@/lib/periods";
+import { formatNum } from "@/lib/format";
 
 interface Props { lang: Language; }
 
@@ -34,7 +35,7 @@ const CAT_UZ: Record<string, string> = {
   reports: "Hisobotlar o'z vaqtida", penalty_only: "Jiddiy xatolar", bonus_only: "Shaxsiy mas'uliyat",
 };
 
-const fmt = (v: number) => Math.round(v).toLocaleString("ru-RU");
+const fmt = (v: number) => formatNum(Math.round(v));
 const barColor = (b: number) => (b >= 85 ? "var(--success)" : b >= 70 ? "var(--accent-blue)" : b >= 60 ? "var(--warning)" : "var(--danger)");
 
 const KpiLeaderboard: React.FC<Props> = ({ lang }) => {

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { updateUser, changePassword } from "@/server/users";
 import { ROLE_LABELS, ROLE_COLORS, type UserRole } from "@/lib/permissions";
+import { formatUzMonthYear, formatUzDateNumeric, formatUzTime, formatNum } from "@/lib/format";
 
 // ─── Tiplar ────────────────────────────────────────────────
 interface Profile {
@@ -106,11 +107,9 @@ const STATUS_LABELS: Record<string, string> = {
   sick: "Betob / kasal",
 };
 
-const fmtMoney = (n: number) => new Intl.NumberFormat("uz-UZ").format(Math.round(n));
-const fmtDate = (s: string | null) =>
-  s ? new Date(s).toLocaleDateString("uz-UZ", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
-const fmtTime = (s: string | null) =>
-  s ? new Date(s).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }) : "—";
+const fmtMoney = (n: number) => formatNum(n);
+const fmtDate = (s: string | null) => (s ? formatUzDateNumeric(s) : "—");
+const fmtTime = (s: string | null) => (s ? formatUzTime(s) : "—");
 
 export default function MyCabinet(props: MyCabinetProps) {
   const { profile, companies, kpi, adjustments, payrollSummary, attendance, attendanceSummary, currentMonth } = props;
@@ -119,7 +118,7 @@ export default function MyCabinet(props: MyCabinetProps) {
 
   const roleLabel = ROLE_LABELS[profile.role as UserRole] || profile.role;
   const roleColor = ROLE_COLORS[profile.role as UserRole] || "#64748b";
-  const monthLabel = new Date(`${currentMonth}-01`).toLocaleDateString("uz-UZ", { month: "long", year: "numeric" });
+  const monthLabel = formatUzMonthYear(`${currentMonth}-01`);
 
   return (
     <div className="space-y-6 animate-fade-in pb-20">

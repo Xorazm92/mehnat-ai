@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import OrganizationModule from "@/components/OrganizationModule";
 import CompanyDrawer from "@/components/CompanyDrawer";
 import { createCompany, updateCompany, deleteCompany } from "@/server/companies";
@@ -16,6 +17,7 @@ interface Props {
 
 export default function OrganizationsClient({ companies, staff, operations }: Props) {
   const router = useRouter();
+  useAutoRefresh();
   const [selectedPeriod, setSelectedPeriod] = useState<string>("2026-03");
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 

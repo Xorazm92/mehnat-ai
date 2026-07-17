@@ -7,6 +7,9 @@ import { DollarSign, CheckCircle2, AlertCircle, FileText, X, TrendingUp, Trendin
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
 import { getPayrollAdjustments, approveEmployeeSalary } from '@/server/payroll';
 import { toast } from 'sonner';
+import { formatNum } from "@/lib/format";
+import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { exportToExcel } from "@/lib/exportExcel";
 
 interface Props {
     staff: Staff[];
@@ -49,6 +52,8 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
     const [loading, setLoading] = useState(false);
     const [savingId, setSavingId] = useState<string | null>(null);
     const [detailModal, setDetailModal] = useState<DetailModal | null>(null);
+    const [viewMode, setViewMode] = useState<ViewMode>('grid');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'approved'>('all');
 
     const superAdminCommission = useMemo(() => {
         const totalTurnover = companies.filter(c => c.isActive).reduce((acc, c) => acc + Number(c.contractAmount || 0), 0);
@@ -182,6 +187,31 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
         setSavingId(null);
     };
 
+    const rows = staff.flatMap(s => {
+        const draft = drafts[s.id];
+        if (!draft || draft.companyCount === 0) return [];
+        const isApproved = approvedSalaries.some(a => a.employeeId === s.id);
+        if (statusFilter === 'approved' && !isApproved) return [];
+        if (statusFilter === 'draft' && isApproved) return [];
+        return [{ s, draft, isApproved }];
+    });
+
+    const handleExport = () => {
+        exportToExcel(
+            rows.map(({ s, draft, isApproved }) => ({
+                'Xodim': s.name,
+                'Lavozim': s.role,
+                'Asosiy': Math.round(draft.baseSalary),
+                'Bonus': Math.round(draft.kpiBonus),
+                'Jarima': Math.round(draft.kpiPenalty),
+                'Jami': Math.round(draft.totalSalary),
+                'Holat': isApproved ? 'Tasdiqlandi' : 'Qoralama',
+            })),
+            `oylik-${month}`,
+            'Oylik'
+        );
+    };
+
     return (
         <div className="space-y-4 animate-fade-in pb-6">
             {/* Drafts Header */}
@@ -206,29 +236,51 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                         <div className="px-3 py-2 rounded-xl flex flex-col items-start min-w-[140px]"
                             style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
                             <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--success)", opacity: 0.8 }}>Super Admin (7%)</p>
-                            <p className="text-[15px] font-black tabular-nums leading-none" style={{ color: "var(--success)" }}>{superAdminCommission.toLocaleString()} <span className="text-[10px]">UZS</span></p>
+                            <p className="text-[15px] font-black tabular-nums leading-none" style={{ color: "var(--success)" }}>{formatNum(superAdminCommission)} <span className="text-[10px]">UZS</span></p>
                         </div>
                     )}
-                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg"
-                        style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)" }}>
-                        <span className="text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>Oy:</span>
-                        <input
-                            type="month"
-                            value={month}
-                            onChange={(e) => setMonth(e.target.value)}
-                            className="bg-transparent border-none outline-none font-bold text-[13px] cursor-pointer"
-                            style={{ color: "var(--accent-blue)" }}
-                        />
-                    </div>
+                    <TableToolbar
+                        view={viewMode}
+                        onViewChange={setViewMode}
+                        month={
+                            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg"
+                                style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)" }}>
+                                <span className="text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>Oy:</span>
+                                <input
+                                    type="month"
+                                    value={month}
+                                    onChange={(e) => setMonth(e.target.value)}
+                                    className="bg-transparent border-none outline-none font-bold text-[13px] cursor-pointer"
+                                    style={{ color: "var(--accent-blue)" }}
+                                />
+                            </div>
+                        }
+                        onExport={handleExport}
+                        filterCount={statusFilter !== 'all' ? 1 : 0}
+                        filter={
+                            <div className="flex flex-col gap-2">
+                                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Holat</p>
+                                {([['all', 'Hammasi'], ['draft', 'Qoralama'], ['approved', 'Tasdiqlangan']] as const).map(([val, label]) => (
+                                    <button key={val} type="button" onClick={() => setStatusFilter(val)}
+                                        className="flex items-center justify-between px-3 py-2 rounded-lg text-[12px] font-bold transition-all"
+                                        style={{
+                                            background: statusFilter === val ? "var(--accent-blue-light)" : "var(--input-bg)",
+                                            border: `1px solid ${statusFilter === val ? "var(--accent-blue)" : "var(--card-border)"}`,
+                                            color: statusFilter === val ? "var(--accent-blue)" : "var(--text-secondary)",
+                                        }}>
+                                        {label}
+                                        {statusFilter === val && <CheckCircle2 size={13} />}
+                                    </button>
+                                ))}
+                            </div>
+                        }
+                    />
                 </div>
             </div>
 
+            {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {staff.map(s => {
-                    const draft = drafts[s.id];
-                    if (!draft || draft.companyCount === 0) return null;
-                    const isApproved = approvedSalaries.some(a => a.employeeId === s.id);
-
+                {rows.map(({ s, draft, isApproved }) => {
                     return (
                         <div key={s.id} className="rounded-xl overflow-hidden flex flex-col transition-all"
                             style={{
@@ -281,7 +333,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                         <FileText size={13} />
                                         <span className="font-bold uppercase tracking-tight text-[11px]">Asosiy</span>
                                     </div>
-                                    <span className="font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{draft.baseSalary.toLocaleString()}</span>
+                                    <span className="font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{formatNum(draft.baseSalary)}</span>
                                 </button>
 
                                 {/* KPI Bonus */}
@@ -296,7 +348,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                         <TrendingUp size={13} />
                                         <span className="font-bold uppercase tracking-tight text-[11px]">Bonus</span>
                                     </div>
-                                    <span className="font-bold tabular-nums" style={{ color: "var(--success)" }}>+{draft.kpiBonus.toLocaleString()}</span>
+                                    <span className="font-bold tabular-nums" style={{ color: "var(--success)" }}>+{formatNum(draft.kpiBonus)}</span>
                                 </button>
 
                                 {/* KPI Jarima */}
@@ -311,7 +363,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                         <TrendingDown size={13} />
                                         <span className="font-bold uppercase tracking-tight text-[11px]">Jarima</span>
                                     </div>
-                                    <span className="font-bold tabular-nums" style={{ color: "var(--danger)" }}>{draft.kpiPenalty.toLocaleString()}</span>
+                                    <span className="font-bold tabular-nums" style={{ color: "var(--danger)" }}>{formatNum(draft.kpiPenalty)}</span>
                                 </button>
                             </div>
 
@@ -320,7 +372,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                 style={{ borderTop: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
                                 <div className="flex flex-col">
                                     <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami To&apos;lov</span>
-                                    <span className="text-[17px] font-black tabular-nums" style={{ color: "var(--text-primary)" }}>{draft.totalSalary.toLocaleString()}</span>
+                                    <span className="text-[17px] font-black tabular-nums" style={{ color: "var(--text-primary)" }}>{formatNum(draft.totalSalary)}</span>
                                 </div>
                                 {isApproved ? (
                                     <div className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-not-allowed"
@@ -343,6 +395,83 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                     );
                 })}
             </div>
+            ) : (
+            <div className="rounded-xl overflow-x-auto" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+                <table className="w-full text-left text-[12px] border-collapse min-w-[720px]">
+                    <thead>
+                        <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--card-border)" }}>
+                            {["Xodim", "Asosiy", "Bonus", "Jarima", "Jami To'lov", "Holat", ""].map((h, i) => (
+                                <th key={i} className={`px-4 py-3 text-[10px] font-black uppercase tracking-widest ${i === 0 || i === 5 || i === 6 ? "text-left" : "text-right"}`}
+                                    style={{ color: "var(--text-muted)" }}>{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map(({ s, draft, isApproved }) => (
+                            <tr key={s.id} className="transition-colors"
+                                style={{ borderBottom: "1px solid var(--card-border)", background: isApproved ? "var(--success-bg)" : "transparent" }}>
+                                <td className="px-4 py-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                                            style={{ background: `hsl(${(s.name.charCodeAt(0) * 37) % 360}, 60%, 50%)` }}>
+                                            {s.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-[13px] leading-none" style={{ color: "var(--text-primary)" }}>{s.name}</p>
+                                            <p className="text-[10px] mt-0.5 font-medium" style={{ color: "var(--text-muted)" }}>{s.role}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="px-4 py-3 text-right font-bold tabular-nums cursor-pointer hover:underline"
+                                    style={{ color: "var(--text-primary)" }}
+                                    onClick={() => setDetailModal({ type: 'base', employeeId: s.id, employeeName: s.name })}>
+                                    {formatNum(draft.baseSalary)}
+                                </td>
+                                <td className="px-4 py-3 text-right font-bold tabular-nums cursor-pointer hover:underline"
+                                    style={{ color: "var(--success)" }}
+                                    onClick={() => setDetailModal({ type: 'bonus', employeeId: s.id, employeeName: s.name })}>
+                                    +{formatNum(draft.kpiBonus)}
+                                </td>
+                                <td className="px-4 py-3 text-right font-bold tabular-nums cursor-pointer hover:underline"
+                                    style={{ color: "var(--danger)" }}
+                                    onClick={() => setDetailModal({ type: 'penalty', employeeId: s.id, employeeName: s.name })}>
+                                    {formatNum(draft.kpiPenalty)}
+                                </td>
+                                <td className="px-4 py-3 text-right font-black tabular-nums text-[14px]" style={{ color: "var(--text-primary)" }}>
+                                    {formatNum(draft.totalSalary)}
+                                </td>
+                                <td className="px-4 py-3">
+                                    {isApproved ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold"
+                                            style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
+                                            <CheckCircle2 size={11} /> Tasdiqlandi
+                                        </span>
+                                    ) : (
+                                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold"
+                                            style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>
+                                            Qoralama
+                                        </span>
+                                    )}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                    {isApproved ? (
+                                        <span className="text-[10px] font-bold uppercase" style={{ color: "var(--text-muted)" }}>Saqlangan</span>
+                                    ) : (
+                                        <button onClick={() => handleApprove(s.id)} disabled={savingId === s.id}
+                                            className="c1-btn c1-btn-primary px-3 py-1.5 text-[10px] disabled:opacity-50">
+                                            {savingId === s.id ? '...' : (<><DollarSign size={11} />Tasdiqlash</>)}
+                                        </button>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                {rows.length === 0 && !loading && (
+                    <div className="py-12 text-center text-[12px] font-bold" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot yo&apos;q</div>
+                )}
+            </div>
+            )}
 
             {loading && (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -396,9 +525,9 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                 <div className="flex items-baseline gap-2">
                                     <span className="text-xl font-black tabular-nums"
                                         style={{ color: detailModal.type === 'base' ? "var(--text-primary)" : detailModal.type === 'bonus' ? "var(--success)" : "var(--danger)" }}>
-                                        {detailModal.type === 'base' && drafts[detailModal.employeeId]?.baseSalary.toLocaleString()}
-                                        {detailModal.type === 'bonus' && `+${drafts[detailModal.employeeId]?.kpiBonus.toLocaleString()}`}
-                                        {detailModal.type === 'penalty' && drafts[detailModal.employeeId]?.kpiPenalty.toLocaleString()}
+                                        {detailModal.type === 'base' && formatNum(drafts[detailModal.employeeId]?.baseSalary)}
+                                        {detailModal.type === 'bonus' && `+${formatNum(drafts[detailModal.employeeId]?.kpiBonus)}`}
+                                        {detailModal.type === 'penalty' && formatNum(drafts[detailModal.employeeId]?.kpiPenalty)}
                                     </span>
                                     <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>UZS (Jami)</span>
                                 </div>
@@ -426,8 +555,8 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                                         <td className="px-3 py-2 text-center" style={{ borderLeft: "1px solid var(--table-border)" }}>
                                                             <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{b.role}</span>
                                                         </td>
-                                                        <td className="px-3 py-2 text-right text-[11px] tabular-nums" style={{ color: "var(--text-secondary)", borderLeft: "1px solid var(--table-border)" }}>{b.contractAmount.toLocaleString()}</td>
-                                                        <td className="px-3 py-2 text-right font-bold tabular-nums" style={{ color: "var(--text-primary)", borderLeft: "1px solid var(--table-border)" }}>{b.baseAmount.toLocaleString()}</td>
+                                                        <td className="px-3 py-2 text-right text-[11px] tabular-nums" style={{ color: "var(--text-secondary)", borderLeft: "1px solid var(--table-border)" }}>{formatNum(b.contractAmount)}</td>
+                                                        <td className="px-3 py-2 text-right font-bold tabular-nums" style={{ color: "var(--text-primary)", borderLeft: "1px solid var(--table-border)" }}>{formatNum(b.baseAmount)}</td>
                                                     </tr>
                                                 ))}
                                                 {modalData.filter(b => b.baseAmount > 0).length === 0 && (
@@ -447,7 +576,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                                         <span className="text-[12px] font-bold uppercase" style={{ color: "var(--text-primary)" }}>{b.companyName}</span>
                                                         <span className="text-[9px] font-bold uppercase" style={{ color: "var(--text-muted)" }}>({b.role})</span>
                                                     </div>
-                                                    <span className="font-bold tabular-nums text-[12px]" style={{ color: "var(--success)" }}>+{b.kpiBonus.toLocaleString()}</span>
+                                                    <span className="font-bold tabular-nums text-[12px]" style={{ color: "var(--success)" }}>+{formatNum(b.kpiBonus)}</span>
                                                 </div>
                                                 <div className="p-3 space-y-2" style={{ background: "var(--card-bg)" }}>
                                                     {b.details.filter(d => d.includes('KPI +') || d.includes('Auto KPI +') || d.includes('KPI Bonus')).map((d, j) => (
@@ -476,7 +605,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                                         <span className="text-[12px] font-bold uppercase" style={{ color: "var(--text-primary)" }}>{b.companyName}</span>
                                                         <span className="text-[9px] font-bold uppercase" style={{ color: "var(--text-muted)" }}>({b.role})</span>
                                                     </div>
-                                                    <span className="font-bold tabular-nums text-[12px]" style={{ color: "var(--danger)" }}>-{b.kpiPenalty.toLocaleString()}</span>
+                                                    <span className="font-bold tabular-nums text-[12px]" style={{ color: "var(--danger)" }}>-{formatNum(b.kpiPenalty)}</span>
                                                 </div>
                                                 <div className="p-3 space-y-2" style={{ background: "var(--card-bg)" }}>
                                                     {b.details.filter(d => d.includes('KPI -') || d.includes('Auto KPI -')).map((d, j) => (

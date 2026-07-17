@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import DocumentsModule, { DocumentRecord } from "@/components/DocumentsModule";
 import { Company } from "@/types";
 import { createDocument, deleteDocument } from "@/server/documents";
@@ -14,6 +15,7 @@ interface Props {
 
 export default function DocumentsClient({ documents, companies, canEdit }: Props) {
   const router = useRouter();
+  useAutoRefresh();
 
   const handleSave = async (data: { companyId: string; name: string; filePath: string }) => {
     await createDocument(data);
