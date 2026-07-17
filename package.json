@@ -2,6 +2,9 @@
   "name": "mehnat-erp",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "bot:dev": "tsx watch bot/main.ts",
     "bot:start": "tsx bot/main.ts",
+    "bot:webhook": "tsx scripts/set-telegram-webhook.ts",
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",

@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main, nextjs-v2]
+  pull_request:
+    branches: [main, nextjs-v2]
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Typecheck · Lint · Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # postinstall runs `prisma generate`; it reads the schema only (no DB).
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # DB-free DDD domain specs (bot/**/*.spec.ts). The test/**/*.test.ts suite
+      # is integration-level (needs a seeded Postgres) — see the commented job
+      # below to enable it once seeding is scripted in CI.
+      - name: Unit tests (domain)
+        run: npx vitest run bot/
+
+  # ── Integration tests (opt-in) ────────────────────────────────────────────
+  # Requires a Postgres service + `prisma db push` + KPI-rule seeding. Uncomment
+  # and wire a seed step once the seed scripts are made CI-idempotent.
+  #
+  # integration:
+  #   name: Integration tests (Postgres)
+  #   runs-on: ubuntu-latest
+  #   services:
+  #     postgres:
+  #       image: postgres:16
+  #       env:
+  #         POSTGRES_USER: asro
+  #         POSTGRES_PASSWORD: asro
+  #         POSTGRES_DB: asro_test
+  #       ports: ["5432:5432"]
+  #       options: >-
+  #         --health-cmd "pg_isready -U asro" --health-interval 10s
+  #         --health-timeout 5s --health-retries 5
+  #   env:
+  #     DATABASE_URL: postgresql://asro:asro@localhost:5432/asro_test?schema=public
+  #     AUTH_SECRET: ci-test-secret-not-for-production
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with: { node-version-file: .nvmrc, cache: npm }
+  #     - run: npm ci
+  #     - run: npx prisma db push --skip-generate
+  #     - run: npx tsx scripts/seed-kpi-rules-v2.ts
+  #     - run: npm test

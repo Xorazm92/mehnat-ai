@@ -123,8 +123,8 @@ export async function createUser(data: {
   if (!["super_admin", "admin"].includes(role)) throw new Error("Forbidden");
 
   if (!data.email?.trim()) throw new Error("Email (login) kiritilishi shart");
-  if (!data.password || data.password.length < 6) {
-    throw new Error("Parol kamida 6 ta belgidan iborat bo'lishi kerak");
+  if (!data.password || data.password.length < 8) {
+    throw new Error("Parol kamida 8 ta belgidan iborat bo'lishi kerak");
   }
 
   // Email band emasligini tekshirish — ochiq xato xabari bilan
@@ -212,8 +212,8 @@ export async function changePassword(
   const userId = session.user.id;
   if (id !== userId) throw new Error("Forbidden");
 
-  if (!newPassword || newPassword.length < 6) {
-    throw new Error("Parol kamida 6 ta belgidan iborat bo'lishi kerak");
+  if (!newPassword || newPassword.length < 8) {
+    throw new Error("Parol kamida 8 ta belgidan iborat bo'lishi kerak");
   }
 
   const user = await prisma.user.findUnique({ where: { id } });
@@ -256,8 +256,8 @@ export async function resetUserPassword(id: string, newPassword: string) {
   if (!["super_admin", "admin"].includes(session.user.role as string)) {
     throw new Error("Forbidden");
   }
-  if (!newPassword || newPassword.length < 6) {
-    throw new Error("Parol kamida 6 ta belgidan iborat bo'lishi kerak");
+  if (!newPassword || newPassword.length < 8) {
+    throw new Error("Parol kamida 8 ta belgidan iborat bo'lishi kerak");
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 12);

@@ -1,0 +1,25 @@
+node_modules
+.next
+out
+build
+coverage
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+npm-debug.log*
+*.tsbuildinfo
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+KPI_bot-main
+Moliyachi AI
+data
+docs
+design-system
+HANDOFF.md
+*.md
+!README.md
+.claude
+test

@@ -54,10 +54,12 @@ export async function createAuditLog(data: {
   ipAddress?: string;
   userAgent?: string;
 }) {
+  // Exported = a publicly reachable server action. Require an authenticated
+  // caller so the audit trail can't be poisoned by anonymous requests.
   const session = await auth();
-  const userId = session?.user?.id;
+  if (!session) throw new Error("Unauthorized");
+  const userId = session.user?.id;
 
-  // Fire and forget — don't await in action handlers
   return serialize(
     await prisma.auditLog.create({
       data: {

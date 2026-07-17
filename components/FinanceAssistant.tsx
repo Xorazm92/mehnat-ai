@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Sparkles, X, Send, Bot, User as UserIcon, Loader2 } from "lucide-react";
+import { askFinanceAssistant } from "@/server/assistant";
 
 interface Msg { role: "user" | "assistant"; content: string }
 
@@ -14,29 +15,6 @@ const SUGGESTIONS = [
   "Muddati o'tgan hisobotlar",
   "Aylanmadan soliq stavkasi",
 ];
-
-// ⚠️ UI SHELL — javoblar hozircha namunaviy.
-// Real AI'ni ulash uchun shu funksiyani `/api/assistant` (Claude) ga POST qiladigan
-// qilib almashtiring. Boshqa hech narsani o'zgartirish shart emas.
-async function fetchAssistantReply(userText: string): Promise<string> {
-  await new Promise((r) => setTimeout(r, 650)); // "yozmoqda" taassuroti
-  const t = userText.toLowerCase();
-  let body: string;
-  if (t.includes("qqs") || t.includes("nds")) {
-    body = "QQS (NDS) — qo'shilgan qiymat solig'i, standart stavka 12%. Masalan 50 000 000 so'm aylanmada QQS ≈ 6 000 000 so'm.";
-  } else if (t.includes("aylanma")) {
-    body = "Aylanmadan soliq (soddalashtirilgan) odatda 4% stavkada hisoblanadi (faoliyat turiga qarab farq qilishi mumkin).";
-  } else if (t.includes("oylik") || t.includes("maosh") || t.includes("fond")) {
-    body = "Oylik fondi = firmalar bo'yicha rol ulushlari (buxgalter/bosh buxgalter/nazoratchi/bank) yig'indisi. Aniq raqamni Oylik bo'limidagi 'Jami to'lov' ko'rsatadi.";
-  } else if (t.includes("kpi")) {
-    body = "KPI ballari nazoratchi/bosh buxgalter tasdig'iga qarab bonus yoki jarimaga aylanadi. Har bir xodim ballarini KPI bo'limida ko'rish mumkin.";
-  } else if (t.includes("hisobot") || t.includes("muddat")) {
-    body = "Muddati o'tgan hisobotlarni Hisobotlar bo'limidagi 'Amallar matritsasi'dan ko'rasiz — qizil (−) belgilar bajarilmagan hisobotlar.";
-  } else {
-    body = "Savolingizni tushundim. To'liq javob uchun real AI hali ulanmagan.";
-  }
-  return body + "\n\n🔌 Eslatma: bu namunaviy javob — haqiqiy Claude AI keyinroq ulanadi.";
-}
 
 export default function FinanceAssistant() {
   const [open, setOpen] = useState(false);
@@ -52,12 +30,19 @@ export default function FinanceAssistant() {
   const send = async (text: string) => {
     const q = text.trim();
     if (!q || typing) return;
+    // Prior turns (before this question) become the model's conversation context.
+    const history = messages.slice(-8);
     setMessages((m) => [...m, { role: "user", content: q }]);
     setInput("");
     setTyping(true);
     try {
-      const reply = await fetchAssistantReply(q);
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
+      const res = await askFinanceAssistant(q, history);
+      setMessages((m) => [...m, { role: "assistant", content: res.reply }]);
+    } catch {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: "Kechirasiz, xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring." },
+      ]);
     } finally {
       setTyping(false);
     }

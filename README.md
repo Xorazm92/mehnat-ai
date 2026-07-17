@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ASRO — Korporativ Boshqaruv Tizimi
 
-## Getting Started
+Accounting-firm ERP: companies, staff, KPI, kassa/expenses, payroll, monthly
+report tracking, and a Telegram KPI bot. Built on **Next.js 16** (App Router,
+Server Actions), **Prisma 7 + PostgreSQL**, **next-auth v5**, **BullMQ + Redis**,
+and **grammY** for the bot.
 
-First, run the development server:
+> ⚠️ This repo pins a **breaking** Next.js version. Read the bundled guides in
+> `node_modules/next/dist/docs/` before changing framework-level code, and note
+> that middleware lives in **`proxy.ts`** (renamed from `middleware.ts`).
+
+## Requirements
+
+- Node.js ≥ 20.9 (see `.nvmrc` → 24)
+- PostgreSQL 14+
+- Redis 6+ (bot queues; optional if you don't run the bot)
+
+## Setup
 
 ```bash
+cp .env.example .env.local     # fill DATABASE_URL, AUTH_SECRET, …
+npm ci
+npx prisma db push             # apply the schema (no migration history yet)
+npx tsx scripts/create-admin.ts   # ADMIN_EMAIL=… ADMIN_PASSWORD=… (≥8 chars)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Generate `AUTH_SECRET` with `openssl rand -base64 32`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Purpose |
+|---|---|
+| `npm run dev` / `build` / `start` | Next.js app |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest — **integration tests need a seeded Postgres** |
+| `npm run bot:dev` / `bot:start` | Telegram bot worker (BullMQ) |
+| `npm run db:push` / `db:studio` | Prisma schema push / Studio |
 
-## Learn More
+Tip: DB-free domain specs only → `npx vitest run bot/`.
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **`app/`** — App Router routes: `(auth)`, `(dashboard)`, `(admin)`, plus
+  `api/telegram/webhook` and `api/health`.
+- **`server/`** — Server Actions (`"use server"`). Every exported action
+  re-checks `auth()` and role — the data layer is the real authorization
+  boundary; `proxy.ts` is defense-in-depth for navigation.
+- **`lib/`** — auth, prisma client, RBAC (`permissions.ts`), caching
+  (`cached-queries.ts`), crypto, serialization.
+- **`bot/`** — DDD-structured Telegram bot (identity / monitoring / kpi /
+  billing / ai contexts) sharing the same Prisma/Postgres.
+- **`prisma/schema.prisma`** — single source of truth for the DB.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+- `Dockerfile` + `docker-compose.yml` provide a Postgres + Redis + web + bot
+  stack (scaffolding — verify `docker compose build`).
+- Health probe: `GET /api/health` (200 = app+DB healthy, 503 = DB down).
+- See `PRODUCTION_REPORT.md` for the production-readiness checklist.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Docs
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`CONTEXT.md`, `docs/adr/`, `AGENTS.md`, `KPI_BOT_BLUEPRINT.md`.

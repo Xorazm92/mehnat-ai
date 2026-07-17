@@ -38,7 +38,7 @@ export const config = {
   ai: {
     /** Gemini API key. Empty ⇒ the classifier falls back to heuristics only. */
     geminiApiKey: process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? "",
-    geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+    geminiModel: process.env.GEMINI_MODEL ?? "gemini-flash-latest",
   },
   billing: {
     /** Daily payment-reminder cron. Set BILLING_ENABLED=false to disable. */
