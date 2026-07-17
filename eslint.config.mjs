@@ -14,11 +14,6 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Migratsiya manba-materiallari (eski Supabase davri skriptlari) — kod emas
     "data/**",
-    // Not part of the Next.js build (mirrors tsconfig `exclude`):
-    // KPI_bot-main is a vendored legacy NestJS reference app (its own tsconfig +
-    // compiled dist/); "Moliyachi AI" is untracked scratch work. See AGENTS.md.
-    "KPI_bot-main/**",
-    "Moliyachi AI/**",
     // Claude Code plugin/skill tooling (.cjs helper scripts) — not app source.
     ".claude/**",
   ]),
