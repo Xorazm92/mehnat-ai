@@ -130,7 +130,7 @@ async function main() {
     const innRaw = row["STIR (INN)"]?.toString().trim();
     // Some INNs might have weird characters, strip them
     const inn = innRaw ? innRaw.replace(/[^0-9]/g, "") : undefined;
-    let name = row["Tashkilot nomi"]?.toString().trim();
+    const name = row["Tashkilot nomi"]?.toString().trim();
 
     if (!name) continue; 
 

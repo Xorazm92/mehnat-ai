@@ -40,6 +40,14 @@ export const config = {
     geminiApiKey: process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? "",
     geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
   },
+  billing: {
+    /** Daily payment-reminder cron. Set BILLING_ENABLED=false to disable. */
+    enabled: (process.env.BILLING_ENABLED ?? "true") !== "false",
+    /** Hour of day (0-23, local) the reminder run fires. Default 09:00. */
+    cronHour: Number.isInteger(Number(process.env.BILLING_CRON_HOUR))
+      ? Number(process.env.BILLING_CRON_HOUR)
+      : 9,
+  },
   botMode: (process.env.BOT_MODE ?? "webhook") as BotMode,
 } as const;
 

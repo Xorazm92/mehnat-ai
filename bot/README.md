@@ -110,6 +110,8 @@ Add to `.env.local` (the bot process loads `.env` + `.env.local` via `bot/env.ts
 | `BOT_MODE` | no | `webhook` | `polling` for local dev (no public URL needed) |
 | `GEMINI_API_KEY` | for AI | — | Gemini question classifier; empty ⇒ heuristic-only detection |
 | `GEMINI_MODEL` | no | `gemini-2.5-flash` | Gemini model id |
+| `BILLING_ENABLED` | no | `true` | set `false` to disable the daily payment-reminder cron |
+| `BILLING_CRON_HOUR` | no | `9` | hour of day (0-23, local) the reminder run fires |
 
 ## Running
 
@@ -194,15 +196,18 @@ the `earlyDays/lateMinutes/absentDays` KPI counters. The bot has **no** attendan
   duplicates) and **never overwrites an `approved` row** — the supervisor still approves before salary
   is affected.
 
-**Phase F (billing detection) — done & verified:** [bot/contexts/billing/](contexts/billing/) —
-`assessDebt` (pure: level 🟡🟠🔴 + amount from `Payment`/`Company.contractAmount`/`paymentDay`),
-`detectPeriodDebts` (unpaid active companies for a period), `recordPaymentReminder` (idempotent per
-company+period+level via `@@unique` — no spam). Escalation days default to orange +3 / red +7.
-
-**Still needed from you (business rules, §18.6/18.7) to finish sending:** confirm escalation days,
-the 🟡🟠🔴 message templates, and who receives the 🔴 (group only, or also the responsible
-accountant in-app). Once set: wire the daily cron → `TelegramGroup` lookup → `sendMessage`, gated by
-`recordPaymentReminder`.
+**Phase F (billing notifications) — done & verified:** [bot/contexts/billing/](contexts/billing/)
+- `assessDebt` (pure: level 🟡🟠🔴 + amount from `Payment`/`Company.contractAmount`/`paymentDay`),
+  `detectPeriodDebts`, `buildReminderMessage` (pure templates), and the `runBillingReminders` pipeline.
+- **Escalation:** 🟡 on the due day, 🟠 +3 days, 🔴 +7 days.
+- **Routing:** 🟡🟠 → Telegram group; 🔴 → group **+** in-app `Notification` (responsible accountant +
+  every active director).
+- **Idempotent & retry-safe:** a `PaymentReminder` is reserved per (company, period, level) before
+  sending; an already-`sent` row is skipped and red in-app notifications are keyed on (user, link) —
+  so re-running the cron never double-sends or double-notifies. A send failure marks the row `failed`
+  (surfaced, not silently retried into a duplicate).
+- **Cron:** daily at `BILLING_CRON_HOUR` (default 09:00), restart-safe. Injected sender → the pipeline
+  is unit-testable without real Telegram.
 
 > After `prisma generate`, restart any running `next dev` or it 500s with
 > "Unknown field …" on the new columns (stale client in the server process).

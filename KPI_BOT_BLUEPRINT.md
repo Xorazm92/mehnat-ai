@@ -590,7 +590,7 @@ Barchasi Postgres holatidan o'qiydi (restart-safe); BullMQ repeatable jobs orqal
 | **D** | ~~Attendance (Telegram)~~ → **e-jurnal integratsiyasi** (Next.js): `lib/attendance.ts` + `lib/ejurnal.ts` + `deriveAttendanceKpi` — ✅ bajarildi |
 | **E** | ✅ KPI **ledger**: `KpiEvent` (idempotent append), atribut, savol→hodisa, `/kpi_award`/`/kpi_penalty`, `rollupLedger`. ✅ **payroll proyeksiya**: `projectResponseKpiToPerformance` → `submitted` `MonthlyPerformance` (approval-gated, approved qatorni bezovta qilmaydi) |
 | **F** | Notifications: eskalatsiya + grammY yuborish |
-| **F2** | **Billing & To'lov eslatmalari** (§11-B): ✅ detection engine (`assessDebt` sof+test, `detectPeriodDebts`, `recordPaymentReminder` idempotent). ⏳ guruhga 🟡🟠🔴 **yuborish** + matn shablonlari + kunlik cron + mas'ulga in-app — sizning biznes-qoidalaringiz kutilmoqda (§18.6/18.7) |
+| **F2** | ✅ **Billing & To'lov eslatmalari** (§11-B) TO'LIQ: `assessDebt`+`detectPeriodDebts`+`buildReminderMessage` (sof, test), `runBillingReminders` pipeline (reserve→send→update, retry-safe, dublikat yo'q), routing 🟡🟠→guruh / 🔴→guruh+in-app (buxgalter+direktor), kunlik cron (`BILLING_CRON_HOUR`, default 09:00). Eskalatsiya: 🟡 muddat kuni, 🟠 +3, 🔴 +7 |
 | **G** | Reports reconciliation (§11 qarorига ko'ra) |
 | **H** | STT (ovoz), AI cost tuning, prompt caching |
 | **I** | Dashboard read-model (mavjud UI ga bot metrikalari), yuklama testi |

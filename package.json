@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "typecheck": "tsc --noEmit",
     "bot:dev": "tsx watch bot/main.ts",
     "bot:start": "tsx bot/main.ts",
     "lint": "eslint",

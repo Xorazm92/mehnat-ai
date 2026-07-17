@@ -11,7 +11,9 @@ import {
  * the open-threshold so questions still open (attributed to the default role).
  */
 export class HeuristicClassifier implements AiClassifier {
-  async classify(_text: string): Promise<QuestionClassification> {
+  // The interface passes `text`, but the heuristic gate already ran in the
+  // worker, so this implementation needs no argument.
+  async classify(): Promise<QuestionClassification> {
     return {
       isQuestion: true,
       responsibleRole: DEFAULT_RESPONSIBLE_ROLE,
