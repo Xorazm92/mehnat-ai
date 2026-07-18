@@ -7,6 +7,7 @@
  *
  * Run: npx tsx scripts/seed-kpi-history.ts
  */
+import "./load-env"; // must be first: loads DATABASE_URL before Prisma is used
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 

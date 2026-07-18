@@ -8,6 +8,7 @@
  *
  * Run:       npx tsx scripts/seed-cashflow-demo.ts
  */
+import "./load-env"; // must be first: loads DATABASE_URL before Prisma is used
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 

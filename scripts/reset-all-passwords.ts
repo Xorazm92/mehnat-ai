@@ -6,7 +6,7 @@
  * Parollar DB'da hash bo'lib saqlanadi; ochiq matn faqat shu ro'yxatda ko'rinadi —
  * uni xodimlarga tarqating va saqlab qo'ying (qayta ko'rib bo'lmaydi).
  */
-import "dotenv/config";
+import "./load-env"; // must be first: loads DATABASE_URL before Prisma is used
 import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
 import { generateMemorablePassword } from "../lib/passwordUtils";

@@ -14,6 +14,7 @@
  *
  * Run:  npx tsx scripts/cleanup-user-import-junk.ts
  */
+import "./load-env"; // must be first: loads DATABASE_URL before Prisma is used
 import { prisma } from "@/lib/prisma";
 
 async function countRefs(ids: string[]) {
