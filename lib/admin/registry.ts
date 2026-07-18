@@ -60,7 +60,7 @@ export const ADMIN_MODULES: AdminModule[] = [
   { id: "operation_matrix", labelUz: "Amallar matritsasi", icon: FileText, href: "/admin/operation-matrix", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Hisobot ustunlarini yoqish/o'chirish, tartiblash, nomlash" },
 
   // NOTE: Moliya sahifalari (Firmalar, Kassa, Hisobotlar, Oylik, KPI, Hujjatlar)
-  // asosiy menyuда bor — bu yerda takrorlanmaydi. Admin panel = tizim boshqaruvi.
+  // asosiy menyuda bor — bu yerda takrorlanmaydi. Admin panel = tizim boshqaruvi.
 
   // --- Integratsiyalar & kelajakdagi modullar (placeholder, drop-in) ---
   { id: "eimzo", labelUz: "E-imzo", icon: KeyRound, href: "/admin/m/eimzo", group: "integratsiya", status: "soon", featureFlag: "eimzo", descUz: "Elektron imzo integratsiyasi" },

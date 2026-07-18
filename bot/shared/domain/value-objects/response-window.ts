@@ -1,7 +1,7 @@
 /**
  * A per-role response regulament limit, measured in *working* minutes (see
  * WorkingHours). Spec limits: accountant 10, bank-client 5, controller 5-10.
- * The task-ETA convention ("10 минутда ўтказаман") allows up to 30 min for the
+ * The task-ETA convention ("10 minutda o'tkazaman") allows up to 30 min for the
  * actual task; that longer limit is modelled as a separate ResponseWindow.
  */
 export class ResponseWindow {

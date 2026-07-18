@@ -162,7 +162,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Brend Nomi (Brand Name)</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Brend Nomi</label>
                                 <input
                                     className="erp-input"
                                     placeholder="Masalan: MONTAJ"
@@ -265,10 +265,10 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     <option value="CR1">CR1</option>
                                     <option value="CR2">CR2</option>
                                     <option value="CR3">CR3</option>
-                                    <option value="srv1c1">srv1c1 (Server 1)</option>
-                                    <option value="srv1c2">srv1c2 (Server 2)</option>
-                                    <option value="srv1c3">srv1c3 (Server 3)</option>
-                                    <option value="srv2">srv2 (Main Server)</option>
+                                    <option value="srv1c1">srv1c1 (1-server)</option>
+                                    <option value="srv1c2">srv1c2 (2-server)</option>
+                                    <option value="srv1c3">srv1c3 (3-server)</option>
+                                    <option value="srv2">srv2 (Asosiy server)</option>
                                 </select>
                             </div>
                             <div className="space-y-1.5">

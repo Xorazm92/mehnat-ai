@@ -6,8 +6,8 @@ export interface DailyWindow {
 
 /**
  * The regulament working-hours calendar. Response timers only advance during
- * these windows (spec: "Регламентлар 09.00-13.00 гача ва 14.00 дан 18.00 гача
- * амал қилади") — time outside them, incl. the 13:00-14:00 break, does not count.
+ * these windows (spec: "Reglamentlar 09.00-13.00 gacha va 14.00 dan 18.00 gacha
+ * amal qiladi") — time outside them, incl. the 13:00-14:00 break, does not count.
  *
  * Dates are read via their UTC wall-clock components, so the caller passes times
  * already normalised to the business timezone (Uzbekistan, UTC+5). Keeping this

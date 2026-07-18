@@ -4,7 +4,7 @@
 // Bot `KpiEvent` ledger'idagi javob (response) hodisalarini mavjud
 // `*_group_response` (select: green/yellow/red) qoidasining tanloviga o'giradi.
 // Yashil = "oy davomida uzluksiz bajarildi", qizil = "tizimli kechikish".
-// Sof va DB'siz test qilinadi. Yozuv (MonthlyPerformance) — server tomonда.
+// Sof va DB'siz test qilinadi. Yozuv (MonthlyPerformance) — server tomonda.
 
 export type KpiColor = "green" | "yellow" | "red";
 

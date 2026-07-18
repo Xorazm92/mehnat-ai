@@ -68,7 +68,7 @@ export default async function DashboardLayout({
           </main>
         </div>
 
-        {/* Mobil pastki navigatsiya (faqat kichik ekranlarда) */}
+        {/* Mobil pastki navigatsiya (faqat kichik ekranlarda) */}
         <MobileBottomNav userRole={userRole} allowedViews={allowedViews} />
       </div>
       </MobileNavProvider>

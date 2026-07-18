@@ -236,8 +236,8 @@ export function AdminUserManager({
             </div>
             <Field label="Holati">
               <select className={inputCls} style={inputStyle} value={form.status || "active"} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                <option value="active">Faol (ishда)</option>
-                <option value="vacation">Ta&apos;tilда</option>
+                <option value="active">Faol (ishda)</option>
+                <option value="vacation">Ta&apos;tilda</option>
                 <option value="sick">Kasallik</option>
               </select>
             </Field>

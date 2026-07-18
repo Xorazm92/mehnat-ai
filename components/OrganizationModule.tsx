@@ -443,7 +443,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           </div>
         )}
 
-        {/* Kartochkalar — mobilда doim, desktopда faqat 'grid' rejimida */}
+        {/* Kartochkalar — mobilda doim, desktopda faqat 'grid' rejimida */}
         <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${viewMode === 'table' ? 'md:hidden' : ''}`}>
             {paginated.map(c => {
               const risk = getRiskIndicator(c);
@@ -598,8 +598,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                         <td>
                           <div className="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                             <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Batafsil"><Eye size={13} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Edit"><Edit3 size={13} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Delete"><Trash2 size={13} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Tahrirlash"><Edit3 size={13} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="O'chirish"><Trash2 size={13} /></button>
                           </div>
                         </td>
                       </tr>

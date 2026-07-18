@@ -61,7 +61,7 @@ export enum ReportStatus {
   ACCEPTED = '+',
   NOT_SUBMITTED = '-',
   NOT_REQUIRED = '0',
-  IN_PROGRESS = 'ариза',
+  IN_PROGRESS = 'ariza',
   BLOCKED = 'kartoteka',
   ERROR = 'OSHIBKA',
   UNKNOWN = '?',

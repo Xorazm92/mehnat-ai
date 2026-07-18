@@ -5,7 +5,7 @@ import { Settings, Edit3, Trash2, X, Shield, Landmark, Calculator, Plus } from '
 import { getKpiRules, createKpiRule, updateKpiRule, deleteKpiRule } from '@/server/kpi';
 import { submitOnCtrlEnter } from '@/lib/format';
 
-// inputTypeV2 → legacy inputType (yangi qoida yaratishда talab qilinadi)
+// inputTypeV2 → legacy inputType (yangi qoida yaratishda talab qilinadi)
 const LEGACY_INPUT: Record<string, string> = {
     select: 'checkbox', counter: 'counter', checkbox_bonus: 'checkbox',
     checkbox_penalty: 'checkbox', amount_penalty: 'number',
@@ -279,7 +279,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Internal nom (ixtiyoriy)</label>
+                                        <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Ichki nom (ixtiyoriy)</label>
                                         <input className="erp-input font-mono text-[12px]" placeholder="avto (nomdan)" value={editingRule.name || ''} onChange={e => setEditingRule({ ...editingRule, name: e.target.value })} />
                                     </div>
                                 </div>
@@ -290,36 +290,36 @@ const KPIRulesManager: React.FC<Props> = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Scope</label>
+                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Qamrov</label>
                                     <select className="erp-input font-bold" value={editingRule.scope || 'per_company'} onChange={e => setEditingRule({ ...editingRule, scope: e.target.value as KPIRule['scope'] })}>
-                                        <option value="global">global</option>
-                                        <option value="per_company">per_company</option>
-                                        <option value="per_group">per_group</option>
+                                        <option value="global">Umumiy</option>
+                                        <option value="per_company">Firma bo&apos;yicha</option>
+                                        <option value="per_group">Guruh bo&apos;yicha</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Kirish turi</label>
                                     <select className="erp-input font-bold" value={editingRule.inputTypeV2 || 'select'} onChange={e => setEditingRule({ ...editingRule, inputTypeV2: e.target.value as KPIRule['inputTypeV2'] })}>
-                                        <option value="select">select</option>
-                                        <option value="counter">counter</option>
-                                        <option value="checkbox_bonus">checkbox_bonus</option>
-                                        <option value="checkbox_penalty">checkbox_penalty</option>
-                                        <option value="amount_penalty">amount_penalty</option>
+                                        <option value="select">Ro&apos;yxatdan tanlash</option>
+                                        <option value="counter">Sanagich</option>
+                                        <option value="checkbox_bonus">Belgi (bonus)</option>
+                                        <option value="checkbox_penalty">Belgi (jarima)</option>
+                                        <option value="amount_penalty">Summa (jarima)</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--success)' }}>Max Bonus %</label>
+                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--success)' }}>Maksimal bonus %</label>
                                     <input type="number" step="0.01" className="erp-input font-bold" value={editingRule.maxBonus ?? ''} onChange={e => setEditingRule({ ...editingRule, maxBonus: e.target.value === '' ? null : Number(e.target.value) })} />
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--danger)' }}>Max Jarima %</label>
+                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--danger)' }}>Maksimal jarima %</label>
                                     <input type="number" step="0.01" className="erp-input font-bold" value={editingRule.maxPenalty ?? ''} onChange={e => setEditingRule({ ...editingRule, maxPenalty: e.target.value === '' ? null : Number(e.target.value) })} />
                                 </div>
                             </div>
                             <div>
-                                <label className="text-[9px] font-bold uppercase tracking-widest mb-1.5 block" style={{ color: 'var(--text-muted)' }}>Holatlar (options)</label>
+                                <label className="text-[9px] font-bold uppercase tracking-widest mb-1.5 block" style={{ color: 'var(--text-muted)' }}>Holatlar</label>
                                 <OptionPills rule={editingRule as KPIRule} />
-                                <p className="text-[9px] mt-1.5" style={{ color: 'var(--text-muted)' }}>Holat koeffitsiyentlari seed skript orqali boshqariladi.</p>
+                                <p className="text-[9px] mt-1.5" style={{ color: 'var(--text-muted)' }}>Holat koeffitsiyentlari maxsus skript orqali boshqariladi.</p>
                             </div>
                         </div>
                         <div className="p-4 flex gap-3" style={{ borderTop: '1px solid var(--card-border)', background: 'var(--table-header-bg)' }}>

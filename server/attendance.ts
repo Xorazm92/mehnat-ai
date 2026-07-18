@@ -119,7 +119,7 @@ export async function deleteAttendance(id: string) {
  * Bir oy uchun xodimning davomatidan KPI ko'rsatkichlarini (earlyDays,
  * lateMinutes, absentDays, ...) HISOBLAB beradi — nazoratchi qo'lda sanamasligi
  * uchun. Manba: e-jurnal (yoki qo'lda) to'ldirgan `Attendance` jadvali. Read-only
- * — MonthlyPerformance'ga yozmaydi; nazoratchi KPI kiritishда shundan foydalanadi.
+ * — MonthlyPerformance'ga yozmaydi; nazoratchi KPI kiritishda shundan foydalanadi.
  */
 export async function deriveAttendanceKpi(employeeId: string, month: string) {
   const session = await auth();

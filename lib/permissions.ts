@@ -255,7 +255,7 @@ export const VIEW_LABELS: Record<AppView, string> = {
 export type RoleViewOverrides = Partial<Record<UserRole, AppView[]>>;
 
 /**
- * Rol uchun AMALDAGI view'lar: override bo'lsa o'sha, aks holda kodдаgi default.
+ * Rol uchun AMALDAGI view'lar: override bo'lsa o'sha, aks holda koddagi default.
  * Bu faqat KO'RINISHNI (menyu/nav) boshqaradi — server xavfsizlik tekshiruvlari
  * (isSeniorRole/isAdminRole/rol massivlari) o'z kuchida qoladi.
  */

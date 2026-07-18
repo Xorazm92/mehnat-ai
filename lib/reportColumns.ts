@@ -89,7 +89,7 @@ export interface OperationColumnRow {
   isSplit: boolean;
 }
 
-// Admin editorда saqlanadigan sozlama (SystemSetting key: "operationColumns")
+// Admin editorda saqlanadigan sozlama (SystemSetting key: "operationColumns")
 export interface OperationColumnConfig {
   key: string;
   enabled?: boolean; // false = yashiriladi (default: ko'rinadi)
@@ -101,7 +101,7 @@ export interface OperationColumnConfig {
 const baseIndex = new Map(BASE_REPORT_COLUMNS.map((c, i) => [c.key, i]));
 
 /**
- * Baza ustunlarга saqlangan configni qo'llaydi: o'chirilganlarни chiqarib
+ * Baza ustunlarga saqlangan configni qo'llaydi: o'chirilganlarni chiqarib
  * tashlaydi, tartiblaydi, nom/guruhni almashtiradi. Config bo'sh bo'lsa —
  * baza o'zgarishsiz qaytadi.
  */

@@ -45,3 +45,10 @@ next-env.d.ts
 # internal working docs
 HANDOFF.md
 cookies.txt
+
+# database dumps / backups (never commit real data)
+mehnat_full_backup.sql
+backup_*.sql
+*_backup.sql
+*.dump
+import_log.txt

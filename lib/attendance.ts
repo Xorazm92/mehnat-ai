@@ -4,7 +4,7 @@
 // Davomat ma'lumoti e-jurnal (Hikvision yuz-skaneri) yoki qo'lda kiritishdan
 // keladi va `Attendance` jadvalida saqlanadi. Bu modul KPI uchun kerakli
 // ko'rsatkichlarni (earlyDays / lateMinutes / absentDays) shu jadvaldan HISOBLAB
-// beradi — endi nazoratchi qo'lда sanamaydi. Sof va DB'siz test qilinadi.
+// beradi — endi nazoratchi qo'lda sanamaydi. Sof va DB'siz test qilinadi.
 
 export interface AttendanceThresholds {
   /** Shu daqiqada yoki undan oldin kelish — "erta" (bonus kuni). 08:30 → 510. */
@@ -65,7 +65,7 @@ export interface MonthlyAttendanceSummary {
 }
 
 /**
- * Bir oylik `Attendance` yozuvlaridan KPI ko'rsatkichlarини yig'adi. Kelish
+ * Bir oylik `Attendance` yozuvlaridan KPI ko'rsatkichlarini yig'adi. Kelish
  * vaqti (checkIn) bor bo'lsa — u haqiqat manbai (yuz-skaneri); yo'q bo'lsa —
  * saqlangan `status`/`lateMinutes` ga ishonadi. `excused` (sababli) jarima emas.
  */
