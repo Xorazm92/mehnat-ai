@@ -1,57 +1,19 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
-import * as bcrypt from "bcryptjs";
-import * as dotenv from "dotenv";
-
-dotenv.config({ path: ".env.local" });
-
-const connectionString = process.env.DATABASE_URL;
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-async function main() {
-  const passwordHash = await bcrypt.hash("Admin2026!", 12);
-  
-  await prisma.user.upsert({
-    where: { email: "admin@mehnat.uz" },
-    update: {
-      passwordHash,
-      isActive: true,
-      role: "super_admin",
-    },
-    create: {
-      email: "admin@mehnat.uz",
-      fullName: "Super Admin",
-      passwordHash,
-      role: "super_admin",
-      avatarColor: "hsl(220, 80%, 60%)",
-      isActive: true,
-    },
-  });
-
-  const testUserHash = await bcrypt.hash("User2026!", 12);
-  await prisma.user.upsert({
-    where: { email: "user@mehnat.uz" },
-    update: {
-      passwordHash: testUserHash,
-      isActive: true,
-      role: "accountant",
-    },
-    create: {
-      email: "user@mehnat.uz",
-      fullName: "Test Accountant",
-      passwordHash: testUserHash,
-      role: "accountant",
-      avatarColor: "hsl(120, 80%, 60%)",
-      isActive: true,
-    },
-  });
-
-  console.log("Users seeded: admin@mehnat.uz (Admin2026!) and user@mehnat.uz (User2026!)");
-}
-
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+/**
+ * DEPRECATED — do not use.
+ *
+ * This script previously seeded a hardcoded admin (with a weak, in-source
+ * password) plus a MOCK "Test Accountant" (user@mehnat.uz). Production must
+ * contain REAL data only, so the mock seeding has been removed.
+ *
+ * Use instead:
+ *   • Real admin (idempotent):
+ *       ADMIN_EMAIL=admin@asro.uz ADMIN_PASSWORD='strong-pass' npm run create:admin
+ *   • Canonical seed (same, wired to prisma db seed):
+ *       ADMIN_EMAIL=… ADMIN_PASSWORD=… npm run db:seed
+ */
+console.error(
+  "scripts/seed-users.ts is deprecated — it used to seed MOCK data.\n" +
+    "Create the real admin instead:\n" +
+    "  ADMIN_EMAIL=admin@asro.uz ADMIN_PASSWORD='strong-pass' npm run create:admin"
+);
+process.exit(1);

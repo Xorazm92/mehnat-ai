@@ -87,13 +87,39 @@ The repo currently uses **`prisma db push`** (no migration history). For a first
 deploy that is fine; for ongoing change management, adopt `prisma migrate`
 (see `PRODUCTION_REPORT.md` §7).
 
+### 4a. One-command deploy (recommended)
+
+`scripts/deploy.sh` runs the whole release **and refuses to restart the app
+unless the system can accept logins** — the exact failure that once shipped an
+empty `User` table. It is idempotent and safe to re-run.
+
+```bash
+cd /opt/asro
+# First deploy: pass the admin creds so the bootstrap can create the account.
+ADMIN_EMAIL=admin@asro.uz ADMIN_PASSWORD='<≥8 chars>' npm run deploy
+# Later deploys: creds optional — the admin already exists (step is a no-op).
+npm run deploy
+```
+
+It runs, in order and failing loudly on any error:
+`preflight env` → `npm ci` → `prisma db push` → seed KPI rules →
+`create-admin` (idempotent) → `npm run build` → **full preflight** (DB reachable,
+schema applied, `User` table non-empty, admin present) → PM2/systemd reload.
+
+### 4b. Manual equivalent
+
 ```bash
 cd /opt/asro
 npm ci
-npx prisma db push                 # create the schema on RDS
+npx prisma db push                     # create the schema on RDS
 npx tsx scripts/seed-kpi-rules-v2.ts   # seed KPI rules (required by KPI/bot)
-ADMIN_EMAIL=admin@asro.uz ADMIN_PASSWORD='<≥8 chars>' npx tsx scripts/create-admin.ts
+ADMIN_EMAIL=admin@asro.uz ADMIN_PASSWORD='<≥8 chars>' npm run create:admin
+npm run preflight                      # MUST print "Preflight passed" before serving traffic
 ```
+
+> `npm run preflight` (or `npx tsx scripts/preflight.ts`) is the guardrail:
+> non-zero exit on missing env, unreachable DB, unapplied schema, an empty
+> `User` table, or a missing admin. Wire it as the last step of any deploy.
 
 ---
 
@@ -220,6 +246,8 @@ docker compose build
 docker compose up -d db redis
 docker compose run --rm web npx prisma db push
 docker compose run --rm web npx tsx scripts/seed-kpi-rules-v2.ts
+docker compose run --rm -e ADMIN_EMAIL=admin@asro.uz -e ADMIN_PASSWORD='<≥8 chars>' web npm run create:admin
+docker compose run --rm web npm run preflight   # gate: must pass before serving
 docker compose up -d
 ```
 
@@ -250,6 +278,7 @@ doesn't match what was registered.
 
 ## 9. Post-deploy smoke test
 
+- [ ] `npm run preflight` → `Preflight passed …` (exit 0) — env + DB + admin.
 - [ ] `curl https://asro.uz/api/health` → `{"status":"ok","db":"ok"}` (200).
 - [ ] Browser: login at `https://asro.uz/login` with the admin account.
 - [ ] `npm run bot:webhook info` → correct URL, no `last_error`.

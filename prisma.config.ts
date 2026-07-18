@@ -7,6 +7,9 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
+    // Run by `prisma db seed` and after `prisma migrate` — idempotent, real
+    // admin bootstrap only (no mock data). See prisma/seed.ts.
+    seed: "tsx prisma/seed.ts",
   },
   datasource: {
     url: process.env["DATABASE_URL"],
