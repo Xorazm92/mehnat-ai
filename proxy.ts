@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { USE_SECURE_COOKIES } from "@/lib/auth.config";
 import { canSeeView, getHomeRoute, type AppView } from "@/lib/permissions";
 
 // Himoyalangan yo'llar
@@ -57,10 +58,14 @@ export async function proxy(req: NextRequest) {
 
   const isProtected = PROTECTED_ROUTES.some((r) => path.startsWith(r));
 
+  // `secureCookie` MUST match how next-auth set the cookie (see USE_SECURE_COOKIES
+  // in lib/auth.config.ts). It drives both the cookie name (`__Secure-` prefix)
+  // AND the JWT decryption salt — omitting it made getToken look for the wrong
+  // cookie in prod HTTPS and always return null, bouncing logged-in users to /login.
   const token = await getToken({
     req,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: true,
+    secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+    secureCookie: USE_SECURE_COOKIES,
   });
 
   // Login bo'lmagan foydalanuvchi himoyalangan sahifaga kirmoqchi

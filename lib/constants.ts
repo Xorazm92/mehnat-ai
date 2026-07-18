@@ -91,6 +91,10 @@ export const CONFIG = {
   },
 
   // ============= SECURITY =============
+  // NOTE: auth cookie flags (secure / httpOnly / sameSite) are NOT configured
+  // here — next-auth owns them. secure + httpOnly are set automatically and the
+  // sameSite policy is `lax` (see lib/auth.config.ts). Do not re-add cookie keys
+  // here: they were dead config and gave a false sense of hardening.
   SECURITY: {
     ENABLE_HTTPS: true,
     ENABLE_CSP: true,
@@ -98,9 +102,6 @@ export const CONFIG = {
     ENABLE_X_FRAME_OPTIONS: true,
     ENABLE_X_CONTENT_TYPE_OPTIONS: true,
     ENABLE_X_XSS_PROTECTION: true,
-    SECURE_COOKIES: true,
-    HTTPONLY_COOKIES: true,
-    SAMESITE_COOKIES: 'Strict',
   },
 
   // ============= LOGGING =============

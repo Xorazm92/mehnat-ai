@@ -58,9 +58,9 @@ Create `/opt/asro/.env` from `.env.example`. The production-critical values:
 ```dotenv
 DATABASE_URL="postgresql://asro:STRONGPASS@asro-db.xxxx.rds.amazonaws.com:5432/asro?schema=public"
 AUTH_SECRET="<openssl rand -base64 32>"
-AUTH_URL="https://asro.uz"
+AUTH_URL="https://asro.uz"                  # https:// is what triggers the __Secure- session cookie
 NEXTAUTH_URL="https://asro.uz"
-AUTH_TRUST_HOST="true"                      # REQUIRED behind nginx/ALB
+AUTH_TRUST_HOST="true"                      # optional now — the app sets trustHost:true in code; keep for env-driven setups
 CREDENTIALS_SECRET="<a second openssl rand -base64 32>"
 NEXT_PUBLIC_SITE_URL="https://asro.uz"
 
@@ -78,6 +78,18 @@ BILLING_CRON_HOUR="9"
 
 > `chmod 600 /opt/asro/.env` and keep it out of git (it already is). Prefer AWS
 > SSM Parameter Store / Secrets Manager for the secrets in a hardened setup.
+
+> **Docker Compose deploys:** `docker-compose.yml` injects this `.env` into the
+> `web` and `bot` containers (plus `.env.local` if present, as an optional dev
+> fallback). The image excludes `.env.local` (`.dockerignore`), so on a prod
+> host the `.env` loaded by Compose **must be the complete file above** — not
+> just `DATABASE_URL`. If `AUTH_SECRET` is missing the container still boots but
+> `/api/health` returns **503** (`auth: unconfigured`) and every login fails.
+
+> **Session behavior:** sessions are stateless JWTs with a **7-day** lifetime
+> (`lib/auth.config.ts`). Over HTTPS the cookie is `__Secure-authjs.session-token`;
+> `proxy.ts` reads it with the matching secure prefix. If `AUTH_URL` is `http://`
+> in prod the cookie is non-secure and can be dropped behind TLS — always use `https://`.
 
 ---
 

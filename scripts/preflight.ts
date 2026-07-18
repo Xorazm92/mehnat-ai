@@ -47,13 +47,14 @@ function checkEnv(): void {
   if (!url) (isProd ? err : warn)("AUTH_URL / NEXTAUTH_URL is not set.");
 
   if (isProd) {
-    // Behind nginx / ALB, next-auth v5 rejects the forwarded Host without this
-    // and login breaks even when users exist.
+    // The app now sets `trustHost: true` in lib/auth.config.ts, so a missing
+    // AUTH_TRUST_HOST env no longer breaks login behind nginx/ALB. Keep this as
+    // a warning for operators who still rely on the env-driven setup.
     if (process.env.AUTH_TRUST_HOST !== "true") {
-      err('AUTH_TRUST_HOST must be "true" in production (app runs behind nginx/ALB) or login breaks.');
+      warn('AUTH_TRUST_HOST is not "true" — fine (code sets trustHost), but set it if you prefer env-driven config.');
     }
     if (url && url.startsWith("http://")) {
-      warn("AUTH_URL uses http:// in production — it should be https://.");
+      warn("AUTH_URL uses http:// in production — it should be https:// (secure session cookies require it).");
     }
   }
 }

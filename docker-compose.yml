@@ -44,7 +44,14 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: .env
+    # `.env` must be COMPLETE for a Compose bring-up (AUTH_SECRET, AUTH_URL,
+    # NEXTAUTH_URL, CREDENTIALS_SECRET, TELEGRAM_* …) — the image excludes
+    # `.env.local` (see .dockerignore), so only these env_files reach the
+    # container. `.env.local` is picked up as an optional dev fallback.
+    env_file:
+      - .env
+      - path: .env.local
+        required: false
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://asro:asro@db:5432/asro?schema=public}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
@@ -68,7 +75,10 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     command: ["npm", "run", "bot:start"]
-    env_file: .env
+    env_file:
+      - .env
+      - path: .env.local
+        required: false
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://asro:asro@db:5432/asro?schema=public}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
