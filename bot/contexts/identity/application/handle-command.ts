@@ -5,6 +5,8 @@ import { authorizeAdmin } from "./authorize";
 import { linkTelegramUser } from "./link-user";
 import { bindGroupToCompany } from "./bind-group";
 import { recordManualKpi, type ManualKind } from "../../kpi/application/manual-adjustment";
+import { rollupLedger } from "../../kpi/application/rollup";
+import { periodOf } from "../../kpi/domain/kpi-event";
 
 export interface CommandContext {
   chatId: bigint;
@@ -19,6 +21,7 @@ export interface CommandContext {
 const HELP = [
   "Buyruqlar:",
   "/whoami — bog'langan profilingiz",
+  "/stats — joriy oy KPI ko'rsatkichlaringiz",
   "/link_me <email yoki JSHSHIR> — o'zingizni xodim kartochkangizga bog'lash",
   "/bind <INN yoki ID> — bu guruhni korxonaga bog'lash (admin)",
   "/link <email yoki JSHSHIR> — xodim xabariga reply qilib, uni Telegram akkauntga bog'lash (admin)",
@@ -43,8 +46,11 @@ export async function handleCommand(
 
   switch (cmd.name) {
     case "start":
+      return start(prisma, ctx);
     case "whoami":
       return whoami(prisma, ctx);
+    case "stats":
+      return stats(prisma, ctx);
     case "help":
       return HELP;
     case "link_me":
@@ -97,6 +103,22 @@ async function kpiAdjust(
   return `✅ ${target.fullName}: ${sign}${res.points}% KPI ledger'ga yozildi (${reason}).`;
 }
 
+/** Friendly welcome / onboarding — context-aware, unlike the terse /whoami. */
+async function start(prisma: PrismaClient, ctx: CommandContext): Promise<string> {
+  const user = await resolveUserByTelegramId(prisma, ctx.callerTelegramId);
+  const lines = ["👋 ASRO KPI bot."];
+  if (user) {
+    lines.push(`Siz: ${user.fullName} — ${user.role}.`, "KPI'ni ko'rish: /stats · Buyruqlar: /help");
+  } else {
+    lines.push(
+      "O'zingizni xodim kartochkangizga bog'lang:",
+      "/link_me <email yoki JSHSHIR>",
+      "So'ng /stats bilan KPI'ni ko'rasiz. Barcha buyruqlar: /help",
+    );
+  }
+  return lines.join("\n");
+}
+
 async function whoami(prisma: PrismaClient, ctx: CommandContext): Promise<string> {
   const user = await resolveUserByTelegramId(prisma, ctx.callerTelegramId);
   if (!user) {
@@ -104,6 +126,39 @@ async function whoami(prisma: PrismaClient, ctx: CommandContext): Promise<string
   }
   const status = user.isActive ? "" : " (faol emas)";
   return `Siz: ${user.fullName} — ${user.role}${status}.`;
+}
+
+const KPI_TYPE_LABEL: Record<string, string> = {
+  response: "Javob (savollarga)",
+  attendance: "Davomat",
+  report: "Hisobot",
+  manual: "Qo'lda tuzatish",
+};
+
+/** The caller's own current-month KPI, summed live from the ledger (TT §5). */
+async function stats(prisma: PrismaClient, ctx: CommandContext): Promise<string> {
+  const user = await resolveUserByTelegramId(prisma, ctx.callerTelegramId);
+  if (!user) {
+    return "Avval o'zingizni bog'lang: /link_me <email yoki JSHSHIR>";
+  }
+  const period = periodOf(new Date());
+  const events = await prisma.kpiEvent.findMany({
+    where: { employeeId: user.id, periodMonth: period },
+    select: { type: true, points: true },
+  });
+  const roll = rollupLedger(events.map((e) => ({ type: e.type, points: Number(e.points) })));
+  if (roll.count === 0) {
+    return `📊 ${user.fullName} — ${period}\nBu oyda hali KPI hodisasi yo'q.`;
+  }
+  const breakdown = Object.entries(roll.byType)
+    .map(([t, v]) => `• ${KPI_TYPE_LABEL[t] ?? t}: ${v >= 0 ? "+" : ""}${v}`)
+    .join("\n");
+  return [
+    `📊 ${user.fullName} — ${period}`,
+    `Sof ball: ${roll.net >= 0 ? "+" : ""}${roll.net}`,
+    `Hodisalar: ${roll.count}`,
+    breakdown,
+  ].join("\n");
 }
 
 /**
