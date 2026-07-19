@@ -8,6 +8,13 @@ export interface LinkUserInput {
   identifier: string;
   /** mehnat-ai user id of the admin performing the link (null for the env bootstrap admin). */
   byUserId?: string | null;
+  /**
+   * Self-service safety (used by /link_me): refuse if the target employee is
+   * already linked to a *different* Telegram account, so nobody can hijack a
+   * colleague's record by knowing their email/PINFL. Admin /link (by reply)
+   * leaves this off and may re-assign.
+   */
+  requireUnlinkedTarget?: boolean;
 }
 
 export interface LinkUserResult {
@@ -41,6 +48,16 @@ export async function linkTelegramUser(
     return {
       ok: false,
       message: `Bu Telegram akkaunt allaqachon ${holder.fullName} ga bog'langan.`,
+    };
+  }
+  if (
+    input.requireUnlinkedTarget &&
+    target.telegramUserId != null &&
+    target.telegramUserId !== input.telegramUserId
+  ) {
+    return {
+      ok: false,
+      message: `"${input.identifier}" allaqachon boshqa Telegram akkauntga bog'langan. Administrator bilan bog'laning.`,
     };
   }
 

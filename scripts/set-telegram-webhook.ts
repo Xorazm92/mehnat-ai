@@ -51,6 +51,7 @@ const ALLOWED_UPDATES = [
 const COMMANDS = [
   { command: "start", description: "Botni ishga tushirish" },
   { command: "whoami", description: "Bog'langan profilingiz" },
+  { command: "link_me", description: "O'zingizni xodimga bog'lash" },
   { command: "help", description: "Buyruqlar ro'yxati" },
   { command: "bind", description: "Guruhni korxonaga bog'lash (admin)" },
   { command: "link", description: "Xodimni Telegram akkauntga bog'lash (admin)" },

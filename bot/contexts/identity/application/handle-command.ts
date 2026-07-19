@@ -19,6 +19,7 @@ export interface CommandContext {
 const HELP = [
   "Buyruqlar:",
   "/whoami — bog'langan profilingiz",
+  "/link_me <email yoki JSHSHIR> — o'zingizni xodim kartochkangizga bog'lash",
   "/bind <INN yoki ID> — bu guruhni korxonaga bog'lash (admin)",
   "/link <email yoki JSHSHIR> — xodim xabariga reply qilib, uni Telegram akkauntga bog'lash (admin)",
   "/kpi_award <email|JSHSHIR> <foiz> [sabab] — qo'lda KPI bonusi (admin)",
@@ -46,6 +47,8 @@ export async function handleCommand(
       return whoami(prisma, ctx);
     case "help":
       return HELP;
+    case "link_me":
+      return linkMe(prisma, ctx, cmd.argString);
     case "link":
       return link(prisma, ctx, cmd.argString);
     case "bind":
@@ -97,10 +100,34 @@ async function kpiAdjust(
 async function whoami(prisma: PrismaClient, ctx: CommandContext): Promise<string> {
   const user = await resolveUserByTelegramId(prisma, ctx.callerTelegramId);
   if (!user) {
-    return "Siz hali biror xodimga bog'lanmagansiz. Administrator /link orqali bog'lashi mumkin.";
+    return "Siz hali biror xodimga bog'lanmagansiz.\nBog'lanish uchun: /link_me <email yoki JSHSHIR>";
   }
   const status = user.isActive ? "" : " (faol emas)";
   return `Siz: ${user.fullName} — ${user.role}${status}.`;
+}
+
+/**
+ * Self-service linking: the caller binds THEIR OWN Telegram account to their
+ * employee record by email/PINFL. No admin needed. `requireUnlinkedTarget`
+ * blocks binding to an employee already linked to someone else (anti-hijack).
+ */
+async function linkMe(
+  prisma: PrismaClient,
+  ctx: CommandContext,
+  argString: string,
+): Promise<string> {
+  const identifier = argString.trim();
+  if (!identifier) {
+    return "Foydalanish: /link_me <email yoki JSHSHIR> — o'zingizni xodim kartochkangizga bog'laydi.";
+  }
+  const res = await linkTelegramUser(prisma, {
+    telegramUserId: ctx.callerTelegramId,
+    telegramUsername: ctx.callerUsername ?? null,
+    identifier,
+    byUserId: null,
+    requireUnlinkedTarget: true,
+  });
+  return (res.ok ? "✅ " : "⚠️ ") + res.message;
 }
 
 async function link(
