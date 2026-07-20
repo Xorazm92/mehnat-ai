@@ -99,6 +99,7 @@ model User {
   attendances         Attendance[]         @relation("UserAttendance")
   assignedInventory   InventoryItem[]      @relation("UserAssignedInventory")
   payments            Payment[]
+  payouts             Payout[]             @relation("EmployeePayouts")
   bankClientCompanies Company[]            @relation("BankClientCompanies")
   chiefDepartments    Department[]         @relation("DepartmentChief")
 
@@ -376,10 +377,16 @@ model Payment {
   createdBy     String?
   user          User?     @relation(fields: [createdBy], references: [id])
 
+  // Soft delete — moliyaviy yozuv hech qachon jismonan o'chirilmaydi
+  deletedAt    DateTime?
+  deletedBy    String?
+  deleteReason String?
+
   @@unique([companyId, period])
   @@index([companyId])
   @@index([period])
   @@index([status])
+  @@index([deletedAt])
 }
 
 // =====================================================
@@ -494,6 +501,8 @@ model MonthlyPerformance {
 // PAYROLL ADJUSTMENT
 // =====================================================
 
+// MAJBURIYAT qatlami: hisoblangan oylik ('payment'), avans, jarima, bonus.
+// REAL pul berish alohida Payout jadvalida — majburiyat ≠ to'lov (ERP ajratuvi).
 model PayrollAdjustment {
   id             String    @id @default(uuid())
   month          String
@@ -507,6 +516,151 @@ model PayrollAdjustment {
   isApproved     Boolean   @default(false)
   createdAt      DateTime  @default(now())
   createdBy      String?
+
+  // Soft delete
+  deletedAt    DateTime?
+  deletedBy    String?
+  deleteReason String?
+
+  payouts Payout[]
+
+  @@index([employeeId, month])
+  @@index([deletedAt])
+}
+
+// =====================================================
+// PAYOUT — REAL berilgan pul (majburiyatdan ajratilgan)
+// =====================================================
+// PayrollAdjustment "qancha to'lash kerak"ni aytadi; Payout "qancha, qachon,
+// kim tomonidan, qanday usulda haqiqatan berildi"ni yozadi. Balans/cashflow
+// faqat Payout'ni chiqim deb sanaydi. adjustmentId — majburiyat havolasi
+// (tasdiqlangan 'payment'/'avans' qatori).
+model Payout {
+  id            String             @id @default(uuid())
+  employeeId    String
+  employee      User               @relation("EmployeePayouts", fields: [employeeId], references: [id])
+  companyId     String?
+  adjustmentId  String?
+  adjustment    PayrollAdjustment? @relation(fields: [adjustmentId], references: [id])
+  month         String // "YYYY-MM" — qaysi oy majburiyati uchun
+  amount        Decimal            @db.Decimal(12, 2) // har doim musbat
+  paymentMethod String             @default("naqd") // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
+  note          String?
+  paidAt        DateTime           @default(now())
+  createdBy     String?
+  createdAt     DateTime           @default(now())
+
+  // Soft delete
+  deletedAt    DateTime?
+  deletedBy    String?
+  deleteReason String?
+
+  @@index([employeeId, month])
+  @@index([adjustmentId])
+  @@index([paidAt])
+  @@index([deletedAt])
+}
+
+// =====================================================
+// DOUBLE-ENTRY LEDGER — har harakat ikki tomonlama
+// =====================================================
+// Append-only: yozuv hech qachon o'zgartirilmaydi/o'chirilmaydi; tuzatish
+// faqat reversal (teskari) entry orqali. transactionId ikki oyoqni bog'laydi;
+// har tranzaksiyada Σdebit == Σcredit (lib/ledger.ts kafolatlaydi).
+model LedgerEntry {
+  id            String   @id @default(uuid())
+  transactionId String
+  accountId     String // lib/ledger.ts ACCOUNTS: CASH | CONTRACT_INCOME | KASSA_INCOME | OPERATING_EXPENSE | SALARY_EXPENSE
+  debit         Decimal  @default(0) @db.Decimal(14, 2)
+  credit        Decimal  @default(0) @db.Decimal(14, 2)
+  description   String?
+  sourceTable   String? // Expense | KassaEntry | Payment | Payout (+ '-reversal')
+  sourceId      String?
+  period        String // "YYYY-MM"
+  createdAt     DateTime @default(now())
+  createdBy     String?
+
+  @@index([transactionId])
+  @@index([accountId, period])
+  @@index([sourceTable, sourceId])
+  @@index([period])
+}
+
+// =====================================================
+// ACCOUNTING PERIOD — oy yopilishi holat mashinasi
+// =====================================================
+// Statuslar: OPEN → READY_TO_CLOSE → CLOSING → LOCKED → (REOPENED) → CLOSING...
+// FAILED = oxirgi yopish urinishi checklist/xato bilan yiqilgan (yozish ochiq).
+// LOCKED va CLOSING davrlarga hech qanday moliyaviy mutation kirmaydi
+// (lib/periodLock.ts). companyId null = butun firma (global). Global (year,month)
+// yagona — migratsiyadagi partial unique index bilan (Postgres NULL-unique).
+model AccountingPeriod {
+  id        String    @id @default(uuid())
+  companyId String? // null = global
+  year      Int
+  month     Int // 1-12
+  status    String    @default("OPEN") // OPEN | READY_TO_CLOSE | CLOSING | LOCKED | REOPENED | FAILED
+  lockedBy  String?
+  lockedAt  DateTime?
+
+  // Month-end closing metadata
+  openingBalance Decimal?  @db.Decimal(14, 2) // yopilganda / keyingi oy yaratilganda to'ldiriladi
+  closedBy       String?
+  closedAt       DateTime?
+  reopenedBy     String?
+  reopenedAt     DateTime?
+  reopenReason   String?
+  statusNote     String? // FAILED sababi (checklist xatolari qisqartmasi)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, year, month])
+  @@index([year, month])
+  @@index([status])
+}
+
+// =====================================================
+// FINANCIAL SNAPSHOT — davr yopilishi qoldiqlari (IMMUTABLE)
+// =====================================================
+// period = "YYYY-MM" (oy yopilishi) yoki "YYYY" (yil yopilishi).
+// closingBalance = openingBalance + income − outflow.
+// IMMUTABLE: moliyaviy ustunlar DB-darajali trigger bilan qulflangan
+// (migratsiya financial_snapshot_immutable) — faqat isValid/invalidated*
+// belgilarini o'zgartirish mumkin (reopen invalidatsiyasi). Global period
+// yagona — partial unique index bilan.
+model FinancialSnapshot {
+  id             String   @id @default(uuid())
+  companyId      String? // null = butun firma
+  period         String // "2026-01" | "2026"
+  openingBalance Decimal  @db.Decimal(14, 2)
+  closingBalance Decimal  @db.Decimal(14, 2)
+  income         Decimal  @default(0) @db.Decimal(14, 2)
+  outflow        Decimal  @default(0) @db.Decimal(14, 2)
+
+  // Month-end kengaytmasi
+  payrollTotal  Decimal @default(0) @db.Decimal(14, 2) // oy ichida berilgan oyliklar (Payout)
+  cashIn        Decimal @default(0) @db.Decimal(14, 2) // ledger CASH debit (davr)
+  cashOut       Decimal @default(0) @db.Decimal(14, 2) // ledger CASH credit (davr)
+  ledgerBalance Decimal @default(0) @db.Decimal(14, 2) // yopilish paytidagi ledger CASH qoldig'i
+  profit        Decimal @default(0) @db.Decimal(14, 2) // max(0, income − outflow)
+  loss          Decimal @default(0) @db.Decimal(14, 2) // max(0, outflow − income)
+  employeeCount Int     @default(0)
+  companyCount  Int     @default(0)
+  checksum      String? // sha256 — moliyaviy maydonlar ustidan (lib/snapshot.ts)
+
+  // Reopen invalidatsiyasi (trigger ruxsat bergan yagona o'zgarish)
+  isValid       Boolean   @default(true)
+  invalidatedAt DateTime?
+  invalidatedBy String?
+  invalidReason String?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, period])
+  @@index([period])
+  @@index([isValid])
 }
 
 // =====================================================
@@ -566,8 +720,14 @@ model KassaEntry {
   createdBy   String?
   user        User?    @relation(fields: [createdBy], references: [id])
 
+  // Soft delete
+  deletedAt    DateTime?
+  deletedBy    String?
+  deleteReason String?
+
   @@index([date])
   @@index([type])
+  @@index([deletedAt])
 }
 
 // =====================================================
@@ -590,9 +750,15 @@ model Expense {
   createdBy      String?
   user           User?     @relation(fields: [createdBy], references: [id])
 
+  // Soft delete
+  deletedAt    DateTime?
+  deletedBy    String?
+  deleteReason String?
+
   @@index([date])
   @@index([category])
   @@index([status])
+  @@index([deletedAt])
 }
 
 // =====================================================

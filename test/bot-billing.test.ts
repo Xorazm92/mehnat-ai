@@ -51,6 +51,29 @@ describe("detectPeriodDebts", () => {
     expect(debts.find((d) => d.companyId === ids.company)).toBeUndefined();
     await prisma.payment.deleteMany({ where: { companyId: ids.company } });
   });
+
+  it("does not let a pending plan amount hide the debt", async () => {
+    // 'pending' qatordagi summa hali kelmagan pul — qarz to'liq ko'rinishi kerak.
+    await prisma.payment.create({
+      data: { companyId: ids.company, period: PERIOD, amount: 5_000_000, status: "pending" },
+    });
+    const debts = await detectPeriodDebts(prisma, PERIOD, NOW);
+    const mine = debts.find((d) => d.companyId === ids.company);
+    expect(mine).toBeDefined();
+    expect(mine!.amountDue).toBe(5_000_000);
+    await prisma.payment.deleteMany({ where: { companyId: ids.company } });
+  });
+
+  it("counts a partial payment against the debt", async () => {
+    await prisma.payment.create({
+      data: { companyId: ids.company, period: PERIOD, amount: 2_000_000, status: "partial" },
+    });
+    const debts = await detectPeriodDebts(prisma, PERIOD, NOW);
+    const mine = debts.find((d) => d.companyId === ids.company);
+    expect(mine).toBeDefined();
+    expect(mine!.amountDue).toBe(3_000_000);
+    await prisma.payment.deleteMany({ where: { companyId: ids.company } });
+  });
 });
 
 describe("recordPaymentReminder", () => {

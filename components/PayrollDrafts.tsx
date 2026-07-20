@@ -129,7 +129,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                         baseSalary: 0,
                         kpiBonus: 0,
                         kpiPenalty: 0,
-                        totalSalary: Number(a.amount),
+                        totalSalary: Math.abs(Number(a.amount) || 0),
                         breakdown: [],
                         isApproved: true,
                         approvedBy: a.approvedBy,

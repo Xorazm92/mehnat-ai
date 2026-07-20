@@ -18,6 +18,10 @@ const eslintConfig = defineConfig([
     ".claude/**",
   ]),
   {
+    // Same glob the Next.js config registers its plugins for — a wider match
+    // (e.g. *.cjs) would reference react-hooks rules where the plugin isn't
+    // loaded and abort the whole lint run.
+    files: ["**/*.{js,jsx,mjs,ts,tsx,mts,cts}"],
     rules: {
       // Uzbek/Cyrillic UI text is full of apostrophes (o', g', ') — escaping
       // every one adds noise without any safety benefit.

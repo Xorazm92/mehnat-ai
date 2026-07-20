@@ -3,9 +3,17 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole, isAdminRole } from "@/lib/permissions";
+import { recordAuditLog } from "@/lib/auditTrail";
 import { revalidateTag } from "next/cache";
 import type { TaxRegime, StatsType } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
+
+// Shartnoma/pul maydonlari — o'zgarishi auditga yoziladi va faqat senior tahrirlaydi.
+const MONEY_FIELDS = [
+  "contractAmount", "paymentDay",
+  "accountantPerc", "bankClientPerc", "chiefAccountantPerc", "supervisorPerc",
+  "accountantSum", "bankClientSum", "chiefAccountantSum", "supervisorSum",
+] as const;
 
 interface CompanyAssignment {
   userId?: string;
@@ -318,6 +326,20 @@ export async function updateCompany(
 
   const data = sanitizeCompanyData(companyData);
 
+  // Buxgalter o'z firmasining OPERATSION maydonlarini tahrirlaydi, lekin pul
+  // maydonlarini (shartnoma summasi, ulush foizlari/summalari) va shtat
+  // biriktiruvlarini emas — aks holda o'z maoshi bazasini o'zi ko'tara olardi.
+  if (!isSeniorRole(role)) {
+    const RESTRICTED_FIELDS = [
+      ...MONEY_FIELDS,
+      "contractNumber", "contractDate",
+      "accountantId", "supervisorId", "chiefAccountantId", "bankClientId",
+      "isActive",
+    ] as const;
+    for (const f of RESTRICTED_FIELDS) delete data[f];
+    assignments = undefined;
+  }
+
   // Map assignments to company direct fields/percentages
   if (assignments && assignments.length > 0) {
     for (const asgn of assignments) {
@@ -413,6 +435,29 @@ export async function updateCompany(
 
     return updatedCompany;
   });
+
+  // Pul maydonlari o'zgargan bo'lsa — kim, qachon, nimadan nimaga (audit izi).
+  const moneyChanges: Record<string, { old: number | null; new: number | null }> = {};
+  for (const f of MONEY_FIELDS) {
+    if (data[f] === undefined) continue;
+    const oldVal = company[f] === null ? null : Number(company[f]);
+    const newVal = data[f] === null ? null : Number(data[f]);
+    if (oldVal !== newVal) moneyChanges[f] = { old: oldVal, new: newVal };
+  }
+  if (Object.keys(moneyChanges).length > 0 || (assignments && assignments.length > 0)) {
+    await recordAuditLog({
+      userId,
+      action: "update",
+      tableName: "Company",
+      recordId: id,
+      newData: {
+        moneyChanges,
+        ...(assignments && assignments.length > 0
+          ? { assignments: assignments.map((a) => ({ userId: a.userId, role: a.role, salaryType: a.salaryType, salaryValue: a.salaryValue })) }
+          : {}),
+      },
+    });
+  }
 
   revalidateTag("companies", "max");
   return serialize(result);

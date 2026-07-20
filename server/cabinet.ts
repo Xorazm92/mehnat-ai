@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
 import { getAvailableBalance } from "@/lib/balance";
+import { adjustmentMagnitude } from "@/lib/adjustments";
 import { serialize } from "@/lib/serialize";
 
 // ─────────────────────────────────────────────
@@ -19,7 +20,7 @@ export async function getMyCabinet() {
   const sixtyDaysAgo = new Date();
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-  const [profile, companies, kpiRecords, adjustments, attendance] = await Promise.all([
+  const [profile, companies, kpiRecords, adjustments, attendance, payouts] = await Promise.all([
     // Shaxsiy profil (parolsiz)
     prisma.user.findUnique({
       where: { id: userId },
@@ -77,7 +78,7 @@ export async function getMyCabinet() {
 
     // Joriy oy oylik tuzatmalari (bonus / avans / jarima)
     prisma.payrollAdjustment.findMany({
-      where: { employeeId: userId, month: { startsWith: currentMonth } },
+      where: { employeeId: userId, month: { startsWith: currentMonth }, deletedAt: null },
       orderBy: { createdAt: "desc" },
     }),
 
@@ -86,6 +87,12 @@ export async function getMyCabinet() {
       where: { userId, date: { gte: sixtyDaysAgo } },
       orderBy: { date: "desc" },
       take: 60,
+    }),
+
+    // Joriy oyda REAL berilgan pullar (Payout)
+    prisma.payout.findMany({
+      where: { employeeId: userId, month: currentMonth, deletedAt: null },
+      orderBy: { paidAt: "desc" },
     }),
   ]);
 
@@ -109,16 +116,21 @@ export async function getMyCabinet() {
   const approvedCount = kpiRecords.filter((p) => p.status === "approved").length;
   const pendingCount = kpiRecords.filter((p) => p.status !== "approved").length;
 
+  // Jarima aralash ishorada saqlangan (lib/adjustments.ts) — miqdor sifatida
+  // o'qilmasa, manfiy jarima "net"ni kamaytirish o'rniga OSHIRIB yuboradi.
   const bonusTotal = adjustments
     .filter((a) => a.adjustmentType === "bonus")
-    .reduce((s, a) => s + Number(a.amount), 0);
+    .reduce((s, a) => s + adjustmentMagnitude(a.amount), 0);
   const penaltyTotal = adjustments
     .filter((a) => a.adjustmentType === "jarima")
-    .reduce((s, a) => s + Number(a.amount), 0);
+    .reduce((s, a) => s + adjustmentMagnitude(a.amount), 0);
 
   const presentDays = attendance.filter((a) => a.status === "present").length;
   const lateDays = attendance.filter((a) => a.status === "late").length;
   const absentDays = attendance.filter((a) => a.status === "absent").length;
+
+  // Joriy oyda qo'lga tegkan pul (Payout — real to'lov, majburiyat emas)
+  const paidTotal = payouts.reduce((s, p) => s + Number(p.amount), 0);
 
   return serialize({
     profile,
@@ -126,7 +138,8 @@ export async function getMyCabinet() {
     companiesCount: companiesWithRole.length,
     kpi: { totalScore, approvedCount, pendingCount, records: kpiRecords },
     adjustments,
-    payrollSummary: { bonusTotal, penaltyTotal, net: bonusTotal - penaltyTotal },
+    payouts,
+    payrollSummary: { bonusTotal, penaltyTotal, paidTotal, net: bonusTotal - penaltyTotal },
     attendance,
     attendanceSummary: { presentDays, lateDays, absentDays, total: attendance.length },
     currentMonth,
@@ -179,6 +192,7 @@ export async function getAccountantCabinetData() {
       where: {
         employeeId: userId,
         month: { startsWith: currentMonth },
+        deletedAt: null,
       },
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -436,6 +450,7 @@ export async function getChiefAccountantCabinetData() {
       where: {
         month: { startsWith: currentMonth },
         isApproved: false,
+        deletedAt: null,
       },
       include: {
         employee: { select: { fullName: true, role: true } },
@@ -556,13 +571,13 @@ export async function getAdminCabinetData() {
   const rangeStart = new Date(base.getFullYear(), base.getMonth() - 5, 1);
   const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-  const [paidPayments, kassaEntries, expenses, payrollOut, availableBalance] = await Promise.all([
-    prisma.payment.groupBy({ by: ["period"], where: { status: "paid", period: { in: months } }, _sum: { amount: true } }),
-    prisma.kassaEntry.findMany({ where: { date: { gte: rangeStart } }, select: { type: true, amount: true, date: true } }),
+  const [paidPayments, kassaEntries, expenses, payoutsOut, availableBalance] = await Promise.all([
+    prisma.payment.groupBy({ by: ["period"], where: { status: "paid", deletedAt: null, period: { in: months } }, _sum: { amount: true } }),
+    prisma.kassaEntry.findMany({ where: { date: { gte: rangeStart }, deletedAt: null }, select: { type: true, amount: true, date: true } }),
     // Faqat TASDIQLANGAN xarajatlar chiqim sifatida sanaladi (pending/rejected emas)
-    prisma.expense.findMany({ where: { date: { gte: rangeStart }, status: "approved" }, select: { amount: true, date: true } }),
-    // Tasdiqlangan oyliklar (to'lov/avans) ham chiqim
-    prisma.payrollAdjustment.findMany({ where: { isApproved: true, adjustmentType: { in: ["payment", "avans"] } }, select: { amount: true, month: true } }),
+    prisma.expense.findMany({ where: { date: { gte: rangeStart }, status: "approved", deletedAt: null }, select: { amount: true, date: true } }),
+    // REAL berilgan oyliklar (Payout) — majburiyat emas, faqat qo'lga berilgan pul chiqim
+    prisma.payout.findMany({ where: { deletedAt: null, paidAt: { gte: rangeStart } }, select: { amount: true, paidAt: true } }),
     // Yagona joriy balans (butun tizim bo'yicha)
     getAvailableBalance(),
   ]);
@@ -578,8 +593,8 @@ export async function getAdminCabinetData() {
     else outflow[m] += n(k.amount);
   }
   for (const e of expenses) { const m = monthKey(e.date); if (m in outflow) outflow[m] += n(e.amount); }
-  // PayrollAdjustment.month "YYYY-MM" yoki "YYYY-MM-01" — 7 ta belgigacha normallashtiramiz
-  for (const a of payrollOut) { const m = (a.month || "").slice(0, 7); if (m in outflow) outflow[m] += n(a.amount); }
+  // Payout.amount har doim musbat — oy kaliti paidAt sanasidan.
+  for (const p of payoutsOut) { const m = monthKey(p.paidAt); if (m in outflow) outflow[m] += n(p.amount); }
 
   const monthlyCashFlow = months.map((m) => ({ month: m, income: Math.round(income[m]), expense: Math.round(outflow[m]) }));
 

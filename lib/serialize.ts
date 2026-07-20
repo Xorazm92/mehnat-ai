@@ -18,6 +18,15 @@ export function serialize<T>(value: T): T {
     return (value as unknown as Prisma.Decimal).toNumber() as unknown as T;
   }
 
+  // BigInt (Telegram chatId/telegramUserId ustunlari) RSC chegarasidan o'tmaydi —
+  // xavfsiz oraliqda number, undan katta bo'lsa string qilib beramiz.
+  if (typeof value === "bigint") {
+    const asNumber = Number(value);
+    return (Number.isSafeInteger(asNumber)
+      ? asNumber
+      : value.toString()) as unknown as T;
+  }
+
   if (value instanceof Date) return value;
 
   if (Array.isArray(value)) {

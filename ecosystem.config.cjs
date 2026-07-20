@@ -19,7 +19,9 @@ module.exports = {
       exec_mode: "fork",
       autorestart: true,
       max_memory_restart: "700M",
-      env: { NODE_ENV: "production", PORT: "3000" },
+      // TZ aniq belgilanadi: server UTC bo'lsa davomat chegaralari (08:30/09:00)
+      // va cron soatlari 5 soatga surilib ketardi.
+      env: { NODE_ENV: "production", PORT: "3000", TZ: "Asia/Tashkent" },
     },
     {
       // The bot worker owns an in-process cron (bot/cron/scheduler.ts), so it
@@ -31,7 +33,8 @@ module.exports = {
       exec_mode: "fork",
       autorestart: true,
       max_memory_restart: "500M",
-      env: { NODE_ENV: "production" },
+      // Billing cron (09:00) va deadline sweep lokal vaqtga tayanadi.
+      env: { NODE_ENV: "production", TZ: "Asia/Tashkent" },
     },
   ],
 };

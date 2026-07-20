@@ -6,7 +6,9 @@ import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2, SlidersHorizontal }
 import { periodsEqual } from '@/lib/periods';
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
 import { getPayrollAdjustments, createPayrollAdjustment } from '@/server/payroll';
+import { getPayouts, createPayout } from '@/server/payouts';
 import { groupDigits, ungroupDigits, submitOnCtrlEnter, formatNum } from '@/lib/format';
+import { adjustmentMagnitude } from '@/lib/adjustments';
 
 interface Props {
     staff: Staff[];
@@ -21,6 +23,9 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [editingAdj, setEditingAdj] = useState<{ empId: string, type: 'bonus' | 'jarima' | 'avans' | 'payment', amount: number, reason: string } | null>(null);
     const [adjustmentsList, setAdjustmentsList] = useState<PayrollAdjustment[]>([]);
+    // REAL berilgan pullar (Payout jadvali) — majburiyatdan alohida o'qiladi.
+    // Avans-payout bu ro'yxatga KIRMAYDI: avans allaqachon totalReceived'da hisoblangan.
+    const [payoutsList, setPayoutsList] = useState<{ employeeId: string; amount: number }[]>([]);
     const [performanceList, setPerformanceList] = useState<MonthlyPerformance[]>([]);
     const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
     const [companyOverrides, setCompanyOverrides] = useState<CompanyKPIRule[]>([]);
@@ -44,16 +49,23 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
 
     const loadMonthlyData = async () => {
         try {
-            const [adj, perf, rules] = await Promise.all([
+            const [adj, perf, rules, payouts] = await Promise.all([
                 getPayrollAdjustments(month + '-01'),
                 getMonthlyPerformance(month + '-01'),
-                getKpiRules()
+                getKpiRules(),
+                getPayouts({ month })
             ]);
 
             setAdjustmentsList((adj as any[]).map(a => ({
                 ...a,
                 amount: Number(a.amount ?? 0),
             })));
+            setPayoutsList((payouts as any[])
+                .filter(p => p.adjustment?.adjustmentType !== 'avans')
+                .map(p => ({
+                    employeeId: p.employeeId as string,
+                    amount: Number(p.amount ?? 0),
+                })));
             setPerformanceList((perf as any[]).map(p => ({
                 ...p,
                 value: Number(p.value ?? 0),
@@ -195,17 +207,20 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
 
             const employeeAdjustments = adjustmentsByStaff.get(s.id) || [];
 
-            const totalReceived = employeeAdjustments
+            // Miqdor sifatida (lib/adjustments.ts): tarixiy qatorlar aralash ishorada.
+            // Konventsiya: received/paid manfiy saqlanadi (displey Math.abs ishlatadi).
+            const totalReceived = -employeeAdjustments
                 .filter(a => a.adjustmentType === 'avans' || a.adjustmentType === 'jarima')
-                .reduce((sum, a) => sum + a.amount, 0);
+                .reduce((sum, a) => sum + adjustmentMagnitude(a.amount), 0);
 
-            const totalPaid = employeeAdjustments
-                .filter(a => a.adjustmentType === 'payment')
-                .reduce((sum, a) => sum + a.amount, 0);
+            // REAL berilgan pul — Payout jadvalidan (majburiyat emas).
+            const totalPaid = -payoutsList
+                .filter(p => p.employeeId === s.id)
+                .reduce((sum, p) => sum + Math.abs(p.amount), 0);
 
             const manualBonuses = employeeAdjustments
                 .filter(a => a.adjustmentType === 'bonus')
-                .reduce((sum, a) => sum + a.amount, 0);
+                .reduce((sum, a) => sum + adjustmentMagnitude(a.amount), 0);
 
             const kpiSalary = totalBase - totalKpiPenalty + totalKpiBonus + manualBonuses;
             const remainingBalance = kpiSalary + totalReceived + totalPaid;
@@ -234,13 +249,24 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
         if (!editingAdj) return;
 
         try {
-            await createPayrollAdjustment({
-                month: `${month}-01`,
-                employeeId: editingAdj.empId,
-                adjustmentType: editingAdj.type,
-                amount: editingAdj.type === 'jarima' || editingAdj.type === 'avans' || editingAdj.type === 'payment' ? -Math.abs(editingAdj.amount) : Math.abs(editingAdj.amount),
-                reason: editingAdj.reason,
-            });
+            if (editingAdj.type === 'payment') {
+                // REAL pul berish — Payout jadvaliga (majburiyat tekshiruvi va
+                // double-entry ledger server tomonda).
+                await createPayout({
+                    employeeId: editingAdj.empId,
+                    month,
+                    amount: Math.abs(editingAdj.amount),
+                    note: editingAdj.reason || "Maosh to'lovi",
+                });
+            } else {
+                await createPayrollAdjustment({
+                    month: `${month}-01`,
+                    employeeId: editingAdj.empId,
+                    adjustmentType: editingAdj.type,
+                    amount: editingAdj.type === 'jarima' || editingAdj.type === 'avans' ? -Math.abs(editingAdj.amount) : Math.abs(editingAdj.amount),
+                    reason: editingAdj.reason,
+                });
+            }
             setEditingAdj(null);
             loadMonthlyData();
         } catch (e) {

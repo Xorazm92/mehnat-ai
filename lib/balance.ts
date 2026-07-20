@@ -2,7 +2,9 @@
 // Yagona balans manbai — barcha pul jadvallarini bitta "mavjud mablag'" ga bog'laydi.
 //   Kirim  = to'langan shartnoma to'lovlari (Payment.paid) + kassa kirimlari (KassaEntry.income)
 //   Chiqim = tasdiqlangan xarajatlar (Expense.approved) + kassa chiqimlari (KassaEntry.expense)
-//            + tasdiqlangan oyliklar (PayrollAdjustment.payment|avans)
+//            + REAL berilgan oyliklar/avanslar (Payout)
+// PayrollAdjustment endi faqat MAJBURIYAT (qancha to'lash kerak) — kassadan pul
+// faqat Payout yozilganda chiqadi. Soft-delete qilingan yozuvlar hisobga kirmaydi.
 // Bu server-only modul (prisma ishlatadi) — faqat server komponent/actionlardan chaqiriladi.
 import { prisma } from "@/lib/prisma";
 import { isAdminRole, ROLE_LABELS, type UserRole } from "@/lib/permissions";
@@ -23,20 +25,31 @@ const n = (v: unknown) => {
 export async function getAvailableBalance(opts?: {
   excludeExpenseId?: string;
 }): Promise<BalanceBreakdown> {
-  const [paidPayments, kassaIncome, kassaExpense, approvedExpenses, approvedPayroll] =
+  const [paidPayments, kassaIncome, kassaExpense, approvedExpenses, payouts] =
     await Promise.all([
-      prisma.payment.aggregate({ where: { status: "paid" }, _sum: { amount: true } }),
-      prisma.kassaEntry.aggregate({ where: { type: "income" }, _sum: { amount: true } }),
-      prisma.kassaEntry.aggregate({ where: { type: "expense" }, _sum: { amount: true } }),
+      prisma.payment.aggregate({
+        where: { status: "paid", deletedAt: null },
+        _sum: { amount: true },
+      }),
+      prisma.kassaEntry.aggregate({
+        where: { type: "income", deletedAt: null },
+        _sum: { amount: true },
+      }),
+      prisma.kassaEntry.aggregate({
+        where: { type: "expense", deletedAt: null },
+        _sum: { amount: true },
+      }),
       prisma.expense.aggregate({
         where: {
           status: "approved",
+          deletedAt: null,
           ...(opts?.excludeExpenseId ? { id: { not: opts.excludeExpenseId } } : {}),
         },
         _sum: { amount: true },
       }),
-      prisma.payrollAdjustment.aggregate({
-        where: { isApproved: true, adjustmentType: { in: ["payment", "avans"] } },
+      // Payout.amount har doim musbat (server yozuvda kafolatlaydi) — SUM xavfsiz.
+      prisma.payout.aggregate({
+        where: { deletedAt: null },
         _sum: { amount: true },
       }),
     ]);
@@ -45,7 +58,7 @@ export async function getAvailableBalance(opts?: {
   const incomeKassa = n(kassaIncome._sum.amount);
   const outflowExpenses = n(approvedExpenses._sum.amount);
   const outflowKassa = n(kassaExpense._sum.amount);
-  const outflowPayroll = n(approvedPayroll._sum.amount);
+  const outflowPayroll = n(payouts._sum.amount);
 
   const income = incomePayments + incomeKassa;
   const outflow = outflowExpenses + outflowKassa + outflowPayroll;
@@ -59,6 +72,145 @@ export async function getAvailableBalance(opts?: {
     outflowExpenses,
     outflowKassa,
     outflowPayroll,
+  };
+}
+
+type MovementDb = Pick<typeof prisma, "payment" | "kassaEntry" | "expense" | "payout">;
+
+interface MovementRange {
+  /** Payment.period ("YYYY-MM" string) uchun filtr */
+  paymentPeriod: { startsWith?: string; lt?: string } | string;
+  /** Sana maydonlari (kassa.date, expense.date, payout.paidAt) uchun oraliq */
+  from?: Date;
+  to: Date;
+}
+
+/** Kirim/chiqim harakati — bitta umumiy so'rov to'plami (soft-delete filtrlangan). */
+async function movementInRange(
+  db: MovementDb,
+  range: MovementRange
+): Promise<{ income: number; outflow: number }> {
+  const dateWhere = { ...(range.from ? { gte: range.from } : {}), lt: range.to };
+  const periodWhere =
+    typeof range.paymentPeriod === "string" ? range.paymentPeriod : range.paymentPeriod;
+  const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
+    db.payment.aggregate({
+      where: { status: "paid", deletedAt: null, period: periodWhere },
+      _sum: { amount: true },
+    }),
+    db.kassaEntry.aggregate({
+      where: { type: "income", deletedAt: null, date: dateWhere },
+      _sum: { amount: true },
+    }),
+    db.kassaEntry.aggregate({
+      where: { type: "expense", deletedAt: null, date: dateWhere },
+      _sum: { amount: true },
+    }),
+    db.expense.aggregate({
+      where: { status: "approved", deletedAt: null, date: dateWhere },
+      _sum: { amount: true },
+    }),
+    db.payout.aggregate({
+      where: { deletedAt: null, paidAt: dateWhere },
+      _sum: { amount: true },
+    }),
+  ]);
+  return {
+    income: n(payments._sum.amount) + n(kassaIn._sum.amount),
+    outflow: n(expenses._sum.amount) + n(kassaOut._sum.amount) + n(payouts._sum.amount),
+  };
+}
+
+/** Bitta oyning kirim/chiqim harakati (oy yopilishi uchun). db — tx bo'lishi mumkin. */
+export async function getMonthMovement(
+  year: number,
+  month: number,
+  db: MovementDb = prisma
+): Promise<{ income: number; outflow: number }> {
+  const key = `${year}-${String(month).padStart(2, "0")}`;
+  return movementInRange(db, {
+    paymentPeriod: key,
+    from: new Date(year, month - 1, 1),
+    to: new Date(year, month, 1),
+  });
+}
+
+/** Oy boshigacha bo'lgan butun tarix harakati (birinchi oy yopilishida ochilish qoldig'i). */
+export async function getMovementBeforeMonth(
+  year: number,
+  month: number,
+  db: MovementDb = prisma
+): Promise<{ income: number; outflow: number }> {
+  const key = `${year}-${String(month).padStart(2, "0")}`;
+  return movementInRange(db, {
+    paymentPeriod: { lt: key },
+    to: new Date(year, month - 1, 1),
+  });
+}
+
+/**
+ * Bir yil ichidagi kirim/chiqim harakati (snapshot/yil yopilishi uchun).
+ * Payment davri "YYYY-MM" string — yil prefiksi bilan filtrlaymiz; qolganlari sana bo'yicha.
+ */
+export async function getYearMovement(year: number): Promise<{ income: number; outflow: number }> {
+  const from = new Date(year, 0, 1);
+  const to = new Date(year + 1, 0, 1);
+  const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
+    prisma.payment.aggregate({
+      where: { status: "paid", deletedAt: null, period: { startsWith: `${year}-` } },
+      _sum: { amount: true },
+    }),
+    prisma.kassaEntry.aggregate({
+      where: { type: "income", deletedAt: null, date: { gte: from, lt: to } },
+      _sum: { amount: true },
+    }),
+    prisma.kassaEntry.aggregate({
+      where: { type: "expense", deletedAt: null, date: { gte: from, lt: to } },
+      _sum: { amount: true },
+    }),
+    prisma.expense.aggregate({
+      where: { status: "approved", deletedAt: null, date: { gte: from, lt: to } },
+      _sum: { amount: true },
+    }),
+    prisma.payout.aggregate({
+      where: { deletedAt: null, paidAt: { gte: from, lt: to } },
+      _sum: { amount: true },
+    }),
+  ]);
+  return {
+    income: n(payments._sum.amount) + n(kassaIn._sum.amount),
+    outflow: n(expenses._sum.amount) + n(kassaOut._sum.amount) + n(payouts._sum.amount),
+  };
+}
+
+/** Yil boshigacha bo'lgan butun tarix harakati (birinchi snapshot uchun ochilish qoldig'i). */
+export async function getMovementBefore(year: number): Promise<{ income: number; outflow: number }> {
+  const to = new Date(year, 0, 1);
+  const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
+    prisma.payment.aggregate({
+      where: { status: "paid", deletedAt: null, period: { lt: `${year}-01` } },
+      _sum: { amount: true },
+    }),
+    prisma.kassaEntry.aggregate({
+      where: { type: "income", deletedAt: null, date: { lt: to } },
+      _sum: { amount: true },
+    }),
+    prisma.kassaEntry.aggregate({
+      where: { type: "expense", deletedAt: null, date: { lt: to } },
+      _sum: { amount: true },
+    }),
+    prisma.expense.aggregate({
+      where: { status: "approved", deletedAt: null, date: { lt: to } },
+      _sum: { amount: true },
+    }),
+    prisma.payout.aggregate({
+      where: { deletedAt: null, paidAt: { lt: to } },
+      _sum: { amount: true },
+    }),
+  ]);
+  return {
+    income: n(payments._sum.amount) + n(kassaIn._sum.amount),
+    outflow: n(expenses._sum.amount) + n(kassaOut._sum.amount) + n(payouts._sum.amount),
   };
 }
 

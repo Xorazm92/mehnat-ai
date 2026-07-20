@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole, isAdminRole } from "@/lib/permissions";
+import { recordAuditLog } from "@/lib/auditTrail";
 import { serialize } from "@/lib/serialize";
 import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
 import { Prisma } from "@prisma/client";
@@ -67,16 +68,24 @@ export async function createKpiRule(data: {
   assertPercent("Jarima foizi", data.penaltyPercent);
 
   const { options, maxBonus, maxPenalty, ...rest } = data;
-  return serialize(
-    await prisma.kpiRule.create({
-      data: {
-        ...rest,
-        ...(options !== undefined ? { options: options as Prisma.InputJsonValue } : {}),
-        ...(maxBonus !== undefined ? { maxBonus: maxBonus === null ? null : new Prisma.Decimal(maxBonus) } : {}),
-        ...(maxPenalty !== undefined ? { maxPenalty: maxPenalty === null ? null : new Prisma.Decimal(maxPenalty) } : {}),
-      },
-    })
-  );
+  const created = await prisma.kpiRule.create({
+    data: {
+      ...rest,
+      ...(options !== undefined ? { options: options as Prisma.InputJsonValue } : {}),
+      ...(maxBonus !== undefined ? { maxBonus: maxBonus === null ? null : new Prisma.Decimal(maxBonus) } : {}),
+      ...(maxPenalty !== undefined ? { maxPenalty: maxPenalty === null ? null : new Prisma.Decimal(maxPenalty) } : {}),
+    },
+  });
+
+  await recordAuditLog({
+    userId: session.user.id,
+    action: "create",
+    tableName: "KpiRule",
+    recordId: created.id,
+    newData: { name: data.name, role: data.role, rewardPercent: data.rewardPercent, penaltyPercent: data.penaltyPercent },
+  });
+
+  return serialize(created);
 }
 
 export async function updateKpiRule(id: string, data: Partial<{
@@ -98,17 +107,32 @@ export async function updateKpiRule(id: string, data: Partial<{
   assertPercent("Jarima foizi", data.penaltyPercent);
 
   const { options, maxBonus, maxPenalty, ...rest } = data;
-  return serialize(
-    await prisma.kpiRule.update({
-      where: { id },
-      data: {
-        ...rest,
-        ...(options !== undefined ? { options: options as Prisma.InputJsonValue } : {}),
-        ...(maxBonus !== undefined ? { maxBonus: maxBonus === null ? null : new Prisma.Decimal(maxBonus) } : {}),
-        ...(maxPenalty !== undefined ? { maxPenalty: maxPenalty === null ? null : new Prisma.Decimal(maxPenalty) } : {}),
-      },
-    })
-  );
+  const before = await prisma.kpiRule.findUnique({
+    where: { id },
+    select: { name: true, rewardPercent: true, penaltyPercent: true, isActive: true },
+  });
+  const updated = await prisma.kpiRule.update({
+    where: { id },
+    data: {
+      ...rest,
+      ...(options !== undefined ? { options: options as Prisma.InputJsonValue } : {}),
+      ...(maxBonus !== undefined ? { maxBonus: maxBonus === null ? null : new Prisma.Decimal(maxBonus) } : {}),
+      ...(maxPenalty !== undefined ? { maxPenalty: maxPenalty === null ? null : new Prisma.Decimal(maxPenalty) } : {}),
+    },
+  });
+
+  await recordAuditLog({
+    userId: session.user.id,
+    action: "update",
+    tableName: "KpiRule",
+    recordId: id,
+    oldData: before
+      ? { name: before.name, rewardPercent: Number(before.rewardPercent), penaltyPercent: Number(before.penaltyPercent), isActive: before.isActive }
+      : undefined,
+    newData: { rewardPercent: data.rewardPercent, penaltyPercent: data.penaltyPercent, isActive: data.isActive },
+  });
+
+  return serialize(updated);
 }
 
 export async function deleteKpiRule(id: string) {
@@ -118,7 +142,18 @@ export async function deleteKpiRule(id: string) {
   const role = session.user.role as string;
   if (!isAdminRole(role)) throw new Error("KPI qoidalarini faqat administrator tahrirlashi mumkin");
 
-  return serialize(await prisma.kpiRule.delete({ where: { id } }));
+  const existing = await prisma.kpiRule.findUnique({ where: { id }, select: { name: true, nameUz: true } });
+  const deleted = await prisma.kpiRule.delete({ where: { id } });
+
+  await recordAuditLog({
+    userId: session.user.id,
+    action: "delete",
+    tableName: "KpiRule",
+    recordId: id,
+    oldData: { name: existing?.name, nameUz: existing?.nameUz },
+  });
+
+  return serialize(deleted);
 }
 
 // =====================================================
@@ -211,6 +246,14 @@ export async function upsertPerformance(data: {
     if (data.employeeId !== submittedBy) throw new Error("Forbidden");
     data.status = "submitted";
     data.source = "employee";
+  } else {
+    // Senior kiritishida ham holat mashinasidan tashqari qiymat bazaga kirmasin.
+    if (data.status !== undefined && !["draft", "submitted", "approved"].includes(data.status)) {
+      throw new Error("KPI holati noto'g'ri");
+    }
+    if (data.source !== undefined && !["employee", "supervisor", "chief", "system"].includes(data.source)) {
+      throw new Error("KPI manbasi noto'g'ri");
+    }
   }
 
   const rule = await prisma.kpiRule.findUnique({ where: { id: data.ruleId } });
@@ -318,16 +361,31 @@ export async function approvePerformance(id: string) {
     throw new Error("Forbidden");
   }
 
-  return serialize(
-    await prisma.monthlyPerformance.update({
-      where: { id },
-      data: {
-        status: "approved",
-        approvedBy: session.user.id,
-        approvedAt: new Date(),
-      },
-    })
-  );
+  const approved = await prisma.monthlyPerformance.update({
+    where: { id },
+    data: {
+      status: "approved",
+      approvedBy: session.user.id,
+      approvedAt: new Date(),
+    },
+  });
+
+  // Tasdiqlangan KPI to'g'ridan-to'g'ri maoshga kiradi — kim tasdiqlagani auditda qolsin.
+  await recordAuditLog({
+    userId: session.user.id,
+    action: "update",
+    tableName: "MonthlyPerformance",
+    recordId: id,
+    newData: {
+      status: "approved",
+      month: approved.month,
+      employeeId: approved.employeeId,
+      calculatedScore: Number(approved.calculatedScore),
+      penaltyAmount: Number(approved.penaltyAmount),
+    },
+  });
+
+  return serialize(approved);
 }
 
 export async function rejectPerformance(id: string, reason: string) {
@@ -339,17 +397,25 @@ export async function rejectPerformance(id: string, reason: string) {
     throw new Error("Forbidden");
   }
 
-  return serialize(
-    await prisma.monthlyPerformance.update({
-      where: { id },
-      data: {
-        status: "rejected",
-        approvedBy: session.user.id,
-        approvedAt: new Date(),
-        rejectedReason: reason,
-      },
-    })
-  );
+  const rejected = await prisma.monthlyPerformance.update({
+    where: { id },
+    data: {
+      status: "rejected",
+      approvedBy: session.user.id,
+      approvedAt: new Date(),
+      rejectedReason: reason,
+    },
+  });
+
+  await recordAuditLog({
+    userId: session.user.id,
+    action: "update",
+    tableName: "MonthlyPerformance",
+    recordId: id,
+    newData: { status: "rejected", rejectedReason: reason, month: rejected.month, employeeId: rejected.employeeId },
+  });
+
+  return serialize(rejected);
 }
 
 // =====================================================

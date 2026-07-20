@@ -53,9 +53,20 @@ export async function createDocument(data: {
     if (company?.accountantId !== userId) throw new Error("Forbidden");
   }
 
+  if (!data.name?.trim()) throw new Error("Hujjat nomi kiritilishi shart");
+
+  // filePath UI'da <a href> bo'lib ochiladi — faqat http(s) yoki ilova ichidagi
+  // yo'lga ruxsat, aks holda saqlangan javascript:/data: havola XSS'ga aylanadi.
+  const filePath = data.filePath?.trim() ?? "";
+  const isSafeUrl =
+    /^https?:\/\//i.test(filePath) || (filePath.startsWith("/") && !filePath.startsWith("//"));
+  if (!isSafeUrl) {
+    throw new Error("Hujjat havolasi http(s) URL bo'lishi kerak");
+  }
+
   return serialize(
     await prisma.document.create({
-      data: { ...data, uploadedBy: userId },
+      data: { ...data, name: data.name.trim(), filePath, uploadedBy: userId },
     })
   );
 }

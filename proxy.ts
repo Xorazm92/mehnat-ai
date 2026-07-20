@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { USE_SECURE_COOKIES } from "@/lib/auth.config";
-import { canSeeView, getHomeRoute, type AppView } from "@/lib/permissions";
+import {
+  canSeeViewWith,
+  getHomeRoute,
+  type AppView,
+  type RoleViewOverrides,
+  type UserRole,
+} from "@/lib/permissions";
+import { getPrisma } from "@/lib/prisma";
 
 // Himoyalangan yo'llar
 const PROTECTED_ROUTES = [
@@ -46,11 +53,39 @@ function pathToView(path: string): AppView | null {
   return null;
 }
 
-// Ruxsat — yagona manba: lib/permissions.ts ALLOWED_VIEWS (sidebar bilan bir xil)
-function isAllowed(path: string, role: string): boolean {
+// Admin tahrirlagan rol→view override'lari (SystemSetting: "roleViews").
+// Sidebar shu override bilan chizadi — proxy ham AYNAN shu manbani ishlatmasa,
+// admin bergan view menyuda ko'rinib, ochilganda 403 bo'lardi. Har so'rovda DB
+// urmaslik uchun 60 soniya modul-darajali kesh; xatoda oxirgi ma'lum qiymat
+// (bo'lmasa override'siz statik ro'yxat) ishlatiladi — routing hech qachon
+// DB nosozligi tufayli yiqilmaydi.
+const OVERRIDES_TTL_MS = 60_000;
+let overridesCache: { at: number; value: RoleViewOverrides } | null = null;
+
+async function getRoleViewOverridesCached(): Promise<RoleViewOverrides> {
+  if (overridesCache && Date.now() - overridesCache.at < OVERRIDES_TTL_MS) {
+    return overridesCache.value;
+  }
+  try {
+    const row = await getPrisma().systemSetting.findUnique({ where: { key: "roleViews" } });
+    const value =
+      row?.value && typeof row.value === "object" && !Array.isArray(row.value)
+        ? (row.value as RoleViewOverrides)
+        : {};
+    overridesCache = { at: Date.now(), value };
+    return value;
+  } catch (e) {
+    console.error("[proxy] roleViews o'qib bo'lmadi (statik ruxsatlar ishlatiladi):", e);
+    return overridesCache?.value ?? {};
+  }
+}
+
+// Ruxsat — sidebar bilan bir xil manba: koddagi default + admin override'lari
+async function isAllowed(path: string, role: string): Promise<boolean> {
   const view = pathToView(path);
   if (!view) return true; // moslik topilmasa to'sib qo'ymaymiz
-  return canSeeView(role as never, view);
+  const overrides = await getRoleViewOverridesCached();
+  return canSeeViewWith(role as UserRole, view, overrides);
 }
 
 export async function proxy(req: NextRequest) {
@@ -84,7 +119,7 @@ export async function proxy(req: NextRequest) {
   // RBAC: ruxsatsiz sahifadan himoya
   if (token && isProtected) {
     const role = token.role as string;
-    if (role && !isAllowed(path, role)) {
+    if (role && !(await isAllowed(path, role))) {
       return NextResponse.redirect(new URL("/403", req.url));
     }
   }

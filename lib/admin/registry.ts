@@ -13,6 +13,7 @@ import {
   Landmark,
   Receipt,
   CheckSquare,
+  CalendarCheck2,
 } from "lucide-react";
 import {
   hasPermission,
@@ -61,6 +62,9 @@ export const ADMIN_MODULES: AdminModule[] = [
 
   // NOTE: Moliya sahifalari (Firmalar, Kassa, Hisobotlar, Oylik, KPI, Hujjatlar)
   // asosiy menyuda bor — bu yerda takrorlanmaydi. Admin panel = tizim boshqaruvi.
+  // Oy yopilishi — istisno: bu buxgalteriya BOSHQARUVI (davr qulfi, snapshot),
+  // kunlik moliya sahifasi emas.
+  { id: "month_closing", labelUz: "Oy yopilishi", icon: CalendarCheck2, href: "/admin/month-closing", group: "moliya", status: "ready", requiredCapability: "manage_system", descUz: "Month-end closing: checklist, snapshot, davr qulfi" },
 
   // --- Integratsiyalar & kelajakdagi modullar (placeholder, drop-in) ---
   { id: "eimzo", labelUz: "E-imzo", icon: KeyRound, href: "/admin/m/eimzo", group: "integratsiya", status: "soon", featureFlag: "eimzo", descUz: "Elektron imzo integratsiyasi" },

@@ -318,7 +318,8 @@ async function main() {
     };
     const existing = await prisma.kpiRule.findUnique({ where: { name: r.name } });
     await prisma.kpiRule.upsert({ where: { name: r.name }, create: { name: r.name, ...data }, update: data });
-    existing ? updated++ : created++;
+    if (existing) updated++;
+    else created++;
   }
 
   const byRole = await prisma.kpiRule.groupBy({ by: ["role"], _count: true, orderBy: { role: "asc" } });

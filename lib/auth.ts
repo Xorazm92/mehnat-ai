@@ -45,6 +45,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id ?? "";
         token.role = user.role;
         token.avatarColor = user.avatarColor;
+        token.checkedAt = Date.now();
+        return token;
+      }
+
+      // JWT strategiyada logout-siz revokatsiya yo'q: bloklangan xodim yoki
+      // o'zgargan rol aks holda 7 kunlik sessiya tugaguncha kuchda qolardi.
+      // Har 5 daqiqada bazadan qayta tekshiramiz: o'chirilgan foydalanuvchi
+      // sessiyasi bekor bo'ladi (null), rol/avatar yangilanadi. DB nosozligida
+      // sessiyani saqlab qolamiz — availability xavfsizlik tekshiruvidan ustun
+      // emas, lekin bu yerda tekshiruvni keyingi so'rovda takrorlash yetarli.
+      const REVALIDATE_MS = 5 * 60_000;
+      const checkedAt = typeof token.checkedAt === "number" ? token.checkedAt : 0;
+      if (typeof token.id === "string" && token.id && Date.now() - checkedAt > REVALIDATE_MS) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: { isActive: true, role: true, avatarColor: true },
+          });
+          if (!dbUser || !dbUser.isActive) return null;
+          token.role = dbUser.role;
+          token.avatarColor = dbUser.avatarColor;
+          token.checkedAt = Date.now();
+        } catch (e) {
+          console.error("[auth] jwt qayta-tekshiruv xatosi (sessiya saqlanadi):", e);
+        }
       }
       return token;
     },

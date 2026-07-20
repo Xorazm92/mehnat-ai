@@ -4,6 +4,7 @@ import { sendMessage } from "../telegram/bot";
 import { expireOverdueQuestions } from "../contexts/monitoring/application/expire-questions";
 import { recordQuestionKpi } from "../contexts/kpi/application/record-question-kpi";
 import { runBillingReminders } from "../contexts/billing/application/run-reminders";
+import { autoManageReadiness, gatherChecklist } from "../../lib/monthClose";
 
 const SWEEP_INTERVAL_MS = 60_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -69,8 +70,56 @@ export function startCron(): () => void {
     console.log(`[cron] billing reminders scheduled daily at ${config.billing.cronHour}:00`);
   }
 
+  // ── Month-end closing avtomatikasi ────────────────────────────────────────
+  // Oy oxirgi kuni 23:55 — checklist (log/ogohlantirish); yangi oy 1-kuni
+  // 00:05 — o'tgan oy uchun auto READY_TO_CLOSE (checklist yashil bo'lsa).
+  // AUTO-CLOSE ATAYIN YO'Q: yopishni faqat administrator UI'dan bosadi.
+  // 5 daqiqalik tekshiruv oynasi restart-safe: statuslar idempotent boshqariladi
+  // (OPEN↔READY), shuning uchun qayta ishga tushish hech narsani buzmaydi.
+  let lastChecklistRun = "";
+  let lastAutoReadyRun = "";
+  const monthClosingSweep = async () => {
+    const now = new Date();
+    const isLastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() === now.getDate();
+    const hm = now.getHours() * 60 + now.getMinutes();
+
+    // 23:55+ oy oxirgi kuni: joriy oy checklistini yurgizib natijani log qilamiz.
+    if (isLastDayOfMonth && hm >= 23 * 60 + 55) {
+      const key = currentPeriod(now);
+      if (lastChecklistRun !== key) {
+        lastChecklistRun = key;
+        try {
+          const res = await gatherChecklist(prisma, now.getFullYear(), now.getMonth() + 1);
+          console.log(
+            `[cron] month-closing checklist ${key}: ${res.ready ? "TAYYOR" : `bloklar: ${res.blockingErrors.join("; ")}`}`
+          );
+        } catch (err) {
+          console.error(`[cron] month-closing checklist failed: ${(err as Error).message}`);
+        }
+      }
+    }
+
+    // 00:05–01:00 yangi oyning 1-kuni: O'TGAN oy uchun auto-ready.
+    if (now.getDate() === 1 && hm >= 5 && hm < 60) {
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const key = currentPeriod(prev);
+      if (lastAutoReadyRun !== key) {
+        lastAutoReadyRun = key;
+        try {
+          const res = await autoManageReadiness(prisma, prev.getFullYear(), prev.getMonth() + 1);
+          console.log(`[cron] month-closing auto-ready ${key}: status=${res.status} (auto-close YO'Q — admin yopadi)`);
+        } catch (err) {
+          console.error(`[cron] month-closing auto-ready failed: ${(err as Error).message}`);
+        }
+      }
+    }
+  };
+  const monthClosingTimer = setInterval(() => void monthClosingSweep(), 5 * 60_000);
+  console.log(`[cron] month-closing: checklist last-day 23:55, auto-ready day-1 00:05 (no auto-close)`);
+
   return () => {
     clearInterval(sweepTimer);
+    clearInterval(monthClosingTimer);
     if (billingStart) clearTimeout(billingStart);
     if (billingInterval) clearInterval(billingInterval);
   };

@@ -37,17 +37,23 @@ export async function detectPeriodDebts(
       name: true,
       contractAmount: true,
       paymentDay: true,
-      payments: { where: { period }, select: { amount: true, status: true } },
+      payments: { where: { period, deletedAt: null }, select: { amount: true, status: true } },
     },
   });
 
   const debts: CompanyDebt[] = [];
   for (const c of companies) {
     const payment = c.payments[0];
+    // Faqat haqiqatan kelib tushgan pul (paid/partial) qarzni kamaytiradi —
+    // 'pending' qatordagi reja summasi qarzni yashirmasligi kerak.
+    const paidAmount =
+      payment && (payment.status === "paid" || payment.status === "partial")
+        ? Number(payment.amount)
+        : 0;
     const res = assessDebt(
       {
         contractAmount: Number(c.contractAmount),
-        paidAmount: payment ? Number(payment.amount) : 0,
+        paidAmount,
         status: payment?.status ?? null,
         paymentDay: c.paymentDay,
         dayOfMonth,

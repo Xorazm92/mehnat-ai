@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
 import { revalidateTag } from "next/cache";
-import { Prisma, type AuditAction } from "@prisma/client";
+import type { AuditAction } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
 
 export async function getAuditLogs(filters?: {
@@ -40,35 +40,15 @@ export async function getAuditLogs(filters?: {
         user: { select: { id: true, fullName: true, role: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: filters?.limit || 100,
+      // Clamp — katta limit bilan butun jurnalni bir so'rovda tortib bo'lmasin.
+      take: Math.min(Math.max(filters?.limit || 100, 1), 500),
     })
   );
 }
 
-export async function createAuditLog(data: {
-  action: AuditAction;
-  tableName: string;
-  recordId?: string;
-  oldData?: Prisma.InputJsonValue;
-  newData?: Prisma.InputJsonValue;
-  ipAddress?: string;
-  userAgent?: string;
-}) {
-  // Exported = a publicly reachable server action. Require an authenticated
-  // caller so the audit trail can't be poisoned by anonymous requests.
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  const userId = session.user?.id;
-
-  return serialize(
-    await prisma.auditLog.create({
-      data: {
-        ...data,
-        userId,
-      },
-    })
-  );
-}
+// Audit yozish endpointi ATAYIN yo'q: server ichki yozuvlar lib/auditTrail.ts
+// orqali ketadi. Public action bo'lsa, istalgan foydalanuvchi ixtiyoriy
+// tableName/newData bilan jurnalni zaharlashi mumkin edi.
 
 // =====================================================
 // NOTIFICATIONS
@@ -109,6 +89,14 @@ export async function markNotificationsRead(ids?: string[]) {
   return serialize(result);
 }
 
+const NOTIFICATION_TYPES = new Set([
+  "deadline",
+  "status_change",
+  "kpi_alert",
+  "system",
+  "approval_request",
+]);
+
 export async function createNotification(data: {
   userId: string;
   type: string;
@@ -121,7 +109,24 @@ export async function createNotification(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const result = await prisma.notification.create({ data });
+  // Klientdan chaqiriladigan oqim (OperationModule) bor, shuning uchun rol bilan
+  // yopib bo'lmaydi — lekin kontentni cheklaymiz: faqat ma'lum turlar, faqat
+  // ilova ichidagi havola (tashqi/javascript: URL forging emas), oqilona uzunlik.
+  if (!NOTIFICATION_TYPES.has(data.type)) throw new Error("Bildirishnoma turi noto'g'ri");
+  const link = data.link?.trim();
+  if (link && (!link.startsWith("/") || link.startsWith("//"))) {
+    throw new Error("Havola ilova ichidagi yo'l bo'lishi kerak");
+  }
+
+  const result = await prisma.notification.create({
+    data: {
+      userId: data.userId,
+      type: data.type,
+      title: data.title.slice(0, 200),
+      message: data.message.slice(0, 1000),
+      link: link || null,
+    },
+  });
   revalidateTag("notifications", "max");
   return serialize(result);
 }
