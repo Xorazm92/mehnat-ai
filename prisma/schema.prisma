@@ -199,6 +199,8 @@ model Company {
   reportProofs        ReportProof[]
   telegramGroups      TelegramGroup[]
   paymentReminders    PaymentReminder[]
+  obligations         Obligation[]
+  obligationOverrides CompanyObligationOverride[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -631,13 +633,13 @@ model AccountingPeriod {
 // belgilarini o'zgartirish mumkin (reopen invalidatsiyasi). Global period
 // yagona — partial unique index bilan.
 model FinancialSnapshot {
-  id             String   @id @default(uuid())
+  id             String  @id @default(uuid())
   companyId      String? // null = butun firma
   period         String // "2026-01" | "2026"
-  openingBalance Decimal  @db.Decimal(14, 2)
-  closingBalance Decimal  @db.Decimal(14, 2)
-  income         Decimal  @default(0) @db.Decimal(14, 2)
-  outflow        Decimal  @default(0) @db.Decimal(14, 2)
+  openingBalance Decimal @db.Decimal(14, 2)
+  closingBalance Decimal @db.Decimal(14, 2)
+  income         Decimal @default(0) @db.Decimal(14, 2)
+  outflow        Decimal @default(0) @db.Decimal(14, 2)
 
   // Month-end kengaytmasi
   payrollTotal  Decimal @default(0) @db.Decimal(14, 2) // oy ichida berilgan oyliklar (Payout)
@@ -991,6 +993,13 @@ model NotificationDelivery {
   sentAt         DateTime?
   createdAt      DateTime  @default(now())
 
+  // Idempotency: obligation reminders write a stable dedupKey so a repeated
+  // sweep never re-sends. NULL keys stay distinct (legacy/non-deduped rows).
+  // e.g. "obligation:<id>:reminder:D-5" | ":due" | ":overdue:L1"
+  dedupKey    String?
+  recipientId String?
+
+  @@unique([channel, dedupKey])
   @@index([status])
 }
 
@@ -1010,4 +1019,290 @@ model PaymentReminder {
   @@unique([companyId, period, level])
   @@index([period])
   @@index([status])
+}
+
+// =====================================================
+// COMPLIANCE / DEADLINE ENGINE (Faza A)
+// Har mijoz uchun takrorlanuvchi majburiyatlarni avtomatik yaratadi,
+// muddat/eskalatsiya, kechikish sababi (2-bosqichli), submission+evidence.
+// TAMOYIL: ish-jarayoni holati (status) va muddatga rioya (isOverdue,
+// hisoblanadi) — ikki alohida o'lcham. Enum qiymatlari mavjud schema idiomiga
+// mos: kichik harf snake_case (qarang ReportStatus).
+// =====================================================
+
+enum ObligationStatus {
+  planned
+  in_progress
+  ready
+  sent
+  accepted
+  rejected
+  cancelled
+}
+
+enum SubmissionStatus {
+  sent
+  accepted
+  rejected
+}
+
+enum EvidenceType {
+  screenshot
+  pdf
+  receipt
+  external_reference // tashqi tizim ID (masalan 1C hujjat/kvitansiya ID)
+  api_response // integratsiya javobi
+  manual_approval // vakolatli reviewer tasdig'i
+}
+
+enum DelayReason {
+  accountant_delay
+  client_delay
+  system_failure
+  external_authority
+  management_decision
+  other
+}
+
+enum Periodicity {
+  monthly
+  quarterly
+  annual
+}
+
+enum DeadlineAnchorType {
+  period_end_offset // davr tugashidan +N kun
+  fixed_day_of_month // muayyan oy-kuni
+}
+
+enum WorkdayAdjustmentPolicy {
+  none
+  next_workday
+  previous_workday
+}
+
+enum TemplateLifecycle {
+  draft
+  approved
+  active
+  retired
+}
+
+// Takrorlanuvchi majburiyat qoidasi (versionlangan, tasdiqlanadigan).
+// Qoida o'zgarsa — YANGI versiya; eski majburiyatlar templateVersion snapshoti
+// bilan tarixda qoladi. Admin darhol productionga chiqara olmaydi (lifecycle).
+model DeadlineTemplate {
+  id             String             @id @default(uuid())
+  code           String // barqaror kalit, masalan "QQS_DECLARATION"
+  name           String
+  obligationType String // erkin turkum, masalan "tax_declaration" | "statistics"
+  periodicity    Periodicity
+  anchorType     DeadlineAnchorType
+  dueDay         Int? // fixed_day_of_month uchun (1..31)
+  dueMonth       Int? // annual/quarterly fixed uchun (1..12)
+  offsetDays     Int? // period_end_offset uchun
+
+  adjustmentPolicy WorkdayAdjustmentPolicy @default(next_workday)
+
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  version       Int       @default(1)
+
+  lifecycle    TemplateLifecycle @default(draft)
+  active       Boolean           @default(true)
+  approvedById String?
+  approvedAt   DateTime?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicability TemplateApplicability[]
+  overrides     CompanyObligationOverride[]
+  obligations   Obligation[]
+
+  @@unique([code, version])
+  @@index([lifecycle])
+  @@index([active])
+  @@index([obligationType])
+}
+
+// Template kompaniyaga tegishlimi — faqat taxRegime emas. Bir template →
+// bir nechta kriteriya (AND semantikasi kod tomonda aniqlanadi).
+model TemplateApplicability {
+  id            String           @id @default(uuid())
+  templateId    String
+  template      DeadlineTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  criteriaType  String // tax_regime|vat_payer|has_employees|stats_type|service_key|company_status
+  criteriaValue String
+  createdAt     DateTime         @default(now())
+
+  @@unique([templateId, criteriaType, criteriaValue])
+  @@index([templateId])
+}
+
+// Kompaniya darajasidagi istisno: majburiyatni o'chirish / individual deadline /
+// boshqa mas'ul. Generator shu overridega bo'ysunadi.
+model CompanyObligationOverride {
+  id         String           @id @default(uuid())
+  companyId  String
+  company    Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  templateId String
+  template   DeadlineTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  action            String // disable | custom_due | reassign
+  customDueDay      Int?
+  customOffsetDays  Int?
+  responsibleUserId String?
+  reason            String
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, templateId])
+  @@index([companyId])
+}
+
+// Ish/dam olish/bayram kalendari — dueAt ni ish kuniga surish uchun.
+// UTC saqlanadi; biznes hisobi Asia/Tashkent. Tasdiqlangan to'plam.
+model BusinessCalendarDay {
+  id           String   @id @default(uuid())
+  date         DateTime @unique @db.Date
+  isWorkday    Boolean  @default(true)
+  isHoliday    Boolean  @default(false)
+  name         String?
+  approvedById String?
+  createdBy    String?
+  createdAt    DateTime @default(now())
+
+  @@index([isWorkday])
+}
+
+// Muayyan kompaniya+template+davr uchun aniq majburiyat.
+// status = ish-jarayoni; isOverdue = (dueAt < now AND status NOT IN
+// (accepted, cancelled)) — HISOBLANADI, saqlanmaydi.
+model Obligation {
+  id              String           @id @default(uuid())
+  companyId       String
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  templateId      String
+  template        DeadlineTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  templateVersion Int // snapshot: qaysi template versiyasi bilan yaratilgan
+
+  periodStart DateTime
+  periodEnd   DateTime
+  periodKey   String // UI: "2026-M07" | "2026-Q3" | "2026-Y"
+  dueAt       DateTime
+
+  status ObligationStatus @default(planned)
+
+  // Mas'ul SNAPSHOT (assignment keyin o'zgarsa ham tarix yo'qolmaydi)
+  responsibleUserId String?
+  backupUserId      String?
+  assignedAt        DateTime?
+  assignedById      String?
+
+  // Timing belgilari
+  sentAt         DateTime?
+  acceptedAt     DateTime?
+  completedAt    DateTime?
+  firstOverdueAt DateTime?
+
+  // Kechikish sababi — 2 bosqichli: belgilangan + MANAGER tasdiqlagan.
+  // KPI exclusion faqat delayApprovedById mavjud + dalilli bo'lsa.
+  delayReason       DelayReason?
+  delayComment      String?
+  delayMarkedById   String?
+  delayMarkedAt     DateTime?
+  delayApprovedById String?
+  delayApprovedAt   DateTime?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  submissions      ObligationSubmission[]
+  statusEvents     ObligationStatusEvent[]
+  assignmentEvents ObligationAssignmentEvent[]
+
+  @@unique([companyId, templateId, periodStart, periodEnd])
+  @@index([companyId])
+  @@index([status])
+  @@index([dueAt])
+  @@index([responsibleUserId])
+  @@index([periodKey])
+}
+
+// Status o'zgarishi tarixi (KPI/timeline uchun; AuditLogdan tashqari, so'rovga qulay).
+model ObligationStatusEvent {
+  id           String            @id @default(uuid())
+  obligationId String
+  obligation   Obligation        @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  fromStatus   ObligationStatus?
+  toStatus     ObligationStatus
+  byUserId     String?
+  note         String?
+  at           DateTime          @default(now())
+
+  @@index([obligationId])
+}
+
+// Mas'ul biriktirish o'zgarishi tarixi.
+model ObligationAssignmentEvent {
+  id           String     @id @default(uuid())
+  obligationId String
+  obligation   Obligation @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  fromUserId   String?
+  toUserId     String?
+  byUserId     String?
+  reason       String?
+  at           DateTime   @default(now())
+
+  @@index([obligationId])
+}
+
+// Bir majburiyat → ko'p yuborish urinishi (yubordi→rad→tuzatdi→qayta→qabul).
+// externalId/sourceSystem — Faza B 1C integratsiyasi uchun oldindan tayyor.
+model ObligationSubmission {
+  id           String           @id @default(uuid())
+  obligationId String
+  obligation   Obligation       @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  attemptNo    Int
+  status       SubmissionStatus @default(sent)
+
+  sentAt        DateTime?
+  acceptedAt    DateTime?
+  rejectedAt    DateTime?
+  rejectionCode String?
+  rejectionNote String?
+
+  externalId   String? // tashqi tizim ID (1C/soliq)
+  sourceSystem String? // "asro" | "1c" | ...
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  evidence SubmissionEvidence[]
+
+  @@unique([obligationId, attemptNo])
+  @@index([obligationId, status])
+  @@index([externalId])
+}
+
+// Yuborish dalili. storageRef = private storage yo'li/URL/tashqi ID (base64 EMAS).
+// Mavjud ReportProof bridge qilinadi (legacy → attempt #1, type=screenshot).
+// MUHIM: screenshot yoki ichki approval avtomatik "soliq qabul qildi" EMAS —
+// accepted uchun manba (external_reference/receipt/api_response/manual_approval).
+model SubmissionEvidence {
+  id           String               @id @default(uuid())
+  submissionId String
+  submission   ObligationSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  type         EvidenceType
+  storageRef   String
+  note         String?
+  createdById  String?
+  createdAt    DateTime             @default(now())
+
+  @@index([submissionId])
 }
