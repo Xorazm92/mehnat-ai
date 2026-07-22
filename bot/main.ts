@@ -6,6 +6,8 @@ import { getClassifier } from "./contexts/ai";
 import { enqueueTelegramUpdate } from "./queues/message.queue";
 import { startMessageWorker } from "./contexts/monitoring/interface/message.worker";
 import { startQuestionWorker } from "./contexts/monitoring/interface/question.worker";
+import { startObligationWorker } from "./queues/obligation.worker";
+import { registerObligationSchedulers } from "./queues/obligation.queue";
 import { startCron } from "./cron/scheduler";
 import type { RawTelegramUpdate } from "./contexts/monitoring/domain/inbound-message";
 
@@ -13,9 +15,11 @@ async function main(): Promise<void> {
   console.log("[bot] starting…");
 
   getClassifier(); // logs which classifier (Gemini / heuristic) is live
-  const workers: Worker[] = [startMessageWorker(), startQuestionWorker()];
+  const workers: Worker[] = [startMessageWorker(), startQuestionWorker(), startObligationWorker()];
   const stopCron = startCron();
-  console.log(`[bot] ${workers.length} worker(s) + cron up · Redis ${config.redisUrl}`);
+  // Compliance schedulers live in Redis (repeatable), not in-process setInterval.
+  await registerObligationSchedulers();
+  console.log(`[bot] ${workers.length} worker(s) + cron + obligation schedulers up · Redis ${config.redisUrl}`);
 
   const bot = config.botMode === "polling" ? getBot() : undefined;
 

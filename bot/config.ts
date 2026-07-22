@@ -63,4 +63,6 @@ export function hasGemini(): boolean {
 export const QUEUE = {
   MESSAGE: "message",
   QUESTION: "question",
+  /** Compliance engine: obligation generation + deadline sweep (repeatable). */
+  OBLIGATION: "obligation",
 } as const;
