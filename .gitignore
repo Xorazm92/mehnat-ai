@@ -51,4 +51,5 @@ mehnat_full_backup.sql
 backup_*.sql
 *_backup.sql
 *.dump
+backups/
 import_log.txt

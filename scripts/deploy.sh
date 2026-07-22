@@ -27,10 +27,12 @@ npx tsx scripts/preflight.ts env
 echo "▶ [2/7] Installing dependencies (npm ci)…"
 npm ci
 
-# 3) Apply the database schema. This repo has no migration history yet, so it
-#    uses `db push`. Switch to `npx prisma migrate deploy` once migrations exist.
-echo "▶ [3/7] Applying database schema…"
-npx prisma db push
+# 3) Apply versioned migrations (NOT `db push`). Idempotent: already-applied
+#    migrations are skipped. IMPORTANT — a prod DB previously built with `db push`
+#    must be baselined ONCE before the first migrate-deploy, else CREATE TABLE
+#    fails on existing tables. Run `scripts/migrate-baseline.sh` on such a DB.
+echo "▶ [3/7] Applying database migrations (prisma migrate deploy)…"
+npx prisma migrate deploy
 
 # 4) Seed REAL reference data (KPI rules) required by the KPI engine + bot.
 #    No mock/demo data is ever seeded in production.

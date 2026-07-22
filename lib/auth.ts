@@ -3,6 +3,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
+import { RATE_LIMIT } from "@/lib/constants";
+import { checkRateLimit, recordFailure, resetRateLimit } from "@/lib/rateLimit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -16,19 +18,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        // Brute-force himoyasi: hisob bo'yicha muvaffaqiyatsiz urinishlarni
+        // 15 daq oynada 5 taga cheklaymiz. Faqat muvaffaqiyatsizlik hisoblanadi.
+        const rlKey = `login:${(credentials.email as string).toLowerCase()}`;
+        if (!checkRateLimit(rlKey, RATE_LIMIT.LOGIN_ATTEMPTS, RATE_LIMIT.LOGIN_WINDOW_MS).allowed) {
+          console.warn(`[auth] rate-limited login for ${rlKey}`);
+          return null;
+        }
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
         });
 
-        if (!user || !user.isActive) return null;
+        if (!user || !user.isActive) {
+          recordFailure(rlKey, RATE_LIMIT.LOGIN_WINDOW_MS);
+          return null;
+        }
 
         const isValid = await bcrypt.compare(
           credentials.password as string,
           user.passwordHash
         );
 
-        if (!isValid) return null;
+        if (!isValid) {
+          recordFailure(rlKey, RATE_LIMIT.LOGIN_WINDOW_MS);
+          return null;
+        }
 
+        resetRateLimit(rlKey); // muvaffaqiyat — hisoblagich tozalanadi
         return {
           id: user.id,
           email: user.email,
