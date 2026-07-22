@@ -17,6 +17,7 @@ const PROTECTED_ROUTES = [
   "/dashboard",
   "/organizations",
   "/reports",
+  "/deadlines",
   "/kpi",
   "/payroll",
   "/staff",
@@ -38,6 +39,7 @@ function pathToView(path: string): AppView | null {
   if (path.startsWith("/organizations")) return "organizations";
   if (path.startsWith("/staff")) return "staff";
   if (path.startsWith("/reports")) return "reports";
+  if (path.startsWith("/deadlines")) return "deadlines";
   if (path.startsWith("/kpi")) return "kpi";
   if (path.startsWith("/kassa")) return "kassa";
   if (path.startsWith("/expenses")) return "expenses";
