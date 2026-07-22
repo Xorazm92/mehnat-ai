@@ -3,7 +3,8 @@ import { prisma } from "../../lib/prisma";
 import { runGenerationLocked } from "../../lib/obligationRun";
 import { sweepDeadlines } from "../../lib/obligationSweep";
 import { createRedisConnection } from "./connection";
-import { QUEUE } from "../config";
+import { QUEUE, hasTelegramToken } from "../config";
+import { sendMessage } from "../telegram/bot";
 import type { ObligationJob } from "./obligation.queue";
 
 /**
@@ -21,7 +22,9 @@ export function startObligationWorker(): Worker<ObligationJob> {
         console.log(`[obligation.worker] generate:`, res.skipped ? "skipped(locked)" : res.results?.map((r) => r.created));
         return res;
       }
-      const res = await sweepDeadlines(prisma, { now: new Date() });
+      // Telegram push faqat token bo'lsa (aks holda faqat in-app eslatma).
+      const notifyTelegram = hasTelegramToken() ? (chatId: bigint, text: string) => sendMessage(chatId, text) : undefined;
+      const res = await sweepDeadlines(prisma, { now: new Date(), notifyTelegram });
       console.log(`[obligation.worker] sweep:`, res);
       return res;
     },

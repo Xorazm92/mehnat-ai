@@ -10,6 +10,7 @@ const { sweepDeadlines } = await import("@/lib/obligationSweep");
 
 const TAG = `vitest-sweep-${Date.now()}`;
 const NOW = new Date(Date.UTC(2097, 6, 15, 12, 0, 0)); // 2097-07-15
+const GROUP_CHAT = BigInt(-Date.now()); // unique negative (telegram group id shakli)
 const ids = { user: "", company: "", template: "", oblSoon: "", oblOverdue: "" };
 
 beforeAll(async () => {
@@ -23,6 +24,7 @@ beforeAll(async () => {
     select: { id: true },
   });
   ids.company = company.id;
+  await prisma.telegramGroup.create({ data: { chatId: GROUP_CHAT, companyId: ids.company } });
   const t = await prisma.deadlineTemplate.create({
     data: {
       code: `${TAG}-T`,
@@ -78,6 +80,7 @@ afterAll(async () => {
   await prisma.notification.deleteMany({ where: { userId: ids.user } });
   await prisma.obligation.deleteMany({ where: { templateId: ids.template } });
   await prisma.deadlineTemplate.deleteMany({ where: { id: ids.template } });
+  await prisma.telegramGroup.deleteMany({ where: { companyId: ids.company } });
   await prisma.company.deleteMany({ where: { id: ids.company } });
   await prisma.user.deleteMany({ where: { id: ids.user } });
   await prisma.$disconnect();
@@ -111,5 +114,30 @@ describe("sweepDeadlines", () => {
       where: { dedupKey: { startsWith: `obligation:${ids.oblSoon}` } },
     });
     expect(after).toBe(before); // dublikat yo'q
+  });
+});
+
+describe("sweepDeadlines — Telegram push", () => {
+  it("pushes to the bound group and dedups on repeat", async () => {
+    const sent: { chatId: bigint; text: string }[] = [];
+    const spy = async (chatId: bigint, text: string) => {
+      sent.push({ chatId, text });
+    };
+
+    const first = await sweepDeadlines(prisma, { now: NOW, notifyTelegram: spy });
+    expect(first.telegramSent).toBeGreaterThanOrEqual(2);
+    expect(sent.length).toBeGreaterThanOrEqual(2);
+    expect(sent.some((s) => s.chatId === GROUP_CHAT)).toBe(true);
+
+    const tgRows = await prisma.notificationDelivery.count({
+      where: { channel: "telegram", dedupKey: { startsWith: `obligation:${ids.oblSoon}` } },
+    });
+    expect(tgRows).toBeGreaterThanOrEqual(2);
+
+    // Ikkinchi marta — telegram dedup, yangi yuborish yo'q.
+    sent.length = 0;
+    const second = await sweepDeadlines(prisma, { now: NOW, notifyTelegram: spy });
+    expect(second.telegramDeduped).toBeGreaterThanOrEqual(2);
+    expect(sent.length).toBe(0);
   });
 });

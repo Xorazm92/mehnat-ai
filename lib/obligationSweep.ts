@@ -43,13 +43,21 @@ export interface SweepResult {
   markedOverdue: number;
   remindersCreated: number;
   remindersDeduped: number;
+  telegramSent: number;
+  telegramDeduped: number;
 }
+
+/** Telegram yuboruvchi — bot qatlamidan injeksiya qilinadi (sweep framework-free). */
+export type TelegramSender = (chatId: bigint, text: string) => Promise<void>;
 
 function isUniqueViolation(e: unknown): boolean {
   return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
 }
 
-export async function sweepDeadlines(db: Db, opts: { now?: Date } = {}): Promise<SweepResult> {
+export async function sweepDeadlines(
+  db: Db,
+  opts: { now?: Date; notifyTelegram?: TelegramSender } = {},
+): Promise<SweepResult> {
   const now = opts.now ?? new Date();
   const today = startOfUtcDay(now);
 
@@ -61,10 +69,35 @@ export async function sweepDeadlines(db: Db, opts: { now?: Date } = {}): Promise
       responsibleUserId: true,
       firstOverdueAt: true,
       periodKey: true,
+      companyId: true,
+      company: { select: { name: true } },
     },
   });
 
-  const res: SweepResult = { scanned: open.length, markedOverdue: 0, remindersCreated: 0, remindersDeduped: 0 };
+  // Telegram push yoqilgan bo'lsa — firma → chat(lar) mappingini oldindan yuklaymiz.
+  const chatMap = new Map<string, bigint[]>();
+  if (opts.notifyTelegram && open.length) {
+    const companyIds = [...new Set(open.map((o) => o.companyId))];
+    const groups = await db.telegramGroup.findMany({
+      where: { companyId: { in: companyIds } },
+      select: { companyId: true, chatId: true },
+    });
+    for (const g of groups) {
+      if (g.companyId == null) continue;
+      const arr = chatMap.get(g.companyId) ?? [];
+      arr.push(g.chatId);
+      chatMap.set(g.companyId, arr);
+    }
+  }
+
+  const res: SweepResult = {
+    scanned: open.length,
+    markedOverdue: 0,
+    remindersCreated: 0,
+    remindersDeduped: 0,
+    telegramSent: 0,
+    telegramDeduped: 0,
+  };
 
   for (const o of open) {
     const daysUntil = Math.floor((startOfUtcDay(o.dueAt).getTime() - today.getTime()) / DAY);
@@ -108,6 +141,28 @@ export async function sweepDeadlines(db: Db, opts: { now?: Date } = {}): Promise
       } catch (e) {
         if (isUniqueViolation(e)) res.remindersDeduped++;
         else throw e;
+      }
+
+      // 2) Telegram kanal — alohida dedup (channel="telegram"), firma guruhiga.
+      if (opts.notifyTelegram) {
+        try {
+          await db.notificationDelivery.create({
+            data: { channel: "telegram", level: m.level, dedupKey, recipientId: o.responsibleUserId, status: "sent", sentAt: now },
+          });
+          const chats = chatMap.get(o.companyId) ?? [];
+          const text = `⏰ ${reminderTitle(m.key)}\n${o.company.name} — ${o.periodKey}\nMuddat: ${o.dueAt.toISOString().slice(0, 10)}`;
+          for (const chatId of chats) {
+            try {
+              await opts.notifyTelegram(chatId, text);
+            } catch (err) {
+              console.error(`[sweep] telegram send failed (chat ${chatId}): ${(err as Error).message}`);
+            }
+          }
+          res.telegramSent++;
+        } catch (e) {
+          if (isUniqueViolation(e)) res.telegramDeduped++;
+          else throw e;
+        }
       }
     }
   }
