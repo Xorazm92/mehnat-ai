@@ -60,6 +60,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
   const [loadingProof, setLoadingProof] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [lightbox, setLightbox] = useState(false); // to'liq ekran skrinshot ko'rinishi
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const open = !!state;
@@ -73,6 +74,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
     setProof(null);
     setShowReject(false);
     setRejectReason("");
+    setLightbox(false);
 
     if (mode === "review" && state) {
       setLoadingProof(true);
@@ -83,6 +85,14 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, state?.companyId, state?.colKey, period]);
+
+  // Lightbox ochiq bo'lsa Esc bilan yopish
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox]);
 
   const handleFile = useCallback(async (file: File | null | undefined) => {
     if (!file) return;
@@ -178,6 +188,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
   };
 
   return createPortal(
+    <>
     <div
       className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.55)" }}
@@ -280,10 +291,18 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                     {statusBadge(proof.status)}
                   </div>
 
+                  {/* Skrinshotni to'liq ekranda ochish. `data:` URL'ni yangi tabda
+                      ochib bo'lmaydi (brauzerlar bloklaydi) — shuning uchun ilova
+                      ichidagi lightbox ishlatamiz. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <a href={proof.imageData} target="_blank" rel="noopener noreferrer" title="To'liq ochish">
-                    <img src={proof.imageData} alt="Skrinshot" className="w-full rounded-lg border cursor-zoom-in" style={{ borderColor: "var(--card-border)", maxHeight: "45vh", objectFit: "contain", background: "var(--surface-2)" }} />
-                  </a>
+                  <img
+                    src={proof.imageData}
+                    alt="Skrinshot"
+                    title="To'liq ochish uchun bosing"
+                    onClick={() => setLightbox(true)}
+                    className="w-full rounded-lg border cursor-zoom-in"
+                    style={{ borderColor: "var(--card-border)", maxHeight: "45vh", objectFit: "contain", background: "var(--surface-2)" }}
+                  />
 
                   {proof.note && (
                     <div className="mt-3 text-xs rounded-lg px-3 py-2" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>
@@ -356,7 +375,34 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
           )}
         </div>
       </div>
-    </div>,
+    </div>
+
+    {/* ── To'liq ekran lightbox (skrinshotni kattalashtirib ko'rish) ── */}
+    {lightbox && proof && (
+      <div
+        className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
+        style={{ background: "rgba(0,0,0,0.9)" }}
+        onMouseDown={() => setLightbox(false)}
+      >
+        <button
+          onClick={() => setLightbox(false)}
+          className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full text-white"
+          style={{ background: "rgba(255,255,255,0.12)" }}
+          title="Yopish (Esc)"
+        >
+          <X size={20} />
+        </button>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={proof.imageData}
+          alt="Skrinshot — to'liq"
+          onMouseDown={(e) => e.stopPropagation()}
+          className="max-w-full max-h-full rounded-lg shadow-2xl"
+          style={{ objectFit: "contain" }}
+        />
+      </div>
+    )}
+    </>,
     document.body
   );
 };

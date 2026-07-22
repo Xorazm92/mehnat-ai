@@ -21,6 +21,7 @@ const SAFE_USER_SELECT = {
   gender: true,
   birthDate: true,
   education: true,
+  skillLevel: true,
   hiredAt: true,
   firedAt: true,
   status: true,
@@ -59,6 +60,7 @@ export async function getUsers() {
         gender: true,
         birthDate: true,
         education: true,
+        skillLevel: true,
         hiredAt: true,
         status: true,
         rating: true,
@@ -112,6 +114,7 @@ export async function createUser(data: {
   gender?: string;
   birthDate?: string | Date;
   education?: string;
+  skillLevel?: string;
   hiredAt?: string | Date;
   status?: string;
   avatarColor?: string;
@@ -145,6 +148,7 @@ export async function createUser(data: {
       gender: data.gender || null,
       birthDate: toDate(data.birthDate) ?? null,
       education: data.education || null,
+      skillLevel: data.skillLevel || null,
       hiredAt: toDate(data.hiredAt) ?? new Date(),
       status: data.status || "active",
       avatarColor: data.avatarColor || `hsl(${Math.floor(Math.random() * 360)}, 60%, 50%)`,
@@ -165,6 +169,7 @@ export async function updateUser(
     gender: string;
     birthDate: string | Date;
     education: string;
+    skillLevel: string;
     hiredAt: string | Date;
     status: string;
     avatarColor: string;
@@ -187,10 +192,13 @@ export async function updateUser(
   if (id !== userId && !isSeniorRole(role)) throw new Error("Forbidden");
 
   // Sana maydonlarini xavfsiz Date'ga aylantirish
-  const { birthDate, hiredAt, ...rest } = data;
+  const { birthDate, hiredAt, skillLevel, ...rest } = data;
   const updateData: Record<string, unknown> = { ...rest };
   if (birthDate !== undefined) updateData.birthDate = toDate(birthDate) ?? null;
   if (hiredAt !== undefined) updateData.hiredAt = toDate(hiredAt) ?? null;
+  // Malaka darajasi — faqat rahbar rollar belgilaydi (xodim o'zini "tajribali"
+  // deb belgilay olmasligi uchun). Oddiy xodim yuborsa — jimgina e'tiborsiz qoldiriladi.
+  if (skillLevel !== undefined && isSeniorRole(role)) updateData.skillLevel = skillLevel || null;
 
   const result = await prisma.user.update({
     where: { id },

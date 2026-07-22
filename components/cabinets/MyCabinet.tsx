@@ -22,8 +22,10 @@ import {
   Wallet,
 } from "lucide-react";
 import { updateUser, changePassword } from "@/server/users";
-import { ROLE_LABELS, ROLE_COLORS, type UserRole } from "@/lib/permissions";
+import { ROLE_LABELS, ROLE_COLORS, isSeniorRole, type UserRole } from "@/lib/permissions";
 import { formatUzMonthYear, formatUzDateNumeric, formatUzTime, formatNum } from "@/lib/format";
+import { kpiCategoryLabel, adjustmentTypeLabel } from "@/lib/kpiLabels";
+import RiskBadge from "@/components/RiskBadge";
 
 // ─── Tiplar ────────────────────────────────────────────────
 interface Profile {
@@ -38,6 +40,7 @@ interface Profile {
   gender: string | null;
   birthDate: string | null;
   education: string | null;
+  skillLevel: string | null;
   hiredAt: string | null;
   status: string | null;
   rating: number | null;
@@ -49,6 +52,7 @@ interface CabinetCompany {
   inn: string;
   taxRegime: string;
   riskLevel: string | null;
+  companyStatus: string | null;
   myRole: string;
 }
 interface KpiRecord {
@@ -106,9 +110,32 @@ const STATUS_LABELS: Record<string, string> = {
   vacation: "Mehnat ta'tilida",
   sick: "Betob / kasal",
 };
+const SKILL_LABELS: Record<string, string> = {
+  stajyor: "Stajyor",
+  orta: "O'rta malakali",
+  tajribali: "Tajribali",
+};
 
 const fmtMoney = (n: number) => formatNum(n);
 const fmtDate = (s: string | null) => (s ? formatUzDateNumeric(s) : "—");
+
+/** Ishga kirgan sanadan ish stajini "X yil Y oy" ko'rinishida hisoblaydi. */
+function formatTenure(hiredAt: string | null): string {
+  if (!hiredAt) return "—";
+  const start = new Date(hiredAt);
+  if (isNaN(start.getTime())) return "—";
+  const now = new Date();
+  let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  if (now.getDate() < start.getDate()) months -= 1;
+  if (months < 0) months = 0;
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  if (years === 0 && rem === 0) return "1 oydan kam";
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} yil`);
+  if (rem > 0) parts.push(`${rem} oy`);
+  return parts.join(" ");
+}
 const fmtTime = (s: string | null) => (s ? formatUzTime(s) : "—");
 
 export default function MyCabinet(props: MyCabinetProps) {
@@ -229,8 +256,11 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
     gender: profile.gender || "",
     birthDate: profile.birthDate ? new Date(profile.birthDate).toISOString().slice(0, 10) : "",
     education: profile.education || "",
+    skillLevel: profile.skillLevel || "",
     avatarColor: profile.avatarColor || "#2563eb",
   });
+  // Malaka darajasini faqat rahbar rollar tahrirlaydi (server ham shuni tekshiradi).
+  const canEditSkill = isSeniorRole(profile.role);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -296,6 +326,16 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
               <option value="magistratura">Magistratura</option>
             </select>
           </FormField>
+          {canEditSkill && (
+            <FormField label="Malaka darajasi">
+              <select className="erp-input" value={form.skillLevel} onChange={(e) => setForm({ ...form, skillLevel: e.target.value })}>
+                <option value="">Tanlanmagan</option>
+                <option value="stajyor">Stajyor</option>
+                <option value="orta">O&apos;rta malakali</option>
+                <option value="tajribali">Tajribali</option>
+              </select>
+            </FormField>
+          )}
           <FormField label="Avatar rangi">
             <div className="flex items-center gap-3">
               <input
@@ -323,6 +363,8 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
         <InfoRow icon={Mail} label="Login (email)" value={profile.email} />
         <InfoRow icon={Briefcase} label="Lavozim" value={ROLE_LABELS[profile.role as UserRole] || profile.role} />
         <InfoRow icon={CalendarDays} label="Ishga kirgan" value={fmtDate(profile.hiredAt)} />
+        <InfoRow icon={Clock} label="Ish staji" value={formatTenure(profile.hiredAt)} />
+        <InfoRow icon={TrendingUp} label="Malaka darajasi" value={profile.skillLevel ? SKILL_LABELS[profile.skillLevel] || profile.skillLevel : "—"} />
         <InfoRow icon={GraduationCap} label="Ma'lumoti" value={profile.education ? EDUCATION_LABELS[profile.education] || profile.education : "—"} />
         <InfoRow icon={CheckCircle2} label="Holati" value={profile.status ? STATUS_LABELS[profile.status] || profile.status : "—"} />
         <InfoRow icon={Award} label="Reyting" value={profile.rating != null ? String(profile.rating) : "—"} />
@@ -333,18 +375,12 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
 
 // ─── FIRMALARIM TAB ────────────────────────────────────────
 function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
-  const riskColors: Record<string, { c: string; bg: string }> = {
-    low: { c: "#10b981", bg: "rgba(16,185,129,.12)" },
-    medium: { c: "#f59e0b", bg: "rgba(245,158,11,.12)" },
-    high: { c: "#ef4444", bg: "rgba(239,68,68,.12)" },
-  };
   if (companies.length === 0) {
     return <EmptyState icon={Building2} text="Sizga hali firma biriktirilmagan" />;
   }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {companies.map((c) => {
-        const risk = c.riskLevel ? riskColors[c.riskLevel] : null;
         const roleC = ROLE_COLORS[c.myRole as UserRole] || "#64748b";
         return (
           <div key={c.id} className="dashboard-card p-5 flex flex-col gap-3">
@@ -353,10 +389,8 @@ function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
                 <div className="text-[14px] font-black truncate" style={{ color: "var(--text)" }}>{c.name}</div>
                 <div className="text-[11px] font-mono mt-0.5" style={{ color: "var(--text-muted)" }}>INN: {c.inn}</div>
               </div>
-              {risk && (
-                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg shrink-0" style={{ color: risk.c, background: risk.bg }}>
-                  {c.riskLevel === "low" ? "Past" : c.riskLevel === "medium" ? "O'rta" : "Yuqori"} risk
-                </span>
+              {c.riskLevel && (
+                <RiskBadge riskLevel={c.riskLevel} companyStatus={c.companyStatus} companyName={c.name} compact />
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -407,7 +441,7 @@ function KpiTab({
               <div key={r.id} className="flex items-center justify-between px-5 py-3.5 gap-4">
                 <div className="min-w-0">
                   <div className="text-[13px] font-bold truncate" style={{ color: "var(--text)" }}>{r.rule?.nameUz || "—"}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>{r.rule?.category || ""}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>{kpiCategoryLabel(r.rule?.category)}</div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-[15px] font-black tabular-nums" style={{ color: Number(r.calculatedScore) >= 0 ? "#10b981" : "#ef4444" }}>
@@ -434,8 +468,8 @@ function KpiTab({
               return (
                 <div key={a.id} className="flex items-center justify-between px-5 py-3.5 gap-4">
                   <div className="min-w-0">
-                    <div className="text-[13px] font-bold capitalize" style={{ color: "var(--text)" }}>{a.adjustmentType}</div>
-                    <div className="text-[11px] truncate" style={{ color: "var(--text-muted)" }}>{a.reason}</div>
+                    <div className="text-[13px] font-bold" style={{ color: "var(--text)" }}>{adjustmentTypeLabel(a.adjustmentType)}</div>
+                    <div className="text-[11px] truncate" style={{ color: "var(--text-muted)" }}>{a.reason || "Sabab ko'rsatilmagan"}</div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-[13px] font-black tabular-nums" style={{ color: isNeg ? "#ef4444" : "#10b981" }}>

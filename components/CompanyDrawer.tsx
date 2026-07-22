@@ -4,6 +4,7 @@ import { X, Shield, FileText, Lock, Globe, Building2, Download, Eye, EyeOff, Use
 import { getKpiRules, getCompanyKpiRules, upsertCompanyKpiRule } from '@/server/kpi';
 import { getClientCredentials, createClientCredential, deleteClientCredential } from '@/server/credentials';
 import { formatUzDate, formatUzDateTime, formatNum } from '@/lib/format';
+import { kpiCategoryLabel } from '@/lib/kpiLabels';
 
 interface DrawerProps {
   company: Company | null;
@@ -957,7 +958,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                                   color: rule.category === 'automation' ? '#4da3ff' : '#ffd700',
                                   borderColor: rule.category === 'automation' ? 'rgba(77, 163, 255, 0.2)' : 'rgba(255, 215, 0, 0.2)'
                                 }}>
-                                  {rule.category}
+                                  {kpiCategoryLabel(rule.category)}
                                 </span>
                               </div>
                             </div>

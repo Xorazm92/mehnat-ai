@@ -8,6 +8,7 @@ import OnboardingWizard from './OnboardingWizard';
 import { MonthPicker } from './ui/MonthPicker';
 import { periodsEqual } from '@/lib/periods';
 import { formatNum } from "@/lib/format";
+import RiskBadge from './RiskBadge';
 
 interface Props {
   companies: Company[];
@@ -470,6 +471,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                         </span>
                       </div>
                     </div>
+                    <RiskBadge riskLevel={c.riskLevel} companyStatus={c.companyStatus} companyName={c.name} compact className="self-start" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mb-4 mt-auto pl-2">

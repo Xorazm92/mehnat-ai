@@ -4,6 +4,7 @@ import { KPIRule, KpiRuleOption, Language, KPIRoleType } from '@/types';
 import { Settings, Edit3, Trash2, X, Shield, Landmark, Calculator, Plus } from 'lucide-react';
 import { getKpiRules, createKpiRule, updateKpiRule, deleteKpiRule } from '@/server/kpi';
 import { submitOnCtrlEnter } from '@/lib/format';
+import { kpiCategoryLabel } from '@/lib/kpiLabels';
 
 // inputTypeV2 → legacy inputType (yangi qoida yaratishda talab qilinadi)
 const LEGACY_INPUT: Record<string, string> = {
@@ -205,7 +206,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                                             <p className="font-bold text-xs" style={{ color: 'var(--text-primary)' }}>{rule.nameUz}</p>
                                             <span className="text-2xs font-mono font-bold" style={{ color: 'var(--text-muted)' }}>{rule.name}</span>
                                             <Badge tone="blue">{rule.inputTypeV2 || rule.inputType}</Badge>
-                                            <Badge>{rule.category}</Badge>
+                                            <Badge>{kpiCategoryLabel(rule.category)}</Badge>
                                             <Badge>{rule.scope}</Badge>
                                         </div>
                                         {rule.descriptionUz && <p className="text-[10px] mb-2 leading-snug" style={{ color: 'var(--text-muted)' }}>{rule.descriptionUz}</p>}

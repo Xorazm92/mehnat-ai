@@ -15,6 +15,7 @@ export interface AdminUser {
   gender?: string | null;
   birthDate?: string | null;
   education?: string | null;
+  skillLevel?: string | null;
   hiredAt?: string | null;
   status?: string | null;
   isActive: boolean;
@@ -33,6 +34,7 @@ interface FormData {
   gender?: string;
   birthDate?: string;
   education?: string;
+  skillLevel?: string;
   hiredAt?: string;
   status?: string;
 }
@@ -84,12 +86,12 @@ export function AdminUserManager({
   }, [users, search, roleFilter]);
 
   const openCreate = () =>
-    setForm({ fullName: "", email: "", phone: "", role: ROLES.ACCOUNTANT, password: "", department: "", pinfl: "", gender: "", birthDate: "", education: "", hiredAt: "", status: "active" });
+    setForm({ fullName: "", email: "", phone: "", role: ROLES.ACCOUNTANT, password: "", department: "", pinfl: "", gender: "", birthDate: "", education: "", skillLevel: "", hiredAt: "", status: "active" });
   const openEdit = (u: AdminUser) =>
     setForm({
       id: u.id, fullName: u.fullName, email: u.email, phone: u.phone || "", role: u.role,
       department: u.department || "", pinfl: u.pinfl || "", gender: u.gender || "",
-      birthDate: toDateInput(u.birthDate), education: u.education || "",
+      birthDate: toDateInput(u.birthDate), education: u.education || "", skillLevel: u.skillLevel || "",
       hiredAt: toDateInput(u.hiredAt), status: u.status || "active",
     });
 
@@ -225,6 +227,14 @@ export function AdminUserManager({
                   <option value="orta_maxsus">O&apos;rta maxsus</option>
                   <option value="oliy">Oliy</option>
                   <option value="magistratura">Magistratura</option>
+                </select>
+              </Field>
+              <Field label="Malaka darajasi">
+                <select className={inputCls} style={inputStyle} value={form.skillLevel || ""} onChange={(e) => setForm({ ...form, skillLevel: e.target.value })}>
+                  <option value="">—</option>
+                  <option value="stajyor">Stajyor</option>
+                  <option value="orta">O&apos;rta malakali</option>
+                  <option value="tajribali">Tajribali</option>
                 </select>
               </Field>
               <Field label="Tug'ilgan sana">

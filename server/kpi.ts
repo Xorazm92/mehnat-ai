@@ -526,6 +526,8 @@ export interface KpiLeaderRow {
   red: number;
   entries: number;
   bonus: number; // so'm
+  // Xodimning mezonlar kesimi (javob tezligi, ishga kelish, ...) — har biri 0-100%
+  byCategory: { category: string; passPercent: number }[];
 }
 
 const darajaOf = (ball: number): KpiLeaderRow["daraja"] =>
@@ -558,6 +560,8 @@ export async function getKpiLeaderboard(month: string) {
   type Agg = { name: string; role: string; green: number; red: number; entries: number; bonus: number };
   const byEmp = new Map<string, Agg>();
   const catAgg = new Map<string, { green: number; scored: number }>();
+  // Har xodim uchun mezon kesimi: employeeId → (category → {green, scored})
+  const byEmpCat = new Map<string, Map<string, { green: number; scored: number }>>();
 
   for (const p of perfs) {
     const a =
@@ -574,12 +578,22 @@ export async function getKpiLeaderboard(month: string) {
     const c = catAgg.get(cat) ?? catAgg.set(cat, { green: 0, scored: 0 }).get(cat)!;
     if (sc > 0) { c.green++; c.scored++; }
     else if (sc < 0 || p.selectedOption === "red") c.scored++;
+
+    // Per-employee kesim
+    const empCat = byEmpCat.get(p.employeeId) ?? byEmpCat.set(p.employeeId, new Map()).get(p.employeeId)!;
+    const ec = empCat.get(cat) ?? empCat.set(cat, { green: 0, scored: 0 }).get(cat)!;
+    if (sc > 0) { ec.green++; ec.scored++; }
+    else if (sc < 0 || p.selectedOption === "red") ec.scored++;
   }
 
   const leaderboard: KpiLeaderRow[] = [...byEmp.entries()].map(([employeeId, a]) => {
     const scored = a.green + a.red;
     const ball = scored > 0 ? Math.round((a.green / scored) * 100) : a.entries > 0 ? 100 : 0;
-    return { employeeId, name: a.name, role: a.role, ball, daraja: darajaOf(ball), green: a.green, red: a.red, entries: a.entries, bonus: Math.round(a.bonus) };
+    const byCategory = [...(byEmpCat.get(employeeId)?.entries() ?? [])]
+      .filter(([, c]) => c.scored > 0)
+      .map(([category, c]) => ({ category, passPercent: Math.round((c.green / c.scored) * 100) }))
+      .sort((x, y) => y.passPercent - x.passPercent);
+    return { employeeId, name: a.name, role: a.role, ball, daraja: darajaOf(ball), green: a.green, red: a.red, entries: a.entries, bonus: Math.round(a.bonus), byCategory };
   });
   leaderboard.sort((x, y) => y.ball - x.ball || y.bonus - x.bonus);
 

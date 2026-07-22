@@ -72,7 +72,8 @@ model User {
   gender       String? // 'erkak' | 'ayol'
   birthDate    DateTime?
   education    String? // 'oliy' | 'orta' | 'magistratura'
-  hiredAt      DateTime?
+  skillLevel   String? // malaka darajasi: 'stajyor' | 'orta' | 'tajribali'
+  hiredAt      DateTime? // ishga qabul sanasi — ish staji shundan hisoblanadi
   firedAt      DateTime?
   status       String?   @default("active") // 'active' | 'vacation' | 'sick'
   rating       Int?

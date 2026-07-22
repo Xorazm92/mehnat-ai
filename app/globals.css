@@ -58,9 +58,9 @@
   --accent-indigo: #4F46E5;
   --accent-indigo-light: rgba(79, 70, 229, 0.08);
 
-  /* Text */
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
+  /* Text — pure qora emas, ko'zga yumshoqroq slate (o'qishni osonlashtiradi) */
+  --text-primary: #1E293B;
+  --text-secondary: #4B5A70;
   --text-muted: #94A3B8;
   --text-white: #FFFFFF;
 
@@ -68,7 +68,7 @@
   --primary: #2563EB;
   --primary-dark: #1D4ED8;
   --primary-ghost: rgba(37, 99, 235, 0.08);
-  --text: #0F172A;
+  --text: #1E293B;
   --border: #E2E8F0;
   --danger-dark: #B91C1C;
   --warning-light: rgba(217, 119, 6, 0.1);
@@ -104,7 +104,7 @@
   --input-border: #CBD5E1;
   --input-focus-border: #2563EB;
   --input-focus-ring: rgba(37, 99, 235, 0.15);
-  --input-text: #0F172A;
+  --input-text: #1E293B;
 
   /* Table */
   --table-header-bg: #F8FAFC;
@@ -137,9 +137,9 @@
    ============================================= */
 .dark {
   color-scheme: dark;
-  /* Backgrounds */
-  --bg-primary: #0C0E14;
-  --bg-secondary: #13161F;
+  /* Backgrounds — pure qora emas, yumshoqroq to'q slate (ko'zga kamroq og'ir) */
+  --bg-primary: #12151D;
+  --bg-secondary: #171B26;
   --bg-card: rgba(255, 255, 255, 0.04);
   --bg-hover: rgba(255, 255, 255, 0.06);
 
@@ -178,13 +178,13 @@
   --warning-light: rgba(251, 191, 36, 0.12);
   /* Surface/text scale — amallar matritsasi (OperationModule) uchun.
      --surface-2 noshaffof: sticky sarlavha ostidan kontent ko'rinmasligi uchun */
-  --surface: #1A1E2A;
-  --surface-2: #242938;
+  --surface: #1C212E;
+  --surface-2: #282F41;
   --text-2: #94A3B8;
   --text-3: #64748B;
 
   /* Sidebar */
-  --sidebar-bg: #13161F;
+  --sidebar-bg: #171B26;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-item-active-bg: #3B82F6;
   --sidebar-item-active-text: #FFFFFF;
@@ -193,12 +193,12 @@
   --sidebar-width: 240px;
 
   /* Topbar */
-  --topbar-bg: #13161F;
+  --topbar-bg: #171B26;
   --topbar-border: rgba(255, 255, 255, 0.08);
   --topbar-height: 64px;
 
   /* Card & Components */
-  --card-bg: #1A1E2A;
+  --card-bg: #1C212E;
   --card-border: rgba(255, 255, 255, 0.08);
   --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
   --card-shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
@@ -213,7 +213,7 @@
 
   /* Table */
   --table-header-bg: rgba(255, 255, 255, 0.03);
-  --table-row-even: #1A1E2A;
+  --table-row-even: #1C212E;
   --table-row-odd: rgba(255, 255, 255, 0.02);
   --table-row-hover: rgba(59, 130, 246, 0.08);
   --table-border: rgba(255, 255, 255, 0.06);
@@ -353,7 +353,7 @@ time {
    over the popup. */
 .dark select option,
 .dark select optgroup {
-  background-color: #1A1E2A;
+  background-color: #1C212E;
   color: #F1F5F9;
 }
 

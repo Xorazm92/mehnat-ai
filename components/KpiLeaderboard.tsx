@@ -6,12 +6,14 @@ import { Trophy, TrendingUp, Award, AlertTriangle, Wallet, Activity } from "luci
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { MONTHS_UZ } from "@/lib/periods";
 import { formatNum } from "@/lib/format";
+import { KPI_CATEGORY_UZ } from "@/lib/kpiLabels";
 
 interface Props { lang: Language; }
 
 interface LeaderRow {
   employeeId: string; name: string; role: string; ball: number;
   daraja: "excellent" | "good" | "fair" | "poor"; green: number; red: number; entries: number; bonus: number;
+  byCategory?: { category: string; passPercent: number }[];
 }
 interface Data {
   leaderboard: LeaderRow[];
@@ -30,10 +32,8 @@ const DARAJA: Record<LeaderRow["daraja"], { label: string; fg: string; bg: strin
 const ROLE_UZ: Record<string, string> = {
   accountant: "Buxgalter", bank_manager: "Bank-klient", supervisor: "Nazoratchi", chief_accountant: "Bosh Buxgalter",
 };
-const CAT_UZ: Record<string, string> = {
-  attendance: "Ishga kelish", communication: "Javob tezligi", automation: "Avtomatlashtirish",
-  reports: "Hisobotlar o'z vaqtida", penalty_only: "Jiddiy xatolar", bonus_only: "Shaxsiy mas'uliyat",
-};
+// Kategoriya nomlari lib/kpiLabels.ts da markazlashtirilgan (yagona manba).
+const CAT_UZ = KPI_CATEGORY_UZ;
 
 const fmt = (v: number) => formatNum(Math.round(v));
 const barColor = (b: number) => (b >= 85 ? "var(--success)" : b >= 70 ? "var(--accent-blue)" : b >= 60 ? "var(--warning)" : "var(--danger)");
@@ -107,6 +107,20 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
                     <div className="min-w-0">
                       <p className="text-xs font-bold truncate" style={{ color: "var(--text-primary)" }}>{r.name}</p>
                       <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{ROLE_UZ[r.role] || r.role}</p>
+                      {r.byCategory && r.byCategory.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {r.byCategory.map((m) => (
+                            <span
+                              key={m.category}
+                              className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                              title={`${CAT_UZ[m.category] || m.category}: ${m.passPercent}%`}
+                              style={{ color: barColor(m.passPercent), background: "var(--input-bg)" }}
+                            >
+                              {CAT_UZ[m.category] || m.category} {m.passPercent}%
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="rounded-full h-2" style={{ background: "var(--input-bg)" }}>
                       <div className="h-2 rounded-full transition-all duration-700" style={{ width: `${r.ball}%`, background: barColor(r.ball) }} />

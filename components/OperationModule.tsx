@@ -808,21 +808,51 @@ const OperationModule: React.FC<Props> = ({
                   <div className="fixed inset-0 z-[90]" onClick={() => setColPanelOpen(false)} />
                   <div className="absolute right-0 mt-2 z-[100] w-64 max-h-[60vh] overflow-y-auto rounded-xl p-3 shadow-2xl"
                     style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                    <div className="flex items-center justify-between mb-2 sticky top-0 pb-2" style={{ background: 'var(--surface)' }}>
+                    <div className="flex items-center justify-between mb-2 sticky top-0 pb-2 gap-2" style={{ background: 'var(--surface)' }}>
                       <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-2)' }}>Ustunlar</span>
-                      <button onClick={() => setHiddenCols(new Set())} className="text-[10px] font-bold uppercase" style={{ color: 'var(--primary)' }}>Hammasi</button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setHiddenCols(new Set())}
+                          className="text-[10px] font-bold uppercase px-2 py-1 rounded-md transition-colors"
+                          style={{ color: 'var(--primary)', background: 'var(--primary-ghost)' }}
+                          title="Barcha ustunlarni ko'rsatish"
+                        >Barchasi</button>
+                        <button
+                          onClick={() => setHiddenCols(new Set(REPORT_COLUMNS.map(c => c.key)))}
+                          className="text-[10px] font-bold uppercase px-2 py-1 rounded-md transition-colors"
+                          style={{ color: 'var(--text-3)', background: 'var(--surface-2)' }}
+                          title="Barcha ustunlarni yashirish"
+                        >Hech biri</button>
+                      </div>
                     </div>
-                    {uniqueGroups.map(g => (
+                    {uniqueGroups.map(g => {
+                      const groupCols = REPORT_COLUMNS.filter(c => c.group === g);
+                      const allShown = groupCols.every(c => !hiddenCols.has(c.key));
+                      return (
                       <div key={g} className="mb-2">
-                        <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--text-3)' }}>{g}</p>
-                        {REPORT_COLUMNS.filter(c => c.group === g).map(c => (
+                        <button
+                          onClick={() => setHiddenCols(prev => {
+                            const next = new Set(prev);
+                            // Guruh to'liq ochiq bo'lsa — hammasini yashir, aks holda — hammasini ko'rsat
+                            groupCols.forEach(c => { if (allShown) next.add(c.key); else next.delete(c.key); });
+                            return next;
+                          })}
+                          className="w-full flex items-center justify-between text-[9px] font-black uppercase tracking-widest mb-1 hover:opacity-80"
+                          style={{ color: 'var(--text-3)' }}
+                          title={allShown ? "Guruhni yashirish" : "Guruhni ko'rsatish"}
+                        >
+                          <span>{g}</span>
+                          <span style={{ color: allShown ? 'var(--primary)' : 'var(--text-3)' }}>{allShown ? '✓' : '○'}</span>
+                        </button>
+                        {groupCols.map(c => (
                           <label key={c.key} className="flex items-center gap-2 py-1 px-1 rounded cursor-pointer text-[11px]" style={{ color: 'var(--text)' }}>
                             <input type="checkbox" checked={!hiddenCols.has(c.key)} onChange={() => toggleCol(c.key)} />
                             <span className="truncate">{c.label}</span>
                           </label>
                         ))}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )}
