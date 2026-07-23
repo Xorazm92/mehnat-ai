@@ -7,12 +7,25 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypt
  * Formatga mos kelmagan qiymat legacy (ochiq matn) deb qaytariladi.
  */
 
+// scrypt ATAYLAB sekin (KDF). Firmalar ro'yxatida har qator uchun bitta
+// decrypt bo'ladi — kalitni har safar qayta hosil qilsak 200 ta firma bir
+// necha soniya CPU yeydi. Shuning uchun sir bo'yicha keshlaymiz.
+let cachedKey: { secret: string; key: Buffer } | null = null;
+
 function getKey(): Buffer {
   const secret = process.env.CREDENTIALS_SECRET || process.env.AUTH_SECRET;
   if (!secret) {
     throw new Error("CREDENTIALS_SECRET yoki AUTH_SECRET o'rnatilishi shart");
   }
-  return scryptSync(secret, "asro-credentials-v1", 32);
+  if (cachedKey?.secret === secret) return cachedKey.key;
+  const key = scryptSync(secret, "asro-credentials-v1", 32);
+  cachedKey = { secret, key };
+  return key;
+}
+
+/** Qiymat allaqachon shifrlanganmi (v1 formatida). */
+export function isEncrypted(stored: string | null | undefined): boolean {
+  return typeof stored === "string" && stored.startsWith("v1:");
 }
 
 export function encryptSecret(plain: string): string {

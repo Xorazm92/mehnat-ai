@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Company, OperationEntry, Payment, Language, ClientCredential, ClientHistory, Staff } from '@/types';
 import { X, Shield, FileText, Lock, Globe, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Check, Calculator, Trash2, Plus, Pencil, Save, Loader2, Phone } from 'lucide-react';
 import { getKpiRules, getCompanyKpiRules, upsertCompanyKpiRule } from '@/server/kpi';
-import { getClientCredentials, createClientCredential, deleteClientCredential } from '@/server/credentials';
+import { getClientCredentials, createClientCredential, deleteClientCredential, setPrimaryCredential } from '@/server/credentials';
 import { formatUzDate, formatUzDateTime, formatNum } from '@/lib/format';
 import { kpiCategoryLabel } from '@/lib/kpiLabels';
 
@@ -405,8 +405,16 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                       </button>
                       <button
                         onClick={async () => {
-                          if (onSave) {
-                            await onSave({ ...company, login: tempLogin, password: tempPassword });
+                          // Shifrlangan vault'ga yoziladi (ClientCredential,
+                          // serviceName="soliq"), Company.login/password
+                          // ustunlariga EMAS — ular deprecated ochiq matn.
+                          try {
+                            await setPrimaryCredential(company.id, tempLogin, tempPassword);
+                            // Ota-komponentdagi ro'yxat yangilansin (parol
+                            // faqat huquqi bor foydalanuvchiga qaytariladi).
+                            onSave?.({ ...company, login: tempLogin, password: tempPassword });
+                          } catch (e) {
+                            console.warn('[CompanyDrawer] setPrimaryCredential failed:', e);
                           }
                           setIsEditingMainLogin(false);
                         }}

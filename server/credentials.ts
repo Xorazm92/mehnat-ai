@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
 import { serialize } from "@/lib/serialize";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
+import { PRIMARY_SERVICE } from "@/lib/credentials";
 
 // =====================================================
 // CLIENT CREDENTIALS (Soliq/Didox/Bank kirish ma'lumotlari)
@@ -69,6 +70,44 @@ export async function createClientCredential(data: {
   });
 
   return serialize({ ...row, encryptedPassword: data.password ?? "" });
+}
+
+// =====================================================
+// ASOSIY (soliq.uz) CREDENTIAL
+// =====================================================
+// Tarixan bu firma kirish ma'lumoti `Company.login` / `Company.password`
+// ustunlarida OCHIQ MATNDA yotardi va `getCompanies()` uni har bir
+// foydalanuvchi brauzeriga yuborardi. Endi u boshqa har qanday mijoz
+// credential'i kabi shifrlangan vault'da (`ClientCredential`) saqlanadi —
+// `PRIMARY_SERVICE` (lib/credentials.ts) nomi bilan ajratiladi.
+
+/**
+ * Firmaning asosiy soliq.uz credential'ini o'rnatadi (upsert).
+ * `(companyId, serviceName)` bo'yicha unique cheklov YO'Q (tarixiy dublikatlar
+ * bo'lishi mumkin), shuning uchun eng oxirgi qatorni yangilaymiz.
+ */
+export async function setPrimaryCredential(companyId: string, login: string, password: string) {
+  const session = await assertCompanyAccess(companyId);
+
+  const existing = await prisma.clientCredential.findFirst({
+    where: { companyId, serviceName: PRIMARY_SERVICE },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true },
+  });
+
+  const data = {
+    loginId: login.trim(),
+    encryptedPassword: password ? encryptSecret(password) : "",
+    updatedBy: session.user.id,
+  };
+
+  const row = existing
+    ? await prisma.clientCredential.update({ where: { id: existing.id }, data })
+    : await prisma.clientCredential.create({
+        data: { companyId, serviceName: PRIMARY_SERVICE, notes: null, ...data },
+      });
+
+  return serialize({ ...row, encryptedPassword: password ?? "" });
 }
 
 export async function deleteClientCredential(id: string) {

@@ -128,7 +128,13 @@ model Company {
   chiefAccountantId String?
   chiefAccountant   User?       @relation("ChiefAccountantCompanies", fields: [chiefAccountantId], references: [id], onDelete: SetNull)
 
-  // Login credentials
+  // DEPRECATED — soliq.uz kirish ma'lumoti (ASRO auth EMAS, tashqi xizmat).
+  // Ochiq matnda saqlanardi; endi shifrlangan vault'da:
+  // ClientCredential(serviceName = "soliq"). Bu ustunlarga YANGI qiymat
+  // yozilmaydi (server/companies.ts#sanitizeCompanyData ularni tashlaydi) va
+  // ular o'qish yo'lida faqat hali ko'chirilmagan firmalar uchun zaxira sifatida
+  // ishlatiladi. Ko'chirish: scripts/migrate-company-credentials.ts
+  // Ustunlar ATAYLAB saqlanmoqda — backfill tasdiqlangach alohida sprintda olib tashlanadi.
   login    String?
   password String?
 
@@ -712,6 +718,9 @@ model ClientCredential {
   updatedAt         DateTime @updatedAt
 
   @@index([companyId])
+  // Firmalar ro'yxati har yuklanishda asosiy (soliq) credential'ni shu bo'yicha
+  // qidiradi — companyId IN (…) AND serviceName = 'soliq'.
+  @@index([companyId, serviceName])
 }
 
 // =====================================================

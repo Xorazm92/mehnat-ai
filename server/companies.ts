@@ -7,6 +7,8 @@ import { recordAuditLog } from "@/lib/auditTrail";
 import { revalidateTag } from "next/cache";
 import type { TaxRegime, StatsType } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
+import { decryptSecret } from "@/lib/crypto";
+import { PRIMARY_SERVICE } from "@/lib/credentials";
 
 // Shartnoma/pul maydonlari — o'zgarishi auditga yoziladi va faqat senior tahrirlaydi.
 const MONEY_FIELDS = [
@@ -22,6 +24,61 @@ interface CompanyAssignment {
   salaryValue: number;
 }
 
+// =====================================================
+// ASOSIY (soliq.uz) CREDENTIAL — o'qish qatlami
+// =====================================================
+// `Company.login` / `Company.password` ustunlari OCHIQ MATNDA edi va bu
+// funksiyalar butun Company qatorini qaytargani uchun parol firmalar ro'yxatini
+// ko'ra oladigan HAR BIR foydalanuvchining brauzeriga tushardi (Excel eksportga
+// ham). Endi qiymat shifrlangan vault'dan (`ClientCredential`) o'qiladi va faqat
+// server/credentials.ts dagi bilan bir xil huquq qoidasi bo'yicha ochiladi:
+// senior rol YOKI shu firmaga biriktirilgan buxgalter/bank-klient.
+//
+// Huquqi yo'q foydalanuvchi uchun `login`/`password` = null (UI "—" ko'rsatadi),
+// xom ustunlar esa javobdan butunlay olib tashlanadi.
+
+interface CredentialCarrier {
+  id: string;
+  accountantId: string | null;
+  bankClientId: string | null;
+  login: string | null;
+  password: string | null;
+}
+
+function canSeeCredentials(row: CredentialCarrier, userId: string, role: string): boolean {
+  return isSeniorRole(role) || row.accountantId === userId || row.bankClientId === userId;
+}
+
+async function withPrimaryCredential<T extends CredentialCarrier>(
+  rows: T[],
+  userId: string,
+  role: string
+): Promise<T[]> {
+  const visibleIds = rows.filter((r) => canSeeCredentials(r, userId, role)).map((r) => r.id);
+
+  const creds = visibleIds.length
+    ? await prisma.clientCredential.findMany({
+        where: { companyId: { in: visibleIds }, serviceName: PRIMARY_SERVICE },
+        orderBy: { updatedAt: "desc" },
+        select: { companyId: true, loginId: true, encryptedPassword: true },
+      })
+    : [];
+
+  // Tarixiy dublikat bo'lsa eng oxirgi yangilangani (orderBy desc) yutadi.
+  const byCompany = new Map<string, (typeof creds)[number]>();
+  for (const c of creds) if (!byCompany.has(c.companyId)) byCompany.set(c.companyId, c);
+
+  const visible = new Set(visibleIds);
+  return rows.map((r) => {
+    if (!visible.has(r.id)) return { ...r, login: null, password: null };
+    const c = byCompany.get(r.id);
+    // Vault bo'sh — bu firma hali ko'chirilmagan (scripts/migrate-company-credentials.ts).
+    // Ish oqimi buzilmasligi uchun eski ustunlardan o'qiymiz.
+    if (!c) return r;
+    return { ...r, login: c.loginId || null, password: decryptSecret(c.encryptedPassword) || null };
+  });
+}
+
 export async function getCompanies() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -31,57 +88,54 @@ export async function getCompanies() {
 
   // Super admin, admin, chief, supervisor — all companies
   if (isSeniorRole(role)) {
-    return serialize(
-      await prisma.company.findMany({
-        where: { isActive: true },
-        include: {
-          accountant: { select: { id: true, fullName: true, avatarColor: true } },
-          supervisor: { select: { id: true, fullName: true } },
-          chiefAccountant: { select: { id: true, fullName: true } },
-          bankClient: { select: { id: true, fullName: true } },
-          departmentRef: { select: { id: true, name: true } },
-        },
-        orderBy: { name: "asc" },
-      })
-    );
+    const rows = await prisma.company.findMany({
+      where: { isActive: true },
+      include: {
+        accountant: { select: { id: true, fullName: true, avatarColor: true } },
+        supervisor: { select: { id: true, fullName: true } },
+        chiefAccountant: { select: { id: true, fullName: true } },
+        bankClient: { select: { id: true, fullName: true } },
+        departmentRef: { select: { id: true, name: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+    return serialize(await withPrimaryCredential(rows, userId, role));
   }
 
   // Bank manager
   if (role === "bank_manager") {
-    return serialize(
-      await prisma.company.findMany({
-        where: {
-          isActive: true,
-          OR: [
-            { bankClientId: userId },
-            { contractAssignments: { some: { userId, isActive: true, role: "bank_manager" } } },
-          ],
-        },
-        include: {
-          accountant: { select: { id: true, fullName: true, avatarColor: true } },
-          bankClient: { select: { id: true, fullName: true } },
-        },
-        orderBy: { name: "asc" },
-      })
-    );
-  }
-
-  // Accountant — own companies (primary accountantId or JAMOA-tab team assignment)
-  return serialize(
-    await prisma.company.findMany({
+    const rows = await prisma.company.findMany({
       where: {
         isActive: true,
         OR: [
-          { accountantId: userId },
-          { contractAssignments: { some: { userId, isActive: true, role: "accountant" } } },
+          { bankClientId: userId },
+          { contractAssignments: { some: { userId, isActive: true, role: "bank_manager" } } },
         ],
       },
       include: {
         accountant: { select: { id: true, fullName: true, avatarColor: true } },
+        bankClient: { select: { id: true, fullName: true } },
       },
       orderBy: { name: "asc" },
-    })
-  );
+    });
+    return serialize(await withPrimaryCredential(rows, userId, role));
+  }
+
+  // Accountant — own companies (primary accountantId or JAMOA-tab team assignment)
+  const rows = await prisma.company.findMany({
+    where: {
+      isActive: true,
+      OR: [
+        { accountantId: userId },
+        { contractAssignments: { some: { userId, isActive: true, role: "accountant" } } },
+      ],
+    },
+    include: {
+      accountant: { select: { id: true, fullName: true, avatarColor: true } },
+    },
+    orderBy: { name: "asc" },
+  });
+  return serialize(await withPrimaryCredential(rows, userId, role));
 }
 
 export async function getCompanyById(id: string) {
@@ -103,7 +157,9 @@ export async function getCompanyById(id: string) {
         where: { isActive: true },
         include: { user: { select: { id: true, fullName: true, role: true } } },
       },
-      credentials: true,
+      // `credentials: true` ATAYLAB olib tashlandi: u butun vault qatorini
+      // (shifrmatn bilan) klientga yuborardi va hech qayerda ishlatilmasdi.
+      // UI ularni gated `getClientCredentials()` orqali oladi.
       documents: { orderBy: { uploadedAt: "desc" } },
     },
   });
@@ -115,7 +171,8 @@ export async function getCompanyById(id: string) {
     throw new Error("Forbidden");
   }
 
-  return serialize(company);
+  const [withCred] = await withPrimaryCredential([company], userId, role);
+  return serialize(withCred);
 }
 
 const mapTaxRegime = (val: unknown): TaxRegime => {
@@ -145,8 +202,11 @@ function sanitizeCompanyData(raw: Record<string, unknown>) {
   if (raw.name !== undefined) data.name = String(raw.name);
   if (raw.inn !== undefined) data.inn = String(raw.inn);
   if (raw.department !== undefined) data.department = raw.department ? String(raw.department) : null;
-  if (raw.login !== undefined) data.login = raw.login ? String(raw.login) : null;
-  if (raw.password !== undefined) data.password = raw.password ? String(raw.password) : null;
+  // DIQQAT: `login` / `password` ATAYLAB e'tiborsiz qoldiriladi. Bu ustunlar
+  // deprecated (ochiq matn) — yangi qiymat faqat shifrlangan vault'ga,
+  // `setPrimaryCredential()` orqali yoziladi. Payload'da kelib qolsa jimgina
+  // tashlanadi: eski klient kodi ham xato bermasdan ishlashda davom etadi va
+  // mavjud ustun qiymatini tozalab yubormaydi.
   if (raw.brandName !== undefined) data.brandName = raw.brandName ? String(raw.brandName) : null;
   if (raw.directorName !== undefined) data.directorName = raw.directorName ? String(raw.directorName) : null;
   if (raw.directorPhone !== undefined) data.directorPhone = raw.directorPhone ? String(raw.directorPhone) : null;
