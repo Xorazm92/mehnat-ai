@@ -140,14 +140,15 @@ model Company {
   founderName    String?
   ownerName      String?
   bankClientId   String?
-  bankClient     User?      @relation("BankClientCompanies", fields: [bankClientId], references: [id], onDelete: SetNull)
+  bankClient     User?             @relation("BankClientCompanies", fields: [bankClientId], references: [id], onDelete: SetNull)
   bankClientName String?
   statsType      StatsType?
-  kpiEnabled     Boolean    @default(false)
+  complexity     CompanyComplexity @default(standard)
+  kpiEnabled     Boolean           @default(false)
   serverInfo     String?
   serverName     String?
   baseName1c     String?
-  contractAmount Decimal?   @db.Decimal(12, 2)
+  contractAmount Decimal?          @db.Decimal(12, 2)
   contractNumber String?
   contractDate   DateTime?
   paymentDay     Int?
@@ -1636,4 +1637,44 @@ model Invoice {
   @@index([period])
   @@index([status])
   @@index([deletedAt])
+}
+
+// =====================================================
+// FAIR KPI v2 (Faza E — shadow mode)
+// =====================================================
+// Mavjud KpiEvent/MonthlyPerformance'ga TEGMAYDI — parallel adolatli qatlam.
+// Weighted composite (SLA 35 / Quality 25 / Client 15 / Volume 15 / Discipline
+// 10), complexity-normalized volume, delay-reason exclusion (Faza A tasdiqlangan
+// sabab). shadowMode=true → oylikka ta'sir qilmaydi (2-3 oy kuzatuv). Reviewer.
+
+enum CompanyComplexity {
+  simple
+  standard
+  complex
+  enterprise
+}
+
+// Xodim × davr uchun hisoblangan shadow ball (komponentlar bilan — shaffoflik).
+model FairKpiScore {
+  id         String @id @default(uuid())
+  period     String // "2026-07"
+  employeeId String
+
+  sla        Decimal @db.Decimal(5, 2) // 0-100
+  quality    Decimal @db.Decimal(5, 2)
+  client     Decimal @db.Decimal(5, 2)
+  volume     Decimal @db.Decimal(5, 2)
+  discipline Decimal @db.Decimal(5, 2)
+  composite  Decimal @db.Decimal(5, 2)
+
+  volumePoints Decimal @default(0) @db.Decimal(8, 2) // complexity-weighted hajm
+  shadowMode   Boolean @default(true)
+  note         String?
+
+  computedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([period, employeeId])
+  @@index([period])
+  @@index([employeeId])
 }
