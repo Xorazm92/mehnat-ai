@@ -5,6 +5,7 @@
 // SlaBreach yozadi (DEDUP: @@unique([taskId, breachType]) → bir marta) va mas'ulga
 // in-app xabar yuboradi. Obligation sweep bilan bir jadvalda ishlaydi.
 import { Prisma, type TaskStatus } from "@prisma/client";
+import { logServerError } from "@/lib/logger";
 
 type Db = Prisma.TransactionClient;
 
@@ -47,7 +48,7 @@ async function recordBreach(
           },
         });
       } catch (err) {
-        console.error(`[task-sla] notification failed for ${task.id}: ${(err as Error).message}`);
+        logServerError("taskSla.notification", err, { taskId: task.id });
       }
     }
   } catch (e) {

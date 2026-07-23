@@ -2,6 +2,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 import { auth } from "@/lib/auth";
+import { logServerError } from "@/lib/logger";
 import {
   ASSISTANT_SYSTEM_INSTRUCTION,
   heuristicReply,
@@ -96,7 +97,7 @@ export async function askFinanceAssistant(
     }
     return { ok: true, reply: text };
   } catch (err) {
-    console.error("[assistant] Gemini error:", (err as Error).message);
+    logServerError("assistant.gemini", err);
     return {
       ok: false,
       reply: "AI yordamchi bilan bog'lanishda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.",

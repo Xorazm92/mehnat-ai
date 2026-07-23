@@ -4,6 +4,7 @@
 // zaharlashi mumkin edi. Bu modul faqat server kodidan chaqiriladi.
 import { prisma } from "@/lib/prisma";
 import type { AuditAction, Prisma } from "@prisma/client";
+import { logServerError } from "@/lib/logger";
 
 export async function recordAuditLog(data: {
   userId: string | null;
@@ -25,5 +26,5 @@ export async function recordAuditLog(data: {
         newData: data.newData,
       },
     })
-    .catch((e) => console.error("[auditTrail] yozuv xatosi:", e));
+    .catch((e) => logServerError("auditTrail.write", e));
 }

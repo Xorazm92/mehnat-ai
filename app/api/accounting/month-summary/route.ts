@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { logServerError } from "@/lib/logger";
 import { getMonthSummaryData } from "@/server/monthClosing";
 import { formatNum } from "@/lib/format";
 
@@ -27,6 +28,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   } catch (e) {
     const message = (e as Error).message;
     const status = message === "Unauthorized" ? 401 : message === "Forbidden" ? 403 : 400;
+    // 401/403 — kutilgan holat (ruxsat rad etildi), shovqin qilmaymiz.
+    // 400 esa haqiqiy nosozlik: noto'g'ri davr yoki hisoblash xatosi.
+    if (status === 400) logServerError("api.accounting.month-summary", e, { year, month });
     return NextResponse.json({ error: message }, { status });
   }
 

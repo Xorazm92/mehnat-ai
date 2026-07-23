@@ -1,4 +1,5 @@
 import { Worker, type Job } from "bullmq";
+import { logJobFailure, logServerError } from "../../../../lib/logger";
 import { prisma } from "../../../../lib/prisma";
 import { createRedisConnection } from "../../../queues/connection";
 import { QUEUE } from "../../../config";
@@ -57,10 +58,16 @@ export function startQuestionWorker(): Worker<QuestionJob> {
   );
 
   worker.on("failed", (job, err) => {
-    console.error(`[question.worker] job ${job?.id ?? "?"} failed: ${err.message}`);
+    logJobFailure({
+      queue: "question",
+      jobId: job?.id,
+      jobName: job?.name,
+      attempts: job?.attemptsMade,
+      err,
+    });
   });
   worker.on("error", (err) => {
-    console.error(`[question.worker] error: ${err.message}`);
+    logServerError("question.worker", err);
   });
 
   return worker;

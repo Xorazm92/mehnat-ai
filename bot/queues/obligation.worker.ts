@@ -1,4 +1,5 @@
 import { Worker, type Job } from "bullmq";
+import { logJobFailure, logServerError } from "../../lib/logger";
 import { prisma } from "../../lib/prisma";
 import { runGenerationLocked } from "../../lib/obligationRun";
 import { sweepDeadlines } from "../../lib/obligationSweep";
@@ -35,10 +36,16 @@ export function startObligationWorker(): Worker<ObligationJob> {
   );
 
   worker.on("failed", (job, err) => {
-    console.error(`[obligation.worker] job ${job?.id ?? "?"} (${job?.name}) failed: ${err.message}`);
+    logJobFailure({
+      queue: "obligation",
+      jobId: job?.id,
+      jobName: job?.name,
+      attempts: job?.attemptsMade,
+      err,
+    });
   });
   worker.on("error", (err) => {
-    console.error(`[obligation.worker] error: ${err.message}`);
+    logServerError("obligation.worker", err);
   });
 
   return worker;

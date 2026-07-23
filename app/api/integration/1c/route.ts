@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { logServerError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { resolveConnectionByToken, ingestEvents, type IngestEventInput } from "@/lib/oneCIngest";
 
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ received: result.received, duplicates: result.duplicates, syncRunId: run.id });
   } catch (e) {
     await prisma.syncRun.update({ where: { id: run.id }, data: { status: "failed", finishedAt: new Date() } });
+    logServerError("api.integration.1c", e, { connectionId: conn.id, syncRunId: run.id, events: b.events.length });
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }
 }

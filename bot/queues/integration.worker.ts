@@ -1,4 +1,5 @@
 import { Worker, type Job } from "bullmq";
+import { logJobFailure, logServerError } from "../../lib/logger";
 import { prisma } from "../../lib/prisma";
 import { sweepPendingIntegrationEvents } from "../../lib/oneCIngest";
 import { createRedisConnection } from "./connection";
@@ -21,10 +22,16 @@ export function startIntegrationWorker(): Worker<IntegrationJob> {
   );
 
   worker.on("failed", (job, err) => {
-    console.error(`[integration.worker] job ${job?.id ?? "?"} failed: ${err.message}`);
+    logJobFailure({
+      queue: "integration",
+      jobId: job?.id,
+      jobName: job?.name,
+      attempts: job?.attemptsMade,
+      err,
+    });
   });
   worker.on("error", (err) => {
-    console.error(`[integration.worker] error: ${err.message}`);
+    logServerError("integration.worker", err);
   });
 
   return worker;

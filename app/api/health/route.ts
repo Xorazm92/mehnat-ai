@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logServerError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 // Never cache — a health probe must reflect live state.
@@ -41,7 +42,9 @@ export async function GET(): Promise<NextResponse> {
       latencyMs: Date.now() - startedAt,
       timestamp: new Date().toISOString(),
     });
-  } catch {
+  } catch (e) {
+    // 503 = load balancer traffic'ni uzadi — bu HAR DOIM log'ga tushishi kerak.
+    logServerError("api.health", e, { check: "db" });
     return NextResponse.json(
       {
         status: "degraded",

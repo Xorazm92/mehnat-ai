@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { logServerError } from "@/lib/logger";
 import { timingSafeEqual } from "node:crypto";
 import { config } from "@/bot/config";
 import { enqueueTelegramUpdate } from "@/bot/queues/message.queue";
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await enqueueTelegramUpdate(update);
   } catch (e) {
-    console.error("[webhook] enqueue failed:", e);
+    logServerError("api.telegram.webhook", e, { updateId: (update as { update_id?: number })?.update_id });
     return NextResponse.json({ error: "enqueue failed" }, { status: 500 });
   }
 

@@ -1,4 +1,5 @@
 import { Worker, type Job } from "bullmq";
+import { logJobFailure, logServerError } from "../../../../lib/logger";
 import { prisma } from "../../../../lib/prisma";
 import { createRedisConnection } from "../../../queues/connection";
 import { QUEUE } from "../../../config";
@@ -99,10 +100,16 @@ export function startMessageWorker(): Worker<TelegramUpdateJob> {
   );
 
   worker.on("failed", (job, err) => {
-    console.error(`[message.worker] job ${job?.id ?? "?"} failed: ${err.message}`);
+    logJobFailure({
+      queue: "message",
+      jobId: job?.id,
+      jobName: job?.name,
+      attempts: job?.attemptsMade,
+      err,
+    });
   });
   worker.on("error", (err) => {
-    console.error(`[message.worker] error: ${err.message}`);
+    logServerError("message.worker", err);
   });
 
   return worker;

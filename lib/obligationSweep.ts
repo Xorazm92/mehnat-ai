@@ -7,6 +7,7 @@
 // (@@unique([channel, dedupKey])) → sweep necha marta ishlasa ham bir bosqich
 // bir marta yuboriladi. Reviewer #9.
 import { Prisma, type ObligationStatus } from "@prisma/client";
+import { logServerError } from "@/lib/logger";
 
 type Db = Prisma.TransactionClient;
 
@@ -135,7 +136,7 @@ export async function sweepDeadlines(
               },
             });
           } catch (err) {
-            console.error(`[sweep] notification create failed for ${o.id}: ${(err as Error).message}`);
+            logServerError("obligationSweep.notification", err, { obligationId: o.id });
           }
         }
       } catch (e) {
@@ -155,7 +156,7 @@ export async function sweepDeadlines(
             try {
               await opts.notifyTelegram(chatId, text);
             } catch (err) {
-              console.error(`[sweep] telegram send failed (chat ${chatId}): ${(err as Error).message}`);
+              logServerError("obligationSweep.telegram", err, { chatId: String(chatId) });
             }
           }
           res.telegramSent++;
