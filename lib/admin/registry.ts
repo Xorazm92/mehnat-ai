@@ -77,7 +77,7 @@ export const ADMIN_MODULES: AdminModule[] = [
   { id: "integration_soliq", labelUz: "Soliq.uz", icon: Landmark, href: "/admin/m/integration_soliq", group: "integratsiya", status: "soon", featureFlag: "integration_soliq", descUz: "Soliq.uz integratsiyasi" },
   { id: "integration_mysoliq", labelUz: "My.soliq", icon: Landmark, href: "/admin/m/integration_mysoliq", group: "integratsiya", status: "soon", featureFlag: "integration_mysoliq", descUz: "My.soliq integratsiyasi" },
   { id: "invoices", labelUz: "Hisob-fakturalar", icon: Receipt, href: "/admin/m/invoices", group: "integratsiya", status: "soon", featureFlag: "invoices", descUz: "Hisob-faktura moduli" },
-  { id: "tasks", labelUz: "Vazifalar", icon: CheckSquare, href: "/admin/m/tasks", group: "integratsiya", status: "soon", featureFlag: "tasks", descUz: "Vazifa boshqaruvi" },
+  { id: "sla_policies", labelUz: "SLA siyosatlari", icon: CheckSquare, href: "/admin/sla-policies", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Vazifa SLA siyosatlari (javob/yechim muddati)" },
   { id: "contracts", labelUz: "Shartnomalar", icon: FileSignature, href: "/admin/m/contracts", group: "integratsiya", status: "soon", descUz: "Shartnoma shabloni va imzolash" },
 ];
 

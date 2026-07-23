@@ -2,6 +2,7 @@ import { Worker, type Job } from "bullmq";
 import { prisma } from "../../lib/prisma";
 import { runGenerationLocked } from "../../lib/obligationRun";
 import { sweepDeadlines } from "../../lib/obligationSweep";
+import { sweepTaskSla } from "../../lib/taskSla";
 import { createRedisConnection } from "./connection";
 import { QUEUE, hasTelegramToken } from "../config";
 import { sendMessage } from "../telegram/bot";
@@ -25,8 +26,10 @@ export function startObligationWorker(): Worker<ObligationJob> {
       // Telegram push faqat token bo'lsa (aks holda faqat in-app eslatma).
       const notifyTelegram = hasTelegramToken() ? (chatId: bigint, text: string) => sendMessage(chatId, text) : undefined;
       const res = await sweepDeadlines(prisma, { now: new Date(), notifyTelegram });
-      console.log(`[obligation.worker] sweep:`, res);
-      return res;
+      // Bir jadvalda task SLA breach'larini ham tekshiramiz.
+      const sla = await sweepTaskSla(prisma, { now: new Date() });
+      console.log(`[obligation.worker] sweep:`, res, "| task-sla:", sla);
+      return { ...res, taskSla: sla };
     },
     { connection: createRedisConnection(), concurrency: 1 },
   );

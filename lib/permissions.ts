@@ -18,6 +18,7 @@ export type AppView =
   | "staff"
   | "reports"
   | "deadlines"
+  | "tasks"
   | "kpi"
   | "kassa"
   | "expenses"
@@ -109,6 +110,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "staff",
     "reports",
     "deadlines",
+    "tasks",
     "kpi",
     "kassa",
     "expenses",
@@ -128,6 +130,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "staff",
     "reports",
     "deadlines",
+    "tasks",
     "kpi",
     "kassa",
     "expenses",
@@ -146,6 +149,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "staff",
     "reports",
     "deadlines",
+    "tasks",
     "kpi",
     "kassa",
     "expenses",
@@ -162,6 +166,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "staff",
     "reports",
     "deadlines",
+    "tasks",
     "kpi",
     "expenses",
     "cabinet",
@@ -173,6 +178,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "cabinet",
     "reports",
     "deadlines",
+    "tasks",
     "notifications",
     "settings",
   ],
@@ -223,6 +229,7 @@ export const ALL_VIEWS: AppView[] = [
   "staff",
   "reports",
   "deadlines",
+  "tasks",
   "kpi",
   "kassa",
   "expenses",
@@ -244,6 +251,7 @@ export const VIEW_LABELS: Record<AppView, string> = {
   staff: "Xodimlar",
   reports: "Hisobotlar",
   deadlines: "Muddatlar",
+  tasks: "Vazifalar",
   kpi: "KPI",
   kassa: "Kassa",
   expenses: "Xarajatlar",

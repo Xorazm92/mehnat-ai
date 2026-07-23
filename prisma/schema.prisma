@@ -202,6 +202,7 @@ model Company {
   obligations         Obligation[]
   obligationOverrides CompanyObligationOverride[]
   oneCMappings        OneCCompanyMapping[]
+  tasks               Task[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -1423,4 +1424,122 @@ model SyncError {
 
   @@index([integrationEventId])
   @@index([connectionId])
+}
+
+// =====================================================
+// WORK MANAGEMENT + SLA (Faza C1)
+// =====================================================
+// In-app vazifalar (bot Question SLA patternidan ilhomlangan): javob (response)
+// va yechim (resolution) SLA'lari. SLA faqat yakuniy muddat emas — masalan
+// "mijoz hujjat yuborgach 8 soatda ko'rilishi kerak" (reviewer). Breach sweep
+// SlaBreach yozadi (dedup: @@unique([taskId, breachType])).
+
+enum TaskStatus {
+  open
+  in_progress
+  blocked
+  done
+  cancelled
+}
+
+enum TaskPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum SlaBreachType {
+  response // birinchi javob kechikdi
+  resolution // yakunlash kechikdi
+}
+
+// Nomlangan SLA siyosati — taskType bo'yicha (null = default).
+model SlaPolicy {
+  id                String   @id @default(uuid())
+  name              String
+  taskType          String? // qaysi vazifa turiga (null = default)
+  responseMinutes   Int? // birinchi javobgacha ruxsat etilgan vaqt
+  resolutionMinutes Int? // yakunlashgacha
+  businessHoursOnly Boolean  @default(false) // TODO: biznes-soat hisobi (kalendar)
+  active            Boolean  @default(true)
+  createdBy         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tasks    Task[]
+  breaches SlaBreach[]
+
+  @@index([taskType])
+  @@index([active])
+}
+
+// Ish/vazifa. companyId ixtiyoriy (ichki vazifa ham bo'ladi).
+model Task {
+  id             String       @id @default(uuid())
+  companyId      String?
+  company        Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  title          String
+  description    String?
+  taskType       String?
+  priority       TaskPriority @default(normal)
+  status         TaskStatus   @default(open)
+  assigneeUserId String?
+  createdBy      String?
+  dueAt          DateTime?
+
+  // SLA — yaratishda siyosatdan hisoblanadi.
+  slaPolicyId     String?
+  slaPolicy       SlaPolicy? @relation(fields: [slaPolicyId], references: [id], onDelete: SetNull)
+  responseDueAt   DateTime?
+  resolutionDueAt DateTime?
+  firstResponseAt DateTime? // birinchi harakat (assign yoki in_progress)
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  blockerReason String?
+  reworkReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events   TaskEvent[]
+  breaches SlaBreach[]
+
+  @@index([companyId])
+  @@index([assigneeUserId])
+  @@index([status])
+  @@index([dueAt])
+}
+
+// Status/assignment/comment tarixi.
+model TaskEvent {
+  id         String      @id @default(uuid())
+  taskId     String
+  task       Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  type       String // status | assign | comment
+  fromStatus TaskStatus?
+  toStatus   TaskStatus?
+  fromUserId String?
+  toUserId   String?
+  note       String?
+  byUserId   String?
+  at         DateTime    @default(now())
+
+  @@index([taskId])
+}
+
+// SLA buzilishi — dedup: har task+breachType bir marta.
+model SlaBreach {
+  id          String        @id @default(uuid())
+  taskId      String
+  task        Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  slaPolicyId String?
+  slaPolicy   SlaPolicy?    @relation(fields: [slaPolicyId], references: [id], onDelete: SetNull)
+  breachType  SlaBreachType
+  dueAt       DateTime
+  breachedAt  DateTime      @default(now())
+
+  @@unique([taskId, breachType])
+  @@index([taskId])
 }
