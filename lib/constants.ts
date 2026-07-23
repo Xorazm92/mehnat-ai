@@ -69,8 +69,14 @@ export const CONFIG = {
 
   // ============= RATE LIMITING =============
   RATE_LIMIT: {
+    // Bitta IP + bitta login juftligi uchun — asosiy brute-force to'sig'i.
     LOGIN_ATTEMPTS: 5,
     LOGIN_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+    // Bitta IP uchun umumiy chegara (login aylantirishga qarshi). Ataylab
+    // yumshoqroq: mijozlar bitta ofis NAT IP'si ortida ishlaydi.
+    LOGIN_IP_ATTEMPTS: 50,
+    // Bitta hisob uchun umumiy chegara (ko'p IP'dan taqsimlangan hujumga qarshi).
+    LOGIN_ACCOUNT_ATTEMPTS: 20,
     API_CALLS_PER_MINUTE: 100,
     BATCH_OPERATIONS_PER_MINUTE: 10,
   },

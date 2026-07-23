@@ -3,8 +3,15 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
-import { RATE_LIMIT } from "@/lib/constants";
-import { checkRateLimit, recordFailure, resetRateLimit } from "@/lib/rateLimit";
+import {
+  checkLoginRateLimit,
+  clientIpFromHeaders,
+  loginRateLimitRules,
+  normalizeLoginId,
+  recordLoginFailure,
+  resetLoginRateLimit,
+} from "@/lib/rateLimit";
+import { logLoginFailure, logLoginSuccess, logRateLimitBlock, logServerError } from "@/lib/logger";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -15,32 +22,54 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Parol", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+      // `request` — original Request; klient IP'si faqat shu yerdan olinadi.
+      // Xodim ham, mijoz ham SHU authorize orqali kiradi (bitta /login sahifasi),
+      // shuning uchun rate limit ikkala portal uchun bir xil qo'llanadi.
+      async authorize(credentials, request) {
+        const ip = clientIpFromHeaders(request?.headers);
+        const email = typeof credentials?.email === "string" ? credentials.email : "";
+        const password = typeof credentials?.password === "string" ? credentials.password : "";
+        const login = normalizeLoginId(email);
 
-        // Brute-force himoyasi: hisob bo'yicha muvaffaqiyatsiz urinishlarni
-        // 15 daq oynada 5 taga cheklaymiz. Faqat muvaffaqiyatsizlik hisoblanadi.
-        const rlKey = `login:${(credentials.email as string).toLowerCase()}`;
-        if (!checkRateLimit(rlKey, RATE_LIMIT.LOGIN_ATTEMPTS, RATE_LIMIT.LOGIN_WINDOW_MS).allowed) {
-          console.warn(`[auth] rate-limited login for ${rlKey}`);
+        if (!email || !password) {
+          logLoginFailure({ reason: "missing_credentials", ip, kind: "unknown" });
+          return null;
+        }
+
+        // Brute-force himoyasi: IP + normallashtirilgan login bo'yicha 15 daq
+        // oynada 5 xato urinish (+ IP va hisob bo'yicha kengroq zaxira chegaralar).
+        // Faqat muvaffaqiyatsizlik hisoblanadi.
+        const rules = loginRateLimitRules(ip, login);
+        const gate = await checkLoginRateLimit(rules);
+        if (!gate.allowed) {
+          logRateLimitBlock({
+            scope: gate.blockedScope ?? "unknown",
+            ip,
+            login,
+            retryAfterMs: gate.retryAfterMs,
+            backend: gate.backend,
+          });
+          // Klientga baribir generik "Invalid credentials" ketadi — bloklanganlik
+          // faktini oshkor qilmaymiz (hisob mavjudligini bilib olish yo'li).
           return null;
         }
 
         // 1) Staff (User) — mavjud bo'lsa faqat shu tekshiriladi.
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+        const user = await prisma.user.findUnique({ where: { email } });
         if (user) {
           if (!user.isActive) {
-            recordFailure(rlKey, RATE_LIMIT.LOGIN_WINDOW_MS);
+            await recordLoginFailure(rules);
+            logLoginFailure({ reason: "inactive_account", login, ip, kind: "staff" });
             return null;
           }
-          const isValid = await bcrypt.compare(credentials.password as string, user.passwordHash);
+          const isValid = await bcrypt.compare(password, user.passwordHash);
           if (!isValid) {
-            recordFailure(rlKey, RATE_LIMIT.LOGIN_WINDOW_MS);
+            await recordLoginFailure(rules);
+            logLoginFailure({ reason: "bad_password", login, ip, kind: "staff" });
             return null;
           }
-          resetRateLimit(rlKey);
+          await resetLoginRateLimit(rules);
+          logLoginSuccess({ userId: user.id, kind: "staff", ip });
           return {
             id: user.id,
             email: user.email,
@@ -51,22 +80,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         // 2) Staff topilmadi → client portal identity (alohida jadval).
-        const client = await prisma.clientUser.findUnique({
-          where: { email: credentials.email as string },
-        });
-        if (client && client.isActive && (await bcrypt.compare(credentials.password as string, client.passwordHash))) {
-          resetRateLimit(rlKey);
-          return {
-            id: client.id,
-            email: client.email,
-            name: client.fullName,
-            role: "client",
-            kind: "client",
-            companyId: client.companyId,
-          };
+        const client = await prisma.clientUser.findUnique({ where: { email } });
+        if (client) {
+          if (!client.isActive) {
+            await recordLoginFailure(rules);
+            logLoginFailure({ reason: "inactive_account", login, ip, kind: "client" });
+            return null;
+          }
+          if (await bcrypt.compare(password, client.passwordHash)) {
+            await resetLoginRateLimit(rules);
+            logLoginSuccess({ userId: client.id, kind: "client", ip });
+            return {
+              id: client.id,
+              email: client.email,
+              name: client.fullName,
+              role: "client",
+              kind: "client",
+              companyId: client.companyId,
+            };
+          }
+          await recordLoginFailure(rules);
+          logLoginFailure({ reason: "bad_password", login, ip, kind: "client" });
+          return null;
         }
 
-        recordFailure(rlKey, RATE_LIMIT.LOGIN_WINDOW_MS);
+        await recordLoginFailure(rules);
+        logLoginFailure({ reason: "unknown_account", login, ip, kind: "unknown" });
         return null;
       },
     }),
@@ -113,7 +152,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.checkedAt = Date.now();
           }
         } catch (e) {
-          console.error("[auth] jwt qayta-tekshiruv xatosi (sessiya saqlanadi):", e);
+          logServerError("auth.jwt.revalidate", e, { note: "sessiya saqlanadi" });
         }
       }
       return token;

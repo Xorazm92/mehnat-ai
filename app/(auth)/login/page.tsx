@@ -17,7 +17,10 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const result = await signIn("credentials", { email, password, redirect: false });
-      if (result?.error) {
+      // BITTA generik xabar — barcha muvaffaqiyatsizlik sabablari uchun (hisob
+      // yo'q / parol xato / bloklangan hisob / rate limit). Aks holda hujumchi
+      // xabar farqidan hisob mavjudligini yoki bloklanganini bilib olardi.
+      if (result?.error || result?.ok === false) {
         toast.error("Noto'g'ri email yoki parol");
       } else {
         toast.success("Xush kelibsiz!");
