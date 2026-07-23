@@ -44,7 +44,7 @@ describe("redactSensitive — ichma-ich va massivlar", () => {
     const out = redactSensitive({
       user: { profile: { credentials: { password: "x" } } },
       rows: [{ login: "l", password: "p" }],
-    }) as any;
+    }) as { user: { profile: { credentials: string } }; rows: Array<Record<string, string>> };
     expect(out.user.profile.credentials).toBe(REDACTED); // "credential" substring
     expect(out.rows[0].login).toBe("l");
     expect(out.rows[0].password).toBe(REDACTED);
@@ -78,7 +78,7 @@ describe("redactSensitive — qiymat ichidagi sirlar", () => {
 
   it("Error obyektini xabar bilan birga tozalaydi", () => {
     const e = new Error("failed with Bearer eyJhbGciOiJIUzI1NiJ9.eyJhIjoxfQ.sig-part-here");
-    const out = redactSensitive({ err: e }) as any;
+    const out = redactSensitive({ err: e }) as { err: { message: string; name: string } };
     expect(out.err.message).not.toContain("eyJ");
     expect(out.err.name).toBe("Error");
   });
