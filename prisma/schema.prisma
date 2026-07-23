@@ -204,6 +204,7 @@ model Company {
   oneCMappings        OneCCompanyMapping[]
   tasks               Task[]
   timeEntries         TimeEntry[]
+  invoices            Invoice[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -1593,4 +1594,46 @@ model EmployeeCostRate {
   createdAt     DateTime  @default(now())
 
   @@index([userId, effectiveFrom])
+}
+
+// =====================================================
+// BILLING (Faza D — invoice + qarzdorlik)
+// =====================================================
+// Invoice = mijozga chiqarilgan hisob; Payment (mavjud) = kelgan to'lov.
+// Qarzdorlik = chiqarilgan (sent/overdue) − to'langan. Rentabellik hisob-kitobi
+// server/profitability.ts'da (Payment tushum − mehnat tannarxi).
+
+enum InvoiceStatus {
+  draft
+  sent
+  partial
+  paid
+  overdue
+  void
+}
+
+model Invoice {
+  id         String        @id @default(uuid())
+  companyId  String
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period     String // "2026-07"
+  amount     Decimal       @db.Decimal(12, 2)
+  paidAmount Decimal       @default(0) @db.Decimal(12, 2)
+  status     InvoiceStatus @default(draft)
+  issuedAt   DateTime?
+  dueAt      DateTime?
+  notes      String?
+  createdBy  String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  // Soft delete — moliyaviy yozuv jismonan o'chirilmaydi.
+  deletedAt    DateTime?
+  deletedBy    String?
+  deleteReason String?
+
+  @@index([companyId])
+  @@index([period])
+  @@index([status])
+  @@index([deletedAt])
 }

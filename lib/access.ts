@@ -53,6 +53,7 @@ export const SENIOR_PERMISSIONS = new Set<string>([
   "obligation:cancel",
   "obligation:assign",
   "delay-reason:approve",
+  "invoice:manage",
 ]);
 
 type Db = Prisma.TransactionClient;
