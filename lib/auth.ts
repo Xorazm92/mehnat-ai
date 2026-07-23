@@ -11,7 +11,8 @@ import {
   recordLoginFailure,
   resetLoginRateLimit,
 } from "@/lib/rateLimit";
-import { logLoginFailure, logLoginSuccess, logRateLimitBlock, logServerError } from "@/lib/logger";
+import { logLoginFailure, logLoginSuccess, logRateLimitBlock } from "@/lib/logger";
+import { revalidateSessionToken } from "@/lib/sessionRevalidation";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -124,38 +125,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // JWT strategiyada logout-siz revokatsiya yo'q: bloklangan xodim yoki
       // o'zgargan rol aks holda 7 kunlik sessiya tugaguncha kuchda qolardi.
-      // Har 5 daqiqada bazadan qayta tekshiramiz: o'chirilgan foydalanuvchi
-      // sessiyasi bekor bo'ladi (null), rol/avatar yangilanadi. DB nosozligida
-      // sessiyani saqlab qolamiz — availability xavfsizlik tekshiruvidan ustun
-      // emas, lekin bu yerda tekshiruvni keyingi so'rovda takrorlash yetarli.
-      const REVALIDATE_MS = 5 * 60_000;
-      const checkedAt = typeof token.checkedAt === "number" ? token.checkedAt : 0;
-      if (typeof token.id === "string" && token.id && Date.now() - checkedAt > REVALIDATE_MS) {
-        try {
-          if (token.kind === "client") {
-            // Client identity — ClientUser jadvaliga qarab qayta tekshiramiz.
-            const c = await prisma.clientUser.findUnique({
-              where: { id: token.id },
-              select: { isActive: true, companyId: true },
-            });
-            if (!c || !c.isActive) return null;
-            token.companyId = c.companyId;
-            token.checkedAt = Date.now();
-          } else {
-            const dbUser = await prisma.user.findUnique({
-              where: { id: token.id },
-              select: { isActive: true, role: true, avatarColor: true },
-            });
-            if (!dbUser || !dbUser.isActive) return null;
-            token.role = dbUser.role;
-            token.avatarColor = dbUser.avatarColor;
-            token.checkedAt = Date.now();
-          }
-        } catch (e) {
-          logServerError("auth.jwt.revalidate", e, { note: "sessiya saqlanadi" });
-        }
-      }
-      return token;
+      // Mantiq lib/sessionRevalidation.ts da — u yerdan test bilan chaqirsa
+      // bo'ladi (bu callback NextAuth() ichida yopiq).
+      return (await revalidateSessionToken(token)) as typeof token;
     },
     async session({ session, token }) {
       if (token) {
