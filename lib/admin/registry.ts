@@ -17,6 +17,7 @@ import {
   CalendarClock,
   CalendarDays,
   Coins,
+  UserPlus,
 } from "lucide-react";
 import {
   hasPermission,
@@ -62,6 +63,7 @@ export const ADMIN_MODULES: AdminModule[] = [
   { id: "settings", labelUz: "Tizim sozlamalari", icon: Settings, href: "/admin/settings", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Global konfiguratsiya va modullar" },
   { id: "audit", labelUz: "Audit jurnali", icon: ScrollText, href: "/admin/audit", group: "tizim", status: "ready", requiredCapability: "view_audit_logs", descUz: "Tizimdagi o'zgarishlar tarixi" },
   { id: "operation_matrix", labelUz: "Amallar matritsasi", icon: FileText, href: "/admin/operation-matrix", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Hisobot ustunlarini yoqish/o'chirish, tartiblash, nomlash" },
+  { id: "client_portal", labelUz: "Mijoz kabineti", icon: UserPlus, href: "/admin/client-users", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Mijoz hisoblari (portal login) va murojaatlar" },
   { id: "deadline_templates", labelUz: "Muddat shablonlari", icon: CalendarClock, href: "/admin/deadline-templates", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Soliq muddat shablonlari — versiyalash, lifecycle, applicability" },
   { id: "business_calendar", labelUz: "Biznes kalendar", icon: CalendarDays, href: "/admin/business-calendar", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Ish/dam olish/bayram kunlari — muddat surish uchun" },
 

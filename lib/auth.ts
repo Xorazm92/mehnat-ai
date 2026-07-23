@@ -26,33 +26,48 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        // 1) Staff (User) — mavjud bo'lsa faqat shu tekshiriladi.
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
         });
-
-        if (!user || !user.isActive) {
-          recordFailure(rlKey, RATE_LIMIT.LOGIN_WINDOW_MS);
-          return null;
+        if (user) {
+          if (!user.isActive) {
+            recordFailure(rlKey, RATE_LIMIT.LOGIN_WINDOW_MS);
+            return null;
+          }
+          const isValid = await bcrypt.compare(credentials.password as string, user.passwordHash);
+          if (!isValid) {
+            recordFailure(rlKey, RATE_LIMIT.LOGIN_WINDOW_MS);
+            return null;
+          }
+          resetRateLimit(rlKey);
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.fullName,
+            role: user.role,
+            avatarColor: user.avatarColor,
+          };
         }
 
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        );
-
-        if (!isValid) {
-          recordFailure(rlKey, RATE_LIMIT.LOGIN_WINDOW_MS);
-          return null;
+        // 2) Staff topilmadi → client portal identity (alohida jadval).
+        const client = await prisma.clientUser.findUnique({
+          where: { email: credentials.email as string },
+        });
+        if (client && client.isActive && (await bcrypt.compare(credentials.password as string, client.passwordHash))) {
+          resetRateLimit(rlKey);
+          return {
+            id: client.id,
+            email: client.email,
+            name: client.fullName,
+            role: "client",
+            kind: "client",
+            companyId: client.companyId,
+          };
         }
 
-        resetRateLimit(rlKey); // muvaffaqiyat — hisoblagich tozalanadi
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.fullName,
-          role: user.role,
-          avatarColor: user.avatarColor,
-        };
+        recordFailure(rlKey, RATE_LIMIT.LOGIN_WINDOW_MS);
+        return null;
       },
     }),
   ],
@@ -62,6 +77,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id ?? "";
         token.role = user.role;
         token.avatarColor = user.avatarColor;
+        token.kind = user.kind ?? "staff";
+        token.companyId = user.companyId ?? null;
         token.checkedAt = Date.now();
         return token;
       }
@@ -76,14 +93,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const checkedAt = typeof token.checkedAt === "number" ? token.checkedAt : 0;
       if (typeof token.id === "string" && token.id && Date.now() - checkedAt > REVALIDATE_MS) {
         try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id },
-            select: { isActive: true, role: true, avatarColor: true },
-          });
-          if (!dbUser || !dbUser.isActive) return null;
-          token.role = dbUser.role;
-          token.avatarColor = dbUser.avatarColor;
-          token.checkedAt = Date.now();
+          if (token.kind === "client") {
+            // Client identity — ClientUser jadvaliga qarab qayta tekshiramiz.
+            const c = await prisma.clientUser.findUnique({
+              where: { id: token.id },
+              select: { isActive: true, companyId: true },
+            });
+            if (!c || !c.isActive) return null;
+            token.companyId = c.companyId;
+            token.checkedAt = Date.now();
+          } else {
+            const dbUser = await prisma.user.findUnique({
+              where: { id: token.id },
+              select: { isActive: true, role: true, avatarColor: true },
+            });
+            if (!dbUser || !dbUser.isActive) return null;
+            token.role = dbUser.role;
+            token.avatarColor = dbUser.avatarColor;
+            token.checkedAt = Date.now();
+          }
         } catch (e) {
           console.error("[auth] jwt qayta-tekshiruv xatosi (sessiya saqlanadi):", e);
         }
@@ -95,6 +123,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.avatarColor = token.avatarColor;
+        session.user.kind = token.kind;
+        session.user.companyId = token.companyId;
       }
       return session;
     },

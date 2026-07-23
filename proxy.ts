@@ -99,7 +99,8 @@ async function isAllowed(path: string, role: string): Promise<boolean> {
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
-  const isProtected = PROTECTED_ROUTES.some((r) => path.startsWith(r));
+  const isPortal = path.startsWith("/portal");
+  const isProtected = isPortal || PROTECTED_ROUTES.some((r) => path.startsWith(r));
 
   // `secureCookie` MUST match how next-auth set the cookie (see USE_SECURE_COOKIES
   // in lib/auth.config.ts). It drives both the cookie name (`__Secure-` prefix)
@@ -110,6 +111,7 @@ export async function proxy(req: NextRequest) {
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
     secureCookie: USE_SECURE_COOKIES,
   });
+  const isClient = token?.kind === "client";
 
   // Login bo'lmagan foydalanuvchi himoyalangan sahifaga kirmoqchi
   if (!token && isProtected) {
@@ -118,13 +120,26 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Login bo'lgan → login/root sahifasidan rolga mos boshlang'ich sahifaga
+  // Login bo'lgan → login/root sahifasidan mos boshlang'ich sahifaga
   if (token && (path === "/login" || path === "/" || path === "")) {
-    const home = getHomeRoute(token.role as string);
+    const home = isClient ? "/portal" : getHomeRoute(token.role as string);
     return NextResponse.redirect(new URL(home, req.url));
   }
 
-  // RBAC: ruxsatsiz sahifadan himoya
+  // Portal izolyatsiyasi: FAQAT client kira oladi; staff → o'z hududiga.
+  if (isPortal) {
+    if (token && !isClient) {
+      return NextResponse.redirect(new URL(getHomeRoute(token.role as string), req.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Staff hududi: client kira olmaydi → portalga qaytariladi.
+  if (token && isClient && isProtected) {
+    return NextResponse.redirect(new URL("/portal", req.url));
+  }
+
+  // RBAC: ruxsatsiz sahifadan himoya (staff)
   if (token && isProtected) {
     const role = token.role as string;
     if (role && !(await isAllowed(path, role))) {

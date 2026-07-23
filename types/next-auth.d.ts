@@ -9,12 +9,18 @@ declare module "next-auth" {
       id: string;
       role: string;
       avatarColor?: string | null;
+      /** "staff" (default) | "client" — client portal identity. */
+      kind?: string;
+      /** Client portal: the company the client belongs to. */
+      companyId?: string | null;
     } & DefaultSession["user"];
   }
 
   interface User {
     role: string;
     avatarColor?: string | null;
+    kind?: string;
+    companyId?: string | null;
   }
 }
 
@@ -23,5 +29,7 @@ declare module "next-auth/jwt" {
     id: string;
     role: string;
     avatarColor?: string | null;
+    kind?: string;
+    companyId?: string | null;
   }
 }

@@ -206,6 +206,8 @@ model Company {
   tasks               Task[]
   timeEntries         TimeEntry[]
   invoices            Invoice[]
+  clientUsers         ClientUser[]
+  clientRequests      ClientRequest[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -1677,4 +1679,44 @@ model FairKpiScore {
   @@unique([period, employeeId])
   @@index([period])
   @@index([employeeId])
+}
+
+// =====================================================
+// CLIENT PORTAL (Faza F — mijoz kabineti)
+// =====================================================
+// Alohida auth identity (staff User'dan ajratilgan). Mijoz FAQAT o'z firmasini
+// ko'radi (companyId izolyatsiya). Reviewer: ichki jarayonlar ishonchli bo'lgach.
+
+model ClientUser {
+  id           String   @id @default(uuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  isActive     Boolean  @default(true)
+  createdBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// Mijoz murojaati (ticket).
+model ClientRequest {
+  id           String    @id @default(uuid())
+  companyId    String
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  clientUserId String?
+  subject      String
+  message      String
+  status       String    @default("open") // open | answered | closed
+  responseText String?
+  respondedBy  String? // staff user id
+  respondedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([status])
 }
