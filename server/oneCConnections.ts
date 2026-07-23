@@ -23,8 +23,21 @@ async function requireAdmin(): Promise<string> {
 export async function getOneCConnections() {
   await requireAdmin();
   return prisma.oneCConnection.findMany({
-    include: { _count: { select: { mappings: true, events: true, syncRuns: true } } },
+    include: {
+      _count: { select: { events: true, syncRuns: true } },
+      mappings: { include: { company: { select: { name: true } } }, orderBy: { externalOrgId: "asc" } },
+    },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+/** Mapping dropdown uchun yengil firma ro'yxati. */
+export async function getCompaniesForMapping() {
+  await requireAdmin();
+  return prisma.company.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, inn: true },
+    orderBy: { name: "asc" },
   });
 }
 

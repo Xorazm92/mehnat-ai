@@ -72,7 +72,7 @@ export const ADMIN_MODULES: AdminModule[] = [
 
   // --- Integratsiyalar & kelajakdagi modullar (placeholder, drop-in) ---
   { id: "eimzo", labelUz: "E-imzo", icon: KeyRound, href: "/admin/m/eimzo", group: "integratsiya", status: "soon", featureFlag: "eimzo", descUz: "Elektron imzo integratsiyasi" },
-  { id: "integration_1c", labelUz: "1C", icon: Boxes, href: "/admin/m/integration_1c", group: "integratsiya", status: "soon", featureFlag: "integration_1c", descUz: "1C bilan sinxronizatsiya" },
+  { id: "integration_1c", labelUz: "1C integratsiya", icon: Boxes, href: "/admin/integration-1c", group: "integratsiya", status: "ready", requiredCapability: "manage_system", descUz: "Agent ulanishlari, firma mapping, sync holati (DLQ)" },
   { id: "integration_didox", labelUz: "Didox", icon: FileSignature, href: "/admin/m/integration_didox", group: "integratsiya", status: "soon", featureFlag: "integration_didox", descUz: "Didox EHF integratsiyasi" },
   { id: "integration_soliq", labelUz: "Soliq.uz", icon: Landmark, href: "/admin/m/integration_soliq", group: "integratsiya", status: "soon", featureFlag: "integration_soliq", descUz: "Soliq.uz integratsiyasi" },
   { id: "integration_mysoliq", labelUz: "My.soliq", icon: Landmark, href: "/admin/m/integration_mysoliq", group: "integratsiya", status: "soon", featureFlag: "integration_mysoliq", descUz: "My.soliq integratsiyasi" },
