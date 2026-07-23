@@ -40,7 +40,7 @@ jobs:
         run: npx vitest run bot/
 
   # ── Integration tests (opt-in) ────────────────────────────────────────────
-  # Requires a Postgres service + `prisma db push` + KPI-rule seeding. Uncomment
+  # Requires a Postgres service + `prisma migrate deploy` + KPI-rule seeding. Uncomment
   # and wire a seed step once the seed scripts are made CI-idempotent.
   #
   # integration:
@@ -65,6 +65,6 @@ jobs:
   #     - uses: actions/setup-node@v4
   #       with: { node-version-file: .nvmrc, cache: npm }
   #     - run: npm ci
-  #     - run: npx prisma db push --skip-generate
+  #     - run: npx prisma migrate deploy
   #     - run: npx tsx scripts/seed-kpi-rules-v2.ts
   #     - run: npm test

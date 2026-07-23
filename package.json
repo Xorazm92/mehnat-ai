@@ -17,7 +17,7 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "db:push": "prisma db push",
+    "db:push": "node -e \"if(process.env.NODE_ENV==='production'){console.error('\\u2716 db push is DEV-ONLY. Production uses: npx prisma migrate deploy');process.exit(1)}\" && prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "create:admin": "tsx scripts/create-admin.ts",
     "preflight": "tsx scripts/preflight.ts",

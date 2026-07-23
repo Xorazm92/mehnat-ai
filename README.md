@@ -20,7 +20,7 @@ and **grammY** for the bot.
 ```bash
 cp .env.example .env.local     # fill DATABASE_URL, AUTH_SECRET, …
 npm ci
-npx prisma db push             # apply the schema (no migration history yet)
+npx prisma migrate deploy      # apply the versioned migration history
 npx tsx scripts/create-admin.ts   # ADMIN_EMAIL=… ADMIN_PASSWORD=… (≥8 chars)
 npm run dev
 ```
@@ -36,7 +36,8 @@ Generate `AUTH_SECRET` with `openssl rand -base64 32`.
 | `npm run lint` | ESLint |
 | `npm test` | Vitest — **integration tests need a seeded Postgres** |
 | `npm run bot:dev` / `bot:start` | Telegram bot worker (BullMQ) |
-| `npm run db:push` / `db:studio` | Prisma schema push / Studio |
+| `npm run db:migrate` / `db:studio` | Prisma migration (dev) / Studio |
+| `npm run db:push` | **Dev only** — unversioned schema push; refuses to run with `NODE_ENV=production` |
 
 Tip: DB-free domain specs only → `npx vitest run bot/`.
 

@@ -87,7 +87,7 @@ async function checkDatabase(): Promise<void> {
     } catch (e) {
       err(
         `Schema not applied (User table missing?): ${(e as Error)?.message ?? e}\n` +
-          "    Apply it with: npx prisma db push   (or: npx prisma migrate deploy)"
+          "    Apply it with: npx prisma migrate deploy"
       );
     }
   } finally {

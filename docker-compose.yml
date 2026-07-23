@@ -4,7 +4,7 @@
 # `docker compose build` before relying on it.
 #
 #   docker compose up -d db redis      # infra only
-#   docker compose run --rm web npx prisma db push   # apply schema (first run)
+#   docker compose run --rm web npx prisma migrate deploy   # apply migrations
 #   docker compose up -d --build       # full stack
 # ─────────────────────────────────────────────────────────────────────────────
 services:

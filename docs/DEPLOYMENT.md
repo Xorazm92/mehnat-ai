@@ -64,7 +64,8 @@ AUTH_TRUST_HOST="true"                      # optional now — the app sets trus
 CREDENTIALS_SECRET="<a second openssl rand -base64 32>"
 NEXT_PUBLIC_SITE_URL="https://asro.uz"
 
-REDIS_URL="redis://asro-redis.xxxx.cache.amazonaws.com:6379"
+REDIS_URL="redis://asro-redis.xxxx.cache.amazonaws.com:6379"   # BullMQ queues AND the login rate limiter
+LOG_LEVEL="info"                            # optional — pino level (trace|debug|info|warn|error)
 
 TELEGRAM_BOT_TOKEN="<from @BotFather>"
 TELEGRAM_WEBHOOK_SECRET="<openssl rand -hex 32>"   # REQUIRED — webhook 503s without it
@@ -78,6 +79,13 @@ BILLING_CRON_HOUR="9"
 
 > `chmod 600 /opt/asro/.env` and keep it out of git (it already is). Prefer AWS
 > SSM Parameter Store / Secrets Manager for the secrets in a hardened setup.
+
+> **`REDIS_URL` is security-relevant, not just a queue setting.** The login rate
+> limiter (`lib/redis.ts`) shares this Redis. If it is unreachable the limiter
+> silently degrades to a per-process in-memory counter — still enforced, but not
+> shared across instances and reset on every restart. Watch for
+> `event=ratelimit.degraded` in the logs. Unset falls back to
+> `redis://127.0.0.1:6379`; an explicitly **empty** value disables Redis entirely.
 
 > **Docker Compose deploys:** `docker-compose.yml` injects this `.env` into the
 > `web` and `bot` containers (plus `.env.local` if present, as an optional dev
@@ -95,9 +103,19 @@ BILLING_CRON_HOUR="9"
 
 ## 4. Database bring-up
 
-The repo currently uses **`prisma db push`** (no migration history). For a first
-deploy that is fine; for ongoing change management, adopt `prisma migrate`
-(see `PRODUCTION_REPORT.md` §7).
+The repo uses **versioned Prisma migrations** (`prisma/migrations/`, baselined
+at `0_baseline`). Every deploy applies them with **`prisma migrate deploy`**,
+which is idempotent and never rewrites existing tables.
+
+> **`prisma db push` must never touch production.** It applies schema changes
+> without recording them in `_prisma_migrations`, so the next `migrate deploy`
+> sees the DB as out of sync and can fail or drift silently. `npm run db:push`
+> is guarded and refuses to run with `NODE_ENV=production`.
+>
+> A prod DB that was originally built with `db push` needs a **one-time
+> baseline** before its first `migrate deploy` — see
+> [`MIGRATION_RECONCILIATION.md`](./MIGRATION_RECONCILIATION.md). Rehearse it on
+> staging first; never run `migrate resolve` unattended against production.
 
 ### 4a. One-command deploy (recommended)
 
@@ -114,7 +132,7 @@ npm run deploy
 ```
 
 It runs, in order and failing loudly on any error:
-`preflight env` → `npm ci` → `prisma db push` → seed KPI rules →
+`preflight env` → `npm ci` → `prisma migrate deploy` → seed KPI rules →
 `create-admin` (idempotent) → `npm run build` → **full preflight** (DB reachable,
 schema applied, `User` table non-empty, admin present) → PM2/systemd reload.
 
@@ -123,7 +141,7 @@ schema applied, `User` table non-empty, admin present) → PM2/systemd reload.
 ```bash
 cd /opt/asro
 npm ci
-npx prisma db push                     # create the schema on RDS
+npx prisma migrate deploy              # apply migrations to RDS
 npx tsx scripts/seed-kpi-rules-v2.ts   # seed KPI rules (required by KPI/bot)
 ADMIN_EMAIL=admin@asro.uz ADMIN_PASSWORD='<≥8 chars>' npm run create:admin
 npm run preflight                      # MUST print "Preflight passed" before serving traffic
@@ -256,7 +274,7 @@ bot). Verify the build first, then:
 ```bash
 docker compose build
 docker compose up -d db redis
-docker compose run --rm web npx prisma db push
+docker compose run --rm web npx prisma migrate deploy
 docker compose run --rm web npx tsx scripts/seed-kpi-rules-v2.ts
 docker compose run --rm -e ADMIN_EMAIL=admin@asro.uz -e ADMIN_PASSWORD='<≥8 chars>' web npm run create:admin
 docker compose run --rm web npm run preflight   # gate: must pass before serving
