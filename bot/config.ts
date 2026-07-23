@@ -65,4 +65,6 @@ export const QUEUE = {
   QUESTION: "question",
   /** Compliance engine: obligation generation + deadline sweep (repeatable). */
   OBLIGATION: "obligation",
+  /** 1C integration: pending IntegrationEvent processing sweep (repeatable). */
+  INTEGRATION: "integration",
 } as const;

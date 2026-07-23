@@ -8,6 +8,8 @@ import { startMessageWorker } from "./contexts/monitoring/interface/message.work
 import { startQuestionWorker } from "./contexts/monitoring/interface/question.worker";
 import { startObligationWorker } from "./queues/obligation.worker";
 import { registerObligationSchedulers } from "./queues/obligation.queue";
+import { startIntegrationWorker } from "./queues/integration.worker";
+import { registerIntegrationSchedulers } from "./queues/integration.queue";
 import { startCron } from "./cron/scheduler";
 import type { RawTelegramUpdate } from "./contexts/monitoring/domain/inbound-message";
 
@@ -15,11 +17,17 @@ async function main(): Promise<void> {
   console.log("[bot] starting…");
 
   getClassifier(); // logs which classifier (Gemini / heuristic) is live
-  const workers: Worker[] = [startMessageWorker(), startQuestionWorker(), startObligationWorker()];
+  const workers: Worker[] = [
+    startMessageWorker(),
+    startQuestionWorker(),
+    startObligationWorker(),
+    startIntegrationWorker(),
+  ];
   const stopCron = startCron();
-  // Compliance schedulers live in Redis (repeatable), not in-process setInterval.
+  // Compliance + integration schedulers live in Redis (repeatable), not setInterval.
   await registerObligationSchedulers();
-  console.log(`[bot] ${workers.length} worker(s) + cron + obligation schedulers up · Redis ${config.redisUrl}`);
+  await registerIntegrationSchedulers();
+  console.log(`[bot] ${workers.length} worker(s) + cron + schedulers up · Redis ${config.redisUrl}`);
 
   const bot = config.botMode === "polling" ? getBot() : undefined;
 
