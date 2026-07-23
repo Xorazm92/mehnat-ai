@@ -16,6 +16,7 @@ import {
   CalendarCheck2,
   CalendarClock,
   CalendarDays,
+  Coins,
 } from "lucide-react";
 import {
   hasPermission,
@@ -69,6 +70,7 @@ export const ADMIN_MODULES: AdminModule[] = [
   // Oy yopilishi — istisno: bu buxgalteriya BOSHQARUVI (davr qulfi, snapshot),
   // kunlik moliya sahifasi emas.
   { id: "month_closing", labelUz: "Oy yopilishi", icon: CalendarCheck2, href: "/admin/month-closing", group: "moliya", status: "ready", requiredCapability: "manage_system", descUz: "Month-end closing: checklist, snapshot, davr qulfi" },
+  { id: "cost_rates", labelUz: "Xodim tannarxi", icon: Coins, href: "/admin/cost-rates", group: "moliya", status: "ready", requiredCapability: "manage_system", descUz: "Xodim soatlik qiymati (effective-dated) — rentabellik uchun" },
 
   // --- Integratsiyalar & kelajakdagi modullar (placeholder, drop-in) ---
   { id: "eimzo", labelUz: "E-imzo", icon: KeyRound, href: "/admin/m/eimzo", group: "integratsiya", status: "soon", featureFlag: "eimzo", descUz: "Elektron imzo integratsiyasi" },

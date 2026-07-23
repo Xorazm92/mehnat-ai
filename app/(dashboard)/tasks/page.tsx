@@ -11,6 +11,7 @@ export default async function TasksPage() {
   const rows = tasks.map((t) => ({
     id: t.id,
     title: t.title,
+    companyId: t.companyId,
     companyName: t.company?.name ?? null,
     taskType: t.taskType,
     priority: t.priority as string,

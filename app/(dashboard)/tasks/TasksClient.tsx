@@ -6,10 +6,12 @@ import { toast } from "sonner";
 import type { TaskStatus, TaskPriority } from "@prisma/client";
 import { formatUzDate } from "@/lib/format";
 import { createTask, updateTaskStatus, assignTask } from "@/server/tasks";
+import { logTime } from "@/server/timeEntries";
 
 interface Row {
   id: string;
   title: string;
+  companyId: string | null;
   companyName: string | null;
   taskType: string | null;
   priority: string;
@@ -56,6 +58,7 @@ export default function TasksClient({ rows, users, companies, userId, role }: { 
   const [tab, setTab] = useState<Tab>("all");
   const [showForm, setShowForm] = useState(false);
   const [f, setF] = useState({ ...EMPTY });
+  const [timeInput, setTimeInput] = useState<Record<string, string>>({});
   const nameOf = useMemo(() => new Map(users.map((u) => [u.id, u.fullName])), [users]);
 
   const run = (fn: () => Promise<unknown>, ok: string) =>
@@ -193,6 +196,8 @@ export default function TasksClient({ rows, users, companies, userId, role }: { 
                         {acts.map((a) => (
                           <button key={a.to} disabled={pending} onClick={() => run(() => updateTaskStatus(r.id, a.to), `${a.label} ✓`)} className="text-xs font-semibold px-2.5 py-1 rounded-md disabled:opacity-50" style={{ background: a.danger ? "#fee2e2" : "var(--bg-hover, #eef2ff)", color: a.danger ? "#b91c1c" : "#4338ca" }}>{a.label}</button>
                         ))}
+                        <input type="number" placeholder="daq" value={timeInput[r.id] ?? ""} onChange={(e) => setTimeInput({ ...timeInput, [r.id]: e.target.value })} className="w-14 text-xs px-1.5 py-1 rounded-md border" style={inputStyle} title="Vaqt (daqiqa)" />
+                        <button disabled={pending} onClick={() => { const m = Number(timeInput[r.id]); if (!(m > 0)) return toast.error("Daqiqa kiriting"); run(() => logTime({ minutes: m, date: new Date().toISOString().slice(0, 10), taskId: r.id, companyId: r.companyId || undefined }), "Vaqt qayd etildi"); setTimeInput({ ...timeInput, [r.id]: "" }); }} className="text-xs font-semibold px-2 py-1 rounded-md disabled:opacity-50" style={{ background: "var(--bg-hover, #eef2ff)", color: "#4338ca" }} title="Vaqtni qayd etish">⏱</button>
                       </div>
                     </td>
                   </tr>

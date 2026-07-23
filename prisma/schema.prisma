@@ -203,6 +203,7 @@ model Company {
   obligationOverrides CompanyObligationOverride[]
   oneCMappings        OneCCompanyMapping[]
   tasks               Task[]
+  timeEntries         TimeEntry[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -1542,4 +1543,54 @@ model SlaBreach {
 
   @@unique([taskId, breachType])
   @@index([taskId])
+}
+
+// =====================================================
+// TIME TRACKING + EMPLOYEE COST (Faza C2 — rentabellik kirish sharti)
+// =====================================================
+// Mehnat vaqti (TimeEntry) + xodim to'liq soatlik qiymati (EmployeeCostRate,
+// effective-dated). Mehnat tannarxi = daqiqa/60 × sanadagi amaldagi stavka —
+// Faza D contribution margin uchun. Reviewer #18 (task modulga qattiq bog'lanmaydi).
+
+enum TimeSource {
+  manual // qo'lda kiritilgan
+  timer // sekundomer
+  estimate // task asosida taxmin
+  normative // standart normativ vaqt
+}
+
+model TimeEntry {
+  id           String     @id @default(uuid())
+  userId       String // xodim (aktor-id konvensiyasi — relationsiz)
+  companyId    String?
+  company      Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  taskId       String? // ixtiyoriy — Task/Obligation'ga bog'lash (relationsiz)
+  obligationId String?
+  date         DateTime   @db.Date
+  minutes      Int
+  activityType String?
+  note         String?
+  source       TimeSource @default(manual)
+  createdBy    String?
+  createdAt    DateTime   @default(now())
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([date])
+  @@index([taskId])
+}
+
+// Xodimning to'liq soatlik qiymati — versionlangan (effective-dated). Tarixiy
+// TimeEntry o'z sanasidagi stavka bilan hisoblanadi.
+model EmployeeCostRate {
+  id            String    @id @default(uuid())
+  userId        String
+  hourlyRate    Decimal   @db.Decimal(12, 2) // to'liq: oylik + soliq + overhead ulushi
+  effectiveFrom DateTime  @db.Date
+  effectiveTo   DateTime? @db.Date
+  note          String?
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, effectiveFrom])
 }
