@@ -7,7 +7,9 @@ const nextConfig: NextConfig = {
   // The Telegram webhook route (app/api/telegram/webhook) imports the BullMQ
   // producer. Keep these native-ish server deps out of the bundler so they load
   // via Node require at runtime.
-  serverExternalPackages: ["bullmq", "ioredis"],
+  // `pino` ham shu ro'yxatda: u transport'ni dinamik `require` bilan yuklaydi,
+  // bundler uni statik tahlil qila olmaydi va build'da "thread-stream" xatosi chiqadi.
+  serverExternalPackages: ["bullmq", "ioredis", "pino"],
   // Skrinshot dalillari (base64) Server Action orqali yuboriladi — standart 1MB
   // chegara ba'zi rasmlar uchun kam bo'lishi mumkin, shuning uchun oshiramiz.
   // Klient tomonda rasm siqiladi, bu faqat zaxira uchun keng chegara.
