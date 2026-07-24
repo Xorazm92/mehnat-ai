@@ -505,7 +505,7 @@ const OperationModule: React.FC<Props> = ({
         index: index + 1,
         name: comp.name,
         inn: comp.inn,
-        accountant: op?.assigned_accountant_name || comp.accountantName || '—',
+        accountant: op?.assigned_accountant_name || comp.accountantName || (comp as any).accountant?.fullName || '—',
         taxType: comp.taxType || '',
         login: comp.login || '',       // From DB company profile
         password: comp.password || '', // From DB company profile
@@ -615,9 +615,17 @@ const OperationModule: React.FC<Props> = ({
   // ── Computed data ────────────────────────────────────────────
   const accountants = useMemo(() => {
     const set = new Set<string>();
-    rows.forEach(r => { if (r.accountant) set.add(r.accountant); });
+    if (staff && Array.isArray(staff)) {
+      staff.forEach(s => {
+        const name = (s.name || (s as any).fullName)?.trim();
+        if (name && name !== '—') set.add(name);
+      });
+    }
+    rows.forEach(r => {
+      if (r.accountant && r.accountant !== '—') set.add(r.accountant.trim());
+    });
     return [...set].sort();
-  }, [rows]);
+  }, [staff, rows]);
 
   const filteredRows = useMemo(() => {
     return rows.filter(r => {
@@ -747,7 +755,7 @@ const OperationModule: React.FC<Props> = ({
   return (
     <div className="flex flex-col h-full bg-[var(--background)]">
       {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 z-40 border-b transition-all duration-300 py-3 px-6 dashboard-card !rounded-none !border-x-0 !border-t-0 shadow-sm">
+      <div className="flex-shrink-0 z-10 border-b transition-all duration-300 py-3 px-6 dashboard-card !rounded-none !border-x-0 !border-t-0 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-5">
             <div>

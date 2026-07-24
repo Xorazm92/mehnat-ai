@@ -78,20 +78,6 @@ export function ChiefAccountantCabinet({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Salom, {firstName}! 📊</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }} suppressHydrationWarning>
-            Bosh Buxgalter kabinetingiz — {monthLabel}
-          </p>
-        </div>
-        <div className="px-4 py-2 rounded-xl text-sm font-medium"
-          style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--accent-indigo)" }}>
-          👑 Bosh Buxgalter
-        </div>
-      </div>
-
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-xl p-4" style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}>

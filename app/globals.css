@@ -355,8 +355,8 @@
    ============================================= */
 :root {
   --z-sticky: 10;    /* jadvalning yopishqoq sarlavhasi */
-  --z-nav: 40;       /* topbar, mobil pastki navigatsiya */
-  --z-drawer: 50;    /* mobil yon panel */
+  --z-nav: 60;       /* topbar, mobil pastki navigatsiya */
+  --z-drawer: 70;    /* mobil yon panel */
   --z-backdrop: 100; /* modal ortidagi qorayish */
   --z-panel: 110;    /* modal paneli, drawer paneli */
   --z-popover: 200;  /* popover, tooltip, toast */

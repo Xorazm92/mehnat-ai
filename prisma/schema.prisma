@@ -139,11 +139,13 @@ model Company {
   password String?
 
   // Extended fields
-  brandName      String?
-  directorName   String?
-  directorPhone  String?
-  legalAddress   String?
-  founderName    String?
+  brandName          String?
+  directorName       String?
+  directorPhone      String?
+  legalAddress       String?
+  founderName        String?
+  bankClientLogin    String?
+  bankClientPassword String?
   ownerName      String?
   bankClientId   String?
   bankClient     User?             @relation("BankClientCompanies", fields: [bankClientId], references: [id], onDelete: SetNull)

@@ -3,7 +3,7 @@
 import { signOut } from "next-auth/react";
 import {
   LogOut, User, Sun, Moon, ChevronDown, Globe,
-  Bell, Settings, Menu, PanelLeftClose, PanelLeftOpen
+  Bell, Settings, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -96,19 +96,21 @@ export function DashboardTopBar({
         paddingTop: "env(safe-area-inset-top, 0px)",
       }}
     >
-      {/* Left: sidebar toggle + Search */}
+      {/* Left: Search */}
       <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-        {/* Desktop: yon panelni yig'ish/ochish */}
+        {/* Yon panelni yig'ish/ochish (Mobil + Desktop) */}
         <button
-          onClick={toggleCollapsed}
+          onClick={() => {
+            if (window.innerWidth < 768) {
+              toggle();
+            } else {
+              toggleCollapsed();
+            }
+          }}
           aria-label={collapsed ? "Yon panelni ochish" : "Yon panelni yig'ish"}
-          className="icon-btn hidden md:inline-flex"
+          className="icon-btn flex"
         >
           {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-        </button>
-        {/* Mobil: menyu */}
-        <button onClick={toggle} aria-label="Menyu" className="icon-btn md:hidden">
-          <Menu size={20} />
         </button>
         {/* Mobil brend belgisi (sidebar yashiringanda) — rolga mos boshlang'ich sahifa */}
         <Link href={getHomeRoute(userRole)} className="md:hidden flex items-center gap-2 shrink-0" aria-label="ASRO">

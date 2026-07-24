@@ -497,17 +497,33 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
                   <div className="flex items-center justify-between pt-3 mt-auto pl-2" style={{ borderTop: '1px solid var(--card-border)' }}>
                     <div className="min-w-0 flex-1">
-                      {(c.login || c.password) ? (
-                        <div className="flex items-center gap-1.5 cursor-help" onClick={(e) => { e.stopPropagation(); togglePassword(c.id); }}>
-                          <div style={{ color: 'var(--text-muted)' }}>
-                            {showPasswords[c.id] ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </div>
-                          <p className="text-meta font-bold font-mono whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--accent-blue)' }}>
-                            {showPasswords[c.id] ? `${c.login || '—'} / ${c.password || '—'}` : '•••• / ••••'}
-                          </p>
+                      {(c.login || c.password || c.bankClientLogin || c.bankClientPassword) ? (
+                        <div className="flex flex-col gap-1">
+                          {(c.login || c.password) && (
+                            <div className="flex items-center gap-1.5 cursor-help" onClick={(e) => { e.stopPropagation(); togglePassword(c.id); }}>
+                              <div style={{ color: 'var(--text-muted)' }}>
+                                {showPasswords[c.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                              </div>
+                              <span className="text-[10px] uppercase font-bold text-gray-500">Soliq:</span>
+                              <p className="text-meta font-bold font-mono whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--accent-blue)' }}>
+                                {showPasswords[c.id] ? `${c.login || '—'} / ${c.password || '—'}` : '•••• / ••••'}
+                              </p>
+                            </div>
+                          )}
+                          {(c.bankClientLogin || c.bankClientPassword) && (
+                            <div className="flex items-center gap-1.5 cursor-help" onClick={(e) => { e.stopPropagation(); togglePassword(c.id); }}>
+                              <div style={{ color: 'var(--text-muted)' }}>
+                                {showPasswords[c.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                              </div>
+                              <span className="text-[10px] uppercase font-bold text-gray-500">Bank:</span>
+                              <p className="text-meta font-bold font-mono whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--accent-blue)' }}>
+                                {showPasswords[c.id] ? `${c.bankClientLogin || '—'} / ${c.bankClientPassword || '—'}` : '•••• / ••••'}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       ) : (
-                        <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Login yo&apos;q</span>
+                        <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Kirish ma&apos;lumotlari yo&apos;q</span>
                       )}
                     </div>
 

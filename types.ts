@@ -175,6 +175,8 @@ export interface Company {
   accountantId?: string;
   accountantName?: string;
   bankClientId?: string;
+  bankClientLogin?: string;
+  bankClientPassword?: string;
   bankClientName?: string; // New from JSON: "bank klient"
   supervisorId?: string;
   supervisorName?: string;

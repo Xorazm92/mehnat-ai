@@ -279,6 +279,8 @@ function sanitizeCompanyData(raw: Record<string, unknown>) {
   if (raw.supervisorId !== undefined) data.supervisorId = raw.supervisorId ? String(raw.supervisorId) : null;
   if (raw.chiefAccountantId !== undefined) data.chiefAccountantId = raw.chiefAccountantId ? String(raw.chiefAccountantId) : null;
   if (raw.bankClientId !== undefined) data.bankClientId = raw.bankClientId ? String(raw.bankClientId) : null;
+  if (raw.bankClientLogin !== undefined) data.bankClientLogin = raw.bankClientLogin ? String(raw.bankClientLogin) : null;
+  if (raw.bankClientPassword !== undefined) data.bankClientPassword = raw.bankClientPassword ? String(raw.bankClientPassword) : null;
   if (raw.departmentId !== undefined) data.departmentId = raw.departmentId ? String(raw.departmentId) : null;
 
   return data;

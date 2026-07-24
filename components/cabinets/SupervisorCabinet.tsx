@@ -11,6 +11,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { formatUzMonthYear } from "@/lib/format";
+import Link from "next/link";
 
 interface SupervisedCompany {
   id: string;
@@ -72,20 +73,6 @@ export function SupervisorCabinet({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Salom, {firstName}! 🔍</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }} suppressHydrationWarning>
-            Nazoratchi kabinetingiz — {monthLabel}
-          </p>
-        </div>
-        <div className="px-4 py-2 rounded-xl text-sm font-medium"
-          style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)", color: "var(--accent-blue)" }}>
-          🛡️ Nazoratchi
-        </div>
-      </div>
-
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
@@ -143,9 +130,10 @@ export function SupervisorCabinet({
                   0
                 );
                 return (
-                  <div
+                  <Link
+                    href={`/staff?userId=${acc.id}`}
                     key={acc.id}
-                    className="flex items-center gap-4 p-4 hover:bg-black/5 dark:bg-white/5 transition-colors"
+                    className="flex items-center gap-4 p-4 hover:bg-black/5 dark:bg-white/5 transition-colors cursor-pointer"
                   >
                     <div
                       className="w-9 h-9 rounded-xl flex items-center justify-center text-text-primary text-sm font-bold flex-shrink-0"
@@ -171,7 +159,7 @@ export function SupervisorCabinet({
                       />
                       <ChevronRight size={14} style={{ color: "var(--text-muted)" }} />
                     </div>
-                  </div>
+                  </Link>
                 );
               })
             )}

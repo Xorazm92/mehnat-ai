@@ -47,6 +47,18 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
+  // URL'dan userId o'qish (masalan Buxgalterlar holati bo'limidan o'tganda)
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const uid = params.get('userId');
+      if (uid && staff.length > 0 && !selected) {
+        const u = staff.find(s => s.id === uid);
+        if (u) setSelected(u);
+      }
+    }
+  }, [staff]);
+
   const isEditing = Boolean(form.id);
 
   const openAdd = () => { setForm({ status: 'active', role: 'accountant' }); setNewPassword(''); setIsAdding(true); };

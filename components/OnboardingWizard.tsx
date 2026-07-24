@@ -289,6 +289,24 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     onChange={e => setFormData({ ...formData, serverName: e.target.value })}
                                 />
                             </div>
+                            <div className="space-y-1.5">
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Bank-Klient Login</label>
+                                <input
+                                    className="erp-input"
+                                    placeholder="Masalan: bk_login"
+                                    value={formData.bankClientLogin || ''}
+                                    onChange={e => setFormData({ ...formData, bankClientLogin: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Bank-Klient Parol</label>
+                                <input
+                                    className="erp-input"
+                                    placeholder="Masalan: 12345"
+                                    value={formData.bankClientPassword || ''}
+                                    onChange={e => setFormData({ ...formData, bankClientPassword: e.target.value })}
+                                />
+                            </div>
                         </div>
                         <label
                             className="flex items-center gap-4 p-5 rounded-xl cursor-pointer transition-all"
