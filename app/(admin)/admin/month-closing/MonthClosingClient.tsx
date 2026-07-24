@@ -130,12 +130,12 @@ export default function MonthClosingClient({
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: "linear-gradient(135deg, #059669, #10b981)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: "linear-gradient(135deg, var(--success), var(--success))" }}>
             <CalendarCheck2 size={20} />
           </div>
           <div>
-            <h1 className="text-[17px] font-black" style={{ color: "var(--text-primary)" }}>Oy yopilishi (Month-End Closing)</h1>
-            <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+            <h1 className="text-base font-black" style={{ color: "var(--text-primary)" }}>Oy yopilishi (Month-End Closing)</h1>
+            <p className="text-meta" style={{ color: "var(--text-muted)" }}>
               Checklist yashil → TAYYOR → Yopish. Yopilgan oyga yozib bo&apos;lmaydi; qayta ochish faqat Superadmin, sabab bilan.
             </p>
           </div>
@@ -143,7 +143,7 @@ export default function MonthClosingClient({
         <div className="flex items-center gap-2">
           {[year - 1, year, year + 1].map((y) => (
             <button key={y} onClick={() => changeYear(y)}
-              className="px-3 py-1.5 rounded-lg text-[12px] font-bold"
+              className="px-3 py-1.5 rounded-lg text-xs font-bold"
               style={{
                 background: y === board.year ? "var(--accent-blue)" : "var(--input-bg)",
                 color: y === board.year ? "#fff" : "var(--text-primary)",
@@ -157,11 +157,11 @@ export default function MonthClosingClient({
 
       {/* Months table */}
       <div className="rounded-xl overflow-x-auto" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-        <table className="w-full text-[12px]">
+        <table className="w-full text-xs">
           <thead>
             <tr style={{ borderBottom: "1px solid var(--card-border)" }}>
               {["Oy", "Holat", "Ochilish", "Kirim", "Chiqim", "Yopilish", "Foyda/Zarar", "Amallar"].map((h, i) => (
-                <th key={h} className={`px-4 py-3 text-[10px] font-black uppercase tracking-widest ${i >= 2 && i <= 6 ? "text-right" : "text-left"}`} style={{ color: "var(--text-muted)" }}>{h}</th>
+                <th key={h} className={`px-4 py-3 text-micro font-black uppercase tracking-widest ${i >= 2 && i <= 6 ? "text-right" : "text-left"}`} style={{ color: "var(--text-muted)" }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -174,14 +174,14 @@ export default function MonthClosingClient({
                   <td className="px-4 py-3 font-bold" style={{ color: "var(--text-primary)" }}>
                     {MONTH_NAMES[m.month - 1]} <span style={{ color: "var(--text-muted)" }}>({m.period})</span>
                     {s && !s.isValid && (
-                      <span className="ml-2 text-[10px] font-black" style={{ color: "var(--danger)" }} title="Snapshot reopen tufayli invalid">INVALID</span>
+                      <span className="ml-2 text-micro font-black" style={{ color: "var(--danger)" }} title="Snapshot reopen tufayli invalid">INVALID</span>
                     )}
                     {s && !s.checksumOk && (
-                      <span className="ml-2 text-[10px] font-black" style={{ color: "var(--danger)" }} title="Checksum mos emas — ma'lumot o'zgartirilgan!">CHECKSUM!</span>
+                      <span className="ml-2 text-micro font-black" style={{ color: "var(--danger)" }} title="Checksum mos emas — ma'lumot o'zgartirilgan!">CHECKSUM!</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex px-2 py-1 rounded-md text-[10px] font-black tracking-wider" style={{ background: st.bg, color: st.color }} title={m.statusNote ?? undefined}>
+                    <span className="inline-flex px-2 py-1 rounded-lg text-micro font-black tracking-wider" style={{ background: st.bg, color: st.color }} title={m.statusNote ?? undefined}>
                       {st.label}
                     </span>
                   </td>
@@ -200,7 +200,7 @@ export default function MonthClosingClient({
                     <div className="flex gap-1.5 flex-wrap">
                       {m.status !== "LOCKED" && m.status !== "CLOSING" && (
                         <button onClick={() => handleValidate(m)} disabled={busy !== null}
-                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold inline-flex items-center gap-1"
+                          className="px-2.5 py-1.5 rounded-lg text-meta font-bold inline-flex items-center gap-1"
                           style={{ background: "var(--info-bg)", color: "var(--accent-blue)", border: "1px solid var(--input-border)" }}>
                           <RefreshCw size={11} className={busy === `validate-${m.period}` ? "animate-spin" : ""} /> Tekshirish
                         </button>
@@ -209,21 +209,21 @@ export default function MonthClosingClient({
                         <button onClick={() => handleClose(m)}
                           disabled={busy !== null || m.status !== "READY_TO_CLOSE"}
                           title={m.status !== "READY_TO_CLOSE" ? "Avval checklist yashil bo'lishi kerak (Tekshirish)" : "Oyni yopish"}
-                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="px-2.5 py-1.5 rounded-lg text-meta font-bold inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                           style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
                           <Lock size={11} /> Yopish
                         </button>
                       )}
                       {isSuperAdmin && m.status === "LOCKED" && (
                         <button onClick={() => { setReopenTarget(m); setReopenReason(""); }} disabled={busy !== null}
-                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold inline-flex items-center gap-1"
+                          className="px-2.5 py-1.5 rounded-lg text-meta font-bold inline-flex items-center gap-1"
                           style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>
                           <LockOpen size={11} /> Qayta ochish
                         </button>
                       )}
                       {s && (
                         <a href={`/api/accounting/month-summary?year=${m.year}&month=${m.month}&format=html`} target="_blank" rel="noreferrer"
-                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold inline-flex items-center gap-1"
+                          className="px-2.5 py-1.5 rounded-lg text-meta font-bold inline-flex items-center gap-1"
                           style={{ background: "var(--input-bg)", color: "var(--text-primary)", border: "1px solid var(--input-border)" }}>
                           <Printer size={11} /> PDF
                         </a>
@@ -241,10 +241,10 @@ export default function MonthClosingClient({
       {checklist && (
         <div className="rounded-xl p-5" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[14px] font-black" style={{ color: "var(--text-primary)" }}>
+            <h2 className="text-sm font-black" style={{ color: "var(--text-primary)" }}>
               Yopish checklisti — {checklist.period}
             </h2>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-black"
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-meta font-black"
               style={{
                 background: checklist.ready ? "var(--success-bg)" : "var(--danger-bg)",
                 color: checklist.ready ? "var(--success)" : "var(--danger)",
@@ -260,11 +260,11 @@ export default function MonthClosingClient({
                   : item.blocking
                     ? <XCircle size={15} style={{ color: "var(--danger)" }} />
                     : <AlertTriangle size={15} style={{ color: "var(--warning)" }} />}
-                <span className="text-[12px] font-semibold flex-1" style={{ color: "var(--text-primary)" }}>{item.label}</span>
+                <span className="text-xs font-semibold flex-1" style={{ color: "var(--text-primary)" }}>{item.label}</span>
                 {item.count !== undefined && item.count > 0 && (
-                  <span className="text-[11px] font-black tabular-nums" style={{ color: item.blocking ? "var(--danger)" : "var(--warning)" }}>{item.count} ta</span>
+                  <span className="text-meta font-black tabular-nums" style={{ color: item.blocking ? "var(--danger)" : "var(--warning)" }}>{item.count} ta</span>
                 )}
-                {item.detail && <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{item.detail}</span>}
+                {item.detail && <span className="text-micro" style={{ color: "var(--text-muted)" }}>{item.detail}</span>}
               </div>
             ))}
           </div>
@@ -275,22 +275,22 @@ export default function MonthClosingClient({
       {reopenTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
           <div className="rounded-xl p-5 w-[420px] max-w-[92vw]" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-            <h3 className="text-[14px] font-black mb-1" style={{ color: "var(--text-primary)" }}>
+            <h3 className="text-sm font-black mb-1" style={{ color: "var(--text-primary)" }}>
               {reopenTarget.period} oyini qayta ochish
             </h3>
-            <p className="text-[11px] mb-3" style={{ color: "var(--text-muted)" }}>
+            <p className="text-meta mb-3" style={{ color: "var(--text-muted)" }}>
               Diqqat: shu oy va undan keyingi barcha snapshotlar INVALID bo&apos;ladi — ular qayta yopishda qaytadan hisoblanadi. Sabab majburiy.
             </p>
             <textarea value={reopenReason} onChange={(e) => setReopenReason(e.target.value)} rows={3}
               placeholder="Qayta ochish sababi..."
-              className="w-full rounded-lg p-2.5 text-[12px] outline-none"
+              className="w-full rounded-lg p-2.5 text-xs outline-none"
               style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }} />
             <div className="flex gap-2 mt-3 justify-end">
-              <button onClick={() => setReopenTarget(null)} className="px-3.5 py-2 rounded-lg text-[12px] font-bold" style={{ background: "var(--input-bg)", color: "var(--text-primary)", border: "1px solid var(--input-border)" }}>
+              <button onClick={() => setReopenTarget(null)} className="px-3.5 py-2 rounded-lg text-xs font-bold" style={{ background: "var(--input-bg)", color: "var(--text-primary)", border: "1px solid var(--input-border)" }}>
                 Bekor qilish
               </button>
               <button onClick={handleReopen} disabled={!reopenReason.trim() || busy !== null}
-                className="px-3.5 py-2 rounded-lg text-[12px] font-bold disabled:opacity-40"
+                className="px-3.5 py-2 rounded-lg text-xs font-bold disabled:opacity-40"
                 style={{ background: "var(--warning)", color: "#fff" }}>
                 Qayta ochish
               </button>

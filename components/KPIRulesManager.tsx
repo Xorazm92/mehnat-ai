@@ -29,7 +29,7 @@ const COLOR: Record<string, { fg: string; bg: string; bd: string }> = {
 };
 
 const Badge: React.FC<{ children: React.ReactNode; tone?: 'muted' | 'blue' }> = ({ children, tone = 'muted' }) => (
-    <span className="text-2xs font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+    <span className="text-2xs font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-lg"
         style={tone === 'blue'
             ? { background: 'var(--accent-blue-light)', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)' }
             : { background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
@@ -158,25 +158,25 @@ const KPIRulesManager: React.FC<Props> = () => {
                         <Settings size={20} />
                     </div>
                     <div>
-                        <h2 className="text-[15px] font-bold leading-none" style={{ color: 'var(--text-primary)' }}>KPI Qoidalari (v2)</h2>
-                        <p className="text-[11px] mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>Uch holatli tizim — bonus / neytral / jarima</p>
+                        <h2 className="text-sm font-bold leading-none" style={{ color: 'var(--text-primary)' }}>KPI Qoidalari (v2)</h2>
+                        <p className="text-meta mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>Uch holatli tizim — bonus / neytral / jarima</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     {ROLE_META.map(m => (
                         <div key={m.key} className="px-3 py-2 rounded-lg text-center" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
-                            <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: m.accent }}>{m.label}</p>
-                            <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{m.base} + KPI {m.kpi}</p>
+                            <p className="text-micro font-bold uppercase tracking-widest" style={{ color: m.accent }}>{m.label}</p>
+                            <p className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>{m.base} + KPI {m.kpi}</p>
                         </div>
                     ))}
-                    <button onClick={openCreate} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest text-white"
+                    <button onClick={openCreate} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-meta font-bold uppercase tracking-widest text-white"
                         style={{ background: 'var(--accent-blue)' }}>
                         <Plus size={14} /> Yangi qoida
                     </button>
                 </div>
             </div>
 
-            {loading && <p className="text-center text-[12px] py-4" style={{ color: 'var(--text-muted)' }}>Yuklanmoqda…</p>}
+            {loading && <p className="text-center text-xs py-4" style={{ color: 'var(--text-muted)' }}>Yuklanmoqda…</p>}
 
             {/* Rules grouped by role */}
             {ROLE_META.map(meta => {
@@ -188,7 +188,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                             <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white" style={{ background: meta.accent }}>
                                 <meta.icon size={13} />
                             </div>
-                            <h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>{meta.label}</h3>
+                            <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>{meta.label}</h3>
                             <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>{list.length} qoida</span>
                         </div>
                         <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
@@ -198,7 +198,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                                     {/* toggle */}
                                     <div onClick={() => toggleActive(rule)} className="mt-0.5 w-9 h-5 rounded-full relative cursor-pointer transition-all shrink-0"
                                         style={{ background: rule.isActive ? 'var(--success)' : 'var(--card-border)' }}>
-                                        <div className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform" style={{ left: 2, transform: rule.isActive ? 'translateX(16px)' : 'translateX(0)' }} />
+                                        <div className="absolute top-0.5 w-4 h-4 bg-[var(--card-bg)] rounded-full shadow-sm transition-transform" style={{ left: 2, transform: rule.isActive ? 'translateX(16px)' : 'translateX(0)' }} />
                                     </div>
                                     {/* body */}
                                     <div className="flex-1 min-w-0">
@@ -209,14 +209,14 @@ const KPIRulesManager: React.FC<Props> = () => {
                                             <Badge>{kpiCategoryLabel(rule.category)}</Badge>
                                             <Badge>{rule.scope}</Badge>
                                         </div>
-                                        {rule.descriptionUz && <p className="text-[10px] mb-2 leading-snug" style={{ color: 'var(--text-muted)' }}>{rule.descriptionUz}</p>}
+                                        {rule.descriptionUz && <p className="text-micro mb-2 leading-snug" style={{ color: 'var(--text-muted)' }}>{rule.descriptionUz}</p>}
                                         <OptionPills rule={rule} />
                                     </div>
                                     {/* caps + edit */}
                                     <div className="flex items-center gap-3 shrink-0">
                                         <div className="text-right">
-                                            <p className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--success)' }}>+{rule.maxBonus ?? 0}%</p>
-                                            <p className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--danger)' }}>{rule.maxPenalty ?? 0}%</p>
+                                            <p className="text-meta font-bold tabular-nums" style={{ color: 'var(--success)' }}>+{rule.maxBonus ?? 0}%</p>
+                                            <p className="text-meta font-bold tabular-nums" style={{ color: 'var(--danger)' }}>{rule.maxPenalty ?? 0}%</p>
                                         </div>
                                         <button onClick={() => setEditingRule(rule)} className="p-2 rounded-lg transition-colors"
                                             style={{ color: 'var(--text-muted)', border: '1px solid var(--card-border)' }} title="Tahrirlash">
@@ -233,15 +233,15 @@ const KPIRulesManager: React.FC<Props> = () => {
             {/* Archived */}
             {archived.length > 0 && (
                 <details className="rounded-xl overflow-hidden" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
-                    <summary className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest cursor-pointer" style={{ color: 'var(--text-muted)' }}>
+                    <summary className="px-5 py-3 text-meta font-bold uppercase tracking-widest cursor-pointer" style={{ color: 'var(--text-muted)' }}>
                         Arxivlangan qoidalar ({archived.length})
                     </summary>
                     <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
                         {archived.map(rule => (
                             <div key={rule.id} className="px-5 py-2.5 flex items-center justify-between" style={{ borderColor: 'var(--card-border)' }}>
-                                <p className="font-bold text-[12px]" style={{ color: 'var(--text-secondary)' }}>{rule.nameUz} <span className="text-2xs font-mono" style={{ color: 'var(--text-muted)' }}>{rule.name}</span></p>
+                                <p className="font-bold text-xs" style={{ color: 'var(--text-secondary)' }}>{rule.nameUz} <span className="text-2xs font-mono" style={{ color: 'var(--text-muted)' }}>{rule.name}</span></p>
                                 <div className="flex gap-2">
-                                    <button onClick={() => toggleActive(rule)} className="text-[9px] font-bold uppercase px-2.5 py-1 rounded-lg" style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }}>Tiklash</button>
+                                    <button onClick={() => toggleActive(rule)} className="text-micro font-bold uppercase px-2.5 py-1 rounded-lg" style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }}>Tiklash</button>
                                     <button onClick={() => handleDelete(rule.id, rule.nameUz)} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger-border)' }}><Trash2 size={12} /></button>
                                 </div>
                             </div>
@@ -253,25 +253,25 @@ const KPIRulesManager: React.FC<Props> = () => {
             {/* Edit modal */}
             {editingRule && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }} onClick={() => setEditingRule(null)}>
-                    <div className="w-full max-w-2xl rounded-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col"
+                    <div className="w-full max-w-2xl rounded-xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col"
                         style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: '0 25px 60px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}
                         onKeyDown={submitOnCtrlEnter(handleSave)}>
                         <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)', background: 'var(--table-header-bg)' }}>
                             <div>
-                                <h3 className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>{editingRule.id ? editingRule.nameUz : 'Yangi KPI qoidasi'}</h3>
-                                <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>{editingRule.id ? editingRule.name : "rol va nom tanlang"}</p>
+                                <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{editingRule.id ? editingRule.nameUz : 'Yangi KPI qoidasi'}</h3>
+                                <p className="text-micro font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>{editingRule.id ? editingRule.name : "rol va nom tanlang"}</p>
                             </div>
                             <button onClick={() => setEditingRule(null)} style={{ color: 'var(--text-muted)' }}><X size={20} /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-4">
                             <div>
-                                <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Nomi (O&apos;zbekcha)</label>
+                                <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Nomi (O&apos;zbekcha)</label>
                                 <input className="erp-input font-bold" value={editingRule.nameUz || ''} onChange={e => setEditingRule({ ...editingRule, nameUz: e.target.value })} />
                             </div>
                             {!editingRule.id && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Rol</label>
+                                        <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Rol</label>
                                         <select className="erp-input font-bold" value={editingRule.role || 'accountant'} onChange={e => setEditingRule({ ...editingRule, role: e.target.value as KPIRule['role'] })}>
                                             <option value="accountant">Buxgalter</option>
                                             <option value="bank_client">Bank-klient</option>
@@ -280,18 +280,18 @@ const KPIRulesManager: React.FC<Props> = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Ichki nom (ixtiyoriy)</label>
-                                        <input className="erp-input font-mono text-[12px]" placeholder="avto (nomdan)" value={editingRule.name || ''} onChange={e => setEditingRule({ ...editingRule, name: e.target.value })} />
+                                        <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Ichki nom (ixtiyoriy)</label>
+                                        <input className="erp-input font-mono text-xs" placeholder="avto (nomdan)" value={editingRule.name || ''} onChange={e => setEditingRule({ ...editingRule, name: e.target.value })} />
                                     </div>
                                 </div>
                             )}
                             <div>
-                                <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Izoh</label>
+                                <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Izoh</label>
                                 <textarea className="erp-input min-h-[70px] resize-none" value={editingRule.descriptionUz || ''} onChange={e => setEditingRule({ ...editingRule, descriptionUz: e.target.value })} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Qamrov</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Qamrov</label>
                                     <select className="erp-input font-bold" value={editingRule.scope || 'per_company'} onChange={e => setEditingRule({ ...editingRule, scope: e.target.value as KPIRule['scope'] })}>
                                         <option value="global">Umumiy</option>
                                         <option value="per_company">Firma bo&apos;yicha</option>
@@ -299,7 +299,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Kirish turi</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Kirish turi</label>
                                     <select className="erp-input font-bold" value={editingRule.inputTypeV2 || 'select'} onChange={e => setEditingRule({ ...editingRule, inputTypeV2: e.target.value as KPIRule['inputTypeV2'] })}>
                                         <option value="select">Ro&apos;yxatdan tanlash</option>
                                         <option value="counter">Sanagich</option>
@@ -309,18 +309,18 @@ const KPIRulesManager: React.FC<Props> = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--success)' }}>Maksimal bonus %</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--success)' }}>Maksimal bonus %</label>
                                     <input type="number" step="0.01" className="erp-input font-bold" value={editingRule.maxBonus ?? ''} onChange={e => setEditingRule({ ...editingRule, maxBonus: e.target.value === '' ? null : Number(e.target.value) })} />
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--danger)' }}>Maksimal jarima %</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--danger)' }}>Maksimal jarima %</label>
                                     <input type="number" step="0.01" className="erp-input font-bold" value={editingRule.maxPenalty ?? ''} onChange={e => setEditingRule({ ...editingRule, maxPenalty: e.target.value === '' ? null : Number(e.target.value) })} />
                                 </div>
                             </div>
                             <div>
-                                <label className="text-[9px] font-bold uppercase tracking-widest mb-1.5 block" style={{ color: 'var(--text-muted)' }}>Holatlar</label>
+                                <label className="text-micro font-bold uppercase tracking-widest mb-1.5 block" style={{ color: 'var(--text-muted)' }}>Holatlar</label>
                                 <OptionPills rule={editingRule as KPIRule} />
-                                <p className="text-[9px] mt-1.5" style={{ color: 'var(--text-muted)' }}>Holat koeffitsiyentlari maxsus skript orqali boshqariladi.</p>
+                                <p className="text-micro mt-1.5" style={{ color: 'var(--text-muted)' }}>Holat koeffitsiyentlari maxsus skript orqali boshqariladi.</p>
                             </div>
                         </div>
                         <div className="p-4 flex gap-3" style={{ borderTop: '1px solid var(--card-border)', background: 'var(--table-header-bg)' }}>

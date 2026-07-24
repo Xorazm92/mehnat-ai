@@ -119,13 +119,13 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     </div>
                     <div className="relative z-10">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-md shrink-0 bg-gradient-to-br from-[var(--danger)] to-[var(--danger-dark)]">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md shrink-0 bg-gradient-to-br from-[var(--danger)] to-[var(--danger-dark)]">
                                 <TrendingDown size={20} />
                             </div>
-                            <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>SHU OYDA</span>
+                            <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>SHU OYDA</span>
                         </div>
                         <div className="text-3xl font-black tabular-nums leading-none mb-4" style={{ color: 'var(--text)' }}>
-                            {formatNum(stats.totalMonth)} <span className="text-[14px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                            {formatNum(stats.totalMonth)} <span className="text-sm font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
                         </div>
                         <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                             <div className="h-full w-3/4 rounded-full" style={{ background: 'var(--danger)' }}></div>
@@ -135,32 +135,32 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
 
                 <div className="dashboard-card p-6 flex flex-col justify-center relative">
                     <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
                             <Receipt size={20} />
                         </div>
                         <div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>UMUMIY</span>
-                            <h4 className="font-bold text-[13px] uppercase tracking-tight" style={{ color: 'var(--text)' }}>Jami xarajat</h4>
+                            <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>UMUMIY</span>
+                            <h4 className="font-bold text-body uppercase tracking-tight" style={{ color: 'var(--text)' }}>Jami xarajat</h4>
                         </div>
                     </div>
                     <div className="text-2xl font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-                        {formatNum(stats.totalAll)} <span className="text-[12px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                        {formatNum(stats.totalAll)} <span className="text-xs font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
                     </div>
                 </div>
 
                 <div className="dashboard-card p-6 flex flex-col justify-center relative">
                     <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
                             <Tag size={20} />
                         </div>
                         <div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>FAOLLIK</span>
-                            <h4 className="font-bold text-[13px] uppercase tracking-tight" style={{ color: 'var(--text)' }}>Tranzaksiyalar</h4>
+                            <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>FAOLLIK</span>
+                            <h4 className="font-bold text-body uppercase tracking-tight" style={{ color: 'var(--text)' }}>Tranzaksiyalar</h4>
                         </div>
                     </div>
                     <div className="flex items-end gap-2 leading-none">
                         <span className="text-3xl font-black tabular-nums" style={{ color: 'var(--text)' }}>{stats.count}</span>
-                        <span className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>QAYD</span>
+                        <span className="text-meta font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>QAYD</span>
                     </div>
                 </div>
             </div>
@@ -169,26 +169,26 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 <div className="lg:col-span-2 dashboard-card p-5">
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>Oylik byudjet</h3>
-                        <span className="text-[13px] font-black tabular-nums" style={{ color: 'var(--text-primary)' }}>
-                            {som(budget.totalSpent)} <span className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>/ {som(budget.totalBudget)} so&apos;m</span>
+                        <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>Oylik byudjet</h3>
+                        <span className="text-body font-black tabular-nums" style={{ color: 'var(--text-primary)' }}>
+                            {som(budget.totalSpent)} <span className="text-meta font-bold" style={{ color: 'var(--text-muted)' }}>/ {som(budget.totalBudget)} so&apos;m</span>
                         </span>
                     </div>
                     <div className="h-3 w-full rounded-full overflow-hidden" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                         <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct(budget.totalSpent, budget.totalBudget)}%`, background: limitColor(pct(budget.totalSpent, budget.totalBudget)) }} />
                     </div>
-                    <p className="text-[11px] font-bold mt-2" style={{ color: budget.remaining >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                    <p className="text-meta font-bold mt-2" style={{ color: budget.remaining >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                         Qoldiq: {som(Math.abs(budget.remaining))} so&apos;m {budget.remaining < 0 ? '(oshib ketdi)' : ''}
                     </p>
                 </div>
                 <div className="dashboard-card p-5">
-                    <h3 className="text-[12px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-primary)' }}>Kategoriya limitlari</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-primary)' }}>Kategoriya limitlari</h3>
                     <div className="space-y-3">
                         {budget.cats.map(c => {
                             const p = pct(c.spent, c.limit);
                             return (
                                 <div key={c.label}>
-                                    <div className="flex justify-between text-[11px] font-bold mb-1">
+                                    <div className="flex justify-between text-meta font-bold mb-1">
                                         <span style={{ color: 'var(--text-secondary)' }}>{c.label}</span>
                                         <span style={{ color: limitColor(p) }}>{(c.spent / 1_000_000).toFixed(1)}<span style={{ color: 'var(--text-muted)' }}> / {c.limit / 1_000_000} mln</span></span>
                                     </div>
@@ -210,9 +210,9 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     <div className="p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2" style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)' }}>
                         <div className="flex items-center gap-2">
                             <Clock size={16} style={{ color: 'var(--warning)' }} />
-                            <span className="text-[12px] font-bold" style={{ color: 'var(--warning)' }}>{pending.length} ta xarajat tasdiq kutmoqda</span>
+                            <span className="text-xs font-bold" style={{ color: 'var(--warning)' }}>{pending.length} ta xarajat tasdiq kutmoqda</span>
                         </div>
-                        <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>&lt;1 mln avto · 1–10 mln Bosh Buxgalter · &gt;10 mln Superadmin</span>
+                        <span className="text-micro font-medium" style={{ color: 'var(--text-muted)' }}>&lt;1 mln avto · 1–10 mln Bosh Buxgalter · &gt;10 mln Superadmin</span>
                     </div>
                 );
             })()}
@@ -228,11 +228,11 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     filterCount={statusFilter !== 'all' ? 1 : 0}
                     filter={
                         <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Holat</span>
+                            <span className="text-micro font-black uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Holat</span>
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="rounded-lg py-2 px-3 text-[12px] font-bold outline-none"
+                                className="rounded-lg py-2 px-3 text-xs font-bold outline-none"
                                 style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                             >
                                 <option value="all">Barcha holat</option>
@@ -253,7 +253,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         });
                         setIsModalOpen(true);
                     }}
-                    className="font-bold px-5 py-3 rounded-xl text-[12px] flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md text-white"
+                    className="font-bold px-5 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md text-white"
                     style={{ background: 'linear-gradient(135deg, var(--danger), var(--danger-dark))' }}
                 >
                     <Plus size={16} />
@@ -267,36 +267,36 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     const st = EXP_STATUS[expense.status || 'approved'] || EXP_STATUS.approved;
                     const canApr = expense.status === 'pending' && canApproveExpense(userRole, expense.amount);
                     const pm = expense.paymentMethod || 'naqd';
-                    const pmc = PAYMENT_METHOD_COLORS[pm] || '#64748b';
+                    const pmc = PAYMENT_METHOD_COLORS[pm] || 'var(--text-muted)';
                     return (
                         <div key={expense.id} className="dashboard-card p-4">
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>{expense.category}</span>
-                                        <span className="text-[9px] font-bold px-2 py-1 rounded uppercase inline-flex items-center gap-1" style={{ background: st.bg, color: st.fg, border: `1px solid ${st.bd}` }}>
+                                        <span className="text-micro font-bold px-2 py-1 rounded-lg uppercase inline-flex items-center gap-1" style={{ background: st.bg, color: st.fg, border: `1px solid ${st.bd}` }}>
                                             {expense.status === 'approved' ? <CheckCircle2 size={10} /> : expense.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />} {st.label}
                                         </span>
                                     </div>
-                                    <div className="text-[13px] font-bold mt-1.5 truncate" style={{ color: 'var(--text)' }}>{expense.description || '—'}</div>
-                                    <div className="flex items-center gap-2 mt-1 text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>
+                                    <div className="text-body font-bold mt-1.5 truncate" style={{ color: 'var(--text)' }}>{expense.description || '—'}</div>
+                                    <div className="flex items-center gap-2 mt-1 text-meta font-bold" style={{ color: 'var(--text-muted)' }}>
                                         <span className="font-mono">{fmtDate(expense.date)}</span>
-                                        <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ color: pmc, background: `${pmc}1a` }}>{PAYMENT_METHOD_LABELS[pm] || pm}</span>
+                                        <span className="text-micro font-black uppercase tracking-widest px-1.5 py-0.5 rounded-lg" style={{ color: pmc, background: `${pmc}1a` }}>{PAYMENT_METHOD_LABELS[pm] || pm}</span>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <div className="font-black text-[14px] tabular-nums" style={{ color: 'var(--danger)' }}>-{formatNum(expense.amount)}</div>
-                                    <div className="text-[9px] font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
+                                    <div className="font-black text-sm tabular-nums" style={{ color: 'var(--danger)' }}>-{formatNum(expense.amount)}</div>
+                                    <div className="text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
                                 {canApr && onApproveExpense && (
                                     <>
-                                        <button onClick={() => onApproveExpense(expense.id)} className="flex-1 py-2 rounded-lg text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--success)' }}><CheckCircle2 size={13} /> Tasdiq</button>
-                                        {onRejectExpense && <button onClick={() => onRejectExpense(expense.id)} className="flex-1 py-2 rounded-lg text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--danger)' }}><XCircle size={13} /> Rad</button>}
+                                        <button onClick={() => onApproveExpense(expense.id)} className="flex-1 py-2 rounded-lg text-white text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--success)' }}><CheckCircle2 size={13} /> Tasdiq</button>
+                                        {onRejectExpense && <button onClick={() => onRejectExpense(expense.id)} className="flex-1 py-2 rounded-lg text-white text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--danger)' }}><XCircle size={13} /> Rad</button>}
                                     </>
                                 )}
-                                <button onClick={() => { setEditingExpense(expense); setIsModalOpen(true); }} className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }}><Edit3 size={13} /> Tahrir</button>
+                                <button onClick={() => { setEditingExpense(expense); setIsModalOpen(true); }} className="flex-1 py-2 rounded-lg text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }}><Edit3 size={13} /> Tahrir</button>
                                 {onDeleteExpense && (
                                     <button onClick={() => { if (confirm('Xarajatni o\'chirishni tasdiqlaysizmi?')) onDeleteExpense(expense.id); }} className="w-10 py-2 rounded-lg flex items-center justify-center shrink-0" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }}><Trash2 size={14} /></button>
                                 )}
@@ -307,7 +307,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 {filteredExpenses.length === 0 && (
                     <div className="dashboard-card p-12 text-center">
                         <Search size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
-                        <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Ma&apos;lumot topilmadi</span>
+                        <span className="text-meta uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Ma&apos;lumot topilmadi</span>
                     </div>
                 )}
             </div>
@@ -318,39 +318,39 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[120px]" style={{ color: 'var(--text-muted)' }}>Sana</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[150px]" style={{ color: 'var(--text-muted)' }}>Kategoriya</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Izoh</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[130px]" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[150px]" style={{ color: 'var(--text-muted)' }}>Summa</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[130px]" style={{ color: 'var(--text-muted)' }}>Holat</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[100px]" style={{ color: 'var(--text-muted)' }}>Amallar</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[120px]" style={{ color: 'var(--text-muted)' }}>Sana</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[150px]" style={{ color: 'var(--text-muted)' }}>Kategoriya</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Izoh</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[130px]" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-right w-[150px]" style={{ color: 'var(--text-muted)' }}>Summa</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[130px]" style={{ color: 'var(--text-muted)' }}>Holat</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-right w-[100px]" style={{ color: 'var(--text-muted)' }}>Amallar</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredExpenses.map((expense, i) => (
                                 <tr key={expense.id} className="transition-colors group hover:bg-[var(--danger-bg)] cursor-pointer" style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                                    <td className="px-6 py-4 text-[11px] font-bold uppercase tracking-tight font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtDate(expense.date)}</td>
+                                    <td className="px-6 py-4 text-meta font-bold uppercase tracking-tight font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtDate(expense.date)}</td>
                                     <td className="px-6 py-4">
                                         <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>{expense.category}</span>
                                     </td>
-                                    <td className="px-6 py-4 text-[13px] font-bold truncate max-w-[300px] tracking-tight" style={{ color: 'var(--text)' }}>
+                                    <td className="px-6 py-4 text-body font-bold truncate max-w-[300px] tracking-tight" style={{ color: 'var(--text)' }}>
                                         {expense.description || "—"}
                                     </td>
                                     <td className="px-6 py-4">
                                         {(() => {
                                             const pm = expense.paymentMethod || 'naqd';
-                                            const c = PAYMENT_METHOD_COLORS[pm] || '#64748b';
+                                            const c = PAYMENT_METHOD_COLORS[pm] || 'var(--text-muted)';
                                             return (
-                                                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md whitespace-nowrap" style={{ color: c, background: `${c}1a`, border: `1px solid ${c}40` }}>
+                                                <span className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg whitespace-nowrap" style={{ color: c, background: `${c}1a`, border: `1px solid ${c}40` }}>
                                                     {PAYMENT_METHOD_LABELS[pm] || pm}
                                                 </span>
                                             );
                                         })()}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <span className="font-bold text-[13px] tabular-nums" style={{ color: 'var(--danger)' }}>
-                                            -{formatNum(expense.amount)} <span className="text-[10px] font-bold uppercase ml-1 opacity-60">sum</span>
+                                        <span className="font-bold text-body tabular-nums" style={{ color: 'var(--danger)' }}>
+                                            -{formatNum(expense.amount)} <span className="text-micro font-bold uppercase ml-1 opacity-60">sum</span>
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
@@ -359,13 +359,13 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                             const canApr = expense.status === 'pending' && canApproveExpense(userRole, expense.amount);
                                             return (
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[9px] font-bold px-2 py-1 rounded uppercase inline-flex items-center gap-1" style={{ background: st.bg, color: st.fg, border: `1px solid ${st.bd}` }}>
+                                                    <span className="text-micro font-bold px-2 py-1 rounded-lg uppercase inline-flex items-center gap-1" style={{ background: st.bg, color: st.fg, border: `1px solid ${st.bd}` }}>
                                                         {expense.status === 'approved' ? <CheckCircle2 size={10} /> : expense.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />} {st.label}
                                                     </span>
                                                     {canApr && onApproveExpense && (
                                                         <div className="flex gap-1">
-                                                            <button onClick={() => onApproveExpense(expense.id)} className="w-6 h-6 flex items-center justify-center rounded-md text-white" style={{ background: 'var(--success)' }} title="Tasdiqlash"><CheckCircle2 size={13} /></button>
-                                                            {onRejectExpense && <button onClick={() => onRejectExpense(expense.id)} className="w-6 h-6 flex items-center justify-center rounded-md text-white" style={{ background: 'var(--danger)' }} title="Rad etish"><XCircle size={13} /></button>}
+                                                            <button onClick={() => onApproveExpense(expense.id)} className="w-6 h-6 flex items-center justify-center rounded-lg text-white" style={{ background: 'var(--success)' }} title="Tasdiqlash"><CheckCircle2 size={13} /></button>
+                                                            {onRejectExpense && <button onClick={() => onRejectExpense(expense.id)} className="w-6 h-6 flex items-center justify-center rounded-lg text-white" style={{ background: 'var(--danger)' }} title="Rad etish"><XCircle size={13} /></button>}
                                                         </div>
                                                     )}
                                                 </div>
@@ -405,7 +405,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     <td colSpan={7} className="px-6 py-24 text-center">
                                         <div className="flex flex-col items-center" style={{ color: 'var(--text-muted)' }}>
                                             <Search size={48} className="mb-4 opacity-20" />
-                                            <span className="text-[11px] uppercase font-bold tracking-[0.2em] opacity-60">Ma&apos;lumot topilmadi</span>
+                                            <span className="text-meta uppercase font-bold tracking-[0.2em] opacity-60">Ma&apos;lumot topilmadi</span>
                                         </div>
                                     </td>
                                 </tr>
@@ -419,10 +419,10 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--danger)' }}></div>
                         <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
                             <div>
-                                <h3 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Xarajatni kiritish</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
+                                <h3 className="text-body font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Xarajatni kiritish</h3>
+                                <p className="text-micro font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--input-bg)'; }}>
+                            <button onClick={() => setIsModalOpen(false)} className="icon-btn-sm transition-all" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--input-bg)'; }}>
                                 <Plus size={20} className="rotate-45" />
                             </button>
                         </div>
@@ -430,60 +430,60 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                             onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); e.currentTarget.requestSubmit(); } }}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</label>
                                     <div className="relative">
                                         <input
                                             type="text" inputMode="numeric"
                                             value={groupDigits(editingExpense?.amount || '')}
                                             onChange={(e) => setEditingExpense(prev => ({ ...prev, amount: Number(ungroupDigits(e.target.value)) }))}
-                                            className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                            className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
                                             style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                             required
                                         />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
                                     <input
                                         type="date"
                                         value={editingExpense?.date || ''}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, date: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--danger)' }}
                                         required
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.category}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.category}</label>
                                     <select
                                         value={editingExpense?.category || 'Other'}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, category: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     >
                                         {categories.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</label>
                                     <select
                                         value={editingExpense?.paymentMethod || 'naqd'}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     >
                                         {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label.toUpperCase()}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-2 md:col-span-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
                                     <input
                                         type="text"
                                         placeholder="IXTIYORIY IZOH..."
                                         value={editingExpense?.description || ''}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, description: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     />
                                 </div>
@@ -493,7 +493,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all shadow-sm"
+                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-meta uppercase tracking-widest transition-all shadow-sm"
                                     style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
                                     onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
                                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
@@ -502,7 +502,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-[11px] text-white transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95"
+                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-meta text-white transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95"
                                     style={{ background: 'linear-gradient(135deg, var(--danger), var(--danger-dark))' }}
                                 >
                                     SAQLASH

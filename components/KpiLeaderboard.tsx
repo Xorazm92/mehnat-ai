@@ -63,12 +63,12 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
             <Trophy size={20} />
           </div>
           <div>
-            <h2 className="text-[15px] font-bold leading-none" style={{ color: "var(--text-primary)" }}>KPI Reytingi</h2>
-            <p className="text-[11px] mt-1 font-medium" style={{ color: "var(--text-muted)" }}>{s?.total ?? 0} xodim baholandi · o&apos;rtacha {s?.avgBall ?? 0} ball</p>
+            <h2 className="text-sm font-bold leading-none" style={{ color: "var(--text-primary)" }}>KPI Reytingi</h2>
+            <p className="text-meta mt-1 font-medium" style={{ color: "var(--text-muted)" }}>{s?.total ?? 0} xodim baholandi · o&apos;rtacha {s?.avgBall ?? 0} ball</p>
           </div>
         </div>
         <input type="month" value={month} onChange={(e) => setMonth(e.target.value)}
-          className="rounded-lg px-3 py-2 text-[13px] font-bold outline-none cursor-pointer"
+          className="rounded-lg px-3 py-2 text-body font-bold outline-none cursor-pointer"
           style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--accent-blue)" }} />
       </div>
 
@@ -80,39 +80,40 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
           { icon: AlertTriangle, label: "Qoniqarsiz (<60)", value: `${s?.poor ?? 0} xodim`, color: "var(--danger)", bg: "var(--danger-bg)" },
           { icon: Wallet, label: "Bonus fondi", value: `${fmt(s?.bonusFund ?? 0)} so'm`, color: "var(--warning)", bg: "var(--warning-bg)" },
         ].map((c, i) => (
-          <div key={i} className="rounded-2xl p-4" style={{ background: c.bg, border: `1px solid ${c.color}33` }}>
-            <div className="flex items-center gap-2 mb-2"><c.icon size={16} style={{ color: c.color }} /><span className="text-[11px] font-bold" style={{ color: "var(--text-muted)" }}>{c.label}</span></div>
-            <p className="text-[18px] font-black tabular-nums" style={{ color: c.color }}>{c.value}</p>
+          <div key={i} className="rounded-xl p-4" style={{ background: c.bg, border: `1px solid ${c.color}33` }}>
+            <div className="flex items-center gap-2 mb-2"><c.icon size={16} style={{ color: c.color }} /><span className="text-meta font-bold" style={{ color: "var(--text-muted)" }}>{c.label}</span></div>
+            <p className="text-lg font-black tabular-nums" style={{ color: c.color }}>{c.value}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Leaderboard */}
-        <div className="lg:col-span-2 rounded-xl overflow-hidden" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
-          <div className="px-5 py-3 grid grid-cols-[40px_1fr_120px_90px_110px] gap-2 text-[9px] font-bold uppercase tracking-widest" style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--card-border)", color: "var(--text-muted)" }}>
+        <div className="lg:col-span-2 rounded-xl overflow-x-auto" style={{ background: "var(--card-bg)", border: "1px solid var(--rule)" }}>
+          <div className="min-w-[420px]">
+          <div className="px-5 py-3 grid grid-cols-[40px_1fr_120px_90px_110px] gap-2 font-mono text-micro font-semibold uppercase" style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--rule-strong)", color: "var(--text-muted)", letterSpacing: "0.09em" }}>
             <span>#</span><span>Xodim</span><span>Bajarilish</span><span className="text-center">Ball</span><span className="text-right">Bonus</span>
           </div>
           <div className="max-h-[520px] overflow-y-auto">
             {loading ? (
-              <p className="text-center text-[12px] py-10" style={{ color: "var(--text-muted)" }}>Yuklanmoqda…</p>
+              <p className="text-center text-xs py-10" style={{ color: "var(--text-muted)" }}>Yuklanmoqda…</p>
             ) : (data?.leaderboard.length ?? 0) === 0 ? (
-              <p className="text-center text-[12px] py-10" style={{ color: "var(--text-muted)" }}>Bu oy uchun ma&apos;lumot yo&apos;q</p>
+              <p className="text-center text-xs py-10" style={{ color: "var(--text-muted)" }}>Bu oy uchun ma&apos;lumot yo&apos;q</p>
             ) : (
               data!.leaderboard.map((r, i) => {
                 const d = DARAJA[r.daraja];
                 return (
                   <div key={r.employeeId} className="px-5 py-3 grid grid-cols-[40px_1fr_120px_90px_110px] gap-2 items-center" style={{ borderBottom: "1px solid var(--card-border)" }}>
-                    <span className="text-[12px] font-bold tabular-nums" style={{ color: i < 3 ? "var(--accent-blue)" : "var(--text-muted)" }}>{i === 0 ? "🏆" : i + 1}</span>
+                    <span className="font-mono text-xs font-semibold tabular-nums flex items-center" style={{ color: i < 3 ? "var(--brand)" : "var(--text-muted)" }}>{i === 0 ? <Trophy size={14} aria-label="Birinchi o'rin" /> : i + 1}</span>
                     <div className="min-w-0">
                       <p className="text-xs font-bold truncate" style={{ color: "var(--text-primary)" }}>{r.name}</p>
-                      <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{ROLE_UZ[r.role] || r.role}</p>
+                      <p className="text-micro font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{ROLE_UZ[r.role] || r.role}</p>
                       {r.byCategory && r.byCategory.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {r.byCategory.map((m) => (
                             <span
                               key={m.category}
-                              className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                              className="text-micro font-bold px-1.5 py-0.5 rounded-lg"
                               title={`${CAT_UZ[m.category] || m.category}: ${m.passPercent}%`}
                               style={{ color: barColor(m.passPercent), background: "var(--input-bg)" }}
                             >
@@ -126,14 +127,15 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
                       <div className="h-2 rounded-full transition-all duration-700" style={{ width: `${r.ball}%`, background: barColor(r.ball) }} />
                     </div>
                     <div className="flex items-center justify-center gap-1.5">
-                      <span className="text-[13px] font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{r.ball}</span>
-                      <span className="text-2xs font-bold px-1.5 py-0.5 rounded" style={{ background: d.bg, color: d.fg, border: `1px solid ${d.bd}` }}>{d.label}</span>
+                      <span className="text-body font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{r.ball}</span>
+                      <span className="text-2xs font-bold px-1.5 py-0.5 rounded-lg" style={{ background: d.bg, color: d.fg, border: `1px solid ${d.bd}` }}>{d.label}</span>
                     </div>
-                    <span className="text-[12px] font-bold tabular-nums text-right" style={{ color: r.bonus > 0 ? "var(--success)" : "var(--text-muted)" }}>{r.bonus > 0 ? "+" + fmt(r.bonus) : "—"}</span>
+                    <span className="text-xs font-bold tabular-nums text-right" style={{ color: r.bonus > 0 ? "var(--success)" : "var(--text-muted)" }}>{r.bonus > 0 ? "+" + fmt(r.bonus) : "—"}</span>
                   </div>
                 );
               })
             )}
+          </div>
           </div>
         </div>
 
@@ -145,7 +147,7 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
           const chartData = trend.map((t) => ({ name: MONTHS_UZ[Number(t.month.split("-")[1]) - 1]?.slice(0, 3) || t.month, ball: t.avgBall }));
           return (
             <div className="rounded-xl p-5" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
-              <div className="flex items-center gap-2 mb-3"><Activity size={15} style={{ color: "var(--accent-blue)" }} /><h3 className="text-[12px] font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>Jamoa dinamikasi · 6 oy</h3></div>
+              <div className="flex items-center gap-2 mb-3"><Activity size={15} style={{ color: "var(--accent-blue)" }} /><h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>Jamoa dinamikasi · 6 oy</h3></div>
               <div style={{ width: "100%", height: 140 }}>
                 <ResponsiveContainer width="100%" height={140}>
                   <LineChart data={chartData} margin={{ top: 5, right: 8, left: -20, bottom: 0 }}>
@@ -162,14 +164,14 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
 
         {/* Criteria breakdown */}
         <div className="rounded-xl p-5" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
-          <h3 className="text-[12px] font-bold uppercase tracking-widest mb-4" style={{ color: "var(--text-primary)" }}>Mezonlar kesimi · jamoa</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "var(--text-primary)" }}>Mezonlar kesimi · jamoa</h3>
           {(data?.criteria.length ?? 0) === 0 ? (
-            <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot yo&apos;q</p>
+            <p className="text-meta" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot yo&apos;q</p>
           ) : (
             <div className="space-y-4">
               {data!.criteria.map((c) => (
                 <div key={c.category}>
-                  <div className="flex justify-between text-[11px] font-bold mb-1.5">
+                  <div className="flex justify-between text-meta font-bold mb-1.5">
                     <span style={{ color: "var(--text-secondary)" }}>{CAT_UZ[c.category] || c.category}</span>
                     <span style={{ color: barColor(c.passPercent) }}>{c.passPercent}%</span>
                   </div>

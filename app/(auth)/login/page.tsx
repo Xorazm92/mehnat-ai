@@ -6,6 +6,13 @@ import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { Mail, Lock, Loader2, ArrowRight, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
+// Login sahifasi ataylab har doim to'q: u tema tanlanishidan oldin ko'rinadi,
+// shuning uchun tema tokenlariga bog'lanmaydi. Qiymatlar dark palitradan.
+const LOGIN_INK = "#0D1014";
+const LOGIN_DEEP = "#0C2C49";
+const LOGIN_BRAND = "#4FA3E3";
+const LOGIN_TEXT_DIM = "#9BA7B4";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,64 +46,104 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-[#070A12] text-white overflow-hidden">
-      {/* Left / brand panel */}
-      <div className="hidden lg:flex flex-col justify-between w-[46%] relative p-12 overflow-hidden">
+    <div
+      className="min-h-dvh w-full flex overflow-hidden"
+      style={{ background: LOGIN_INK, color: "#E4E9EF" }}
+    >
+      {/* Chap / brend paneli.
+          Avvalgi ko'k "orb" radial gradientlari o'rniga — ASRO belgisining
+          o'z azure→cyan qanoti va uning ostidagi chartreuse barg chizig'i.
+          Fon esa daftar chizig'i: qat'iy, sanaladigan gorizontal chiziqlar. */}
+      <div
+        className="hidden lg:flex flex-col justify-between w-[46%] relative p-12 overflow-hidden"
+        // Panel qirrasi — tasodifiy chok emas, ataylab tortilgan chiziq.
+        style={{ borderRight: "1px solid rgba(255,255,255,.10)" }}
+      >
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "radial-gradient(120% 120% at 0% 0%, #1E3A8A 0%, #0B1220 45%, #070A12 100%)",
+            background: `linear-gradient(155deg, ${LOGIN_DEEP} 0%, #0A1622 62%, ${LOGIN_INK} 100%)`,
           }}
         />
+        {/* Daftar chizig'i — 28px qadamda, sanaladigan, lekin baqirmaydigan */}
         <div
-          className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl opacity-40"
-          style={{ background: "radial-gradient(circle, #3B82F6, transparent 70%)" }}
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0 1px, transparent 1px 28px)",
+          }}
         />
+        {/* Belgining qanoti — yagona yorug'lik manbai */}
         <div
-          className="absolute bottom-0 right-0 w-[28rem] h-[28rem] rounded-full blur-3xl opacity-30"
-          style={{ background: "radial-gradient(circle, #6366F1, transparent 70%)" }}
+          className="absolute -right-40 top-1/4 w-[34rem] h-[34rem] rounded-full blur-3xl opacity-25"
+          style={{ background: "radial-gradient(circle, #0090E0, transparent 68%)" }}
         />
 
-        <div className="relative flex items-center gap-3">
+        <div className="relative animate-rise-in" style={{ animationDelay: "60ms" }}>
           <Logo />
         </div>
 
         <div className="relative">
-          <h2 className="text-4xl font-black leading-tight tracking-tight">
-            Biznesingizni bir <br /> joydan boshqaring.
+          {/* Chartreuse chiziq — sahifadagi yagona "jonli" belgi */}
+          <div
+            className="w-10 h-0.5 mb-7 animate-rise-in"
+            style={{ background: "#9FBE1C", animationDelay: "140ms" }}
+          />
+          <h2
+            className="text-4xl font-semibold leading-[1.15] tracking-tight animate-rise-in"
+            style={{ animationDelay: "200ms" }}
+          >
+            Muddat, hisobot va
+            <br />
+            oylik — bitta joyda.
           </h2>
-          <p className="mt-4 text-[15px] leading-relaxed text-slate-300/80 max-w-sm">
+          <p
+            className="mt-5 text-sm leading-relaxed max-w-sm animate-rise-in"
+            style={{ color: "#9FB0C2", animationDelay: "260ms" }}
+          >
             Firmalar, xodimlar, KPI, kassa va hisobotlar — ASRO korporativ
             boshqaruv platformasida yagona, xavfsiz tizimda.
           </p>
-          <div className="mt-8 flex items-center gap-2 text-[12px] font-semibold text-slate-400">
-            <ShieldCheck size={16} className="text-blue-400" />
-            Ma&apos;lumotlaringiz shifrlangan va himoyalangan
+          <div
+            className="mt-10 flex items-center gap-2 font-mono text-meta uppercase animate-rise-in"
+            style={{ color: "#7A8A9B", letterSpacing: "0.1em", animationDelay: "320ms" }}
+          >
+            <ShieldCheck size={15} style={{ color: LOGIN_BRAND }} />
+            Ma&apos;lumotlaringiz shifrlangan
           </div>
         </div>
 
-        <div className="relative text-[12px] text-slate-500">
+        <div
+          className="relative font-mono text-meta"
+          style={{ color: "#5A6979" }}
+        >
           © 2026 ASRO — Barcha huquqlar himoyalangan
         </div>
       </div>
 
-      {/* Right / form panel */}
+      {/* O'ng / forma paneli */}
       <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <div className="lg:hidden flex justify-center mb-8">
+        <div className="w-full max-w-sm animate-rise-in" style={{ animationDelay: "120ms" }}>
+          <div className="lg:hidden flex justify-center mb-10">
             <Logo />
           </div>
 
-          <h1 className="text-2xl font-black tracking-tight">Tizimga kirish</h1>
-          <p className="mt-1.5 text-[13px] text-slate-400">
+          <h1 className="text-2xl font-semibold tracking-tight">Tizimga kirish</h1>
+          <p className="mt-2 text-body" style={{ color: LOGIN_TEXT_DIM }}>
             Davom etish uchun hisobingizga kiring.
           </p>
+          {/* Sarlavhani formadan ajratuvchi chiziq — chap paneldagi daftar
+              chizig'ining shu tomondagi javobi. */}
+          <div className="mt-7 h-px" style={{ background: "rgba(255,255,255,.10)" }} />
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <Field label="Email manzil">
+          <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+            <Field label="Email manzil" htmlFor="email">
               <div className="relative">
-                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Mail
+                  size={16}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: "#5A6979" }}
+                />
                 <input
                   id="email"
                   type="email"
@@ -104,14 +151,18 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ism@asro.uz"
                   required
-                  className="w-full pl-10 pr-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-[14px] text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-transparent transition-all"
+                  className="login-input pl-10 pr-4"
                 />
               </div>
             </Field>
 
-            <Field label="Parol">
+            <Field label="Parol" htmlFor="password">
               <div className="relative">
-                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Lock
+                  size={16}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: "#5A6979" }}
+                />
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -119,14 +170,15 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full pl-10 pr-11 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-[14px] text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-transparent transition-all"
+                  className="login-input pl-10 pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
                   aria-pressed={showPassword}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none focus:text-blue-400"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-lg transition-colors"
+                  style={{ color: "#5A6979" }}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -137,7 +189,8 @@ export default function LoginPage() {
               id="login-btn"
               type="submit"
               disabled={loading}
-              className="group w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-[14px] font-bold rounded-xl transition-all duration-200 shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2"
+              className="group w-full h-12 px-4 rounded-lg text-sm font-semibold transition-colors duration-100 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ background: LOGIN_BRAND, color: LOGIN_INK }}
             >
               {loading ? (
                 <>
@@ -152,7 +205,10 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-[11px] text-slate-600 lg:hidden">
+          <p
+            className="mt-10 text-center font-mono text-meta lg:hidden"
+            style={{ color: "#5A6979" }}
+          >
             © 2026 ASRO — Barcha huquqlar himoyalangan
           </p>
         </div>
@@ -167,14 +223,17 @@ function Logo() {
       <Image
         src="/asro-logo-192.png"
         alt="ASRO"
-        width={48}
-        height={48}
+        width={44}
+        height={44}
         priority
-        className="w-12 h-12 object-contain drop-shadow-[0_4px_12px_rgba(37,99,235,0.35)]"
+        className="w-11 h-11 object-contain"
       />
       <div>
-        <div className="text-[20px] font-black tracking-tight leading-none">ASRO</div>
-        <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-blue-400/80 mt-1">
+        <div className="text-xl font-semibold tracking-tight leading-none">ASRO</div>
+        <div
+          className="font-mono text-micro font-medium uppercase mt-1.5"
+          style={{ color: LOGIN_BRAND, letterSpacing: "0.2em" }}
+        >
           Boshqaruv tizimi
         </div>
       </div>
@@ -182,11 +241,27 @@ function Logo() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+// Yorliq inputga `htmlFor` orqali dasturiy bog'lanadi — ekran o'quvchi
+// maydonni nomi bilan e'lon qiladi, yorliq bosilganda fokus maydonga o'tadi.
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
   return (
-    <label className="block">
-      <span className="text-[12px] font-semibold text-slate-300">{label}</span>
-      <div className="mt-1.5">{children}</div>
-    </label>
+    <div>
+      <label
+        htmlFor={htmlFor}
+        className="block font-mono text-micro font-semibold uppercase"
+        style={{ color: LOGIN_TEXT_DIM, letterSpacing: "0.12em" }}
+      >
+        {label}
+      </label>
+      <div className="mt-2">{children}</div>
+    </div>
   );
 }

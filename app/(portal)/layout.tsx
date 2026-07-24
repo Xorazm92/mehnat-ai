@@ -2,10 +2,10 @@ import { signOut } from "@/lib/auth";
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg, #f8fafc)" }}>
+    <div className="min-h-dvh" style={{ background: "var(--bg, var(--bg-sunken))" }}>
       <header
         className="h-14 flex items-center justify-between px-4 md:px-6 border-b"
-        style={{ borderColor: "var(--border, #e5e7eb)", background: "var(--card, #fff)" }}
+        style={{ borderColor: "var(--border, var(--rule))", background: "var(--card, #fff)" }}
       >
         <div className="flex items-center gap-2">
           <span className="font-black text-base" style={{ color: "var(--text-primary)" }}>ASRO</span>
@@ -17,7 +17,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             await signOut({ redirectTo: "/login" });
           }}
         >
-          <button className="text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ background: "var(--bg-hover, #f3f4f6)", color: "var(--text-primary)" }}>
+          <button className="text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-primary)" }}>
             Chiqish
           </button>
         </form>

@@ -3,7 +3,8 @@
 import React from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { Sun, Moon, ExternalLink } from "lucide-react";
+import { Sun, Moon, ExternalLink, Menu } from "lucide-react";
+import { useMobileNav } from "@/components/MobileNavContext";
 
 export function AdminTopbar({
   userName,
@@ -15,6 +16,7 @@ export function AdminTopbar({
   avatarColor?: string;
 }) {
   const { theme, setTheme } = useTheme();
+  const { toggle } = useMobileNav();
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   const isDark = mounted && theme === "dark";
@@ -28,43 +30,65 @@ export function AdminTopbar({
 
   return (
     <header
-      className="h-16 flex-shrink-0 flex items-center justify-between px-6"
-      style={{ background: "var(--topbar-bg)", borderBottom: "1px solid var(--topbar-border)" }}
+      className="h-16 flex-shrink-0 flex items-center justify-between px-3 md:px-5"
+      style={{
+        background: "var(--topbar-bg)",
+        borderBottom: "1px solid var(--rule)",
+        paddingTop: "env(safe-area-inset-top, 0px)",
+      }}
     >
-      <div className="flex items-center gap-2 text-[13px] font-bold" style={{ color: "var(--text-secondary)" }}>
-        <span style={{ color: "var(--text-muted)" }}>ASRO</span>
-        <span style={{ color: "var(--text-muted)" }}>/</span>
-        <span style={{ color: "var(--text-primary)" }}>Admin</span>
+      <div className="flex items-center gap-2 min-w-0">
+        <button onClick={toggle} aria-label="Menyu" className="icon-btn md:hidden">
+          <Menu size={20} />
+        </button>
+        <div
+          className="flex items-center gap-2 font-mono text-meta font-medium uppercase"
+          style={{ color: "var(--text-muted)", letterSpacing: "0.1em" }}
+        >
+          <span>ASRO</span>
+          <span aria-hidden>/</span>
+          <span style={{ color: "var(--text-primary)" }}>Admin</span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <Link
           href="/dashboard"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all"
-          style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}
+          className="hidden sm:flex items-center gap-1.5 px-3 h-11 rounded-lg font-mono text-micro font-semibold uppercase transition-colors duration-100 hover:bg-[var(--bg-hover)]"
+          style={{
+            border: "1px solid var(--rule-strong)",
+            color: "var(--text-secondary)",
+            letterSpacing: "0.1em",
+          }}
         >
           <ExternalLink size={13} /> Ilova
         </Link>
 
         <button
           onClick={() => setTheme(isDark ? "light" : "dark")}
-          className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
-          style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}
-          aria-label="Mavzuni almashtirish"
+          className="icon-btn"
+          aria-label={isDark ? "Yorug' rejim" : "Qorong'u rejim"}
         >
-          {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          {isDark ? <Sun size={17} /> : <Moon size={17} />}
         </button>
 
-        <div className="flex items-center gap-2.5 pl-2">
+        <div className="flex items-center gap-2.5 pl-1">
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[12px] font-black"
-            style={{ background: avatarColor || "linear-gradient(135deg, #7C3AED, #4F46E5)" }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-mono text-meta font-bold flex-shrink-0"
+            style={{ background: avatarColor || "var(--accent-purple)" }}
           >
             {initials || "A"}
           </div>
-          <div className="hidden sm:block leading-tight">
-            <div className="text-[12px] font-bold" style={{ color: "var(--text-primary)" }}>{userName}</div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{role}</div>
+          <div className="hidden sm:block leading-none">
+            <div className="text-body font-semibold" style={{ color: "var(--text-primary)" }}>
+              {userName}
+            </div>
+            <div
+              className="font-mono text-micro font-medium uppercase mt-1"
+              style={{ color: "var(--text-muted)", letterSpacing: "0.08em" }}
+            >
+              {role}
+            </div>
           </div>
         </div>
       </div>

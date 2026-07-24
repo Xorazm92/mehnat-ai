@@ -43,14 +43,14 @@ export default function RoleViewEditor({ initial }: { initial: RoleViewMatrix })
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Rollar & Ruxsatlar</h1>
-          <p className="text-[12px] font-medium" style={{ color: "var(--text-muted)" }}>
+          <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
             Har bir rol qaysi bo&apos;limlarni (menyu) ko&apos;rishini belgilang. Superadmin doim hammasini ko&apos;radi.
           </p>
         </div>
         <button
           onClick={save}
           disabled={busy || !dirty}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-bold uppercase tracking-widest text-white disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white disabled:opacity-50"
           style={{ background: "var(--accent-blue)" }}
         >
           <Save size={15} /> Saqlash
@@ -58,19 +58,19 @@ export default function RoleViewEditor({ initial }: { initial: RoleViewMatrix })
       </div>
 
       {dirty && (
-        <div className="px-3 py-2 rounded-lg text-[12px] font-bold inline-block" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)", color: "var(--warning)" }}>
+        <div className="px-3 py-2 rounded-lg text-xs font-bold inline-block" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)", color: "var(--warning)" }}>
           Saqlanmagan o&apos;zgarishlar bor
         </div>
       )}
 
       <div className="rounded-xl overflow-hidden" style={card}>
         <div className="overflow-x-auto">
-          <table className="w-full text-[12px]">
+          <table className="w-full text-xs">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--card-border)" }}>
-                <th className="text-left px-4 py-3 font-bold uppercase tracking-widest text-[10px] sticky left-0" style={{ color: "var(--text-muted)", background: "var(--card-bg)" }}>Bo&apos;lim</th>
+                <th className="text-left px-4 py-3 font-bold uppercase tracking-widest text-micro sticky left-0" style={{ color: "var(--text-muted)", background: "var(--card-bg)" }}>Bo&apos;lim</th>
                 {initial.roles.map((r) => (
-                  <th key={r} className="px-3 py-3 font-bold text-[10px] text-center whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                  <th key={r} className="px-3 py-3 font-bold text-micro text-center whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
                     {ROLE_LABELS[r]}
                     {r === "super_admin" && <Lock size={9} className="inline ml-1" />}
                   </th>
@@ -81,7 +81,7 @@ export default function RoleViewEditor({ initial }: { initial: RoleViewMatrix })
               {initial.views.map((v) => (
                 <tr key={v} style={{ borderBottom: "1px solid var(--card-border)" }}>
                   <td className="px-4 py-2 font-semibold sticky left-0" style={{ color: "var(--text-primary)", background: "var(--card-bg)" }}>
-                    {VIEW_LABELS[v]} <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>{v}</span>
+                    {VIEW_LABELS[v]} <span className="text-micro font-mono" style={{ color: "var(--text-muted)" }}>{v}</span>
                   </td>
                   {initial.roles.map((r) => {
                     const on = !!enabled[r]?.[v];
@@ -91,7 +91,7 @@ export default function RoleViewEditor({ initial }: { initial: RoleViewMatrix })
                         <button
                           onClick={() => toggle(r, v)}
                           disabled={busy || locked}
-                          className="w-6 h-6 rounded-md inline-flex items-center justify-center transition-colors"
+                          className="w-6 h-6 rounded-lg inline-flex items-center justify-center transition-colors"
                           style={{
                             background: on ? "var(--success-bg)" : "var(--input-bg)",
                             border: `1px solid ${on ? "var(--success-border)" : "var(--card-border)"}`,

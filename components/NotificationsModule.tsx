@@ -81,7 +81,7 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
                 <div className="flex items-center gap-2 p-1 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                     {(['all', 'unread'] as const).map(f => (
                         <button key={f} onClick={() => setFilter(f)}
-                            className="px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all"
+                            className="px-4 py-2 rounded-lg text-meta font-bold uppercase tracking-widest transition-all"
                             style={filter === f
                                 ? { background: 'var(--accent-blue)', color: '#fff' }
                                 : { color: 'var(--text-muted)' }}>
@@ -91,7 +91,7 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
                     ))}
                 </div>
                 <button onClick={markAll} disabled={busy || unreadCount === 0}
-                    className="font-bold px-5 py-2.5 rounded-xl text-[11px] flex items-center justify-center gap-2 transition-all uppercase tracking-widest disabled:opacity-40"
+                    className="font-bold px-5 py-2.5 rounded-xl text-meta flex items-center justify-center gap-2 transition-all uppercase tracking-widest disabled:opacity-40"
                     style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
                     <CheckCheck size={15} />
                     {lang === 'uz' ? 'Barchasini o\'qildi' : 'Прочитать всё'}
@@ -109,23 +109,23 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <h4 className="text-[13px] font-bold tracking-tight" style={{ color: 'var(--text)' }}>{n.title}</h4>
+                                    <h4 className="text-body font-bold tracking-tight" style={{ color: 'var(--text)' }}>{n.title}</h4>
                                     {!n.isRead && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: meta.color }} />}
                                 </div>
-                                <p className="text-[12px] font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>{n.message}</p>
+                                <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>{n.message}</p>
                                 <div className="flex items-center gap-3 mt-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                                    <span className="text-micro font-bold uppercase tracking-widest tabular-nums" style={{ color: 'var(--text-muted)' }}>
                                         {formatCreatedAt(n.createdAt)}
                                     </span>
                                     {n.link && (
-                                        <Link href={n.link} onClick={() => { if (!n.isRead) onMarkRead([n.id]); }} className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1" style={{ color: 'var(--accent-blue)' }}>
+                                        <Link href={n.link} onClick={() => { if (!n.isRead) onMarkRead([n.id]); }} className="text-micro font-bold uppercase tracking-widest flex items-center gap-1" style={{ color: 'var(--accent-blue)' }}>
                                             <ExternalLink size={11} /> {lang === 'uz' ? 'Ochish' : 'Открыть'}
                                         </Link>
                                     )}
                                 </div>
                             </div>
                             {!n.isRead && (
-                                <button onClick={() => markOne(n.id)} className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0 transition-all" style={{ color: 'var(--success)' }} title={lang === 'uz' ? "O'qildi" : 'Прочитано'}>
+                                <button onClick={() => markOne(n.id)} className="icon-btn-sm shrink-0 transition-all" style={{ color: 'var(--success)' }} title={lang === 'uz' ? "O'qildi" : 'Прочитано'}>
                                     <Check size={16} />
                                 </button>
                             )}
@@ -135,7 +135,7 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
                 {list.length === 0 && (
                     <div className="dashboard-card p-16 flex flex-col items-center" style={{ color: 'var(--text-muted)' }}>
                         <Bell size={48} className="mb-4 opacity-20" />
-                        <span className="text-[11px] uppercase font-bold tracking-[0.2em] opacity-60">{lang === 'uz' ? 'Xabarlar yo\'q' : 'Нет уведомлений'}</span>
+                        <span className="text-meta uppercase font-bold tracking-[0.2em] opacity-60">{lang === 'uz' ? 'Xabarlar yo\'q' : 'Нет уведомлений'}</span>
                     </div>
                 )}
             </div>

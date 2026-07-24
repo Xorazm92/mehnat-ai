@@ -64,12 +64,12 @@ const roleLabelsMap: Record<string, string> = {
 };
 
 const roleColors: Record<string, string> = {
-  super_admin: "#ef4444",
-  admin: "#f97316",
-  chief_accountant: "#8b5cf6",
-  supervisor: "#3b82f6",
-  accountant: "#10b981",
-  bank_manager: "#06b6d4",
+  super_admin: "var(--danger)",
+  admin: "var(--warning)",
+  chief_accountant: "var(--accent-purple)",
+  supervisor: "var(--brand)",
+  accountant: "var(--success)",
+  bank_manager: "var(--info)",
 };
 
 const actionLabels: Record<string, string> = {
@@ -109,7 +109,7 @@ export function AdminCabinet({
 
       {/* Tizim holati */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-2xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Users size={16} style={{ color: "var(--accent-blue)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>Faol Foydalanuvchilar</span>
@@ -117,7 +117,7 @@ export function AdminCabinet({
           <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{systemHealth.activeUsers}</div>
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--accent-indigo)" + "22", border: "1px solid rgba(99,102,241,0.2)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--accent-indigo)" + "22", border: "1px solid rgba(99,102,241,0.2)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Building2 size={16} style={{ color: "var(--accent-indigo)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>Faol Firmalar</span>
@@ -125,7 +125,7 @@ export function AdminCabinet({
           <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{systemHealth.activeCompanies}</div>
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={16} style={{ color: "var(--success)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI Bajarilishi</span>
@@ -133,7 +133,7 @@ export function AdminCabinet({
           <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>{systemHealth.kpiCompletionPercent ?? 0}%</div>
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Wallet size={16} style={{ color: "var(--warning)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>Oylik Fondi</span>
@@ -143,7 +143,7 @@ export function AdminCabinet({
             <span className="text-xs font-bold ml-1" style={{ color: "var(--text-muted)" }}>so&apos;m</span>
           </div>
           {systemHealth.pendingKpi > 0 && (
-            <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{systemHealth.pendingKpi} KPI tasdiq kutmoqda</p>
+            <p className="text-micro mt-1" style={{ color: "var(--text-muted)" }}>{systemHealth.pendingKpi} KPI tasdiq kutmoqda</p>
           )}
         </div>
       </div>
@@ -163,7 +163,7 @@ export function AdminCabinet({
           <div className="space-y-3">
             {userStats.map((stat) => {
               const percent = totalUsers > 0 ? (stat._count / totalUsers) * 100 : 0;
-              const color = roleColors[stat.role] || "#6b7280";
+              const color = roleColors[stat.role] || "var(--text-muted)";
               return (
                 <div key={stat.role} className="flex items-center gap-3">
                   <div className="flex items-center gap-2 w-36 flex-shrink-0">
@@ -225,7 +225,7 @@ export function AdminCabinet({
                       {log.user?.fullName || "Tizim"}{" "}
                       <span style={{ color: "var(--text-muted)" }}>— {actionLabels[log.action] || log.action}</span>
                     </p>
-                    <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>
+                    <p className="text-micro truncate" style={{ color: "var(--text-muted)" }}>
                       {log.tableName} ·{" "}
                       {formatUzDateTime(log.createdAt)}
                     </p>

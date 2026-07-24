@@ -97,28 +97,28 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
 
                     <div className="relative z-10 flex justify-between items-start mb-6">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md shrink-0"
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md shrink-0"
                                 style={{ background: "linear-gradient(135deg, var(--accent-blue), var(--accent-blue-hover))" }}>
                                 <Wallet size={24} />
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black uppercase tracking-tight" style={{ color: 'var(--text-primary)' }}>{t.kassa || 'Kassa'}</h2>
-                                <p className="text-[12px] font-bold uppercase tracking-widest leading-none mt-1" style={{ color: 'var(--text-muted)' }}>{selectedPeriod} DAVRI BO&apos;YICHA</p>
+                                <p className="text-xs font-bold uppercase tracking-widest leading-none mt-1" style={{ color: 'var(--text-muted)' }}>{selectedPeriod} DAVRI BO&apos;YICHA</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="relative z-10 grid grid-cols-2 gap-6">
                         <div className="min-w-0">
-                            <span className="text-[11px] font-bold uppercase tracking-widest mb-2 block" style={{ color: 'var(--text-muted)' }}>Kutilayotgan</span>
+                            <span className="text-meta font-bold uppercase tracking-widest mb-2 block" style={{ color: 'var(--text-muted)' }}>Kutilayotgan</span>
                             <div className="stat-metric text-2xl font-black tabular-nums leading-none" style={{ color: 'var(--text-primary)' }}>
-                                {formatNum(stats.totalExpected)} <span className="text-[12px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                                {formatNum(stats.totalExpected)} <span className="text-xs font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
                             </div>
                         </div>
                         <div className="min-w-0">
-                            <span className="text-[11px] font-bold uppercase tracking-widest mb-2 block" style={{ color: 'var(--success)' }}>To&apos;langan</span>
+                            <span className="text-meta font-bold uppercase tracking-widest mb-2 block" style={{ color: 'var(--success)' }}>To&apos;langan</span>
                             <div className="stat-metric text-2xl font-black tabular-nums leading-none" style={{ color: 'var(--success)' }}>
-                                {formatNum(stats.totalPaid)} <span className="text-[12px] font-bold ml-1 uppercase opacity-60">sum</span>
+                                {formatNum(stats.totalPaid)} <span className="text-xs font-bold ml-1 uppercase opacity-60">sum</span>
                             </div>
                         </div>
                     </div>
@@ -160,7 +160,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                     <input
                         type="text"
                         placeholder="INN YOKI FIRMA NOMI..."
-                        className="w-full rounded-xl py-3 pl-12 pr-4 text-[12px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
+                        className="w-full rounded-xl py-3 pl-12 pr-4 text-xs font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-primary)' }}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -171,7 +171,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                         type="month"
                         value={selectedPeriod}
                         onChange={(e) => setSelectedPeriod(e.target.value)}
-                        className="w-full rounded-xl px-4 py-3 pr-12 text-[12px] font-bold uppercase outline-none transition-all appearance-none focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20 cursor-pointer"
+                        className="w-full rounded-xl px-4 py-3 pr-12 text-xs font-bold uppercase outline-none transition-all appearance-none focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20 cursor-pointer"
                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--accent-blue)' }}
                     />
                     <Clock className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" size={18} style={{ color: 'var(--text-muted)' }} />
@@ -186,27 +186,27 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                     const stColor = stt === PaymentStatus.PAID ? 'var(--success)' : stt === PaymentStatus.PENDING ? 'var(--warning)' : stt ? 'var(--danger)' : 'var(--text-muted)';
                     const stBg = stt === PaymentStatus.PAID ? 'var(--success-bg)' : stt === PaymentStatus.PENDING ? 'var(--warning-light)' : stt ? 'var(--danger-bg)' : 'var(--input-bg)';
                     const pm = item.payment?.paymentMethod || 'naqd';
-                    const pmc = PAYMENT_METHOD_COLORS[pm] || '#64748b';
+                    const pmc = PAYMENT_METHOD_COLORS[pm] || 'var(--text-muted)';
                     return (
                         <div key={item.id} onClick={() => openPayment(item)} className="dashboard-card p-4 cursor-pointer active:scale-[0.99] transition-transform">
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex-1">
-                                    <div className="text-[13px] font-black uppercase tracking-tight truncate" style={{ color: 'var(--text)' }}>{item.name}</div>
-                                    <div className="text-[11px] font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>INN: {item.inn}</div>
+                                    <div className="text-body font-black uppercase tracking-tight truncate" style={{ color: 'var(--text)' }}>{item.name}</div>
+                                    <div className="text-meta font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>INN: {item.inn}</div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <div className="font-black text-[14px] tabular-nums" style={{ color: 'var(--text)' }}>{formatNum((item.contractAmount || 0))}</div>
-                                    <div className="text-[9px] font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
+                                    <div className="font-black text-sm tabular-nums" style={{ color: 'var(--text)' }}>{formatNum((item.contractAmount || 0))}</div>
+                                    <div className="text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-                                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: stColor, background: stBg }}>
+                                <span className="inline-flex items-center gap-1 text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: stColor, background: stBg }}>
                                     {stt === PaymentStatus.PAID ? <CheckCircle2 size={11} /> : <Clock size={11} />} {stt || 'Kutilmoqda'}
                                 </span>
-                                {item.payment && <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: pmc, background: `${pmc}1a` }}>{PAYMENT_METHOD_LABELS[pm] || pm}</span>}
+                                {item.payment && <span className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: pmc, background: `${pmc}1a` }}>{PAYMENT_METHOD_LABELS[pm] || pm}</span>}
                             </div>
                             <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
-                                <button onClick={(e) => { e.stopPropagation(); openPayment(item); }} className="flex-1 py-2 rounded-lg text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--accent-blue)' }}>
+                                <button onClick={(e) => { e.stopPropagation(); openPayment(item); }} className="flex-1 py-2 rounded-lg text-white text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--accent-blue)' }}>
                                     <CreditCard size={14} /> {item.payment ? 'Tahrirlash' : "To'lov"}
                                 </button>
                                 {item.payment && (
@@ -219,7 +219,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                 {filteredData.length === 0 && (
                     <div className="dashboard-card p-12 text-center">
                         <Search size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
-                        <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Ma&apos;lumot topilmadi</span>
+                        <span className="text-meta uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Ma&apos;lumot topilmadi</span>
                     </div>
                 )}
             </div>
@@ -230,27 +230,27 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                     <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.companyName}</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.inn}</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>{t.status}</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right" style={{ color: 'var(--text-muted)' }}>{t.actions}</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.companyName}</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.inn}</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>{t.status}</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-right" style={{ color: 'var(--text-muted)' }}>{t.actions}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredData.map((item, i) => (
                                 <tr key={item.id} onClick={() => openPayment(item)} className="transition-colors group hover:bg-[var(--accent-blue-light)] cursor-pointer" style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
                                     <td className="px-6 py-3">
-                                        <div className="font-bold text-[13px] uppercase tracking-tight truncate max-w-[250px]" style={{ color: 'var(--text)' }}>
+                                        <div className="font-bold text-body uppercase tracking-tight truncate max-w-[250px]" style={{ color: 'var(--text)' }}>
                                             {item.name}
                                         </div>
-                                        {item.brandName && <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5 truncate max-w-[250px]" style={{ color: 'var(--text-muted)' }}>{item.brandName}</p>}
+                                        {item.brandName && <p className="text-micro font-bold uppercase tracking-widest mt-0.5 truncate max-w-[250px]" style={{ color: 'var(--text-muted)' }}>{item.brandName}</p>}
                                     </td>
-                                    <td className="px-6 py-3 font-mono text-[11px] font-bold" style={{ color: 'var(--text-secondary)' }}>{item.inn}</td>
+                                    <td className="px-6 py-3 font-mono text-meta font-bold" style={{ color: 'var(--text-secondary)' }}>{item.inn}</td>
                                     <td className="px-6 py-3">
-                                        <div className="font-bold text-[13px] tabular-nums" style={{ color: 'var(--text)' }}>
-                                            {formatNum((item.contractAmount || 0))} <span className="text-[10px] font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                                        <div className="font-bold text-body tabular-nums" style={{ color: 'var(--text)' }}>
+                                            {formatNum((item.contractAmount || 0))} <span className="text-micro font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-3 text-center">
@@ -272,9 +272,9 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                     <td className="px-6 py-3 text-center">
                                         {item.payment ? (() => {
                                             const pm = item.payment.paymentMethod || 'naqd';
-                                            const c = PAYMENT_METHOD_COLORS[pm] || '#64748b';
+                                            const c = PAYMENT_METHOD_COLORS[pm] || 'var(--text-muted)';
                                             return (
-                                                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md whitespace-nowrap" style={{ color: c, background: `${c}1a`, border: `1px solid ${c}40` }}>
+                                                <span className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg whitespace-nowrap" style={{ color: c, background: `${c}1a`, border: `1px solid ${c}40` }}>
                                                     {PAYMENT_METHOD_LABELS[pm] || pm}
                                                 </span>
                                             );
@@ -284,7 +284,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                         <div className="flex items-center justify-end gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); openPayment(item); }}
-                                                className="h-8 px-3 flex items-center gap-1.5 rounded-lg text-white text-[11px] font-bold uppercase tracking-wider transition-all"
+                                                className="h-8 px-3 flex items-center gap-1.5 rounded-lg text-white text-meta font-bold uppercase tracking-wider transition-all"
                                                 style={{ background: 'var(--accent-blue)' }}
                                                 onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-hover)'}
                                                 onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-blue)'}
@@ -314,7 +314,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                     {filteredData.length === 0 && (
                         <div className="py-24 flex flex-col items-center justify-center" style={{ color: 'var(--text-muted)' }}>
                             <Search size={48} className="opacity-20 mb-4" />
-                            <p className="font-bold uppercase tracking-[0.2em] text-[11px] opacity-60">Ma&apos;lumot topilmadi</p>
+                            <p className="font-bold uppercase tracking-[0.2em] text-meta opacity-60">Ma&apos;lumot topilmadi</p>
                         </div>
                     )}
                 </div>
@@ -326,46 +326,46 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
                         <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
                             <div>
-                                <h3 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>To&apos;lovni tasdiqlash</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
+                                <h3 className="text-body font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>To&apos;lovni tasdiqlash</h3>
+                                <p className="text-micro font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--input-bg)'; }}>
+                            <button onClick={() => setIsModalOpen(false)} className="icon-btn-sm transition-all" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--input-bg)'; }}>
                                 <Plus size={20} className="rotate-45" />
                             </button>
                         </div>
                         <form onSubmit={handleSave} className="p-6 space-y-5">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</label>
                                     <div className="relative">
                                         <input
                                             type="number"
                                             value={editingPayment?.amount || ''}
                                             onChange={(e) => setEditingPayment(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                                            className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
+                                            className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
                                             style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                             required
                                         />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
                                     <input
                                         type="date"
                                         value={editingPayment?.paymentDate || ''}
                                         onChange={(e) => setEditingPayment(prev => ({ ...prev, paymentDate: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--accent-blue)' }}
                                         required
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov Holati</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov Holati</label>
                                     <select
                                         value={editingPayment?.status || PaymentStatus.PENDING}
                                         onChange={(e) => setEditingPayment(prev => ({ ...prev, status: e.target.value as PaymentStatus }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     >
                                         <option value={PaymentStatus.PAID}>To&apos;landi</option>
@@ -375,24 +375,24 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</label>
                                     <select
                                         value={editingPayment?.paymentMethod || 'naqd'}
                                         onChange={(e) => setEditingPayment(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     >
                                         {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label.toUpperCase()}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-2 md:col-span-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
                                     <input
                                         type="text"
                                         placeholder="IXTIYORIY IZOH..."
                                         value={editingPayment?.comment || ''}
                                         onChange={(e) => setEditingPayment(prev => ({ ...prev, comment: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     />
                                 </div>
@@ -402,7 +402,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all shadow-sm"
+                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-meta uppercase tracking-widest transition-all shadow-sm"
                                     style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
                                     onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
                                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
@@ -412,7 +412,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                 <button
                                     type="submit"
                                     disabled={isSaving}
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-[11px] text-white transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest disabled:opacity-50"
+                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-meta text-white transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest disabled:opacity-50"
                                     style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent-blue-hover))' }}
                                 >
                                     {isSaving ? (

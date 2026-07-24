@@ -1,9 +1,26 @@
 # Mehnat ERP — Design System (Master)
 
-> **Source of truth.** This documents the system that **actually exists** in `app/globals.css`
-> (803 lines), extracted from the code on 2026-07-16 — not an aspirational redesign. Components
-> already consume these tokens; anything that contradicts this file is drift, and the drift is
-> catalogued in [CONSISTENCY.md](./CONSISTENCY.md).
+> **⚠️ Superseded 2026-07-24 by the "Ledger" redesign, then softened the same day.**
+> `app/globals.css` was rewritten: the accent is the ASRO mark's **azure `--brand`**, not `#2563EB`;
+> chartreuse **`--live`** is the signature marker; hierarchy is carried by **`--rule` hairlines,
+> not elevation** (`--card-shadow` is `none`); the type scale (`--text-micro/meta/body` + native
+> Tailwind steps) is live and the 982 arbitrary `text-[Npx]` were migrated; **IBM Plex Sans + Plex
+> Mono** replaced Inter (mono for all figures/dates/labels); the z-index ladder and `.erp-table`
+> ledger treatment shipped.
+>
+> **Softening pass (premium/low-strain).** Palette values were then softened for a calmer,
+> Linear/Vercel/Notion-grade feel — token **names are unchanged and still authoritative, values are not**:
+> light `--brand #0F66AE`, dark `--brand #4FA3E3`; light page `--bg-primary #F4F5F6` with white cards,
+> soft ink `--text-primary #262C34` (~14:1, down from near-black ~18:1); dark ground neutralised to
+> `#0F1116`/card `#181C23` with soft off-white `--text-primary #D9DEE4` (~12.6:1, down from ~13.5:1
+> glare); `--rule` hairlines lightened (.12/.22 → .09/.15 light, .10/.18 → .08/.14 dark); status colours
+> desaturated; `--shadow-float`/`--shadow-overlay` rebuilt as soft, diffuse, multi-layer. Every
+> foreground/background pair is verified WCAG AA. The counts in CONSISTENCY.md / UI-IMPROVEMENTS.md
+> describe the **pre-redesign** tree. Treat the sections below as historical until this file is rewritten.
+>
+> **Source of truth (historical).** This documented the system that existed in `app/globals.css`
+> (803 lines), extracted from the code on 2026-07-16. Components already consume these tokens;
+> anything that contradicts this file is drift, catalogued in [CONSISTENCY.md](./CONSISTENCY.md).
 >
 > Read this before building any page. For page-specific deviations check `design-system/pages/<page>.md`;
 > if that file doesn't exist, these rules apply exclusively.

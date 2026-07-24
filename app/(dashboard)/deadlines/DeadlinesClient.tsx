@@ -25,13 +25,13 @@ interface Row {
 const SENIOR = new Set(["super_admin", "admin", "chief_accountant", "supervisor"]);
 
 const STATUS_META: Record<string, { label: string; bg: string; fg: string }> = {
-  planned: { label: "Rejalashtirilgan", bg: "#e5e7eb", fg: "#374151" },
-  in_progress: { label: "Jarayonda", bg: "#dbeafe", fg: "#1d4ed8" },
-  ready: { label: "Tayyor", bg: "#e0e7ff", fg: "#4338ca" },
-  sent: { label: "Yuborilgan", bg: "#fef3c7", fg: "#b45309" },
-  accepted: { label: "Qabul qilingan", bg: "#dcfce7", fg: "#15803d" },
-  rejected: { label: "Rad etilgan", bg: "#fee2e2", fg: "#b91c1c" },
-  cancelled: { label: "Bekor qilingan", bg: "#f3f4f6", fg: "#6b7280" },
+  planned: { label: "Rejalashtirilgan", bg: "var(--rule)", fg: "var(--text-secondary)" },
+  in_progress: { label: "Jarayonda", bg: "var(--info-bg)", fg: "var(--brand-deep)" },
+  ready: { label: "Tayyor", bg: "var(--accent-indigo-light)", fg: "var(--accent-indigo)" },
+  sent: { label: "Yuborilgan", bg: "var(--warning-bg)", fg: "var(--warning)" },
+  accepted: { label: "Qabul qilingan", bg: "var(--success-bg)", fg: "var(--success)" },
+  rejected: { label: "Rad etilgan", bg: "var(--danger-bg)", fg: "var(--danger-dark)" },
+  cancelled: { label: "Bekor qilingan", bg: "var(--bg-sunken)", fg: "var(--text-muted)" },
 };
 
 const DELAY_LABELS: Record<string, string> = {
@@ -129,7 +129,7 @@ export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; r
               onClick={() => setTab(t.key)}
               className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
               style={{
-                background: tab === t.key ? "var(--sidebar-item-active-bg, #2563eb)" : "var(--bg-hover, #f3f4f6)",
+                background: tab === t.key ? "var(--sidebar-item-active-bg, var(--brand))" : "var(--bg-hover, var(--bg-sunken))",
                 color: tab === t.key ? "#fff" : "var(--text-primary)",
               }}
             >
@@ -142,17 +142,17 @@ export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; r
       {filtered.length === 0 ? (
         <div
           className="rounded-xl border p-10 text-center text-sm"
-          style={{ borderColor: "var(--border, #e5e7eb)", color: "var(--text-muted)" }}
+          style={{ borderColor: "var(--border, var(--rule))", color: "var(--text-muted)" }}
         >
           {counts.all === 0
             ? "Hozircha majburiyatlar yo'q. Admin DeadlineTemplate qo'shib, generatsiya ishga tushgach paydo bo'ladi."
             : "Bu filtrga mos majburiyat yo'q."}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, var(--rule))" }}>
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ background: "var(--bg-hover, #f9fafb)", color: "var(--text-muted)" }}>
+              <tr style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>
                 <th className="text-left font-semibold px-3 py-2.5">Firma</th>
                 <th className="text-left font-semibold px-3 py-2.5">Majburiyat</th>
                 <th className="text-left font-semibold px-3 py-2.5">Davr</th>
@@ -167,36 +167,36 @@ export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; r
                 const acts = actionsFor(r.status).filter((a) => !a.senior || isSenior);
                 const canMarkDelay = !TERMINAL.has(r.status);
                 return (
-                  <tr key={r.id} className="border-t" style={{ borderColor: "var(--border, #f1f5f9)" }}>
+                  <tr key={r.id} className="border-t" style={{ borderColor: "var(--border, var(--bg-sunken))" }}>
                     <td className="px-3 py-2.5 font-medium" style={{ color: "var(--text-primary)" }}>
                       {r.companyName}
                       {r.responsibleUserId === userId && (
-                        <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#dcfce7", color: "#15803d" }}>
+                        <span className="ml-2 text-micro font-bold px-1.5 py-0.5 rounded-lg" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
                           Men
                         </span>
                       )}
                     </td>
                     <td className="px-3 py-2.5" style={{ color: "var(--text-primary)" }}>
                       {r.templateName}
-                      <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>{r.obligationType}</div>
+                      <div className="text-meta" style={{ color: "var(--text-muted)" }}>{r.obligationType}</div>
                     </td>
                     <td className="px-3 py-2.5" style={{ color: "var(--text-muted)" }}>{r.periodKey}</td>
                     <td className="px-3 py-2.5">
-                      <span style={{ color: r.isOverdue ? "#b91c1c" : "var(--text-primary)", fontWeight: r.isOverdue ? 700 : 400 }}>
+                      <span style={{ color: r.isOverdue ? "var(--danger-dark)" : "var(--text-primary)", fontWeight: r.isOverdue ? 700 : 400 }}>
                         {formatUzDate(r.dueAt)}
                       </span>
                       {r.isOverdue && (
-                        <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#fee2e2", color: "#b91c1c" }}>
+                        <span className="ml-2 text-micro font-bold px-1.5 py-0.5 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger-dark)" }}>
                           Muddati o'tdi
                         </span>
                       )}
                     </td>
                     <td className="px-3 py-2.5">
-                      <span className="text-xs font-bold px-2 py-1 rounded-md" style={{ background: meta.bg, color: meta.fg }}>
+                      <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: meta.bg, color: meta.fg }}>
                         {meta.label}
                       </span>
                       {r.delayReason && (
-                        <div className="mt-1 text-[11px]" style={{ color: r.delayApproved ? "#15803d" : "#b45309" }}>
+                        <div className="mt-1 text-meta" style={{ color: r.delayApproved ? "var(--success)" : "var(--warning)" }}>
                           {DELAY_LABELS[r.delayReason] ?? r.delayReason}
                           {r.delayApproved ? " ✓ tasdiqlangan" : r.delayMarked ? " (tasdiq kutilmoqda)" : ""}
                         </div>
@@ -209,8 +209,8 @@ export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; r
                             key={a.to}
                             disabled={pending}
                             onClick={() => run(() => updateObligationStatus(r.id, a.to), `${a.label} ✓`)}
-                            className="text-xs font-semibold px-2.5 py-1 rounded-md transition-colors disabled:opacity-50"
-                            style={{ background: a.danger ? "#fee2e2" : "var(--bg-hover, #eef2ff)", color: a.danger ? "#b91c1c" : "#4338ca" }}
+                            className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                            style={{ background: a.danger ? "var(--danger-bg)" : "var(--bg-hover, var(--accent-indigo-light))", color: a.danger ? "var(--danger-dark)" : "var(--accent-indigo)" }}
                           >
                             {a.label}
                           </button>
@@ -224,8 +224,8 @@ export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; r
                               e.target.value = "";
                               if (v) run(() => setDelayReason(r.id, v), "Kechikish sababi belgilandi");
                             }}
-                            className="text-xs px-2 py-1 rounded-md border disabled:opacity-50"
-                            style={{ borderColor: "var(--border, #e5e7eb)", background: "transparent", color: "var(--text-muted)" }}
+                            className="text-xs px-2 py-1 rounded-lg border disabled:opacity-50"
+                            style={{ borderColor: "var(--border, var(--rule))", background: "transparent", color: "var(--text-muted)" }}
                           >
                             <option value="">Kechikish sababi…</option>
                             {Object.entries(DELAY_LABELS).map(([k, v]) => (
@@ -237,8 +237,8 @@ export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; r
                           <button
                             disabled={pending}
                             onClick={() => run(() => approveDelayReason(r.id), "Kechikish sababi tasdiqlandi")}
-                            className="text-xs font-semibold px-2.5 py-1 rounded-md disabled:opacity-50"
-                            style={{ background: "#dcfce7", color: "#15803d" }}
+                            className="text-xs font-semibold px-2.5 py-1 rounded-lg disabled:opacity-50"
+                            style={{ background: "var(--success-bg)", color: "var(--success)" }}
                           >
                             Sababni tasdiqlash
                           </button>

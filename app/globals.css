@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 /* next-themes `.dark` klassi bilan ishlashi uchun — aks holda `dark:`
@@ -18,223 +17,349 @@
   --color-text-secondary: var(--text-secondary);
   --blur-glass: 12px;
 
-  /* Density floor for this data-dense ERP: 10px, below Tailwind's smallest
-     step (text-xs, 12px). ADDITIVE ONLY — Tailwind's built-in scale is left
-     exactly as it is, because text-xs/sm/base/lg/xl/2xl are already used in
-     ~213 places and redefining them would silently resize all of them.
-     This is the floor, not a replacement scale: nothing in the UI may be
-     smaller than this. See design-system/MASTER.md. */
-  --text-2xs: 0.625rem;      /* 10px — table micro-labels, badges */
+  /* Brend + struktura ranglari Tailwind utilitilari sifatida ham kerak:
+     `border-rule`, `bg-brand`, `text-brand`, `bg-live` va h.k. */
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-ghost: var(--brand-ghost);
+  --color-live: var(--live);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+
+  /* Shriftlar — next/font (app/layout.tsx) o'zgaruvchilarni beradi.
+     IBM Plex Sans interfeys uchun, IBM Plex Mono esa RAQAMLAR uchun:
+     pul, sana, davr, STIR va katta harfli mikro-yorliqlar. Bu mahsulotda
+     raqam — kontentning o'zi, shuning uchun u alohida shrift bilan teriladi. */
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* ─── Tipografik shkala — FAQAT QO'SHIMCHA ───────────────────────────
+     Tailwind'ning o'z qadamlari (text-xs 12 / sm 14 / base 16 / lg 18 /
+     xl 20 / 2xl 24) ~213 joyda ishlatilgan, shuning uchun ular QAYTA
+     BELGILANMAYDI — aks holda butun UI jimgina o'lchamini o'zgartiradi.
+     Bu yerda faqat Tailwind'da YO'Q qadamlar qo'shiladi: 10 / 11 / 13.
+     Shkalaning to'liq ko'rinishi design-system/MASTER.md §Type'da. */
+  --text-micro: 0.625rem;          /* 10px — nishonlar, mikro-yorliqlar (quyi chegara) */
+  --text-micro--line-height: 1.4;
+  --text-meta: 0.6875rem;          /* 11px — zich jadval kataklari, meta */
+  --text-meta--line-height: 1.45;
+  --text-body: 0.8125rem;          /* 13px — zich ko'rinishlarda asosiy matn */
+  --text-body--line-height: 1.5;
+
+  /* Eski nom — 10px uchun. `text-2xs` allaqachon ishlatilgan joylar
+     buzilmasin deb saqlanadi; yangi kodda `text-micro` afzal. */
+  --text-2xs: 0.625rem;
   --text-2xs--line-height: 1.4;
 }
 
 /* =============================================
-   LIGHT THEME - Premium Design System
+   LIGHT THEME — "Ledger"
+
+   Palitra ASRO belgisidan olingan (public/asro-logo-512.png):
+   qanotning azure→cyan gradienti #0068C8 → #00B8F0, bargning
+   chartreuse'i #B0DC18. Avvalgi #2563EB belgida umuman yo'q edi.
+
+   Har bir qiymat WCAG AA uchun hisoblab tekshirilgan (ko'z bilan emas).
    ============================================= */
 :root {
   color-scheme: light;
-  /* Backgrounds */
-  --bg-primary: #F1F5F9;
+
+  /* ─── Brend ───
+     Logotipdan olingan azure, endi bir oz chuqurroq va kamroq to'yingan —
+     "premium SaaS" ohangi (Linear/Stripe). Oq ustida 5.95:1 (AA). */
+  --brand: #0F66AE;
+  --brand-deep: #0B5091;           /* chiziqli sarlavhalar, faol umurtqa */
+  --brand-ghost: rgba(15, 102, 174, 0.07);
+  --brand-hover: #0B5A9C;          /* to'ldirilgan tugma hover — bir oz to'q */
+
+  /* ─── Imzo: "jonli" chiziq ───
+     Faqat BELGI sifatida — hozir amalda bo'lgan narsani ko'rsatadi.
+     Yumshatilgan chartreuse; hech qachon och fonda matn rangi emas. */
+  --live: #9FBE1C;
+  --live-ink: #0E1720;             /* --live fonida matn: 8.5:1 */
+
+  /* ─── Rangli to'ldirish ustidagi matn ───
+     Fon rangi temaga qarab och/to'q bo'lgani uchun matn ham u bilan birga
+     aylanadi — aks holda qorong'u temada oq matn och fonda yo'qoladi. */
+  --on-brand: #FFFFFF;
+  --on-success: #FFFFFF;
+  --on-danger: #FFFFFF;
+  --on-warning: #FFFFFF;
+
+  /* ─── Zamin ───
+     Yumshoq, deyarli neytral kanvas — lekin oq kartalar undan ~12% yorug'roq
+     bo'lishi uchun yetarlicha to'q. Avvalgi ~9% qadam juda kichik edi: oq
+     panellar zaminga singib, "hamma yoq oq" bo'lib ko'rinardi. Endi kartalar
+     kanvas ustida aniq turadi (Stripe/Linear "kanvasdagi kartalar" ko'rinishi),
+     ammo hali ham tinch va sovuq emas. */
+  --bg-primary: #F1F2F5;
   --bg-secondary: #FFFFFF;
   --bg-card: #FFFFFF;
-  --bg-hover: #F8FAFC;
+  --bg-hover: #F0F2F4;
+  --bg-sunken: #F1F3F5;            /* jadval sarlavhasi, kirish maydoni zamini */
 
-  /* Borders */
-  --border-glass: rgba(0, 0, 0, 0.07);
-  --border-strong: rgba(0, 0, 0, 0.12);
+  /* ─── Chiziq (ierarxiyani KO'TARILISH emas, CHIZIQ tashiydi) ───
+     Yumshatilgan: .12/.22 → .09/.15. Kartalar chegarasi endi sezilarli,
+     lekin qattiq emas. */
+  --rule: rgba(23, 29, 38, 0.09);
+  --rule-strong: rgba(23, 29, 38, 0.15);
+  --border-glass: rgba(23, 29, 38, 0.09);
+  --border-strong: rgba(23, 29, 38, 0.15);
 
-  /* Accent Colors */
-  --accent-blue: #2563EB;
-  --accent-blue-light: rgba(37, 99, 235, 0.08);
-  --accent-blue-hover: #1D4ED8;
-  --accent-green: #059669;
-  --accent-green-light: rgba(5, 150, 105, 0.08);
-  --accent-red: #DC2626;
-  --accent-red-light: rgba(220, 38, 38, 0.08);
-  --accent-amber: #D97706;
-  --accent-amber-light: rgba(217, 119, 6, 0.08);
-  --accent-purple: #7C3AED;
-  --accent-purple-light: rgba(124, 58, 237, 0.08);
-  --accent-indigo: #4F46E5;
-  --accent-indigo-light: rgba(79, 70, 229, 0.08);
+  /* ─── Aksentlar — kamroq to'yingan, tinchroq ─── */
+  --accent-blue: #0F66AE;
+  --accent-blue-light: rgba(15, 102, 174, 0.07);
+  --accent-blue-hover: #0B5A9C;
+  --accent-green: #177C55;
+  --accent-green-light: rgba(23, 124, 85, 0.08);
+  --accent-red: #C43A31;
+  --accent-red-light: rgba(196, 58, 49, 0.08);
+  --accent-amber: #8F5A0C;
+  --accent-amber-light: rgba(143, 90, 12, 0.08);
+  --accent-purple: #6941C0;
+  --accent-purple-light: rgba(105, 65, 192, 0.08);
+  --accent-purple-border: rgba(105, 65, 192, 0.28);
+  --accent-indigo: #3D48C0;
+  --accent-indigo-light: rgba(61, 72, 192, 0.08);
+  --accent-indigo-border: rgba(61, 72, 192, 0.28);
 
-  /* Text — pure qora emas, ko'zga yumshoqroq slate (o'qishni osonlashtiradi) */
-  --text-primary: #1E293B;
-  --text-secondary: #4B5A70;
-  --text-muted: #94A3B8;
+  /* ─── Matn ───
+     Avvalgi #0E1720 deyarli qora edi (~18:1) — halolash/ko'z charchashi.
+     Endi yumshoq siyoh (~14:1): hali ham tiniq, lekin ko'zga yumshoqroq. */
+  --text-primary: #262C34;         /* oq ustida 14:1 */
+  --text-secondary: #586371;       /* oq ustida 6.1:1 */
+  --text-muted: #646E7A;           /* oq 5.2:1 · sahifa 4.6:1 · sunken 4.7:1 — hamma joyda AA */
   --text-white: #FFFFFF;
 
-  /* Aliases for legacy components */
-  --primary: #2563EB;
-  --primary-dark: #1D4ED8;
-  --primary-ghost: rgba(37, 99, 235, 0.08);
-  --text: #1E293B;
-  --border: #E2E8F0;
-  --danger-dark: #B91C1C;
-  --warning-light: rgba(217, 119, 6, 0.1);
-  /* Surface/text scale — amallar matritsasi (OperationModule) uchun */
+  /* Eski komponentlar uchun taxalluslar */
+  --primary: #0F66AE;
+  --primary-dark: #0B5091;
+  --primary-ghost: rgba(15, 102, 174, 0.07);
+  --text: #262C34;
+  --border: rgba(23, 29, 38, 0.09);
+  --danger-dark: #A6322A;
+  --warning-light: rgba(143, 90, 12, 0.1);
+  /* Surface/text shkalasi — amallar matritsasi (OperationModule) uchun */
   --surface: #FFFFFF;
-  --surface-2: #F1F5F9;
-  --text-2: #475569;
-  --text-3: #94A3B8;
+  --surface-2: #F1F3F5;
+  --text-2: #586371;
+  --text-3: #646E7A;
 
-  /* Sidebar */
+  /* ─── Sidebar ─── */
   --sidebar-bg: #FFFFFF;
-  --sidebar-border: #E2E8F0;
-  --sidebar-item-active-bg: #2563EB;
-  --sidebar-item-active-text: #FFFFFF;
-  --sidebar-item-hover-bg: rgba(37, 99, 235, 0.06);
-  --sidebar-item-text: #64748B;
+  --sidebar-border: rgba(23, 29, 38, 0.09);
+  --sidebar-item-active-bg: rgba(15, 102, 174, 0.07);
+  --sidebar-item-active-text: #0B5091;
+  --sidebar-item-hover-bg: #F0F2F4;
+  --sidebar-item-text: #586371;
   --sidebar-width: 240px;
 
-  /* Topbar */
+  /* ─── Topbar ─── */
   --topbar-bg: #FFFFFF;
-  --topbar-border: #E2E8F0;
+  --topbar-border: rgba(23, 29, 38, 0.09);
   --topbar-height: 64px;
 
-  /* Card & Components */
+  /* ─── Karta ───
+     Chegara bir oz aniqroq (.09 → .11) va ostida SHIVIRLAGAN soya:
+     kanvasdan atigi bir necha piksel ko'tariladi. Bu kartaga chuqurlik va
+     "premium" tugatilganlik beradi, lekin eski og'ir suzuvchi ko'rinishga
+     qaytmaydi — soya deyarli sezilmaydi (Stripe/Linear karta soyasi). */
   --card-bg: #FFFFFF;
-  --card-border: #E2E8F0;
-  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --card-shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --card-border: rgba(23, 29, 38, 0.11);
+  --card-shadow: 0 1px 2px rgba(20, 28, 42, 0.04), 0 1px 3px -1px rgba(20, 28, 42, 0.05);
+  --card-shadow-hover: 0 2px 4px rgba(20, 28, 42, 0.05), 0 6px 16px -6px rgba(20, 28, 42, 0.10);
   --card-radius: 12px;
 
-  /* Input */
-  --input-bg: #F8FAFC;
-  --input-border: #CBD5E1;
-  --input-focus-border: #2563EB;
-  --input-focus-ring: rgba(37, 99, 235, 0.15);
-  --input-text: #1E293B;
+  /* Suzuvchi qatlamlar — yumshoq, tarqoq, ko'p qatlamli soya (premium his).
+     Avvalgi bitta-zich soya o'rniga uch qatlam past shaffoflik bilan. */
+  --shadow-float: 0 1px 2px rgba(24, 30, 40, 0.04), 0 4px 12px -2px rgba(24, 30, 40, 0.07), 0 12px 32px -8px rgba(24, 30, 40, 0.09);
+  --shadow-overlay: 0 2px 4px rgba(24, 30, 40, 0.05), 0 12px 28px -6px rgba(24, 30, 40, 0.12), 0 28px 60px -12px rgba(24, 30, 40, 0.16);
 
-  /* Table */
-  --table-header-bg: #F8FAFC;
+  /* ─── Kirish maydoni ─── */
+  --input-bg: #FFFFFF;
+  --input-border: rgba(23, 29, 38, 0.16);
+  --input-focus-border: #0F66AE;
+  --input-focus-ring: rgba(15, 102, 174, 0.16);
+  --input-text: #262C34;
+
+  /* ─── Jadval ─── */
+  --table-header-bg: #F4F5F7;
   --table-row-even: #FFFFFF;
-  --table-row-odd: #F8FAFC;
-  --table-row-hover: #EFF6FF;
-  --table-border: #E2E8F0;
+  --table-row-odd: #FFFFFF;        /* zebra o'rniga chiziq — qatorlarni chiziq ajratadi */
+  --table-row-hover: rgba(15, 102, 174, 0.05);
+  --table-border: rgba(23, 29, 38, 0.08);
 
-  /* Status */
-  --success: #059669;
-  --success-bg: #ECFDF5;
-  --success-border: #A7F3D0;
-  --danger: #DC2626;
-  --danger-bg: #FEF2F2;
-  --danger-border: #FECACA;
-  --warning: #D97706;
-  --warning-bg: #FFFBEB;
-  --warning-border: #FDE68A;
-  --info: #2563EB;
-  --info-bg: #EFF6FF;
-  --info-border: #BFDBFE;
+  /* ─── Status — tinchroq fon/chegara ─── */
+  --success: #177C55;
+  --success-bg: #ECF6F0;
+  --success-border: rgba(23, 124, 85, 0.25);
+  --danger: #C43A31;
+  --danger-bg: #FBEDEB;
+  --danger-border: rgba(196, 58, 49, 0.25);
+  --warning: #8F5A0C;
+  --warning-bg: #FAF2E4;
+  --warning-border: rgba(143, 90, 12, 0.25);
+  --info: #0F66AE;
+  --info-bg: #EAF1F9;
+  --info-border: rgba(15, 102, 174, 0.25);
 
-  /* Scrollbar */
-  --scrollbar-thumb: #CBD5E1;
-  --scrollbar-track: #F1F5F9;
+  /* ─── Scrollbar ─── */
+  --scrollbar-thumb: rgba(23, 29, 38, 0.16);
+  --scrollbar-track: transparent;
 }
 
 /* =============================================
-   DARK THEME - Premium Design System
+   DARK THEME — "Ledger"
    ============================================= */
 .dark {
   color-scheme: dark;
-  /* Backgrounds — pure qora emas, yumshoqroq to'q slate (ko'zga kamroq og'ir) */
-  --bg-primary: #12151D;
-  --bg-secondary: #171B26;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --bg-hover: rgba(255, 255, 255, 0.06);
 
-  /* Borders */
+  /* ─── Brend ───
+     Yumshatilgan sky — avvalgi #38A9F0 elektrik/uchqun edi. Endi tinchroq
+     (#4FA3E3, to'q karta ustida 6.25:1). */
+  --brand: #4FA3E3;
+  --brand-deep: #2E80C0;
+  --brand-ghost: rgba(79, 163, 227, 0.14);
+  --brand-hover: #6BB2E9;
+
+  /* ─── Imzo ─── */
+  --live: #AEC93B;
+  --live-ink: #0E1720;
+
+  /* Qorong'u temada aksent ranglari OCH bo'ladi, shuning uchun ular
+     ustidagi matn — siyoh, oq emas. */
+  --on-brand: #06121C;
+  --on-success: #04180F;
+  --on-danger: #200705;
+  --on-warning: #1C1203;
+
+  /* ─── Zamin ───
+     Avvalgi zamin sovuq ko'k tusda edi (#10141B/#171D27). Endi deyarli
+     neytral, bir tomchi issiqroq to'q kulrang — Linear/Vercel qorong'u
+     rejimi kabi: sokin, ko'k tovlanmaydi. */
+  --bg-primary: #0F1116;
+  --bg-secondary: #15181E;
+  --bg-card: #181C23;
+  --bg-hover: rgba(255, 255, 255, 0.045);
+  --bg-sunken: #12151A;
+
+  /* ─── Chiziq — yumshatilgan (.10/.18 → .08/.14) ─── */
+  --rule: rgba(255, 255, 255, 0.08);
+  --rule-strong: rgba(255, 255, 255, 0.14);
   --border-glass: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.14);
 
-  /* Accent Colors */
-  --accent-blue: #3B82F6;
-  --accent-blue-light: rgba(59, 130, 246, 0.12);
-  --accent-blue-hover: #2563EB;
-  --accent-green: #10B981;
-  --accent-green-light: rgba(16, 185, 129, 0.12);
-  --accent-red: #F87171;
-  --accent-red-light: rgba(248, 113, 113, 0.12);
-  --accent-amber: #FBBF24;
-  --accent-amber-light: rgba(251, 191, 36, 0.12);
-  --accent-purple: #A78BFA;
-  --accent-purple-light: rgba(167, 139, 250, 0.12);
-  --accent-indigo: #818CF8;
-  --accent-indigo-light: rgba(129, 140, 248, 0.12);
+  /* ─── Aksentlar — kamroq to'yingan, to'q fonda vibratsiya qilmaydi ─── */
+  --accent-blue: #4FA3E3;
+  --accent-blue-light: rgba(79, 163, 227, 0.14);
+  --accent-blue-hover: #6BB2E9;
+  --accent-green: #3FB985;
+  --accent-green-light: rgba(63, 185, 133, 0.14);
+  --accent-red: #E37F76;
+  --accent-red-light: rgba(227, 127, 118, 0.14);
+  --accent-amber: #D6A64E;
+  --accent-amber-light: rgba(214, 166, 78, 0.14);
+  --accent-purple: #A88DEC;
+  --accent-purple-light: rgba(168, 141, 236, 0.14);
+  --accent-purple-border: rgba(168, 141, 236, 0.3);
+  --accent-indigo: #8890E8;
+  --accent-indigo-light: rgba(136, 144, 232, 0.14);
+  --accent-indigo-border: rgba(136, 144, 232, 0.3);
 
-  /* Text */
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  /* ─── Matn ───
+     Avvalgi #EDF1F5 deyarli oq edi (~13.5:1) — to'q fonda halolash/porlash.
+     Yumshoq oq-kulrang (~12.6:1): tiniq, lekin ko'zga porlamaydi. */
+  --text-primary: #D9DEE4;
+  --text-secondary: #98A3AF;       /* 6.7:1 */
+  --text-muted: #727E8A;           /* 4.1:1 — hint/meta */
   --text-white: #FFFFFF;
 
-  /* Aliases for legacy components */
-  --primary: #3B82F6;
-  --primary-dark: #2563EB;
-  --primary-ghost: rgba(59, 130, 246, 0.14);
-  --text: #F1F5F9;
+  /* Eski komponentlar uchun taxalluslar */
+  --primary: #4FA3E3;
+  --primary-dark: #2E80C0;
+  --primary-ghost: rgba(79, 163, 227, 0.16);
+  --text: #D9DEE4;
   --border: rgba(255, 255, 255, 0.08);
-  --danger-dark: #EF4444;
-  --warning-light: rgba(251, 191, 36, 0.12);
-  /* Surface/text scale — amallar matritsasi (OperationModule) uchun.
-     --surface-2 noshaffof: sticky sarlavha ostidan kontent ko'rinmasligi uchun */
-  --surface: #1C212E;
-  --surface-2: #282F41;
-  --text-2: #94A3B8;
-  --text-3: #64748B;
+  --danger-dark: #E37F76;
+  --warning-light: rgba(214, 166, 78, 0.14);
+  /* --surface-2 noshaffof: sticky sarlavha ostidan kontent ko'rinmasligi uchun */
+  --surface: #181C23;
+  --surface-2: #222732;
+  --text-2: #98A3AF;
+  --text-3: #727E8A;
 
-  /* Sidebar */
-  --sidebar-bg: #171B26;
+  /* ─── Sidebar ─── */
+  --sidebar-bg: #15181E;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-item-active-bg: #3B82F6;
-  --sidebar-item-active-text: #FFFFFF;
-  --sidebar-item-hover-bg: rgba(59, 130, 246, 0.1);
-  --sidebar-item-text: #64748B;
+  --sidebar-item-active-bg: rgba(79, 163, 227, 0.13);
+  --sidebar-item-active-text: #86C2EE;
+  --sidebar-item-hover-bg: rgba(255, 255, 255, 0.045);
+  --sidebar-item-text: #98A3AF;
   --sidebar-width: 240px;
 
-  /* Topbar */
-  --topbar-bg: #171B26;
+  /* ─── Topbar ─── */
+  --topbar-bg: #15181E;
   --topbar-border: rgba(255, 255, 255, 0.08);
   --topbar-height: 64px;
 
-  /* Card & Components */
-  --card-bg: #1C212E;
-  --card-border: rgba(255, 255, 255, 0.08);
-  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
-  --card-shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  /* ─── Karta ───
+     Qorong'u temada kartani yorug'roq yuza (#181C23 zamin #0F1116 ustida)
+     allaqachon ajratadi; nozik chegara + juda yengil soya chuqurlik qo'shadi. */
+  --card-bg: #181C23;
+  --card-border: rgba(255, 255, 255, 0.09);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px -1px rgba(0, 0, 0, 0.4);
+  --card-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.45), 0 8px 20px -8px rgba(0, 0, 0, 0.55);
   --card-radius: 12px;
 
-  /* Input */
-  --input-bg: rgba(255, 255, 255, 0.05);
-  --input-border: rgba(255, 255, 255, 0.1);
-  --input-focus-border: #3B82F6;
-  --input-focus-ring: rgba(59, 130, 246, 0.2);
-  --input-text: #F1F5F9;
+  --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px -2px rgba(0, 0, 0, 0.45), 0 12px 32px -8px rgba(0, 0, 0, 0.55);
+  --shadow-overlay: 0 2px 6px rgba(0, 0, 0, 0.5), 0 16px 40px -8px rgba(0, 0, 0, 0.6), 0 28px 64px -12px rgba(0, 0, 0, 0.7);
 
-  /* Table */
-  --table-header-bg: rgba(255, 255, 255, 0.03);
-  --table-row-even: #1C212E;
-  --table-row-odd: rgba(255, 255, 255, 0.02);
-  --table-row-hover: rgba(59, 130, 246, 0.08);
-  --table-border: rgba(255, 255, 255, 0.06);
+  /* ─── Kirish maydoni ─── */
+  --input-bg: rgba(255, 255, 255, 0.035);
+  --input-border: rgba(255, 255, 255, 0.14);
+  --input-focus-border: #4FA3E3;
+  --input-focus-ring: rgba(79, 163, 227, 0.22);
+  --input-text: #D9DEE4;
 
-  /* Status */
-  --success: #34D399;
-  --success-bg: rgba(52, 211, 153, 0.1);
-  --success-border: rgba(52, 211, 153, 0.2);
-  --danger: #F87171;
-  --danger-bg: rgba(248, 113, 113, 0.1);
-  --danger-border: rgba(248, 113, 113, 0.2);
-  --warning: #FBBF24;
-  --warning-bg: rgba(251, 191, 36, 0.1);
-  --warning-border: rgba(251, 191, 36, 0.2);
-  --info: #60A5FA;
-  --info-bg: rgba(96, 165, 250, 0.1);
-  --info-border: rgba(96, 165, 250, 0.2);
+  /* ─── Jadval ─── */
+  --table-header-bg: #14171D;
+  --table-row-even: transparent;
+  --table-row-odd: transparent;
+  --table-row-hover: rgba(79, 163, 227, 0.07);
+  --table-border: rgba(255, 255, 255, 0.07);
 
-  /* Scrollbar */
-  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
-  --scrollbar-track: rgba(255, 255, 255, 0.03);
+  /* ─── Status ─── */
+  --success: #3FB985;
+  --success-bg: rgba(63, 185, 133, 0.13);
+  --success-border: rgba(63, 185, 133, 0.28);
+  --danger: #E37F76;
+  --danger-bg: rgba(227, 127, 118, 0.13);
+  --danger-border: rgba(227, 127, 118, 0.28);
+  --warning: #D6A64E;
+  --warning-bg: rgba(214, 166, 78, 0.13);
+  --warning-border: rgba(214, 166, 78, 0.28);
+  --info: #4FA3E3;
+  --info-bg: rgba(79, 163, 227, 0.13);
+  --info-border: rgba(79, 163, 227, 0.28);
+
+  /* ─── Scrollbar ─── */
+  --scrollbar-thumb: rgba(255, 255, 255, 0.14);
+  --scrollbar-track: transparent;
+}
+
+/* =============================================
+   Z-INDEX — yagona narvon
+
+   Avval shkala yo'q edi: qiymatlar z-10 dan z-[10000] gacha har faylda
+   alohida tanlangan, ikki fayl mustaqil ravishda z-[10000] ni olgan edi.
+   ============================================= */
+:root {
+  --z-sticky: 10;    /* jadvalning yopishqoq sarlavhasi */
+  --z-nav: 40;       /* topbar, mobil pastki navigatsiya */
+  --z-drawer: 50;    /* mobil yon panel */
+  --z-backdrop: 100; /* modal ortidagi qorayish */
+  --z-panel: 110;    /* modal paneli, drawer paneli */
+  --z-popover: 200;  /* popover, tooltip, toast */
 }
 
 /* =============================================
@@ -251,23 +376,31 @@ html {
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-family: var(--font-sans);
+  /* Plex Sans standart tracking'i UI uchun bir oz keng — juda oz siqilsa
+     matn ixchamroq, "premium" ko'rinadi. Sarlavhalar alohida siqiladi. */
+  letter-spacing: -0.006em;
+  line-height: 1.5;
   min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Sarlavhalar biroz qattiqroq siqiladi — katta o'lchamda Plex bo'sh
+   ko'rinmasligi uchun (Linear/Stripe sarlavha ohangi). */
+h1, h2, h3 {
+  letter-spacing: -0.018em;
 }
 
 /* =============================================
    NUMERALS
-   ============================================= */
 
-/* Inter's default figures are proportional: '1' is narrower than '8', so a
-   money column visibly reshuffles as digits change and decimal points stop
-   lining up. Every number a user compares against another number — salary,
-   contract amount, KPI percent, counters — belongs in tabular figures.
-   Applies to the elements that are numeric by definition; use .tabular for
-   individual cells (e.g. a total inside a <p>). */
+   Bu mahsulotda raqam — kontentning o'zi. Pul, davr, sana, STIR va
+   hisoblagichlar IBM Plex Mono bilan teriladi: ustunlar qulflanadi,
+   o'nlik nuqtalar bir chiziqda turadi va raqam matndan ajralib ko'rinadi.
+   ============================================= */
 .tabular,
 .erp-table td,
 input[type="number"],
@@ -276,45 +409,67 @@ time {
   font-feature-settings: 'tnum' 1;
 }
 
+/* Raqam terimi — pul/davr/hisoblagich uchun. `.num` allaqachon ~o'nlab
+   joyda ishlatiladi, shuning uchun mono shrift shu nom orqali tarqaladi. */
+.num,
+.figure,
+.erp-table td.col-numeric,
+.col-numeric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+/* Katta ko'rsatkich raqami — sahifadagi eng baland tipografik nuqta. */
+.stat-metric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
 /* =============================================
    OPTICAL ALIGNMENT
    ============================================= */
 
-/* Lucide icons are drawn on a 24px grid with the glyph inset from the box, so
-   an icon set flush against text sits visually low against the cap height even
-   when the boxes align. A ~1px lift is what makes icon+label pairs read as one
-   object rather than two stacked things. Opt-in — only where an icon sits
-   inline with text. */
+/* Lucide belgilari 24px to'rda chizilgan va glif quti ichida chekingan, shu
+   bois matn yoniga qo'yilganda ko'zga pastroq tushadi. ~1px ko'tarish
+   belgi+yorliq juftligini bitta narsadek ko'rsatadi. */
 .icon-optical {
   transform: translateY(-1px);
 }
 
-/* Uppercase micro-labels ('QIDIRISH...', '1-QADAM') look cramped at small sizes
-   because Inter's default tracking is tuned for lowercase at reading size.
-   Widening tracking as size drops is what keeps them legible. */
+/* Katta harfli mikro-yorliqlar ('QIDIRISH...', '1-QADAM') kichik o'lchamda
+   siqilib ko'rinadi. Ular mono shrift bilan teriladi — bu ularni interfeys
+   matnidan ajratadi va yorliq ekanini ko'rsatadi. */
 .label-caps {
+  font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   font-weight: 600;
 }
 
-/* Numbers right-align so decimal points and thousands stack; headers must
-   follow the data or the column reads broken. */
+/* Raqamlar o'ngga tekislanadi; sarlavha ham ma'lumot ortidan bormasa,
+   ustun buzilgandek o'qiladi. */
 .col-numeric {
   text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
 }
 
 /* =============================================
    FOCUS — visible ring on every interactive element
    ============================================= */
 
-/* :focus-visible was used 0 times before this; components set `outline: none`
-   with an inline style object that cannot express :focus, leaving keyboard
-   focus completely invisible (design-system/ACCESSIBILITY.md A4).
-   :where() keeps specificity at 0 so a component can still override it, and
-   :focus-visible means mouse users never see a ring on click. */
+/* :focus-visible avval 0 marta ishlatilgan: komponentlar `outline: none` ni
+   inline style bilan qo'yadi va :focus ni ifodalay olmaydi, natijada
+   klaviatura fokusi butunlay ko'rinmas edi (design-system/ACCESSIBILITY.md A4).
+   :where() aniqlikni 0 da ushlaydi, shuning uchun komponent hali ham uni
+   bekor qila oladi; :focus-visible esa sichqoncha bosganda halqa chiqmaydi. */
 :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 2px solid var(--input-focus-border);
   outline-offset: 2px;
@@ -325,57 +480,48 @@ time {
    IMAGE OUTLINES
    ============================================= */
 
-/* A white avatar or a light screenshot on a light card has no edge — the image
-   bleeds into the surface and its bounds become guesswork. A hairline inset
-   ring reads as a contour in both themes without adding a heavy border, and
-   inset means it never changes the element's box. */
+/* Oq avatar yoki och skrinshot och kartada chegarasiz qoladi — rasm yuzaga
+   qo'shilib ketadi. Ichki soch chizig'i ikkala temada ham kontur beradi va
+   elementning qutisini o'zgartirmaydi. */
 .img-outline {
-  box-shadow: inset 0 0 0 1px var(--border-glass);
+  box-shadow: inset 0 0 0 1px var(--rule);
 }
 
 .img-framed {
   border-radius: var(--card-radius);
-  box-shadow: inset 0 0 0 1px var(--border-glass), var(--card-shadow);
-  background-color: var(--bg-hover); /* holds the space while loading */
+  box-shadow: inset 0 0 0 1px var(--rule);
+  background-color: var(--bg-sunken); /* yuklanayotganda joyni ushlab turadi */
 }
 
 /* =============================================
    FORM CONTROLS — native <select> popup + checkboxes
    ============================================= */
 
-/* The <select> option list and checkbox ticks are painted by the browser, not
-   by our inline styles. With no color-scheme the dark theme drew the option
-   popup as (near-white) inherited text on the UA's white popup — the "oq-qora"
-   bug reported on Xodimlar / Firmalar / Organizations / KPI. color-scheme on
-   :root/.dark fixes the popup, date pickers and scrollbars; the explicit option
-   rule below is a solid-background fallback for engines that ignore it. Note we
-   use a solid color, not var(--input-bg) which is translucent and renders white
-   over the popup. */
+/* <select> ro'yxati va galochka brauzer tomonidan chiziladi, bizning inline
+   uslublarimiz bilan emas. color-scheme :root/.dark da ro'yxatni, sana
+   tanlagichni va scrollbarni to'g'rilaydi; quyidagi qoida esa uni
+   e'tiborsiz qoldiradigan brauzerlar uchun noshaffof zaxira. */
 .dark select option,
 .dark select optgroup {
-  background-color: #1C212E;
-  color: #F1F5F9;
+  background-color: #181C23;
+  color: #D9DEE4;
 }
 
-/* Checkbox/radio ticks defaulted to the UA pale grey, barely visible on a light
-   card ("darker qilish galochkani"). accent-color paints them brand-blue. */
+/* Galochka/radio brauzerning oqish kulranggi edi — och kartada deyarli
+   ko'rinmasdi. accent-color ularni brend rangiga bo'yaydi. */
 input[type="checkbox"],
 input[type="radio"] {
-  accent-color: var(--accent-blue);
+  accent-color: var(--brand);
 }
 
 /* =============================================
    REDUCED MOTION
    ============================================= */
 
-/* prefers-reduced-motion was honoured nowhere, while .animate-spin,
-   .animate-pulse-glow, .animate-float and .animate-shimmer run infinitely and
-   every modal opens with animate-fade-in/scale-in. Vestibular disorders make
-   that actively unpleasant, not merely busy.
-   Motion is reduced to near-zero rather than 0s: instant-but-present keeps
-   transitionend/animationend handlers firing, so nothing that waits on an
-   animation callback silently hangs. Spinners keep turning (slowly) because a
-   frozen spinner reads as a crashed app. */
+/* Vestibulyar buzilishlar uchun cheksiz animatsiya shunchaki shovqin emas,
+   balki jismonan yoqimsiz. Harakat 0s emas, deyarli-nol qilinadi: shunda
+   transitionend/animationend ishlovchilari ishlashda davom etadi va
+   animatsiya tugashini kutayotgan hech narsa jimgina osilib qolmaydi. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -384,17 +530,10 @@ input[type="radio"] {
     scroll-behavior: auto !important;
   }
 
-  /* A loading indicator must still indicate loading. */
+  /* Yuklanish indikatori yuklanishni ko'rsatishda davom etishi shart. */
   .animate-spin {
     animation-duration: 1.5s !important;
     animation-iteration-count: infinite !important;
-  }
-
-  /* Purely decorative — stop entirely. */
-  .animate-float,
-  .animate-pulse-glow,
-  .animate-shimmer {
-    animation: none !important;
   }
 }
 
@@ -402,18 +541,17 @@ input[type="radio"] {
    CUSTOM SCROLLBAR
    ============================================= */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
-  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -426,86 +564,199 @@ input[type="radio"] {
 }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+/* Ochilma menyu / uzun ro'yxatlar uchun ko'rinadigan, qalinroq scrollbar.
+   Global 8px'dan kengroq (10px) va hover'da rang to'yingan bo'ladi, shunda
+   foydalanuvchi qayerda turganini ko'radi. padding-box + shaffof chegara —
+   thumb ozgina ichkariroq, zamonaviy ko'rinishда. */
+.scrollbar-styled {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+.scrollbar-styled::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scrollbar-styled::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+.scrollbar-styled::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scrollbar-styled::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  background-clip: padding-box;
+}
+
+/* =============================================
+   THE LIVE RULE — imzo elementi
+
+   2px chartreuse chiziq HOZIR amalda bo'lgan narsani belgilaydi: faol
+   menyu bandi, ochiq davr, keyingi muddat, joriy oy. Bir ko'rinishda
+   ATIGI BITTA marta. Hech qachon to'ldirish emas, hech qachon och fonda
+   matn emas — faqat belgi.
+   ============================================= */
+.live-rule {
+  position: relative;
+}
+
+.live-rule::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: calc(100% - 12px);
+  min-height: 14px;
+  background: var(--live);
+  border-radius: 1px;
+}
+
+/* Gorizontal variant — ustun sarlavhasi yoki karta usti uchun. */
+.live-rule-top::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--live);
+}
+
+/* Ochiq davr yorlig'i. To'liq chartreuse tabletka juda baqiradi va
+   yo'nalishning o'z mantiqiga ("to'ldirish emas, chiziq") zid keladi —
+   shuning uchun rang faqat 2px chiziqda qoladi, matn esa oddiy siyoh. */
+.live-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0 0.25rem 0.625rem;
+  border-left: 2px solid var(--live);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
 /* =============================================
    COMPONENT STYLES
    ============================================= */
 
-/* Glass Card */
-.glass-card {
+/* Karta — chegara + shivirlagan soya bilan kanvasdan ko'tarilgan panel. */
+.glass-card,
+.dashboard-card,
+.c1-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
   box-shadow: var(--card-shadow);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: border-color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.glass-card:hover {
-  box-shadow: var(--card-shadow-hover);
-}
-
-/* Dashboard Card */
-.dashboard-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  box-shadow: var(--card-shadow);
-  /* .glass-card (14 uses) had this and .dashboard-card (80 uses) did not, so the
-     dominant card was the one that never responded. Shadow + border only — the
-     card must not move, or a table of them ripples under the cursor. */
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-/* Only cards that are themselves a control (open a drawer, select a row) lift.
-   A static card that lifts is a lie about what's clickable. */
+/* Faqat o'zi boshqaruv bo'lgan kartalar javob beradi (drawer ochadi, qator
+   tanlaydi). Statik kartaning javob berishi — nima bosiladiganligi haqidagi
+   yolg'on. Karta joyidan qimirlamaydi: ostidagi jadval kursor tagida
+   to'lqinlanmasligi kerak. */
 .dashboard-card:where(a, button, [role="button"]):hover,
-.dashboard-card.is-interactive:hover {
+.dashboard-card.is-interactive:hover,
+.glass-card:where(a, button, [role="button"]):hover {
+  border-color: var(--rule-strong);
   box-shadow: var(--card-shadow-hover);
-  border-color: var(--border-strong);
 }
 
-/* Stat Card */
-.stat-card {
-  position: relative;
-  overflow: hidden;
+/* Ko'rsatkichlar tasmasi — 4 ta suzuvchi plitka o'rniga BITTA panel,
+   ichida vertikal chiziqlar bilan bo'lingan. Bu daftar sarhisobiga
+   o'xshaydi va har qanday boshqaruv panelidagi "stat tile" qatoriga emas.
+   Mobilda chiziqlar gorizontalga aylanadi. */
+.stat-strip {
+  display: grid;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
   box-shadow: var(--card-shadow);
-  padding: 1.25rem;
-  transition: all 0.2s ease;
-  cursor: default;
+  overflow: hidden;
 }
 
-.stat-card:hover {
-  box-shadow: var(--card-shadow-hover);
-  transform: translateY(-2px);
-  border-color: var(--accent-blue);
+.stat-strip > * {
+  padding: 0.875rem 1rem;
+  border-top: 1px solid var(--rule);
 }
 
-/* Badge */
+.stat-strip > *:first-child { border-top: none; }
+
+@media (min-width: 640px) {
+  .stat-strip { grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .stat-strip > * { border-top: none; border-left: 1px solid var(--rule); }
+  .stat-strip > *:first-child { border-left: none; }
+}
+
+/* Tasmadagi bitta ko'rsatkich: mono katta-harfli yorliq + katta raqam. */
+.stat-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.stat-value {
+  display: block;
+  margin-top: 0.375rem;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* Suzuvchi qatlamlar — modal, drawer, popover. Faqat shular ko'tariladi. */
+.layer-float {
+  box-shadow: var(--shadow-float);
+}
+
+.layer-overlay {
+  box-shadow: var(--shadow-overlay);
+}
+
+/* Nishon */
 .c1-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 100px;
-  font-size: 11px;
+  padding: 0.1875rem 0.625rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
-/* Sidebar Items with labels */
+/* Sidebar bandlari */
 .sidebar-nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.625rem 0.875rem;
-  border-radius: 10px;
-  font-size: 13px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: var(--text-body);
   font-weight: 500;
   color: var(--sidebar-item-text);
-  transition: all 0.2s ease;
+  transition: background-color 0.12s ease, color 0.12s ease;
   white-space: nowrap;
   cursor: pointer;
   text-decoration: none;
@@ -513,48 +764,59 @@ input[type="radio"] {
 
 .sidebar-nav-item:hover {
   background: var(--sidebar-item-hover-bg);
-  color: var(--accent-blue);
+  color: var(--text-primary);
 }
 
+/* Faol band: to'q ko'k tabletka + porlash emas, balki jonli chiziq +
+   yengil brend zamini. Chiziq ma'no tashiydi; porlash tashimasdi. */
 .sidebar-nav-item.active {
   background: var(--sidebar-item-active-bg);
   color: var(--sidebar-item-active-text);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  font-weight: 600;
 }
 
-/* Buttons */
+.sidebar-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: calc(100% - 10px);
+  background: var(--live);
+  border-radius: 1px;
+}
+
+/* Tugmalar */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: var(--accent-blue);
-  color: var(--text-white);
+  padding: 0.5rem 1rem;
+  min-height: 36px;
+  background: var(--brand);
+  color: var(--on-brand);
   border-radius: 8px;
-  font-size: var(--text-base);
+  font-size: var(--text-body);
   font-weight: 600;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
-  /* Was `all`, which tweens layout properties too — any width/padding change
-     would animate and force reflow. Name only what actually moves. */
-  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  /* `all` edi — bu tartib xossalarini ham animatsiyalab, har bir kenglik
+     o'zgarishida qayta chizishga majburlardi. Faqat haqiqatan
+     o'zgaradiganini nomlaymiz. */
+  transition: background-color 0.12s ease, border-color 0.12s ease;
   white-space: nowrap;
 }
 
 .btn-primary:hover {
-  background: var(--accent-blue-hover);
-  transform: translateY(-1px);
-  /* Was hardcoded rgba(37, 99, 235, .3) — light-mode blue, so the glow stayed
-     the wrong blue in dark mode. Derived from the token, it follows the theme. */
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-blue) 30%, transparent);
+  background: var(--brand-hover);
 }
 
-/* Press settles back to rest — the button meets the cursor. Faster than the
-   hover so it feels like contact rather than a second animation. */
+/* Bosilganda tugma kursorga qarab bir oz to'qlashadi — sakramaydi. */
 .btn-primary:active {
-  transform: translateY(0);
-  transition-duration: 0.05s;
+  background: var(--brand-deep);
+  transition-duration: 0.06s;
 }
 
 .btn-secondary {
@@ -562,272 +824,27 @@ input[type="radio"] {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: var(--input-bg);
+  padding: 0.5rem 1rem;
+  min-height: 36px;
+  background: transparent;
   color: var(--text-secondary);
-  border: 1px solid var(--card-border);
+  border: 1px solid var(--rule-strong);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--text-body);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
   white-space: nowrap;
 }
 
 .btn-secondary:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
-  border-color: var(--accent-blue);
+  border-color: var(--brand);
 }
 
-/* Input styles */
-.erp-input {
-  width: 100%;
-  background: var(--input-bg);
-  border: 1px solid var(--input-border);
-  color: var(--input-text);
-  border-radius: 8px;
-  padding: 0.625rem 0.875rem;
-  font-size: 13px;
-  font-weight: 500;
-  outline: none;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-.erp-input:focus {
-  border-color: var(--input-focus-border);
-  box-shadow: 0 0 0 3px var(--input-focus-ring);
-}
-
-.erp-input::placeholder {
-  color: var(--text-muted);
-}
-
-/* Table */
-.erp-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.erp-table thead tr {
-  background: var(--table-header-bg);
-  border-bottom: 1px solid var(--table-border);
-}
-
-.erp-table thead th {
-  padding: 0.75rem 1rem;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.erp-table tbody tr {
-  border-bottom: 1px solid var(--table-border);
-  transition: background-color 0.15s ease;
-  background: var(--table-row-even);
-}
-
-.erp-table tbody tr:nth-child(odd) {
-  background: var(--table-row-odd);
-}
-
-.erp-table tbody tr:hover,
-.erp-table tbody tr:nth-child(odd):hover {
-  background: var(--table-row-hover);
-}
-
-.erp-table tbody td {
-  padding: 0.875rem 1rem;
-  font-size: 13px;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
-/* Tooltip */
-.tooltip {
-  position: absolute;
-  left: calc(100% + 12px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: #0F172A;
-  color: #F1F5F9;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 0.375rem 0.75rem;
-  border-radius: 6px;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.tooltip::before {
-  content: '';
-  position: absolute;
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  border: 5px solid transparent;
-  border-right-color: #0F172A;
-}
-
-/* Animations */
-/* NOTE: the end state intentionally has NO transform. A lingering
-   `transform` (via animation-fill-mode: forwards) turns the animated
-   wrapper into a containing block for position:fixed descendants, which
-   pushes any modal inside it off-screen. Ending on `opacity` only keeps
-   the fade while leaving `transform: none`, so fixed modals pin to the
-   viewport correctly. */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slide-in-right {
-  from { opacity: 0; transform: translateX(16px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes scale-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.3); }
-  50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
-}
-
-.animate-fade-in { animation: fade-in 0.25s ease-out forwards; }
-.animate-slide-in-right { animation: slide-in-right 0.25s ease-out forwards; }
-.animate-scale-in { animation: scale-in 0.2s ease-out forwards; }
-.animate-spin { animation: spin 1s linear infinite; }
-.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
-}
-@keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-.animate-float { animation: float 3s ease-in-out infinite; }
-.animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-/* Status indicator dots */
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-dot.active { background: var(--success); box-shadow: 0 0 0 3px var(--success-bg); }
-.status-dot.inactive { background: var(--text-muted); }
-.status-dot.sick { background: var(--warning); box-shadow: 0 0 0 3px var(--warning-bg); }
-.status-dot.vacation { background: var(--info); box-shadow: 0 0 0 3px var(--info-bg); }
-
-/* Number formatting - always show full numbers */
-.num {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  font-feature-settings: 'tnum';
-}
-
-/* Gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Premium sidebar label */
-.sidebar-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  padding: 0 0.875rem;
-  margin-top: 1rem;
-  margin-bottom: 0.25rem;
-}
-
-/* Page header utility */
-.page-header {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  box-shadow: var(--card-shadow);
-  padding: 1.25rem 1.5rem;
-}
-
-/* Stat metric (large number display) */
-.stat-metric {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-/* Empty state */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  text-align: center;
-  color: var(--text-muted);
-}
-
-.empty-state svg {
-  opacity: 0.25;
-  margin-bottom: 1rem;
-}
-
-.empty-state p {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  opacity: 0.6;
-}
-
-/* Legacy component classes used in older components (wizard, drawer, KPI manager).
-   Hammasi theme o'zgaruvchilariga bog'langan — light/dark avtomatik mos keladi. */
-.c1-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  box-shadow: var(--card-shadow);
-}
-
-.c1-section-header {
-  padding: 0.75rem 1.25rem;
-  background: var(--input-bg);
-  border-bottom: 1px solid var(--card-border);
-  color: var(--text-secondary);
-}
-
+/* Kirish maydonlari */
+.erp-input,
 .c1-input {
   width: 100%;
   background: var(--input-bg);
@@ -835,139 +852,438 @@ input[type="radio"] {
   color: var(--input-text);
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
-  font-size: 12px;
+  font-size: var(--text-body);
+  font-weight: 500;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
+.erp-input:focus,
 .c1-input:focus {
   border-color: var(--input-focus-border);
   box-shadow: 0 0 0 3px var(--input-focus-ring);
 }
 
+.erp-input::placeholder,
 .c1-input::placeholder {
   color: var(--text-muted);
 }
 
-/* Legacy glass inputs/cards — theme tokenlarga bog'langan soddalashtirilgan variant */
-.liquid-glass-input {
-  background: var(--input-bg);
-  border: 1px solid var(--input-border);
-  color: var(--input-text);
+/* iOS kirish maydonini 16px dan kichik bo'lsa avtomatik kattalashtiradi va
+   sahifani suradi. Mobilda barcha maydonlar 16px. */
+@media (max-width: 767px) {
+  .erp-input,
+  .c1-input,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
-.liquid-glass-input:focus {
-  border-color: var(--input-focus-border);
-  box-shadow: 0 0 0 3px var(--input-focus-ring);
+/* =============================================
+   TABLE — the ledger
+
+   Buxgalteriyaning tabiiy tuzilmasi: ustunlar chiziq bilan ajratiladi,
+   qator ostiga chiziq tortiladi, yakun ikki chiziq ostida turadi.
+   Zebra yo'q — chiziq zebradan aniqroq va zichlikda bulg'anmaydi.
+   ============================================= */
+.erp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
 }
 
-.liquid-glass-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+.erp-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: var(--table-header-bg);
+  padding: 0.625rem 0.875rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  text-align: left;
+  border-bottom: 1px solid var(--rule-strong);
 }
 
-/* Primary CTA (masalan, "Yangi qo'shish") */
+/* Raqamli ustunning sarlavhasi ma'lumot ortidan borishi shart. `.col-numeric`
+   yolg'iz o'zi yetmaydi: `.erp-table thead th` undan aniqroq va sarlavhani
+   chapda ushlab qolib, ustunni buzilgan ko'rsatardi. */
+.erp-table thead th.col-numeric,
+.erp-table thead th.num {
+  text-align: right;
+}
+
+/* Ustun chizig'i — jadvalni ro'yxat emas, daftar qiladi. */
+.erp-table thead th + th,
+.erp-table tbody td + td {
+  border-left: 1px solid var(--table-border);
+}
+
+.erp-table tbody tr {
+  border-bottom: 1px solid var(--table-border);
+  transition: background-color 0.1s ease;
+  background: transparent;
+}
+
+.erp-table tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+.erp-table tbody td {
+  padding: 0.625rem 0.875rem;
+  font-size: var(--text-body);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* Yakun qatori — ikki chiziq ostida, xuddi daftardagidek. */
+.erp-table tfoot td,
+.erp-table tbody tr.is-total td {
+  border-top: 3px double var(--rule-strong);
+  border-bottom: none;
+  font-weight: 700;
+  background: var(--bg-sunken);
+}
+
+/* Joriy davr / hozir amalda bo'lgan qator. */
+.erp-table tbody tr.is-live td:first-child {
+  box-shadow: inset 2px 0 0 0 var(--live);
+}
+
+/* =============================================
+   VERDICT — rang yolg'iz ma'no tashimaydi
+
+   Yashil/sariq/qizil — domenning asosiy toifaviy qiymati (CONTEXT.md), va
+   u faqat rang bilan berilardi. Rangni ajrata olmaydigan nazoratchi o'zi
+   javobgar bo'lgan bahoni o'qiy olmasdi. Endi shakl ham bor:
+   to'la ● / yarim ◐ / bo'sh ○.
+   ============================================= */
+.verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--text-meta);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.verdict-mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid currentColor;
+}
+
+.verdict-green .verdict-mark { background: currentColor; }
+.verdict-yellow .verdict-mark {
+  background: linear-gradient(to right, currentColor 0 50%, transparent 50% 100%);
+}
+.verdict-red .verdict-mark { background: transparent; }
+
+.verdict-green  { color: var(--success); }
+.verdict-yellow { color: var(--warning); }
+.verdict-red    { color: var(--danger); }
+
+/* Holat nuqtalari */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.status-dot.active { background: var(--success); }
+.status-dot.inactive { background: var(--text-muted); }
+.status-dot.sick { background: var(--warning); }
+.status-dot.vacation { background: var(--info); }
+
+/* =============================================
+   MOTION — faqat holat o'zgarishi
+
+   Uzoq seansli ish quroli. Ambient animatsiya (float / pulse-glow /
+   shimmer) va karta ko'tarilishi olib tashlandi: ellikinchi sahifada ular
+   ma'lumot emas, shovqin. Qolgani — 60-180ms holat o'tishlari.
+   Yagona uyushtirilgan lahza login sahifasida.
+   ============================================= */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* DIQQAT: tugash holatida transform ATAYLAB yo'q. Qolib ketgan
+   `transform` (animation-fill-mode: forwards orqali) animatsiyalangan
+   o'ramni position:fixed avlodlar uchun containing block'ga aylantiradi
+   va ichidagi modalni ekrandan chiqarib yuboradi. Faqat `opacity` bilan
+   tugash `transform: none` ni saqlaydi. */
+.animate-fade-in { animation: fade-in 0.18s ease-out forwards; }
+.animate-slide-in-right { animation: slide-in-right 0.18s ease-out forwards; }
+.animate-scale-in { animation: scale-in 0.14s ease-out forwards; }
+.animate-rise-in { animation: rise-in 0.22s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.animate-spin { animation: spin 1s linear infinite; }
+
+/* Eski taxalluslar — hali ishlatilayotgan joylar buzilmasin. */
+.animate-macos { animation: fade-in 0.18s ease-out forwards; }
+.animate-in.slide-in-from-right { animation: slide-in-right 0.2s ease-out forwards; }
+
+/* O'CHIRILDI: .animate-float, .animate-pulse-glow, .animate-shimmer.
+   Uchalasi ham cheksiz aylanardi va uchalasining ham ishlatilishi 0 edi. */
+
+/* =============================================
+   UTILITIES
+   ============================================= */
+
+/* Gradient matn — brend qanotining azure→cyan o'tishi. */
+.gradient-text {
+  background: linear-gradient(100deg, var(--brand-deep), var(--brand));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Sidebar guruh yorlig'i — mono, katta harf, chiziq bilan */
+.sidebar-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  padding: 0 0.75rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.375rem;
+}
+
+.sidebar-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+/* Sahifa sarlavhasi — karta emas, chiziq ostidagi sarlavha.
+   Tartib xossalari (display/flex) ATAYLAB yo'q: bu sinf Tailwind
+   utilitilari bilan birga qo'yiladi va ularni bosib ketmasligi kerak. */
+.page-header {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.c1-section-header {
+  padding: 0.625rem 1rem;
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+}
+
+/* Bo'sh holat — harakatga taklif, kayfiyat emas. */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-state svg {
+  opacity: 0.35;
+  margin-bottom: 0.875rem;
+}
+
+.empty-state p {
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Asosiy CTA ("Yangi qo'shish") — endi porlamaydi, qat'iy brend to'ldirish */
 .ai-button-glow {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
-  color: #FFFFFF;
+  padding: 0.5rem 1rem;
+  min-height: 36px;
+  background: var(--brand);
+  color: var(--on-brand);
   border: none;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 700;
+  border-radius: 8px;
+  font-size: var(--text-body);
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: background-color 0.12s ease;
 }
 
-.ai-button-glow:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
-}
+.ai-button-glow:hover { background: var(--brand-hover); }
+.ai-button-glow:active { background: var(--brand-deep); }
 
-.ai-button-glow:active {
-  transform: translateY(0);
-}
-
-/* Legacy animation aliases */
-.animate-macos { animation: fade-in 0.25s ease-out forwards; }
-.animate-in.slide-in-from-right { animation: slide-in-right 0.3s ease-out forwards; }
-
-/* Legacy button classes used in older components */
+/* Eski tugma sinflari */
 .c1-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
   border-radius: 8px;
-  font-weight: 700;
-  font-size: 11px;
+  font-weight: 600;
+  font-size: var(--text-meta);
   cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  border: 1px solid transparent;
   white-space: nowrap;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
 }
 
 .c1-btn-primary {
-  background: var(--accent-blue);
-  color: #FFFFFF;
-  padding: 0.5rem 1rem;
+  background: var(--brand);
+  color: var(--on-brand);
+  padding: 0.5rem 0.875rem;
 }
 
-.c1-btn-primary:hover {
-  background: var(--accent-blue-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
+.c1-btn-primary:hover { background: var(--brand-hover); }
 
 .c1-btn-secondary {
-  background: var(--input-bg);
+  background: transparent;
   color: var(--text-secondary);
-  border: 1px solid var(--card-border);
-  padding: 0.5rem 1rem;
+  border-color: var(--rule-strong);
+  padding: 0.5rem 0.875rem;
 }
 
 .c1-btn-secondary:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
-  border-color: var(--accent-blue);
+  border-color: var(--brand);
 }
 
 .c1-btn-success {
   background: var(--success);
-  color: #FFFFFF;
-  padding: 0.5rem 1rem;
+  color: var(--on-success);
+  padding: 0.5rem 0.875rem;
 }
 
-.c1-btn-success:hover {
-  filter: brightness(0.92);
-  transform: translateY(-1px);
-}
+.c1-btn-success:hover { filter: brightness(0.92); }
 
 .c1-btn-danger {
   background: var(--danger);
-  color: #FFFFFF;
-  padding: 0.5rem 1rem;
+  color: var(--on-danger);
+  padding: 0.5rem 0.875rem;
 }
 
-.c1-btn-danger:hover {
-  filter: brightness(0.92);
-  transform: translateY(-1px);
+.c1-btn-danger:hover { filter: brightness(0.92); }
+
+/* Login sahifasi kirish maydoni. Login tema tokenlariga bog'lanmaydi:
+   u tema tanlanishidan oldin ko'rinadi va doim to'q qoladi. */
+.login-input {
+  width: 100%;
+  height: 3rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #E4E9EF;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
 }
 
-/* KPI status colors — semantic reusable */
+.login-input::placeholder { color: #5A6979; }
+
+.login-input:focus {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #4FA3E3;
+  box-shadow: 0 0 0 3px rgba(79, 163, 227, 0.22);
+}
+
+/* iOS 16px dan kichik maydonda sahifani kattalashtiradi. */
+@media (max-width: 767px) {
+  .login-input { font-size: 16px; }
+}
+
+/* Belgili tugma — 44×44 teginish maydoni (Apple HIG / Material 48dp).
+   Avval bular `p-2` (≈33-36px) edi va har biri hover'ni inline
+   onMouseEnter/onMouseLeave bilan qo'lda chizardi. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Zich jadval qatorlari va mobil kartalardagi amal tugmalari.
+   Mobilda 44px (Apple HIG) — bir nechtasi O'CHIRISH amali, va o'lchamsiz
+   destruktiv nishon xato bosishni ma'lumot yo'qotishiga aylantiradi.
+   Desktopda ustunni yemasligi uchun 32px. */
+.icon-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+@media (min-width: 768px) {
+  .icon-btn-sm { width: 32px; height: 32px; }
+}
+
+/* KPI holat ranglari — semantik, qayta ishlatiladigan */
 .kpi-positive { color: var(--success); }
 .kpi-negative { color: var(--danger); }
 .kpi-neutral  { color: var(--text-muted); }
 
 .kpi-positive-bg { background: var(--success-bg); border: 1px solid var(--success-border); }
 .kpi-negative-bg { background: var(--danger-bg);  border: 1px solid var(--danger-border); }
-.kpi-neutral-bg  { background: var(--input-bg);   border: 1px solid var(--card-border); }
+.kpi-neutral-bg  { background: var(--bg-sunken);  border: 1px solid var(--rule); }

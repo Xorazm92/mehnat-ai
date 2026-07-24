@@ -94,7 +94,7 @@ export function ChiefAccountantCabinet({
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-2xl p-4" style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}>
+        <div className="rounded-xl p-4" style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Building2 size={16} style={{ color: "var(--accent-indigo)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>Firmalar</span>
@@ -102,7 +102,7 @@ export function ChiefAccountantCabinet({
           <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{companiesCount}</div>
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Users size={16} style={{ color: "var(--accent-blue)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>Jamoa</span>
@@ -110,7 +110,7 @@ export function ChiefAccountantCabinet({
           <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{teamMembers.length}</div>
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Clock size={16} style={{ color: "var(--warning)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI Kutmoqda</span>
@@ -118,7 +118,7 @@ export function ChiefAccountantCabinet({
           <div className="text-2xl font-bold" style={{ color: "var(--warning)" }}>{pendingApprovals.length}</div>
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Award size={16} style={{ color: "var(--success)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>Jamoa KPI</span>
@@ -176,7 +176,7 @@ export function ChiefAccountantCabinet({
                         <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
                           {member.fullName}
                         </p>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--input-bg)", color: "var(--text-secondary)", border: "1px solid var(--card-border)" }}>
+                        <span className="text-micro px-1.5 py-0.5 rounded-lg" style={{ background: "var(--input-bg)", color: "var(--text-secondary)", border: "1px solid var(--card-border)" }}>
                           {roleLabels[member.role] || member.role}
                         </span>
                       </div>
@@ -192,7 +192,7 @@ export function ChiefAccountantCabinet({
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{score.toFixed(0)}</p>
-                      <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                      <p className="text-micro" style={{ color: "var(--text-muted)" }}>
                         {member._count.assignedCompanies} firma
                       </p>
                     </div>
@@ -218,7 +218,7 @@ export function ChiefAccountantCabinet({
             <div className="max-h-52 overflow-y-auto">
               {pendingApprovals.length === 0 ? (
                 <div className="p-6 text-center text-text-secondary">
-                  <CheckCircle2 size={28} className="mx-auto mb-2 text-emerald-400/30" />
+                  <CheckCircle2 size={28} className="mx-auto mb-2 text-[color-mix(in_srgb,var(--success)_30%,transparent)]" />
                   <p className="text-sm">Barcha KPI tasdiqlangan</p>
                 </div>
               ) : (
@@ -240,7 +240,7 @@ export function ChiefAccountantCabinet({
                       <p className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>
                         {item.employee.fullName}
                       </p>
-                      <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>{item.rule.nameUz}</p>
+                      <p className="text-micro truncate" style={{ color: "var(--text-muted)" }}>{item.rule.nameUz}</p>
                     </div>
                     <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
                       {Number(item.calculatedScore).toFixed(1)}
@@ -277,7 +277,7 @@ export function ChiefAccountantCabinet({
                       <p className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>
                         {item.employee.fullName}
                       </p>
-                      <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>{item.reason}</p>
+                      <p className="text-micro truncate" style={{ color: "var(--text-muted)" }}>{item.reason}</p>
                     </div>
                     <span
                       className="text-sm font-bold"

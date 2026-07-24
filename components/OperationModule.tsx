@@ -12,32 +12,40 @@ import { createNotification } from '@/server/audit';
 import { getReportProofsMeta } from '@/server/proofs';
 import ReportProofModal, { ProofModalState } from './ReportProofModal';
 import { BASE_REPORT_COLUMNS, type ReportColumn } from '@/lib/reportColumns';
+import { useDismissable } from '@/hooks/useDismissable';
 // ── Report Column Definitions ──────────────────────────────────
 // Ustunlar ta'rifi endi lib/reportColumns.ts da (BASE_REPORT_COLUMNS) — yagona manba.
 // Amaldagi (config qo'llangan) ro'yxat `reportColumns` prop orqali keladi;
 // prop bo'lmasa BASE_REPORT_COLUMNS ishlatiladi.
 
 // ── Status Rendering ───────────────────────────────────────────
+// Fon ranglari endi TEMA TOKENLARIDAN (color-mix orqali) — avval bu yerda
+// eski "GitHub" temasidan qolgan qattiq rgba qiymatlar bor edi
+// (#34D058, #FF6B6B, #FFD700, #4DA3FF), ular yumshatilgan palitraga mos
+// kelmasdi. Bo'sh katak endi SHAFFOF: 212×46 li matritsada aksariyat
+// kataklar bo'sh, shuning uchun ular chekinadi va TO'LDIRILGAN statuslar
+// ajralib chiqadi (kulrang tabletkalar devori o'rniga).
+const tint = (c: string, pct: number) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 const getStatusStyle = (value: string) => {
   const v = String(value || '').trim().toLowerCase();
 
-  if (!v || v === '0' || v === 'not_required') return { bg: 'var(--surface-2)', text: 'var(--text-3)', icon: '—', tooltip: "Bo'sh" };
-  if (v === '+' || v === 'accepted') return { bg: 'rgba(52, 208, 88, 0.1)', text: '#34d058', icon: '✓', tooltip: 'Bajarildi (+)' };
-  if (v === '-' || v === 'not_submitted') return { bg: 'rgba(255, 107, 107, 0.1)', text: '#ff6b6b', icon: '✗', tooltip: 'Bajarilmadi (-)' };
-  if (v === 'topshirildi' || v === 'submitted') return { bg: 'rgba(77, 163, 255, 0.1)', text: '#4da3ff', icon: '⏳', tooltip: 'Topshirildi (Kutilmoqda)' };
-  if (v === 'kartoteka' || v === 'blocked') return { bg: 'rgba(255, 215, 0, 0.1)', text: '#ffd700', icon: '!', tooltip: 'Kartoteka' };
-  if (v === 'error' || v === 'oshibka') return { bg: 'rgba(255, 107, 107, 0.1)', text: '#ff6b6b', icon: '!', tooltip: 'Xatolik' };
+  if (!v || v === '0' || v === 'not_required') return { bg: 'transparent', text: 'var(--text-muted)', icon: '—', tooltip: "Bo'sh" };
+  if (v === '+' || v === 'accepted') return { bg: tint('var(--success)', 13), text: 'var(--success)', icon: '✓', tooltip: 'Bajarildi (+)' };
+  if (v === '-' || v === 'not_submitted') return { bg: tint('var(--danger)', 13), text: 'var(--danger)', icon: '✗', tooltip: 'Bajarilmadi (-)' };
+  if (v === 'topshirildi' || v === 'submitted') return { bg: tint('var(--info)', 13), text: 'var(--info)', icon: '·', tooltip: 'Topshirildi (Kutilmoqda)' };
+  if (v === 'kartoteka' || v === 'blocked') return { bg: tint('var(--warning)', 15), text: 'var(--warning)', icon: '!', tooltip: 'Kartoteka' };
+  if (v === 'error' || v === 'oshibka') return { bg: tint('var(--danger)', 13), text: 'var(--danger)', icon: '!', tooltip: 'Xatolik' };
 
-  return { bg: 'rgba(77, 163, 255, 0.1)', text: '#4da3ff', icon: value, tooltip: value };
+  return { bg: tint('var(--info)', 13), text: 'var(--info)', icon: value, tooltip: value };
 };
 
 const AVAILABLE_STATUSES = [
-  { value: '+', label: 'Tasdiqlash (✓)', icon: '✓', color: 'text-[#28A745]' },
-  { value: 'topshirildi', label: 'Topshirildi (⏳)', icon: '⏳', color: 'text-[#007BFF]' },
-  { value: '-', label: 'Bajarilmadi (-)', icon: '✗', color: 'text-[#DC3545]' },
-  { value: 'kartoteka', label: 'Kartoteka', icon: '!', color: 'text-[#FFC107]' },
-  { value: 'izoh', label: 'Matn yozish...', icon: '✎', color: 'text-[#3366CC]' },
-  { value: '0', label: 'Tozalash', icon: '—', color: 'text-[#ADB5BD]' },
+  { value: '+', label: 'Tasdiqlash (✓)', icon: '✓', color: 'text-[var(--success)]' },
+  { value: 'topshirildi', label: 'Topshirildi', icon: '·', color: 'text-[var(--brand)]' },
+  { value: '-', label: 'Bajarilmadi (-)', icon: '✗', color: 'text-[var(--danger)]' },
+  { value: 'kartoteka', label: 'Kartoteka', icon: '!', color: 'text-[var(--warning)]' },
+  { value: 'izoh', label: 'Matn yozish...', icon: '✎', color: 'text-[var(--brand)]' },
+  { value: '0', label: 'Tozalash', icon: '—', color: 'text-[var(--text-muted)]' },
 ];
 
 interface StatusCellProps {
@@ -51,9 +59,9 @@ interface StatusCellProps {
 }
 
 const PROOF_DOT: Record<string, string> = {
-  pending: '#4da3ff',
-  approved: '#34d058',
-  rejected: '#ff6b6b',
+  pending: 'var(--info)',
+  approved: 'var(--success)',
+  rejected: 'var(--danger)',
 };
 
 const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, userRole, proofStatus, onRequestSubmit, onViewProof }) => {
@@ -152,16 +160,20 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
           else if (proofStatus) handleViewProof();
         }}
         disabled={readOnly && !proofStatus}
-        className="w-full h-6 min-w-[24px] px-1 rounded-sm flex items-center justify-center text-[10px] font-bold transition-all border border-black/5 dark:border-white/5 hover:opacity-80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`w-full h-6 min-w-[24px] px-1 rounded-lg flex items-center justify-center text-micro font-bold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+          style.bg === 'transparent'
+            ? 'border border-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--rule)]'
+            : 'border border-black/5 dark:border-white/5 hover:opacity-80'
+        }`}
         style={{ background: style.bg, color: style.text }}
-        title={proofStatus ? `${style.tooltip} · 📎 Skrinshot biriktirilgan` : style.tooltip}
+        title={proofStatus ? `${style.tooltip} · Skrinshot biriktirilgan` : style.tooltip}
       >
         <span className="truncate w-full text-center block uppercase">{style.icon}</span>
       </button>
       {proofStatus && (
         <span
-          className="absolute top-0 right-0 w-2 h-2 rounded-full ring-1 ring-white dark:ring-[#1a1d23] pointer-events-none"
-          style={{ background: PROOF_DOT[proofStatus] || '#4da3ff' }}
+          className="absolute top-0 right-0 w-2 h-2 rounded-full ring-1 ring-white dark:ring-[var(--surface)] pointer-events-none"
+          style={{ background: PROOF_DOT[proofStatus] || 'var(--info)' }}
           title="Skrinshot biriktirilgan"
         />
       )}
@@ -175,7 +187,7 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
             left: coords.left,
             transform: 'translateX(-50%)'
           }}
-          className="z-[9999] min-w-[180px] bg-white dark:bg-[#22252B] p-1 shadow-md border border-[#DEE2E6] dark:border-[#3A3D44] rounded-sm"
+          className="z-[110] min-w-[180px] bg-[var(--card-bg)] dark:bg-[var(--surface-2)] p-1 shadow-md border border-[var(--rule)] dark:border-[var(--rule-strong)] rounded-lg"
         >
           {!showInput ? (
             <div className="grid grid-cols-1">
@@ -183,12 +195,12 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
                 <>
                   <button
                     onClick={handleViewProof}
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-[#F8F9FA] dark:hover:bg-[#2A2D33] transition-colors w-full text-left group"
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-[var(--bg-sunken)] dark:hover:bg-[var(--surface-2)] transition-colors w-full text-left group"
                   >
-                    <span className="w-5 h-5 flex items-center justify-center rounded-sm" style={{ background: 'var(--primary-ghost)' }}>
-                      <span className="w-2 h-2 rounded-full" style={{ background: PROOF_DOT[proofStatus] || '#4da3ff' }} />
+                    <span className="w-5 h-5 flex items-center justify-center rounded-lg" style={{ background: 'var(--primary-ghost)' }}>
+                      <span className="w-2 h-2 rounded-full" style={{ background: PROOF_DOT[proofStatus] || 'var(--info)' }} />
                     </span>
-                    <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 group-hover:text-[#3366CC]">Skrinshotni ko&apos;rish</span>
+                    <span className="text-meta font-bold text-[var(--text-secondary)] group-hover:text-[var(--brand)]">Skrinshotni ko&apos;rish</span>
                   </button>
                   <div className="h-px my-1" style={{ background: 'var(--border)' }} />
                 </>
@@ -197,11 +209,11 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
                 <button
                   key={status.value}
                   onClick={() => handleSelect(status.value)}
-                  className="flex items-center gap-3 px-3 py-2 hover:bg-[#F8F9FA] dark:hover:bg-[#2A2D33] transition-colors w-full text-left group"
+                  className="flex items-center gap-3 px-3 py-2 hover:bg-[var(--bg-sunken)] dark:hover:bg-[var(--surface-2)] transition-colors w-full text-left group"
                 >
-                  <span className={`font-bold text-xs w-5 h-5 flex items-center justify-center rounded-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 ${status.color}`}>{status.icon}</span>
-                  <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 group-hover:text-[#3366CC]">{status.label}</span>
-                  {value === status.value && <div className="ml-auto w-1 h-1 rounded-full bg-[#3366CC]"></div>}
+                  <span className={`font-bold text-xs w-5 h-5 flex items-center justify-center rounded-lg bg-[var(--bg-sunken)] dark:bg-white/5 border border-[var(--rule)] dark:border-white/10 ${status.color}`}>{status.icon}</span>
+                  <span className="text-meta font-bold text-[var(--text-secondary)] group-hover:text-[var(--brand)]">{status.label}</span>
+                  {value === status.value && <div className="ml-auto w-1 h-1 rounded-full bg-[var(--brand)]"></div>}
                 </button>
               ))}
             </div>
@@ -216,8 +228,8 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
                 className="c1-input w-full text-xs font-bold mb-2"
               />
               <div className="flex gap-2">
-                <button type="button" onClick={() => setShowInput(false)} className="c1-btn c1-btn-secondary flex-1 py-1 px-2 text-[10px]">Bekor</button>
-                <button type="submit" className="c1-btn c1-btn-primary flex-1 py-1 px-2 text-[10px]">Saqlash</button>
+                <button type="button" onClick={() => setShowInput(false)} className="c1-btn c1-btn-secondary flex-1 py-1 px-2 text-micro">Bekor</button>
+                <button type="submit" className="c1-btn c1-btn-primary flex-1 py-1 px-2 text-micro">Saqlash</button>
               </div>
             </form>
           )}
@@ -247,7 +259,7 @@ const OperationRow = React.memo<{
 
   return (
     <tr className="group transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
-      <td className="sticky left-0 z-20 px-2 py-1.5 text-center text-[10px] font-bold w-10 min-w-[40px] transition-colors" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
+      <td className="sticky left-0 z-20 px-2 py-1.5 text-center text-micro font-bold w-10 min-w-[40px] transition-colors" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
         {idx + 1}
       </td>
       <td
@@ -257,15 +269,15 @@ const OperationRow = React.memo<{
         onMouseLeave={e => e.currentTarget.style.background = 'var(--surface)'}
         onClick={() => row.companyId && onCompanySelect(row.companyId as string)}
       >
-        <div className="max-w-[180px] truncate text-[11px] font-bold transition-colors" style={{ color: 'var(--text)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text)'} title={row.name}>
+        <div className="max-w-[180px] truncate text-meta font-bold transition-colors" style={{ color: 'var(--text)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text)'} title={row.name}>
           {row.name}
         </div>
       </td>
-      <td className="md:sticky md:left-[232px] z-20 px-1.5 py-1.5 text-center text-[10px] font-bold w-20 min-w-[80px] transition-colors group-hover:bg-[var(--surface-2)]" style={{ background: 'var(--surface)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
+      <td className="md:sticky md:left-[232px] z-20 px-1.5 py-1.5 text-center text-micro font-bold w-20 min-w-[80px] transition-colors group-hover:bg-[var(--surface-2)]" style={{ background: 'var(--surface)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
         {row.inn || '—'}
       </td>
       <td className="md:sticky md:left-[312px] z-20 px-2 py-1.5 transition-colors w-24 min-w-[96px] group-hover:bg-[var(--surface-2)]" style={{ background: 'var(--surface)', borderRight: '2px solid var(--border)' }}>
-        <div className="max-w-[90px] truncate text-[10px] font-bold" style={{ color: 'var(--text-2)' }} title={row.accountant}>
+        <div className="max-w-[90px] truncate text-micro font-bold" style={{ color: 'var(--text-2)' }} title={row.accountant}>
           {row.accountant || '—'}
         </div>
       </td>
@@ -278,9 +290,9 @@ const OperationRow = React.memo<{
           const payDisabled = !isServiceEnabled(payKey);
           return (
             <React.Fragment key={col.key}>
-              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: serviceDisabled ? 'var(--surface-2)' : 'rgba(52, 208, 88, 0.05)' }}>
+              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: serviceDisabled ? 'var(--bg-sunken)' : tint('var(--success)', 4) }}>
                 {serviceDisabled ? (
-                  <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>—</span>
+                  <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
                 ) : (
                   <StatusCell
                     value={String(row[col.key] || '')}
@@ -293,9 +305,9 @@ const OperationRow = React.memo<{
                   />
                 )}
               </td>
-              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: payDisabled ? 'var(--surface-2)' : 'rgba(255, 215, 0, 0.05)' }}>
+              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: payDisabled ? 'var(--bg-sunken)' : tint('var(--warning)', 4) }}>
                 {payDisabled ? (
-                  <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>—</span>
+                  <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
                 ) : (
                   <StatusCell
                     value={String(row[payKey] || '')}
@@ -315,7 +327,7 @@ const OperationRow = React.memo<{
         return (
           <td key={col.key} className="px-0.5 py-0.5 text-center h-8 transition-colors group-hover:bg-[var(--surface-2)]" style={{ borderRight: '1px solid var(--border)', background: serviceDisabled ? 'var(--surface-2)' : 'transparent' }}>
             {serviceDisabled ? (
-              <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>—</span>
+              <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
             ) : (
               <StatusCell
                 value={String(row[col.key] || '')}
@@ -396,6 +408,9 @@ const OperationModule: React.FC<Props> = ({
   // Per-user column show/hide, persisted per browser (no DB needed).
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
   const [colPanelOpen, setColPanelOpen] = useState(false);
+  // Tashqi bosish / Escape'da yopiladi; profil menyusi kabi boshqa popover
+  // ochilganда bu ham avtomatik yopiladi (bir vaqtda faqat bittasi ochiq).
+  const colPanelRef = useDismissable<HTMLDivElement>(colPanelOpen, () => setColPanelOpen(false));
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 100;
 
@@ -557,10 +572,10 @@ const OperationModule: React.FC<Props> = ({
         let message = `${activeUserName} "${company?.name}" firmasining "${colLabel}" holatini "${newValue}" qilib o'zgartirdi.`;
 
         if (newValue === 'topshirildi') {
-          title = 'Tasdiqlash kutilmoqda ⏳';
+          title = 'Tasdiqlash kutilmoqda';
           message = `${activeUserName} "${company?.name}" firmasining "${colLabel}" vazifasini topshirdi. Iltimos, tekshirib tasdiqlang.`;
         } else if (newValue === '+') {
-          title = 'Vazifa tasdiqlandi ✅';
+          title = 'Vazifa tasdiqlandi';
           message = `${company?.name}: "${colLabel}" vazifasini ${activeUserName} tasdiqladi.`;
         }
 
@@ -736,22 +751,22 @@ const OperationModule: React.FC<Props> = ({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-5">
             <div>
-              <h1 className="text-[15px] font-black uppercase tracking-widest leading-tight" style={{ color: 'var(--text)' }}>{t.matrixTitle}</h1>
-              <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>
+              <h1 className="text-sm font-black uppercase tracking-widest leading-tight" style={{ color: 'var(--text)' }}>{t.matrixTitle}</h1>
+              <p className="text-micro font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>
                 {filteredRows.length} / {rows.length} {t.taKorxona} · <span style={{ color: 'var(--primary)' }}>{selectedPeriod}</span>
               </p>
             </div>
             {/* Mini Stats */}
             <div className="hidden xl:flex items-center gap-3">
               {[
-                { icon: '✓', count: stats.done, color: '#34d058', bg: 'rgba(52, 208, 88, 0.1)' },
-                { icon: '✗', count: stats.notDone, color: '#ff6b6b', bg: 'rgba(255, 107, 107, 0.1)' },
-                { icon: '!', count: stats.warning, color: '#ffd700', bg: 'rgba(255, 215, 0, 0.1)' },
+                { icon: '✓', count: stats.done, color: 'var(--success)', bg: tint('var(--success)', 12) },
+                { icon: '✗', count: stats.notDone, color: 'var(--danger)', bg: tint('var(--danger)', 12) },
+                { icon: '!', count: stats.warning, color: 'var(--warning)', bg: tint('var(--warning)', 12) },
                 { icon: '✎', count: stats.text, color: 'var(--primary)', bg: 'var(--primary-ghost)' },
               ].map(s => (
                 <div key={s.icon} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <span className="font-bold text-[11px] w-4 h-4 flex items-center justify-center rounded-sm" style={{ color: s.color, background: s.bg }}>{s.icon}</span>
-                  <span className="font-bold text-[11px] tabular-nums" style={{ color: 'var(--text)' }}>{s.count}</span>
+                  <span className="font-bold text-meta w-4 h-4 flex items-center justify-center rounded-lg" style={{ color: s.color, background: s.bg }}>{s.icon}</span>
+                  <span className="font-bold text-meta tabular-nums" style={{ color: 'var(--text)' }}>{s.count}</span>
                 </div>
               ))}
             </div>
@@ -762,7 +777,7 @@ const OperationModule: React.FC<Props> = ({
             <div className="relative group">
               <input type="text" value={search} onChange={e => setSearch(e.target.value)}
                 placeholder={t.searchPlaceholder} 
-                className="w-48 pl-10 pr-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 placeholder:text-[var(--text-3)]"
+                className="w-48 pl-10 pr-4 py-2 rounded-xl text-meta font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 placeholder:text-[var(--text-3)]"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-3)' }} />
             </div>
@@ -770,7 +785,7 @@ const OperationModule: React.FC<Props> = ({
             {/* Accountant Filter */}
             <div className="relative">
               <select value={filterAccountant} onChange={e => setFilterAccountant(e.target.value)}
-                className="pl-4 pr-9 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none min-w-[130px] cursor-pointer"
+                className="pl-4 pr-9 py-2 rounded-xl text-meta font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none min-w-[130px] cursor-pointer"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}>
                 <option value="all">{t.allAccountants}</option>
                 {accountants.map(a => <option key={a} value={a}>{a}</option>)}
@@ -781,7 +796,7 @@ const OperationModule: React.FC<Props> = ({
             {/* Group Filter */}
             <div className="relative">
               <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
-                className="pl-4 pr-9 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none min-w-[120px] cursor-pointer"
+                className="pl-4 pr-9 py-2 rounded-xl text-meta font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none min-w-[120px] cursor-pointer"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}>
                 <option value="all">{t.allColumns}</option>
                 {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
@@ -797,34 +812,36 @@ const OperationModule: React.FC<Props> = ({
             />
 
             {/* Column visibility (per-user, saved in this browser) */}
-            <div className="relative">
+            <div className="relative" ref={colPanelRef}>
               <button onClick={() => setColPanelOpen(o => !o)}
-                className="font-bold px-4 py-2 rounded-xl text-[11px] flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest"
+                aria-expanded={colPanelOpen}
+                className="font-bold px-4 py-2 rounded-xl text-meta flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest"
                 style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}>
                 <SlidersHorizontal size={14} /> Ustunlar{hiddenCols.size > 0 ? ` (${hiddenCols.size})` : ''}
               </button>
               {colPanelOpen && (
-                <>
-                  <div className="fixed inset-0 z-[90]" onClick={() => setColPanelOpen(false)} />
-                  <div className="absolute right-0 mt-2 z-[100] w-64 max-h-[60vh] overflow-y-auto rounded-xl p-3 shadow-2xl"
-                    style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                    <div className="flex items-center justify-between mb-2 sticky top-0 pb-2 gap-2" style={{ background: 'var(--surface)' }}>
-                      <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-2)' }}>Ustunlar</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setHiddenCols(new Set())}
-                          className="text-[10px] font-bold uppercase px-2 py-1 rounded-md transition-colors"
-                          style={{ color: 'var(--primary)', background: 'var(--primary-ghost)' }}
-                          title="Barcha ustunlarni ko'rsatish"
-                        >Barchasi</button>
-                        <button
-                          onClick={() => setHiddenCols(new Set(REPORT_COLUMNS.map(c => c.key)))}
-                          className="text-[10px] font-bold uppercase px-2 py-1 rounded-md transition-colors"
-                          style={{ color: 'var(--text-3)', background: 'var(--surface-2)' }}
-                          title="Barcha ustunlarni yashirish"
-                        >Hech biri</button>
-                      </div>
+                <div className="absolute right-0 mt-2 z-[200] w-64 flex flex-col max-h-[70vh] rounded-xl layer-overlay overflow-hidden"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--rule-strong)' }}>
+                  {/* Header — doim tepada, scroll qilinmaydi */}
+                  <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-2 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-2)' }}>Ustunlar</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setHiddenCols(new Set())}
+                        className="text-micro font-bold uppercase px-2 py-1 rounded-lg transition-colors"
+                        style={{ color: 'var(--primary)', background: 'var(--primary-ghost)' }}
+                        title="Barcha ustunlarni ko'rsatish"
+                      >Barchasi</button>
+                      <button
+                        onClick={() => setHiddenCols(new Set(REPORT_COLUMNS.map(c => c.key)))}
+                        className="text-micro font-bold uppercase px-2 py-1 rounded-lg transition-colors"
+                        style={{ color: 'var(--text-3)', background: 'var(--surface-2)' }}
+                        title="Barcha ustunlarni yashirish"
+                      >Hech biri</button>
                     </div>
+                  </div>
+                  {/* Body — faqat shu qism scroll bo'ladi */}
+                  <div className="flex-1 overflow-y-auto scrollbar-styled p-3">
                     {uniqueGroups.map(g => {
                       const groupCols = REPORT_COLUMNS.filter(c => c.group === g);
                       const allShown = groupCols.every(c => !hiddenCols.has(c.key));
@@ -837,7 +854,7 @@ const OperationModule: React.FC<Props> = ({
                             groupCols.forEach(c => { if (allShown) next.add(c.key); else next.delete(c.key); });
                             return next;
                           })}
-                          className="w-full flex items-center justify-between text-[9px] font-black uppercase tracking-widest mb-1 hover:opacity-80"
+                          className="w-full flex items-center justify-between text-micro font-black uppercase tracking-widest mb-1 hover:opacity-80"
                           style={{ color: 'var(--text-3)' }}
                           title={allShown ? "Guruhni yashirish" : "Guruhni ko'rsatish"}
                         >
@@ -845,7 +862,7 @@ const OperationModule: React.FC<Props> = ({
                           <span style={{ color: allShown ? 'var(--primary)' : 'var(--text-3)' }}>{allShown ? '✓' : '○'}</span>
                         </button>
                         {groupCols.map(c => (
-                          <label key={c.key} className="flex items-center gap-2 py-1 px-1 rounded cursor-pointer text-[11px]" style={{ color: 'var(--text)' }}>
+                          <label key={c.key} className="flex items-center gap-2 py-1 px-1 rounded-lg cursor-pointer text-meta" style={{ color: 'var(--text)' }}>
                             <input type="checkbox" checked={!hiddenCols.has(c.key)} onChange={() => toggleCol(c.key)} />
                             <span className="truncate">{c.label}</span>
                           </label>
@@ -854,14 +871,14 @@ const OperationModule: React.FC<Props> = ({
                       );
                     })}
                   </div>
-                </>
+                </div>
               )}
             </div>
 
             <button onClick={handleExport}
-              className="font-bold px-4 py-2 rounded-xl text-[11px] flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest"
+              className="font-bold px-4 py-2 rounded-xl text-meta flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest"
               style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#34d058'; e.currentTarget.style.borderColor = '#34d058'; }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--success)'; e.currentTarget.style.borderColor = 'var(--success)'; }}
               onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
             >
               <Download size={14} /> Excel
@@ -872,51 +889,56 @@ const OperationModule: React.FC<Props> = ({
         {/* Legend */}
         <div className="flex items-center gap-5 mt-4 pt-3 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid var(--border)' }}>
           {[
-            { icon: '✓', label: `${t.approved} (+)`, color: '#34d058', bg: 'rgba(52, 208, 88, 0.1)' },
-            { icon: '✗', label: `${t.rejected} (-)`, color: '#ff6b6b', bg: 'rgba(255, 107, 107, 0.1)' },
+            { icon: '✓', label: `${t.approved} (+)`, color: 'var(--success)', bg: tint('var(--success)', 12) },
+            { icon: '✗', label: `${t.rejected} (-)`, color: 'var(--danger)', bg: tint('var(--danger)', 12) },
             { icon: '—', label: `${t.not_required} (0)`, color: 'var(--text-3)', bg: 'var(--surface-2)' },
-            { icon: '⏳', label: t.pending, color: '#4da3ff', bg: 'rgba(77, 163, 255, 0.1)' },
-            { icon: '!', label: t.kartoteka, color: '#ffd700', bg: 'rgba(255, 215, 0, 0.1)' },
+            { icon: '·', label: t.pending, color: 'var(--info)', bg: tint('var(--info)', 12) },
+            { icon: '!', label: t.kartoteka, color: 'var(--warning)', bg: tint('var(--warning)', 12) },
             { icon: '✎', label: t.comment, color: 'var(--primary)', bg: 'var(--primary-ghost)' },
           ].map(l => (
             <div key={l.label} className="flex items-center gap-2 shrink-0">
-              <span className="font-bold text-[10px] w-5 h-5 flex items-center justify-center rounded-md border" style={{ color: l.color, background: l.bg, borderColor: 'var(--border)' }}>{l.icon}</span>
-              <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{l.label}</span>
+              <span className="font-bold text-micro w-5 h-5 flex items-center justify-center rounded-lg border" style={{ color: l.color, background: l.bg, borderColor: 'var(--border)' }}>{l.icon}</span>
+              <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{l.label}</span>
             </div>
           ))}
           <div className="flex items-center gap-2 shrink-0 ml-4 border-l pl-4" style={{ borderColor: 'var(--border)' }}>
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter" style={{ background: 'rgba(52, 208, 88, 0.1)', color: '#34d058', border: '1px solid rgba(52, 208, 88, 0.2)' }}>Xis.</span>
-            <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.reportLegend}</span>
+            <span className="text-micro font-bold px-1.5 py-0.5 rounded-lg uppercase tracking-tighter" style={{ background: tint('var(--success)', 12), color: 'var(--success)', border: `1px solid ${tint('var(--success)', 24)}` }}>Xis.</span>
+            <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.reportLegend}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter" style={{ background: 'rgba(255, 215, 0, 0.1)', color: '#ffd700', border: '1px solid rgba(255, 215, 0, 0.2)' }}>To&apos;l</span>
-            <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.paymentLegend}</span>
+            <span className="text-micro font-bold px-1.5 py-0.5 rounded-lg uppercase tracking-tighter" style={{ background: tint('var(--warning)', 12), color: 'var(--warning)', border: `1px solid ${tint('var(--warning)', 24)}` }}>To&apos;l</span>
+            <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.paymentLegend}</span>
           </div>
         </div>
       </div>
 
-      {/* ── Matrix ──────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto relative dashboard-card mx-4 my-4 !shadow-sm">
+      {/* ── Matrix ──────────────────────────────────────────────
+          `isolate`: jadvalning yopishqoq sarlavhasi z-[100] da — bu qiymat
+          stacking-context'siz yuqoriga "sizib chiqib", ustidagi toolbar
+          (z-40) va uning USTUNLAR ochilma menyusidan oldinga o'tib ketardi
+          (menyu o'rtasidan sarlavha teshib chiqardi). isolation:isolate
+          jadvalning ichki z-indekslarini shu quti ichida ushlaydi. */}
+      <div className="flex-1 overflow-auto relative isolate dashboard-card mx-4 my-4 !shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
-              <RefreshCw size={28} className="animate-spin text-blue-500" />
-              <span className="text-xs text-gray-500">{t.loading}</span>
+              <RefreshCw size={28} className="animate-spin text-[var(--brand)]" />
+              <span className="text-xs text-[var(--text-secondary)]">{t.loading}</span>
             </div>
           </div>
         ) : filteredRows.length === 0 ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <Info size={40} className="mx-auto mb-2 text-gray-300" />
-              <p className="text-gray-500 text-sm font-medium">{t.noData}</p>
+              <Info size={40} className="mx-auto mb-2 text-[var(--text-muted)]" />
+              <p className="text-[var(--text-secondary)] text-sm font-medium">{t.noData}</p>
             </div>
           </div>
         ) : (
           <table className="w-full border-separate border-spacing-0 text-xs">
-            <thead className="sticky top-0 z-[60]">
+            <thead className="sticky top-0 z-50">
               {/* Group row */}
               <tr className="h-7">
-                <th colSpan={4} className="sticky top-0 left-0 z-[80] px-3 py-1.5 text-left text-[10px] font-black uppercase tracking-widest w-[408px] min-w-[408px]" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)', color: 'var(--text-3)' }}>
+                <th colSpan={4} className="sticky top-0 left-0 z-[100] px-3 py-1.5 text-left text-micro font-black uppercase tracking-widest w-[408px] min-w-[408px]" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)', color: 'var(--text-3)' }}>
                   {t.firmTable}
                 </th>
                 {(() => {
@@ -926,20 +948,23 @@ const OperationModule: React.FC<Props> = ({
                     groupCounts.set(c.group, (groupCounts.get(c.group) || 0) + visualCols);
                   });
 
-                  const groupColors: Record<string, any> = {
-                    'Oylik': { bg: 'rgba(51, 102, 204, 0.05)', color: '#3366cc' },
-                    'Soliqlar': { bg: 'rgba(255, 193, 7, 0.05)', color: '#ffc107' },
-                    'Soliq H/T': { bg: 'rgba(153, 51, 204, 0.05)', color: '#9933cc' },
-                    'Yillik': { bg: 'rgba(40, 167, 69, 0.05)', color: '#28a745' },
-                    'Statistika': { bg: 'rgba(23, 162, 184, 0.05)', color: '#17a2b8' },
-                    'IT Park': { bg: 'rgba(111, 66, 193, 0.05)', color: '#6f42c1' },
-                    'Komunalka': { bg: 'rgba(220, 53, 69, 0.05)', color: '#dc3545' },
+                  // Har guruh bir xil darajada nozik tint oladi (color-mix,
+                  // 7%) — avval ba'zilari qattiq rgba, ba'zilari to'qroq -bg
+                  // token edi, natijada loyqa/notekis bandlar chiqardi.
+                  const groupColors: Record<string, { bg: string; color: string }> = {
+                    'Oylik': { bg: tint('var(--brand)', 7), color: 'var(--brand)' },
+                    'Soliqlar': { bg: tint('var(--warning)', 7), color: 'var(--warning)' },
+                    'Soliq H/T': { bg: tint('var(--accent-purple)', 7), color: 'var(--accent-purple)' },
+                    'Yillik': { bg: tint('var(--success)', 7), color: 'var(--success)' },
+                    'Statistika': { bg: tint('var(--info)', 7), color: 'var(--info)' },
+                    'IT Park': { bg: tint('var(--accent-indigo)', 7), color: 'var(--accent-indigo)' },
+                    'Komunalka': { bg: tint('var(--danger)', 7), color: 'var(--danger)' },
                   };
 
                   return [...groupCounts.entries()].map(([name, count]) => {
                     const style = groupColors[name] || { bg: 'var(--surface-2)', color: 'var(--text-3)' };
                     return (
-                      <th key={name} colSpan={count} className="sticky top-0 px-1 py-1.5 text-center text-[10px] font-black uppercase tracking-wider" style={{ background: `linear-gradient(${style.bg}, ${style.bg}), var(--surface-2)`, color: style.color, borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>
+                      <th key={name} colSpan={count} className="sticky top-0 px-1 py-1.5 text-center text-micro font-black uppercase tracking-wider" style={{ background: `linear-gradient(${style.bg}, ${style.bg}), var(--surface-2)`, color: style.color, borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>
                         {name}
                       </th>
                     );
@@ -948,29 +973,29 @@ const OperationModule: React.FC<Props> = ({
               </tr>
               {/* Column header row */}
               <tr className="h-9">
-                <th className="sticky top-[28px] left-0 z-[70] px-2 py-2 text-center text-[10px] font-bold w-10 min-w-[40px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>#</th>
-                <th className="sticky top-[28px] left-10 z-[70] px-3 py-2 text-left text-[10px] font-bold w-48 min-w-[192px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>{t.companyName}</th>
-                <th className="md:sticky md:top-[28px] md:left-[232px] z-[70] px-1.5 py-2 text-center text-[10px] font-bold w-20 min-w-[80px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>INN</th>
-                <th className="md:sticky md:top-[28px] md:left-[312px] z-[70] px-2 py-2 text-left text-[10px] font-bold w-24 min-w-[96px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)' }}>BUXGALTER</th>
+                <th className="sticky top-[28px] left-0 z-[100] px-2 py-2 text-center text-micro font-bold w-10 min-w-[40px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>#</th>
+                <th className="sticky top-[28px] left-10 z-[100] px-3 py-2 text-left text-micro font-bold w-48 min-w-[192px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>{t.companyName}</th>
+                <th className="md:sticky md:top-[28px] md:left-[232px] z-[100] px-1.5 py-2 text-center text-micro font-bold w-20 min-w-[80px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>INN</th>
+                <th className="md:sticky md:top-[28px] md:left-[312px] z-[100] px-2 py-2 text-left text-micro font-bold w-24 min-w-[96px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)' }}>BUXGALTER</th>
                 {visibleColumns.map(col => {
                   if ((col as any).isSplit) {
                     return (
                       <React.Fragment key={col.key}>
                         <th
-                          className="sticky top-[28px] px-0.5 py-2 text-center w-10 text-[9px] cursor-help"
-                          style={{ background: 'linear-gradient(rgba(52, 208, 88, 0.08), rgba(52, 208, 88, 0.08)), var(--surface)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
+                          className="sticky top-[28px] px-0.5 py-2 text-center w-10 text-micro cursor-help"
+                          style={{ background: `linear-gradient(${tint('var(--success)', 8)}, ${tint('var(--success)', 8)}), var(--surface)`, borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
                           title={col.label}
                         >
-                          <span className="text-[10px] font-black tracking-widest" style={{ color: '#34d058' }}>{col.short}</span>
-                          <div className="text-2xs font-black uppercase tracking-tighter" style={{ color: 'rgba(52, 208, 88, 0.7)' }}>Xis.</div>
+                          <span className="text-micro font-black tracking-widest" style={{ color: 'var(--success)' }}>{col.short}</span>
+                          <div className="text-2xs font-black uppercase tracking-tighter" style={{ color: 'var(--success)', opacity: 0.75 }}>Xis.</div>
                         </th>
                         <th
                           className="sticky top-[28px] px-0.5 py-2 text-center w-10 cursor-help"
-                          style={{ background: 'linear-gradient(rgba(255, 215, 0, 0.08), rgba(255, 215, 0, 0.08)), var(--surface)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
+                          style={{ background: `linear-gradient(${tint('var(--warning)', 8)}, ${tint('var(--warning)', 8)}), var(--surface)`, borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
                           title={`${col.label} to'lov`}
                         >
-                          <span className="text-[10px] font-black tracking-widest" style={{ color: '#ffd700' }}>{(col as any).payShort}</span>
-                          <div className="text-2xs font-black uppercase tracking-tighter" style={{ color: 'rgba(255, 215, 0, 0.7)' }}>To&apos;l</div>
+                          <span className="text-micro font-black tracking-widest" style={{ color: 'var(--warning)' }}>{(col as any).payShort}</span>
+                          <div className="text-2xs font-black uppercase tracking-tighter" style={{ color: 'var(--warning)', opacity: 0.75 }}>To&apos;l</div>
                         </th>
                       </React.Fragment>
                     );
@@ -990,7 +1015,7 @@ const OperationModule: React.FC<Props> = ({
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'var(--surface)'}
                     >
-                      <span className="text-[10px] font-black uppercase tracking-widest transition-colors" style={{ color: 'var(--text-3)' }}
+                      <span className="text-micro font-black uppercase tracking-widest transition-colors" style={{ color: 'var(--text-3)' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
                       >
@@ -1028,18 +1053,18 @@ const OperationModule: React.FC<Props> = ({
       {/* ── Footer ──────────────────────────────────────────── */}
       <div className="flex-shrink-0 dashboard-card !rounded-none !border-x-0 !border-b-0 px-6 py-3 mt-auto !shadow-none">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+          <div className="flex items-center gap-6 text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-sm bg-[var(--primary)] opacity-50"></span>
+              <span className="w-2 h-2 rounded-lg bg-[var(--primary)] opacity-50"></span>
               <span>{t.totalFirms}: <strong style={{ color: 'var(--text)' }}>{filteredRows.length}</strong></span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-sm opacity-50" style={{ background: '#34d058' }}></span>
+              <span className="w-2 h-2 rounded-lg opacity-50" style={{ background: 'var(--success)' }}></span>
               <span><strong style={{ color: 'var(--text)' }}>{visibleColumns.length}</strong> {t.reports.toLowerCase()}</span>
             </div>
             <div className="h-4 w-px" style={{ background: 'var(--border)' }}></div>
             <div className="flex items-center gap-2">
-              <span className="text-[9px] uppercase tracking-widest opacity-70">SINXRON:</span>
+              <span className="text-micro uppercase tracking-widest opacity-70">SINXRON:</span>
               <strong style={{ color: 'var(--primary)' }}>AKTIV</strong>
             </div>
           </div>
@@ -1052,7 +1077,7 @@ const OperationModule: React.FC<Props> = ({
                 if (matrix) matrix.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === 1}
-              className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-xl text-micro font-bold uppercase tracking-widest transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
               onMouseEnter={e => { if (!e.currentTarget.disabled) { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text-3)'; } }}
               onMouseLeave={e => { if (!e.currentTarget.disabled) { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; } }}
@@ -1061,11 +1086,11 @@ const OperationModule: React.FC<Props> = ({
             </button>
 
             <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-              <span className="text-[11px] font-black tabular-nums" style={{ color: 'var(--text)' }}>
+              <span className="text-meta font-black tabular-nums" style={{ color: 'var(--text)' }}>
                 {currentPage}
               </span>
-              <span className="text-[11px] font-bold" style={{ color: 'var(--text-3)' }}>/</span>
-              <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--text-3)' }}>
+              <span className="text-meta font-bold" style={{ color: 'var(--text-3)' }}>/</span>
+              <span className="text-meta font-bold tabular-nums" style={{ color: 'var(--text-3)' }}>
                 {totalPages || 1}
               </span>
             </div>
@@ -1077,7 +1102,7 @@ const OperationModule: React.FC<Props> = ({
                 if (matrix) matrix.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === totalPages || totalPages === 0}
-              className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-xl text-micro font-bold uppercase tracking-widest transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white' }}
             >
               Keyingi →

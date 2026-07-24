@@ -19,12 +19,12 @@ interface Invoice {
 
 const money = (n: number) => formatNum(Math.round(n));
 const INV_STATUS: Record<string, { label: string; bg: string; fg: string }> = {
-  draft: { label: "Qoralama", bg: "#e5e7eb", fg: "#374151" },
-  sent: { label: "Yuborilgan", bg: "#dbeafe", fg: "#1d4ed8" },
-  partial: { label: "Qisman", bg: "#fef3c7", fg: "#b45309" },
-  paid: { label: "To'langan", bg: "#dcfce7", fg: "#15803d" },
-  overdue: { label: "Kechikkan", bg: "#fee2e2", fg: "#b91c1c" },
-  void: { label: "Bekor", bg: "#f3f4f6", fg: "#9ca3af" },
+  draft: { label: "Qoralama", bg: "var(--rule)", fg: "var(--text-secondary)" },
+  sent: { label: "Yuborilgan", bg: "var(--info-bg)", fg: "var(--brand-deep)" },
+  partial: { label: "Qisman", bg: "var(--warning-bg)", fg: "var(--warning)" },
+  paid: { label: "To'langan", bg: "var(--success-bg)", fg: "var(--success)" },
+  overdue: { label: "Kechikkan", bg: "var(--danger-bg)", fg: "var(--danger-dark)" },
+  void: { label: "Bekor", bg: "var(--bg-sunken)", fg: "var(--text-muted)" },
 };
 
 export default function ProfitabilityClient({ initialPeriod, initialMargins, initialInvoices }: { initialPeriod: string; initialMargins: CompanyMargin[]; initialInvoices: Invoice[] }) {
@@ -60,7 +60,7 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
     setInv({ companyId: "", amount: "", dueAt: "", notes: "" });
   };
 
-  const inputStyle = { borderColor: "var(--border, #e5e7eb)", background: "transparent", color: "var(--text-primary)" };
+  const inputStyle = { borderColor: "var(--border, var(--rule))", background: "transparent", color: "var(--text-primary)" };
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -75,12 +75,12 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
       {/* Totals */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Tushum", val: totals.revenue, fg: "#15803d" },
-          { label: "Mehnat tannarxi", val: totals.laborCost, fg: "#b45309" },
-          { label: "Margin", val: totals.margin, fg: totals.margin < 0 ? "#b91c1c" : "#15803d" },
-          { label: "Qarzdorlik", val: totals.debt, fg: "#b91c1c" },
+          { label: "Tushum", val: totals.revenue, fg: "var(--success)" },
+          { label: "Mehnat tannarxi", val: totals.laborCost, fg: "var(--warning)" },
+          { label: "Margin", val: totals.margin, fg: totals.margin < 0 ? "var(--danger-dark)" : "var(--success)" },
+          { label: "Qarzdorlik", val: totals.debt, fg: "var(--danger-dark)" },
         ].map((t) => (
-          <div key={t.label} className="rounded-xl border p-3" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+          <div key={t.label} className="rounded-xl border p-3" style={{ borderColor: "var(--border, var(--rule))" }}>
             <div className="text-lg font-black" style={{ color: t.fg }}>{money(t.val)}</div>
             <div className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{t.label}</div>
           </div>
@@ -88,10 +88,10 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
       </div>
 
       {/* Margin table */}
-      <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+      <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, var(--rule))" }}>
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ background: "var(--bg-hover, #f9fafb)", color: "var(--text-muted)" }}>
+            <tr style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>
               <th className="text-left font-semibold px-3 py-2.5">Firma</th>
               <th className="text-right font-semibold px-3 py-2.5">Tushum</th>
               <th className="text-right font-semibold px-3 py-2.5">Mehnat</th>
@@ -103,13 +103,13 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
           <tbody>
             {margins.length === 0 && <tr><td colSpan={6} className="px-3 py-6 text-center text-sm" style={{ color: "var(--text-muted)" }}>Ma'lumot yo'q.</td></tr>}
             {margins.map((m) => (
-              <tr key={m.companyId} className="border-t" style={{ borderColor: "var(--border, #f1f5f9)" }}>
+              <tr key={m.companyId} className="border-t" style={{ borderColor: "var(--border, var(--bg-sunken))" }}>
                 <td className="px-3 py-2.5 font-medium" style={{ color: "var(--text-primary)" }}>{m.companyName}</td>
                 <td className="px-3 py-2.5 text-right" style={{ color: "var(--text-primary)" }}>{money(m.revenue)}</td>
                 <td className="px-3 py-2.5 text-right" style={{ color: "var(--text-muted)" }}>{money(m.laborCost)}</td>
-                <td className="px-3 py-2.5 text-right font-bold" style={{ color: m.margin < 0 ? "#b91c1c" : "#15803d" }}>{money(m.margin)}</td>
-                <td className="px-3 py-2.5 text-right" style={{ color: m.margin < 0 ? "#b91c1c" : "var(--text-muted)" }}>{m.marginPct == null ? "—" : `${Math.round(m.marginPct)}%`}</td>
-                <td className="px-3 py-2.5 text-right" style={{ color: m.debt > 0 ? "#b91c1c" : "var(--text-muted)" }}>{money(m.debt)}</td>
+                <td className="px-3 py-2.5 text-right font-bold" style={{ color: m.margin < 0 ? "var(--danger-dark)" : "var(--success)" }}>{money(m.margin)}</td>
+                <td className="px-3 py-2.5 text-right" style={{ color: m.margin < 0 ? "var(--danger-dark)" : "var(--text-muted)" }}>{m.marginPct == null ? "—" : `${Math.round(m.marginPct)}%`}</td>
+                <td className="px-3 py-2.5 text-right" style={{ color: m.debt > 0 ? "var(--danger-dark)" : "var(--text-muted)" }}>{money(m.debt)}</td>
               </tr>
             ))}
           </tbody>
@@ -119,26 +119,26 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
       {/* Invoices */}
       <div>
         <h2 className="text-base font-bold mb-2" style={{ color: "var(--text-primary)" }}>Hisob-fakturalar ({period})</h2>
-        <div className="rounded-xl border p-4 flex flex-wrap items-end gap-3 mb-3" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+        <div className="rounded-xl border p-4 flex flex-wrap items-end gap-3 mb-3" style={{ borderColor: "var(--border, var(--rule))" }}>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Firma
-            <select className="block px-2.5 py-1.5 rounded-md border text-sm" style={inputStyle} value={inv.companyId} onChange={(e) => setInv({ ...inv, companyId: e.target.value })}>
+            <select className="block px-2.5 py-1.5 rounded-lg border text-sm" style={inputStyle} value={inv.companyId} onChange={(e) => setInv({ ...inv, companyId: e.target.value })}>
               <option value="">—</option>
               {margins.map((m) => <option key={m.companyId} value={m.companyId}>{m.companyName}</option>)}
             </select>
           </label>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Summa
-            <input type="number" className="block px-2.5 py-1.5 rounded-md border text-sm" style={inputStyle} value={inv.amount} onChange={(e) => setInv({ ...inv, amount: e.target.value })} />
+            <input type="number" className="block px-2.5 py-1.5 rounded-lg border text-sm" style={inputStyle} value={inv.amount} onChange={(e) => setInv({ ...inv, amount: e.target.value })} />
           </label>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Muddat
-            <input type="date" className="block px-2.5 py-1.5 rounded-md border text-sm" style={inputStyle} value={inv.dueAt} onChange={(e) => setInv({ ...inv, dueAt: e.target.value })} />
+            <input type="date" className="block px-2.5 py-1.5 rounded-lg border text-sm" style={inputStyle} value={inv.dueAt} onChange={(e) => setInv({ ...inv, dueAt: e.target.value })} />
           </label>
-          <button disabled={pending} onClick={submitInvoice} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#16a34a" }}>+ Hisob chiqarish</button>
+          <button disabled={pending} onClick={submitInvoice} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>+ Hisob chiqarish</button>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, var(--rule))" }}>
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ background: "var(--bg-hover, #f9fafb)", color: "var(--text-muted)" }}>
+              <tr style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>
                 <th className="text-left font-semibold px-3 py-2.5">Firma</th>
                 <th className="text-right font-semibold px-3 py-2.5">Summa</th>
                 <th className="text-right font-semibold px-3 py-2.5">To'langan</th>
@@ -151,18 +151,18 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
               {invoices.map((i) => {
                 const s = INV_STATUS[i.status] ?? INV_STATUS.sent;
                 return (
-                  <tr key={i.id} className="border-t" style={{ borderColor: "var(--border, #f1f5f9)" }}>
+                  <tr key={i.id} className="border-t" style={{ borderColor: "var(--border, var(--bg-sunken))" }}>
                     <td className="px-3 py-2.5 font-medium" style={{ color: "var(--text-primary)" }}>{i.company.name}</td>
                     <td className="px-3 py-2.5 text-right" style={{ color: "var(--text-primary)" }}>{money(Number(i.amount))}</td>
                     <td className="px-3 py-2.5 text-right" style={{ color: "var(--text-muted)" }}>{money(Number(i.paidAmount))}</td>
-                    <td className="px-3 py-2.5"><span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: s.bg, color: s.fg }}>{s.label}</span></td>
+                    <td className="px-3 py-2.5"><span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: s.bg, color: s.fg }}>{s.label}</span></td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-1.5">
                         {i.status !== "paid" && i.status !== "void" && (
                           <>
-                            <input type="number" placeholder="to'lov" value={payInput[i.id] ?? ""} onChange={(e) => setPayInput({ ...payInput, [i.id]: e.target.value })} className="w-20 text-xs px-1.5 py-1 rounded-md border" style={inputStyle} />
-                            <button disabled={pending} onClick={() => { const a = Number(payInput[i.id]); if (!(a > 0)) return toast.error("Summa kiriting"); run(() => recordInvoicePayment(i.id, a), "To'lov qayd etildi"); setPayInput({ ...payInput, [i.id]: "" }); }} className="text-xs font-semibold px-2 py-1 rounded-md text-white disabled:opacity-50" style={{ background: "#2563eb" }}>To'lov</button>
-                            <button disabled={pending} onClick={() => run(() => voidInvoice(i.id, "bekor"), "Bekor qilindi")} className="text-xs font-semibold px-2 py-1 rounded-md disabled:opacity-50" style={{ background: "#fee2e2", color: "#b91c1c" }}>Bekor</button>
+                            <input type="number" placeholder="to'lov" value={payInput[i.id] ?? ""} onChange={(e) => setPayInput({ ...payInput, [i.id]: e.target.value })} className="w-20 text-xs px-1.5 py-1 rounded-lg border" style={inputStyle} />
+                            <button disabled={pending} onClick={() => { const a = Number(payInput[i.id]); if (!(a > 0)) return toast.error("Summa kiriting"); run(() => recordInvoicePayment(i.id, a), "To'lov qayd etildi"); setPayInput({ ...payInput, [i.id]: "" }); }} className="text-xs font-semibold px-2 py-1 rounded-lg text-white disabled:opacity-50" style={{ background: "var(--brand)" }}>To'lov</button>
+                            <button disabled={pending} onClick={() => run(() => voidInvoice(i.id, "bekor"), "Bekor qilindi")} className="text-xs font-semibold px-2 py-1 rounded-lg disabled:opacity-50" style={{ background: "var(--danger-bg)", color: "var(--danger-dark)" }}>Bekor</button>
                           </>
                         )}
                       </div>

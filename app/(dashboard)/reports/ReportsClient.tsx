@@ -39,13 +39,13 @@ export default function ReportsClient({ companies, operations, staff, userRole, 
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="flex gap-1 overflow-x-auto border-b bg-white dark:bg-[#1a1d23] pt-2 px-2 shadow-sm rounded-t flex-shrink-0"
+      <div className="flex gap-1 overflow-x-auto border-b bg-[var(--card-bg)] dark:bg-[var(--surface)] pt-2 px-2 shadow-sm rounded-t flex-shrink-0"
         style={{ borderColor: "var(--card-border)" }}>
         {tabs.map((t) => {
           const active = tab === t.id;
           return (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 py-2.5 px-6 font-bold text-xs uppercase transition-colors whitespace-nowrap border-t-[3px] rounded-t ${active ? "border-indigo-600 text-gray-900 dark:text-white" : "border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}
+              className={`flex items-center gap-2 py-2.5 px-6 font-bold text-xs uppercase transition-colors whitespace-nowrap border-t-[3px] rounded-t ${active ? "border-[var(--accent-indigo)] text-[var(--text-primary)] dark:text-white" : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-white"}`}
               style={active ? { background: "var(--card-bg)" } : {}}>
               <t.icon size={16} /> <span>{t.label}</span>
             </button>

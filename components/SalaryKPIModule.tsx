@@ -91,7 +91,7 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
 
     if (visibleTabs.length === 0) {
         return (
-            <div className="p-10 text-center text-slate-400">
+            <div className="p-10 text-center text-[var(--text-muted)]">
                 Sizda bu bo&apos;limni ko&apos;rish huquqi yo&apos;q.
             </div>
         );
@@ -100,7 +100,7 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
     return (
         <div className="space-y-0 animate-fade-in pb-20">
             {/* Standard Tab Navigation */}
-            <div className="flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1d23] pt-2 px-2 shadow-sm rounded-t">
+            <div className="flex gap-1 overflow-x-auto border-b border-[var(--rule)] bg-[var(--card-bg)] dark:bg-[var(--surface)] pt-2 px-2 shadow-sm rounded-t">
                 {visibleTabs.map(tab => {
                     const isActive = activeTab === tab.id;
                     return (
@@ -108,8 +108,8 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`flex items-center gap-2 py-2.5 px-6 font-bold text-xs uppercase transition-colors whitespace-nowrap border-t-[3px] rounded-t ${isActive
-                                    ? 'border-indigo-600 bg-white dark:bg-[#22252B] text-gray-900 dark:text-white border-x border-gray-200 dark:border-gray-700 -mb-[1px]'
-                                    : 'border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white dark:bg-[#1e2025] hover:bg-gray-50 dark:hover:bg-gray-800'
+                                    ? 'border-[var(--accent-indigo)] bg-[var(--card-bg)] dark:bg-[var(--surface-2)] text-[var(--text-primary)] dark:text-white border-x border-[var(--rule)] -mb-[1px]'
+                                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-white dark:bg-[var(--surface)] hover:bg-[var(--bg-sunken)] dark:hover:bg-[var(--surface-2)]'
                                 }`}
                         >
                             <tab.icon size={16} />
@@ -120,7 +120,7 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
             </div>
 
             {/* Content Area */}
-            <div className="bg-white dark:bg-[#22252B] min-h-[600px] border border-gray-200 dark:border-gray-700 rounded-b shadow-sm relative z-10 p-0 md:p-0">
+            <div className="bg-[var(--card-bg)] dark:bg-[var(--surface-2)] min-h-[600px] border border-[var(--rule)] rounded-b shadow-sm relative z-10 p-0 md:p-0">
                 {activeComponent}
             </div>
         </div>

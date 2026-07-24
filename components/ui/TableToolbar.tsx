@@ -33,7 +33,7 @@ interface TableToolbarProps {
 }
 
 const btnBase =
-  "font-bold px-3 py-2 rounded-xl text-[11px] flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest";
+  "font-bold px-3 py-2 rounded-xl text-meta flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest";
 
 /**
  * Shared table toolbar: grid/list toggle, live search, a month slot, a
@@ -97,7 +97,7 @@ export function TableToolbar({
             value={search ?? ""}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            className="w-44 pl-9 pr-3 py-2 rounded-xl text-[12px] font-semibold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20"
+            className="w-44 pl-9 pr-3 py-2 rounded-xl text-xs font-semibold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20"
             style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
           />
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-3)" }} />
@@ -125,7 +125,7 @@ export function TableToolbar({
             <Filter size={14} />
             {filterCount > 0 && (
               <span
-                className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-black flex items-center justify-center"
+                className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full text-micro font-black flex items-center justify-center"
                 style={{ background: "var(--danger)", color: "#fff" }}
               >
                 {filterCount}
@@ -134,7 +134,7 @@ export function TableToolbar({
           </button>
           {filterOpen && (
             <>
-              <div className="fixed inset-0 z-[90]" onClick={() => setFilterOpen(false)} />
+              <div className="fixed inset-0 z-[100]" onClick={() => setFilterOpen(false)} />
               <div
                 className="absolute right-0 mt-2 z-[100] w-72 max-h-[70vh] overflow-y-auto rounded-xl p-4 shadow-2xl"
                 style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
@@ -154,8 +154,8 @@ export function TableToolbar({
           className={btnBase}
           style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-2)" }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#34d058";
-            e.currentTarget.style.borderColor = "#34d058";
+            e.currentTarget.style.color = "var(--success)";
+            e.currentTarget.style.borderColor = "var(--success)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.color = "var(--text-2)";

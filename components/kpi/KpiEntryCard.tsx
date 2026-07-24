@@ -1,5 +1,6 @@
 "use client";
 import React, { useMemo, useState, useEffect } from "react";
+import { Download } from "lucide-react";
 import { KPIRule, KpiRuleOption, Language, MonthlyPerformance } from "@/types";
 import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
 import { formatNum } from "@/lib/format";
@@ -115,17 +116,17 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
             {rule.nameUz || rule.name}
           </p>
           {rule.descriptionUz && (
-            <p className="text-[10px] mt-1 leading-snug line-clamp-2" style={{ color: "var(--text-muted)" }}>
+            <p className="text-micro mt-1 leading-snug line-clamp-2" style={{ color: "var(--text-muted)" }}>
               {rule.descriptionUz}
             </p>
           )}
         </div>
         <div className="text-right shrink-0">
-          <span className="text-[13px] font-extrabold tabular-nums" style={{ color: activeColor ? activeColor.fg : "var(--text-muted)" }}>
+          <span className="text-body font-extrabold tabular-nums" style={{ color: activeColor ? activeColor.fg : "var(--text-muted)" }}>
             {fmtPct(pct)}
           </span>
           {base ? (
-            <p className="text-[9px] font-bold tabular-nums mt-0.5" style={{ color: somImpact > 0 ? "var(--success)" : somImpact < 0 ? "var(--danger)" : "var(--text-muted)" }}>
+            <p className="text-micro font-bold tabular-nums mt-0.5" style={{ color: somImpact > 0 ? "var(--success)" : somImpact < 0 ? "var(--danger)" : "var(--text-muted)" }}>
               {somImpact > 0 ? "+" : ""}{fmtSom(somImpact)}
             </p>
           ) : null}
@@ -168,10 +169,10 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
               disabled={disabled || prefilling}
               onClick={runPrefill}
               title={lang === "uz" ? "E-jurnal davomatidan to'ldirish" : "Заполнить из e-jurnal"}
-              className="text-[10px] font-bold px-2 py-1.5 rounded-lg transition-all"
+              className="text-micro font-bold px-2 py-1.5 rounded-lg transition-all"
               style={{ background: "var(--input-bg)", color: "var(--text-secondary)", border: "1px solid var(--input-border)", cursor: disabled || prefilling ? "not-allowed" : "pointer" }}
             >
-              {prefilling ? "…" : lang === "uz" ? "⭳ e-jurnal" : "⭳ e-jurnal"}
+              {prefilling ? "…" : <><Download size={12} /> e-jurnal</>}
             </button>
           )}
           {options.map((o) => {
@@ -180,7 +181,7 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
             const per = o.coeff_per_unit ?? 0;
             return (
               <label key={o.key} className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: per >= 0 ? "var(--success)" : "var(--danger)" }}>
+                <span className="text-micro font-bold uppercase tracking-wide" style={{ color: per >= 0 ? "var(--success)" : "var(--danger)" }}>
                   {o.label_uz || o.key}
                 </span>
                 <input
@@ -189,10 +190,10 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
                   disabled={disabled}
                   value={f.value || ""}
                   onChange={(e) => f.set(Math.max(0, Number(e.target.value) || 0))}
-                  className="w-16 px-2 py-1.5 rounded-lg text-[12px] font-bold outline-none text-center tabular-nums"
+                  className="w-16 px-2 py-1.5 rounded-lg text-xs font-bold outline-none text-center tabular-nums"
                   style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }}
                 />
-                <span className="text-[9px] font-bold" style={{ color: "var(--text-muted)" }}>{f.label}</span>
+                <span className="text-micro font-bold" style={{ color: "var(--text-muted)" }}>{f.label}</span>
               </label>
             );
           })}
@@ -201,7 +202,7 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
 
       {type === "amount_penalty" && (
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--danger)" }}>
+          <span className="text-micro font-bold uppercase tracking-wide" style={{ color: "var(--danger)" }}>
             {lang === "uz" ? "Jarima summasi (so'm)" : "Сумма штрафа (сум)"}
           </span>
           <input
@@ -211,13 +212,13 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
             value={penaltyAmount || ""}
             onChange={(e) => setPenaltyAmount(Math.max(0, Number(e.target.value) || 0))}
             onBlur={() => save({ penaltyAmount })}
-            className="flex-1 px-2 py-1.5 rounded-lg text-[12px] font-bold outline-none tabular-nums"
+            className="flex-1 px-2 py-1.5 rounded-lg text-xs font-bold outline-none tabular-nums"
             style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }}
             placeholder="0"
           />
           {penaltyAmount > 0 && (
             <button type="button" onClick={() => { setPenaltyAmount(0); save({ penaltyAmount: 0 }); }}
-              className="text-[10px] font-bold px-2 py-1.5 rounded-lg" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
+              className="text-micro font-bold px-2 py-1.5 rounded-lg" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
               {lang === "uz" ? "Xato yo'q" : "Нет ошибки"}
             </button>
           )}

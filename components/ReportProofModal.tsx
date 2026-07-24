@@ -182,20 +182,20 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
   if (!open || !state) return null;
 
   const statusBadge = (s: string) => {
-    if (s === "approved") return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(52,208,88,0.15)", color: "#34d058" }}>Tasdiqlangan</span>;
-    if (s === "rejected") return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,107,107,0.15)", color: "#ff6b6b" }}>Rad etilgan</span>;
-    return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1" style={{ background: "rgba(77,163,255,0.15)", color: "#4da3ff" }}><Clock size={11} /> Kutilmoqda</span>;
+    if (s === "approved") return <span className="text-micro font-bold px-2 py-0.5 rounded-full" style={{ background: "color-mix(in srgb, var(--success) 15%, transparent)", color: "var(--success)" }}>Tasdiqlangan</span>;
+    if (s === "rejected") return <span className="text-micro font-bold px-2 py-0.5 rounded-full" style={{ background: "color-mix(in srgb, var(--danger) 15%, transparent)", color: "var(--danger)" }}>Rad etilgan</span>;
+    return <span className="text-micro font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1" style={{ background: "color-mix(in srgb, var(--info) 15%, transparent)", color: "var(--info)" }}><Clock size={11} /> Kutilmoqda</span>;
   };
 
   return createPortal(
     <>
     <div
-      className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[110] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.55)" }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-lg max-h-[90vh] overflow-auto rounded-2xl shadow-2xl"
+        className="w-full max-w-lg max-h-[90vh] overflow-auto rounded-xl shadow-2xl"
         style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}
       >
         {/* Header */}
@@ -204,11 +204,11 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
             <h3 className="text-sm font-black" style={{ color: "var(--text)" }}>
               {mode === "upload" ? "Hisobotni topshirish" : "Topshirilgan hisobot"}
             </h3>
-            <p className="text-[11px] font-bold mt-0.5" style={{ color: "var(--text-3)" }}>
+            <p className="text-meta font-bold mt-0.5" style={{ color: "var(--text-3)" }}>
               {state.companyName} · <span style={{ color: "var(--primary)" }}>{state.colLabel}</span> · {period}
             </p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-70" style={{ color: "var(--text-3)" }}>
+          <button onClick={onClose} className="icon-btn-sm hover:opacity-70" style={{ color: "var(--text-3)" }}>
             <X size={18} />
           </button>
         </div>
@@ -230,7 +230,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                   <img src={imgPreview} alt="Skrinshot" className="w-full rounded-lg border" style={{ borderColor: "var(--card-border)", maxHeight: "40vh", objectFit: "contain", background: "var(--surface-2)" }} />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute top-2 right-2 text-[10px] font-bold px-2.5 py-1 rounded-lg shadow"
+                    className="absolute top-2 right-2 text-micro font-bold px-2.5 py-1 rounded-lg shadow"
                     style={{ background: "var(--card-bg)", color: "var(--text-2)", border: "1px solid var(--card-border)" }}
                   >
                     O'zgartirish
@@ -244,11 +244,11 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                 >
                   <Upload size={26} />
                   <span className="text-xs font-bold" style={{ color: "var(--text-2)" }}>Skrinshot yuklash</span>
-                  <span className="text-[10px] flex items-center gap-1"><Clipboard size={11} /> yoki Ctrl+V bilan yopishtiring</span>
+                  <span className="text-micro flex items-center gap-1"><Clipboard size={11} /> yoki Ctrl+V bilan yopishtiring</span>
                 </button>
               )}
 
-              <label className="block text-[11px] font-bold uppercase tracking-widest mt-4 mb-1.5" style={{ color: "var(--text-3)" }}>
+              <label className="block text-meta font-bold uppercase tracking-widest mt-4 mb-1.5" style={{ color: "var(--text-3)" }}>
                 Izoh (ixtiyoriy)
               </label>
               <textarea
@@ -284,7 +284,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
               ) : (
                 <>
                   <div className="flex items-center justify-between mb-3">
-                    <div className="text-[11px] font-bold" style={{ color: "var(--text-2)" }}>
+                    <div className="text-meta font-bold" style={{ color: "var(--text-2)" }}>
                       {proof.submittedByName} topshirdi
                       <span className="font-normal" style={{ color: "var(--text-3)" }}> · {fmtDate(proof.submittedAt)}</span>
                     </div>
@@ -311,13 +311,13 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                   )}
 
                   {proof.status === "rejected" && proof.rejectReason && (
-                    <div className="mt-2 text-xs rounded-lg px-3 py-2" style={{ background: "rgba(255,107,107,0.1)", color: "#ff6b6b" }}>
+                    <div className="mt-2 text-xs rounded-lg px-3 py-2" style={{ background: "color-mix(in srgb, var(--danger) 10%, transparent)", color: "var(--danger)" }}>
                       <span className="font-bold">Rad etish sababi: </span>{proof.rejectReason}
                     </div>
                   )}
 
                   {proof.status !== "pending" && proof.reviewedByName && (
-                    <p className="mt-2 text-[10px] font-bold" style={{ color: "var(--text-3)" }}>
+                    <p className="mt-2 text-micro font-bold" style={{ color: "var(--text-3)" }}>
                       {proof.status === "approved" ? "Tasdiqladi" : "Rad etdi"}: {proof.reviewedByName} · {fmtDate(proof.reviewedAt)}
                     </p>
                   )}
@@ -327,7 +327,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                     showReject ? (
                       // ── Rad etish rejimi: faqat sabab + rad etishni tasdiqlash ──
                       <div className="mt-4">
-                        <label className="block text-[11px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "#ff6b6b" }}>
+                        <label className="block text-meta font-bold uppercase tracking-widest mb-1.5" style={{ color: "var(--danger)" }}>
                           Rad etish sababi
                         </label>
                         <textarea
@@ -337,13 +337,13 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                           rows={2}
                           placeholder="Nima uchun rad etilyapti? (ixtiyoriy)"
                           className="w-full text-xs rounded-lg px-3 py-2 outline-none resize-none"
-                          style={{ background: "var(--surface)", border: "1px solid rgba(255,107,107,0.4)", color: "var(--text)" }}
+                          style={{ background: "var(--surface)", border: "1px solid color-mix(in srgb, var(--danger) 40%, transparent)", color: "var(--text)" }}
                         />
                         <div className="flex gap-2 mt-3">
                           <button onClick={() => { setShowReject(false); setRejectReason(""); }} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50" style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--card-border)" }}>
                             Orqaga
                           </button>
-                          <button onClick={() => handleReview("rejected")} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "linear-gradient(135deg, #ef4444, #b91c1c)" }}>
+                          <button onClick={() => handleReview("rejected")} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--danger), var(--danger-dark))" }}>
                             {busy ? <Loader2 size={15} className="animate-spin" /> : <Ban size={15} />}
                             Rad etishni tasdiqlash
                           </button>
@@ -352,11 +352,11 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                     ) : (
                       // ── Asosiy: Rad etish / Tasdiqlash ──
                       <div className="flex gap-2 mt-4">
-                        <button onClick={() => setShowReject(true)} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "rgba(255,107,107,0.12)", color: "#ff6b6b", border: "1px solid rgba(255,107,107,0.3)" }}>
+                        <button onClick={() => setShowReject(true)} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "color-mix(in srgb, var(--danger) 12%, transparent)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 30%, transparent)" }}>
                           <Ban size={15} />
                           Rad etish
                         </button>
-                        <button onClick={() => handleReview("approved")} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "linear-gradient(135deg, #28a745, #1e7e34)" }}>
+                        <button onClick={() => handleReview("approved")} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "var(--success)" }}>
                           {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                           Tasdiqlash
                         </button>
@@ -380,7 +380,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
     {/* ── To'liq ekran lightbox (skrinshotni kattalashtirib ko'rish) ── */}
     {lightbox && proof && (
       <div
-        className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
+        className="fixed inset-0 z-[200] flex items-center justify-center p-4"
         style={{ background: "rgba(0,0,0,0.9)" }}
         onMouseDown={() => setLightbox(false)}
       >

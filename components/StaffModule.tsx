@@ -29,9 +29,9 @@ const ROLE_OPTIONS: UserRole[] = [
 ];
 
 const STATUS_META: Record<string, { label: string; dot: string; c: string; bg: string }> = {
-  active: { label: 'Faol', dot: 'bg-emerald-500', c: '#10b981', bg: 'rgba(16,185,129,.12)' },
-  vacation: { label: "Ta'til", dot: 'bg-rose-500', c: '#f43f5e', bg: 'rgba(244,63,94,.12)' },
-  sick: { label: 'Betob', dot: 'bg-amber-400', c: '#f59e0b', bg: 'rgba(245,158,11,.12)' },
+  active: { label: 'Faol', dot: 'bg-[var(--success)]', c: 'var(--success)', bg: 'rgba(16,185,129,.12)' },
+  vacation: { label: "Ta'til", dot: 'bg-[var(--danger)]', c: 'var(--danger)', bg: 'rgba(244,63,94,.12)' },
+  sick: { label: 'Betob', dot: 'bg-[var(--warning)]', c: 'var(--warning)', bg: 'rgba(245,158,11,.12)' },
 };
 
 const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete, onResetPassword }) => {
@@ -88,7 +88,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       await onSave({
         ...(form as Staff),
         id: form.id || '',
-        avatarColor: form.avatarColor || '#2563eb',
+        avatarColor: form.avatarColor || 'var(--brand)',
       });
       // Tahrirlashda ixtiyoriy parol tiklash
       if (isEditing && newPassword && onResetPassword) {
@@ -127,19 +127,19 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       {/* Header */}
       <div className="dashboard-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md bg-gradient-to-br from-[var(--primary)] to-[var(--accent-blue-hover)]">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md bg-gradient-to-br from-[var(--primary)] to-[var(--accent-blue-hover)]">
             <UserPlus size={24} />
           </div>
           <div>
-            <h2 className="text-[15px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>{t.staff}</h2>
-            <p className="text-[11px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>
+            <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>{t.staff}</h2>
+            <p className="text-meta font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>
               {staff.length} ta xodim · {staff.filter(s => (s.status || 'active') === 'active').length} faol
             </p>
           </div>
         </div>
         <button
           onClick={openAdd}
-          className="font-bold px-6 py-3 rounded-xl text-[12px] flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md"
+          className="font-bold px-6 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md"
           style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent-blue-hover))', color: '#fff' }}
         >
           <UserPlus size={16} />
@@ -152,7 +152,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
         <div className="relative flex-grow">
           <input
             type="text"
-            className="w-full pl-12 pr-4 py-3.5 rounded-xl text-[12px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20"
+            className="w-full pl-12 pr-4 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20"
             style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
             placeholder="ISM, EMAIL, TELEFON YOKI JSHSHIR..."
             value={searchTerm}
@@ -163,7 +163,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <select
-              className="w-full pl-12 pr-10 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none appearance-none sm:min-w-[200px]"
+              className="w-full pl-12 pr-10 py-3.5 rounded-xl text-meta font-bold uppercase tracking-widest outline-none appearance-none sm:min-w-[200px]"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
@@ -175,7 +175,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           </div>
           <div className="relative flex-1">
             <select
-              className="w-full pl-12 pr-10 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest outline-none appearance-none sm:min-w-[170px]"
+              className="w-full pl-12 pr-10 py-3.5 rounded-xl text-meta font-bold uppercase tracking-widest outline-none appearance-none sm:min-w-[170px]"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -197,14 +197,14 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       {isAdding && (
         <div className="dashboard-card p-8 border-t-[4px] animate-fade-in" style={{ borderTopColor: 'var(--accent-blue)' }}>
           <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm border" style={{ background: 'var(--accent-blue-light)', borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' }}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm border" style={{ background: 'var(--accent-blue-light)', borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' }}>
               <UserPlus size={22} />
             </div>
             <div>
               <h3 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text)' }}>
                 {isEditing ? 'Xodim anketasini tahrirlash' : "Yangi xodim anketasi"}
               </h3>
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-micro font-bold uppercase tracking-[0.2em] mt-1" style={{ color: 'var(--text-muted)' }}>
                 Barcha maydonlarni to&apos;ldiring
               </p>
             </div>
@@ -282,7 +282,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
                   show={showPw}
                   onToggle={() => setShowPw(s => !s)}
                   onGenerate={() => { set('password', generateMemorablePassword(form.name)); setShowPw(true); }}
-                  placeholder="Kamida 6 ta belgi — yoki 🔄 bilan yarating"
+                  placeholder="Kamida 6 ta belgi — yoki yonidagi tugma bilan yarating"
                 />
               </Field>
             )}
@@ -302,18 +302,18 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
             </Field>
             <Field label="Avatar rangi">
               <div className="flex items-center gap-3">
-                <input type="color" className="w-12 h-11 rounded-lg cursor-pointer border" style={{ borderColor: 'var(--card-border)', background: 'var(--input-bg)' }} value={form.avatarColor || '#2563eb'} onChange={e => set('avatarColor', e.target.value)} />
-                <span className="text-[12px] font-mono" style={{ color: 'var(--text-muted)' }}>{form.avatarColor || '#2563eb'}</span>
+                <input type="color" className="w-12 h-11 rounded-lg cursor-pointer border" style={{ borderColor: 'var(--card-border)', background: 'var(--input-bg)' }} value={form.avatarColor || 'var(--brand)'} onChange={e => set('avatarColor', e.target.value)} />
+                <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{form.avatarColor || 'var(--brand)'}</span>
               </div>
             </Field>
           </FormSection>
 
           {/* Actions */}
           <div className="flex gap-4 pt-8 mt-4 justify-end" style={{ borderTop: '1px solid var(--card-border)' }}>
-            <button onClick={closeForm} className="px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
+            <button onClick={closeForm} className="px-8 py-3 rounded-xl text-meta font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
               <X size={16} /> Bekor qilish
             </button>
-            <button onClick={handleSave} disabled={isSaving} className={`px-10 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-md transition-all active:scale-95 ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-lg'}`} style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent-blue-hover))', color: 'white' }}>
+            <button onClick={handleSave} disabled={isSaving} className={`px-10 py-3 rounded-xl font-black text-meta uppercase tracking-widest flex items-center gap-3 shadow-md transition-all active:scale-95 ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-lg'}`} style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent-blue-hover))', color: 'white' }}>
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
               {isSaving ? 'SAQLANMOQDA...' : (isEditing ? 'YANGILASH' : "QO'SHISH")}
             </button>
@@ -330,31 +330,31 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           });
           const status = person.status || 'active';
           const sm = STATUS_META[status] || STATUS_META.active;
-          const roleColor = ROLE_COLORS[person.role as UserRole] || '#64748b';
+          const roleColor = ROLE_COLORS[person.role as UserRole] || 'var(--text-muted)';
           return (
             <div key={person.id} onClick={() => setSelected(person)} className="dashboard-card p-4 flex items-center gap-3 cursor-pointer active:scale-[0.99] transition-transform">
               <div className="relative shrink-0">
-                <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-black text-white shadow-sm" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-black text-white shadow-sm" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
                   {person.name.charAt(0)}
                 </div>
                 <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 rounded-full ${sm.dot}`} style={{ borderColor: 'var(--card-bg)' }} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-black tracking-tight truncate" style={{ color: 'var(--text)' }}>{person.name}</span>
-                  <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md" style={{ color: roleColor, background: `${roleColor}1a` }}>{ROLE_LABELS[person.role as UserRole] || person.role}</span>
+                  <span className="text-sm font-black tracking-tight truncate" style={{ color: 'var(--text)' }}>{person.name}</span>
+                  <span className="text-micro font-black uppercase tracking-widest px-2 py-0.5 rounded-lg" style={{ color: roleColor, background: `${roleColor}1a` }}>{ROLE_LABELS[person.role as UserRole] || person.role}</span>
                 </div>
-                <div className="text-[11px] font-bold mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{person.phone || person.email || '—'}</div>
+                <div className="text-meta font-bold mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{person.phone || person.email || '—'}</div>
                 <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md" style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
-                  <span className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{myCompanies.length} firma</span>
+                  <span className="text-micro font-black uppercase tracking-widest px-2 py-0.5 rounded-lg" style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
+                  <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>{myCompanies.length} firma</span>
                 </div>
               </div>
               <div className="flex flex-col gap-1.5 shrink-0">
-                <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title="Tahrirlash">
+                <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="icon-btn-sm" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title="Tahrirlash">
                   <Edit3 size={15} />
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); if (confirm(person.name + (t.confirmDelete || " ni o'chirasizmi?"))) onDelete(person.id); }} className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title="O'chirish">
+                <button onClick={(e) => { e.stopPropagation(); if (confirm(person.name + (t.confirmDelete || " ni o'chirasizmi?"))) onDelete(person.id); }} className="icon-btn-sm" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title="O'chirish">
                   <Trash2 size={15} />
                 </button>
               </div>
@@ -364,7 +364,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
         {filteredStaff.length === 0 && (
           <div className="dashboard-card p-12 text-center">
             <Search size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
-            <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>MA&apos;LUMOT TOPILMADI</span>
+            <span className="text-meta uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>MA&apos;LUMOT TOPILMADI</span>
           </div>
         )}
       </div>
@@ -375,13 +375,13 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           <table className="w-full text-left border-collapse min-w-[960px]">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
-                <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xodim</th>
-                <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>Lavozim</th>
-                <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Bo&apos;lim</th>
-                <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Aloqa</th>
-                <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>Firma</th>
-                <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>Holat</th>
-                <th className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest text-right" style={{ color: 'var(--text-muted)' }}>Boshqaruv</th>
+                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xodim</th>
+                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>Lavozim</th>
+                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Bo&apos;lim</th>
+                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Aloqa</th>
+                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>Firma</th>
+                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>Holat</th>
+                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest text-right" style={{ color: 'var(--text-muted)' }}>Boshqaruv</th>
               </tr>
             </thead>
             <tbody>
@@ -392,7 +392,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
                 });
                 const status = person.status || 'active';
                 const sm = STATUS_META[status] || STATUS_META.active;
-                const roleColor = ROLE_COLORS[person.role as UserRole] || '#64748b';
+                const roleColor = ROLE_COLORS[person.role as UserRole] || 'var(--text-muted)';
                 return (
                   <tr
                     key={person.id}
@@ -405,45 +405,45 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
                         <div className="relative">
-                          <div className="w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center text-sm font-black text-white shadow-sm transition-transform group-hover:scale-110" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
+                          <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center text-sm font-black text-white shadow-sm transition-transform group-hover:scale-110" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
                             {person.name.charAt(0)}
                           </div>
                           <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 rounded-full ${sm.dot}`} style={{ borderColor: 'var(--card-bg)' }} />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[13px] font-black tracking-tight truncate" style={{ color: 'var(--text)' }}>{person.name}</div>
-                          <div className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>{person.pinfl ? `JSHSHIR: ${person.pinfl}` : person.id.slice(0, 8)}</div>
+                          <div className="text-body font-black tracking-tight truncate" style={{ color: 'var(--text)' }}>{person.name}</div>
+                          <div className="text-micro font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>{person.pinfl ? `JSHSHIR: ${person.pinfl}` : person.id.slice(0, 8)}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg" style={{ color: roleColor, background: `${roleColor}1a`, border: `1px solid ${roleColor}40` }}>
+                      <span className="text-micro font-black uppercase tracking-widest px-2.5 py-1 rounded-lg" style={{ color: roleColor, background: `${roleColor}1a`, border: `1px solid ${roleColor}40` }}>
                         {ROLE_LABELS[person.role as UserRole] || person.role}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-[12px] font-bold" style={{ color: 'var(--text-secondary)' }}>{person.department || '—'}</span>
+                      <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>{person.department || '—'}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
-                        <div className="text-[12px] font-bold tracking-tight" style={{ color: 'var(--text)' }}>{person.phone || '—'}</div>
-                        <div className="text-[10px] font-bold truncate max-w-[180px]" style={{ color: 'var(--text-muted)' }}>{person.email || '—'}</div>
+                        <div className="text-xs font-bold tracking-tight" style={{ color: 'var(--text)' }}>{person.phone || '—'}</div>
+                        <div className="text-micro font-bold truncate max-w-[180px]" style={{ color: 'var(--text-muted)' }}>{person.email || '—'}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[36px] h-9 border text-[12px] font-black rounded-xl tabular-nums" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--accent-blue)' }}>
+                      <span className="inline-flex items-center justify-center min-w-[36px] h-9 border text-xs font-black rounded-xl tabular-nums" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--accent-blue)' }}>
                         {myCompanies.length}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg" style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
+                      <span className="text-micro font-black uppercase tracking-widest px-2.5 py-1 rounded-lg" style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="w-9 h-9 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Tahrirlash">
+                        <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="icon-btn-sm transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Tahrirlash">
                           <Edit3 size={16} />
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); if (confirm(person.name + (t.confirmDelete || " ni o'chirasizmi?"))) onDelete(person.id); }} className="w-9 h-9 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="O'chirish">
+                        <button onClick={(e) => { e.stopPropagation(); if (confirm(person.name + (t.confirmDelete || " ni o'chirasizmi?"))) onDelete(person.id); }} className="icon-btn-sm transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="O'chirish">
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -455,7 +455,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
                 <tr>
                   <td colSpan={7} className="px-8 py-20 text-center">
                     <Search size={40} className="mx-auto mb-4 opacity-20" style={{ color: 'var(--text-muted)' }} />
-                    <span className="text-[11px] uppercase font-black tracking-[0.3em] opacity-50" style={{ color: 'var(--text-muted)' }}>MA&apos;LUMOT TOPILMADI</span>
+                    <span className="text-meta uppercase font-black tracking-[0.3em] opacity-50" style={{ color: 'var(--text-muted)' }}>MA&apos;LUMOT TOPILMADI</span>
                   </td>
                 </tr>
               )}
@@ -484,7 +484,7 @@ function FormSection({ icon: Icon, title, children }: { icon: React.ElementType;
     <div className="mb-8">
       <div className="flex items-center gap-2 mb-4">
         <Icon size={15} style={{ color: 'var(--accent-blue)' }} />
-        <span className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-secondary)' }}>{title}</span>
+        <span className="text-meta font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-secondary)' }}>{title}</span>
         <div className="flex-1 h-px ml-2" style={{ background: 'var(--card-border)' }} />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">{children}</div>
@@ -518,7 +518,7 @@ function PasswordInput({ value, onChange, show, onToggle, onGenerate, placeholde
 function Field({ label, icon: Icon, children }: { label: string; icon?: React.ElementType; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+      <label className="text-micro font-black uppercase tracking-widest ml-1 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
         {Icon && <Icon size={12} />} {label}
       </label>
       {children}

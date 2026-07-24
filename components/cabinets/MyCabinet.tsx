@@ -144,7 +144,7 @@ export default function MyCabinet(props: MyCabinetProps) {
   const [tab, setTab] = useState<TabId>("profile");
 
   const roleLabel = ROLE_LABELS[profile.role as UserRole] || profile.role;
-  const roleColor = ROLE_COLORS[profile.role as UserRole] || "#64748b";
+  const roleColor = ROLE_COLORS[profile.role as UserRole] || "var(--text-muted)";
   const monthLabel = formatUzMonthYear(`${currentMonth}-01`);
 
   return (
@@ -153,7 +153,7 @@ export default function MyCabinet(props: MyCabinetProps) {
       <div className="dashboard-card p-6 flex flex-col lg:flex-row lg:items-center gap-6">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div
-            className="w-16 h-16 rounded-2xl shrink-0 flex items-center justify-center text-2xl font-black text-white shadow-md"
+            className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center text-2xl font-black text-white shadow-md"
             style={{ backgroundColor: profile.avatarColor || roleColor }}
           >
             {profile.fullName.charAt(0)}
@@ -164,12 +164,12 @@ export default function MyCabinet(props: MyCabinetProps) {
             </h2>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <span
-                className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg"
+                className="text-micro font-black uppercase tracking-widest px-2.5 py-1 rounded-lg"
                 style={{ color: roleColor, background: `${roleColor}1a`, border: `1px solid ${roleColor}40` }}
               >
                 {roleLabel}
               </span>
-              <span className="text-[11px] font-bold flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
+              <span className="text-meta font-bold flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
                 <Mail size={12} /> {profile.email}
               </span>
             </div>
@@ -179,8 +179,8 @@ export default function MyCabinet(props: MyCabinetProps) {
         {/* stat chips */}
         <div className="grid grid-cols-3 gap-3 shrink-0">
           <HeaderStat icon={Building2} value={companies.length} label="Firmalar" color="var(--accent-blue)" />
-          <HeaderStat icon={Award} value={Math.round(kpi.totalScore)} label="KPI ball" color="#8b5cf6" />
-          <HeaderStat icon={CalendarCheck} value={attendanceSummary.presentDays} label="Kelgan kun" color="#10b981" />
+          <HeaderStat icon={Award} value={Math.round(kpi.totalScore)} label="KPI ball" color="var(--accent-purple)" />
+          <HeaderStat icon={CalendarCheck} value={attendanceSummary.presentDays} label="Kelgan kun" color="var(--success)" />
         </div>
       </div>
 
@@ -193,10 +193,10 @@ export default function MyCabinet(props: MyCabinetProps) {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className="px-4 py-2.5 rounded-xl text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 whitespace-nowrap transition-all shrink-0"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 whitespace-nowrap transition-all shrink-0"
               style={
                 active
-                  ? { background: "var(--accent-blue)", color: "#fff", boxShadow: "0 4px 12px rgba(37,99,235,.25)" }
+                  ? { background: "var(--accent-blue)", color: "#fff", boxShadow: "0 4px 12px color-mix(in srgb, var(--brand) 25%, transparent)" }
                   : { background: "var(--card-bg)", color: "var(--text-secondary)", border: "1px solid var(--card-border)" }
               }
             >
@@ -239,7 +239,7 @@ function HeaderStat({
       <span className="text-lg font-black tabular-nums mt-0.5" style={{ color: "var(--text)" }}>
         {value}
       </span>
-      <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+      <span className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
         {label}
       </span>
     </div>
@@ -257,7 +257,7 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
     birthDate: profile.birthDate ? new Date(profile.birthDate).toISOString().slice(0, 10) : "",
     education: profile.education || "",
     skillLevel: profile.skillLevel || "",
-    avatarColor: profile.avatarColor || "#2563eb",
+    avatarColor: profile.avatarColor || "var(--brand)",
   });
   // Malaka darajasini faqat rahbar rollar tahrirlaydi (server ham shuni tekshiradi).
   const canEditSkill = isSeniorRole(profile.role);
@@ -345,12 +345,12 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
                 value={form.avatarColor}
                 onChange={(e) => setForm({ ...form, avatarColor: e.target.value })}
               />
-              <span className="text-[12px] font-mono" style={{ color: "var(--text-muted)" }}>{form.avatarColor}</span>
+              <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>{form.avatarColor}</span>
             </div>
           </FormField>
         </div>
         <div className="flex justify-end pt-2">
-          <button onClick={save} disabled={saving} className="c1-btn c1-btn-primary flex items-center gap-2 px-8 py-3 text-[12px]">
+          <button onClick={save} disabled={saving} className="c1-btn c1-btn-primary flex items-center gap-2 px-8 py-3 text-xs">
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? "Saqlanmoqda..." : "Saqlash"}
           </button>
@@ -381,23 +381,23 @@ function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {companies.map((c) => {
-        const roleC = ROLE_COLORS[c.myRole as UserRole] || "#64748b";
+        const roleC = ROLE_COLORS[c.myRole as UserRole] || "var(--text-muted)";
         return (
           <div key={c.id} className="dashboard-card p-5 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-[14px] font-black truncate" style={{ color: "var(--text)" }}>{c.name}</div>
-                <div className="text-[11px] font-mono mt-0.5" style={{ color: "var(--text-muted)" }}>INN: {c.inn}</div>
+                <div className="text-sm font-black truncate" style={{ color: "var(--text)" }}>{c.name}</div>
+                <div className="text-meta font-mono mt-0.5" style={{ color: "var(--text-muted)" }}>INN: {c.inn}</div>
               </div>
               {c.riskLevel && (
                 <RiskBadge riskLevel={c.riskLevel} companyStatus={c.companyStatus} companyName={c.name} compact />
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: "var(--text-secondary)", background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
+              <span className="text-micro font-bold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: "var(--text-secondary)", background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
                 {c.taxRegime === 'turnover' ? 'Aylanma' : c.taxRegime === 'fixed' ? 'Belgilangan' : c.taxRegime === 'nds_profit' ? 'QQS' : c.taxRegime}
               </span>
-              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: roleC, background: `${roleC}1a`, border: `1px solid ${roleC}40` }}>
+              <span className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: roleC, background: `${roleC}1a`, border: `1px solid ${roleC}40` }}>
                 {ROLE_LABELS[c.myRole as UserRole] || c.myRole}
               </span>
             </div>
@@ -423,9 +423,9 @@ function KpiTab({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={TrendingUp} value={Math.round(kpi.totalScore)} label={`KPI ball · ${monthLabel}`} color="#8b5cf6" />
-        <StatCard icon={CheckCircle2} value={kpi.approvedCount} label="Tasdiqlangan" color="#10b981" />
-        <StatCard icon={Clock} value={kpi.pendingCount} label="Kutilmoqda" color="#f59e0b" />
+        <StatCard icon={TrendingUp} value={Math.round(kpi.totalScore)} label={`KPI ball · ${monthLabel}`} color="var(--accent-purple)" />
+        <StatCard icon={CheckCircle2} value={kpi.approvedCount} label="Tasdiqlangan" color="var(--success)" />
+        <StatCard icon={Clock} value={kpi.pendingCount} label="Kutilmoqda" color="var(--warning)" />
         <StatCard icon={Wallet} value={fmtMoney(payrollSummary.net)} label="Bonus − jarima (so'm)" color="var(--accent-blue)" small />
       </div>
 
@@ -440,11 +440,11 @@ function KpiTab({
             {kpi.records.map((r) => (
               <div key={r.id} className="flex items-center justify-between px-5 py-3.5 gap-4">
                 <div className="min-w-0">
-                  <div className="text-[13px] font-bold truncate" style={{ color: "var(--text)" }}>{r.rule?.nameUz || "—"}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>{kpiCategoryLabel(r.rule?.category)}</div>
+                  <div className="text-body font-bold truncate" style={{ color: "var(--text)" }}>{r.rule?.nameUz || "—"}</div>
+                  <div className="text-micro font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>{kpiCategoryLabel(r.rule?.category)}</div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-[15px] font-black tabular-nums" style={{ color: Number(r.calculatedScore) >= 0 ? "#10b981" : "#ef4444" }}>
+                  <span className="text-sm font-black tabular-nums" style={{ color: Number(r.calculatedScore) >= 0 ? "var(--success)" : "var(--danger)" }}>
                     {Number(r.calculatedScore) > 0 ? "+" : ""}{Number(r.calculatedScore)}
                   </span>
                   <KpiStatusBadge status={r.status} />
@@ -468,16 +468,16 @@ function KpiTab({
               return (
                 <div key={a.id} className="flex items-center justify-between px-5 py-3.5 gap-4">
                   <div className="min-w-0">
-                    <div className="text-[13px] font-bold" style={{ color: "var(--text)" }}>{adjustmentTypeLabel(a.adjustmentType)}</div>
-                    <div className="text-[11px] truncate" style={{ color: "var(--text-muted)" }}>{a.reason || "Sabab ko'rsatilmagan"}</div>
+                    <div className="text-body font-bold" style={{ color: "var(--text)" }}>{adjustmentTypeLabel(a.adjustmentType)}</div>
+                    <div className="text-meta truncate" style={{ color: "var(--text-muted)" }}>{a.reason || "Sabab ko'rsatilmagan"}</div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-[13px] font-black tabular-nums" style={{ color: isNeg ? "#ef4444" : "#10b981" }}>
+                    <span className="text-body font-black tabular-nums" style={{ color: isNeg ? "var(--danger)" : "var(--success)" }}>
                       {isNeg ? "−" : "+"}{fmtMoney(a.amount)}
                     </span>
                     <span
-                      className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md"
-                      style={a.isApproved ? { color: "#10b981", background: "rgba(16,185,129,.12)" } : { color: "#f59e0b", background: "rgba(245,158,11,.12)" }}
+                      className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg"
+                      style={a.isApproved ? { color: "var(--success)", background: "color-mix(in srgb, var(--success) 12%, transparent)" } : { color: "var(--warning)", background: "color-mix(in srgb, var(--warning) 12%, transparent)" }}
                     >
                       {a.isApproved ? "Tasdiqlangan" : "Kutilmoqda"}
                     </span>
@@ -501,17 +501,17 @@ function AttendanceTab({
   summary: MyCabinetProps["attendanceSummary"];
 }) {
   const statusMap: Record<string, { label: string; c: string; bg: string; Icon: React.ElementType }> = {
-    present: { label: "Kelgan", c: "#10b981", bg: "rgba(16,185,129,.12)", Icon: CheckCircle2 },
-    late: { label: "Kechikkan", c: "#f59e0b", bg: "rgba(245,158,11,.12)", Icon: Clock },
-    absent: { label: "Kelmagan", c: "#ef4444", bg: "rgba(239,68,68,.12)", Icon: XCircle },
-    excused: { label: "Uzrli", c: "#6366f1", bg: "rgba(99,102,241,.12)", Icon: CalendarCheck },
+    present: { label: "Kelgan", c: "var(--success)", bg: "color-mix(in srgb, var(--success) 12%, transparent)", Icon: CheckCircle2 },
+    late: { label: "Kechikkan", c: "var(--warning)", bg: "color-mix(in srgb, var(--warning) 12%, transparent)", Icon: Clock },
+    absent: { label: "Kelmagan", c: "var(--danger)", bg: "color-mix(in srgb, var(--danger) 12%, transparent)", Icon: XCircle },
+    excused: { label: "Uzrli", c: "var(--accent-indigo)", bg: "rgba(99,102,241,.12)", Icon: CalendarCheck },
   };
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
-        <StatCard icon={CheckCircle2} value={summary.presentDays} label="Kelgan kun" color="#10b981" />
-        <StatCard icon={Clock} value={summary.lateDays} label="Kechikkan" color="#f59e0b" />
-        <StatCard icon={XCircle} value={summary.absentDays} label="Kelmagan" color="#ef4444" />
+        <StatCard icon={CheckCircle2} value={summary.presentDays} label="Kelgan kun" color="var(--success)" />
+        <StatCard icon={Clock} value={summary.lateDays} label="Kechikkan" color="var(--warning)" />
+        <StatCard icon={XCircle} value={summary.absentDays} label="Kelmagan" color="var(--danger)" />
       </div>
       <div className="dashboard-card overflow-hidden">
         <div className="p-5" style={{ borderBottom: "1px solid var(--card-border)" }}>
@@ -525,7 +525,7 @@ function AttendanceTab({
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--card-border)" }}>
                   {["Sana", "Kelish", "Ketish", "Holat"].map((h) => (
-                    <th key={h} className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{h}</th>
+                    <th key={h} className="px-5 py-3 text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -535,11 +535,11 @@ function AttendanceTab({
                   const StIcon = st.Icon;
                   return (
                     <tr key={a.id}>
-                      <td className="px-5 py-3 text-[12px] font-bold" style={{ color: "var(--text)" }}>{fmtDate(a.date)}</td>
-                      <td className="px-5 py-3 text-[12px] tabular-nums" style={{ color: "var(--text-secondary)" }}>{fmtTime(a.checkIn)}</td>
-                      <td className="px-5 py-3 text-[12px] tabular-nums" style={{ color: "var(--text-secondary)" }}>{fmtTime(a.checkOut)}</td>
+                      <td className="px-5 py-3 text-xs font-bold" style={{ color: "var(--text)" }}>{fmtDate(a.date)}</td>
+                      <td className="px-5 py-3 text-xs tabular-nums" style={{ color: "var(--text-secondary)" }}>{fmtTime(a.checkIn)}</td>
+                      <td className="px-5 py-3 text-xs tabular-nums" style={{ color: "var(--text-secondary)" }}>{fmtTime(a.checkOut)}</td>
                       <td className="px-5 py-3">
-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md" style={{ color: st.c, background: st.bg }}>
+                        <span className="inline-flex items-center gap-1.5 text-micro font-black uppercase tracking-widest px-2.5 py-1 rounded-lg" style={{ color: st.c, background: st.bg }}>
                           <StIcon size={12} /> {st.label}
                         </span>
                       </td>
@@ -598,7 +598,7 @@ function SecurityTab({ userId }: { userId: string }) {
         <input type="password" className="erp-input" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" />
       </FormField>
       <div className="flex justify-end">
-        <button onClick={submit} disabled={saving || !current || !next} className="c1-btn c1-btn-primary flex items-center gap-2 px-8 py-3 text-[12px]">
+        <button onClick={submit} disabled={saving || !current || !next} className="c1-btn c1-btn-primary flex items-center gap-2 px-8 py-3 text-xs">
           {saving ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
           {saving ? "O'zgartirilmoqda..." : "Parolni yangilash"}
         </button>
@@ -615,8 +615,8 @@ function SectionTitle({ icon: Icon, title, hint }: { icon: React.ElementType; ti
         <Icon size={18} />
       </div>
       <div>
-        <h3 className="text-[13px] font-black uppercase tracking-widest" style={{ color: "var(--text)" }}>{title}</h3>
-        {hint && <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>{hint}</p>}
+        <h3 className="text-body font-black uppercase tracking-widest" style={{ color: "var(--text)" }}>{title}</h3>
+        {hint && <p className="text-micro font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>{hint}</p>}
       </div>
     </div>
   );
@@ -625,7 +625,7 @@ function SectionTitle({ icon: Icon, title, hint }: { icon: React.ElementType; ti
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={{ color: "var(--text-muted)" }}>{label}</label>
+      <label className="text-micro font-black uppercase tracking-widest ml-1" style={{ color: "var(--text-muted)" }}>{label}</label>
       {children}
     </div>
   );
@@ -638,8 +638,8 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
         <Icon size={15} />
       </div>
       <div className="min-w-0">
-        <div className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</div>
-        <div className="text-[13px] font-bold truncate" style={{ color: "var(--text)" }}>{value}</div>
+        <div className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</div>
+        <div className="text-body font-bold truncate" style={{ color: "var(--text)" }}>{value}</div>
       </div>
     </div>
   );
@@ -652,21 +652,21 @@ function StatCard({ icon: Icon, value, label, color, small }: { icon: React.Elem
         <Icon size={18} />
       </div>
       <div className={`${small ? "text-lg" : "text-2xl"} font-black tabular-nums`} style={{ color: "var(--text)" }}>{value}</div>
-      <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</div>
+      <div className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</div>
     </div>
   );
 }
 
 function KpiStatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; c: string; bg: string }> = {
-    approved: { label: "Tasdiqlangan", c: "#10b981", bg: "rgba(16,185,129,.12)" },
-    submitted: { label: "Yuborilgan", c: "#3b82f6", bg: "rgba(59,130,246,.12)" },
-    draft: { label: "Qoralama", c: "#f59e0b", bg: "rgba(245,158,11,.12)" },
-    rejected: { label: "Rad etilgan", c: "#ef4444", bg: "rgba(239,68,68,.12)" },
+    approved: { label: "Tasdiqlangan", c: "var(--success)", bg: "color-mix(in srgb, var(--success) 12%, transparent)" },
+    submitted: { label: "Yuborilgan", c: "var(--brand)", bg: "color-mix(in srgb, var(--brand) 12%, transparent)" },
+    draft: { label: "Qoralama", c: "var(--warning)", bg: "color-mix(in srgb, var(--warning) 12%, transparent)" },
+    rejected: { label: "Rad etilgan", c: "var(--danger)", bg: "color-mix(in srgb, var(--danger) 12%, transparent)" },
   };
   const s = map[status] || map.draft;
   return (
-    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md" style={{ color: s.c, background: s.bg }}>
+    <span className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: s.c, background: s.bg }}>
       {s.label}
     </span>
   );
@@ -676,7 +676,7 @@ function EmptyState({ icon: Icon, text, inline }: { icon: React.ElementType; tex
   const body = (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <Icon size={40} className="opacity-20 mb-3" style={{ color: "var(--text-muted)" }} />
-      <span className="text-[11px] font-black uppercase tracking-[0.2em] opacity-60" style={{ color: "var(--text-muted)" }}>{text}</span>
+      <span className="text-meta font-black uppercase tracking-[0.2em] opacity-60" style={{ color: "var(--text-muted)" }}>{text}</span>
     </div>
   );
   return inline ? body : <div className="dashboard-card">{body}</div>;

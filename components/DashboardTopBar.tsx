@@ -10,6 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
 import { useMobileNav } from "@/components/MobileNavContext";
+import { useDismissable } from "@/hooks/useDismissable";
 import { useTheme } from "next-themes";
 import GlobalSearch from "@/components/GlobalSearch";
 import FinanceAssistant from "@/components/FinanceAssistant";
@@ -24,13 +25,15 @@ const ROLE_LABELS: Record<string, string> = {
   bank_manager:     "Bank Menejer",
 };
 
+// Tokenlar orqali — avval bu yerda light-tema hex qiymatlari qotib qolgan edi,
+// shu bois rol rangi qorong'u temada doim noto'g'ri ko'k bo'lib qolardi.
 const ROLE_COLORS: Record<string, string> = {
-  super_admin:      "#7C3AED",
-  admin:            "#2563EB",
-  chief_accountant: "#059669",
-  supervisor:       "#D97706",
-  accountant:       "#2563EB",
-  bank_manager:     "#DC2626",
+  super_admin:      "var(--accent-purple)",
+  admin:            "var(--brand)",
+  chief_accountant: "var(--success)",
+  supervisor:       "var(--warning)",
+  accountant:       "var(--brand)",
+  bank_manager:     "var(--accent-indigo)",
 };
 
 interface DashboardTopBarProps {
@@ -50,6 +53,9 @@ export function DashboardTopBar({
 }: DashboardTopBarProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  // Tashqariga bosilganda / Escape'da yopiladi; boshqa ochilma tetigini bosish
+  // ham buni yopadi (bir vaqtda faqat bitta popover ochiq).
+  const userMenuRef = useDismissable<HTMLDivElement>(showUserMenu, () => setShowUserMenu(false));
   const { theme, setTheme } = useTheme();
   const { toggle, toggleCollapsed, collapsed } = useMobileNav();
   const [mounted, setMounted] = useState(false);
@@ -75,17 +81,19 @@ export function DashboardTopBar({
     .toUpperCase()
     .slice(0, 2);
 
-  const roleColor = ROLE_COLORS[userRole] || "#2563EB";
-  const bgColor = avatarColor || "#2563EB";
+  const roleColor = ROLE_COLORS[userRole] || "var(--brand)";
+  // avatarColor foydalanuvchi profilidan keladigan qiymat; bo'lmasa brend.
+  const bgColor = avatarColor || "var(--brand)";
 
   return (
     <header
-      className="flex items-center justify-between px-6 flex-shrink-0 z-30 sticky top-0"
+      className="flex items-center justify-between px-3 md:px-5 flex-shrink-0 sticky top-0"
       style={{
         height: "var(--topbar-height)",
         background: "var(--topbar-bg)",
-        borderBottom: "1px solid var(--topbar-border)",
-        boxShadow: "0 1px 0 0 var(--topbar-border)",
+        borderBottom: "1px solid var(--rule)",
+        zIndex: "var(--z-nav)",
+        paddingTop: "env(safe-area-inset-top, 0px)",
       }}
     >
       {/* Left: sidebar toggle + Search */}
@@ -94,32 +102,18 @@ export function DashboardTopBar({
         <button
           onClick={toggleCollapsed}
           aria-label={collapsed ? "Yon panelni ochish" : "Yon panelni yig'ish"}
-          className="hidden md:flex p-2 rounded-lg transition-all flex-shrink-0"
-          style={{ color: "var(--text-secondary)" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--bg-hover)";
-            e.currentTarget.style.color = "var(--text-primary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "";
-            e.currentTarget.style.color = "var(--text-secondary)";
-          }}
+          className="icon-btn hidden md:inline-flex"
         >
-          {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
         </button>
         {/* Mobil: menyu */}
-        <button
-          onClick={toggle}
-          aria-label="Menyu"
-          className="md:hidden p-2 rounded-lg transition-all"
-          style={{ color: "var(--text-secondary)" }}
-        >
+        <button onClick={toggle} aria-label="Menyu" className="icon-btn md:hidden">
           <Menu size={20} />
         </button>
         {/* Mobil brend belgisi (sidebar yashiringanda) — rolga mos boshlang'ich sahifa */}
         <Link href={getHomeRoute(userRole)} className="md:hidden flex items-center gap-2 shrink-0" aria-label="ASRO">
-          <Image src="/asro-logo-192.png" alt="ASRO" width={28} height={28} priority className="w-7 h-7 object-contain" />
-          <span className="text-[15px] font-black tracking-tight whitespace-nowrap" style={{ color: "var(--text-primary)" }}>ASRO</span>
+          <Image src="/asro-logo-192.png" alt="ASRO" width={26} height={26} priority className="w-[26px] h-[26px] object-contain" />
+          <span className="text-sm font-bold tracking-tight whitespace-nowrap" style={{ color: "var(--text-primary)" }}>ASRO</span>
         </Link>
         {/* Qidiruv + AI */}
         <div className="flex items-center gap-2 md:gap-3">
@@ -132,22 +126,10 @@ export function DashboardTopBar({
       <div className="flex items-center gap-1.5">
         {/* Language */}
         <button
-          className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all"
-          style={{
-            color: "var(--text-secondary)",
-            fontSize: "12px",
-            fontWeight: 600,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--bg-hover)";
-            e.currentTarget.style.color = "var(--text-primary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "";
-            e.currentTarget.style.color = "var(--text-secondary)";
-          }}
+          className="hidden sm:flex items-center gap-1.5 px-2.5 h-11 rounded-lg font-mono text-micro font-semibold uppercase transition-colors duration-100 hover:bg-[var(--bg-hover)]"
+          style={{ color: "var(--text-secondary)", letterSpacing: "0.08em" }}
         >
-          <Globe size={15} />
+          <Globe size={14} />
           <span>O&apos;zbekcha</span>
           <ChevronDown size={12} className="opacity-60" />
         </button>
@@ -156,16 +138,8 @@ export function DashboardTopBar({
         {mounted && (
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 rounded-lg transition-all"
-            style={{ color: "var(--text-secondary)" }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--bg-hover)";
-              e.currentTarget.style.color = "var(--text-primary)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "";
-              e.currentTarget.style.color = "var(--text-secondary)";
-            }}
+            className="icon-btn"
+            aria-label={theme === "dark" ? "Yorug' rejim" : "Qorong'u rejim"}
             title={theme === "dark" ? "Yorug' rejim" : "Qorong'u rejim"}
           >
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
@@ -175,83 +149,52 @@ export function DashboardTopBar({
         {/* Notifications */}
         <Link
           href="/notifications"
-          className="relative p-2 rounded-lg transition-all"
-          style={{ color: "var(--text-secondary)" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--bg-hover)";
-            e.currentTarget.style.color = "var(--text-primary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "";
-            e.currentTarget.style.color = "var(--text-secondary)";
-          }}
+          className="icon-btn relative"
+          aria-label={unreadCount > 0 ? `Xabarlar — ${unreadCount} ta o'qilmagan` : "Xabarlar"}
         >
           <Bell size={17} />
           {unreadCount > 0 && (
             <span
-              className="absolute top-1 right-1 w-2 h-2 rounded-full"
-              style={{ background: "var(--accent-red)" }}
+              className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full"
+              style={{ background: "var(--danger)", outline: "2px solid var(--topbar-bg)" }}
             />
           )}
         </Link>
 
         {/* Settings */}
-        <Link
-          href="/settings"
-          className="p-2 rounded-lg transition-all"
-          style={{ color: "var(--text-secondary)" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--bg-hover)";
-            e.currentTarget.style.color = "var(--text-primary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "";
-            e.currentTarget.style.color = "var(--text-secondary)";
-          }}
-        >
+        <Link href="/settings" className="icon-btn" aria-label="Sozlamalar">
           <Settings size={17} />
         </Link>
 
         {/* Divider */}
-        <div
-          className="w-px h-6 mx-1"
-          style={{ background: "var(--topbar-border)" }}
-        />
+        <div className="w-px h-6 mx-1" style={{ background: "var(--rule)" }} />
 
         {/* User menu */}
-        <div className="relative">
+        <div className="relative" ref={userMenuRef}>
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-all"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--bg-hover)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "";
-            }}
+            aria-label="Foydalanuvchi menyusi"
+            aria-expanded={showUserMenu}
+            className="flex items-center gap-2.5 px-1.5 h-11 rounded-lg transition-colors duration-100 hover:bg-[var(--bg-hover)]"
           >
-            {/* Avatar */}
+            {/* Avatar — tekis to'ldirish; gradient va soya olib tashlandi */}
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-              style={{
-                background: `linear-gradient(135deg, ${bgColor}, ${bgColor}cc)`,
-                boxShadow: `0 2px 8px ${bgColor}44`,
-                fontSize: "12px",
-              }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-mono text-meta font-bold flex-shrink-0"
+              style={{ background: bgColor }}
             >
               {initials || <User size={14} />}
             </div>
 
             <div className="hidden sm:block text-left leading-none">
               <p
-                className="text-[13px] font-semibold leading-none"
+                className="text-body font-semibold leading-none"
                 style={{ color: "var(--text-primary)" }}
               >
                 {userName || "Foydalanuvchi"}
               </p>
               <p
-                className="text-[11px] mt-0.5 font-medium leading-none"
-                style={{ color: roleColor }}
+                className="font-mono text-micro mt-1 font-medium leading-none uppercase"
+                style={{ color: roleColor, letterSpacing: "0.08em" }}
               >
                 {ROLE_LABELS[userRole] || userRole}
               </p>
@@ -266,43 +209,32 @@ export function DashboardTopBar({
 
           {/* Dropdown */}
           {showUserMenu && (
-            <>
               <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowUserMenu(false)}
-              />
-              <div
-                className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden z-50 animate-scale-in"
+                className="absolute right-0 top-full mt-2 w-60 rounded-xl overflow-hidden animate-scale-in layer-overlay"
                 style={{
                   background: "var(--card-bg)",
-                  border: "1px solid var(--card-border)",
-                  boxShadow:
-                    "0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1)",
+                  border: "1px solid var(--rule-strong)",
+                  zIndex: "var(--z-popover)",
                 }}
               >
                 {/* Header */}
-                <div
-                  className="px-4 py-3"
-                  style={{ borderBottom: "1px solid var(--card-border)" }}
-                >
+                <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--rule)" }}>
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                      style={{
-                        background: `linear-gradient(135deg, ${bgColor}, ${bgColor}cc)`,
-                      }}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-mono text-body font-bold flex-shrink-0"
+                      style={{ background: bgColor }}
                     >
                       {initials || <User size={16} />}
                     </div>
                     <div className="min-w-0">
                       <p
-                        className="text-[13px] font-semibold truncate"
+                        className="text-body font-semibold truncate"
                         style={{ color: "var(--text-primary)" }}
                       >
                         {userName}
                       </p>
                       <p
-                        className="text-[11px] truncate"
+                        className="font-mono text-micro truncate mt-0.5"
                         style={{ color: "var(--text-muted)" }}
                       >
                         {userEmail}
@@ -312,13 +244,10 @@ export function DashboardTopBar({
                 </div>
 
                 {/* Role badge */}
-                <div className="px-4 py-2.5" style={{ borderBottom: "1px solid var(--card-border)" }}>
+                <div className="px-4 py-2.5" style={{ borderBottom: "1px solid var(--rule)" }}>
                   <span
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-                    style={{
-                      background: `${roleColor}15`,
-                      color: roleColor,
-                    }}
+                    className="inline-flex items-center gap-1.5 font-mono text-micro font-semibold uppercase"
+                    style={{ color: roleColor, letterSpacing: "0.1em" }}
                   >
                     <span
                       className="w-1.5 h-1.5 rounded-full flex-shrink-0"
@@ -334,21 +263,14 @@ export function DashboardTopBar({
                     id="logout-btn"
                     onClick={handleLogout}
                     disabled={loggingOut}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all disabled:opacity-50"
+                    className="w-full flex items-center gap-2.5 px-2.5 h-11 rounded-lg text-body font-medium transition-colors duration-100 disabled:opacity-50 hover:bg-[var(--danger-bg)]"
                     style={{ color: "var(--danger)" }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "var(--danger-bg)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "";
-                    }}
                   >
                     <LogOut size={15} />
                     {loggingOut ? "Chiqilmoqda..." : "Tizimdan chiqish"}
                   </button>
                 </div>
               </div>
-            </>
           )}
         </div>
       </div>

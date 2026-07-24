@@ -40,10 +40,10 @@ interface Template {
 const PERIODICITY: Record<string, string> = { monthly: "Oylik", quarterly: "Choraklik", annual: "Yillik" };
 const ADJUST: Record<string, string> = { none: "Surilmaydi", next_workday: "Keyingi ish kuni", previous_workday: "Oldingi ish kuni" };
 const LIFECYCLE: Record<string, { label: string; bg: string; fg: string }> = {
-  draft: { label: "Qoralama", bg: "#e5e7eb", fg: "#374151" },
-  approved: { label: "Tasdiqlangan", bg: "#dbeafe", fg: "#1d4ed8" },
-  active: { label: "Faol", bg: "#dcfce7", fg: "#15803d" },
-  retired: { label: "Arxiv", bg: "#f3f4f6", fg: "#9ca3af" },
+  draft: { label: "Qoralama", bg: "var(--rule)", fg: "var(--text-secondary)" },
+  approved: { label: "Tasdiqlangan", bg: "var(--info-bg)", fg: "var(--brand-deep)" },
+  active: { label: "Faol", bg: "var(--success-bg)", fg: "var(--success)" },
+  retired: { label: "Arxiv", bg: "var(--bg-sunken)", fg: "var(--text-muted)" },
 };
 const CRITERIA_TYPES = ["tax_regime", "vat_payer", "has_employees", "stats_type", "service_key", "company_status"];
 
@@ -117,8 +117,8 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
     setShowForm(false);
   };
 
-  const input = "px-2.5 py-1.5 rounded-md border text-sm w-full";
-  const inputStyle = { borderColor: "var(--border, #e5e7eb)", background: "transparent", color: "var(--text-primary)" };
+  const input = "px-2.5 py-1.5 rounded-lg border text-sm w-full";
+  const inputStyle = { borderColor: "var(--border, var(--rule))", background: "transparent", color: "var(--text-primary)" };
 
   return (
     <div className="space-y-5">
@@ -127,13 +127,13 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
           <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Muddat shablonlari</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>Takrorlanuvchi majburiyat qoidalari — versiyalash + lifecycle</p>
         </div>
-        <button onClick={() => setShowForm((s) => !s)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white" style={{ background: "#2563eb" }}>
+        <button onClick={() => setShowForm((s) => !s)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white" style={{ background: "var(--brand)" }}>
           {showForm ? "Bekor" : "+ Yangi shablon"}
         </button>
       </div>
 
       {showForm && (
-        <div className="rounded-xl border p-4 grid grid-cols-2 md:grid-cols-3 gap-3" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+        <div className="rounded-xl border p-4 grid grid-cols-2 md:grid-cols-3 gap-3" style={{ borderColor: "var(--border, var(--rule))" }}>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Kod
             <input className={input} style={inputStyle} value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} placeholder="QQS_DECLARATION" />
           </label>
@@ -180,7 +180,7 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
             <input className={input} style={inputStyle} type="date" value={f.effectiveTo} onChange={(e) => setF({ ...f, effectiveTo: e.target.value })} />
           </label>
           <div className="col-span-2 md:col-span-3">
-            <button disabled={pending} onClick={submitCreate} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#16a34a" }}>
+            <button disabled={pending} onClick={submitCreate} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>
               Qoralama yaratish
             </button>
           </div>
@@ -188,7 +188,7 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
       )}
 
       {initial.length === 0 ? (
-        <div className="rounded-xl border p-10 text-center text-sm" style={{ borderColor: "var(--border, #e5e7eb)", color: "var(--text-muted)" }}>
+        <div className="rounded-xl border p-10 text-center text-sm" style={{ borderColor: "var(--border, var(--rule))", color: "var(--text-muted)" }}>
           Hozircha shablon yo'q. "Yangi shablon" bilan qoralama yarating → tasdiqlang → faollashtiring; generator faqat FAOL shablonlar bo'yicha ishlaydi.
         </div>
       ) : (
@@ -198,13 +198,13 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
             const nx = nextLifecycle(t.lifecycle);
             const a = appl[t.id] ?? { type: CRITERIA_TYPES[0], value: "" };
             return (
-              <div key={t.id} className="rounded-xl border p-4" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+              <div key={t.id} className="rounded-xl border p-4" style={{ borderColor: "var(--border, var(--rule))" }}>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold" style={{ color: "var(--text-primary)" }}>{t.name}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ background: "var(--bg-hover, #f3f4f6)", color: "var(--text-muted)" }}>{t.code} v{t.version}</span>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: lc.bg, color: lc.fg }}>{lc.label}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded-lg font-mono" style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>{t.code} v{t.version}</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: lc.bg, color: lc.fg }}>{lc.label}</span>
                     </div>
                     <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
                       {PERIODICITY[t.periodicity]} · {ruleSummary(t)} · {ADJUST[t.adjustmentPolicy]} · {formatUzDate(t.effectiveFrom)}
@@ -213,12 +213,12 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
                   </div>
                   <div className="flex gap-1.5">
                     {nx && (
-                      <button disabled={pending} onClick={() => run(() => setTemplateLifecycle(t.id, nx.to), `${nx.label} ✓`)} className="text-xs font-semibold px-2.5 py-1 rounded-md disabled:opacity-50" style={{ background: nx.danger ? "#fee2e2" : "#dcfce7", color: nx.danger ? "#b91c1c" : "#15803d" }}>
+                      <button disabled={pending} onClick={() => run(() => setTemplateLifecycle(t.id, nx.to), `${nx.label} ✓`)} className="text-xs font-semibold px-2.5 py-1 rounded-lg disabled:opacity-50" style={{ background: nx.danger ? "var(--danger-bg)" : "var(--success-bg)", color: nx.danger ? "var(--danger-dark)" : "var(--success)" }}>
                         {nx.label}
                       </button>
                     )}
                     {(t.lifecycle === "active" || t.lifecycle === "approved") && (
-                      <button disabled={pending} onClick={() => run(() => createNewVersion(t.id), "Yangi versiya yaratildi")} className="text-xs font-semibold px-2.5 py-1 rounded-md disabled:opacity-50" style={{ background: "var(--bg-hover, #eef2ff)", color: "#4338ca" }}>
+                      <button disabled={pending} onClick={() => run(() => createNewVersion(t.id), "Yangi versiya yaratildi")} className="text-xs font-semibold px-2.5 py-1 rounded-lg disabled:opacity-50" style={{ background: "var(--bg-hover, var(--accent-indigo-light))", color: "var(--accent-indigo)" }}>
                         Yangi versiya
                       </button>
                     )}
@@ -227,23 +227,23 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
 
                 {/* Applicability */}
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>Qamrov:</span>
-                  {t.applicability.length === 0 && <span className="text-[11px] italic" style={{ color: "var(--text-muted)" }}>universal (barcha yaroqli firma)</span>}
+                  <span className="text-meta" style={{ color: "var(--text-muted)" }}>Qamrov:</span>
+                  {t.applicability.length === 0 && <span className="text-meta italic" style={{ color: "var(--text-muted)" }}>universal (barcha yaroqli firma)</span>}
                   {t.applicability.map((ap) => (
-                    <span key={ap.id} className="text-[11px] px-1.5 py-0.5 rounded flex items-center gap-1" style={{ background: "var(--bg-hover, #f3f4f6)", color: "var(--text-primary)" }}>
+                    <span key={ap.id} className="text-meta px-1.5 py-0.5 rounded-lg flex items-center gap-1" style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-primary)" }}>
                       {ap.criteriaType}={ap.criteriaValue}
                       {t.lifecycle === "draft" && (
-                        <button disabled={pending} onClick={() => run(() => removeTemplateApplicability(ap.id), "O'chirildi")} className="text-red-500 font-bold">×</button>
+                        <button disabled={pending} onClick={() => run(() => removeTemplateApplicability(ap.id), "O'chirildi")} className="text-[var(--danger)] font-bold">×</button>
                       )}
                     </span>
                   ))}
                   {t.lifecycle === "draft" && (
                     <span className="flex items-center gap-1">
-                      <select value={a.type} onChange={(e) => setAppl({ ...appl, [t.id]: { ...a, type: e.target.value } })} className="text-[11px] px-1 py-0.5 rounded border" style={inputStyle}>
+                      <select value={a.type} onChange={(e) => setAppl({ ...appl, [t.id]: { ...a, type: e.target.value } })} className="text-meta px-1 py-0.5 rounded-lg border" style={inputStyle}>
                         {CRITERIA_TYPES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
-                      <input value={a.value} onChange={(e) => setAppl({ ...appl, [t.id]: { ...a, value: e.target.value } })} placeholder="qiymat" className="text-[11px] px-1 py-0.5 rounded border w-24" style={inputStyle} />
-                      <button disabled={pending || !a.value.trim()} onClick={() => { run(() => addTemplateApplicability(t.id, a.type, a.value), "Qamrov qo'shildi"); setAppl({ ...appl, [t.id]: { ...a, value: "" } }); }} className="text-[11px] font-semibold px-1.5 py-0.5 rounded disabled:opacity-50" style={{ background: "#2563eb", color: "#fff" }}>+</button>
+                      <input value={a.value} onChange={(e) => setAppl({ ...appl, [t.id]: { ...a, value: e.target.value } })} placeholder="qiymat" className="text-meta px-1 py-0.5 rounded-lg border w-24" style={inputStyle} />
+                      <button disabled={pending || !a.value.trim()} onClick={() => { run(() => addTemplateApplicability(t.id, a.type, a.value), "Qamrov qo'shildi"); setAppl({ ...appl, [t.id]: { ...a, value: "" } }); }} className="text-meta font-semibold px-1.5 py-0.5 rounded-lg disabled:opacity-50" style={{ background: "var(--brand)", color: "#fff" }}>+</button>
                     </span>
                   )}
                 </div>

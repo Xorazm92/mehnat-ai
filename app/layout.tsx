@@ -1,9 +1,27 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 
-const inter = Inter({ subsets: ["latin"] });
+// Interfeys shrifti. Plex korporativ tizimlar uchun chizilgan va Inter
+// ataylab bermaydigan xarakterga ega. O'zbek lotini uchun kerak bo'lgan
+// U+02BB-02BC (o', g') Google'ning standart `latin` diapazonida.
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-plex-sans",
+  display: "swap",
+});
+
+// Raqamlar shrifti: pul, sana, davr, STIR va katta harfli mikro-yorliqlar.
+// Bu mahsulotda raqam — kontentning o'zi, shuning uchun u alohida shrift
+// bilan teriladi va ustunlar qulflanadi.
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-plex-mono",
+  display: "swap",
+});
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://asro.uz";
 const TITLE = "ASRO — Korporativ Boshqaruv Tizimi";
@@ -53,9 +71,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // Brauzer chrome'i sahifa zaminiga mos kelsin (--bg-secondary / topbar).
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0f17" },
+    { media: "(prefers-color-scheme: dark)", color: "#15181E" },
   ],
   colorScheme: "light dark",
 };
@@ -68,8 +87,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="uz" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="uz" className={`${plexSans.variable} ${plexMono.variable}`} suppressHydrationWarning>
+      <body>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

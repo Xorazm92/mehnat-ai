@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { Building2, CheckCircle2, Clock, Ban, type LucideIcon } from "lucide-react";
 import { formatUzDateFull, formatNum } from "@/lib/format";
 import {
   getCachedCompanyStats,
@@ -130,77 +131,82 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-          Xush kelibsiz, {userName.split(" ")[0]}! 👋
+      <div className="page-header">
+        <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>
+          Xush kelibsiz, {userName.split(" ")[0]}
         </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+        <p className="font-mono text-meta mt-1.5" style={{ color: "var(--text-secondary)" }}>
           {formatUzDateFull(new Date())}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Jami firmalar" value={companyStats.total} icon="🏢" color="blue" />
-        <StatCard title="Bajarilgan" value={operationStats.accepted} icon="✅" color="green" />
-        <StatCard title="Kutilayotgan" value={operationStats.pending} icon="⏳" color="yellow" />
-        <StatCard title="Bloklangan" value={operationStats.blocked} icon="🚫" color="red" />
+      {/* Ko'rsatkichlar tasmasi — to'rtta suzuvchi plitka emas, chiziq bilan
+          bo'lingan bitta panel. Belgilar lucide'dan: emoji har OT'da boshqa
+          ko'rinishda chiziladi va temaga bo'yalmaydi. */}
+      <div className="stat-strip">
+        <Stat label="Jami firmalar" value={companyStats.total} Icon={Building2} />
+        <Stat label="Bajarilgan" value={operationStats.accepted} Icon={CheckCircle2} tone="var(--success)" />
+        <Stat label="Kutilayotgan" value={operationStats.pending} Icon={Clock} tone="var(--warning)" />
+        <Stat label="Bloklangan" value={operationStats.blocked} Icon={Ban} tone="var(--danger)" />
       </div>
 
-      <div className="glass-card p-6">
+      <div className="dashboard-card p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>Umumiy progress</h2>
-          <span className="font-bold text-lg" style={{ color: "var(--accent-blue)" }}>{progressPercent}%</span>
+          <h2 className="text-body font-semibold" style={{ color: "var(--text-primary)" }}>
+            Umumiy progress
+          </h2>
+          <span className="font-mono text-lg font-semibold tabular" style={{ color: "var(--text-primary)" }}>
+            {progressPercent}%
+          </span>
         </div>
-        <div className="w-full rounded-full h-3" style={{ background: "var(--input-bg)" }}>
+        {/* Gradient o'rniga tekis to'ldirish: qiymatni holat rangi bildiradi,
+            rangdan rangga o'tish emas. */}
+        <div className="w-full rounded-full h-2 overflow-hidden" style={{ background: "var(--bg-sunken)" }}>
           <div
-            className="h-3 rounded-full transition-all duration-500"
+            className="h-2 rounded-full transition-[width] duration-300"
             style={{
               width: `${progressPercent}%`,
               background:
                 progressPercent >= 80
-                  ? "linear-gradient(90deg, var(--success), var(--success-border))"
+                  ? "var(--success)"
                   : progressPercent >= 50
-                  ? "linear-gradient(90deg, var(--warning), var(--warning-border))"
-                  : "linear-gradient(90deg, var(--danger), var(--danger-border))",
+                  ? "var(--warning)"
+                  : "var(--danger)",
             }}
           />
         </div>
-        <div className="flex items-center justify-between mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
-          <span>{operationStats.accepted} ta qabul qilindi</span>
-          <span>{operationStats.total} ta jami</span>
+        <div
+          className="flex items-center justify-between mt-3 font-mono text-micro uppercase"
+          style={{ color: "var(--text-muted)", letterSpacing: "0.08em" }}
+        >
+          <span>{formatNum(operationStats.accepted)} ta qabul qilindi</span>
+          <span>{formatNum(operationStats.total)} ta jami</span>
         </div>
       </div>
     </div>
   );
 }
 
-function StatCard({
-  title,
+function Stat({
+  label,
   value,
-  icon,
-  color,
+  Icon,
+  tone,
 }: {
-  title: string;
+  label: string;
   value: number;
-  icon: string;
-  color: "blue" | "green" | "yellow" | "red";
+  Icon: LucideIcon;
+  tone?: string;
 }) {
-  const stylesMap = {
-    blue: { bg: "var(--accent-blue-light)", border: "1px solid rgba(59, 130, 246, 0.2)", textColor: "var(--accent-blue)" },
-    green: { bg: "var(--success-bg)", border: "1px solid var(--success-border)", textColor: "var(--success)" },
-    yellow: { bg: "var(--warning-bg)", border: "1px solid var(--warning-border)", textColor: "var(--warning)" },
-    red: { bg: "var(--danger-bg)", border: "1px solid var(--danger-border)", textColor: "var(--danger)" },
-  };
-
-  const style = stylesMap[color];
-
   return (
-    <div className="rounded-2xl p-5" style={{ background: style.bg, border: style.border }}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-2xl">{icon}</span>
-      </div>
-      <div className="text-3xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>{formatNum(value)}</div>
-      <div className="text-sm" style={{ color: "var(--text-muted)" }}>{title}</div>
+    <div>
+      <span className="stat-label flex items-center gap-1.5">
+        <Icon size={12} style={{ color: tone ?? "var(--text-muted)" }} />
+        {label}
+      </span>
+      <span className="stat-value" style={tone ? { color: tone } : undefined}>
+        {formatNum(value)}
+      </span>
     </div>
   );
 }

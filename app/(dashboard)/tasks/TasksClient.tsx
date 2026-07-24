@@ -25,17 +25,17 @@ interface UserLite { id: string; fullName: string }
 interface CompanyLite { id: string; name: string }
 
 const STATUS_META: Record<string, { label: string; bg: string; fg: string }> = {
-  open: { label: "Ochiq", bg: "#e5e7eb", fg: "#374151" },
-  in_progress: { label: "Jarayonda", bg: "#dbeafe", fg: "#1d4ed8" },
-  blocked: { label: "Bloklangan", bg: "#fef3c7", fg: "#b45309" },
-  done: { label: "Bajarilgan", bg: "#dcfce7", fg: "#15803d" },
-  cancelled: { label: "Bekor", bg: "#f3f4f6", fg: "#9ca3af" },
+  open: { label: "Ochiq", bg: "var(--rule)", fg: "var(--text-secondary)" },
+  in_progress: { label: "Jarayonda", bg: "var(--info-bg)", fg: "var(--brand-deep)" },
+  blocked: { label: "Bloklangan", bg: "var(--warning-bg)", fg: "var(--warning)" },
+  done: { label: "Bajarilgan", bg: "var(--success-bg)", fg: "var(--success)" },
+  cancelled: { label: "Bekor", bg: "var(--bg-sunken)", fg: "var(--text-muted)" },
 };
 const PRIORITY_META: Record<string, { label: string; bg: string; fg: string }> = {
-  low: { label: "Past", bg: "#f3f4f6", fg: "#6b7280" },
-  normal: { label: "O'rta", bg: "#e0e7ff", fg: "#4338ca" },
-  high: { label: "Yuqori", bg: "#ffedd5", fg: "#c2410c" },
-  urgent: { label: "Shoshilinch", bg: "#fee2e2", fg: "#b91c1c" },
+  low: { label: "Past", bg: "var(--bg-sunken)", fg: "var(--text-muted)" },
+  normal: { label: "O'rta", bg: "var(--accent-indigo-light)", fg: "var(--accent-indigo)" },
+  high: { label: "Yuqori", bg: "var(--warning-bg)", fg: "var(--warning)" },
+  urgent: { label: "Shoshilinch", bg: "var(--danger-bg)", fg: "var(--danger-dark)" },
 };
 
 interface Action { label: string; to: TaskStatus; danger?: boolean }
@@ -89,8 +89,8 @@ export default function TasksClient({ rows, users, companies, userId, role }: { 
     setF({ ...EMPTY }); setShowForm(false);
   };
 
-  const input = "px-2.5 py-1.5 rounded-md border text-sm w-full";
-  const inputStyle = { borderColor: "var(--border, #e5e7eb)", background: "transparent", color: "var(--text-primary)" };
+  const input = "px-2.5 py-1.5 rounded-lg border text-sm w-full";
+  const inputStyle = { borderColor: "var(--border, var(--rule))", background: "transparent", color: "var(--text-primary)" };
   const TABS: { key: Tab; label: string; n: number }[] = [
     { key: "all", label: "Hammasi", n: counts.all },
     { key: "mine", label: "Mening", n: counts.mine },
@@ -106,16 +106,16 @@ export default function TasksClient({ rows, users, companies, userId, role }: { 
         </div>
         <div className="flex gap-2">
           {TABS.map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)} className="px-3 py-1.5 rounded-lg text-sm font-semibold" style={{ background: tab === t.key ? "#2563eb" : "var(--bg-hover, #f3f4f6)", color: tab === t.key ? "#fff" : "var(--text-primary)" }}>
+            <button key={t.key} onClick={() => setTab(t.key)} className="px-3 py-1.5 rounded-lg text-sm font-semibold" style={{ background: tab === t.key ? "var(--brand)" : "var(--bg-hover, var(--bg-sunken))", color: tab === t.key ? "#fff" : "var(--text-primary)" }}>
               {t.label} <span className="opacity-70">({t.n})</span>
             </button>
           ))}
-          <button onClick={() => setShowForm((s) => !s)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white" style={{ background: "#16a34a" }}>{showForm ? "Bekor" : "+ Yangi"}</button>
+          <button onClick={() => setShowForm((s) => !s)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white" style={{ background: "var(--success)" }}>{showForm ? "Bekor" : "+ Yangi"}</button>
         </div>
       </div>
 
       {showForm && (
-        <div className="rounded-xl border p-4 grid grid-cols-2 md:grid-cols-3 gap-3" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+        <div className="rounded-xl border p-4 grid grid-cols-2 md:grid-cols-3 gap-3" style={{ borderColor: "var(--border, var(--rule))" }}>
           <label className="text-xs col-span-2 md:col-span-1" style={{ color: "var(--text-muted)" }}>Sarlavha
             <input className={input} style={inputStyle} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
           </label>
@@ -146,18 +146,18 @@ export default function TasksClient({ rows, users, companies, userId, role }: { 
             <input className={input} style={inputStyle} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
           </label>
           <div className="col-span-2 md:col-span-3">
-            <button disabled={pending} onClick={submitCreate} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#16a34a" }}>Yaratish</button>
+            <button disabled={pending} onClick={submitCreate} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>Yaratish</button>
           </div>
         </div>
       )}
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border p-10 text-center text-sm" style={{ borderColor: "var(--border, #e5e7eb)", color: "var(--text-muted)" }}>Vazifa yo'q.</div>
+        <div className="rounded-xl border p-10 text-center text-sm" style={{ borderColor: "var(--border, var(--rule))", color: "var(--text-muted)" }}>Vazifa yo'q.</div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, var(--rule))" }}>
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ background: "var(--bg-hover, #f9fafb)", color: "var(--text-muted)" }}>
+              <tr style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>
                 <th className="text-left font-semibold px-3 py-2.5">Vazifa</th>
                 <th className="text-left font-semibold px-3 py-2.5">Mas'ul</th>
                 <th className="text-left font-semibold px-3 py-2.5">Muhimlik</th>
@@ -171,33 +171,33 @@ export default function TasksClient({ rows, users, companies, userId, role }: { 
                 const pm = PRIORITY_META[r.priority] ?? PRIORITY_META.normal;
                 const acts = actionsFor(r.status);
                 return (
-                  <tr key={r.id} className="border-t" style={{ borderColor: "var(--border, #f1f5f9)" }}>
+                  <tr key={r.id} className="border-t" style={{ borderColor: "var(--border, var(--bg-sunken))" }}>
                     <td className="px-3 py-2.5">
                       <div className="font-medium" style={{ color: "var(--text-primary)" }}>{r.title}</div>
-                      <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                      <div className="text-meta" style={{ color: "var(--text-muted)" }}>
                         {r.companyName ?? "ichki"}{r.taskType ? ` · ${r.taskType}` : ""}{r.dueAt ? ` · ${formatUzDate(r.dueAt)}` : ""}
                       </div>
                     </td>
                     <td className="px-3 py-2.5" style={{ color: "var(--text-primary)" }}>
                       {r.assigneeUserId ? (nameOf.get(r.assigneeUserId) ?? "?") : <span className="italic" style={{ color: "var(--text-muted)" }}>tayinlanmagan</span>}
                     </td>
-                    <td className="px-3 py-2.5"><span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: pm.bg, color: pm.fg }}>{pm.label}</span></td>
+                    <td className="px-3 py-2.5"><span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: pm.bg, color: pm.fg }}>{pm.label}</span></td>
                     <td className="px-3 py-2.5">
-                      <span className="text-xs font-bold px-2 py-1 rounded-md" style={{ background: sm.bg, color: sm.fg }}>{sm.label}</span>
-                      {r.responseBreached && <span className="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#fee2e2", color: "#b91c1c" }}>javob SLA</span>}
-                      {r.resolutionBreached && <span className="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#fee2e2", color: "#b91c1c" }}>yechim SLA</span>}
+                      <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: sm.bg, color: sm.fg }}>{sm.label}</span>
+                      {r.responseBreached && <span className="ml-1 text-micro font-bold px-1.5 py-0.5 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger-dark)" }}>javob SLA</span>}
+                      {r.resolutionBreached && <span className="ml-1 text-micro font-bold px-1.5 py-0.5 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger-dark)" }}>yechim SLA</span>}
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                        <select disabled={pending} value={r.assigneeUserId ?? ""} onChange={(e) => run(() => assignTask(r.id, e.target.value || null), "Mas'ul yangilandi")} className="text-xs px-1.5 py-1 rounded-md border disabled:opacity-50" style={inputStyle}>
+                        <select disabled={pending} value={r.assigneeUserId ?? ""} onChange={(e) => run(() => assignTask(r.id, e.target.value || null), "Mas'ul yangilandi")} className="text-xs px-1.5 py-1 rounded-lg border disabled:opacity-50" style={inputStyle}>
                           <option value="">Mas'ul…</option>
                           {users.map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
                         </select>
                         {acts.map((a) => (
-                          <button key={a.to} disabled={pending} onClick={() => run(() => updateTaskStatus(r.id, a.to), `${a.label} ✓`)} className="text-xs font-semibold px-2.5 py-1 rounded-md disabled:opacity-50" style={{ background: a.danger ? "#fee2e2" : "var(--bg-hover, #eef2ff)", color: a.danger ? "#b91c1c" : "#4338ca" }}>{a.label}</button>
+                          <button key={a.to} disabled={pending} onClick={() => run(() => updateTaskStatus(r.id, a.to), `${a.label} ✓`)} className="text-xs font-semibold px-2.5 py-1 rounded-lg disabled:opacity-50" style={{ background: a.danger ? "var(--danger-bg)" : "var(--bg-hover, var(--accent-indigo-light))", color: a.danger ? "var(--danger-dark)" : "var(--accent-indigo)" }}>{a.label}</button>
                         ))}
-                        <input type="number" placeholder="daq" value={timeInput[r.id] ?? ""} onChange={(e) => setTimeInput({ ...timeInput, [r.id]: e.target.value })} className="w-14 text-xs px-1.5 py-1 rounded-md border" style={inputStyle} title="Vaqt (daqiqa)" />
-                        <button disabled={pending} onClick={() => { const m = Number(timeInput[r.id]); if (!(m > 0)) return toast.error("Daqiqa kiriting"); run(() => logTime({ minutes: m, date: new Date().toISOString().slice(0, 10), taskId: r.id, companyId: r.companyId || undefined }), "Vaqt qayd etildi"); setTimeInput({ ...timeInput, [r.id]: "" }); }} className="text-xs font-semibold px-2 py-1 rounded-md disabled:opacity-50" style={{ background: "var(--bg-hover, #eef2ff)", color: "#4338ca" }} title="Vaqtni qayd etish">⏱</button>
+                        <input type="number" placeholder="daq" value={timeInput[r.id] ?? ""} onChange={(e) => setTimeInput({ ...timeInput, [r.id]: e.target.value })} className="w-14 text-xs px-1.5 py-1 rounded-lg border" style={inputStyle} title="Vaqt (daqiqa)" />
+                        <button disabled={pending} onClick={() => { const m = Number(timeInput[r.id]); if (!(m > 0)) return toast.error("Daqiqa kiriting"); run(() => logTime({ minutes: m, date: new Date().toISOString().slice(0, 10), taskId: r.id, companyId: r.companyId || undefined }), "Vaqt qayd etildi"); setTimeInput({ ...timeInput, [r.id]: "" }); }} className="text-xs font-semibold px-2 py-1 rounded-lg disabled:opacity-50" style={{ background: "var(--bg-hover, var(--accent-indigo-light))", color: "var(--accent-indigo)" }} title="Vaqtni qayd etish">⏱</button>
                       </div>
                     </td>
                   </tr>

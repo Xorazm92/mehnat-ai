@@ -123,11 +123,11 @@ export default function GlobalSearch({ userRole }: { userRole: string }) {
       {/* Natijalar dropdown */}
       {open && (query.trim().length >= 1) && (
         <div
-          className="absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden z-[90] max-h-[70vh] overflow-y-auto"
+          className="absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden z-[100] max-h-[70vh] overflow-y-auto"
           style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "0 12px 32px rgba(0,0,0,0.28)", minWidth: 340 }}
         >
           {!hasResults && !loading && (
-            <div className="px-4 py-6 text-center text-[12px]" style={{ color: "var(--text-muted)" }}>
+            <div className="px-4 py-6 text-center text-xs" style={{ color: "var(--text-muted)" }}>
               Hech narsa topilmadi
             </div>
           )}
@@ -176,7 +176,7 @@ export default function GlobalSearch({ userRole }: { userRole: string }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="py-1.5">
-      <div className="px-4 py-1 text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{title}</div>
+      <div className="px-4 py-1 text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{title}</div>
       {children}
     </div>
   );
@@ -192,8 +192,8 @@ function Row({ icon, label, sub, onClick }: { icon: React.ReactNode; label: stri
     >
       <span className="shrink-0" style={{ color: "var(--accent-blue)" }}>{icon}</span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[13px] font-bold truncate" style={{ color: "var(--text-primary)" }}>{label}</span>
-        {sub && <span className="block text-[10px] truncate" style={{ color: "var(--text-muted)" }}>{sub}</span>}
+        <span className="block text-body font-bold truncate" style={{ color: "var(--text-primary)" }}>{label}</span>
+        {sub && <span className="block text-micro truncate" style={{ color: "var(--text-muted)" }}>{sub}</span>}
       </span>
       <CornerDownLeft size={13} className="opacity-0 group-hover:opacity-50 shrink-0" style={{ color: "var(--text-muted)" }} />
     </button>

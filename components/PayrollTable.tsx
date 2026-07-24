@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Staff, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance, KPIRule, CompanyKPIRule } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
-import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2, SlidersHorizontal } from 'lucide-react';
+import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2, SlidersHorizontal, Users, Briefcase, TrendingUp, AlertTriangle } from 'lucide-react';
 import { periodsEqual } from '@/lib/periods';
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
 import { getPayrollAdjustments, createPayrollAdjustment } from '@/server/payroll';
@@ -294,10 +294,10 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                         <Wallet size={20} />
                     </div>
                     <div>
-                        <h2 className="text-[15px] font-bold leading-none" style={{ color: "var(--text-primary)" }}>
+                        <h2 className="text-sm font-bold leading-none" style={{ color: "var(--text-primary)" }}>
                             Oylik Hisobot
                         </h2>
-                        <p className="text-[11px] mt-1 font-medium" style={{ color: "var(--text-muted)" }}>
+                        <p className="text-meta mt-1 font-medium" style={{ color: "var(--text-muted)" }}>
                             Finans va maosh tizimi
                         </p>
                     </div>
@@ -305,38 +305,41 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                 <div className="flex flex-wrap gap-3 items-center">
                     <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg"
                         style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)" }}>
-                        <span className="text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>Oy:</span>
+                        <span className="text-meta font-semibold" style={{ color: "var(--text-muted)" }}>Oy:</span>
                         <input
                             type="month" value={month}
                             onChange={e => setMonth(e.target.value)}
-                            className="bg-transparent border-none outline-none font-bold text-[13px] cursor-pointer"
+                            className="bg-transparent border-none outline-none font-bold text-body cursor-pointer"
                             style={{ color: "var(--accent-blue)" }}
                         />
                     </div>
                     <div className="px-5 py-2.5 rounded-xl" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--success)" }}>Jami to&apos;lov</p>
-                        <p className="text-[18px] font-black tabular-nums leading-none" style={{ color: "var(--success)" }}>
+                        <p className="text-micro font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--success)" }}>Jami to&apos;lov</p>
+                        <p className="text-lg font-black tabular-nums leading-none" style={{ color: "var(--success)" }}>
                             {formatNum(summaries.reduce((a, b) => a + b.totalSalary, 0))}
-                            <span className="text-[11px] font-bold ml-1.5" style={{ color: "var(--success)", opacity: 0.7 }}>so&apos;m</span>
+                            <span className="text-meta font-bold ml-1.5" style={{ color: "var(--success)", opacity: 0.7 }}>so&apos;m</span>
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Summary stat cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Ko'rsatkichlar tasmasi — rangli plitkalar o'rniga chiziq bilan
+                bo'lingan bitta panel; belgilar lucide'dan (emoji emas). */}
+            <div className="stat-strip">
                 {[
-                    { label: "Xodimlar", value: summaries.length, icon: "👥", color: "var(--accent-blue)", bg: "var(--info-bg)" },
-                    { label: "Jami stavka", value: formatNum(summaries.reduce((a, b) => a + b.baseSalary, 0)) + " so'm", icon: "💼", color: "var(--accent-indigo)", bg: "var(--accent-indigo-light)" },
-                    { label: "KPI bonus", value: "+" + formatNum(summaries.reduce((a, b) => a + b.kpiBonus, 0)) + " so'm", icon: "📈", color: "var(--success)", bg: "var(--success-bg)" },
-                    { label: "Jami jarima", value: formatNum(summaries.reduce((a, b) => a + Math.abs(b.kpiPenalty), 0)) + " so'm", icon: "⚠️", color: "var(--danger)", bg: "var(--danger-bg)" },
-                ].map((card, i) => (
-                    <div key={i} className="p-4 rounded-xl" style={{ background: card.bg, border: `1px solid ${card.color}22` }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="text-lg">{card.icon}</span>
-                            <span className="text-[11px] font-semibold" style={{ color: card.color }}>{card.label}</span>
-                        </div>
-                        <p className="text-[15px] font-black tabular-nums" style={{ color: card.color }}>{card.value}</p>
+                    { label: "Xodimlar", value: formatNum(summaries.length), Icon: Users },
+                    { label: "Jami stavka", value: formatNum(summaries.reduce((a, b) => a + b.baseSalary, 0)) + " so'm", Icon: Briefcase },
+                    { label: "KPI bonus", value: "+" + formatNum(summaries.reduce((a, b) => a + b.kpiBonus, 0)) + " so'm", Icon: TrendingUp, color: "var(--success)" },
+                    { label: "Jami jarima", value: formatNum(summaries.reduce((a, b) => a + Math.abs(b.kpiPenalty), 0)) + " so'm", Icon: AlertTriangle, color: "var(--danger)" },
+                ].map((card) => (
+                    <div key={card.label}>
+                        <span className="stat-label flex items-center gap-1.5">
+                            <card.Icon size={12} style={{ color: card.color ?? "var(--text-muted)" }} />
+                            {card.label}
+                        </span>
+                        <span className="stat-value text-lg" style={card.color ? { color: card.color } : undefined}>
+                            {card.value}
+                        </span>
                     </div>
                 ))}
             </div>
@@ -348,12 +351,12 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ background: `hsl(${(s.employeeName.charCodeAt(0) * 37) % 360}, 60%, 50%)` }}>{s.employeeName.charAt(0)}</div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-bold leading-none truncate" style={{ color: "var(--text-primary)" }}>{s.employeeName}</p>
-                                <p className="text-[10px] mt-1 leading-none truncate" style={{ color: "var(--text-muted)" }}>{ROLE_LABELS[s.employeeRole] || s.employeeRole} • {s.companyCount} firma</p>
+                                <p className="text-body font-bold leading-none truncate" style={{ color: "var(--text-primary)" }}>{s.employeeName}</p>
+                                <p className="text-micro mt-1 leading-none truncate" style={{ color: "var(--text-muted)" }}>{ROLE_LABELS[s.employeeRole] || s.employeeRole} • {s.companyCount} firma</p>
                             </div>
                             <div className="text-right shrink-0">
                                 <p className="text-2xs font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami</p>
-                                <p className="text-[15px] font-black tabular-nums leading-tight" style={{ color: "var(--accent-indigo)" }}>{formatNum(s.totalSalary)}</p>
+                                <p className="text-sm font-black tabular-nums leading-tight" style={{ color: "var(--accent-indigo)" }}>{formatNum(s.totalSalary)}</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 mt-3">
@@ -367,19 +370,19 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                             ].map((x, i) => (
                                 <div key={i} className="rounded-lg px-2 py-1.5 text-center" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
                                     <div className="text-2xs font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{x.l}</div>
-                                    <div className="text-[11px] font-black tabular-nums mt-0.5 truncate" style={{ color: x.c }}>{x.v}</div>
+                                    <div className="text-meta font-black tabular-nums mt-0.5 truncate" style={{ color: x.c }}>{x.v}</div>
                                 </div>
                             ))}
                         </div>
                         <div className="flex gap-2 mt-3">
-                            <button onClick={() => setEditingAdj({ empId: s.employeeId, type: "avans", amount: 0, reason: "" })} className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}><HandCoins size={13} /> Avans</button>
-                            <button onClick={() => setEditingAdj({ empId: s.employeeId, type: "payment", amount: s.remainingBalance, reason: "Maosh to'lovi" })} className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}><CheckCircle2 size={13} /> To&apos;lash</button>
+                            <button onClick={() => setEditingAdj({ empId: s.employeeId, type: "avans", amount: 0, reason: "" })} className="flex-1 py-2 rounded-lg text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}><HandCoins size={13} /> Avans</button>
+                            <button onClick={() => setEditingAdj({ empId: s.employeeId, type: "payment", amount: s.remainingBalance, reason: "Maosh to'lovi" })} className="flex-1 py-2 rounded-lg text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}><CheckCircle2 size={13} /> To&apos;lash</button>
                         </div>
                     </div>
                 ))}
                 {summaries.length === 0 && (
                     <div className="rounded-xl p-12 text-center" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-                        <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot topilmadi</span>
+                        <span className="text-meta uppercase font-black tracking-[0.2em] opacity-50" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot topilmadi</span>
                     </div>
                 )}
             </div>
@@ -389,20 +392,20 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
             <div className="hidden md:flex justify-end mb-2">
                 <div className="relative">
                     <button onClick={() => setColPanelOpen(o => !o)}
-                        className="font-bold px-4 py-2 rounded-xl text-[11px] flex items-center gap-2 uppercase tracking-widest"
+                        className="font-bold px-4 py-2 rounded-xl text-meta flex items-center gap-2 uppercase tracking-widest"
                         style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>
                         <SlidersHorizontal size={14} /> Ustunlar{hiddenCols.size > 0 ? ` (${hiddenCols.size})` : ''}
                     </button>
                     {colPanelOpen && (
                         <>
-                            <div className="fixed inset-0 z-[90]" onClick={() => setColPanelOpen(false)} />
+                            <div className="fixed inset-0 z-[100]" onClick={() => setColPanelOpen(false)} />
                             <div className="absolute right-0 mt-2 z-[100] w-56 rounded-xl p-3 shadow-2xl" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-secondary)" }}>Ustunlar</span>
-                                    <button onClick={() => setHiddenCols(new Set())} className="text-[10px] font-bold uppercase" style={{ color: "var(--accent-blue)" }}>Hammasi</button>
+                                    <span className="text-meta font-bold uppercase tracking-widest" style={{ color: "var(--text-secondary)" }}>Ustunlar</span>
+                                    <button onClick={() => setHiddenCols(new Set())} className="text-micro font-bold uppercase" style={{ color: "var(--accent-blue)" }}>Hammasi</button>
                                 </div>
                                 {HIDEABLE_COLS.map(c => (
-                                    <label key={c.key} className="flex items-center gap-2 py-1 px-1 rounded cursor-pointer text-[12px]" style={{ color: "var(--text-primary)" }}>
+                                    <label key={c.key} className="flex items-center gap-2 py-1 px-1 rounded-lg cursor-pointer text-xs" style={{ color: "var(--text-primary)" }}>
                                         <input type="checkbox" checked={!hiddenCols.has(c.key)} onChange={() => toggleCol(c.key)} />
                                         <span>{c.label}</span>
                                     </label>
@@ -429,7 +432,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                     { key: 'remaining', label: "Qolgan", align: "right", color: "var(--success)" },
                                     { key: 'actions', label: "Amallar", align: "center" },
                                 ].filter(h => !hiddenCols.has(h.key)).map((h, i) => (
-                                    <th key={i} className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"
+                                    <th key={i} className="px-4 py-3.5 text-micro font-bold uppercase tracking-wider whitespace-nowrap"
                                         style={{ color: h.color || "var(--text-muted)", textAlign: h.align as any }}>
                                         {h.label}
                                     </th>
@@ -455,8 +458,8 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                                 {s.employeeName.charAt(0)}
                                             </div>
                                             <div>
-                                                <p className="text-[13px] font-semibold leading-none" style={{ color: "var(--text-primary)" }}>{s.employeeName}</p>
-                                                <p className="text-[10px] mt-0.5 leading-none" style={{ color: "var(--text-muted)" }}>
+                                                <p className="text-body font-semibold leading-none" style={{ color: "var(--text-primary)" }}>{s.employeeName}</p>
+                                                <p className="text-micro mt-0.5 leading-none" style={{ color: "var(--text-muted)" }}>
                                                     {ROLE_LABELS[s.employeeRole] || s.employeeRole}
                                                     <span className="ml-1.5 opacity-60">• {s.companyCount} firma</span>
                                                 </p>
@@ -465,14 +468,14 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                     </td>
                                     {/* Stavka */}
                                     <td className="px-4 py-3.5 text-right">
-                                        <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
+                                        <span className="text-body font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
                                             {formatNum(s.baseSalary)}
                                         </span>
                                     </td>
                                     {/* KPI Bonus */}
                                     {!hiddenCols.has('bonus') && (
                                     <td className="px-4 py-3.5 text-right">
-                                        <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--success)" }}>
+                                        <span className="text-body font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--success)" }}>
                                             +{formatNum(s.kpiBonus)}
                                         </span>
                                     </td>
@@ -480,7 +483,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                     {/* Jarima */}
                                     {!hiddenCols.has('penalty') && (
                                     <td className="px-4 py-3.5 text-right">
-                                        <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--danger)" }}>
+                                        <span className="text-body font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--danger)" }}>
                                             {formatNum(s.kpiPenalty)}
                                         </span>
                                     </td>
@@ -488,7 +491,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                     {/* Qo'shimcha */}
                                     {!hiddenCols.has('manual') && (
                                     <td className="px-4 py-3.5 text-right">
-                                        <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--accent-blue)" }}>
+                                        <span className="text-body font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--accent-blue)" }}>
                                             {s.manualBonuses > 0 ? "+" : ""}{formatNum(s.manualBonuses)}
                                         </span>
                                     </td>
@@ -496,21 +499,21 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                     {/* Avans */}
                                     {!hiddenCols.has('avans') && (
                                     <td className="px-4 py-3.5 text-right">
-                                        <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--warning)" }}>
+                                        <span className="text-body font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--warning)" }}>
                                             {formatNum(Math.abs(s.totalReceived))}
                                         </span>
                                     </td>
                                     )}
                                     {/* Jami */}
                                     <td className="px-4 py-3.5 text-right">
-                                        <span className="text-[14px] font-black tabular-nums whitespace-nowrap" style={{ color: "var(--accent-indigo)" }}>
+                                        <span className="text-sm font-black tabular-nums whitespace-nowrap" style={{ color: "var(--accent-indigo)" }}>
                                             {formatNum(s.totalSalary)}
                                         </span>
                                     </td>
                                     {/* Qolgan */}
                                     {!hiddenCols.has('remaining') && (
                                     <td className="px-4 py-3.5 text-right">
-                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold tabular-nums whitespace-nowrap"
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold tabular-nums whitespace-nowrap"
                                             style={{
                                                 background: s.remainingBalance <= 0 ? "var(--success-bg)" : "var(--warning-bg)",
                                                 color: s.remainingBalance <= 0 ? "var(--success)" : "var(--warning)",
@@ -525,7 +528,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                         <div className="flex gap-1.5 justify-center opacity-30 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => setEditingAdj({ empId: s.employeeId, type: "avans", amount: 0, reason: "" })}
-                                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
+                                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-meta font-semibold transition-all"
                                                 style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}
                                                 title="Avans berish"
                                             >
@@ -533,7 +536,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                             </button>
                                             <button
                                                 onClick={() => setEditingAdj({ empId: s.employeeId, type: "payment", amount: s.remainingBalance, reason: "Maosh to'lovi" })}
-                                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
+                                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-meta font-semibold transition-all"
                                                 style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}
                                                 title="Maosh to'lash"
                                             >
@@ -547,7 +550,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                 <tr>
                                     <td colSpan={9} className="px-8 py-16 text-center">
                                         <Wallet size={36} className="mx-auto mb-3" style={{ color: "var(--text-muted)", opacity: 0.4 }} />
-                                        <p className="text-[13px] font-medium" style={{ color: "var(--text-muted)" }}>Bu oy uchun ma&apos;lumot topilmadi</p>
+                                        <p className="text-body font-medium" style={{ color: "var(--text-muted)" }}>Bu oy uchun ma&apos;lumot topilmadi</p>
                                     </td>
                                 </tr>
                             )}
@@ -561,18 +564,18 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
                     style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
                     onClick={() => setEditingAdj(null)}>
-                    <div className="w-full max-w-md rounded-2xl overflow-hidden animate-scale-in"
+                    <div className="w-full max-w-md rounded-xl overflow-hidden animate-scale-in"
                         style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}
                         onClick={e => e.stopPropagation()}
                         onKeyDown={submitOnCtrlEnter(handleAddAdjustment)}>
                         <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: "1px solid var(--card-border)" }}>
                             <div>
-                                <h3 className="text-[15px] font-bold" style={{ color: "var(--text-primary)" }}>
+                                <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
                                     {editingAdj.type === "bonus" ? "Bonus belgilash" :
                                         editingAdj.type === "jarima" ? "Jarima yozish" :
                                             editingAdj.type === "avans" ? "Avans berish" : "Maosh to'lovi"}
                                 </h3>
-                                <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>Miqdor va sababni kiriting</p>
+                                <p className="text-meta mt-0.5" style={{ color: "var(--text-muted)" }}>Miqdor va sababni kiriting</p>
                             </div>
                             <button onClick={() => setEditingAdj(null)}
                                 className="p-2 rounded-lg transition-all"
@@ -584,15 +587,15 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-[11px] font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Summa (so&apos;m)</label>
+                                <label className="block text-meta font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Summa (so&apos;m)</label>
                                 <input type="text" inputMode="numeric"
-                                    className="erp-input text-[15px] font-bold"
+                                    className="erp-input text-sm font-bold"
                                     value={groupDigits(editingAdj.amount || "")}
                                     onChange={e => setEditingAdj({ ...editingAdj, amount: Number(ungroupDigits(e.target.value)) })}
                                     placeholder="0" />
                             </div>
                             <div>
-                                <label className="block text-[11px] font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Sabab / Izoh</label>
+                                <label className="block text-meta font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Sabab / Izoh</label>
                                 <textarea
                                     className="erp-input min-h-[90px] resize-none"
                                     value={editingAdj.reason}

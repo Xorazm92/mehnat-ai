@@ -178,12 +178,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
   return (
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity" onClick={onClose}></div>
-      <div className="fixed right-0 top-0 h-full w-full max-w-[850px] z-[101] overflow-y-auto overflow-x-hidden animate-in slide-in-from-right duration-300 flex flex-col shadow-2xl" style={{ background: 'var(--input-bg)' }}>
+      <div className="fixed right-0 top-0 h-full w-full max-w-[850px] z-[110] overflow-y-auto overflow-x-hidden animate-in slide-in-from-right duration-300 flex flex-col shadow-2xl" style={{ background: 'var(--input-bg)' }}>
         <div className="dashboard-card shrink-0 z-20 shadow-md !rounded-none !border-0 !border-b border-[var(--border)] relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
           <div className="p-6 flex justify-between items-start">
             <div className="flex gap-5 items-start">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl text-white font-black shrink-0 shadow-md transition-transform hover:scale-105" style={{ background: `linear-gradient(135deg, var(--primary), var(--accent-blue-hover))` }}>
+              <div className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl text-white font-black shrink-0 shadow-md transition-transform hover:scale-105" style={{ background: `linear-gradient(135deg, var(--primary), var(--accent-blue-hover))` }}>
                 {company.name.charAt(0)}
               </div>
               <div className="flex flex-col gap-1.5 pt-1">
@@ -203,7 +203,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 transition-all font-bold text-[11px] uppercase tracking-widest whitespace-nowrap rounded-lg border`}
+                className={`flex items-center gap-2 px-4 py-2.5 transition-all font-bold text-meta uppercase tracking-widest whitespace-nowrap rounded-lg border`}
                 style={activeTab === tab.id ? { background: 'var(--accent-blue)', color: '#fff', borderColor: 'var(--accent-blue)' } : { background: 'var(--input-bg)', color: 'var(--text-secondary)', borderColor: 'var(--card-border)' }}
               >
                 <div className="shrink-0">{React.cloneElement(tab.icon as React.ReactElement<any>, { size: 14 })}</div>
@@ -221,11 +221,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
                     <User size={20} />
                   </div>
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Direktor / Rahbar</h4>
+                  <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Direktor / Rahbar</h4>
                 </div>
                 <div className="pl-14">
                   <p className="text-xl font-black uppercase tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.directorName || '—'}</p>
-                  <p className="text-[12px] font-bold uppercase mt-3 tracking-widest tabular-nums flex items-center gap-2" style={{ color: 'var(--accent-blue)' }}>
+                  <p className="text-xs font-bold uppercase mt-3 tracking-widest tabular-nums flex items-center gap-2" style={{ color: 'var(--accent-blue)' }}>
                     <Phone size={14} /> {company.directorPhone || 'MALUMOT YOQ'}
                   </p>
                 </div>
@@ -236,10 +236,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--warning-light)', color: 'var(--warning)' }}>
                     <MapPin size={20} />
                   </div>
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Yuridik Manzil</h4>
+                  <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Yuridik Manzil</h4>
                 </div>
                 <div className="pl-14">
-                  <p className="text-[13px] font-bold uppercase tracking-tight leading-relaxed" style={{ color: 'var(--text)' }}>{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
+                  <p className="text-body font-bold uppercase tracking-tight leading-relaxed" style={{ color: 'var(--text)' }}>{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
                 </div>
               </div>
 
@@ -247,14 +247,14 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 <div className="px-5 py-4 flex items-center justify-between" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
                   <div className="flex items-center gap-3">
                     <FileText size={18} style={{ color: 'var(--text-muted)' }} />
-                    <h4 className="text-[11px] font-bold uppercase tracking-widest leading-none" style={{ color: 'var(--text)' }}>Arxiv Hujjatlari</h4>
+                    <h4 className="text-meta font-bold uppercase tracking-widest leading-none" style={{ color: 'var(--text)' }}>Arxiv Hujjatlari</h4>
                   </div>
                   <span className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{documents.length} FAYL</span>
                 </div>
                 {isLoadingDocs ? (
                   <div className="p-10 flex flex-col items-center justify-center">
                     <div className="animate-spin w-8 h-8 border-3 border-t-transparent rounded-full mb-4" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest leading-none" style={{ color: 'var(--text-muted)' }}>Yuklanmoqda...</p>
+                    <p className="text-meta font-bold uppercase tracking-widest leading-none" style={{ color: 'var(--text-muted)' }}>Yuklanmoqda...</p>
                   </div>
                 ) : documents.length > 0 ? (
                   <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
@@ -264,7 +264,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }}>
                                 <FileText size={16} />
                             </div>
-                            <span className="text-[13px] font-bold truncate pr-4 uppercase tracking-tight transition-colors" style={{ color: 'var(--text)' }}>{doc.file_name}</span>
+                            <span className="text-body font-bold truncate pr-4 uppercase tracking-tight transition-colors" style={{ color: 'var(--text)' }}>{doc.file_name}</span>
                         </div>
                         <a href={doc.file_url} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center rounded-lg shrink-0 transition-all shadow-sm" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; }}>
                           <Download size={18} />
@@ -273,7 +273,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                     ))}
                   </div>
                 ) : (
-                  <div className="p-16 text-center text-[12px] font-bold uppercase tracking-[0.3em]" style={{ color: 'var(--text-muted)' }}>
+                  <div className="p-16 text-center text-xs font-bold uppercase tracking-[0.3em]" style={{ color: 'var(--text-muted)' }}>
                     Hujjatlar topilmadi
                   </div>
                 )}
@@ -283,7 +283,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               <div className="dashboard-card overflow-hidden">
                 <div className="px-5 py-4 flex items-center gap-3" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
                   <Check size={18} style={{ color: 'var(--text-muted)' }} />
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Xizmatlar & Operatsiyalar</h4>
+                  <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Xizmatlar & Operatsiyalar</h4>
                 </div>
                 <div className="p-6">
                   <div className="flex flex-wrap gap-2 mb-6">
@@ -292,15 +292,15 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                     )) : company.activeServices?.length ? company.activeServices.slice(0, 8).map(s => (
                       <span key={s} className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{s.replace('_', ' ')}</span>
                     )) : (
-                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Xizmatlar tanlanmagan</p>
+                      <p className="text-meta font-bold uppercase tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Xizmatlar tanlanmagan</p>
                     )}
                     {company.activeServices && company.activeServices.length > 8 && (
-                      <span className="text-[10px] font-bold flex items-center px-1 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>+{company.activeServices.length - 8} YANA</span>
+                      <span className="text-micro font-bold flex items-center px-1 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>+{company.activeServices.length - 8} YANA</span>
                     )}
                   </div>
                   <button
                     onClick={() => setActiveTab('xizmatlar')}
-                    className="w-full py-3 rounded-lg text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-sm flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-lg text-meta font-bold uppercase tracking-[0.2em] transition-all shadow-sm flex items-center justify-center gap-2"
                     style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
                     onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.borderColor = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--card-border)'; e.currentTarget.style.background = 'var(--input-bg)'; }}
@@ -316,8 +316,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
             <div className="space-y-4 animate-fade-in">
               <div className="grid grid-cols-2 gap-4">
                 <div className="dashboard-card p-5">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>1C Server & Baza</h4>
-                  <div className="space-y-3 text-[12px]">
+                  <h4 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>1C Server & Baza</h4>
+                  <div className="space-y-3 text-xs">
                     <p className="font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>Server ID: <span style={{ color: 'var(--accent-blue)' }}>{company.serverInfo || '—'}</span></p>
                     {company.serverName && (
                       <p className="font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>Server Nomi: <span style={{ color: 'var(--success)' }}>{company.serverName}</span></p>
@@ -327,40 +327,40 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
                 <div className={`dashboard-card p-5 flex items-center gap-4 transition-colors`} style={{ background: company.itParkResident ? 'var(--accent-blue-light)' : 'var(--card-bg)', borderColor: company.itParkResident ? 'var(--accent-blue)' : 'var(--card-border)' }}>
                   <Shield size={24} className="shrink-0" style={{ color: company.itParkResident ? 'var(--accent-blue)' : 'var(--text-muted)' }} />
-                  <span className="text-[13px] font-black uppercase tracking-widest" style={{ color: company.itParkResident ? 'var(--accent-blue)' : 'var(--text-muted)' }}>IT Park Rezidenti</span>
+                  <span className="text-body font-black uppercase tracking-widest" style={{ color: company.itParkResident ? 'var(--accent-blue)' : 'var(--text-muted)' }}>IT Park Rezidenti</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="dashboard-card p-5">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Statistika Hisobotlari</h4>
+                  <h4 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Statistika Hisobotlari</h4>
                   <div className="flex flex-wrap gap-2">
                     {company.statReports?.length ? company.statReports.map(s => (
                       <span key={s} className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>{s}</span>
-                    )) : <p className="text-[11px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>belgilanmagan</p>}
+                    )) : <p className="text-meta font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>belgilanmagan</p>}
                   </div>
                 </div>
 
                 <div className="dashboard-card p-5">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Majburiy Hisobotlar</h4>
+                  <h4 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Majburiy Hisobotlar</h4>
                   <div className="flex flex-wrap gap-2">
                     {company.requiredReports?.length ? company.requiredReports.map(r => (
                       <span key={r} className="c1-badge" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>{r}</span>
-                    )) : <p className="text-[11px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>belgilanmagan</p>}
+                    )) : <p className="text-meta font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>belgilanmagan</p>}
                   </div>
                 </div>
 
                 <div className="dashboard-card p-5 col-span-1 md:col-span-2">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Xizmatlar Ko&apos;lami (Scope)</h4>
+                  <h4 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Xizmatlar Ko&apos;lami (Scope)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {company.serviceScope?.length ? company.serviceScope.map(s => (
                       <div key={s} className="flex items-center gap-2 p-2 rounded-lg transition-colors" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
                         <Check size={14} className="shrink-0" />
-                        <span className="text-[10px] font-bold uppercase truncate tracking-tight">{s}</span>
+                        <span className="text-micro font-bold uppercase truncate tracking-tight">{s}</span>
                       </div>
                     )) : (
                       <div className="col-span-full py-8 text-center rounded-lg border border-dashed transition-colors" style={{ borderColor: 'var(--card-border)', background: 'var(--input-bg)' }}>
-                        <p className="text-[11px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>Xizmatlar tanlanmagan</p>
+                        <p className="text-meta font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>Xizmatlar tanlanmagan</p>
                       </div>
                     )}
                   </div>
@@ -370,11 +370,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               <div className="dashboard-card p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Database size={16} style={{ color: 'var(--text-muted)' }} />
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>1C Holati</h4>
+                  <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>1C Holati</h4>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {['cloud', 'local', 'server', 'none'].map(status => (
-                    <button key={status} className={`px-4 py-2 rounded-lg border font-bold text-[11px] uppercase transition-all tracking-widest shadow-sm`} style={company.oneCStatus === status ? { background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' } : { background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}>
+                    <button key={status} className={`px-4 py-2 rounded-lg border font-bold text-meta uppercase transition-all tracking-widest shadow-sm`} style={company.oneCStatus === status ? { background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' } : { background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}>
                       {status === 'cloud' ? '☁️ Cloud' : status === 'local' ? '💻 Local' : status === 'server' ? '🖥️ Server' : '❌ Yo\'q'}
                     </button>
                   ))}
@@ -385,11 +385,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
           {activeTab === 'loginlar' && (
             <div className="space-y-4 animate-fade-in">
-              <div className="bg-[var(--card-bg)] p-4 rounded-sm border border-[var(--card-border)] shadow-sm transition-colors">
+              <div className="bg-[var(--card-bg)] p-4 rounded-lg border border-[var(--card-border)] shadow-sm transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Globe size={12} className="text-[var(--text-muted)]" />
-                    <h4 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">Soliq.uz (Asosiy)</h4>
+                    <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Soliq.uz (Asosiy)</h4>
                   </div>
                   {isEditingMainLogin ? (
                     <div className="flex gap-1.5">
@@ -399,7 +399,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           setTempLogin(company.login || '');
                           setTempPassword(company.password || '');
                         }}
-                        className="px-2.5 py-1 text-[10px] font-bold text-[var(--text-muted)] uppercase rounded-sm border border-[var(--card-border)] hover:bg-[var(--bg-hover)] transition-all"
+                        className="px-2.5 py-1 text-micro font-bold text-[var(--text-muted)] uppercase rounded-lg border border-[var(--card-border)] hover:bg-[var(--bg-hover)] transition-all"
                       >
                         Bekor qilish
                       </button>
@@ -418,7 +418,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           }
                           setIsEditingMainLogin(false);
                         }}
-                        className="px-2.5 py-1 bg-[var(--success)] hover:opacity-90 text-white text-[10px] font-bold uppercase rounded-sm border border-[var(--success-border)] transition-all shadow-sm"
+                        className="px-2.5 py-1 bg-[var(--success)] hover:opacity-90 text-white text-micro font-bold uppercase rounded-lg border border-[var(--success-border)] transition-all shadow-sm"
                       >
                         Saqlash
                       </button>
@@ -426,7 +426,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   ) : (
                     <button
                       onClick={() => setIsEditingMainLogin(true)}
-                      className="px-2.5 py-1 bg-[var(--input-bg)] hover:bg-[var(--bg-hover)] text-[10px] font-bold text-[var(--text-secondary)] uppercase rounded-sm border border-[var(--card-border)] transition-all hover:text-[var(--accent-blue)]"
+                      className="px-2.5 py-1 bg-[var(--input-bg)] hover:bg-[var(--bg-hover)] text-micro font-bold text-[var(--text-secondary)] uppercase rounded-lg border border-[var(--card-border)] transition-all hover:text-[var(--accent-blue)]"
                     >
                       Tahrirlash
                     </button>
@@ -434,31 +434,31 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1">
-                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Login</p>
+                    <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">Login</p>
                     {isEditingMainLogin ? (
                       <input
                         type="text"
-                        className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] font-mono text-[11px] uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
+                        className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] font-mono text-meta uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
                         value={tempLogin}
                         onChange={(e) => setTempLogin(e.target.value)}
                       />
                     ) : (
-                      <p className="text-[11px] font-mono font-bold text-[var(--text)] uppercase bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] transition-colors">{company.login || '—'}</p>
+                      <p className="text-meta font-mono font-bold text-[var(--text)] uppercase bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] transition-colors">{company.login || '—'}</p>
                     )}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Parol</p>
+                    <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">Parol</p>
                     <div className="relative">
                       {isEditingMainLogin ? (
                         <input
                           type="text"
-                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] font-mono text-[11px] outline-none focus:border-[var(--accent-blue)] transition-colors"
+                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] font-mono text-meta outline-none focus:border-[var(--accent-blue)] transition-colors"
                           value={tempPassword}
                           onChange={(e) => setTempPassword(e.target.value)}
                         />
                       ) : (
-                        <div className="flex items-center justify-between bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] transition-colors">
-                          <p className="text-[11px] font-mono font-bold text-[var(--text)] tracking-widest leading-none">
+                        <div className="flex items-center justify-between bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] transition-colors">
+                          <p className="text-meta font-mono font-bold text-[var(--text)] tracking-widest leading-none">
                             {showPasswords['main'] ? company.password || '—' : '••••••••'}
                           </p>
                           <button onClick={() => setShowPasswords(prev => ({ ...prev, main: !prev.main }))} className="text-[var(--text-muted)] hover:text-[var(--accent-blue)] transition-all">
@@ -471,12 +471,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
               </div>
 
-              <div className="bg-[var(--card-bg)] rounded-sm border border-[var(--card-border)] shadow-sm overflow-hidden transition-colors">
+              <div className="bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] shadow-sm overflow-hidden transition-colors">
                 <div className="bg-[var(--input-bg)] px-3 py-2 flex items-center justify-between border-b border-[var(--card-border)]">
-                  <h4 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">Qo&apos;shimcha Kirish Ma&apos;lumotlari</h4>
+                  <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Qo&apos;shimcha Kirish Ma&apos;lumotlari</h4>
                   <button
                     onClick={() => setIsAddingCredential(true)}
-                    className="flex items-center gap-1 text-[10px] font-bold text-[var(--accent-blue)] uppercase py-1 px-2.5 bg-[var(--accent-blue-light)] rounded-sm border border-[var(--card-border)] hover:bg-[var(--bg-hover)] transition-all shadow-sm"
+                    className="flex items-center gap-1 text-micro font-bold text-[var(--accent-blue)] uppercase py-1 px-2.5 bg-[var(--accent-blue-light)] rounded-lg border border-[var(--card-border)] hover:bg-[var(--bg-hover)] transition-all shadow-sm"
                   >
                     <Plus size={10} /> Yangi Qo&apos;shish
                   </button>
@@ -486,43 +486,43 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <div className="p-3 border-b border-[var(--card-border)] bg-[var(--accent-blue-light)] transition-colors">
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div className="col-span-2">
-                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block tracking-widest">Xizmat nomi (Didox, Bank...)</label>
+                        <label className="text-micro font-bold text-[var(--text-muted)] uppercase mb-1 block tracking-widest">Xizmat nomi (Didox, Bank...)</label>
                         <input
                           type="text"
-                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] text-[11px] font-bold outline-none focus:border-[var(--accent-blue)] transition-colors"
+                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] text-meta font-bold outline-none focus:border-[var(--accent-blue)] transition-colors"
                           value={newCred.serviceName}
                           onChange={e => setNewCred({ ...newCred, serviceName: e.target.value })}
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block tracking-widest whitespace-nowrap">Login</label>
+                        <label className="text-micro font-bold text-[var(--text-muted)] uppercase block tracking-widest whitespace-nowrap">Login</label>
                         <input
                           type="text"
-                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] font-mono text-[11px] uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
+                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] font-mono text-meta uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
                           value={newCred.loginId}
                           onChange={e => setNewCred({ ...newCred, loginId: e.target.value })}
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block tracking-widest whitespace-nowrap">Parol</label>
+                        <label className="text-micro font-bold text-[var(--text-muted)] uppercase block tracking-widest whitespace-nowrap">Parol</label>
                         <input
                           type="text"
-                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] font-mono text-[11px] outline-none focus:border-[var(--accent-blue)] transition-colors"
+                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] font-mono text-meta outline-none focus:border-[var(--accent-blue)] transition-colors"
                           value={newCred.password}
                           onChange={e => setNewCred({ ...newCred, password: e.target.value })}
                         />
                       </div>
                       <div className="col-span-2">
-                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1 block tracking-widest">Izoh</label>
+                        <label className="text-micro font-bold text-[var(--text-muted)] uppercase mb-1 block tracking-widest">Izoh</label>
                         <input
                           type="text"
-                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] text-[11px] font-bold outline-none focus:border-[var(--accent-blue)] transition-colors"
+                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] text-meta font-bold outline-none focus:border-[var(--accent-blue)] transition-colors"
                           value={newCred.notes}
                           onChange={e => setNewCred({ ...newCred, notes: e.target.value })}
                         />
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2 text-[10px] uppercase font-bold">
+                    <div className="flex justify-end gap-2 text-micro uppercase font-bold">
                       <button onClick={() => setIsAddingCredential(false)} className="px-2.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors uppercase tracking-widest">Bekor qilish</button>
                       <button
                         disabled={!newCred.serviceName || !newCred.loginId}
@@ -543,7 +543,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             alert((e as Error).message || "Saqlashda xatolik");
                           }
                         }}
-                        className="px-2.5 py-1 bg-[var(--accent-blue)] text-white rounded-sm border border-[var(--accent-blue)] disabled:opacity-50 shadow-sm transition-all"
+                        className="px-2.5 py-1 bg-[var(--accent-blue)] text-white rounded-lg border border-[var(--accent-blue)] disabled:opacity-50 shadow-sm transition-all"
                       >
                         Qo&apos;shish
                       </button>
@@ -557,7 +557,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">
                           <Key size={10} className="text-[var(--text-muted)]" />
-                          <p className="text-[10px] font-bold text-[var(--text)] uppercase tracking-tight">{cred.serviceName}</p>
+                          <p className="text-micro font-bold text-[var(--text)] uppercase tracking-tight">{cred.serviceName}</p>
                         </div>
                         <button
                           onClick={async () => {
@@ -570,27 +570,27 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               }
                             }
                           }}
-                          className="p-1 text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] rounded-sm opacity-0 group-hover/cred:opacity-100 transition-all"
+                          className="p-1 text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] rounded-lg opacity-0 group-hover/cred:opacity-100 transition-all"
                         >
                           <Trash2 size={10} />
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-3 mt-1">
-                        <div className="bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] transition-colors">
-                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-0.5 tracking-widest">Login</p>
-                          <p className="font-mono text-[11px] font-bold text-[var(--text)] uppercase truncate leading-none mt-1">{cred.loginId || '—'}</p>
+                        <div className="bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] transition-colors">
+                          <p className="text-micro font-bold text-[var(--text-muted)] uppercase mb-0.5 tracking-widest">Login</p>
+                          <p className="font-mono text-meta font-bold text-[var(--text)] uppercase truncate leading-none mt-1">{cred.loginId || '—'}</p>
                         </div>
-                        <div className="bg-[var(--input-bg)] p-1.5 rounded-sm border border-[var(--card-border)] flex justify-between items-center transition-colors">
+                        <div className="bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] flex justify-between items-center transition-colors">
                           <div className="flex-1 min-w-0 pr-2">
-                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-0.5 tracking-widest">Parol</p>
-                            <p className="font-mono text-[11px] font-bold text-[var(--text)] tracking-widest leading-none mt-1">{showPasswords[cred.id] ? cred.encryptedPassword || '—' : '••••••••'}</p>
+                            <p className="text-micro font-bold text-[var(--text-muted)] uppercase mb-0.5 tracking-widest">Parol</p>
+                            <p className="font-mono text-meta font-bold text-[var(--text)] tracking-widest leading-none mt-1">{showPasswords[cred.id] ? cred.encryptedPassword || '—' : '••••••••'}</p>
                           </div>
                           <button onClick={() => handleShowPassword(cred.id)} className="text-[var(--text-muted)] hover:text-[var(--accent-blue)] transition-all shrink-0">
                             {showPasswords[cred.id] ? <EyeOff size={11} /> : <Eye size={11} />}
                           </button>
                         </div>
                       </div>
-                      {cred.notes && <p className="text-[10px] font-bold text-[var(--text-muted)] mt-2 uppercase tracking-tight italic opacity-70">Izoh: {cred.notes}</p>}
+                      {cred.notes && <p className="text-micro font-bold text-[var(--text-muted)] mt-2 uppercase tracking-tight italic opacity-70">Izoh: {cred.notes}</p>}
                     </div>
                   ))}
                 </div>
@@ -600,9 +600,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
           {activeTab === 'jamoa' && (
             <div className="space-y-4 animate-fade-in">
-              <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-sm shadow-sm overflow-hidden transition-colors">
+              <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg shadow-sm overflow-hidden transition-colors">
                 <div className="bg-[var(--input-bg)] px-3 py-2 flex items-center justify-between border-b border-[var(--card-border)]">
-                  <h4 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">Amaldagi Jamoa</h4>
+                  <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Amaldagi Jamoa</h4>
                   {onSave && !isEditingJamoa && (
                     <button
                       onClick={() => {
@@ -615,7 +615,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         })));
                         setIsEditingJamoa(true);
                       }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-secondary)] text-[10px] font-bold uppercase transition-all hover:text-[var(--accent-blue)] hover:bg-[var(--accent-blue-light)]"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-secondary)] text-micro font-bold uppercase transition-all hover:text-[var(--accent-blue)] hover:bg-[var(--accent-blue-light)]"
                     >
                       <Pencil size={10} /> Tahrirlash
                     </button>
@@ -624,7 +624,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => setIsEditingJamoa(false)}
-                        className="px-2.5 py-1 rounded-sm border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] text-[10px] font-bold uppercase transition-all"
+                        className="px-2.5 py-1 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] text-micro font-bold uppercase transition-all"
                       >
                         Bekor
                       </button>
@@ -645,7 +645,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             setIsSavingJamoa(false);
                           }
                         }}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[var(--success-border)] bg-[var(--success)] hover:opacity-90 text-white text-[10px] font-bold uppercase transition-all shadow-sm disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--success-border)] bg-[var(--success)] hover:opacity-90 text-white text-micro font-bold uppercase transition-all shadow-sm disabled:opacity-50"
                       >
                         {isSavingJamoa ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} Saqlash
                       </button>
@@ -654,9 +654,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
 
                 {assignmentsError && (
-                  <div className="m-3 p-3 rounded-sm border border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning)]">
-                    <p className="text-[10px] font-bold uppercase tracking-widest leading-none">contract_assignments xatoligi</p>
-                    <p className="text-[10px] uppercase mt-1 opacity-80">{assignmentsError}</p>
+                  <div className="m-3 p-3 rounded-lg border border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning)]">
+                    <p className="text-micro font-bold uppercase tracking-widest leading-none">contract_assignments xatoligi</p>
+                    <p className="text-micro uppercase mt-1 opacity-80">{assignmentsError}</p>
                   </div>
                 )}
 
@@ -669,26 +669,26 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         return (
                           <div key={asgn.id} className="px-4 py-3.5 flex items-center justify-between hover:bg-[var(--bg-hover)] transition-colors group">
                             <div className="flex gap-3.5 items-center">
-                              <div className="w-10 h-10 rounded-lg bg-[var(--accent-blue-light)] border border-[var(--card-border)] flex items-center justify-center text-[var(--accent-blue)] text-[14px] font-black shrink-0 transition-colors uppercase">
+                              <div className="w-10 h-10 rounded-lg bg-[var(--accent-blue-light)] border border-[var(--card-border)] flex items-center justify-center text-[var(--accent-blue)] text-sm font-black shrink-0 transition-colors uppercase">
                                 {member?.name?.charAt(0) || '?'}
                               </div>
                               <div className="flex flex-col gap-1">
-                                <p className="text-[13px] font-bold text-[var(--text)] tracking-tight leading-none">{member?.name?.toUpperCase() || 'Mavjud emas'}</p>
-                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wide leading-none">{ROLE_LABELS[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
+                                <p className="text-body font-bold text-[var(--text)] tracking-tight leading-none">{member?.name?.toUpperCase() || 'Mavjud emas'}</p>
+                                <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-wide leading-none">{ROLE_LABELS[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
                               </div>
                             </div>
                             <div className="text-right flex flex-col gap-1 items-end">
-                              <span className="px-2.5 py-1 bg-[var(--input-bg)] rounded-md border border-[var(--card-border)] text-[12px] font-bold text-[var(--text)] tabular-nums whitespace-nowrap shadow-sm">
+                              <span className="px-2.5 py-1 bg-[var(--input-bg)] rounded-lg border border-[var(--card-border)] text-xs font-bold text-[var(--text)] tabular-nums whitespace-nowrap shadow-sm">
                                 {asgn.salary_type === 'percent' ? `${asgn.salary_value}%` : `${formatNum(asgn.salary_value)} so'm`}
                               </span>
-                              {asgn.start_date && <p className="text-[10px] text-[var(--text-muted)] font-semibold tracking-tight">Sana: {formatUzDate(asgn.start_date)}</p>}
+                              {asgn.start_date && <p className="text-micro text-[var(--text-muted)] font-semibold tracking-tight">Sana: {formatUzDate(asgn.start_date)}</p>}
                             </div>
                           </div>
                         );
                       }) : (
                         <div className="p-8 text-center bg-[var(--input-bg)] transition-colors">
                           <Users size={20} className="mx-auto mb-2 text-[var(--text-muted)]" />
-                          <p className="text-[10px] font-bold uppercase text-[var(--text-muted)] tracking-widest opacity-50">Jamoa a&apos;zolari tayinlanmagan</p>
+                          <p className="text-micro font-bold uppercase text-[var(--text-muted)] tracking-widest opacity-50">Jamoa a&apos;zolari tayinlanmagan</p>
                         </div>
                       );
                     })()}
@@ -697,34 +697,34 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <div className="p-3 bg-[var(--accent-blue-light)] space-y-3 transition-colors">
                     {editAssignments.map((asgn, idx) => {
                       return (
-                        <div key={asgn.role} className="p-3 bg-[var(--card-bg)] rounded-sm border border-[var(--card-border)] space-y-2.5 shadow-sm transition-colors">
-                          <p className="text-[10px] font-bold text-[var(--accent-blue)] uppercase tracking-widest">{ROLE_LABELS[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
+                        <div key={asgn.role} className="p-3 bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] space-y-2.5 shadow-sm transition-colors">
+                          <p className="text-micro font-bold text-[var(--accent-blue)] uppercase tracking-widest">{ROLE_LABELS[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="sm:col-span-2">
-                              <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1 tracking-widest">Xodim</label>
+                              <label className="text-micro font-bold text-[var(--text-muted)] uppercase block mb-1 tracking-widest">Xodim</label>
                               <select
                                 value={asgn.userId || ''}
                                 onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, userId: e.target.value } : a))}
-                                className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-sm px-2 py-1.5 text-[10px] font-bold uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
+                                className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-lg px-2 py-1.5 text-micro font-bold uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
                               >
                                 <option value="">— Tanlanmagan —</option>
                                 {staff.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
                               </select>
                             </div>
                             <div className="flex flex-col">
-                              <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1 tracking-widest whitespace-nowrap">
+                              <label className="text-micro font-bold text-[var(--text-muted)] uppercase block mb-1 tracking-widest whitespace-nowrap">
                                 {asgn.salaryType === 'percent' ? 'Foiz (%)' : 'Summa (so\'m)'}
                               </label>
-                              <div className="flex border border-[var(--card-border)] rounded-sm overflow-hidden shadow-sm transition-colors">
+                              <div className="flex border border-[var(--card-border)] rounded-lg overflow-hidden shadow-sm transition-colors">
                                 <input
                                   type="number"
                                   value={asgn.salaryValue ?? 0}
                                   onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, salaryValue: Number(e.target.value) } : a))}
-                                  className="w-full bg-[var(--input-bg)] px-2 py-1.5 text-[10px] font-bold outline-none"
+                                  className="w-full bg-[var(--input-bg)] px-2 py-1.5 text-micro font-bold outline-none"
                                 />
                                 <button
                                   onClick={() => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, salaryType: a.salaryType === 'percent' ? 'fixed' : 'percent' } : a))}
-                                  className="px-2 py-1.5 bg-[var(--input-bg)] text-[10px] font-bold uppercase text-[var(--text-secondary)] shrink-0 border-l border-[var(--card-border)] hover:bg-[var(--accent-blue-light)] transition-all hover:text-[var(--accent-blue)]"
+                                  className="px-2 py-1.5 bg-[var(--input-bg)] text-micro font-bold uppercase text-[var(--text-secondary)] shrink-0 border-l border-[var(--card-border)] hover:bg-[var(--accent-blue-light)] transition-all hover:text-[var(--accent-blue)]"
                                 >
                                   {asgn.salaryType === 'percent' ? '%' : 'UZS'}
                                 </button>
@@ -739,19 +739,19 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               </div>
 
               {clientHistory.length > 0 && (
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-sm shadow-sm overflow-hidden transition-colors">
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg shadow-sm overflow-hidden transition-colors">
                   <div className="bg-[var(--input-bg)] px-3 py-2 border-b border-[var(--card-border)]">
-                    <h4 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">Tayinlovlar Tarixi</h4>
+                    <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Tayinlovlar Tarixi</h4>
                   </div>
                   <div className="divide-y divide-[var(--card-border)] max-h-[250px] overflow-y-auto">
                     {clientHistory.filter(h => h.changeType === 'assign_role' || h.changeType === 'remove_role').map((h, i) => (
                       <div key={i} className="flex gap-2.5 p-2.5 hover:bg-[var(--bg-hover)] transition-colors group">
-                        <div className={`mt-0.5 w-6 h-6 rounded-sm shrink-0 flex items-center justify-center border transition-colors ${h.changeType === 'assign_role' ? 'bg-[var(--success-bg)] text-[var(--success)] border-[var(--card-border)]' : 'bg-[var(--danger-bg)] text-[var(--danger)] border-[var(--card-border)]'}`}>
+                        <div className={`mt-0.5 w-6 h-6 rounded-lg shrink-0 flex items-center justify-center border transition-colors ${h.changeType === 'assign_role' ? 'bg-[var(--success-bg)] text-[var(--success)] border-[var(--card-border)]' : 'bg-[var(--danger-bg)] text-[var(--danger)] border-[var(--card-border)]'}`}>
                           {h.changeType === 'assign_role' ? <Check size={10} /> : <X size={10} />}
                         </div>
                         <div className="flex flex-col gap-0.5 min-w-0">
-                          <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase truncate pr-2 tracking-tight leading-tight">{h.notes || 'Rol o\'zgarishi'}</p>
-                          <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest opacity-60 leading-none mt-0.5">{formatUzDateTime(h.changedAt)} • {h.changedByName || 'Tizim'}</p>
+                          <p className="text-micro font-bold text-[var(--text-secondary)] uppercase truncate pr-2 tracking-tight leading-tight">{h.notes || 'Rol o\'zgarishi'}</p>
+                          <p className="text-micro text-[var(--text-muted)] font-bold uppercase tracking-widest opacity-60 leading-none mt-0.5">{formatUzDateTime(h.changedAt)} • {h.changedByName || 'Tizim'}</p>
                         </div>
                       </div>
                     ))}
@@ -767,44 +767,44 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 {company.internalContractor && (
                   <div className="col-span-2 dashboard-card p-5 !shadow-sm flex items-center justify-between" style={{ background: 'var(--accent-blue-light)' }}>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5 opacity-70" style={{ color: 'var(--accent-blue)' }}>Ichki Pudratchi (Ijrochi)</p>
+                      <p className="text-micro font-bold uppercase tracking-widest mb-1.5 opacity-70" style={{ color: 'var(--accent-blue)' }}>Ichki Pudratchi (Ijrochi)</p>
                       <div className="flex items-center gap-3">
                         <Building2 size={16} style={{ color: 'var(--accent-blue)' }} />
-                        <p className="text-[14px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.internalContractor}</p>
+                        <p className="text-sm font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.internalContractor}</p>
                       </div>
                     </div>
                   </div>
                 )}
 
                 <div className="dashboard-card p-5 !shadow-sm">
-                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Shartnoma Raqami</p>
-                  <p className="text-[13px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.contractNumber || '—'}</p>
+                  <p className="text-micro font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Shartnoma Raqami</p>
+                  <p className="text-body font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.contractNumber || '—'}</p>
                 </div>
                 <div className="dashboard-card p-5 !shadow-sm">
-                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Sana</p>
-                  <p className="text-[13px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.contractDate || '—'}</p>
+                  <p className="text-micro font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Sana</p>
+                  <p className="text-body font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.contractDate || '—'}</p>
                 </div>
               </div>
 
               <div className="dashboard-card overflow-hidden !shadow-sm">
                 <div className="p-5 text-center" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest mb-5" style={{ color: 'var(--text-muted)' }}>Moliyaviy Holat</h4>
+                  <h4 className="text-micro font-bold uppercase tracking-widest mb-5" style={{ color: 'var(--text-muted)' }}>Moliyaviy Holat</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
-                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xizmat Narxi</p>
-                      <p className="text-[18px] font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{formatNum(Number(company.contractAmount || 0))} <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>so&apos;m</span></p>
+                      <p className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xizmat Narxi</p>
+                      <p className="text-lg font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{formatNum(Number(company.contractAmount || 0))} <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>so&apos;m</span></p>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Joriy Balans</p>
-                      <p className={`text-[18px] font-black tabular-nums tracking-tight leading-none uppercase`} style={{ color: Number(company.currentBalance || 0) < 0 ? 'var(--danger)' : 'var(--success)' }}>
-                        {formatNum(Number(company.currentBalance || 0))} <span className="text-[10px] font-bold uppercase tracking-widest">so&apos;m</span>
+                      <p className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Joriy Balans</p>
+                      <p className={`text-lg font-black tabular-nums tracking-tight leading-none uppercase`} style={{ color: Number(company.currentBalance || 0) < 0 ? 'var(--danger)' : 'var(--success)' }}>
+                        {formatNum(Number(company.currentBalance || 0))} <span className="text-micro font-bold uppercase tracking-widest">so&apos;m</span>
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="p-5">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Kaskadli Taqsimot (Oylik prognozi)</h4>
+                  <h4 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Kaskadli Taqsimot (Oylik prognozi)</h4>
                   {(() => {
                     // Jamoa tabi bilan bir xil manba (deriveRoleComp) — qiymatlar
                     // ikkala tabda doim mos keladi.
@@ -824,18 +824,18 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         <div className="divide-y rounded-xl overflow-hidden border" style={{ borderColor: 'var(--card-border)' }}>
                           {cascade.map((item, i) => (
                             <div key={i} className="flex items-center justify-between px-4 py-3.5 transition-colors group hover:bg-[var(--input-bg)]" style={{ background: 'var(--card-bg)' }}>
-                              <span className="text-[13px] font-bold tracking-tight uppercase" style={{ color: 'var(--text)' }}>{item.label}</span>
+                              <span className="text-body font-bold tracking-tight uppercase" style={{ color: 'var(--text)' }}>{item.label}</span>
                               <div className="text-right flex items-center gap-4">
-                                <p className="text-[11px] font-bold px-2.5 py-1 rounded-md border tabular-nums" style={{ color: 'var(--text-secondary)', background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>{item.type === 'fixed' ? 'Fiks' : `${item.value}%`}</p>
-                                <p className="text-[14px] font-black tabular-nums tracking-tight leading-none min-w-[90px]" style={{ color: 'var(--text)' }}>{formatNum(item.amountValue)} <span className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>UZS</span></p>
+                                <p className="text-meta font-bold px-2.5 py-1 rounded-lg border tabular-nums" style={{ color: 'var(--text-secondary)', background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>{item.type === 'fixed' ? 'Fiks' : `${item.value}%`}</p>
+                                <p className="text-sm font-black tabular-nums tracking-tight leading-none min-w-[90px]" style={{ color: 'var(--text)' }}>{formatNum(item.amountValue)} <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>UZS</span></p>
                               </div>
                             </div>
                           ))}
                         </div>
                         <div className="mt-4 flex items-center justify-between p-4 rounded-xl shadow-sm" style={{ background: 'var(--success-bg)', border: '1px solid var(--success-border)' }}>
-                          <span className="text-[12px] font-black uppercase tracking-widest" style={{ color: 'var(--success)' }}>Kompaniya Qoldig&apos;i</span>
-                          <span className="text-[15px] font-black tabular-nums tracking-tight leading-none" style={{ color: remainder < 0 ? 'var(--danger)' : 'var(--success)' }}>
-                            {formatNum(remainder)} <span className="text-[10px] font-bold">UZS</span>
+                          <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--success)' }}>Kompaniya Qoldig&apos;i</span>
+                          <span className="text-sm font-black tabular-nums tracking-tight leading-none" style={{ color: remainder < 0 ? 'var(--danger)' : 'var(--success)' }}>
+                            {formatNum(remainder)} <span className="text-micro font-bold">UZS</span>
                           </span>
                         </div>
                       </>
@@ -852,7 +852,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 <div className="flex items-center justify-between mb-5 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
                   <div className="flex items-center gap-3">
                     <Check size={16} style={{ color: 'var(--text-muted)' }} />
-                    <h4 className="text-[11px] font-black uppercase tracking-widest leading-none mt-0.5" style={{ color: 'var(--text)' }}>Aktiv Xizmatlar</h4>
+                    <h4 className="text-meta font-black uppercase tracking-widest leading-none mt-0.5" style={{ color: 'var(--text)' }}>Aktiv Xizmatlar</h4>
                   </div>
                   <div className="flex gap-3">
                     <button
@@ -862,8 +862,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           onSave({ ...company, activeServices: allKeys });
                         }
                       }}
-                      className="px-3 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
-                      style={{ color: '#34d058', background: 'rgba(52, 208, 88, 0.1)', border: '1px solid rgba(52, 208, 88, 0.2)' }}
+                      className="px-3 py-2 text-micro font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
+                      style={{ color: 'var(--success)', background: 'color-mix(in srgb, var(--success) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 20%, transparent)' }}
                     >
                       Hammasini yoqish
                     </button>
@@ -871,8 +871,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                       onClick={() => {
                         if (onSave) onSave({ ...company, activeServices: [] });
                       }}
-                      className="px-3 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
-                      style={{ color: '#ff6b6b', background: 'rgba(255, 107, 107, 0.1)', border: '1px solid rgba(255, 107, 107, 0.2)' }}
+                      className="px-3 py-2 text-micro font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
+                      style={{ color: 'var(--danger)', background: 'color-mix(in srgb, var(--danger) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--danger) 20%, transparent)' }}
                     >
                       Hammasini o&apos;chirish
                     </button>
@@ -909,7 +909,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         <div className="relative flex items-center justify-center">
                           <input
                             type="checkbox"
-                            className="peer appearance-none w-5 h-5 border rounded-md transition-all cursor-pointer shadow-sm"
+                            className="peer appearance-none w-5 h-5 border rounded-lg transition-all cursor-pointer shadow-sm"
                             style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
                             checked={isActive}
                             onChange={() => {
@@ -919,10 +919,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               onSave({ ...company, activeServices: updated });
                             }}
                           />
-                          <div className="absolute inset-0 rounded-md pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" style={{ background: 'var(--accent-blue)' }}></div>
+                          <div className="absolute inset-0 rounded-lg pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" style={{ background: 'var(--accent-blue)' }}></div>
                           <Check size={12} className="absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none z-10" />
                         </div>
-                        <span className={`text-[10px] font-bold uppercase tracking-tight transition-colors`} style={{ color: isActive ? 'var(--text)' : 'var(--text-muted)' }}>
+                        <span className={`text-micro font-bold uppercase tracking-tight transition-colors`} style={{ color: isActive ? 'var(--text)' : 'var(--text-muted)' }}>
                           {service.label}
                         </span>
                       </label>
@@ -938,13 +938,13 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               {isLoadingKpi ? (
                 <div className="dashboard-card p-10 flex flex-col items-center justify-center transition-colors">
                   <div className="animate-spin w-8 h-8 border-3 border-t-transparent rounded-full mb-4" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>KPI ma&apos;lumotlari yuklanmoqda...</p>
+                  <p className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>KPI ma&apos;lumotlari yuklanmoqda...</p>
                 </div>
               ) : (
                 <div className="dashboard-card p-5 !shadow-sm">
                   <div className="flex items-center gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
                     <Calculator size={16} style={{ color: 'var(--text-muted)' }} />
-                    <h4 className="text-[11px] font-black uppercase tracking-widest mt-0.5 leading-none" style={{ color: 'var(--text)' }}>Mijoz KPI Soblamalari (Override)</h4>
+                    <h4 className="text-meta font-black uppercase tracking-widest mt-0.5 leading-none" style={{ color: 'var(--text)' }}>Mijoz KPI Soblamalari (Override)</h4>
                   </div>
 
                   <div className="space-y-4">
@@ -958,33 +958,33 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         <div key={rule.id} className="p-4 rounded-xl border transition-all group hover:shadow-sm" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
                           <div className="flex justify-between items-start mb-4">
                             <div className="min-w-0 flex-1">
-                              <p className="text-[11px] font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{rule.nameUz}</p>
+                              <p className="text-meta font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{rule.nameUz}</p>
                               <div className="flex items-center gap-3 mt-1.5">
-                                <span className="text-[10px] font-bold uppercase tracking-tight opacity-70" style={{ color: 'var(--text-muted)' }}>{rule.role}</span>
-                                <span className="px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border" style={{
-                                  background: rule.category === 'automation' ? 'rgba(77, 163, 255, 0.1)' : 'rgba(255, 215, 0, 0.1)',
-                                  color: rule.category === 'automation' ? '#4da3ff' : '#ffd700',
-                                  borderColor: rule.category === 'automation' ? 'rgba(77, 163, 255, 0.2)' : 'rgba(255, 215, 0, 0.2)'
+                                <span className="text-micro font-bold uppercase tracking-tight opacity-70" style={{ color: 'var(--text-muted)' }}>{rule.role}</span>
+                                <span className="px-2 py-1 rounded-lg text-micro font-black uppercase tracking-widest border" style={{
+                                  background: rule.category === 'automation' ? 'color-mix(in srgb, var(--info) 10%, transparent)' : 'color-mix(in srgb, var(--warning) 10%, transparent)',
+                                  color: rule.category === 'automation' ? 'var(--info)' : 'var(--warning)',
+                                  borderColor: rule.category === 'automation' ? 'color-mix(in srgb, var(--info) 20%, transparent)' : 'color-mix(in srgb, var(--warning) 20%, transparent)'
                                 }}>
                                   {kpiCategoryLabel(rule.category)}
                                 </span>
                               </div>
                             </div>
                             <div className="ml-5 text-right">
-                              <p className="text-[10px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-muted)' }}>Standart</p>
-                              <p className="text-[10px] font-black tracking-tight mt-0.5" style={{ color: 'var(--accent-blue)' }}>+{rule.rewardPercent}/-{rule.penaltyPercent}%</p>
+                              <p className="text-micro font-bold uppercase tracking-tight" style={{ color: 'var(--text-muted)' }}>Standart</p>
+                              <p className="text-micro font-black tracking-tight mt-0.5" style={{ color: 'var(--accent-blue)' }}>+{rule.rewardPercent}/-{rule.penaltyPercent}%</p>
                             </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-4 mt-4">
                             <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>
-                              <label className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: '#34d058' }}>Bonus %:</label>
+                              <label className="text-micro font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: 'var(--success)' }}>Bonus %:</label>
                               <input
                                 type="number"
                                 step="0.1"
                                 disabled={isSaving}
                                 placeholder="Standart"
-                                className="flex-1 bg-transparent border-none outline-none text-[11px] font-black font-mono uppercase transition-colors disabled:opacity-50"
+                                className="flex-1 bg-transparent border-none outline-none text-meta font-black font-mono uppercase transition-colors disabled:opacity-50"
                                 style={{ color: 'var(--text)' }}
                                 value={currentReward}
                                 onBlur={async (e) => {
@@ -1019,13 +1019,13 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               />
                             </div>
                             <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>
-                              <label className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: '#ff6b6b' }}>Jarima %:</label>
+                              <label className="text-micro font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: 'var(--danger)' }}>Jarima %:</label>
                               <input
                                 type="number"
                                 step="0.1"
                                 disabled={isSaving}
                                 placeholder="Standart"
-                                className="flex-1 bg-transparent border-none outline-none text-[11px] font-black font-mono uppercase transition-colors disabled:opacity-50"
+                                className="flex-1 bg-transparent border-none outline-none text-meta font-black font-mono uppercase transition-colors disabled:opacity-50"
                                 style={{ color: 'var(--text)' }}
                                 value={currentPenalty}
                                 onBlur={async (e) => {
@@ -1067,7 +1067,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                     {kpiRules.length === 0 && (
                       <div className="p-10 text-center rounded-xl border border-dashed transition-colors" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
                         <AlertTriangle size={24} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
-                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>Hech qanday KPI qoidasi topilmadi</p>
+                        <p className="text-micro font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>Hech qanday KPI qoidasi topilmadi</p>
                       </div>
                     )}
                   </div>

@@ -25,7 +25,7 @@ const COMPONENTS: { key: keyof Score; label: string; weight: string }[] = [
   { key: "discipline", label: "Intizom", weight: "10%" },
 ];
 
-const scoreColor = (n: number) => (n >= 85 ? "#15803d" : n >= 65 ? "#b45309" : "#b91c1c");
+const scoreColor = (n: number) => (n >= 85 ? "var(--success)" : n >= 65 ? "var(--warning)" : "var(--danger-dark)");
 
 export default function FairKpiClient({ initialPeriod, initialScores }: { initialPeriod: string; initialScores: Score[] }) {
   const [pending, start] = useTransition();
@@ -51,7 +51,7 @@ export default function FairKpiClient({ initialPeriod, initialScores }: { initia
       } catch (e) { toast.error((e as Error).message || "Xatolik"); }
     });
 
-  const inputStyle = { borderColor: "var(--border, #e5e7eb)", background: "transparent", color: "var(--text-primary)" };
+  const inputStyle = { borderColor: "var(--border, var(--rule))", background: "transparent", color: "var(--text-primary)" };
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -62,29 +62,29 @@ export default function FairKpiClient({ initialPeriod, initialScores }: { initia
         </div>
         <div className="flex gap-2 items-center">
           <input type="month" value={period} onChange={(e) => e.target.value && load(e.target.value)} className="px-3 py-1.5 rounded-lg border text-sm" style={inputStyle} />
-          <button disabled={pending} onClick={recompute} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#2563eb" }}>Qayta hisoblash</button>
+          <button disabled={pending} onClick={recompute} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--brand)" }}>Qayta hisoblash</button>
         </div>
       </div>
 
       {/* Shadow-mode banner */}
-      <div className="rounded-lg border-2 px-4 py-2 text-sm font-semibold" style={{ borderColor: "#f59e0b", background: "#fffbeb", color: "#b45309" }}>
+      <div className="rounded-lg border-2 px-4 py-2 text-sm font-semibold" style={{ borderColor: "var(--warning)", background: "var(--warning-bg)", color: "var(--warning)" }}>
         ⚠️ SHADOW rejim — bu ballar oylikka TA'SIR QILMAYDI. 2–3 oy kuzatib, xodimlar bilan muhokama qilib, keyin bonus tizimiga ulanadi.
       </div>
 
       {/* Weights legend */}
       <div className="flex flex-wrap gap-2 text-xs" style={{ color: "var(--text-muted)" }}>
-        {COMPONENTS.map((c) => <span key={c.key} className="px-2 py-0.5 rounded" style={{ background: "var(--bg-hover, #f3f4f6)" }}>{c.label} {c.weight}</span>)}
+        {COMPONENTS.map((c) => <span key={c.key} className="px-2 py-0.5 rounded-lg" style={{ background: "var(--bg-hover, var(--bg-sunken))" }}>{c.label} {c.weight}</span>)}
       </div>
 
       {scores.length === 0 ? (
-        <div className="rounded-xl border p-10 text-center text-sm" style={{ borderColor: "var(--border, #e5e7eb)", color: "var(--text-muted)" }}>
+        <div className="rounded-xl border p-10 text-center text-sm" style={{ borderColor: "var(--border, var(--rule))", color: "var(--text-muted)" }}>
           Bu davr uchun ball yo'q. "Qayta hisoblash" bilan signallardan (obligation/task/davomat) hisoblang.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, var(--rule))" }}>
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ background: "var(--bg-hover, #f9fafb)", color: "var(--text-muted)" }}>
+              <tr style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>
                 <th className="text-left font-semibold px-3 py-2.5">Xodim</th>
                 <th className="text-right font-semibold px-3 py-2.5">Composite</th>
                 {COMPONENTS.map((c) => <th key={c.key} className="text-right font-semibold px-3 py-2.5">{c.label}</th>)}
@@ -95,7 +95,7 @@ export default function FairKpiClient({ initialPeriod, initialScores }: { initia
               {scores.map((s) => {
                 const comp = Number(s.composite);
                 return (
-                  <tr key={s.employeeId} className="border-t" style={{ borderColor: "var(--border, #f1f5f9)" }}>
+                  <tr key={s.employeeId} className="border-t" style={{ borderColor: "var(--border, var(--bg-sunken))" }}>
                     <td className="px-3 py-2.5 font-medium" style={{ color: "var(--text-primary)" }}>{s.employeeName}</td>
                     <td className="px-3 py-2.5 text-right"><span className="text-base font-black" style={{ color: scoreColor(comp) }}>{comp.toFixed(1)}</span></td>
                     {COMPONENTS.map((c) => {

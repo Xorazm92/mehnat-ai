@@ -76,22 +76,22 @@ export function BankCabinet({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Salom, {firstName}! 💼</h1>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Salom, {firstName}</h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }} suppressHydrationWarning>
             Bank-Klient kabinetingiz — {monthLabel}
           </p>
         </div>
         <div className="px-4 py-2 rounded-xl text-sm font-medium"
           style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)", color: "var(--accent-blue)" }}>
-          🏦 Bank-Klient
+          Bank-Klient
         </div>
       </div>
 
       {/* Balance Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-2xl p-5" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
+        <div className="rounded-xl p-5" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(34, 197, 94, 0.15)" }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "color-mix(in srgb, var(--success) 15%, transparent)" }}>
               <ArrowUpCircle size={20} style={{ color: "var(--success)" }} />
             </div>
             <span className="text-sm" style={{ color: "var(--text-muted)" }}>Kirim</span>
@@ -102,9 +102,9 @@ export function BankCabinet({
           <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>so&apos;m</div>
         </div>
 
-        <div className="rounded-2xl p-5" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
+        <div className="rounded-xl p-5" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(239, 68, 68, 0.15)" }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "color-mix(in srgb, var(--danger) 15%, transparent)" }}>
               <ArrowDownCircle size={20} style={{ color: "var(--danger)" }} />
             </div>
             <span className="text-sm" style={{ color: "var(--text-muted)" }}>Chiqim</span>
@@ -116,7 +116,7 @@ export function BankCabinet({
         </div>
 
         <div
-          className="rounded-2xl p-5"
+          className="rounded-xl p-5"
           style={{
             background: balance.net >= 0 ? "var(--accent-blue-light)" : "var(--danger-bg)",
             border: balance.net >= 0 ? "1px solid var(--accent-blue)" : "1px solid var(--danger-border)"
@@ -125,7 +125,7 @@ export function BankCabinet({
           <div className="flex items-center gap-3 mb-3">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: balance.net >= 0 ? "rgba(59, 130, 246, 0.15)" : "rgba(239, 68, 68, 0.15)" }}
+              style={{ background: balance.net >= 0 ? "color-mix(in srgb, var(--brand) 15%, transparent)" : "color-mix(in srgb, var(--danger) 15%, transparent)" }}
             >
               <Wallet size={20} style={{ color: balance.net >= 0 ? "var(--accent-blue)" : "var(--danger)" }} />
             </div>
@@ -169,7 +169,7 @@ export function BankCabinet({
                     onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
                     onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(59, 130, 246, 0.15)" }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "color-mix(in srgb, var(--brand) 15%, transparent)" }}>
                       <Banknote size={14} style={{ color: "var(--accent-blue)" }} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -228,7 +228,7 @@ export function BankCabinet({
                   >
                     <div
                       className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: entry.type === "income" ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)" }}
+                      style={{ background: entry.type === "income" ? "color-mix(in srgb, var(--success) 15%, transparent)" : "color-mix(in srgb, var(--danger) 15%, transparent)" }}
                     >
                       {entry.type === "income" ? (
                         <ArrowUpCircle size={13} style={{ color: "var(--success)" }} />
@@ -240,7 +240,7 @@ export function BankCabinet({
                       <p className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>
                         {entry.description || categoryLabels[entry.category] || entry.category}
                       </p>
-                      <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                      <p className="text-micro" style={{ color: "var(--text-muted)" }}>
                         <span>{formatUzDateNumeric(entry.date)}</span>
                       </p>
                     </div>
@@ -285,8 +285,8 @@ export function BankCabinet({
                       <span
                         className={`w-2 h-2 rounded-full ${
                           record.status === "approved"
-                            ? "bg-emerald-400"
-                            : "bg-yellow-400"
+                            ? "bg-[var(--success)]"
+                            : "bg-[var(--warning)]"
                         }`}
                       />
                     </div>

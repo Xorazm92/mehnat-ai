@@ -134,11 +134,11 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
     };
 
     if (loading) {
-        return <div className="p-20 text-center text-slate-400">{t.loading}</div>;
+        return <div className="p-20 text-center text-[var(--text-muted)]">{t.loading}</div>;
     }
 
     if (!summary) {
-        return <div className="p-20 text-center text-slate-400">{t.noData}</div>;
+        return <div className="p-20 text-center text-[var(--text-muted)]">{t.noData}</div>;
     }
 
     // Calculate efficiency percentage (gamification)
@@ -149,80 +149,80 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
     const efficiency = Math.min(100, Math.round((positiveperf / 20) * 100));
 
     return (
-        <div className="space-y-6 animate-fade-in p-6 bg-gray-50 dark:bg-[#1A1D23] min-h-screen">
+        <div className="space-y-6 animate-fade-in p-6 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] min-h-dvh">
             {/* Header Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Estimated Salary */}
-                <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 p-4 rounded shadow-sm flex flex-col justify-between">
+                <div className="bg-[var(--card-bg)] dark:bg-[var(--surface-2)] border border-[var(--rule)] p-4 rounded-lg shadow-sm flex flex-col justify-between">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">{(t as any).currentMonthEst || 'Joriy oy'}</p>
-                            <h3 className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
-                                {formatNum(summary.totalSalary)} <span className="text-sm font-bold text-gray-400">UZS</span>
+                            <p className="text-micro font-bold uppercase text-[var(--text-secondary)] mb-1">{(t as any).currentMonthEst || 'Joriy oy'}</p>
+                            <h3 className="text-2xl font-bold tabular-nums text-[var(--text-primary)] dark:text-white">
+                                {formatNum(summary.totalSalary)} <span className="text-sm font-bold text-[var(--text-muted)]">UZS</span>
                             </h3>
                         </div>
-                        <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded flex items-center justify-center border border-indigo-100 dark:border-indigo-800">
+                        <div className="w-10 h-10 bg-[var(--accent-indigo-light)] text-[var(--accent-indigo)] rounded-lg flex items-center justify-center border border-[var(--accent-indigo-border)]">
                             <Wallet size={20} />
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                        <div className="p-2 bg-gray-50 dark:bg-[#1e2025] border border-gray-200 dark:border-gray-700 rounded">
-                            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Bazaviy</p>
-                            <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{formatNum(summary.baseSalary)}</p>
+                        <div className="p-2 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] border border-[var(--rule)] rounded-lg">
+                            <p className="text-micro font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">Bazaviy</p>
+                            <p className="text-xs font-bold text-[var(--text-primary)]">{formatNum(summary.baseSalary)}</p>
                         </div>
-                        <div className="p-2 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 rounded">
-                            <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Bonus</p>
-                            <p className="text-xs font-bold text-emerald-600">+{formatNum(summary.kpiBonus)}</p>
+                        <div className="p-2 bg-[var(--success-bg)] border border-[var(--success-border)] rounded-lg">
+                            <p className="text-micro font-bold text-[var(--success)] uppercase tracking-widest mb-1">Bonus</p>
+                            <p className="text-xs font-bold text-[var(--success)]">+{formatNum(summary.kpiBonus)}</p>
                         </div>
-                        <div className="p-2 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-900/30 rounded">
-                            <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mb-1">Qo&apos;shimcha</p>
-                            <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{formatNum(summary.adjustments)}</p>
+                        <div className="p-2 bg-[var(--accent-indigo-light)] border border-[var(--accent-indigo-border)] rounded-lg">
+                            <p className="text-micro font-bold text-[var(--accent-indigo)] uppercase tracking-widest mb-1">Qo&apos;shimcha</p>
+                            <p className="text-xs font-bold text-[var(--accent-indigo)]">{formatNum(summary.adjustments)}</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Efficiency Score */}
-                <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 p-4 rounded shadow-sm flex flex-col justify-between">
+                <div className="bg-[var(--card-bg)] dark:bg-[var(--surface-2)] border border-[var(--rule)] p-4 rounded-lg shadow-sm flex flex-col justify-between">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Reyting</p>
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest">Samaradorlik</h4>
+                            <p className="text-micro font-bold uppercase text-[var(--text-secondary)] mb-1">Reyting</p>
+                            <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-white uppercase tracking-widest">Samaradorlik</h4>
                         </div>
-                        <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 text-amber-500 rounded flex items-center justify-center border border-amber-100 dark:border-amber-900/30">
+                        <div className="w-10 h-10 bg-[var(--warning-bg)] text-[var(--warning)] rounded-lg flex items-center justify-center border border-[var(--warning-border)]">
                             <Award size={20} />
                         </div>
                     </div>
                     <div>
                         <div className="flex items-end gap-2 mb-2">
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{efficiency}%</h3>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">ko&apos;rsatkich</span>
+                            <h3 className="text-2xl font-bold text-[var(--text-primary)] dark:text-white tabular-nums">{efficiency}%</h3>
+                            <span className="text-micro font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">ko&apos;rsatkich</span>
                         </div>
-                        <div className="w-full bg-gray-100 dark:bg-gray-800 h-2 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
-                            <div className="h-full bg-amber-500" style={{ width: `${efficiency}%` }}></div>
+                        <div className="w-full bg-[var(--bg-sunken)] h-2 rounded-lg border border-[var(--rule)] overflow-hidden">
+                            <div className="h-full bg-[var(--warning)]" style={{ width: `${efficiency}%` }}></div>
                         </div>
                     </div>
                 </div>
 
                 {/* Penalties Alert */}
-                <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 p-4 rounded shadow-sm flex flex-col justify-between">
+                <div className="bg-[var(--card-bg)] dark:bg-[var(--surface-2)] border border-[var(--rule)] p-4 rounded-lg shadow-sm flex flex-col justify-between">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Ehtiyotkorlik</p>
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest">Jarimalar</h4>
+                            <p className="text-micro font-bold uppercase text-[var(--text-secondary)] mb-1">Ehtiyotkorlik</p>
+                            <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-white uppercase tracking-widest">Jarimalar</h4>
                         </div>
-                        <div className="w-10 h-10 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded flex items-center justify-center border border-rose-100 dark:border-rose-900/30">
+                        <div className="w-10 h-10 bg-[var(--danger-bg)] text-[var(--danger)] rounded-lg flex items-center justify-center border border-[var(--danger-border)]">
                             <AlertCircle size={20} />
                         </div>
                     </div>
                     <div>
                         <div className="flex items-baseline gap-2 mb-1">
-                            <h3 className="text-2xl font-bold text-rose-600 tabular-nums">
+                            <h3 className="text-2xl font-bold text-[var(--danger)] tabular-nums">
                                 {formatNum(summary.kpiPenalty)}
                             </h3>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase">UZS</span>
+                            <span className="text-micro font-bold text-[var(--text-secondary)] uppercase">UZS</span>
                         </div>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-sm bg-rose-500"></span>
+                        <p className="text-micro font-bold text-[var(--text-secondary)] uppercase tracking-widest flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-lg bg-[var(--danger)]"></span>
                             {performances.filter(p => p.calculatedScore < 0).length} {t.violationsCount}
                         </p>
                     </div>
@@ -232,78 +232,78 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
             {/* Detailed Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Positive Actions */}
-                <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 p-4 rounded shadow-sm text-sm">
-                    <div className="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
-                        <h4 className="font-bold text-gray-800 dark:text-white uppercase flex items-center gap-2">
-                            <TrendingUp size={16} className="text-emerald-500" />
+                <div className="bg-[var(--card-bg)] dark:bg-[var(--surface-2)] border border-[var(--rule)] p-4 rounded-lg shadow-sm text-sm">
+                    <div className="flex items-center justify-between mb-4 border-b border-[var(--rule)] pb-3">
+                        <h4 className="font-bold text-[var(--text-primary)] dark:text-white uppercase flex items-center gap-2">
+                            <TrendingUp size={16} className="text-[var(--success)]" />
                             {t.performedTasks}
                         </h4>
-                        <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 font-bold text-[10px] uppercase border border-emerald-200 dark:border-emerald-800">
+                        <span className="px-2 py-0.5 rounded-lg bg-[var(--success-bg)] text-[var(--success)] font-bold text-micro uppercase border border-[var(--success-border)]">
                             {t.bonus}
                         </span>
                     </div>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                         {performances.filter(p => p.calculatedScore > 0).map(p => (
-                            <div key={p.id} className="flex flex-col p-3 bg-gray-50 dark:bg-[#1e2025] rounded border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                            <div key={p.id} className="flex flex-col p-3 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] rounded-lg border border-[var(--rule)] hover:border-[var(--rule)] dark:hover:border-[var(--rule-strong)] transition-colors">
                                 <div className="flex justify-between items-start mb-2">
-                                    <p className="font-bold text-gray-800 dark:text-gray-100 text-xs leading-snug max-w-[80%]">{p.ruleNameUz || p.ruleName}</p>
-                                    <span className="font-bold text-emerald-600 text-sm tabular-nums">
+                                    <p className="font-bold text-[var(--text-primary)] text-xs leading-snug max-w-[80%]">{p.ruleNameUz || p.ruleName}</p>
+                                    <span className="font-bold text-[var(--success)] text-sm tabular-nums">
                                         +{p.calculatedScore.toFixed(0)}%
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <p className="text-[10px] font-bold text-gray-500 uppercase">{p.companyName}</p>
-                                        <span className="text-gray-300 dark:text-gray-600">•</span>
-                                        <p className="text-[10px] font-bold text-emerald-500/80">{formatUzDate(p.submittedAt)}</p>
+                                        <p className="text-micro font-bold text-[var(--text-secondary)] uppercase">{p.companyName}</p>
+                                        <span className="text-[var(--text-muted)]">•</span>
+                                        <p className="text-micro font-bold text-[color-mix(in_srgb,var(--success)_80%,transparent)]">{formatUzDate(p.submittedAt)}</p>
                                     </div>
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase">Oylikka ta&apos;sir</p>
+                                    <p className="text-micro font-bold text-[var(--text-muted)] uppercase">Oylikka ta&apos;sir</p>
                                 </div>
                             </div>
                         ))}
                         {performances.filter(p => p.calculatedScore > 0).length === 0 && (
-                            <div className="text-center py-10 bg-gray-50 dark:bg-[#1e2025] rounded border border-dashed border-gray-300 dark:border-gray-700">
+                            <div className="text-center py-10 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] rounded-lg border border-dashed border-[var(--rule)]">
                                 <div className="text-2xl mb-2 opacity-50">🌱</div>
-                                <p className="font-bold text-gray-500 uppercase text-xs">Hozircha bonuslar mavjud emas</p>
+                                <p className="font-bold text-[var(--text-secondary)] uppercase text-xs">Hozircha bonuslar mavjud emas</p>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* Negative Actions */}
-                <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 p-4 rounded shadow-sm text-sm">
-                    <div className="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
-                        <h4 className="font-bold text-gray-800 dark:text-white uppercase flex items-center gap-2">
-                            <TrendingDown size={16} className="text-rose-500" />
+                <div className="bg-[var(--card-bg)] dark:bg-[var(--surface-2)] border border-[var(--rule)] p-4 rounded-lg shadow-sm text-sm">
+                    <div className="flex items-center justify-between mb-4 border-b border-[var(--rule)] pb-3">
+                        <h4 className="font-bold text-[var(--text-primary)] dark:text-white uppercase flex items-center gap-2">
+                            <TrendingDown size={16} className="text-[var(--danger)]" />
                             {t.discrepancies}
                         </h4>
-                        <span className="px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-900/10 text-rose-600 font-bold text-[10px] uppercase border border-rose-200 dark:border-rose-800">
+                        <span className="px-2 py-0.5 rounded-lg bg-[var(--danger-bg)] text-[var(--danger)] font-bold text-micro uppercase border border-[var(--danger-border)]">
                             {t.penalty}
                         </span>
                     </div>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                         {performances.filter(p => p.calculatedScore < 0).map(p => (
-                            <div key={p.id} className="flex flex-col p-3 bg-gray-50 dark:bg-[#1e2025] rounded border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                            <div key={p.id} className="flex flex-col p-3 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] rounded-lg border border-[var(--rule)] hover:border-[var(--rule)] dark:hover:border-[var(--rule-strong)] transition-colors">
                                 <div className="flex justify-between items-start mb-2">
-                                    <p className="font-bold text-gray-800 dark:text-gray-100 text-xs leading-snug max-w-[80%]">{p.ruleNameUz || p.ruleName}</p>
-                                    <span className="font-bold text-rose-600 text-sm tabular-nums">
+                                    <p className="font-bold text-[var(--text-primary)] text-xs leading-snug max-w-[80%]">{p.ruleNameUz || p.ruleName}</p>
+                                    <span className="font-bold text-[var(--danger)] text-sm tabular-nums">
                                         {p.calculatedScore.toFixed(0)}%
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <p className="text-[10px] font-bold text-gray-500 uppercase">{p.companyName}</p>
-                                        <span className="text-gray-300 dark:text-gray-600">•</span>
-                                        <p className="text-[10px] font-bold text-rose-500/80">{formatUzDate(p.submittedAt)}</p>
+                                        <p className="text-micro font-bold text-[var(--text-secondary)] uppercase">{p.companyName}</p>
+                                        <span className="text-[var(--text-muted)]">•</span>
+                                        <p className="text-micro font-bold text-[color-mix(in_srgb,var(--danger)_80%,transparent)]">{formatUzDate(p.submittedAt)}</p>
                                     </div>
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase">Chegirildi</p>
+                                    <p className="text-micro font-bold text-[var(--text-muted)] uppercase">Chegirildi</p>
                                 </div>
                             </div>
                         ))}
                         {performances.filter(p => p.calculatedScore < 0).length === 0 && (
-                            <div className="text-center py-10 bg-gray-50 dark:bg-[#1e2025] rounded border border-dashed border-gray-300 dark:border-gray-700">
+                            <div className="text-center py-10 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] rounded-lg border border-dashed border-[var(--rule)]">
                                 <div className="text-2xl mb-2 opacity-50">🛡️</div>
-                                <p className="font-bold text-gray-500 uppercase text-xs">A&apos;lo darajada! Hech qanday jarima yo&apos;q</p>
+                                <p className="font-bold text-[var(--text-secondary)] uppercase text-xs">A&apos;lo darajada! Hech qanday jarima yo&apos;q</p>
                             </div>
                         )}
                     </div>
@@ -311,31 +311,31 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
             </div>
 
             {/* KPI Submission (Employee) */}
-            <div className="bg-white dark:bg-[#22252B] border border-gray-200 dark:border-gray-700 shadow-sm rounded p-6">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <div className="bg-[var(--card-bg)] dark:bg-[var(--surface-2)] border border-[var(--rule)] shadow-sm rounded-lg p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 border-b border-[var(--rule)] pb-4">
                     <div>
-                        <h4 className="text-lg font-bold text-gray-900 dark:text-white uppercase flex items-center gap-2">
-                            <Activity className="text-indigo-600" size={18} />
+                        <h4 className="text-lg font-bold text-[var(--text-primary)] dark:text-white uppercase flex items-center gap-2">
+                            <Activity className="text-[var(--accent-indigo)]" size={18} />
                             {t.kpiInitiatives}
                         </h4>
-                        <p className="text-xs font-bold text-gray-500 mt-1 max-w-xl">
+                        <p className="text-xs font-bold text-[var(--text-secondary)] mt-1 max-w-xl">
                             {t.kpiDesc}
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#1e2025] px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] px-3 py-1.5 rounded-lg border border-[var(--rule)]">
                         <input
                             type="month"
                             value={month}
                             onChange={e => setMonth(e.target.value)}
-                            className="bg-transparent border-none font-bold text-sm text-gray-700 dark:text-gray-300 focus:ring-0 cursor-pointer p-0"
+                            className="bg-transparent border-none font-bold text-sm text-[var(--text-secondary)] focus:ring-0 cursor-pointer p-0"
                         />
                     </div>
                 </div>
 
                 {myCompanies.length === 0 ? (
-                    <div className="text-center py-20 bg-gray-50 dark:bg-[#1e2025] rounded border border-dashed border-gray-300 dark:border-gray-700">
+                    <div className="text-center py-20 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] rounded-lg border border-dashed border-[var(--rule)]">
                         <div className="text-4xl mb-4 opacity-50">🏝️</div>
-                        <p className="font-bold text-gray-500 uppercase text-xs">
+                        <p className="font-bold text-[var(--text-secondary)] uppercase text-xs">
                             {lang === 'uz' ? 'Hozircha faol firmalar mavjud emas' : 'Активных фирм пока нет'}
                         </p>
                     </div>
@@ -348,18 +348,18 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                             const roleRules = rules.filter(r => r.role === role);
 
                             return (
-                                <div key={company.id} className="bg-gray-50 dark:bg-[#1e2025] rounded p-4 border border-gray-200 dark:border-gray-700">
-                                    <div className="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
+                                <div key={company.id} className="bg-[var(--bg-sunken)] dark:bg-[var(--surface)] rounded-lg p-4 border border-[var(--rule)]">
+                                    <div className="flex items-center justify-between mb-4 border-b border-[var(--rule)] pb-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded bg-gray-200 dark:bg-gray-800 flex items-center justify-center font-bold text-lg text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700">
+                                            <div className="w-10 h-10 rounded-lg bg-[var(--rule)] flex items-center justify-center font-bold text-lg text-[var(--text-secondary)] border border-[var(--rule)]">
                                                 {company.name[0]}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-gray-900 dark:text-white">{company.name}</p>
+                                                <p className="text-sm font-bold text-[var(--text-primary)] dark:text-white">{company.name}</p>
                                                 <div className="flex items-center gap-2 mt-0.5">
-                                                    <p className="text-[10px] font-bold text-gray-500 uppercase">INN: {company.inn}</p>
-                                                    <span className="text-gray-300 dark:text-gray-600">•</span>
-                                                    <span className="text-[10px] font-bold text-indigo-600 uppercase">
+                                                    <p className="text-micro font-bold text-[var(--text-secondary)] uppercase">INN: {company.inn}</p>
+                                                    <span className="text-[var(--text-muted)]">•</span>
+                                                    <span className="text-micro font-bold text-[var(--accent-indigo)] uppercase">
                                                         {role === 'accountant' ? (lang === 'uz' ? 'Buxgalter' : 'Бухгалтер') : 'Bank'}
                                                     </span>
                                                 </div>
@@ -393,7 +393,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                                                                 <span className="c1-badge" style={{ background: `var(--${badge.c}-bg)`, color: `var(--${badge.c})`, border: `1px solid var(--${badge.c}-border)` }}>{badge.t}</span>
                                                             )}
                                                             {perf?.rejectedReason && (
-                                                                <span className="text-[10px] font-bold" style={{ color: 'var(--danger)' }}>&quot;{perf.rejectedReason}&quot;</span>
+                                                                <span className="text-micro font-bold" style={{ color: 'var(--danger)' }}>&quot;{perf.rejectedReason}&quot;</span>
                                                             )}
                                                         </div>
                                                     )}
@@ -402,8 +402,8 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                                         })}
 
                                         {roleRules.length === 0 && (
-                                            <div className="text-center text-gray-500 text-sm py-8 bg-gray-100 dark:bg-[#1a1d23] rounded border border-dashed border-gray-300 dark:border-gray-700 col-span-full">
-                                                <p className="font-bold uppercase text-[10px]">Ushbu rol uchun KPI qoidalari sozlanmagan</p>
+                                            <div className="text-center text-[var(--text-secondary)] text-sm py-8 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] rounded-lg border border-dashed border-[var(--rule)] col-span-full">
+                                                <p className="font-bold uppercase text-micro">Ushbu rol uchun KPI qoidalari sozlanmagan</p>
                                             </div>
                                         )}
                                     </div>

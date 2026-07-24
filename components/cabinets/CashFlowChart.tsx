@@ -33,12 +33,12 @@ export function CashFlowChart({ data }: { data: Point[] }) {
           <TrendingUp size={18} style={{ color: "var(--accent-blue)" }} />
           <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>Pul oqimi</h2>
         </div>
-        <div className="flex items-center gap-4 text-[11px] font-bold">
+        <div className="flex items-center gap-4 text-meta font-bold">
           <span className="flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
-            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--accent-blue)" }} /> Kirim
+            <span className="w-2.5 h-2.5 rounded-lg inline-block" style={{ background: "var(--accent-blue)" }} /> Kirim
           </span>
           <span className="flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
-            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--text-muted)" }} /> Chiqim
+            <span className="w-2.5 h-2.5 rounded-lg inline-block" style={{ background: "var(--text-muted)" }} /> Chiqim
           </span>
         </div>
       </div>
@@ -62,16 +62,16 @@ export function CashFlowChart({ data }: { data: Point[] }) {
           </div>
           <div className="grid grid-cols-3 gap-3 mt-4 pt-4" style={{ borderTop: "1px solid var(--card-border)" }}>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{curLabel} kirim</p>
-              <p className="text-[15px] font-bold tabular-nums" style={{ color: "var(--success)" }}>+{fmt(cur.income)}</p>
+              <p className="text-micro font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{curLabel} kirim</p>
+              <p className="text-sm font-bold tabular-nums" style={{ color: "var(--success)" }}>+{fmt(cur.income)}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{curLabel} chiqim</p>
-              <p className="text-[15px] font-bold tabular-nums" style={{ color: "var(--danger)" }}>−{fmt(cur.expense)}</p>
+              <p className="text-micro font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{curLabel} chiqim</p>
+              <p className="text-sm font-bold tabular-nums" style={{ color: "var(--danger)" }}>−{fmt(cur.expense)}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Sof oqim</p>
-              <p className="text-[15px] font-bold tabular-nums" style={{ color: net >= 0 ? "var(--accent-blue)" : "var(--danger)" }}>
+              <p className="text-micro font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Sof oqim</p>
+              <p className="text-sm font-bold tabular-nums" style={{ color: net >= 0 ? "var(--accent-blue)" : "var(--danger)" }}>
                 {net >= 0 ? "+" : "−"}{fmt(Math.abs(net))}
               </p>
             </div>
@@ -81,7 +81,7 @@ export function CashFlowChart({ data }: { data: Point[] }) {
         <div className="flex flex-col items-center justify-center py-16 text-center" style={{ color: "var(--text-muted)" }}>
           <TrendingUp size={32} className="mb-2 opacity-30" />
           <p className="text-sm font-medium">Pul oqimi ma&apos;lumoti yo&apos;q</p>
-          <p className="text-[11px] mt-1">Kassa to&apos;lovlari va xarajatlar kiritilgach shu yerda aks etadi</p>
+          <p className="text-meta mt-1">Kassa to&apos;lovlari va xarajatlar kiritilgach shu yerda aks etadi</p>
         </div>
       )}
     </div>

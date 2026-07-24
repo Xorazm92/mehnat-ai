@@ -117,7 +117,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     {isDone ? <Check size={18} strokeWidth={3} /> : <Icon size={18} />}
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)' }}>{step.title}</span>
+                                    <span className="text-micro font-black uppercase tracking-[0.15em]" style={{ color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)' }}>{step.title}</span>
                                     <span className="text-2xs font-bold uppercase tracking-widest" style={fieldLabelStyle}>{idx + 1}-QADAM</span>
                                 </div>
                                 {idx < steps.length - 1 && <div className="mx-2 w-8 h-px" style={{ background: 'var(--card-border)' }} />}
@@ -143,7 +143,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                         <h3 className="text-xl font-black" style={{ color: 'var(--text)' }}>Asosiy ma&apos;lumotlar</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Firma Nomi *</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Firma Nomi *</label>
                                 <input
                                     autoFocus
                                     className="erp-input"
@@ -153,7 +153,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>INN (9 ta raqam) *</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>INN (9 ta raqam) *</label>
                                 <input
                                     className="erp-input font-mono"
                                     placeholder="123456789"
@@ -162,7 +162,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Brend Nomi</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Brend Nomi</label>
                                 <input
                                     className="erp-input"
                                     placeholder="Masalan: MONTAJ"
@@ -171,7 +171,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Direktor Ism-Sharifi</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Direktor Ism-Sharifi</label>
                                 <input
                                     className="erp-input"
                                     placeholder="Masalan: Sobirov Ali"
@@ -180,7 +180,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Direktor Telefoni</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Direktor Telefoni</label>
                                 <input
                                     className="erp-input"
                                     placeholder="+998 90 123 45 67"
@@ -189,7 +189,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5 md:col-span-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Yuridik Manzil</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Yuridik Manzil</label>
                                 <input
                                     className="erp-input"
                                     placeholder="Masalan: Toshkent sh., Chilonzor tumani..."
@@ -198,7 +198,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Ichki Shartnoma Tomoni</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Ichki Shartnoma Tomoni</label>
                                 <select
                                     className="erp-input"
                                     value={formData.internalContractor || ''}
@@ -218,7 +218,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 </select>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shartnoma Summasi</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shartnoma Summasi</label>
                                 <input
                                     type="text" inputMode="numeric"
                                     className="erp-input tabular-nums"
@@ -227,7 +227,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shartnoma №</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shartnoma №</label>
                                 <input
                                     className="erp-input"
                                     placeholder="Masalan: 12-A"
@@ -236,7 +236,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shartnoma Sanasi</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shartnoma Sanasi</label>
                                 <input
                                     type="date"
                                     className="erp-input"
@@ -256,7 +256,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>1C Server</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>1C Server</label>
                                 <select
                                     className="erp-input cursor-pointer"
                                     value={formData.serverInfo || 'CR1'}
@@ -272,7 +272,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 </select>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>1C Baza Nomi</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>1C Baza Nomi</label>
                                 <input
                                     className="erp-input"
                                     placeholder="Masalan: Montaj_Teplo_2024"
@@ -281,7 +281,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5 md:col-span-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Server Nomi (Firma Bazasi uchun)</label>
+                                <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Server Nomi (Firma Bazasi uchun)</label>
                                 <input
                                     className="erp-input"
                                     placeholder="Masalan: 44.AMIRBEK"
@@ -310,7 +310,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                             />
                             <div className="flex flex-col">
                                 <span className="text-sm font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>IT Park Rezidenti</span>
-                                <span className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={fieldLabelStyle}>Soliq imtiyozlari mavjud</span>
+                                <span className="text-micro font-bold uppercase tracking-widest mt-0.5" style={fieldLabelStyle}>Soliq imtiyozlari mavjud</span>
                             </div>
                         </label>
                     </div>
@@ -321,7 +321,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                         <h3 className="text-xl font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>Soliq va Statistika</h3>
                         <div className="space-y-5">
                             <div>
-                                <label className="text-[10px] font-bold uppercase tracking-widest mb-3 block ml-1" style={fieldLabelStyle}>Soliq Turi</label>
+                                <label className="text-micro font-bold uppercase tracking-widest mb-3 block ml-1" style={fieldLabelStyle}>Soliq Turi</label>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {[
                                         { id: TaxType.NDS_PROFIT, label: 'QQS va Foyda', desc: 'УСН + НДС' },
@@ -344,7 +344,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                                     <Calculator size={18} style={{ color: selected ? 'var(--accent-blue)' : 'var(--text-muted)' }} />
                                                 </div>
                                                 <div className="font-bold text-base mb-1" style={{ color: 'var(--text)' }}>{tax.label}</div>
-                                                <div className="text-[9px] font-bold uppercase tracking-widest" style={fieldLabelStyle}>{tax.desc}</div>
+                                                <div className="text-micro font-bold uppercase tracking-widest" style={fieldLabelStyle}>{tax.desc}</div>
                                             </button>
                                         );
                                     })}
@@ -358,11 +358,11 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                         <div className="flex gap-2 shrink-0">
                                             <button
                                                 onClick={() => setFormData({ ...formData, activeServices: [...ALL_SERVICE_KEYS] })}
-                                                className="c1-btn c1-btn-success text-[9px] !py-1"
+                                                className="c1-btn c1-btn-success text-micro !py-1"
                                             >Yoqish</button>
                                             <button
                                                 onClick={() => setFormData({ ...formData, activeServices: [] })}
-                                                className="c1-btn c1-btn-danger text-[9px] !py-1"
+                                                className="c1-btn c1-btn-danger text-micro !py-1"
                                             >O&apos;chirish</button>
                                         </div>
                                     </div>
@@ -370,7 +370,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 <div className="p-5 space-y-4">
                                     {SERVICE_GROUPS.map(section => (
                                         <div key={section.group} className="mb-4 last:mb-0">
-                                            <h5 className="text-[9px] font-black uppercase tracking-widest mb-2 px-2 py-1 rounded-md w-fit" style={{ color: 'var(--text-secondary)', background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>{section.group}</h5>
+                                            <h5 className="text-micro font-black uppercase tracking-widest mb-2 px-2 py-1 rounded-lg w-fit" style={{ color: 'var(--text-secondary)', background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>{section.group}</h5>
                                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                                                 {section.keys.map(key => {
                                                     const currentServices = formData.activeServices || [];
@@ -384,7 +384,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                                                 : { background: 'var(--input-bg)', border: '1px solid var(--card-border)', opacity: 0.65 }}
                                                         >
                                                             <div
-                                                                className="w-4 h-4 rounded-sm border flex items-center justify-center shrink-0"
+                                                                className="w-4 h-4 rounded-lg border flex items-center justify-center shrink-0"
                                                                 style={isChecked
                                                                     ? { background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' }
                                                                     : { borderColor: 'var(--input-border)', color: 'transparent' }}
@@ -405,7 +405,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                                                     setFormData({ ...formData, activeServices: newServices });
                                                                 }}
                                                             />
-                                                            <span className="text-[9px] font-bold uppercase tracking-tight truncate" style={{ color: 'var(--text-secondary)' }}>{SERVICE_LABELS[key] || key}</span>
+                                                            <span className="text-micro font-bold uppercase tracking-tight truncate" style={{ color: 'var(--text-secondary)' }}>{SERVICE_LABELS[key] || key}</span>
                                                         </label>
                                                     );
                                                 })}
@@ -425,7 +425,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                             {assignments.map((asgn) => (
                                 <div key={asgn.role} className="p-4 rounded-xl grid grid-cols-12 gap-4 items-end" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                                     <div className="col-span-12 lg:col-span-4 space-y-1">
-                                        <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>
+                                        <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>
                                             {asgn.role === 'chief' ? 'BOSH BUXGALTER' : asgn.role === 'controller' ? 'NAZORATCHI' : asgn.role === 'bank_manager' ? 'BANK MENEJER' : 'BUXGALTER'}
                                         </label>
                                         <select
@@ -438,22 +438,22 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                         </select>
                                     </div>
                                     <div className="col-span-6 lg:col-span-3 space-y-1">
-                                        <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Hisob turi</label>
+                                        <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Hisob turi</label>
                                         <div className="flex p-1 rounded-lg" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
                                             <button
                                                 onClick={() => updateAssignment(asgn.role, 'salaryType', 'percent')}
-                                                className="flex-1 py-1 text-[9px] font-black uppercase rounded-md transition-all"
+                                                className="flex-1 py-1 text-micro font-black uppercase rounded-lg transition-all"
                                                 style={asgn.salaryType === 'percent' ? { background: 'var(--accent-blue)', color: '#fff' } : { color: 'var(--text-muted)' }}
                                             >Foiz</button>
                                             <button
                                                 onClick={() => updateAssignment(asgn.role, 'salaryType', 'fixed')}
-                                                className="flex-1 py-1 text-[9px] font-black uppercase rounded-md transition-all"
+                                                className="flex-1 py-1 text-micro font-black uppercase rounded-lg transition-all"
                                                 style={asgn.salaryType === 'fixed' ? { background: 'var(--accent-blue)', color: '#fff' } : { color: 'var(--text-muted)' }}
                                             >Fiks</button>
                                         </div>
                                     </div>
                                     <div className="col-span-6 lg:col-span-5 space-y-1">
-                                        <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Qiymat</label>
+                                        <label className="text-micro font-black uppercase tracking-widest ml-1" style={fieldLabelStyle}>Qiymat</label>
                                         <div className="relative">
                                             <input
                                                 type="number"
@@ -461,7 +461,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                                 value={asgn.salaryValue ?? 0}
                                                 onChange={e => updateAssignment(asgn.role, 'salaryValue', Number(e.target.value))}
                                             />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase" style={fieldLabelStyle}>
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-micro font-black uppercase" style={fieldLabelStyle}>
                                                 {asgn.salaryType === 'percent' ? '%' : "so'm"}
                                             </span>
                                         </div>
@@ -490,7 +490,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                             />
                             <div className="flex flex-col">
                                 <span className="text-sm font-bold uppercase tracking-tight" style={{ color: 'var(--success)' }}>KPI Tizimini Yoqish</span>
-                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-70" style={{ color: 'var(--success)' }}>Avtomatik hisob-kitob va ballar tizimi faollashadi</span>
+                                <span className="text-micro font-bold uppercase tracking-widest opacity-70" style={{ color: 'var(--success)' }}>Avtomatik hisob-kitob va ballar tizimi faollashadi</span>
                             </div>
                         </label>
                     </div>
@@ -502,7 +502,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                 <button
                     onClick={prevStep}
                     disabled={currentStep === 0}
-                    className="px-5 py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 disabled:opacity-0 transition-all"
+                    className="px-5 py-2.5 rounded-lg font-bold text-micro uppercase tracking-widest flex items-center gap-2 disabled:opacity-0 transition-all"
                     style={{ color: 'var(--text-secondary)', background: 'var(--card-bg)', border: '1px solid var(--card-border)' }}
                 >
                     <ChevronLeft size={16} strokeWidth={3} /> Orqaga
@@ -511,14 +511,14 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                 {currentStep < steps.length - 1 ? (
                     <button
                         onClick={nextStep}
-                        className="c1-btn c1-btn-primary flex items-center gap-2 text-[11px]"
+                        className="c1-btn c1-btn-primary flex items-center gap-2 text-meta"
                     >
                         Keyingisi <ChevronRight size={16} strokeWidth={3} />
                     </button>
                 ) : (
                     <button
                         onClick={handleFinish}
-                        className="c1-btn c1-btn-success flex items-center gap-2 text-[12px] px-10 py-3"
+                        className="c1-btn c1-btn-success flex items-center gap-2 text-xs px-10 py-3"
                     >
                         Tamomlash <Check size={18} strokeWidth={4} />
                     </button>

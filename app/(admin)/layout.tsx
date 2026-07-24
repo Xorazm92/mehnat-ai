@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { isAdminRole, getHomeRoute, ROLE_LABELS, type UserRole } from "@/lib/permissions";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminTopbar } from "@/components/admin/AdminTopbar";
+import { MobileNavProvider } from "@/components/MobileNavContext";
 
 export default async function AdminRootLayout({
   children,
@@ -18,17 +19,25 @@ export default async function AdminRootLayout({
 
   return (
     <SessionProvider session={session}>
-      <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}>
-        <AdminSidebar userRole={role} />
-        <div className="flex-1 flex flex-col min-w-0">
-          <AdminTopbar
-            userName={session.user.name || "Admin"}
-            role={ROLE_LABELS[role as UserRole] ?? role}
-            avatarColor={session.user.avatarColor ?? undefined}
-          />
-          <main className="flex-1 overflow-y-auto">{children}</main>
+      {/* Dashboard qobig'idagi drawer namunasi — avval admin bo'limida mobil
+          qo'llab-quvvatlash umuman yo'q edi: 230px yon panel 375px ekranning
+          61% ini yeb, yopilmasdi. */}
+      <MobileNavProvider>
+        <div
+          className="flex h-dvh overflow-hidden"
+          style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
+        >
+          <AdminSidebar userRole={role} />
+          <div className="flex-1 flex flex-col min-w-0">
+            <AdminTopbar
+              userName={session.user.name || "Admin"}
+              role={ROLE_LABELS[role as UserRole] ?? role}
+              avatarColor={session.user.avatarColor ?? undefined}
+            />
+            <main className="flex-1 overflow-y-auto">{children}</main>
+          </div>
         </div>
-      </div>
+      </MobileNavProvider>
     </SessionProvider>
   );
 }

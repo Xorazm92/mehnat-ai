@@ -18,10 +18,13 @@ import { X, Info } from "lucide-react";
 
 export type RiskLevel = "low" | "medium" | "high";
 
-const RISK_META: Record<RiskLevel, { label: string; emoji: string; color: string; bg: string; border: string; desc: string }> = {
+// Rang yolg'iz ma'no tashimaydi: har daraja SHAKL ham oladi
+// (to'la ● / yarim ◐ / bo'sh ○) — .verdict-mark orqali. Emoji olib
+// tashlandi: u har OT'da boshqacha chiziladi va temaga bo'yalmaydi.
+const RISK_META: Record<RiskLevel, { label: string; verdict: string; color: string; bg: string; border: string; desc: string }> = {
   low: {
     label: "Past risk",
-    emoji: "🟢",
+    verdict: "verdict-green",
     color: "var(--success)",
     bg: "var(--success-bg)",
     border: "var(--success-border)",
@@ -29,7 +32,7 @@ const RISK_META: Record<RiskLevel, { label: string; emoji: string; color: string
   },
   medium: {
     label: "O'rta risk",
-    emoji: "🟡",
+    verdict: "verdict-yellow",
     color: "var(--warning)",
     bg: "var(--warning-bg)",
     border: "var(--warning-border)",
@@ -37,7 +40,7 @@ const RISK_META: Record<RiskLevel, { label: string; emoji: string; color: string
   },
   high: {
     label: "Yuqori risk",
-    emoji: "🔴",
+    verdict: "verdict-red",
     color: "var(--danger)",
     bg: "var(--danger-bg)",
     border: "var(--danger-border)",
@@ -98,22 +101,24 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen(true); }}
         title="Risk darajasi nimani anglatadi? — bosing"
-        className={`inline-flex items-center gap-1 font-black uppercase tracking-widest rounded-lg shrink-0 transition-transform hover:scale-[1.03] ${compact ? "text-[9px] px-2 py-1" : "text-[10px] px-2.5 py-1.5"} ${className || ""}`}
+        className={`inline-flex items-center gap-1 font-black uppercase tracking-widest rounded-lg shrink-0 transition-transform hover:scale-[1.03] ${compact ? "text-micro px-2 py-1" : "text-micro px-2.5 py-1.5"} ${className || ""}`}
         style={{ color: meta.color, background: meta.bg, border: `1px solid ${meta.border}` }}
       >
-        <span>{meta.emoji}</span>
+        <span className={`verdict ${meta.verdict}`} aria-hidden>
+          <span className="verdict-mark" />
+        </span>
         <span>{meta.label}</span>
         <Info size={compact ? 10 : 12} style={{ opacity: 0.7 }} />
       </button>
 
       {open && createPortal(
         <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.55)" }}
           onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
         >
           <div
-            className="w-full max-w-md max-h-[90vh] overflow-auto rounded-2xl shadow-2xl"
+            className="w-full max-w-md max-h-[90vh] overflow-auto rounded-xl shadow-2xl"
             style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}
             onMouseDown={(e) => e.stopPropagation()}
           >
@@ -121,13 +126,13 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--card-border)" }}>
               <div className="min-w-0">
                 <h3 className="text-sm font-black flex items-center gap-2" style={{ color: "var(--text)" }}>
-                  <span>{meta.emoji}</span> Risk darajasi: {meta.label}
+                  <span className={`verdict ${meta.verdict}`} aria-hidden><span className="verdict-mark" /></span> Risk darajasi: {meta.label}
                 </h3>
                 {companyName && (
-                  <p className="text-[11px] font-bold mt-0.5 truncate" style={{ color: "var(--text-3, var(--text-muted))" }}>{companyName}</p>
+                  <p className="text-meta font-bold mt-0.5 truncate" style={{ color: "var(--text-3, var(--text-muted))" }}>{companyName}</p>
                 )}
               </div>
-              <button onClick={() => setOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-70 shrink-0" style={{ color: "var(--text-muted)" }}>
+              <button onClick={() => setOpen(false)} className="icon-btn-sm hover:opacity-70 shrink-0" style={{ color: "var(--text-muted)" }}>
                 <X size={18} />
               </button>
             </div>
@@ -135,18 +140,18 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
             <div className="p-5 space-y-4">
               {/* Amaldagi daraja izohi */}
               <div className="rounded-xl px-4 py-3" style={{ background: meta.bg, border: `1px solid ${meta.border}` }}>
-                <p className="text-[12px] leading-relaxed font-medium" style={{ color: "var(--text)" }}>{meta.desc}</p>
+                <p className="text-xs leading-relaxed font-medium" style={{ color: "var(--text)" }}>{meta.desc}</p>
               </div>
 
               {/* Nima uchun shu daraja */}
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest mb-1.5" style={{ color: "var(--text-muted)" }}>Nima uchun shu daraja?</p>
-                <div className="flex items-start gap-2 text-[12px]" style={{ color: "var(--text-secondary, var(--text-2))" }}>
+                <p className="text-micro font-black uppercase tracking-widest mb-1.5" style={{ color: "var(--text-muted)" }}>Nima uchun shu daraja?</p>
+                <div className="flex items-start gap-2 text-xs" style={{ color: "var(--text-secondary, var(--text-2))" }}>
                   <Info size={14} className="mt-0.5 shrink-0" style={{ color: meta.color }} />
                   <span>{riskReason(level, companyStatus)}</span>
                 </div>
                 {companyStatus && companyStatus !== "active" && (
-                  <p className="text-[11px] mt-2" style={{ color: "var(--text-muted)" }}>
+                  <p className="text-meta mt-2" style={{ color: "var(--text-muted)" }}>
                     Hozirgi status: <span className="font-bold" style={{ color: meta.color }}>{STATUS_UZ[companyStatus] || companyStatus}</span>
                   </p>
                 )}
@@ -154,17 +159,17 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
 
               {/* Barcha darajalar shkalasi */}
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>Darajalar shkalasi</p>
+                <p className="text-micro font-black uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>Darajalar shkalasi</p>
                 <div className="space-y-2">
                   {(["low", "medium", "high"] as RiskLevel[]).map((lv) => {
                     const m = RISK_META[lv];
                     const active = lv === level;
                     return (
                       <div key={lv} className="flex items-start gap-2.5 rounded-lg px-3 py-2" style={{ background: active ? m.bg : "var(--surface-2, var(--input-bg))", border: active ? `1px solid ${m.border}` : "1px solid transparent", opacity: active ? 1 : 0.75 }}>
-                        <span className="text-[13px] leading-none mt-0.5">{m.emoji}</span>
+                        <span className={`verdict ${m.verdict} mt-0.5`} aria-hidden><span className="verdict-mark" /></span>
                         <div className="min-w-0">
-                          <p className="text-[11px] font-black uppercase tracking-wide" style={{ color: m.color }}>{m.label}</p>
-                          <p className="text-[11px] leading-snug" style={{ color: "var(--text-secondary, var(--text-2))" }}>{m.desc}</p>
+                          <p className="text-meta font-black uppercase tracking-wide" style={{ color: m.color }}>{m.label}</p>
+                          <p className="text-meta leading-snug" style={{ color: "var(--text-secondary, var(--text-2))" }}>{m.desc}</p>
                         </div>
                       </div>
                     );
@@ -172,7 +177,7 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
                 </div>
               </div>
 
-              <p className="text-[10px] leading-relaxed pt-1" style={{ color: "var(--text-muted)" }}>
+              <p className="text-micro leading-relaxed pt-1" style={{ color: "var(--text-muted)" }}>
                 Risk darajasini nazoratchi yoki admin firma ma'lumotlaridan belgilaydi. «Qarzdor», «Muammoli» yoki «Kartoteka» statuslari darajani avtomatik oshiradi.
               </p>
             </div>

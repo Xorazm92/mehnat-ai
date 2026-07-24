@@ -42,8 +42,8 @@ export default function SlaPoliciesClient({ initial }: { initial: Policy[] }) {
     setF({ ...EMPTY });
   };
 
-  const input = "px-2.5 py-1.5 rounded-md border text-sm w-full";
-  const inputStyle = { borderColor: "var(--border, #e5e7eb)", background: "transparent", color: "var(--text-primary)" };
+  const input = "px-2.5 py-1.5 rounded-lg border text-sm w-full";
+  const inputStyle = { borderColor: "var(--border, var(--rule))", background: "transparent", color: "var(--text-primary)" };
 
   return (
     <div className="space-y-5">
@@ -52,7 +52,7 @@ export default function SlaPoliciesClient({ initial }: { initial: Policy[] }) {
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>Vazifa javob (response) va yechim (resolution) muddatlari. taskType bo'yicha (bo'sh = default).</p>
       </div>
 
-      <div className="rounded-xl border p-4 grid grid-cols-2 md:grid-cols-5 gap-3 items-end" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+      <div className="rounded-xl border p-4 grid grid-cols-2 md:grid-cols-5 gap-3 items-end" style={{ borderColor: "var(--border, var(--rule))" }}>
         <label className="text-xs" style={{ color: "var(--text-muted)" }}>Nom
           <input className={input} style={inputStyle} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         </label>
@@ -65,16 +65,16 @@ export default function SlaPoliciesClient({ initial }: { initial: Policy[] }) {
         <label className="text-xs" style={{ color: "var(--text-muted)" }}>Yechim (daqiqa)
           <input type="number" className={input} style={inputStyle} value={f.resolutionMinutes} onChange={(e) => setF({ ...f, resolutionMinutes: e.target.value })} />
         </label>
-        <button disabled={pending} onClick={submit} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#16a34a" }}>+ Yaratish</button>
+        <button disabled={pending} onClick={submit} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>+ Yaratish</button>
       </div>
 
       {initial.length === 0 ? (
-        <div className="rounded-xl border p-8 text-center text-sm" style={{ borderColor: "var(--border, #e5e7eb)", color: "var(--text-muted)" }}>SLA siyosati yo'q. Yarating — yangi vazifalar taskType bo'yicha avtomatik muddat oladi.</div>
+        <div className="rounded-xl border p-8 text-center text-sm" style={{ borderColor: "var(--border, var(--rule))", color: "var(--text-muted)" }}>SLA siyosati yo'q. Yarating — yangi vazifalar taskType bo'yicha avtomatik muddat oladi.</div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, #e5e7eb)" }}>
+        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, var(--rule))" }}>
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ background: "var(--bg-hover, #f9fafb)", color: "var(--text-muted)" }}>
+              <tr style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>
                 <th className="text-left font-semibold px-3 py-2.5">Nom</th>
                 <th className="text-left font-semibold px-3 py-2.5">Task turi</th>
                 <th className="text-left font-semibold px-3 py-2.5">Javob</th>
@@ -85,14 +85,14 @@ export default function SlaPoliciesClient({ initial }: { initial: Policy[] }) {
             </thead>
             <tbody>
               {initial.map((p) => (
-                <tr key={p.id} className="border-t" style={{ borderColor: "var(--border, #f1f5f9)" }}>
-                  <td className="px-3 py-2.5 font-medium" style={{ color: "var(--text-primary)" }}>{p.name}<div className="text-[11px]" style={{ color: "var(--text-muted)" }}>{p._count.tasks} vazifa · {p._count.breaches} buzilish</div></td>
+                <tr key={p.id} className="border-t" style={{ borderColor: "var(--border, var(--bg-sunken))" }}>
+                  <td className="px-3 py-2.5 font-medium" style={{ color: "var(--text-primary)" }}>{p.name}<div className="text-meta" style={{ color: "var(--text-muted)" }}>{p._count.tasks} vazifa · {p._count.breaches} buzilish</div></td>
                   <td className="px-3 py-2.5" style={{ color: "var(--text-muted)" }}>{p.taskType ?? "default"}</td>
                   <td className="px-3 py-2.5" style={{ color: "var(--text-primary)" }}>{fmtMin(p.responseMinutes)}</td>
                   <td className="px-3 py-2.5" style={{ color: "var(--text-primary)" }}>{fmtMin(p.resolutionMinutes)}</td>
-                  <td className="px-3 py-2.5"><span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: p.active ? "#dcfce7" : "#f3f4f6", color: p.active ? "#15803d" : "#9ca3af" }}>{p.active ? "faol" : "o'chiq"}</span></td>
+                  <td className="px-3 py-2.5"><span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: p.active ? "var(--success-bg)" : "var(--bg-sunken)", color: p.active ? "var(--success)" : "var(--text-muted)" }}>{p.active ? "faol" : "o'chiq"}</span></td>
                   <td className="px-3 py-2.5 text-right">
-                    <button disabled={pending} onClick={() => run(() => setSlaPolicyActive(p.id, !p.active), p.active ? "O'chirildi" : "Faollashtirildi")} className="text-xs font-semibold px-2.5 py-1 rounded-md disabled:opacity-50" style={{ background: "var(--bg-hover, #f3f4f6)", color: "var(--text-primary)" }}>{p.active ? "O'chirish" : "Faollashtirish"}</button>
+                    <button disabled={pending} onClick={() => run(() => setSlaPolicyActive(p.id, !p.active), p.active ? "O'chirildi" : "Faollashtirildi")} className="text-xs font-semibold px-2.5 py-1 rounded-lg disabled:opacity-50" style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-primary)" }}>{p.active ? "O'chirish" : "Faollashtirish"}</button>
                   </td>
                 </tr>
               ))}

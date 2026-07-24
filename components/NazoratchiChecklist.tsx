@@ -129,7 +129,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     };
 
     return (
-        <div className="flex flex-col xl:flex-row gap-6 h-[calc(100vh-160px)] animate-fade-in pb-6 p-4">
+        <div className="flex flex-col xl:flex-row gap-6 h-[calc(100dvh-160px)] animate-fade-in pb-6 p-4">
             {/* LEFT: Company sidebar */}
             <div className="w-full xl:w-[340px] flex flex-col overflow-hidden rounded-xl"
                 style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
@@ -139,12 +139,12 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                             style={{ background: 'linear-gradient(135deg, var(--accent-indigo), var(--accent-blue))' }}>
                             <Shield size={15} />
                         </div>
-                        <h3 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>{t.organizations}</h3>
+                        <h3 className="text-body font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>{t.organizations}</h3>
                     </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={14} style={{ color: 'var(--text-muted)' }} />
                         <input type="text" placeholder={t.searchMatrix}
-                            className="w-full pl-9 pr-3 py-2.5 rounded-lg text-[12px] font-bold outline-none"
+                            className="w-full pl-9 pr-3 py-2.5 rounded-lg text-xs font-bold outline-none"
                             style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
                             value={search} onChange={e => setSearch(e.target.value)} />
                     </div>
@@ -158,9 +158,9 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                 className="p-3 rounded-lg cursor-pointer transition-all"
                                 style={{ background: isSelected ? 'var(--accent-blue-light)' : 'transparent', border: `1px solid ${isSelected ? 'var(--accent-blue)' : 'transparent'}` }}>
                                 <div className="flex justify-between items-start mb-2 gap-2">
-                                    <h4 className="font-bold text-[13px] leading-tight" style={{ color: isSelected ? 'var(--accent-blue)' : 'var(--text-primary)' }}>{c.name}</h4>
+                                    <h4 className="font-bold text-body leading-tight" style={{ color: isSelected ? 'var(--accent-blue)' : 'var(--text-primary)' }}>{c.name}</h4>
                                     {total !== 0 && (
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0"
+                                        <span className="text-micro font-bold px-2 py-0.5 rounded-lg shrink-0"
                                             style={total > 0
                                                 ? { background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }
                                                 : { background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger-border)' }}>
@@ -186,8 +186,8 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                         <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
                             style={{ borderBottom: '1px solid var(--card-border)', background: 'var(--table-header-bg)' }}>
                             <div>
-                                <h2 className="text-[17px] font-bold uppercase mb-1" style={{ color: 'var(--text-primary)' }}>{selectedCompany.name}</h2>
-                                <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>
+                                <h2 className="text-base font-bold uppercase mb-1" style={{ color: 'var(--text-primary)' }}>{selectedCompany.name}</h2>
+                                <p className="text-meta font-bold" style={{ color: 'var(--text-muted)' }}>
                                     {lang === 'uz' ? 'Shartnoma' : 'Договор'}: {formatNum(contractAmount)} {lang === 'uz' ? "so'm" : 'сум'}
                                 </p>
                             </div>
@@ -196,9 +196,9 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                 onViewChange={setViewMode}
                                 month={
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Oy' : 'Месяц'}</span>
+                                        <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Oy' : 'Месяц'}</span>
                                         <input type="month" value={month} onChange={e => setMonth(e.target.value)}
-                                            className="rounded-lg px-3 py-2 text-[13px] font-bold outline-none cursor-pointer"
+                                            className="rounded-lg px-3 py-2 text-body font-bold outline-none cursor-pointer"
                                             style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--accent-blue)' }} />
                                     </div>
                                 }
@@ -216,15 +216,15 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                     <div key={group.key} className="animate-fade-in">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-1 h-4 rounded-sm" style={{ background: group.accent }} />
-                                                <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{group.label}</h4>
+                                                <div className="w-1 h-4 rounded-lg" style={{ background: group.accent }} />
+                                                <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{group.label}</h4>
                                                 <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
                                                     {group.employeeName || (lang === 'uz' ? 'Biriktirilmagan' : 'Не назначен')}
                                                 </span>
                                             </div>
-                                            <span className="text-[12px] font-extrabold tabular-nums"
+                                            <span className="text-xs font-extrabold tabular-nums"
                                                 style={{ color: capped > 0 ? 'var(--success)' : capped < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
-                                                {capped > 0 ? '+' : ''}{Number(capped.toFixed(2))}% <span className="text-[9px] font-bold" style={{ color: 'var(--text-muted)' }}>/ max {cap}%</span>
+                                                {capped > 0 ? '+' : ''}{Number(capped.toFixed(2))}% <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>/ max {cap}%</span>
                                             </span>
                                         </div>
                                         {group.employeeId ? (
@@ -253,11 +253,11 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                             {needsApproval && perf && canApprove && (
                                                                 <div className="flex gap-2">
                                                                     <button onClick={() => changeStatus(perf, true)}
-                                                                        className="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase text-white flex items-center justify-center gap-1" style={{ background: 'var(--success)' }}>
+                                                                        className="flex-1 py-1.5 rounded-lg text-micro font-bold uppercase text-white flex items-center justify-center gap-1" style={{ background: 'var(--success)' }}>
                                                                         <CheckCircle2 size={12} /> {lang === 'uz' ? 'Tasdiqlash' : 'Одобрить'}
                                                                     </button>
                                                                     <button onClick={() => changeStatus(perf, false)}
-                                                                        className="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase text-white flex items-center justify-center gap-1" style={{ background: 'var(--danger)' }}>
+                                                                        className="flex-1 py-1.5 rounded-lg text-micro font-bold uppercase text-white flex items-center justify-center gap-1" style={{ background: 'var(--danger)' }}>
                                                                         <XCircle size={12} /> {lang === 'uz' ? 'Rad etish' : 'Отклонить'}
                                                                     </button>
                                                                 </div>
@@ -267,26 +267,26 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                 })}
                                             </div>
                                         ) : (
-                                            <p className="text-[12px] font-medium px-3 py-4 rounded-lg" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px dashed var(--card-border)' }}>
+                                            <p className="text-xs font-medium px-3 py-4 rounded-lg" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px dashed var(--card-border)' }}>
                                                 {lang === 'uz' ? 'Bu rol firmaga biriktirilmagan.' : 'Роль не назначена для этой фирмы.'}
                                             </p>
                                         )}
                                     </div>
                                 );
                             })}
-                            {loading && <p className="text-center text-[12px] py-4" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Yuklanmoqda…' : 'Загрузка…'}</p>}
+                            {loading && <p className="text-center text-xs py-4" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Yuklanmoqda…' : 'Загрузка…'}</p>}
                         </div>
                     </>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center p-10 text-center animate-fade-in">
-                        <div className="w-20 h-20 mb-6 rounded-2xl flex items-center justify-center"
+                        <div className="w-20 h-20 mb-6 rounded-xl flex items-center justify-center"
                             style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-muted)' }}>
                             <Shield size={32} />
                         </div>
-                        <h3 className="text-[17px] font-bold uppercase mb-2" style={{ color: 'var(--text-primary)' }}>
+                        <h3 className="text-base font-bold uppercase mb-2" style={{ color: 'var(--text-primary)' }}>
                             {(t as unknown as { selectCompany?: string }).selectCompany || (lang === 'uz' ? 'Firmani tanlang' : 'Выберите фирму')}
                         </h3>
-                        <p className="text-[13px] font-medium max-w-md" style={{ color: 'var(--text-muted)' }}>
+                        <p className="text-body font-medium max-w-md" style={{ color: 'var(--text-muted)' }}>
                             {lang === 'uz' ? 'KPI kiritish uchun chapdan firmani tanlang.' : 'Выберите фирму слева для ввода KPI.'}
                         </p>
                     </div>

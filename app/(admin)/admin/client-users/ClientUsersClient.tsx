@@ -36,8 +36,8 @@ export default function ClientUsersClient({ clients, requests, companies }: { cl
     });
   };
 
-  const input = "px-2.5 py-1.5 rounded-md border text-sm";
-  const inputStyle = { borderColor: "var(--border, #e5e7eb)", background: "transparent", color: "var(--text-primary)" };
+  const input = "px-2.5 py-1.5 rounded-lg border text-sm";
+  const inputStyle = { borderColor: "var(--border, var(--rule))", background: "transparent", color: "var(--text-primary)" };
 
   return (
     <div className="space-y-6">
@@ -60,15 +60,15 @@ export default function ClientUsersClient({ clients, requests, companies }: { cl
         <label className="text-xs" style={{ color: "var(--text-muted)" }}>Ism
           <input className={`block ${input}`} style={inputStyle} value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} />
         </label>
-        <button disabled={pending} onClick={submit} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#16a34a" }}>+ Hisob yaratish</button>
+        <button disabled={pending} onClick={submit} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>+ Hisob yaratish</button>
       </div>
 
       {cred && (
-        <div className="rounded-xl border-2 p-4" style={{ borderColor: "#f59e0b", background: "#fffbeb" }}>
-          <div className="text-sm font-bold" style={{ color: "#b45309" }}>⚠️ Parol faqat HOZIR ko'rsatiladi — mijozga bering</div>
-          <div className="mt-1 text-sm" style={{ color: "#92400e" }}>Login: <code>{cred.email}</code> · Parol: <code className="font-bold">{cred.password}</code></div>
-          <button onClick={() => { navigator.clipboard?.writeText(`Login: ${cred.email}\nParol: ${cred.password}`); toast.success("Nusxalandi"); }} className="mt-2 px-3 py-1.5 rounded-md text-xs font-semibold text-white" style={{ background: "#f59e0b" }}>Nusxalash</button>
-          <button onClick={() => setCred(null)} className="mt-2 ml-2 px-3 py-1.5 rounded-md text-xs font-semibold" style={{ background: "#e5e7eb" }}>Yashirish</button>
+        <div className="rounded-xl border-2 p-4" style={{ borderColor: "var(--warning)", background: "var(--warning-bg)" }}>
+          <div className="text-sm font-bold" style={{ color: "var(--warning)" }}>⚠️ Parol faqat HOZIR ko'rsatiladi — mijozga bering</div>
+          <div className="mt-1 text-sm" style={{ color: "var(--warning)" }}>Login: <code>{cred.email}</code> · Parol: <code className="font-bold">{cred.password}</code></div>
+          <button onClick={() => { navigator.clipboard?.writeText(`Login: ${cred.email}\nParol: ${cred.password}`); toast.success("Nusxalandi"); }} className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: "var(--warning)" }}>Nusxalash</button>
+          <button onClick={() => setCred(null)} className="mt-2 ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: "var(--rule)" }}>Yashirish</button>
         </div>
       )}
 
@@ -77,18 +77,18 @@ export default function ClientUsersClient({ clients, requests, companies }: { cl
         <h2 className="text-base font-bold mb-2" style={{ color: "var(--text-primary)" }}>Hisoblar</h2>
         <div className="overflow-x-auto rounded-xl border" style={inputStyle}>
           <table className="w-full text-sm">
-            <thead><tr style={{ background: "var(--bg-hover, #f9fafb)", color: "var(--text-muted)" }}>
+            <thead><tr style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>
               <th className="text-left font-semibold px-3 py-2">Firma</th><th className="text-left font-semibold px-3 py-2">Login</th><th className="text-left font-semibold px-3 py-2">Ism</th><th className="text-left font-semibold px-3 py-2">Holat</th><th className="text-right font-semibold px-3 py-2"></th>
             </tr></thead>
             <tbody>
               {clients.length === 0 && <tr><td colSpan={5} className="px-3 py-5 text-center" style={{ color: "var(--text-muted)" }}>Hisob yo'q.</td></tr>}
               {clients.map((c) => (
-                <tr key={c.id} className="border-t" style={{ borderColor: "var(--border, #f1f5f9)" }}>
+                <tr key={c.id} className="border-t" style={{ borderColor: "var(--border, var(--bg-sunken))" }}>
                   <td className="px-3 py-2 font-medium" style={{ color: "var(--text-primary)" }}>{c.company.name}</td>
                   <td className="px-3 py-2" style={{ color: "var(--text-muted)" }}>{c.email}</td>
                   <td className="px-3 py-2" style={{ color: "var(--text-primary)" }}>{c.fullName}</td>
-                  <td className="px-3 py-2"><span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: c.isActive ? "#dcfce7" : "#f3f4f6", color: c.isActive ? "#15803d" : "#9ca3af" }}>{c.isActive ? "faol" : "o'chiq"}</span></td>
-                  <td className="px-3 py-2 text-right"><button disabled={pending} onClick={() => run(() => setClientUserActive(c.id, !c.isActive), "Yangilandi")} className="text-xs font-semibold px-2 py-1 rounded-md disabled:opacity-50" style={{ background: "var(--bg-hover, #f3f4f6)", color: "var(--text-primary)" }}>{c.isActive ? "O'chirish" : "Faollashtirish"}</button></td>
+                  <td className="px-3 py-2"><span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: c.isActive ? "var(--success-bg)" : "var(--bg-sunken)", color: c.isActive ? "var(--success)" : "var(--text-muted)" }}>{c.isActive ? "faol" : "o'chiq"}</span></td>
+                  <td className="px-3 py-2 text-right"><button disabled={pending} onClick={() => run(() => setClientUserActive(c.id, !c.isActive), "Yangilandi")} className="text-xs font-semibold px-2 py-1 rounded-lg disabled:opacity-50" style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-primary)" }}>{c.isActive ? "O'chirish" : "Faollashtirish"}</button></td>
                 </tr>
               ))}
             </tbody>
@@ -105,15 +105,15 @@ export default function ClientUsersClient({ clients, requests, companies }: { cl
             <div key={r.id} className="rounded-xl border p-4" style={inputStyle}>
               <div className="flex items-center justify-between">
                 <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{r.company.name} — {r.subject}</span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: r.status === "answered" ? "#dcfce7" : "#fef3c7", color: r.status === "answered" ? "#15803d" : "#b45309" }}>{r.status}</span>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: r.status === "answered" ? "var(--success-bg)" : "var(--warning-bg)", color: r.status === "answered" ? "var(--success)" : "var(--warning)" }}>{r.status}</span>
               </div>
               <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{r.message}</p>
               {r.responseText ? (
-                <p className="text-sm mt-2 pl-3 border-l-2" style={{ borderColor: "#16a34a", color: "var(--text-primary)" }}>{r.responseText}</p>
+                <p className="text-sm mt-2 pl-3 border-l-2" style={{ borderColor: "var(--success)", color: "var(--text-primary)" }}>{r.responseText}</p>
               ) : (
                 <div className="flex gap-2 mt-2">
                   <input value={resp[r.id] ?? ""} onChange={(e) => setResp({ ...resp, [r.id]: e.target.value })} placeholder="Javob..." className={`flex-1 ${input}`} style={inputStyle} />
-                  <button disabled={pending} onClick={() => { const t = resp[r.id]; if (!t?.trim()) return toast.error("Javob kiriting"); run(() => respondClientRequest(r.id, t), "Javob yuborildi"); }} className="px-3 py-1.5 rounded-md text-xs font-semibold text-white disabled:opacity-50" style={{ background: "#2563eb" }}>Javob berish</button>
+                  <button disabled={pending} onClick={() => { const t = resp[r.id]; if (!t?.trim()) return toast.error("Javob kiriting"); run(() => respondClientRequest(r.id, t), "Javob yuborildi"); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50" style={{ background: "var(--brand)" }}>Javob berish</button>
                 </div>
               )}
             </div>

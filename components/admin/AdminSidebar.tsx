@@ -10,51 +10,64 @@ import {
   type AdminModuleGroup,
 } from "@/lib/admin/registry";
 import type { UserRole } from "@/lib/permissions";
+import { useMobileNav } from "@/components/MobileNavContext";
 
 const GROUP_ORDER: AdminModuleGroup[] = ["tizim", "moliya", "integratsiya"];
 
 export function AdminSidebar({ userRole }: { userRole: string }) {
   const pathname = usePathname();
   const modules = visibleAdminModules(userRole as UserRole);
+  const { open, setOpen } = useMobileNav();
 
   return (
+    <>
+    {/* Mobil backdrop */}
+    {open && (
+      <div
+        className="fixed inset-0 md:hidden"
+        style={{ background: "rgba(6,10,15,0.55)", zIndex: "var(--z-backdrop)" }}
+        onClick={() => setOpen(false)}
+      />
+    )}
     <aside
-      className="flex-shrink-0 flex flex-col overflow-y-auto scrollbar-hide"
+      className={`flex-shrink-0 flex flex-col overflow-y-auto scrollbar-hide h-dvh md:h-auto transition-transform duration-200 ease-out fixed md:relative top-0 left-0 md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
       style={{
         width: "230px",
-        background: "var(--card-bg)",
-        borderRight: "1px solid var(--card-border)",
+        background: "var(--bg-secondary)",
+        borderRight: "1px solid var(--rule)",
+        zIndex: "var(--z-panel)",
       }}
     >
       <div
-        className="px-4 py-4 flex items-center gap-2"
-        style={{ borderBottom: "1px solid var(--card-border)" }}
+        className="px-4 h-16 flex items-center gap-2.5 flex-shrink-0"
+        style={{ borderBottom: "1px solid var(--rule)" }}
       >
         <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-          style={{ background: "linear-gradient(135deg, #7C3AED, #4F46E5)" }}
+          className="w-8 h-8 rounded-lg flex items-center justify-center font-mono text-body font-bold"
+          style={{ background: "var(--accent-purple-light)", color: "var(--accent-purple)" }}
         >
-          <span className="text-[13px] font-black">A</span>
+          A
         </div>
         <div>
-          <h2 className="text-[13px] font-black leading-none" style={{ color: "var(--text-primary)" }}>
+          <h2 className="text-body font-semibold leading-none" style={{ color: "var(--text-primary)" }}>
             Admin Panel
           </h2>
-          <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>
+          <p
+            className="font-mono text-micro font-medium uppercase mt-1 leading-none"
+            style={{ color: "var(--text-muted)", letterSpacing: "0.14em" }}
+          >
             Boshqaruv markazi
           </p>
         </div>
       </div>
 
-      <nav className="flex-1 py-3 px-2.5 space-y-3">
+      <nav className="flex-1 py-2 px-2.5">
         {GROUP_ORDER.map((group) => {
           const items = modules.filter((m) => m.group === group);
           if (items.length === 0) return null;
           return (
             <div key={group}>
-              <div className="px-2 mb-1 text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
-                {ADMIN_GROUP_LABELS[group]}
-              </div>
+              <div className="sidebar-label">{ADMIN_GROUP_LABELS[group]}</div>
               <div className="space-y-0.5">
                 {items.map((m) => {
                   const Icon = m.icon;
@@ -66,19 +79,20 @@ export function AdminSidebar({ userRole }: { userRole: string }) {
                     <Link
                       key={m.id}
                       href={m.href}
-                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-all"
-                      style={
-                        active
-                          ? { background: "var(--accent-blue)", color: "#fff" }
-                          : { color: "var(--text-secondary)" }
-                      }
+                      onClick={() => setOpen(false)}
+                      aria-current={active ? "page" : undefined}
+                      className={`sidebar-nav-item ${active ? "active" : ""}`}
                     >
-                      <Icon size={15} className="shrink-0" />
-                      <span className="truncate">{m.labelUz}</span>
+                      <Icon size={16} className="shrink-0" />
+                      <span className="truncate flex-1">{m.labelUz}</span>
                       {m.status === "soon" && (
                         <span
-                          className="ml-auto text-2xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
-                          style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
+                          className="ml-auto font-mono text-micro font-semibold px-1.5 py-0.5 rounded uppercase"
+                          style={{
+                            background: "var(--warning-bg)",
+                            color: "var(--warning)",
+                            letterSpacing: "0.06em",
+                          }}
                         >
                           Soon
                         </span>
@@ -94,11 +108,17 @@ export function AdminSidebar({ userRole }: { userRole: string }) {
 
       <Link
         href="/dashboard"
-        className="m-2.5 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all"
-        style={{ border: "1px solid var(--card-border)", color: "var(--text-muted)" }}
+        onClick={() => setOpen(false)}
+        className="m-2.5 flex-shrink-0 flex items-center justify-center gap-2 px-3 h-11 rounded-lg font-mono text-micro font-semibold uppercase transition-colors duration-100 hover:bg-[var(--bg-hover)]"
+        style={{
+          border: "1px solid var(--rule-strong)",
+          color: "var(--text-secondary)",
+          letterSpacing: "0.1em",
+        }}
       >
-        <ArrowLeft size={13} /> Tizimga qaytish
+        <ArrowLeft size={14} /> Tizimga qaytish
       </Link>
     </aside>
+    </>
   );
 }

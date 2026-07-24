@@ -32,7 +32,7 @@ export function RolePermissionMatrix() {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-black" style={{ color: "var(--text-primary)" }}>Qobiliyatlar (server xavfsizligi)</h2>
-        <p className="text-[12px] font-medium" style={{ color: "var(--text-muted)" }}>
+        <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
           Kod bilan belgilangan RBAC — ma&apos;lumot uchun. Bu qobiliyatlar server tekshiruvlarini ta&apos;minlaydi
           (<span className="font-mono">lib/permissions.ts</span>). Menyu ko&apos;rinishini yuqoridagi jadvaldan sozlang.
         </p>
@@ -40,12 +40,12 @@ export function RolePermissionMatrix() {
 
       <div className="rounded-xl overflow-hidden" style={card}>
         <div className="overflow-x-auto">
-          <table className="w-full text-[12px]">
+          <table className="w-full text-xs">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--card-border)" }}>
-                <th className="text-left px-4 py-3 font-bold uppercase tracking-widest text-[10px] sticky left-0" style={{ color: "var(--text-muted)", background: "var(--card-bg)" }}>Ruxsat</th>
+                <th className="text-left px-4 py-3 font-bold uppercase tracking-widest text-micro sticky left-0" style={{ color: "var(--text-muted)", background: "var(--card-bg)" }}>Ruxsat</th>
                 {ROLE_LIST.map((r) => (
-                  <th key={r} className="px-3 py-3 font-bold text-[10px] text-center" style={{ color: "var(--text-muted)" }}>
+                  <th key={r} className="px-3 py-3 font-bold text-micro text-center" style={{ color: "var(--text-muted)" }}>
                     {ROLE_LABELS[r]}
                   </th>
                 ))}

@@ -55,7 +55,7 @@ const ROLE_OPTIONS = Object.values(ROLES);
 
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
 const inputCls =
-  "w-full px-3 py-2 rounded-lg text-[13px] outline-none";
+  "w-full px-3 py-2 rounded-lg text-body outline-none";
 const inputStyle = {
   background: "var(--input-bg)",
   border: "1px solid var(--card-border)",
@@ -115,14 +115,14 @@ export function AdminUserManager({
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Foydalanuvchilar</h1>
-          <p className="text-[12px] font-medium" style={{ color: "var(--text-muted)" }}>
+          <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
             {users.length} ta · {users.filter((u) => u.isActive).length} faol
           </p>
         </div>
         <button
           onClick={openCreate}
           disabled={busy}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-bold uppercase tracking-widest text-white disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white disabled:opacity-50"
           style={{ background: "var(--accent-blue)" }}
         >
           <Plus size={15} /> Yangi
@@ -150,11 +150,11 @@ export function AdminUserManager({
 
       <div className="rounded-xl overflow-hidden" style={card}>
         <div className="overflow-x-auto">
-          <table className="w-full text-[12px]">
+          <table className="w-full text-xs">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--card-border)", color: "var(--text-muted)" }}>
                 {["Ism", "Email", "Rol", "Holat", "Amallar"].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 font-bold uppercase tracking-widest text-[10px]">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 font-bold uppercase tracking-widest text-micro">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -166,7 +166,7 @@ export function AdminUserManager({
                   <td className="px-4 py-2.5" style={{ color: "var(--text-secondary)" }}>{ROLE_LABELS[u.role as UserRole] ?? u.role}</td>
                   <td className="px-4 py-2.5">
                     <span
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
+                      className="text-micro font-bold px-2 py-0.5 rounded-full uppercase"
                       style={u.isActive
                         ? { background: "var(--success-bg)", color: "var(--success)" }
                         : { background: "var(--danger-bg)", color: "var(--danger)" }}
@@ -176,9 +176,9 @@ export function AdminUserManager({
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-1.5">
-                      <button title="Tahrirlash" onClick={() => openEdit(u)} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-md" style={{ color: "var(--accent-blue)" }}><Pencil size={14} /></button>
-                      <button title="Parolni tiklash" onClick={() => { setPwTarget(u); setPwValue(""); }} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-md" style={{ color: "var(--warning)" }}><KeyRound size={14} /></button>
-                      <button title={u.isActive ? "Faolsizlantirish" : "Faollashtirish"} onClick={() => onToggleActive(u)} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-md" style={{ color: u.isActive ? "var(--danger)" : "var(--success)" }}>
+                      <button title="Tahrirlash" onClick={() => openEdit(u)} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--accent-blue)" }}><Pencil size={14} /></button>
+                      <button title="Parolni tiklash" onClick={() => { setPwTarget(u); setPwValue(""); }} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--warning)" }}><KeyRound size={14} /></button>
+                      <button title={u.isActive ? "Faolsizlantirish" : "Faollashtirish"} onClick={() => onToggleActive(u)} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: u.isActive ? "var(--danger)" : "var(--success)" }}>
                         {u.isActive ? <UserX size={14} /> : <UserCheck size={14} />}
                       </button>
                     </div>
@@ -284,7 +284,7 @@ export function AdminUserManager({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</span>
+      <span className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</span>
       <div className="mt-1">{children}</div>
     </label>
   );
@@ -293,10 +293,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl p-5" style={card} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-xl p-5" style={card} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[15px] font-black" style={{ color: "var(--text-primary)" }}>{title}</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: "var(--text-muted)" }}><X size={16} /></button>
+          <h3 className="text-sm font-black" style={{ color: "var(--text-primary)" }}>{title}</h3>
+          <button onClick={onClose} className="icon-btn-sm" style={{ color: "var(--text-muted)" }}><X size={16} /></button>
         </div>
         {children}
       </div>
@@ -307,8 +307,8 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 function ModalActions({ onCancel, onSave, busy, disabled }: { onCancel: () => void; onSave: () => void; busy: boolean; disabled?: boolean }) {
   return (
     <div className="flex items-center justify-end gap-2 mt-5">
-      <button onClick={onCancel} className="px-4 py-2 rounded-lg text-[12px] font-bold" style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Bekor</button>
-      <button onClick={onSave} disabled={busy || disabled} className="px-4 py-2 rounded-lg text-[12px] font-bold text-white disabled:opacity-50" style={{ background: "var(--accent-blue)" }}>Saqlash</button>
+      <button onClick={onCancel} className="px-4 py-2 rounded-lg text-xs font-bold" style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Bekor</button>
+      <button onClick={onSave} disabled={busy || disabled} className="px-4 py-2 rounded-lg text-xs font-bold text-white disabled:opacity-50" style={{ background: "var(--accent-blue)" }}>Saqlash</button>
     </div>
   );
 }

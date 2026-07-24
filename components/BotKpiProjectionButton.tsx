@@ -37,7 +37,7 @@ export default function BotKpiProjectionButton({ month }: { month: string }) {
       onClick={run}
       disabled={pending}
       title="Telegram bot javob KPI'sini shu oy uchun dashboardga chiqaradi (nazoratchi tasdiqlaydi)"
-      className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent-indigo)] px-3 py-2 text-sm font-medium text-white transition hover:bg-[var(--accent-indigo)] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Chiqarilmoqda…" : `Bot KPI'ni chiqarish (${month})`}
     </button>

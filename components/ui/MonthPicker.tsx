@@ -61,23 +61,23 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
         <div className={`inline-block ${className}`} ref={triggerRef}>
             <button
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                className="flex items-center gap-2 px-3 py-1.5 c1-input text-[13px] font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 c1-input text-body font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-sunken)] dark:hover:bg-[var(--surface-2)] transition-colors"
             >
-                <CalendarIcon size={14} className="text-blue-600" />
+                <CalendarIcon size={14} className="text-[var(--brand)]" />
                 <span>{selectedPeriod}</span>
             </button>
 
             {isOpen && createPortal(
-                <div className="fixed inset-0 z-[10000]">
+                <div className="fixed inset-0 z-[110]">
                     {/* Minimal backdrop for closing */}
                     <div
-                        className="absolute inset-0 bg-slate-900/40"
+                        className="absolute inset-0 bg-[color-mix(in_srgb,var(--surface-2)_40%,transparent)]"
                         onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
                     />
 
                     {/* Industrial Popover content */}
                     <div
-                        className="absolute bg-[#F0F2F5] dark:bg-[#111318] p-5 w-[280px] rounded-sm shadow-2xl border border-[#DEE2E6] dark:border-[#3A3D44] animate-fade-in"
+                        className="absolute bg-[var(--card-bg)] p-5 w-[280px] rounded-lg shadow-2xl border border-[var(--rule)] dark:border-[var(--rule-strong)] animate-fade-in"
                         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
                         style={{
                             top: coords.top + 4,
@@ -86,17 +86,17 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
                     >
 
                         <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-5 pb-2 border-b border-[#DEE2E6] dark:border-[#3A3D44]">
+                            <div className="flex items-center justify-between mb-5 pb-2 border-b border-[var(--rule)] dark:border-[var(--rule-strong)]">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setViewYear(y => y - 1); }}
-                                    className="p-1.5 hover:bg-white dark:hover:bg-[#22252B] rounded-sm border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44] transition-all text-gray-400 hover:text-[#3366CC]"
+                                    className="p-1.5 hover:bg-[var(--card-bg)] dark:hover:bg-[var(--surface-2)] rounded-lg border border-transparent hover:border-[var(--rule)] dark:hover:border-[var(--rule-strong)] transition-all text-[var(--text-muted)] hover:text-[var(--brand)]"
                                 >
                                     <ChevronLeft size={16} />
                                 </button>
-                                <span className="text-[14px] font-black text-gray-800 dark:text-white uppercase tracking-widest">{viewYear}</span>
+                                <span className="text-sm font-black text-[var(--text-primary)] dark:text-white uppercase tracking-widest">{viewYear}</span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setViewYear(y => y + 1); }}
-                                    className="p-1.5 hover:bg-white dark:hover:bg-[#22252B] rounded-sm border border-transparent hover:border-[#DEE2E6] dark:hover:border-[#3A3D44] transition-all text-gray-400 hover:text-[#3366CC]"
+                                    className="p-1.5 hover:bg-[var(--card-bg)] dark:hover:bg-[var(--surface-2)] rounded-lg border border-transparent hover:border-[var(--rule)] dark:hover:border-[var(--rule-strong)] transition-all text-[var(--text-muted)] hover:text-[var(--brand)]"
                                 >
                                     <ChevronRight size={16} />
                                 </button>
@@ -109,9 +109,9 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
                                         <button
                                             key={month}
                                             onClick={(e) => { e.stopPropagation(); handleMonthSelect(month); }}
-                                            className={`py-2 px-1 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-all border ${isSelected
-                                                ? 'bg-[#3366CC] text-white border-[#2A52A3] shadow-sm'
-                                                : 'text-gray-500 dark:text-gray-400 bg-white dark:bg-[#22252B] border-[#DEE2E6] dark:border-[#3A3D44] hover:border-[#3366CC] hover:text-[#3366CC]'
+                                            className={`py-2 px-1 rounded-lg text-micro font-bold uppercase tracking-wider transition-all border ${isSelected
+                                                ? 'bg-[var(--brand)] text-white border-[var(--brand-deep)] shadow-sm'
+                                                : 'text-[var(--text-secondary)] bg-[var(--card-bg)] dark:bg-[var(--surface-2)] border-[var(--rule)] dark:border-[var(--rule-strong)] hover:border-[var(--brand)] hover:text-[var(--brand)]'
                                                 }`}
                                         >
                                             {month}

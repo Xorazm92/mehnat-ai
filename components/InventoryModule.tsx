@@ -124,7 +124,7 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                     { label: lang === 'uz' ? 'Ta\'mirda' : 'Ремонт', value: stats.maintenance, color: 'var(--warning)' },
                 ].map((s, i) => (
                     <div key={i} className="dashboard-card p-5">
-                        <span className="text-[10px] font-bold uppercase tracking-widest block mb-2" style={{ color: 'var(--text-muted)' }}>{s.label}</span>
+                        <span className="text-micro font-bold uppercase tracking-widest block mb-2" style={{ color: 'var(--text-muted)' }}>{s.label}</span>
                         <div className="text-3xl font-black tabular-nums leading-none" style={{ color: s.color }}>{s.value}</div>
                     </div>
                 ))}
@@ -136,7 +136,7 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                     <input
                         type="text"
                         placeholder="QIDIRISH..."
-                        className="w-full rounded-xl py-3 pl-12 pr-4 text-[12px] font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
+                        className="w-full rounded-xl py-3 pl-12 pr-4 text-xs font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -144,7 +144,7 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                 </div>
                 <button
                     onClick={openNew}
-                    className="font-bold px-5 py-3 rounded-xl text-[12px] flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md text-white"
+                    className="font-bold px-5 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md text-white"
                     style={{ background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-blue-hover))' }}
                 >
                     <Plus size={16} />
@@ -161,16 +161,16 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                         <div key={it.id} className="dashboard-card p-4 flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}><Package size={18} /></div>
                             <div className="flex-1 min-w-0">
-                                <div className="text-[13px] font-black uppercase tracking-tight truncate" style={{ color: 'var(--text)' }}>{it.name}</div>
+                                <div className="text-body font-black uppercase tracking-tight truncate" style={{ color: 'var(--text)' }}>{it.name}</div>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest" style={{ background: meta.bg, color: meta.color }}>{meta.icon}{lang === 'uz' ? meta.labelUz : meta.labelRu}</span>
-                                    {it.serialNumber && <span className="text-[10px] font-mono font-bold" style={{ color: 'var(--text-muted)' }}>#{it.serialNumber}</span>}
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-micro font-black uppercase tracking-widest" style={{ background: meta.bg, color: meta.color }}>{meta.icon}{lang === 'uz' ? meta.labelUz : meta.labelRu}</span>
+                                    {it.serialNumber && <span className="text-micro font-mono font-bold" style={{ color: 'var(--text-muted)' }}>#{it.serialNumber}</span>}
                                 </div>
-                                <div className="text-[11px] font-bold uppercase tracking-tight mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>{it.assignedToName || '—'}</div>
+                                <div className="text-meta font-bold uppercase tracking-tight mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>{it.assignedToName || '—'}</div>
                             </div>
                             <div className="flex flex-col gap-1.5 shrink-0">
-                                <button onClick={() => openEdit(it)} className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title={t.edit}><Edit3 size={15} /></button>
-                                <button onClick={() => handleDelete(it.id)} className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title={t.delete}><Trash2 size={15} /></button>
+                                <button onClick={() => openEdit(it)} className="icon-btn-sm" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title={t.edit}><Edit3 size={15} /></button>
+                                <button onClick={() => handleDelete(it.id)} className="icon-btn-sm" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title={t.delete}><Trash2 size={15} /></button>
                             </div>
                         </div>
                     );
@@ -178,7 +178,7 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                 {filtered.length === 0 && (
                     <div className="dashboard-card p-12 text-center">
                         <Package size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
-                        <span className="text-[11px] uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? "Inventar yo'q" : 'Нет предметов'}</span>
+                        <span className="text-meta uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? "Inventar yo'q" : 'Нет предметов'}</span>
                     </div>
                 )}
             </div>
@@ -189,11 +189,11 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                     <table className="w-full text-left border-collapse min-w-[820px]">
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Nomi' : 'Название'}</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[160px]" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Seriya raqami' : 'Серийный №'}</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[150px]" style={{ color: 'var(--text-muted)' }}>{t.status}</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest w-[180px]" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Kimda' : 'У кого'}</th>
-                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-right w-[100px]" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Amallar' : 'Действия'}</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Nomi' : 'Название'}</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[160px]" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Seriya raqami' : 'Серийный №'}</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[150px]" style={{ color: 'var(--text-muted)' }}>{t.status}</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[180px]" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Kimda' : 'У кого'}</th>
+                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-right w-[100px]" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Amallar' : 'Действия'}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -206,23 +206,23 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                                                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
                                                     <Package size={16} />
                                                 </div>
-                                                <span className="text-[13px] font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{it.name}</span>
+                                                <span className="text-body font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{it.name}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-[12px] font-bold tabular-nums font-mono" style={{ color: 'var(--text-secondary)' }}>{it.serialNumber || '—'}</td>
+                                        <td className="px-6 py-4 text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--text-secondary)' }}>{it.serialNumber || '—'}</td>
                                         <td className="px-6 py-4">
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest" style={{ background: meta.bg, color: meta.color }}>
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro font-bold uppercase tracking-widest" style={{ background: meta.bg, color: meta.color }}>
                                                 {meta.icon}
                                                 {lang === 'uz' ? meta.labelUz : meta.labelRu}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-[12px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>{it.assignedToName || '—'}</td>
+                                        <td className="px-6 py-4 text-xs font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>{it.assignedToName || '—'}</td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => openEdit(it)} className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: 'var(--accent-blue)' }} title={t.edit}>
+                                                <button onClick={() => openEdit(it)} className="icon-btn-sm" style={{ color: 'var(--accent-blue)' }} title={t.edit}>
                                                     <Edit3 size={16} />
                                                 </button>
-                                                <button onClick={() => handleDelete(it.id)} className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: 'var(--danger)' }} title={t.delete}>
+                                                <button onClick={() => handleDelete(it.id)} className="icon-btn-sm" style={{ color: 'var(--danger)' }} title={t.delete}>
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
@@ -235,7 +235,7 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                                     <td colSpan={5} className="px-6 py-24 text-center">
                                         <div className="flex flex-col items-center" style={{ color: 'var(--text-muted)' }}>
                                             <Package size={48} className="mb-4 opacity-20" />
-                                            <span className="text-[11px] uppercase font-bold tracking-[0.2em] opacity-60">{lang === 'uz' ? "Inventar yo'q" : 'Нет предметов'}</span>
+                                            <span className="text-meta uppercase font-bold tracking-[0.2em] opacity-60">{lang === 'uz' ? "Inventar yo'q" : 'Нет предметов'}</span>
                                         </div>
                                     </td>
                                 </tr>
@@ -250,37 +250,37 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                     <div className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0">
                         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
                         <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                            <h3 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>{form.id ? (lang === 'uz' ? 'Jihozni tahrirlash' : 'Изменить предмет') : (lang === 'uz' ? 'Yangi jihoz' : 'Новый предмет')}</h3>
-                            <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }}>
+                            <h3 className="text-body font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>{form.id ? (lang === 'uz' ? 'Jihozni tahrirlash' : 'Изменить предмет') : (lang === 'uz' ? 'Yangi jihoz' : 'Новый предмет')}</h3>
+                            <button onClick={() => setIsModalOpen(false)} className="icon-btn-sm" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }}>
                                 <Plus size={20} className="rotate-45" />
                             </button>
                         </div>
                         <form onSubmit={handleSave} className="p-6 space-y-5">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-2 md:col-span-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Nomi' : 'Название'}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Nomi' : 'Название'}</label>
                                     <input type="text" value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} required placeholder={lang === 'uz' ? 'MASALAN: NOUTBUK HP' : 'НАЗВАНИЕ'}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }} />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Seriya raqami' : 'Серийный №'}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Seriya raqami' : 'Серийный №'}</label>
                                     <input type="text" value={form.serialNumber} onChange={(e) => setForm(f => ({ ...f, serialNumber: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }} />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Holati' : 'Состояние'}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Holati' : 'Состояние'}</label>
                                     <select value={form.condition} onChange={(e) => setForm(f => ({ ...f, condition: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}>
                                         {CONDITIONS.map(c => <option key={c} value={c}>{(lang === 'uz' ? CONDITION_LABEL[c].uz : CONDITION_LABEL[c].ru).toUpperCase()}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.status}</label>
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.status}</label>
                                     <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none uppercase tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}>
                                         {Object.entries(STATUS_META).map(([key, meta]) => (
                                             <option key={key} value={key}>{(lang === 'uz' ? meta.labelUz : meta.labelRu).toUpperCase()}</option>
@@ -289,9 +289,9 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                                 </div>
                                 {form.status === 'assigned' && (
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Kimga' : 'Кому'}</label>
+                                        <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Kimga' : 'Кому'}</label>
                                         <select value={form.assignedToId} onChange={(e) => setForm(f => ({ ...f, assignedToId: e.target.value }))}
-                                            className="w-full rounded-lg px-4 py-3 text-[12px] font-bold outline-none uppercase tracking-tight"
+                                            className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none uppercase tracking-tight"
                                             style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}>
                                             <option value="">—</option>
                                             {staff.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
@@ -301,12 +301,12 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
                             </div>
                             <div className="flex gap-3 pt-6 mt-6" style={{ borderTop: '1px solid var(--card-border)' }}>
                                 <button type="button" onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all shadow-sm"
+                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-meta uppercase tracking-widest transition-all shadow-sm"
                                     style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
                                     {t.cancel}
                                 </button>
                                 <button type="submit" disabled={isSaving}
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-[11px] text-white transition-all shadow-md hover:shadow-lg uppercase tracking-widest active:scale-95 disabled:opacity-60"
+                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-meta text-white transition-all shadow-md hover:shadow-lg uppercase tracking-widest active:scale-95 disabled:opacity-60"
                                     style={{ background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-blue-hover))' }}>
                                     {isSaving ? '...' : t.save}
                                 </button>

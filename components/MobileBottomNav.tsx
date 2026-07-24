@@ -37,13 +37,13 @@ export function MobileBottomNav({ userRole, allowedViews }: { userRole: string; 
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch"
+      className="md:hidden fixed bottom-0 left-0 right-0 flex items-stretch"
       style={{
-        background: "var(--card-bg)",
-        borderTop: "1px solid var(--card-border)",
-        boxShadow: "0 -4px 16px rgba(0,0,0,0.08)",
+        background: "var(--bg-secondary)",
+        borderTop: "1px solid var(--rule-strong)",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
         height: "calc(60px + env(safe-area-inset-bottom, 0px))",
+        zIndex: "var(--z-nav)",
       }}
     >
       {items.map((item) => {
@@ -53,23 +53,25 @@ export function MobileBottomNav({ userRole, allowedViews }: { userRole: string; 
           <Link
             key={item.href}
             href={item.href}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
-            style={{ color: active ? "var(--accent-blue)" : "var(--text-muted)" }}
+            aria-current={active ? "page" : undefined}
+            // Faol band ustidagi jonli chiziq — sidebar bilan bir xil belgi.
+            className={`relative flex-1 flex flex-col items-center justify-center gap-1 transition-colors duration-100 ${active ? "live-rule-top" : ""}`}
+            style={{ color: active ? "var(--brand)" : "var(--text-muted)" }}
           >
-            <Icon size={21} strokeWidth={active ? 2.4 : 2} />
-            <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
+            <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+            <span className="font-mono text-micro font-semibold">{item.label}</span>
           </Link>
         );
       })}
       {/* Yana — to'liq menyu (sidebar drawer) */}
       <button
         onClick={toggle}
-        className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
+        className="flex-1 flex flex-col items-center justify-center gap-1 transition-colors duration-100"
         style={{ color: "var(--text-muted)" }}
         aria-label="Yana"
       >
-        <Menu size={21} />
-        <span className="text-[10px] font-bold tracking-tight">Yana</span>
+        <Menu size={20} strokeWidth={1.8} />
+        <span className="font-mono text-micro font-semibold">Yana</span>
       </button>
     </nav>
   );

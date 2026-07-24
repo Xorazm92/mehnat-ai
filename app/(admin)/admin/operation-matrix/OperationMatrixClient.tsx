@@ -70,17 +70,17 @@ export default function OperationMatrixClient({ initialRows }: { initialRows: Op
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Amallar matritsasi</h1>
-          <p className="text-[12px] font-medium" style={{ color: "var(--text-muted)" }}>
+          <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
             Hisobot ustunlarini yoqish/o&apos;chirish, tartiblash va nomlash. {enabledCount}/{rows.length} yoqilgan.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setAll(true)} disabled={busy} className="px-3 py-2 rounded-lg text-[11px] font-bold" style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Hammasini yoqish</button>
-          <button onClick={() => setAll(false)} disabled={busy} className="px-3 py-2 rounded-lg text-[11px] font-bold" style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Hammasini o&apos;chirish</button>
+          <button onClick={() => setAll(true)} disabled={busy} className="px-3 py-2 rounded-lg text-meta font-bold" style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Hammasini yoqish</button>
+          <button onClick={() => setAll(false)} disabled={busy} className="px-3 py-2 rounded-lg text-meta font-bold" style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Hammasini o&apos;chirish</button>
           <button
             onClick={save}
             disabled={busy || !dirty}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-bold uppercase tracking-widest text-white disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white disabled:opacity-50"
             style={{ background: "var(--accent-blue)" }}
           >
             <Save size={15} /> Saqlash
@@ -91,7 +91,7 @@ export default function OperationMatrixClient({ initialRows }: { initialRows: Op
       <div className="relative max-w-sm">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
         <input
-          className="w-full pl-9 pr-3 py-2 rounded-lg text-[13px] outline-none"
+          className="w-full pl-9 pr-3 py-2 rounded-lg text-body outline-none"
           style={inputStyle}
           placeholder="Ustun qidirish..."
           value={search}
@@ -100,7 +100,7 @@ export default function OperationMatrixClient({ initialRows }: { initialRows: Op
       </div>
 
       {dirty && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-bold" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)", color: "var(--warning)" }}>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)", color: "var(--warning)" }}>
           <RotateCcw size={13} /> Saqlanmagan o&apos;zgarishlar bor
         </div>
       )}
@@ -123,26 +123,26 @@ export default function OperationMatrixClient({ initialRows }: { initialRows: Op
                 <button onClick={() => move(i, 1)} disabled={i === rows.length - 1 || busy} className="disabled:opacity-30" style={{ color: "var(--text-muted)" }} title="Pastga"><ChevronDown size={14} /></button>
               </div>
               <GripVertical size={14} className="shrink-0" style={{ color: "var(--text-muted)", opacity: 0.4 }} />
-              <span className="text-[10px] font-bold tabular-nums w-6 text-center shrink-0" style={{ color: "var(--text-muted)" }}>{i + 1}</span>
+              <span className="text-micro font-bold tabular-nums w-6 text-center shrink-0" style={{ color: "var(--text-muted)" }}>{i + 1}</span>
 
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 w-10 text-center" style={{ background: "var(--input-bg)", color: "var(--text-muted)" }}>{r.short}</span>
+              <span className="text-micro font-bold px-1.5 py-0.5 rounded-lg shrink-0 w-10 text-center" style={{ background: "var(--input-bg)", color: "var(--text-muted)" }}>{r.short}</span>
 
               <input
-                className="flex-1 min-w-[120px] px-2 py-1.5 rounded-md text-[13px] font-semibold outline-none"
+                className="flex-1 min-w-[120px] px-2 py-1.5 rounded-lg text-body font-semibold outline-none"
                 style={inputStyle}
                 value={r.label}
                 onChange={(e) => rename(r.key, e.target.value)}
                 placeholder={r.baseLabel}
               />
               <input
-                className="w-32 px-2 py-1.5 rounded-md text-[12px] outline-none shrink-0"
+                className="w-32 px-2 py-1.5 rounded-lg text-xs outline-none shrink-0"
                 style={inputStyle}
                 value={r.group}
                 onChange={(e) => regroup(r.key, e.target.value)}
                 title="Guruh"
               />
               {r.isSplit && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ background: "var(--accent-blue-light)", color: "var(--accent-blue)" }}>+To&apos;lov</span>
+                <span className="text-micro font-bold px-1.5 py-0.5 rounded-lg shrink-0" style={{ background: "var(--accent-blue-light)", color: "var(--accent-blue)" }}>+To&apos;lov</span>
               )}
               <button
                 onClick={() => toggle(r.key)}

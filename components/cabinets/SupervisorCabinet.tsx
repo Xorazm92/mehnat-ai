@@ -88,7 +88,7 @@ export function SupervisorCabinet({
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-2xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Building2 size={16} style={{ color: "var(--accent-blue)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>Firmalar</span>
@@ -96,7 +96,7 @@ export function SupervisorCabinet({
           <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{companiesCount}</div>
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--accent-indigo)" + "22", border: "1px solid rgba(99,102,241,0.2)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--accent-indigo)" + "22", border: "1px solid rgba(99,102,241,0.2)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Users size={16} style={{ color: "var(--accent-indigo)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>Buxgalterlar</span>
@@ -104,7 +104,7 @@ export function SupervisorCabinet({
           <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{accountants.length}</div>
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={16} style={{ color: "var(--danger)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>Yuqori risk</span>
@@ -112,7 +112,7 @@ export function SupervisorCabinet({
           <div className="text-2xl font-bold" style={{ color: "var(--danger)" }}>{highRisk}</div>
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
+        <div className="rounded-xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Clock size={16} style={{ color: "var(--warning)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI Kutmoqda</span>
@@ -123,10 +123,10 @@ export function SupervisorCabinet({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Buxgalterlar holati */}
-        <div className="bg-bg-card border border-border-glass rounded-2xl overflow-hidden">
+        <div className="bg-bg-card border border-border-glass rounded-xl overflow-hidden">
           <div className="flex items-center justify-between p-5 border-b border-border-glass">
             <div className="flex items-center gap-2">
-              <Users size={18} className="text-purple-400" />
+              <Users size={18} className="text-[var(--accent-purple)]" />
               <h2 className="text-text-primary font-semibold">Buxgalterlar Holati</h2>
             </div>
           </div>
@@ -149,7 +149,7 @@ export function SupervisorCabinet({
                   >
                     <div
                       className="w-9 h-9 rounded-xl flex items-center justify-center text-text-primary text-sm font-bold flex-shrink-0"
-                      style={{ background: acc.avatarColor || "#3b82f6" }}
+                      style={{ background: acc.avatarColor || "var(--brand)" }}
                     >
                       {acc.fullName[0]}
                     </div>
@@ -163,10 +163,10 @@ export function SupervisorCabinet({
                       <div
                         className={`w-2 h-2 rounded-full ${
                           acc.status === "active"
-                            ? "bg-emerald-400"
+                            ? "bg-[var(--success)]"
                             : acc.status === "vacation"
-                            ? "bg-yellow-400"
-                            : "bg-red-400"
+                            ? "bg-[var(--warning)]"
+                            : "bg-[var(--danger)]"
                         }`}
                       />
                       <ChevronRight size={14} style={{ color: "var(--text-muted)" }} />
@@ -270,7 +270,7 @@ export function SupervisorCabinet({
                       <p className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>
                         {item.employee.fullName}
                       </p>
-                      <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>
+                      <p className="text-micro truncate" style={{ color: "var(--text-muted)" }}>
                         {item.rule.nameUz}
                       </p>
                     </div>
@@ -287,7 +287,7 @@ export function SupervisorCabinet({
 
       {/* Yuqori risk firmalar */}
       {highRisk > 0 && (
-        <div className="rounded-2xl p-5" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
+        <div className="rounded-xl p-5" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle size={18} style={{ color: "var(--danger)" }} />
             <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>Yuqori Risk Firmalar</h2>

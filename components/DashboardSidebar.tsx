@@ -25,7 +25,6 @@ import {
   Package,
   Bell,
   Banknote,
-  ChevronRight,
   ShieldCheck,
 } from "lucide-react";
 
@@ -84,44 +83,49 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
     <>
     {/* Mobil backdrop */}
     {open && (
-      <div className="fixed inset-0 z-30 md:hidden" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setOpen(false)} />
+      <div
+        className="fixed inset-0 md:hidden"
+        style={{ background: "rgba(6,10,15,0.55)", zIndex: "var(--z-backdrop)" }}
+        onClick={() => setOpen(false)}
+      />
     )}
     <aside
-      className={`flex-shrink-0 h-screen flex flex-col z-40 md:z-20 overflow-hidden transition-all duration-300 fixed md:relative top-0 left-0 w-[var(--sidebar-width)] ${open ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "md:w-[72px] md:translate-x-0" : "md:w-[var(--sidebar-width)] md:translate-x-0"}`}
+      className={`flex-shrink-0 h-dvh flex flex-col md:z-20 overflow-hidden transition-transform duration-200 ease-out fixed md:relative top-0 left-0 w-[var(--sidebar-width)] ${open ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "md:w-[72px] md:translate-x-0" : "md:w-[var(--sidebar-width)] md:translate-x-0"}`}
       style={{
         background: "var(--sidebar-bg)",
-        borderRight: "1px solid var(--sidebar-border)",
+        borderRight: "1px solid var(--rule)",
+        zIndex: "var(--z-panel)",
       }}
     >
       {/* Logo */}
       <div
-        className={`h-16 flex items-center flex-shrink-0 ${collapsed ? "px-5 md:px-0 md:justify-center" : "px-5"}`}
-        style={{ borderBottom: "1px solid var(--sidebar-border)" }}
+        className={`h-16 flex items-center flex-shrink-0 ${collapsed ? "px-4 md:px-0 md:justify-center" : "px-4"}`}
+        style={{ borderBottom: "1px solid var(--rule)" }}
       >
         <Link
           href={getHomeRoute(userRole)}
           onClick={() => setOpen(false)}
-          className={`flex items-center transition-opacity hover:opacity-80 ${collapsed ? "gap-3 md:gap-0" : "gap-3"}`}
+          className={`flex items-center transition-opacity hover:opacity-80 ${collapsed ? "gap-2.5 md:gap-0" : "gap-2.5"}`}
           aria-label="Bosh sahifa"
         >
           <Image
             src="/asro-logo-192.png"
             alt="ASRO"
-            width={34}
-            height={34}
+            width={32}
+            height={32}
             priority
-            className="w-[34px] h-[34px] object-contain shrink-0"
+            className="w-8 h-8 object-contain shrink-0"
           />
           <div className={collapsed ? "md:hidden" : ""}>
             <h1
-              className="text-[16px] font-black tracking-tight leading-none"
+              className="text-base font-bold tracking-tight leading-none"
               style={{ color: "var(--text-primary)" }}
             >
               ASRO
             </h1>
             <p
-              className="text-[9px] font-semibold uppercase tracking-widest leading-none mt-0.5"
-              style={{ color: "var(--text-muted)" }}
+              className="font-mono text-micro font-medium uppercase leading-none mt-1"
+              style={{ color: "var(--text-muted)", letterSpacing: "0.14em" }}
             >
               Boshqaruv tizimi
             </p>
@@ -130,13 +134,18 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-3 px-3 scrollbar-hide space-y-0.5">
+      <nav className="flex-1 overflow-y-auto py-2 px-2.5 scrollbar-hide space-y-0.5">
         {groups.map((group) => {
           const groupItems = visibleItems.filter((item) => item.group === group);
           if (groupItems.length === 0) return null;
 
           return (
             <div key={group}>
+              {/* Yig'ilgan holatda yorliq o'rniga guruhlarni ajratuvchi chiziq */}
+              <div
+                className={`hidden ${collapsed ? "md:block" : ""} mx-2 my-2`}
+                style={{ height: 1, background: "var(--rule)" }}
+              />
               <div className={`sidebar-label ${collapsed ? "md:hidden" : ""}`}>{GROUP_LABELS[group]}</div>
               {groupItems.map((item) => {
                 const Icon = item.icon;
@@ -152,28 +161,13 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
                     href={item.href}
                     onClick={() => setOpen(false)}
                     title={collapsed ? item.label : undefined}
+                    aria-current={isActive ? "page" : undefined}
                     className={`sidebar-nav-item ${isActive ? "active" : ""} ${collapsed ? "md:justify-center" : ""}`}
-                    style={
-                      isActive
-                        ? {
-                            background: "var(--sidebar-item-active-bg)",
-                            color: "var(--sidebar-item-active-text)",
-                          }
-                        : {}
-                    }
                   >
-                    <Icon
-                      size={17}
-                      className="flex-shrink-0"
-                      style={{ opacity: isActive ? 1 : 0.7 }}
-                    />
-                    <span className={`flex-1 text-[13px] font-medium ${collapsed ? "md:hidden" : ""}`}>{item.label}</span>
-                    {isActive && (
-                      <ChevronRight
-                        size={14}
-                        className={`flex-shrink-0 opacity-60 ${collapsed ? "md:hidden" : ""}`}
-                      />
-                    )}
+                    {/* Faol holat jonli chiziq (.sidebar-nav-item.active::before)
+                        bilan belgilanadi — chevron shuning uchun olib tashlandi. */}
+                    <Icon size={16} className="flex-shrink-0" />
+                    <span className={`flex-1 ${collapsed ? "md:hidden" : ""}`}>{item.label}</span>
                   </Link>
                 );
               })}
@@ -182,24 +176,23 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
         })}
       </nav>
 
-      {/* Bottom - Settings quick link */}
+      {/* Bottom — joriy rol */}
       <div
-        className="p-3 flex-shrink-0"
-        style={{ borderTop: "1px solid var(--sidebar-border)" }}
+        className="p-2.5 flex-shrink-0"
+        style={{ borderTop: "1px solid var(--rule)" }}
       >
         <div
-          className={`flex items-center gap-2 py-2 rounded-lg ${collapsed ? "px-3 md:px-0 md:justify-center" : "px-3"}`}
-          style={{ background: "var(--bg-hover)" }}
+          className={`flex items-center gap-2.5 py-2 rounded-lg ${collapsed ? "px-2.5 md:px-0 md:justify-center" : "px-2.5"}`}
         >
           <div
-            className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-black text-white flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, #2563EB, #4F46E5)" }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center font-mono text-meta font-bold flex-shrink-0"
+            style={{ background: "var(--brand-ghost)", color: "var(--brand)" }}
           >
             {userRole?.charAt(0)?.toUpperCase() || "U"}
           </div>
           <div className={`flex-1 min-w-0 ${collapsed ? "md:hidden" : ""}`}>
             <p
-              className="text-[11px] font-semibold truncate leading-none"
+              className="text-meta font-semibold truncate leading-none"
               style={{ color: "var(--text-primary)" }}
             >
               {role === "super_admin"
@@ -213,8 +206,8 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
                 : role || "Foydalanuvchi"}
             </p>
             <p
-              className="text-[10px] mt-0.5 leading-none"
-              style={{ color: "var(--text-muted)" }}
+              className="font-mono text-micro mt-1 leading-none uppercase"
+              style={{ color: "var(--text-muted)", letterSpacing: "0.1em" }}
             >
               Faol
             </p>

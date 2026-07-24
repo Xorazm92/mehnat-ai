@@ -53,8 +53,8 @@ export default function FinanceAssistant() {
       {/* Trigger button (topbar) */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-white text-[13px] font-semibold transition-all shadow-sm shrink-0"
-        style={{ background: "linear-gradient(135deg, #7C3AED, #2563EB)" }}
+        className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-white text-body font-semibold transition-all shadow-sm shrink-0"
+        style={{ background: "linear-gradient(135deg, var(--accent-purple), var(--brand))" }}
         onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.08)")}
         onMouseLeave={(e) => (e.currentTarget.style.filter = "")}
         title="AI moliyachi yordamchi"
@@ -65,23 +65,23 @@ export default function FinanceAssistant() {
 
       {open && (
         <>
-          <div className="fixed inset-0 z-[190] bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div
             className="fixed right-0 top-0 h-full w-full max-w-[420px] z-[200] flex flex-col shadow-2xl animate-in slide-in-from-right duration-300"
             style={{ background: "var(--card-bg)", borderLeft: "1px solid var(--card-border)" }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--card-border)", background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.12))" }}>
+            <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--card-border)", background: "linear-gradient(135deg, color-mix(in srgb, var(--accent-purple) 12%, transparent), color-mix(in srgb, var(--brand) 12%, transparent))" }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md" style={{ background: "linear-gradient(135deg, #7C3AED, #2563EB)" }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md" style={{ background: "linear-gradient(135deg, var(--accent-purple), var(--brand))" }}>
                   <Bot size={20} />
                 </div>
                 <div>
-                  <h3 className="text-[14px] font-black" style={{ color: "var(--text-primary)" }}>Moliyachi AI</h3>
-                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Moliyaviy yordamchi · beta</p>
+                  <h3 className="text-sm font-black" style={{ color: "var(--text-primary)" }}>Moliyachi AI</h3>
+                  <p className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Moliyaviy yordamchi · beta</p>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors" style={{ color: "var(--text-muted)" }} onMouseEnter={(e) => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = ""; e.currentTarget.style.color = "var(--text-muted)"; }}>
+              <button onClick={() => setOpen(false)} className="icon-btn-sm transition-colors" style={{ color: "var(--text-muted)" }} onMouseEnter={(e) => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = ""; e.currentTarget.style.color = "var(--text-muted)"; }}>
                 <X size={18} />
               </button>
             </div>
@@ -90,11 +90,11 @@ export default function FinanceAssistant() {
             <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
               {messages.map((m, i) => (
                 <div key={i} className={`flex gap-2.5 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-white" style={{ background: m.role === "user" ? "var(--accent-blue)" : "linear-gradient(135deg, #7C3AED, #2563EB)" }}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-white" style={{ background: m.role === "user" ? "var(--accent-blue)" : "linear-gradient(135deg, var(--accent-purple), var(--brand))" }}>
                     {m.role === "user" ? <UserIcon size={14} /> : <Bot size={14} />}
                   </div>
                   <div
-                    className="max-w-[78%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap"
+                    className="max-w-[78%] px-3.5 py-2.5 rounded-xl text-body leading-relaxed whitespace-pre-wrap"
                     style={m.role === "user"
                       ? { background: "var(--accent-blue)", color: "#fff", borderTopRightRadius: 4 }
                       : { background: "var(--input-bg)", color: "var(--text-primary)", border: "1px solid var(--card-border)", borderTopLeftRadius: 4 }}
@@ -106,10 +106,10 @@ export default function FinanceAssistant() {
 
               {typing && (
                 <div className="flex gap-2.5">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-white" style={{ background: "linear-gradient(135deg, #7C3AED, #2563EB)" }}><Bot size={14} /></div>
-                  <div className="px-3.5 py-2.5 rounded-2xl flex items-center gap-1.5" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", borderTopLeftRadius: 4 }}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-white" style={{ background: "linear-gradient(135deg, var(--accent-purple), var(--brand))" }}><Bot size={14} /></div>
+                  <div className="px-3.5 py-2.5 rounded-xl flex items-center gap-1.5" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", borderTopLeftRadius: 4 }}>
                     <Loader2 size={13} className="animate-spin" style={{ color: "var(--text-muted)" }} />
-                    <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>yozmoqda…</span>
+                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>yozmoqda…</span>
                   </div>
                 </div>
               )}
@@ -118,7 +118,7 @@ export default function FinanceAssistant() {
               {messages.length === 1 && !typing && (
                 <div className="flex flex-wrap gap-2 pt-1">
                   {SUGGESTIONS.map((s) => (
-                    <button key={s} onClick={() => send(s)} className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent-blue)"; e.currentTarget.style.color = "var(--accent-blue)"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--card-border)"; e.currentTarget.style.color = "var(--text-secondary)"; }}>
+                    <button key={s} onClick={() => send(s)} className="text-meta font-semibold px-3 py-1.5 rounded-full transition-colors" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent-blue)"; e.currentTarget.style.color = "var(--accent-blue)"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--card-border)"; e.currentTarget.style.color = "var(--text-secondary)"; }}>
                       {s}
                     </button>
                   ))}
@@ -133,16 +133,16 @@ export default function FinanceAssistant() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Savolingizni yozing…"
-                  className="flex-1 px-4 py-2.5 rounded-xl text-[13px] outline-none transition-all"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-body outline-none transition-all"
                   style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }}
                   onFocus={(e) => { e.currentTarget.style.borderColor = "var(--input-focus-border)"; }}
                   onBlur={(e) => { e.currentTarget.style.borderColor = "var(--input-border)"; }}
                 />
-                <button type="submit" disabled={!input.trim() || typing} className="w-11 h-11 flex items-center justify-center rounded-xl text-white shrink-0 transition-all disabled:opacity-40" style={{ background: "linear-gradient(135deg, #7C3AED, #2563EB)" }}>
+                <button type="submit" disabled={!input.trim() || typing} className="w-11 h-11 flex items-center justify-center rounded-xl text-white shrink-0 transition-all disabled:opacity-40" style={{ background: "linear-gradient(135deg, var(--accent-purple), var(--brand))" }}>
                   <Send size={17} />
                 </button>
               </form>
-              <p className="text-[9px] text-center mt-2" style={{ color: "var(--text-muted)" }}>Moliyachi AI xatolarga yo&apos;l qo&apos;yishi mumkin · beta</p>
+              <p className="text-micro text-center mt-2" style={{ color: "var(--text-muted)" }}>Moliyachi AI xatolarga yo&apos;l qo&apos;yishi mumkin · beta</p>
             </div>
           </div>
         </>

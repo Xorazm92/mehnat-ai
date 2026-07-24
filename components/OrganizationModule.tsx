@@ -70,16 +70,18 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
   const itemsPerPage = 100;
 
-  // Risk indicator helper
+  // Risk darajasi. Rang YOLG'IZ ma'no tashimasligi kerak (ACCESSIBILITY §A6),
+  // shuning uchun har daraja shakl (to'la / yarim / bo'sh doira) va matnli
+  // nom ham oladi — avval faqat rangli chiziq va emoji bor edi.
   const getRiskIndicator = (company: Company) => {
     const risk = company.riskLevel || 'low';
     if (risk === 'high' || company.companyStatus === 'problem' || company.companyStatus === 'debtor') {
-      return { emoji: '🔴', stripe: 'var(--danger)' };
+      return { stripe: 'var(--danger)', verdict: 'verdict-red', label: 'Yuqori risk' };
     }
     if (risk === 'medium' || company.companyStatus === 'suspended') {
-      return { emoji: '🟡', stripe: 'var(--warning)' };
+      return { stripe: 'var(--warning)', verdict: 'verdict-yellow', label: "O'rta risk" };
     }
-    return { emoji: '🟢', stripe: 'var(--success)' };
+    return { stripe: 'var(--success)', verdict: 'verdict-green', label: 'Past risk' };
   };
 
   const filtered = useMemo(() => {
@@ -243,7 +245,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
     <div className="w-full space-y-4 animate-fade-in pb-24 min-w-0">
       {companies.length === 0 && (
         <div className="rounded-lg p-6 text-center shadow-sm" style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)' }}>
-          <p className="font-bold text-[11px] uppercase tracking-widest leading-relaxed" style={{ color: 'var(--danger)' }}>
+          <p className="font-bold text-meta uppercase tracking-widest leading-relaxed" style={{ color: 'var(--danger)' }}>
             ⚠️ Hech qanday firma yuklanmadi. Sahifani yangilang yoki administratorga murojaat qiling.
           </p>
         </div>
@@ -256,7 +258,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           </div>
           <div className="min-w-0">
             <h2 className="text-lg font-black uppercase tracking-wider truncate" style={{ color: 'var(--text)' }}>{t.organizations}</h2>
-            <p className="text-[11px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-meta font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>
               {t.totalFirms}: <span className="tabular-nums" style={{ color: 'var(--accent-blue)' }}>{filtered.length}</span>
             </p>
           </div>
@@ -272,7 +274,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               <button
                 key={String(opt.value)}
                 onClick={() => setFilterActive(opt.value)}
-                className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold uppercase tracking-widest ${filterActive === opt.value ? 'shadow-sm' : ''}`}
+                className={`px-3 py-1.5 rounded-lg transition-all text-meta font-bold uppercase tracking-widest ${filterActive === opt.value ? 'shadow-sm' : ''}`}
                 style={filterActive === opt.value ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--card-border)' } : { color: 'var(--text-secondary)', border: '1px solid transparent' }}
               >
                 {opt.label}
@@ -283,7 +285,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           <div className="flex p-1 rounded-lg transition-colors" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'shadow-sm' : ''}`}
+              className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'shadow-sm' : ''}`}
               style={viewMode === 'grid' ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--card-border)' } : { color: 'var(--text-secondary)', border: '1px solid transparent' }}
               title={t.gridView}
             >
@@ -291,7 +293,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'table' ? 'shadow-sm' : ''}`}
+              className={`p-1.5 rounded-lg transition-all ${viewMode === 'table' ? 'shadow-sm' : ''}`}
               style={viewMode === 'table' ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--card-border)' } : { color: 'var(--text-secondary)', border: '1px solid transparent' }}
               title={t.tableView}
             >
@@ -304,7 +306,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           <MonthPicker
             selectedPeriod={selectedPeriod}
             onChange={onPeriodChange}
-            className="h-9 text-[13px] rounded-lg"
+            className="h-9 text-body rounded-lg"
           />
 
           <div className="flex items-center gap-2">
@@ -336,7 +338,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             className="ai-button-glow flex items-center gap-2"
           >
             <Plus size={16} />
-            <span className="uppercase tracking-widest text-[11px]">{t.addCompany}</span>
+            <span className="uppercase tracking-widest text-meta">{t.addCompany}</span>
           </button>
         </div>
       </div>
@@ -346,7 +348,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         <div className="dashboard-card p-4 animate-fade-in">
           <div className="flex items-center gap-2 mb-4 pb-3" style={{ borderBottom: '1px solid var(--card-border)' }}>
             <Filter size={14} style={{ color: 'var(--accent-blue)' }} />
-            <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Aqlli Filtrlar</h3>
+            <h3 className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Aqlli Filtrlar</h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
@@ -376,11 +378,11 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               { label: 'KPI', value: filterKpi, onChange: setFilterKpi, options: [{ label: 'Barchasi', val: 'all' }, { label: 'Yoqilgan', val: 'yes' }, { label: "O'chirilgan", val: 'no' }] }
             ].map((f, idx) => (
               <div key={idx} className="space-y-1">
-                <label className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{f.label}</label>
+                <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{f.label}</label>
                 <select
                   value={f.value}
                   onChange={(e) => { f.onChange(e.target.value); setCurrentPage(1); }}
-                  className="c1-input text-[10px] font-bold uppercase tracking-tight"
+                  className="c1-input text-micro font-bold uppercase tracking-tight"
                 >
                   {f.options.map((o, i) => <option key={i} value={o.val}>{o.label}</option>)}
                 </select>
@@ -395,7 +397,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 setFilterRisk('all'); setFilterServer('all'); setFilterItPark('all');
                 setFilterKpi('all'); setCurrentPage(1);
               }}
-              className="px-3 py-1 text-[9px] font-bold transition-colors uppercase tracking-widest"
+              className="px-3 py-1 text-micro font-bold transition-colors uppercase tracking-widest"
               style={{ color: 'var(--text-muted)' }}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
@@ -412,7 +414,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         <input
           type="text"
           placeholder="INN, firma nomi yoki direktor..."
-          className="erp-input !pl-9 text-[12px] font-semibold"
+          className="erp-input !pl-9 text-xs font-semibold"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
         />
@@ -455,16 +457,20 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                   className={`dashboard-card p-4 transition-all cursor-pointer flex flex-col group relative overflow-hidden`}
                   onClick={() => onCompanySelect(c)}
                 >
-                  <div className="absolute top-0 left-0 bottom-0 w-1" style={{ background: risk.stripe }}></div>
+                  <div className="absolute top-0 left-0 bottom-0 w-1" style={{ background: risk.stripe }} aria-hidden></div>
 
                   <div className="flex gap-3 mb-4 pl-2">
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-black shrink-0 shadow-sm transition-transform group-hover:scale-105" style={{ background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}99)` }}>
                       {c.name.charAt(0)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-[13px] font-bold truncate mb-0.5" style={{ color: 'var(--text)' }} title={c.name}>{c.name}</h4>
-                      {c.brandName && <p className="text-[10px] font-bold uppercase truncate mb-1" style={{ color: 'var(--text-muted)' }}>{c.brandName}</p>}
-                      <div className="flex gap-1.5 mt-1">
+                      <h4 className="text-body font-bold truncate mb-0.5" style={{ color: 'var(--text)' }} title={c.name}>{c.name}</h4>
+                      {c.brandName && <p className="text-micro font-bold uppercase truncate mb-1" style={{ color: 'var(--text-muted)' }}>{c.brandName}</p>}
+                      <div className="flex gap-1.5 mt-1 items-center flex-wrap">
+                        <span className={`verdict ${risk.verdict}`} title={risk.label}>
+                          <span className="verdict-mark" aria-hidden />
+                          <span className="sr-only">{risk.label}</span>
+                        </span>
                         <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>INN: {c.inn}</span>
                         <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)' }}>
                           {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'AYLANMA' : (c.taxType?.toUpperCase() || 'FIX'))}
@@ -482,9 +488,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                       <div key={i} className="p-2 rounded-lg" style={{ background: 'var(--input-bg)' }}>
                         <div className="flex items-center gap-1.5 mb-1" style={{ color: 'var(--text-muted)' }}>
                           {stat.icon}
-                          <p className="text-[9px] font-bold uppercase tracking-widest">{stat.label}</p>
+                          <p className="text-micro font-bold uppercase tracking-widest">{stat.label}</p>
                         </div>
-                        <p className="text-[11px] font-bold truncate" style={{ color: 'var(--text)' }}>{stat.val || '—'}</p>
+                        <p className="text-meta font-bold truncate" style={{ color: 'var(--text)' }}>{stat.val || '—'}</p>
                       </div>
                     ))}
                   </div>
@@ -496,18 +502,18 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                           <div style={{ color: 'var(--text-muted)' }}>
                             {showPasswords[c.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                           </div>
-                          <p className="text-[11px] font-bold font-mono whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--accent-blue)' }}>
+                          <p className="text-meta font-bold font-mono whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--accent-blue)' }}>
                             {showPasswords[c.id] ? `${c.login || '—'} / ${c.password || '—'}` : '•••• / ••••'}
                           </p>
                         </div>
                       ) : (
-                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Login yo&apos;q</span>
+                        <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Login yo&apos;q</span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-1 ml-2">
-                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Edit3 size={15} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Trash2 size={15} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="icon-btn-sm transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Edit3 size={15} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="icon-btn-sm transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Trash2 size={15} /></button>
                     </div>
                   </div>
                 </div>
@@ -563,19 +569,19 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                         onClick={() => onCompanySelect(c)}
                         className="group cursor-pointer transition-colors"
                       >
-                        <td className="text-center font-mono text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
+                        <td className="text-center font-mono text-micro font-bold" style={{ color: 'var(--text-muted)' }}>
                           {c.originalIndex || (i + 1)}
                         </td>
                         <td className="sticky left-0 z-10 font-bold relative !pl-3" style={{ color: 'var(--text)', background: 'var(--card-bg)' }}>
                           <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: risk.stripe }}></div>
                           <div className="truncate max-w-[210px] uppercase tracking-tight" title={c.name}>{c.name}</div>
-                          {c.brandName && <div className="text-[9px] font-bold truncate uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{c.brandName}</div>}
+                          {c.brandName && <div className="text-micro font-bold truncate uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{c.brandName}</div>}
                         </td>
-                        <td className="font-mono text-[11px] font-bold" style={{ color: 'var(--text-secondary)' }}>
+                        <td className="font-mono text-meta font-bold" style={{ color: 'var(--text-secondary)' }}>
                           {c.inn}
                         </td>
-                        <td className="font-bold text-right text-[12px] tabular-nums" style={{ color: 'var(--text)' }}>
-                          {formatNum(displayAmount) || '0'} <span className="text-[9px] font-bold uppercase ml-0.5" style={{ color: 'var(--text-muted)' }}>sum</span>
+                        <td className="font-bold text-right text-xs tabular-nums" style={{ color: 'var(--text)' }}>
+                          {formatNum(displayAmount) || '0'} <span className="text-micro font-bold uppercase ml-0.5" style={{ color: 'var(--text-muted)' }}>sum</span>
                         </td>
                         <td className="text-center">
                           <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)' }}>
@@ -585,23 +591,23 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                         <td>
                           <div className="flex items-center gap-1.5 truncate">
                             <Users size={12} style={{ color: 'var(--text-muted)' }} className="shrink-0" />
-                            <span className="truncate text-[11px] font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{displayAccountant || '—'}</span>
+                            <span className="truncate text-meta font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{displayAccountant || '—'}</span>
                           </div>
                         </td>
                         <td>
-                          <span className="truncate block text-[11px] font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>{displaySupervisor || '—'}</span>
+                          <span className="truncate block text-meta font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>{displaySupervisor || '—'}</span>
                         </td>
                         <td>
                           <div className="flex flex-col">
-                            {c.serverInfo && <span className="text-[10px] font-black uppercase tracking-widest leading-none mb-0.5" style={{ color: 'var(--success)' }}>{c.serverInfo}</span>}
-                            <span className="text-[9px] font-bold truncate uppercase tracking-tight" style={{ color: 'var(--text-muted)' }} title={c.serverName}>{c.serverName || '—'}</span>
+                            {c.serverInfo && <span className="text-micro font-black uppercase tracking-widest leading-none mb-0.5" style={{ color: 'var(--success)' }}>{c.serverInfo}</span>}
+                            <span className="text-micro font-bold truncate uppercase tracking-tight" style={{ color: 'var(--text-muted)' }} title={c.serverName}>{c.serverName || '—'}</span>
                           </div>
                         </td>
                         <td>
                           <div className="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Batafsil"><Eye size={13} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Tahrirlash"><Edit3 size={13} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-7 h-7 flex items-center justify-center rounded-md transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="O'chirish"><Trash2 size={13} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="w-7 h-7 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Batafsil"><Eye size={13} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-7 h-7 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Tahrirlash"><Edit3 size={13} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-7 h-7 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="O'chirish"><Trash2 size={13} /></button>
                           </div>
                         </td>
                       </tr>
@@ -612,7 +618,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               {paginated.length === 0 && (
                 <div className="py-24 flex flex-col items-center justify-center" style={{ color: 'var(--text-muted)' }}>
                   <LayoutGrid size={48} className="mb-4 opacity-20" />
-                  <p className="font-bold uppercase tracking-[0.2em] text-[11px] opacity-60">{t.noData}</p>
+                  <p className="font-bold uppercase tracking-[0.2em] text-meta opacity-60">{t.noData}</p>
                 </div>
               )}
             </div>
@@ -621,14 +627,14 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4 dashboard-card p-3">
-            <p className="text-[11px] font-bold uppercase tracking-widest pl-2" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-meta font-bold uppercase tracking-widest pl-2" style={{ color: 'var(--text-muted)' }}>
               {t.page} <span style={{ color: 'var(--accent-blue)' }}>{currentPage}</span> / {totalPages}
             </p>
             <div className="flex gap-2 pr-1">
               <button
                 onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 disabled={currentPage === 1}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg disabled:opacity-30 text-[11px] font-bold uppercase tracking-widest transition-all disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg disabled:opacity-30 text-meta font-bold uppercase tracking-widest transition-all disabled:cursor-not-allowed"
                 style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
                 onMouseEnter={e => { if (currentPage !== 1) { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; } }}
                 onMouseLeave={e => { if (currentPage !== 1) { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; } }}
@@ -638,7 +644,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               <button
                 onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 disabled={currentPage === totalPages}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg disabled:opacity-30 text-[11px] font-bold uppercase tracking-widest transition-all disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg disabled:opacity-30 text-meta font-bold uppercase tracking-widest transition-all disabled:cursor-not-allowed"
                 style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
                 onMouseEnter={e => { if (currentPage !== totalPages) { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; } }}
                 onMouseLeave={e => { if (currentPage !== totalPages) { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; } }}
