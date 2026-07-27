@@ -2,7 +2,7 @@
 
 import { signOut } from "next-auth/react";
 import {
-  LogOut, User, Sun, Moon, ChevronDown, Globe,
+  LogOut, User, Sun, Moon, ChevronDown,
   Bell, Settings, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -14,7 +14,7 @@ import { useDismissable } from "@/hooks/useDismissable";
 import { useTheme } from "next-themes";
 import GlobalSearch from "@/components/GlobalSearch";
 import FinanceAssistant from "@/components/FinanceAssistant";
-import { getHomeRoute } from "@/lib/permissions";
+import { getHomeRoute, type AppView } from "@/lib/permissions";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin:      "Super Admin",
@@ -42,6 +42,8 @@ interface DashboardTopBarProps {
   userRole: string;
   avatarColor?: string;
   unreadCount?: number;
+  /** Admin RBAC override'lari — qidiruv ham yon panel bilan bir xil ko'rsin. */
+  allowedViews?: AppView[];
 }
 
 export function DashboardTopBar({
@@ -50,6 +52,7 @@ export function DashboardTopBar({
   userRole,
   avatarColor,
   unreadCount = 0,
+  allowedViews,
 }: DashboardTopBarProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -119,22 +122,17 @@ export function DashboardTopBar({
         </Link>
         {/* Qidiruv + AI */}
         <div className="flex items-center gap-2 md:gap-3">
-          <GlobalSearch userRole={userRole} />
+          <GlobalSearch userRole={userRole} allowedViews={allowedViews} />
           <FinanceAssistant />
         </div>
       </div>
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1.5">
-        {/* Language */}
-        <button
-          className="hidden sm:flex items-center gap-1.5 px-2.5 h-11 rounded-lg font-mono text-micro font-semibold uppercase transition-colors duration-100 hover:bg-[var(--bg-hover)]"
-          style={{ color: "var(--text-secondary)", letterSpacing: "0.08em" }}
-        >
-          <Globe size={14} />
-          <span>O&apos;zbekcha</span>
-          <ChevronDown size={12} className="opacity-60" />
-        </button>
+        {/* Til tanlagich olib tashlandi: interfeys siyosat bo'yicha faqat o'zbek
+            (lotin) tilida, `lang` "uz" ga qotirilgan — ya'ni tanlanadigan ikkinchi
+            til yo'q. Tugmada `onClick` bo'lmagani holda ChevronDown turardi, ya'ni
+            u mavjud bo'lmagan menyuni va'da qilardi. */}
 
         {/* Theme toggle */}
         {mounted && (

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { formatUzDate } from "@/lib/format";
 import { getCalendarDays, upsertCalendarDay, deleteCalendarDay } from "@/server/businessCalendar";
+import { Button } from "@/components/ui/Button";
 
 interface Day {
   id: string;
@@ -77,7 +78,7 @@ export default function BusinessCalendarClient({ initial, initialYear }: { initi
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Biznes kalendar</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Biznes kalendar</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>Bayram / dam olish / ish kuni override — muddatlar shu bo'yicha suriladi (Asia/Tashkent)</p>
         </div>
         <div className="flex gap-1.5">
@@ -101,7 +102,7 @@ export default function BusinessCalendarClient({ initial, initialYear }: { initi
         <label className="text-xs flex-1 min-w-[160px]" style={{ color: "var(--text-muted)" }}>Nomi (ixt.)
           <input className="block px-2.5 py-1.5 rounded-lg border text-sm w-full" style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Mustaqillik kuni" />
         </label>
-        <button disabled={pending} onClick={addDay} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>Saqlash</button>
+        <Button variant="success" size="md" disabled={pending} onClick={addDay}>Saqlash</Button>
       </div>
 
       {days.length === 0 ? (

@@ -5,6 +5,10 @@ import { Settings, Edit3, Trash2, X, Shield, Landmark, Calculator, Plus } from '
 import { getKpiRules, createKpiRule, updateKpiRule, deleteKpiRule } from '@/server/kpi';
 import { submitOnCtrlEnter } from '@/lib/format';
 import { kpiCategoryLabel } from '@/lib/kpiLabels';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { toast } from "sonner";
+import { SkeletonTable } from "@/components/ui/Skeleton";
+import { Button } from "@/components/ui/Button";
 
 // inputTypeV2 → legacy inputType (yangi qoida yaratishda talab qilinadi)
 const LEGACY_INPUT: Record<string, string> = {
@@ -38,6 +42,7 @@ const Badge: React.FC<{ children: React.ReactNode; tone?: 'muted' | 'blue' }> = 
 );
 
 const KPIRulesManager: React.FC<Props> = () => {
+    const confirm = useConfirm();
     const [rules, setRules] = useState<KPIRule[]>([]);
     const [loading, setLoading] = useState(false);
     const [editingRule, setEditingRule] = useState<Partial<KPIRule> | null>(null);
@@ -63,8 +68,8 @@ const KPIRulesManager: React.FC<Props> = () => {
 
     const toggleActive = async (rule: KPIRule) => { await updateKpiRule(rule.id, { isActive: !rule.isActive }); loadRules(); };
     const handleDelete = async (id: string, name: string) => {
-        if (!confirm(`${name} qoidasini o'chirishni tasdiqlaysizmi?`)) return;
-        try { await deleteKpiRule(id); loadRules(); } catch (e) { alert((e as Error).message); }
+        if (!await confirm({ title: `"${name}" qoidasi o'chirilsinmi?`, description: "KPI qoidasi olib tashlanadi.", confirmLabel: "O'chirish", tone: 'danger' })) return;
+        try { await deleteKpiRule(id); loadRules(); } catch (e) { toast.error((e as Error).message); }
     };
 
     const openCreate = () => setEditingRule({
@@ -91,7 +96,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                     isActive: editingRule.isActive,
                 });
             } else {
-                if (!editingRule.nameUz?.trim()) { alert("Nomi (o'zbekcha) kiritilishi shart"); return; }
+                if (!editingRule.nameUz?.trim()) { toast.error("Nomi (o'zbekcha) kiritilishi shart"); return; }
                 await createKpiRule({
                     name: (editingRule.name?.trim() || slugify(editingRule.nameUz)),
                     nameUz: editingRule.nameUz.trim(),
@@ -110,7 +115,7 @@ const KPIRulesManager: React.FC<Props> = () => {
             }
             setEditingRule(null);
             loadRules();
-        } catch (e) { alert((e as Error).message); }
+        } catch (e) { toast.error((e as Error).message); }
     };
 
     const OptionPills: React.FC<{ rule: KPIRule }> = ({ rule }) => {
@@ -169,14 +174,13 @@ const KPIRulesManager: React.FC<Props> = () => {
                             <p className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>{m.base} + KPI {m.kpi}</p>
                         </div>
                     ))}
-                    <button onClick={openCreate} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-meta font-bold uppercase tracking-widest text-white"
-                        style={{ background: 'var(--accent-blue)' }}>
+                    <Button variant="primary" size="md" onClick={openCreate}>
                         <Plus size={14} /> Yangi qoida
-                    </button>
+                    </Button>
                 </div>
             </div>
 
-            {loading && <p className="text-center text-xs py-4" style={{ color: 'var(--text-muted)' }}>Yuklanmoqda…</p>}
+            {loading && <SkeletonTable rows={4} cols={3} />}
 
             {/* Rules grouped by role */}
             {ROLE_META.map(meta => {
@@ -188,7 +192,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                             <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white" style={{ background: meta.accent }}>
                                 <meta.icon size={13} />
                             </div>
-                            <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>{meta.label}</h3>
+                            <h3 className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{meta.label}</h3>
                             <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>{list.length} qoida</span>
                         </div>
                         <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
@@ -324,8 +328,8 @@ const KPIRulesManager: React.FC<Props> = () => {
                             </div>
                         </div>
                         <div className="p-4 flex gap-3" style={{ borderTop: '1px solid var(--card-border)', background: 'var(--table-header-bg)' }}>
-                            <button onClick={() => setEditingRule(null)} className="btn-secondary flex-1">Bekor qilish</button>
-                            <button onClick={handleSave} className="btn-primary flex-1">Saqlash</button>
+                            <Button variant="secondary" size="md" onClick={() => setEditingRule(null)} className="flex-1">Bekor qilish</Button>
+                            <Button variant="primary" size="md" onClick={handleSave} className="flex-1">Saqlash</Button>
                         </div>
                     </div>
                 </div>

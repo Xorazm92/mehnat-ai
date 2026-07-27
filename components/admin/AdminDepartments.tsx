@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Plus, Pencil, Power, X, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 export interface ChiefOption {
   id: string;
@@ -48,14 +49,12 @@ export function AdminDepartments({ departments, chiefs, busy, onCreate, onUpdate
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Bo'limlar</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Bo'limlar</h1>
           <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{departments.length} ta bo'lim</p>
         </div>
-        <button onClick={() => setForm({ name: "", chiefAccountantId: null })} disabled={busy}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white disabled:opacity-50"
-          style={{ background: "var(--accent-blue)" }}>
+        <Button variant="primary" size="md" onClick={() => setForm({ name: "", chiefAccountantId: null })} disabled={busy}>
           <Plus size={15} /> Yangi bo'lim
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -72,7 +71,7 @@ export function AdminDepartments({ departments, chiefs, busy, onCreate, onUpdate
                 )}
               </div>
             </div>
-            <div className="mt-2.5 text-sm font-black" style={{ color: "var(--text-primary)" }}>{d.name}</div>
+            <div className="mt-2.5 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{d.name}</div>
             <div className="mt-1 text-meta" style={{ color: "var(--text-muted)" }}>
               Bosh buxgalter: <span className="font-semibold" style={{ color: "var(--text-secondary)" }}>{d.chiefAccountant?.fullName ?? "—"}</span>
             </div>
@@ -90,7 +89,7 @@ export function AdminDepartments({ departments, chiefs, busy, onCreate, onUpdate
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setForm(null)}>
           <div className="w-full max-w-md rounded-xl p-5" style={card} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black" style={{ color: "var(--text-primary)" }}>{form.id ? "Bo'limni tahrirlash" : "Yangi bo'lim"}</h3>
+              <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{form.id ? "Bo'limni tahrirlash" : "Yangi bo'lim"}</h3>
               <button onClick={() => setForm(null)} className="icon-btn-sm" style={{ color: "var(--text-muted)" }}><X size={16} /></button>
             </div>
             <div className="space-y-3">
@@ -108,7 +107,7 @@ export function AdminDepartments({ departments, chiefs, busy, onCreate, onUpdate
             </div>
             <div className="flex items-center justify-end gap-2 mt-5">
               <button onClick={() => setForm(null)} className="px-4 py-2 rounded-lg text-xs font-bold" style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Bekor</button>
-              <button onClick={submit} disabled={busy || !form.name.trim()} className="px-4 py-2 rounded-lg text-xs font-bold text-white disabled:opacity-50" style={{ background: "var(--accent-blue)" }}>Saqlash</button>
+              <Button variant="primary" size="md" onClick={submit} disabled={busy || !form.name.trim()}>Saqlash</Button>
             </div>
           </div>
         </div>

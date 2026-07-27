@@ -5,6 +5,8 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import PayrollDrafts from "@/components/PayrollDrafts";
 import PayrollTable from "@/components/PayrollTable";
 import { Company, Staff, OperationEntry } from "@/types";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { CreditCard } from "lucide-react";
 
 interface Props {
   companies: Company[];
@@ -19,6 +21,11 @@ export default function PayrollClient({ companies, staff, operations, userRole }
 
   return (
     <div className="space-y-6 h-full flex flex-col">
+    <PageHeader
+      icon={<CreditCard size={20} />}
+      title="Oylik"
+      description="Maosh hisoblash, qoralamalar va to'lovlar"
+    />
       <div className="flex items-center gap-4 border-b border-[var(--rule-strong)] pb-4">
         <button
           onClick={() => setActiveTab('drafts')}

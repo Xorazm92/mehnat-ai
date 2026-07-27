@@ -547,7 +547,7 @@ export async function upsertPayment(data: {
       createdBy: session.user.id,
       reason: "to'lov yangilandi",
     });
-    if (data.status === "paid" && data.amount > 0) {
+    if ((data.status === "paid" || data.status === "partial") && data.amount > 0) {
       await postLedger(tx, {
         legs: [
           { accountId: ACCOUNTS.CASH, debit: data.amount },

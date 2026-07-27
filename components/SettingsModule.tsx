@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { Language } from '@/types';
 import { translations } from '@/lib/translations';
 import { User, Phone, Building2, Lock, Save, ShieldCheck, Palette } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export interface ProfileData {
     id: string;
@@ -23,7 +25,7 @@ interface Props {
     onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
-const COLORS = ['var(--brand)', 'var(--accent-purple)', 'var(--accent-purple)', 'var(--danger)', 'var(--warning)', 'var(--success)', 'var(--info)', 'var(--accent-indigo)'];
+const COLORS = ['var(--brand)', 'var(--accent-purple)', 'var(--accent-blue)', 'var(--danger)', 'var(--warning)', 'var(--success)', 'var(--info)', 'var(--accent-indigo)'];
 
 const SettingsModule: React.FC<Props> = ({ profile, lang, onSaveProfile, onChangePassword }) => {
     const t = translations[lang];
@@ -89,6 +91,11 @@ const SettingsModule: React.FC<Props> = ({ profile, lang, onSaveProfile, onChang
 
     return (
         <div className="max-w-2xl mx-auto space-y-4 animate-fade-in pb-20">
+      <PageHeader
+        icon={<Settings size={20} />}
+        title="Sozlamalar"
+        description="Profil, xavfsizlik va tizim parametrlari"
+      />
             {/* Tabs */}
             <div className="flex items-center gap-2 p-1 rounded-xl w-fit" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                 {([['profile', lang === 'uz' ? 'Profil' : 'Профиль'], ['security', lang === 'uz' ? 'Xavfsizlik' : 'Безопасность']] as const).map(([key, label]) => (
@@ -102,13 +109,13 @@ const SettingsModule: React.FC<Props> = ({ profile, lang, onSaveProfile, onChang
             </div>
 
             {tab === 'profile' && (
-                <form onSubmit={saveProfile} className="dashboard-card p-6 space-y-5">
+                <form onSubmit={saveProfile} className="dashboard-card p-5 space-y-5">
                     <div className="flex items-center gap-4 pb-5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                        <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white text-lg font-black shrink-0" style={{ background: form.avatarColor }}>
+                        <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white text-lg font-semibold shrink-0" style={{ background: form.avatarColor }}>
                             {form.fullName.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <h3 className="text-sm font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{form.fullName}</h3>
+                            <h3 className="text-sm font-semibold tracking-tight" style={{ color: 'var(--text)' }}>{form.fullName}</h3>
                             <p className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{profile.email}</p>
                         </div>
                     </div>
@@ -160,9 +167,9 @@ const SettingsModule: React.FC<Props> = ({ profile, lang, onSaveProfile, onChang
             )}
 
             {tab === 'security' && (
-                <form onSubmit={savePassword} className="dashboard-card p-6 space-y-5">
+                <form onSubmit={savePassword} className="dashboard-card p-5 space-y-5">
                     <div className="pb-5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                        <h3 className="text-body font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>{lang === 'uz' ? 'Parolni o\'zgartirish' : 'Смена пароля'}</h3>
+                        <h3 className="text-body font-bold" style={{ color: 'var(--text)' }}>{lang === 'uz' ? 'Parolni o\'zgartirish' : 'Смена пароля'}</h3>
                         <p className="text-micro font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Xavfsizlik uchun kuchli parol tanlang' : 'Выберите надёжный пароль'}</p>
                     </div>
 

@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Company, Staff, Language, OperationEntry } from '@/types';
 import { LayoutDashboard, CheckSquare, Settings, DollarSign, Trophy } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 // Sub-components
 import NazoratchiChecklist from './NazoratchiChecklist';
@@ -9,6 +10,7 @@ import EmployeeDashboard from './EmployeeDashboard';
 import PayrollTable from './PayrollTable';
 import KPIRulesManager from './KPIRulesManager';
 import KpiLeaderboard from './KpiLeaderboard';
+import { PageHeader } from "@/components/ui/PageHeader";
 
 interface Props {
     companies: Company[];
@@ -44,8 +46,8 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
             id: 'reyting',
             label: 'Reyting',
             icon: Trophy,
-            component: <KpiLeaderboard lang={lang} />,
-            allowedRoles: ['manager', 'supervisor', 'admin', 'chief_accountant', 'super_admin']
+            component: <KpiLeaderboard lang={lang} hideBonus={!['manager', 'supervisor', 'admin', 'chief_accountant', 'super_admin'].includes(normalizedRole)} />,
+            allowedRoles: ['manager', 'supervisor', 'admin', 'chief_accountant', 'super_admin', 'accountant', 'bank_client', 'bank_manager', 'staff']
         },
         {
             id: 'employee',
@@ -99,6 +101,11 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
 
     return (
         <div className="space-y-0 animate-fade-in pb-20">
+      <PageHeader
+        icon={<TrendingUp size={20} />}
+        title="KPI va Oylik"
+        description="Ko'rsatkichlar, reyting va maosh hisobi"
+      />
             {/* Standard Tab Navigation */}
             <div className="flex gap-1 overflow-x-auto border-b border-[var(--rule)] bg-[var(--card-bg)] dark:bg-[var(--surface)] pt-2 px-2 shadow-sm rounded-t">
                 {visibleTabs.map(tab => {

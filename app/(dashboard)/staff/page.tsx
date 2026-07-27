@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { getCachedUsers, getCachedCompanies, getCachedOperations } from "@/lib/cached-queries";
 import StaffClient from "./StaffClient";
 
+export const metadata = { title: "Xodimlar" };
+
 export default async function StaffPage() {
   const session = await auth();
   const userId = session?.user?.id ?? "";

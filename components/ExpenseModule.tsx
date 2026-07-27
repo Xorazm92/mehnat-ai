@@ -12,6 +12,12 @@ import { TableToolbar, type ViewMode } from '@/components/ui/TableToolbar';
 import { formatUzDateNumeric, formatNum } from '@/lib/format';
 import { groupDigits, ungroupDigits } from '@/lib/format';
 import type { BalanceBreakdown } from '@/types';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { DataTable, type DataColumn } from '@/components/ui/DataTable';
+import { useTableState } from '@/hooks/useTableState';
+import { exportRowsToCsv } from '@/lib/exportTable';
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 
 interface ExpenseModuleProps {
     expenses: Expense[];
@@ -31,9 +37,21 @@ const EXP_STATUS: Record<string, { label: string; fg: string; bg: string; bd: st
 };
 
 const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole = '', balance, onSaveExpense, onDeleteExpense, onApproveExpense, onRejectExpense }) => {
+  const confirm = useConfirm();
     const t = translations[lang];
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    // Qidiruv/saralash/filtr — URL'da; qidiruv 250ms debounce bilan.
+    // `TableToolbar` ning o'z qidiruvi debounce qilinmagan edi, ya'ni uni
+    // ishlatgan HAR BIR ekran har bosilgan harfda qayta filtrlanardi.
+    const table = useTableState({
+        ns: 'exp',
+        defaultSortKey: 'date',
+        defaultSortDir: 'desc',
+        defaultFilters: { status: 'all' },
+    });
+    const searchTerm = table.debouncedSearch;
+    const statusFilter = table.filters.status;
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Partial<Expense> | null>(null);
@@ -45,6 +63,82 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
             && (statusFilter === 'all' || (e.status || 'approved') === statusFilter)
         );
     }, [expenses, searchTerm, statusFilter]);
+
+    const expenseColumns = useMemo<DataColumn<Expense>[]>(() => [
+        {
+            key: 'date', header: 'Sana', width: '120px',
+            sortValue: e => e.date ?? '',
+            exportValue: e => fmtDate(e.date),
+            cell: e => <span className="text-meta font-bold font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtDate(e.date)}</span>,
+        },
+        {
+            key: 'category', header: 'Kategoriya', width: '150px',
+            sortValue: e => e.category ?? '',
+            cell: e => <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>{e.category}</span>,
+        },
+        {
+            key: 'description', header: 'Izoh',
+            sortValue: e => e.description ?? '',
+            cell: e => <span className="text-body font-bold truncate max-w-[300px] inline-block align-middle" style={{ color: 'var(--text)' }}>{e.description || '—'}</span>,
+        },
+        {
+            key: 'paymentMethod', header: "To'lov usuli", width: '130px',
+            sortValue: e => PAYMENT_METHOD_LABELS[e.paymentMethod || 'naqd'] ?? '',
+            cell: e => {
+                const pm = e.paymentMethod || 'naqd';
+                const c = PAYMENT_METHOD_COLORS[pm] || 'var(--text-muted)';
+                return (
+                    <span className="text-micro font-semibold uppercase tracking-widest px-2 py-1 rounded-lg whitespace-nowrap" style={{ color: c, background: `${c}1a`, border: `1px solid ${c}40` }}>
+                        {PAYMENT_METHOD_LABELS[pm] || pm}
+                    </span>
+                );
+            },
+        },
+        {
+            key: 'amount', header: 'Summa', numeric: true, width: '150px',
+            sortValue: e => Number(e.amount) || 0,
+            exportValue: e => Number(e.amount) || 0,
+            cell: e => (
+                <span className="font-bold text-body" style={{ color: 'var(--danger)' }}>
+                    -{formatNum(e.amount)} <span className="text-micro font-bold uppercase ml-1 opacity-60">sum</span>
+                </span>
+            ),
+        },
+        {
+            key: 'status', header: 'Holat', width: '130px',
+            sortValue: e => e.status ?? 'approved',
+            cell: e => {
+                const st = EXP_STATUS[e.status || 'approved'] || EXP_STATUS.approved;
+                const canApr = e.status === 'pending' && canApproveExpense(userRole, e.amount);
+                return (
+                    <div className="flex items-center gap-2">
+                        <span className="text-micro font-bold px-2 py-1 rounded-lg uppercase inline-flex items-center gap-1 whitespace-nowrap" style={{ background: st.bg, color: st.fg, border: `1px solid ${st.bd}` }}>
+                            {e.status === 'approved' ? <CheckCircle2 size={10} /> : e.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />} {st.label}
+                        </span>
+                        {canApr && onApproveExpense && (
+                            <div className="flex gap-1" onClick={ev => ev.stopPropagation()}>
+                                <button onClick={() => onApproveExpense(e.id)} className="w-6 h-6 flex items-center justify-center rounded-lg" style={{ background: 'var(--success)', color: 'var(--on-success)' }} aria-label="Tasdiqlash"><CheckCircle2 size={13} /></button>
+                                {onRejectExpense && <button onClick={() => onRejectExpense(e.id)} className="w-6 h-6 flex items-center justify-center rounded-lg" style={{ background: 'var(--danger)', color: 'var(--on-danger)' }} aria-label="Rad etish"><XCircle size={13} /></button>}
+                            </div>
+                        )}
+                    </div>
+                );
+            },
+        },
+        {
+            key: 'actions', header: 'Amallar', align: 'right', width: '100px',
+            cell: e => (
+                <div className="flex items-center justify-end gap-1.5" onClick={ev => ev.stopPropagation()}>
+                    <button onClick={() => { setEditingExpense(e); setIsModalOpen(true); }} className="icon-btn-sm rounded-lg" style={{ color: 'var(--accent-blue)' }} aria-label="Tahrirlash"><Edit3 size={15} /></button>
+                    {onDeleteExpense && (
+                        <button
+                            onClick={async () => { if (await confirm({ title: "Xarajat o'chirilsinmi?", description: "Xarajat yozuvi o'chiriladi va balansga ta'sir qiladi.", confirmLabel: "O'chirish", tone: 'danger' })) onDeleteExpense(e.id); }}
+                            className="icon-btn-sm rounded-lg" style={{ color: 'var(--danger)' }} aria-label="O'chirish"><Trash2 size={15} /></button>
+                    )}
+                </div>
+            ),
+        },
+    ], [userRole, onApproveExpense, onRejectExpense, onDeleteExpense, confirm]);
 
     const stats = useMemo(() => {
         const currentMonth = new Date().toISOString().slice(0, 7);
@@ -108,12 +202,17 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
 
     return (
         <div className="space-y-4 animate-fade-in pb-20">
+      <PageHeader
+        icon={<Receipt size={20} />}
+        title="Xarajatlar"
+        description="Firma xarajatlari, tasdiqlash va byudjet nazorati"
+      />
             {/* Mavjud balans — yagona kassa (kirim − chiqim − oylik) */}
             {balance && <BalanceOverview breakdown={balance} variant="compact" />}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div className="dashboard-card p-6 relative overflow-hidden flex flex-col justify-between">
+                <div className="dashboard-card p-5 relative overflow-hidden flex flex-col justify-between">
                     <div className="absolute top-[-20px] right-[-20px] opacity-5 pointer-events-none">
                         <TrendingDown size={140} style={{ color: 'var(--danger)' }} />
                     </div>
@@ -124,8 +223,8 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                             </div>
                             <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>SHU OYDA</span>
                         </div>
-                        <div className="text-3xl font-black tabular-nums leading-none mb-4" style={{ color: 'var(--text)' }}>
-                            {formatNum(stats.totalMonth)} <span className="text-sm font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                        <div className="text-3xl font-semibold tabular-nums leading-none mb-4" style={{ color: 'var(--text)' }}>
+                            {formatNum(stats.totalMonth)} <span className="text-sm font-bold ml-1" style={{ color: 'var(--text-muted)' }}>sum</span>
                         </div>
                         <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                             <div className="h-full w-3/4 rounded-full" style={{ background: 'var(--danger)' }}></div>
@@ -133,33 +232,33 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     </div>
                 </div>
 
-                <div className="dashboard-card p-6 flex flex-col justify-center relative">
+                <div className="dashboard-card p-5 flex flex-col justify-center relative">
                     <div className="flex items-center gap-4 mb-4">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
                             <Receipt size={20} />
                         </div>
                         <div>
                             <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>UMUMIY</span>
-                            <h4 className="font-bold text-body uppercase tracking-tight" style={{ color: 'var(--text)' }}>Jami xarajat</h4>
+                            <h4 className="font-bold text-body tracking-tight" style={{ color: 'var(--text)' }}>Jami xarajat</h4>
                         </div>
                     </div>
-                    <div className="text-2xl font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-                        {formatNum(stats.totalAll)} <span className="text-xs font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                    <div className="text-2xl font-semibold tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>
+                        {formatNum(stats.totalAll)} <span className="text-xs font-bold ml-1" style={{ color: 'var(--text-muted)' }}>sum</span>
                     </div>
                 </div>
 
-                <div className="dashboard-card p-6 flex flex-col justify-center relative">
+                <div className="dashboard-card p-5 flex flex-col justify-center relative">
                     <div className="flex items-center gap-4 mb-4">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
                             <Tag size={20} />
                         </div>
                         <div>
                             <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>FAOLLIK</span>
-                            <h4 className="font-bold text-body uppercase tracking-tight" style={{ color: 'var(--text)' }}>Tranzaksiyalar</h4>
+                            <h4 className="font-bold text-body tracking-tight" style={{ color: 'var(--text)' }}>Tranzaksiyalar</h4>
                         </div>
                     </div>
                     <div className="flex items-end gap-2 leading-none">
-                        <span className="text-3xl font-black tabular-nums" style={{ color: 'var(--text)' }}>{stats.count}</span>
+                        <span className="text-3xl font-semibold tabular-nums" style={{ color: 'var(--text)' }}>{stats.count}</span>
                         <span className="text-meta font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>QAYD</span>
                     </div>
                 </div>
@@ -169,8 +268,8 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 <div className="lg:col-span-2 dashboard-card p-5">
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>Oylik byudjet</h3>
-                        <span className="text-body font-black tabular-nums" style={{ color: 'var(--text-primary)' }}>
+                        <h3 className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>Oylik byudjet</h3>
+                        <span className="text-body font-semibold tabular-nums" style={{ color: 'var(--text-primary)' }}>
                             {som(budget.totalSpent)} <span className="text-meta font-bold" style={{ color: 'var(--text-muted)' }}>/ {som(budget.totalBudget)} so&apos;m</span>
                         </span>
                     </div>
@@ -182,7 +281,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     </p>
                 </div>
                 <div className="dashboard-card p-5">
-                    <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-primary)' }}>Kategoriya limitlari</h3>
+                    <h3 className="text-xs font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Kategoriya limitlari</h3>
                     <div className="space-y-3">
                         {budget.cats.map(c => {
                             const p = pct(c.spent, c.limit);
@@ -221,17 +320,17 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 <TableToolbar
                     view={viewMode}
                     onViewChange={setViewMode}
-                    search={searchTerm}
-                    onSearchChange={setSearchTerm}
+                    search={table.search}
+                    onSearchChange={table.setSearch}
                     searchPlaceholder="Qidirish..."
                     onExport={filteredExpenses.length ? handleExport : undefined}
                     filterCount={statusFilter !== 'all' ? 1 : 0}
                     filter={
                         <div className="flex flex-col gap-1.5">
-                            <span className="text-micro font-black uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Holat</span>
+                            <span className="text-micro font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Holat</span>
                             <select
                                 value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
+                                onChange={(e) => table.setFilter('status', e.target.value)}
                                 className="rounded-lg py-2 px-3 text-xs font-bold outline-none"
                                 style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                             >
@@ -243,26 +342,17 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         </div>
                     }
                 />
-                <button
-                    onClick={() => {
-                        setEditingExpense({
-                            date: new Date().toISOString().split('T')[0],
-                            category: 'Office',
-                            amount: 0,
-                            paymentMethod: 'naqd'
-                        });
-                        setIsModalOpen(true);
-                    }}
-                    className="font-bold px-5 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md text-white"
-                    style={{ background: 'linear-gradient(135deg, var(--danger), var(--danger-dark))' }}
-                >
+                <Button variant="danger" size="md" onClick={() => { setEditingExpense({ date: new Date().toISOString().split('T')[0], category: 'Office', amount: 0, paymentMethod: 'naqd' }); setIsModalOpen(true); }} className="whitespace-nowrap">
                     <Plus size={16} />
                     <span>Yangi Xarajat</span>
-                </button>
+                </Button>
             </div>
 
             {/* Kartochka ko'rinishi (grid) */}
-            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" : "hidden"}>
+            {/* Karta ko'rinishi — ATAYLAB unmount qilinadi. Avval `hidden` sinfi
+                bilan yashirilardi, ya'ni React ikkala ko'rinishni ham quraverardi. */}
+            {viewMode === 'grid' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredExpenses.map((expense) => {
                     const st = EXP_STATUS[expense.status || 'approved'] || EXP_STATUS.approved;
                     const canApr = expense.status === 'pending' && canApproveExpense(userRole, expense.amount);
@@ -281,148 +371,89 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     <div className="text-body font-bold mt-1.5 truncate" style={{ color: 'var(--text)' }}>{expense.description || '—'}</div>
                                     <div className="flex items-center gap-2 mt-1 text-meta font-bold" style={{ color: 'var(--text-muted)' }}>
                                         <span className="font-mono">{fmtDate(expense.date)}</span>
-                                        <span className="text-micro font-black uppercase tracking-widest px-1.5 py-0.5 rounded-lg" style={{ color: pmc, background: `${pmc}1a` }}>{PAYMENT_METHOD_LABELS[pm] || pm}</span>
+                                        <span className="text-micro font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded-lg" style={{ color: pmc, background: `${pmc}1a` }}>{PAYMENT_METHOD_LABELS[pm] || pm}</span>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <div className="font-black text-sm tabular-nums" style={{ color: 'var(--danger)' }}>-{formatNum(expense.amount)}</div>
+                                    <div className="font-semibold text-sm tabular-nums" style={{ color: 'var(--danger)' }}>-{formatNum(expense.amount)}</div>
                                     <div className="text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
                                 {canApr && onApproveExpense && (
                                     <>
-                                        <button onClick={() => onApproveExpense(expense.id)} className="flex-1 py-2 rounded-lg text-white text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--success)' }}><CheckCircle2 size={13} /> Tasdiq</button>
-                                        {onRejectExpense && <button onClick={() => onRejectExpense(expense.id)} className="flex-1 py-2 rounded-lg text-white text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: 'var(--danger)' }}><XCircle size={13} /> Rad</button>}
+                                        <Button variant="success" size="md" onClick={() => onApproveExpense(expense.id)} className="flex-1"><CheckCircle2 size={13} /> Tasdiq</Button>
+                                        {onRejectExpense && <Button variant="danger" size="md" onClick={() => onRejectExpense(expense.id)} className="flex-1"><XCircle size={13} /> Rad</Button>}
                                     </>
                                 )}
-                                <button onClick={() => { setEditingExpense(expense); setIsModalOpen(true); }} className="flex-1 py-2 rounded-lg text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }}><Edit3 size={13} /> Tahrir</button>
+                                <button onClick={() => { setEditingExpense(expense); setIsModalOpen(true); }} className="flex-1 py-2 rounded-lg text-meta font-semibold uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }}><Edit3 size={13} /> Tahrir</button>
                                 {onDeleteExpense && (
-                                    <button onClick={() => { if (confirm('Xarajatni o\'chirishni tasdiqlaysizmi?')) onDeleteExpense(expense.id); }} className="w-10 py-2 rounded-lg flex items-center justify-center shrink-0" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }}><Trash2 size={14} /></button>
+                                    <button onClick={async () => { if (await confirm({ title: "Xarajat o'chirilsinmi?", description: "Xarajat yozuvi o'chiriladi va balansga ta'sir qiladi.", confirmLabel: "O'chirish", tone: 'danger' })) onDeleteExpense(expense.id); }} className="w-10 py-2 rounded-lg flex items-center justify-center shrink-0" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }}><Trash2 size={14} /></button>
                                 )}
                             </div>
                         </div>
                     );
                 })}
                 {filteredExpenses.length === 0 && (
-                    <div className="dashboard-card p-12 text-center">
+                    <div className="dashboard-card p-5 text-center">
                         <Search size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
-                        <span className="text-meta uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Ma&apos;lumot topilmadi</span>
+                        <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Ma&apos;lumot topilmadi</span>
                     </div>
                 )}
             </div>
+            )}
 
-            {/* Expense List (desktop) */}
-            <div className={viewMode === 'list' ? "dashboard-card overflow-hidden overflow-x-auto" : "hidden"}>
-                <div className="overflow-x-auto scrollbar-hide">
-                    <table className="w-full text-left border-collapse min-w-[800px]">
-                        <thead>
-                            <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[120px]" style={{ color: 'var(--text-muted)' }}>Sana</th>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[150px]" style={{ color: 'var(--text-muted)' }}>Kategoriya</th>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Izoh</th>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[130px]" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</th>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-right w-[150px]" style={{ color: 'var(--text-muted)' }}>Summa</th>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[130px]" style={{ color: 'var(--text-muted)' }}>Holat</th>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-right w-[100px]" style={{ color: 'var(--text-muted)' }}>Amallar</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredExpenses.map((expense, i) => (
-                                <tr key={expense.id} className="transition-colors group hover:bg-[var(--danger-bg)] cursor-pointer" style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                                    <td className="px-6 py-4 text-meta font-bold uppercase tracking-tight font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtDate(expense.date)}</td>
-                                    <td className="px-6 py-4">
-                                        <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>{expense.category}</span>
-                                    </td>
-                                    <td className="px-6 py-4 text-body font-bold truncate max-w-[300px] tracking-tight" style={{ color: 'var(--text)' }}>
-                                        {expense.description || "—"}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {(() => {
-                                            const pm = expense.paymentMethod || 'naqd';
-                                            const c = PAYMENT_METHOD_COLORS[pm] || 'var(--text-muted)';
-                                            return (
-                                                <span className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg whitespace-nowrap" style={{ color: c, background: `${c}1a`, border: `1px solid ${c}40` }}>
-                                                    {PAYMENT_METHOD_LABELS[pm] || pm}
-                                                </span>
-                                            );
-                                        })()}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <span className="font-bold text-body tabular-nums" style={{ color: 'var(--danger)' }}>
-                                            -{formatNum(expense.amount)} <span className="text-micro font-bold uppercase ml-1 opacity-60">sum</span>
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {(() => {
-                                            const st = EXP_STATUS[expense.status || 'approved'] || EXP_STATUS.approved;
-                                            const canApr = expense.status === 'pending' && canApproveExpense(userRole, expense.amount);
-                                            return (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-micro font-bold px-2 py-1 rounded-lg uppercase inline-flex items-center gap-1" style={{ background: st.bg, color: st.fg, border: `1px solid ${st.bd}` }}>
-                                                        {expense.status === 'approved' ? <CheckCircle2 size={10} /> : expense.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />} {st.label}
-                                                    </span>
-                                                    {canApr && onApproveExpense && (
-                                                        <div className="flex gap-1">
-                                                            <button onClick={() => onApproveExpense(expense.id)} className="w-6 h-6 flex items-center justify-center rounded-lg text-white" style={{ background: 'var(--success)' }} title="Tasdiqlash"><CheckCircle2 size={13} /></button>
-                                                            {onRejectExpense && <button onClick={() => onRejectExpense(expense.id)} className="w-6 h-6 flex items-center justify-center rounded-lg text-white" style={{ background: 'var(--danger)' }} title="Rad etish"><XCircle size={13} /></button>}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })()}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => { setEditingExpense(expense); setIsModalOpen(true); }}
-                                                className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
-                                                style={{ color: 'var(--accent-blue)' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                                title="Tahrirlash"
-                                            >
-                                                <Edit3 size={16} />
-                                            </button>
-                                            {onDeleteExpense && (
-                                                <button
-                                                    onClick={() => { if (confirm('Xarajatni o\'chirishni tasdiqlaysizmi?')) onDeleteExpense(expense.id); }}
-                                                    className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
-                                                    style={{ color: 'var(--danger)' }}
-                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'}
-                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                                    title="O'chirish"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filteredExpenses.length === 0 && (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-24 text-center">
-                                        <div className="flex flex-col items-center" style={{ color: 'var(--text-muted)' }}>
-                                            <Search size={48} className="mb-4 opacity-20" />
-                                            <span className="text-meta uppercase font-bold tracking-[0.2em] opacity-60">Ma&apos;lumot topilmadi</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>            {isModalOpen && (
+            {/* Expense List (desktop) — DataTable platformasi */}
+            {viewMode === 'list' && (
+                <DataTable<Expense>
+                    caption="Xarajatlar ro'yxati"
+                    rows={filteredExpenses}
+                    columns={expenseColumns}
+                    rowKey={e => e.id}
+                    sortKey={table.sortKey}
+                    sortDir={table.sortDir}
+                    onToggleSort={table.toggleSort}
+                    density={table.density}
+                    page={table.page}
+                    pageSize={50}
+                    onPageChange={table.setPage}
+                    selected={selectedIds}
+                    onSelectedChange={setSelectedIds}
+                    emptyIcon={<Search size={36} />}
+                    emptyTitle="Xarajat topilmadi"
+                    emptyDescription={table.isDirty ? "Qidiruv yoki filtrni o'zgartirib ko'ring." : undefined}
+                    bulkActions={onDeleteExpense ? (ids) => (
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                const total = ids.reduce((sum, id) => sum + (Number(expenses.find(e => e.id === id)?.amount) || 0), 0);
+                                const ok = await confirm({
+                                    title: `${ids.length} ta xarajat o'chirilsinmi?`,
+                                    description: `Jami ${formatNum(total)} so'm. Balansga ta'sir qiladi va ortga qaytarilmaydi.`,
+                                    confirmLabel: "O'chirish",
+                                    tone: 'danger',
+                                });
+                                if (!ok) return;
+                                for (const id of ids) await onDeleteExpense(id);
+                                setSelectedIds(new Set());
+                            }}
+                            className="text-meta font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg"
+                            style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}
+                        >
+                            O&apos;chirish
+                        </button>
+                    ) : undefined}
+                />
+            )}            {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in">
                     <div className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0">
                         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--danger)' }}></div>
                         <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
                             <div>
-                                <h3 className="text-body font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Xarajatni kiritish</h3>
+                                <h3 className="text-body font-bold" style={{ color: 'var(--text)' }}>Xarajatni kiritish</h3>
                                 <p className="text-micro font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="icon-btn-sm transition-all" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--input-bg)'; }}>
+                            <button onClick={() => setIsModalOpen(false)} className="icon-btn-sm transition-all icon-btn-danger" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }}>
                                 <Plus size={20} className="rotate-45" />
                             </button>
                         </div>
@@ -436,7 +467,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                             type="text" inputMode="numeric"
                                             value={groupDigits(editingExpense?.amount || '')}
                                             onChange={(e) => setEditingExpense(prev => ({ ...prev, amount: Number(ungroupDigits(e.target.value)) }))}
-                                            className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                            className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
                                             style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                             required
                                         />
@@ -449,7 +480,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                         type="date"
                                         value={editingExpense?.date || ''}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, date: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--danger)' }}
                                         required
                                     />
@@ -459,7 +490,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     <select
                                         value={editingExpense?.category || 'Other'}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, category: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     >
                                         {categories.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
@@ -470,7 +501,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     <select
                                         value={editingExpense?.paymentMethod || 'naqd'}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     >
                                         {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label.toUpperCase()}</option>)}
@@ -483,7 +514,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                         placeholder="IXTIYORIY IZOH..."
                                         value={editingExpense?.description || ''}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, description: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     />
                                 </div>
@@ -495,18 +526,12 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     onClick={() => setIsModalOpen(false)}
                                     className="flex-1 px-4 py-3 rounded-xl font-bold text-meta uppercase tracking-widest transition-all shadow-sm"
                                     style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
-                                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
                                 >
                                     {t.cancel}
                                 </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-meta text-white transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95"
-                                    style={{ background: 'linear-gradient(135deg, var(--danger), var(--danger-dark))' }}
-                                >
+                                <Button variant="danger" size="md" type="submit" className="flex-1">
                                     SAQLASH
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     </div>

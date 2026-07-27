@@ -7,6 +7,7 @@ import type { TaskStatus, TaskPriority } from "@prisma/client";
 import { formatUzDate } from "@/lib/format";
 import { createTask, updateTaskStatus, assignTask } from "@/server/tasks";
 import { logTime } from "@/server/timeEntries";
+import { Button } from "@/components/ui/Button";
 
 interface Row {
   id: string;
@@ -60,6 +61,7 @@ export default function TasksClient({ rows, users, companies, userId, role }: { 
   const [f, setF] = useState({ ...EMPTY });
   const [timeInput, setTimeInput] = useState<Record<string, string>>({});
   const nameOf = useMemo(() => new Map(users.map((u) => [u.id, u.fullName])), [users]);
+  const isSenior = ["super_admin", "admin", "chief_accountant", "supervisor"].includes(role);
 
   const run = (fn: () => Promise<unknown>, ok: string) =>
     start(async () => {
@@ -101,7 +103,7 @@ export default function TasksClient({ rows, users, companies, userId, role }: { 
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Vazifalar</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Vazifalar</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>Ish boshqaruvi + SLA (javob/yechim muddati)</p>
         </div>
         <div className="flex gap-2">
@@ -110,7 +112,11 @@ export default function TasksClient({ rows, users, companies, userId, role }: { 
               {t.label} <span className="opacity-70">({t.n})</span>
             </button>
           ))}
-          <button onClick={() => setShowForm((s) => !s)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white" style={{ background: "var(--success)" }}>{showForm ? "Bekor" : "+ Yangi"}</button>
+          {isSenior && (
+            <Button variant="success" size="sm" onClick={() => setShowForm((s) => !s)}>
+              {showForm ? "Bekor" : "+ Yangi"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -146,7 +152,7 @@ export default function TasksClient({ rows, users, companies, userId, role }: { 
             <input className={input} style={inputStyle} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
           </label>
           <div className="col-span-2 md:col-span-3">
-            <button disabled={pending} onClick={submitCreate} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>Yaratish</button>
+            <Button variant="success" size="md" disabled={pending} onClick={submitCreate}>Yaratish</Button>
           </div>
         </div>
       )}

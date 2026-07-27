@@ -536,7 +536,7 @@ const darajaOf = (ball: number): KpiLeaderRow["daraja"] =>
 export async function getKpiLeaderboard(month: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-  if (!isSeniorRole(session.user.role as string)) throw new Error("Forbidden");
+  const isSenior = isSeniorRole(session.user.role as string);
 
   const [perfs, companies] = await Promise.all([
     prisma.monthlyPerformance.findMany({
@@ -593,7 +593,8 @@ export async function getKpiLeaderboard(month: string) {
       .filter(([, c]) => c.scored > 0)
       .map(([category, c]) => ({ category, passPercent: Math.round((c.green / c.scored) * 100) }))
       .sort((x, y) => y.passPercent - x.passPercent);
-    return { employeeId, name: a.name, role: a.role, ball, daraja: darajaOf(ball), green: a.green, red: a.red, entries: a.entries, bonus: Math.round(a.bonus), byCategory };
+    const finalBonus = isSenior ? Math.round(a.bonus) : 0;
+    return { employeeId, name: a.name, role: a.role, ball, daraja: darajaOf(ball), green: a.green, red: a.red, entries: a.entries, bonus: finalBonus, byCategory };
   });
   leaderboard.sort((x, y) => y.ball - x.ball || y.bonus - x.bonus);
 
@@ -639,7 +640,7 @@ export async function getKpiLeaderboard(month: string) {
       avgBall,
       excellent: leaderboard.filter((l) => l.daraja === "excellent").length,
       poor: leaderboard.filter((l) => l.daraja === "poor").length,
-      bonusFund: leaderboard.reduce((s, l) => s + l.bonus, 0),
+      bonusFund: isSenior ? leaderboard.reduce((s, l) => s + l.bonus, 0) : 0,
       total: withScores.length,
     },
     criteria,

@@ -4,6 +4,8 @@ import { getPayments } from "@/server/kassa";
 import { getAvailableBalance } from "@/lib/balance";
 import KassaClient from "./KassaClient";
 
+export const metadata = { title: "Kassa" };
+
 export default async function KassaPage() {
   const session = await auth();
   const userId = session?.user?.id ?? "";

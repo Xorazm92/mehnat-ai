@@ -115,7 +115,7 @@ export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; r
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
             Muddatlar
           </h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>

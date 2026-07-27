@@ -4,6 +4,8 @@ import { getAttendance } from "@/server/attendance";
 import { isSeniorRole } from "@/lib/permissions";
 import AttendanceClient from "./AttendanceClient";
 
+export const metadata = { title: "Davomat" };
+
 export default async function AttendancePage() {
   const session = await auth();
   const userRole = session?.user?.role || "employee";

@@ -41,14 +41,12 @@ export function AdminTopbar({
         <button onClick={toggle} aria-label="Menyu" className="icon-btn md:hidden">
           <Menu size={20} />
         </button>
-        <div
-          className="flex items-center gap-2 font-mono text-meta font-medium uppercase"
-          style={{ color: "var(--text-muted)", letterSpacing: "0.1em" }}
-        >
-          <span>ASRO</span>
-          <span aria-hidden>/</span>
-          <span style={{ color: "var(--text-primary)" }}>Admin</span>
-        </div>
+        {/* Bu yerda qotirilgan "ASRO / Admin" satri turardi: u semantik emas,
+            bosilmaydi va `/admin/users` da ham, `/admin/sla-policies` da ham
+            AYNAN bir xil ko'rinardi. Endi haqiqiy breadcrumb `<main>` ichida. */}
+        <span className="font-mono text-meta font-medium uppercase" style={{ color: "var(--text-muted)", letterSpacing: "0.1em" }}>
+          ASRO
+        </span>
       </div>
 
       <div className="flex items-center gap-1.5">

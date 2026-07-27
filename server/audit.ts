@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { isAdminRole, isSeniorRole } from "@/lib/permissions";
 import { revalidateTag } from "next/cache";
 import type { AuditAction } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
@@ -42,6 +42,39 @@ export async function getAuditLogs(filters?: {
       orderBy: { createdAt: "desc" },
       // Clamp — katta limit bilan butun jurnalni bir so'rovda tortib bo'lmasin.
       take: Math.min(Math.max(filters?.limit || 100, 1), 500),
+    })
+  );
+}
+
+/**
+ * Bitta YOZUV tarixi — firma kartasi, xodim kartasi va h.k. uchun.
+ *
+ * `getAuditLogs` faqat adminlar uchun va butun jurnalni filtrlaydi; u yozuv
+ * sahifasida ishlatib bo'lmaydi. Auditda E4 sifatida yozilgan muammo aynan
+ * shu edi: `AuditLog` sodiqlik bilan yozilardi, lekin foydalanuvchi turgan
+ * joyda — firma kartasida — HECH QAYERDA ko'rinmasdi. "Kim soliq rejimini
+ * o'zgartirdi?" degan savolga javob yo'q edi.
+ *
+ * Ruxsat: senior rollar (bosh buxgalter, nazoratchi, admin). Buxgalter o'z
+ * firmasining o'zgarish tarixini ko'rmaydi — bu nazorat vositasi.
+ */
+export async function getRecordHistory(params: {
+  tableName: string;
+  recordId: string;
+  limit?: number;
+}) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const role = session.user.role as string;
+  if (!isSeniorRole(role)) throw new Error("Forbidden");
+
+  return serialize(
+    await prisma.auditLog.findMany({
+      where: { tableName: params.tableName, recordId: params.recordId },
+      include: { user: { select: { id: true, fullName: true, role: true } } },
+      orderBy: { createdAt: "desc" },
+      take: Math.min(Math.max(params.limit ?? 25, 1), 100),
     })
   );
 }

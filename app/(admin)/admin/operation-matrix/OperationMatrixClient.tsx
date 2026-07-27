@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ChevronUp, ChevronDown, Eye, EyeOff, Save, RotateCcw, Search, GripVertical } from "lucide-react";
 import { saveOperationColumns } from "@/server/report-columns";
 import type { OperationColumnRow } from "@/lib/reportColumns";
+import { Button } from "@/components/ui/Button";
 
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
 const inputStyle = {
@@ -69,7 +70,7 @@ export default function OperationMatrixClient({ initialRows }: { initialRows: Op
     <div className="space-y-4 max-w-4xl">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Amallar matritsasi</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Amallar matritsasi</h1>
           <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
             Hisobot ustunlarini yoqish/o&apos;chirish, tartiblash va nomlash. {enabledCount}/{rows.length} yoqilgan.
           </p>
@@ -77,14 +78,9 @@ export default function OperationMatrixClient({ initialRows }: { initialRows: Op
         <div className="flex items-center gap-2">
           <button onClick={() => setAll(true)} disabled={busy} className="px-3 py-2 rounded-lg text-meta font-bold" style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Hammasini yoqish</button>
           <button onClick={() => setAll(false)} disabled={busy} className="px-3 py-2 rounded-lg text-meta font-bold" style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Hammasini o&apos;chirish</button>
-          <button
-            onClick={save}
-            disabled={busy || !dirty}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white disabled:opacity-50"
-            style={{ background: "var(--accent-blue)" }}
-          >
+          <Button variant="primary" size="md" onClick={save} disabled={busy || !dirty}>
             <Save size={15} /> Saqlash
-          </button>
+          </Button>
         </div>
       </div>
 

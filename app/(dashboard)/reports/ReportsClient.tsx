@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import OperationModule from "@/components/OperationModule";
 import HisobotlarModule from "@/components/HisobotlarModule";
+import { getCurrentPeriodKey } from "@/lib/periods";
 import { upsertMonthlyReport } from "@/server/operations";
 import { Company, Staff, OperationEntry } from "@/types";
 import type { ReportColumn } from "@/lib/reportColumns";
@@ -25,11 +26,14 @@ interface Props {
 export default function ReportsClient({ companies, operations, staff, userRole, currentUserId, userName, focusCompany, focusCol, focusPeriod, reportColumns }: Props) {
   useAutoRefresh();
   const hasFocus = !!(focusCompany && focusCol);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(focusPeriod || "2026-03");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(focusPeriod || getCurrentPeriodKey());
   const [tab, setTab] = useState<"reports" | "matrix">(hasFocus ? "matrix" : "reports");
 
   const handleUpdate = async (data: unknown) => {
-    await upsertMonthlyReport(data as Parameters<typeof upsertMonthlyReport>[0]);
+    const payload = data as { companyId?: string; period?: string };
+    if (payload?.companyId && payload?.period) {
+      await upsertMonthlyReport(payload as Parameters<typeof upsertMonthlyReport>[0]);
+    }
   };
 
   const tabs = [
@@ -54,7 +58,7 @@ export default function ReportsClient({ companies, operations, staff, userRole, 
       </div>
       <div className={`flex-1 min-h-0 ${tab === "matrix" ? "flex flex-col" : "overflow-auto"}`}>
         {tab === "reports" ? (
-          <HisobotlarModule companies={companies} staff={staff} lang="uz" />
+          <HisobotlarModule companies={companies} staff={staff} lang="uz" userRole={userRole} />
         ) : (
           <OperationModule
             companies={companies}

@@ -93,7 +93,7 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
                                 >
                                     <ChevronLeft size={16} />
                                 </button>
-                                <span className="text-sm font-black text-[var(--text-primary)] dark:text-white uppercase tracking-widest">{viewYear}</span>
+                                <span className="text-sm font-semibold text-[var(--text-primary)] dark:text-white">{viewYear}</span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setViewYear(y => y + 1); }}
                                     className="p-1.5 hover:bg-[var(--card-bg)] dark:hover:bg-[var(--surface-2)] rounded-lg border border-transparent hover:border-[var(--rule)] dark:hover:border-[var(--rule-strong)] transition-all text-[var(--text-muted)] hover:text-[var(--brand)]"

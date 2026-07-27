@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatUzDate } from "@/lib/format";
 import { createClientUser, setClientUserActive, respondClientRequest } from "@/server/clientUsers";
+import { Button } from "@/components/ui/Button";
 
 interface Client { id: string; email: string; fullName: string; isActive: boolean; company: { name: string }; createdAt: string }
 interface Req { id: string; subject: string; message: string; status: string; responseText: string | null; company: { name: string }; createdAt: string }
@@ -42,7 +43,7 @@ export default function ClientUsersClient({ clients, requests, companies }: { cl
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Mijoz kabineti</h1>
+        <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Mijoz kabineti</h1>
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>Mijoz portal hisoblari va murojaatlar</p>
       </div>
 
@@ -60,7 +61,7 @@ export default function ClientUsersClient({ clients, requests, companies }: { cl
         <label className="text-xs" style={{ color: "var(--text-muted)" }}>Ism
           <input className={`block ${input}`} style={inputStyle} value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} />
         </label>
-        <button disabled={pending} onClick={submit} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>+ Hisob yaratish</button>
+        <Button variant="success" size="md" disabled={pending} onClick={submit}>+ Hisob yaratish</Button>
       </div>
 
       {cred && (
@@ -74,7 +75,7 @@ export default function ClientUsersClient({ clients, requests, companies }: { cl
 
       {/* Client accounts */}
       <section>
-        <h2 className="text-base font-bold mb-2" style={{ color: "var(--text-primary)" }}>Hisoblar</h2>
+        <h2 className="text-sm font-bold mb-2" style={{ color: "var(--text-primary)" }}>Hisoblar</h2>
         <div className="overflow-x-auto rounded-xl border" style={inputStyle}>
           <table className="w-full text-sm">
             <thead><tr style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>
@@ -98,7 +99,7 @@ export default function ClientUsersClient({ clients, requests, companies }: { cl
 
       {/* Requests */}
       <section>
-        <h2 className="text-base font-bold mb-2" style={{ color: "var(--text-primary)" }}>Murojaatlar</h2>
+        <h2 className="text-sm font-bold mb-2" style={{ color: "var(--text-primary)" }}>Murojaatlar</h2>
         <div className="space-y-2">
           {requests.length === 0 && <div className="text-sm" style={{ color: "var(--text-muted)" }}>Murojaat yo'q.</div>}
           {requests.map((r) => (
@@ -113,7 +114,7 @@ export default function ClientUsersClient({ clients, requests, companies }: { cl
               ) : (
                 <div className="flex gap-2 mt-2">
                   <input value={resp[r.id] ?? ""} onChange={(e) => setResp({ ...resp, [r.id]: e.target.value })} placeholder="Javob..." className={`flex-1 ${input}`} style={inputStyle} />
-                  <button disabled={pending} onClick={() => { const t = resp[r.id]; if (!t?.trim()) return toast.error("Javob kiriting"); run(() => respondClientRequest(r.id, t), "Javob yuborildi"); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50" style={{ background: "var(--brand)" }}>Javob berish</button>
+                  <Button variant="primary" size="sm" disabled={pending} onClick={() => { const t = resp[r.id]; if (!t?.trim()) return toast.error("Javob kiriting"); run(() => respondClientRequest(r.id, t), "Javob yuborildi"); }}>Javob berish</Button>
                 </div>
               )}
             </div>

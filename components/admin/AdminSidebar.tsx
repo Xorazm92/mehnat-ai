@@ -49,7 +49,7 @@ export function AdminSidebar({ userRole }: { userRole: string }) {
           A
         </div>
         <div>
-          <h2 className="text-body font-semibold leading-none" style={{ color: "var(--text-primary)" }}>
+          <h2 className="text-sm font-semibold leading-none" style={{ color: "var(--text-primary)" }}>
             Admin Panel
           </h2>
           <p

@@ -1,10 +1,43 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Company, OperationEntry, Payment, Language, ClientCredential, ClientHistory, Staff } from '@/types';
-import { X, Shield, FileText, Lock, Globe, Building2, Download, Eye, EyeOff, Users, DollarSign, AlertTriangle, MapPin, Briefcase, Database, Key, User, Check, Calculator, Trash2, Plus, Pencil, Save, Loader2, Phone } from 'lucide-react';
+import {
+  X,
+  Shield,
+  FileText,
+  Lock,
+  Globe,
+  Building2,
+  Download,
+  Eye,
+  EyeOff,
+  Users,
+  DollarSign,
+  AlertTriangle,
+  MapPin,
+  Briefcase,
+  Database,
+  Key,
+  User,
+  Check,
+  Calculator,
+  Trash2,
+  Plus,
+  Pencil,
+  Save,
+  Loader2,
+  Phone,
+  History,
+} from 'lucide-react';
 import { getKpiRules, getCompanyKpiRules, upsertCompanyKpiRule } from '@/server/kpi';
 import { getClientCredentials, createClientCredential, deleteClientCredential, setPrimaryCredential } from '@/server/credentials';
 import { formatUzDate, formatUzDateTime, formatNum } from '@/lib/format';
 import { kpiCategoryLabel } from '@/lib/kpiLabels';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { useModalA11y } from '@/hooks/useModalA11y';
+import { toast } from "sonner";
+import { Button } from "@/components/ui/Button";
+import RecordTimeline from "@/components/RecordTimeline";
 
 interface DrawerProps {
   company: Company | null;
@@ -17,9 +50,18 @@ interface DrawerProps {
   onSave?: (company: Company, assignments?: any[]) => void;
 }
 
-type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xizmatlar' | 'kpi';
+type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xizmatlar' | 'kpi' | 'tarix';
 
 const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, onSave }) => {
+  // Dialog semantikasi + fokus tuzog'i + Escape (avval hech biri yo'q edi:
+  // klaviatura bilan bu paneldan chiqib bo'lmasdi).
+  const panelRef = useModalA11y<HTMLDivElement>({ open: Boolean(company), onClose });
+  const confirm = useConfirm();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [documents, setDocuments] = useState<any[]>([]);
   const [credentials, setCredentials] = useState<ClientCredential[]>([]);
   const [clientHistory, setClientHistory] = useState<ClientHistory[]>([]);
@@ -156,7 +198,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
     return merged as Company;
   };
 
-  if (!company) return null;
+  if (!company || !mounted) return null;
 
   const handleShowPassword = async (credId: string) => {
     if (!showPasswords[credId]) {
@@ -173,42 +215,46 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
     { id: 'shartnoma', label: 'Shartnoma', icon: <DollarSign size={14} /> },
     { id: 'xizmatlar', label: 'Xizmatlar', icon: <Check size={14} /> },
     { id: 'kpi', label: 'KPI', icon: <Calculator size={14} /> },
+    { id: 'tarix', label: 'Tarix', icon: <History size={14} /> },
   ];
 
-  return (
+  return createPortal(
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity" onClick={onClose}></div>
-      <div className="fixed right-0 top-0 h-full w-full max-w-[850px] z-[110] overflow-y-auto overflow-x-hidden animate-in slide-in-from-right duration-300 flex flex-col shadow-2xl" style={{ background: 'var(--input-bg)' }}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${company.name} — firma kartasi`}
+        tabIndex={-1}
+        className="fixed right-0 top-0 h-full w-full max-w-[850px] z-[110] overflow-y-auto overflow-x-hidden animate-in slide-in-from-right duration-300 flex flex-col shadow-2xl outline-none"
+        style={{ background: 'var(--input-bg)' }}
+      >
         <div className="dashboard-card shrink-0 z-20 shadow-md !rounded-none !border-0 !border-b border-[var(--border)] relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
           <div className="p-6 flex justify-between items-start">
             <div className="flex gap-5 items-start">
-              <div className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl text-white font-black shrink-0 shadow-md transition-transform hover:scale-105" style={{ background: `linear-gradient(135deg, var(--primary), var(--accent-blue-hover))` }}>
+              <div className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl text-white font-semibold shrink-0 shadow-md transition-transform hover:scale-105" style={{ background: `linear-gradient(135deg, var(--primary), var(--accent-blue-hover))` }}>
                 {company.name.charAt(0)}
               </div>
               <div className="flex flex-col gap-1.5 pt-1">
-                <h2 className="text-2xl font-black uppercase tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.name}</h2>
+                <h2 className="text-sm font-semibold tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.name}</h2>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>INN: {company.inn}</span>
                   <span className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{company.taxType}</span>
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-xl transition-all shadow-sm" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.borderColor = 'var(--danger)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}>
+            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-xl transition-all shadow-sm icon-btn-danger" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
               <X size={20} />
             </button>
           </div>
           <div className="flex px-6 overflow-x-auto gap-2 pb-5">
             {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 transition-all font-bold text-meta uppercase tracking-widest whitespace-nowrap rounded-lg border`}
-                style={activeTab === tab.id ? { background: 'var(--accent-blue)', color: '#fff', borderColor: 'var(--accent-blue)' } : { background: 'var(--input-bg)', color: 'var(--text-secondary)', borderColor: 'var(--card-border)' }}
-              >
+              <Button variant="primary" size="md" key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2.5 transition-all font-bold text-meta uppercase tracking-widest whitespace-nowrap rounded-lg border`} style={activeTab === tab.id ? { background: 'var(--accent-blue)', color: '#fff', borderColor: 'var(--accent-blue)' } : { background: 'var(--input-bg)', color: 'var(--text-secondary)', borderColor: 'var(--card-border)' }}>
                 <div className="shrink-0">{React.cloneElement(tab.icon as React.ReactElement<any>, { size: 14 })}</div>
                 {tab.label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -216,7 +262,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
         <div className="p-6 flex-1 space-y-6">
           {activeTab === 'pasport' && (
             <div className="space-y-6 animate-fade-in pb-10">
-              <div className="dashboard-card p-6 border-l-4" style={{ borderLeftColor: 'var(--accent-blue)' }}>
+              <div className="dashboard-card p-5 border-l-4" style={{ borderLeftColor: 'var(--accent-blue)' }}>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
                     <User size={20} />
@@ -224,14 +270,14 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Direktor / Rahbar</h4>
                 </div>
                 <div className="pl-14">
-                  <p className="text-xl font-black uppercase tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.directorName || '—'}</p>
-                  <p className="text-xs font-bold uppercase mt-3 tracking-widest tabular-nums flex items-center gap-2" style={{ color: 'var(--accent-blue)' }}>
+                  <p className="text-xl font-semibold tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.directorName || '—'}</p>
+                  <p className="text-xs font-bold mt-3 tabular-nums flex items-center gap-2" style={{ color: 'var(--accent-blue)' }}>
                     <Phone size={14} /> {company.directorPhone || 'MALUMOT YOQ'}
                   </p>
                 </div>
               </div>
 
-              <div className="dashboard-card p-6">
+              <div className="dashboard-card p-5">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--warning-light)', color: 'var(--warning)' }}>
                     <MapPin size={20} />
@@ -239,7 +285,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Yuridik Manzil</h4>
                 </div>
                 <div className="pl-14">
-                  <p className="text-body font-bold uppercase tracking-tight leading-relaxed" style={{ color: 'var(--text)' }}>{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
+                  <p className="text-body font-bold tracking-tight leading-relaxed" style={{ color: 'var(--text)' }}>{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
                 </div>
               </div>
 
@@ -264,16 +310,16 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }}>
                                 <FileText size={16} />
                             </div>
-                            <span className="text-body font-bold truncate pr-4 uppercase tracking-tight transition-colors" style={{ color: 'var(--text)' }}>{doc.file_name}</span>
+                            <span className="text-body font-bold truncate pr-4 tracking-tight transition-colors" style={{ color: 'var(--text)' }}>{doc.file_name}</span>
                         </div>
-                        <a href={doc.file_url} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center rounded-lg shrink-0 transition-all shadow-sm" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; }}>
+                        <a href={doc.file_url} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center rounded-lg shrink-0 transition-all shadow-sm icon-btn-accent" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>
                           <Download size={18} />
                         </a>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-16 text-center text-xs font-bold uppercase tracking-[0.3em]" style={{ color: 'var(--text-muted)' }}>
+                  <div className="p-16 text-center text-xs font-bold" style={{ color: 'var(--text-muted)' }}>
                     Hujjatlar topilmadi
                   </div>
                 )}
@@ -300,10 +346,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   </div>
                   <button
                     onClick={() => setActiveTab('xizmatlar')}
-                    className="w-full py-3 rounded-lg text-meta font-bold uppercase tracking-[0.2em] transition-all shadow-sm flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-lg text-meta font-bold uppercase tracking-[0.2em] transition-all shadow-sm flex items-center justify-center gap-2 icon-btn-accent"
                     style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.borderColor = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--card-border)'; e.currentTarget.style.background = 'var(--input-bg)'; }}
                   >
                     BARCHASINI KO&apos;RISH
                   </button>
@@ -327,7 +371,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
                 <div className={`dashboard-card p-5 flex items-center gap-4 transition-colors`} style={{ background: company.itParkResident ? 'var(--accent-blue-light)' : 'var(--card-bg)', borderColor: company.itParkResident ? 'var(--accent-blue)' : 'var(--card-border)' }}>
                   <Shield size={24} className="shrink-0" style={{ color: company.itParkResident ? 'var(--accent-blue)' : 'var(--text-muted)' }} />
-                  <span className="text-body font-black uppercase tracking-widest" style={{ color: company.itParkResident ? 'var(--accent-blue)' : 'var(--text-muted)' }}>IT Park Rezidenti</span>
+                  <span className="text-body font-semibold" style={{ color: company.itParkResident ? 'var(--accent-blue)' : 'var(--text-muted)' }}>IT Park Rezidenti</span>
                 </div>
               </div>
 
@@ -374,9 +418,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {['cloud', 'local', 'server', 'none'].map(status => (
-                    <button key={status} className={`px-4 py-2 rounded-lg border font-bold text-meta uppercase transition-all tracking-widest shadow-sm`} style={company.oneCStatus === status ? { background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' } : { background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}>
+                    <Button variant="primary" size="md" key={status} className={`px-4 py-2 rounded-lg border font-bold text-meta uppercase transition-all tracking-widest shadow-sm`} style={company.oneCStatus === status ? { background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' } : { background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}>
                       {status === 'cloud' ? '☁️ Cloud' : status === 'local' ? '💻 Local' : status === 'server' ? '🖥️ Server' : '❌ Yo\'q'}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -540,7 +584,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             setIsAddingCredential(false);
                             setNewCred({ serviceName: '', loginId: '', password: '', notes: '' });
                           } catch (e) {
-                            alert((e as Error).message || "Saqlashda xatolik");
+                            toast.error((e as Error).message || "Saqlashda xatolik");
                           }
                         }}
                         className="px-2.5 py-1 bg-[var(--accent-blue)] text-white rounded-lg border border-[var(--accent-blue)] disabled:opacity-50 shadow-sm transition-all"
@@ -561,12 +605,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         </div>
                         <button
                           onClick={async () => {
-                            if (confirm(`${cred.serviceName} o'chirilsinmi?`)) {
+                            if (await confirm({ title: `"${cred.serviceName}" kredensiali o'chirilsinmi?`, description: "Saqlangan login va parol o'chiriladi.", confirmLabel: "O'chirish", tone: 'danger' })) {
                               try {
                                 await deleteClientCredential(cred.id);
                                 setCredentials(prev => prev.filter(c => c.id !== cred.id));
                               } catch (e) {
-                                alert((e as Error).message || "O'chirishda xatolik");
+                                toast.error((e as Error).message || "O'chirishda xatolik");
                               }
                             }
                           }}
@@ -669,7 +713,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         return (
                           <div key={asgn.id} className="px-4 py-3.5 flex items-center justify-between hover:bg-[var(--bg-hover)] transition-colors group">
                             <div className="flex gap-3.5 items-center">
-                              <div className="w-10 h-10 rounded-lg bg-[var(--accent-blue-light)] border border-[var(--card-border)] flex items-center justify-center text-[var(--accent-blue)] text-sm font-black shrink-0 transition-colors uppercase">
+                              <div className="w-10 h-10 rounded-lg bg-[var(--accent-blue-light)] border border-[var(--card-border)] flex items-center justify-center text-[var(--accent-blue)] text-sm font-semibold shrink-0 transition-colors">
                                 {member?.name?.charAt(0) || '?'}
                               </div>
                               <div className="flex flex-col gap-1">
@@ -770,7 +814,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                       <p className="text-micro font-bold uppercase tracking-widest mb-1.5 opacity-70" style={{ color: 'var(--accent-blue)' }}>Ichki Pudratchi (Ijrochi)</p>
                       <div className="flex items-center gap-3">
                         <Building2 size={16} style={{ color: 'var(--accent-blue)' }} />
-                        <p className="text-sm font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.internalContractor}</p>
+                        <p className="text-sm font-semibold tracking-tight" style={{ color: 'var(--text)' }}>{company.internalContractor}</p>
                       </div>
                     </div>
                   </div>
@@ -778,11 +822,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
                 <div className="dashboard-card p-5 !shadow-sm">
                   <p className="text-micro font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Shartnoma Raqami</p>
-                  <p className="text-body font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.contractNumber || '—'}</p>
+                  <p className="text-body font-semibold tracking-tight" style={{ color: 'var(--text)' }}>{company.contractNumber || '—'}</p>
                 </div>
                 <div className="dashboard-card p-5 !shadow-sm">
                   <p className="text-micro font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Sana</p>
-                  <p className="text-body font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{company.contractDate || '—'}</p>
+                  <p className="text-body font-semibold tracking-tight" style={{ color: 'var(--text)' }}>{company.contractDate || '—'}</p>
                 </div>
               </div>
 
@@ -792,11 +836,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
                       <p className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xizmat Narxi</p>
-                      <p className="text-lg font-black tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{formatNum(Number(company.contractAmount || 0))} <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>so&apos;m</span></p>
+                      <p className="text-lg font-semibold tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{formatNum(Number(company.contractAmount || 0))} <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>so&apos;m</span></p>
                     </div>
                     <div className="flex flex-col gap-2">
                       <p className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Joriy Balans</p>
-                      <p className={`text-lg font-black tabular-nums tracking-tight leading-none uppercase`} style={{ color: Number(company.currentBalance || 0) < 0 ? 'var(--danger)' : 'var(--success)' }}>
+                      <p className={`text-lg font-semibold tabular-nums tracking-tight leading-none uppercase`} style={{ color: Number(company.currentBalance || 0) < 0 ? 'var(--danger)' : 'var(--success)' }}>
                         {formatNum(Number(company.currentBalance || 0))} <span className="text-micro font-bold uppercase tracking-widest">so&apos;m</span>
                       </p>
                     </div>
@@ -824,17 +868,17 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         <div className="divide-y rounded-xl overflow-hidden border" style={{ borderColor: 'var(--card-border)' }}>
                           {cascade.map((item, i) => (
                             <div key={i} className="flex items-center justify-between px-4 py-3.5 transition-colors group hover:bg-[var(--input-bg)]" style={{ background: 'var(--card-bg)' }}>
-                              <span className="text-body font-bold tracking-tight uppercase" style={{ color: 'var(--text)' }}>{item.label}</span>
+                              <span className="text-body font-bold tracking-tight" style={{ color: 'var(--text)' }}>{item.label}</span>
                               <div className="text-right flex items-center gap-4">
                                 <p className="text-meta font-bold px-2.5 py-1 rounded-lg border tabular-nums" style={{ color: 'var(--text-secondary)', background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>{item.type === 'fixed' ? 'Fiks' : `${item.value}%`}</p>
-                                <p className="text-sm font-black tabular-nums tracking-tight leading-none min-w-[90px]" style={{ color: 'var(--text)' }}>{formatNum(item.amountValue)} <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>UZS</span></p>
+                                <p className="text-sm font-semibold tabular-nums tracking-tight leading-none min-w-[90px]" style={{ color: 'var(--text)' }}>{formatNum(item.amountValue)} <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>UZS</span></p>
                               </div>
                             </div>
                           ))}
                         </div>
                         <div className="mt-4 flex items-center justify-between p-4 rounded-xl shadow-sm" style={{ background: 'var(--success-bg)', border: '1px solid var(--success-border)' }}>
-                          <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--success)' }}>Kompaniya Qoldig&apos;i</span>
-                          <span className="text-sm font-black tabular-nums tracking-tight leading-none" style={{ color: remainder < 0 ? 'var(--danger)' : 'var(--success)' }}>
+                          <span className="text-xs font-semibold" style={{ color: 'var(--success)' }}>Kompaniya Qoldig&apos;i</span>
+                          <span className="text-sm font-semibold tabular-nums tracking-tight leading-none" style={{ color: remainder < 0 ? 'var(--danger)' : 'var(--success)' }}>
                             {formatNum(remainder)} <span className="text-micro font-bold">UZS</span>
                           </span>
                         </div>
@@ -852,7 +896,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 <div className="flex items-center justify-between mb-5 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
                   <div className="flex items-center gap-3">
                     <Check size={16} style={{ color: 'var(--text-muted)' }} />
-                    <h4 className="text-meta font-black uppercase tracking-widest leading-none mt-0.5" style={{ color: 'var(--text)' }}>Aktiv Xizmatlar</h4>
+                    <h4 className="text-meta font-semibold uppercase tracking-widest leading-none mt-0.5" style={{ color: 'var(--text)' }}>Aktiv Xizmatlar</h4>
                   </div>
                   <div className="flex gap-3">
                     <button
@@ -862,7 +906,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           onSave({ ...company, activeServices: allKeys });
                         }
                       }}
-                      className="px-3 py-2 text-micro font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
+                      className="px-3 py-2 text-micro font-semibold rounded-lg transition-all uppercase tracking-widest shadow-sm"
                       style={{ color: 'var(--success)', background: 'color-mix(in srgb, var(--success) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 20%, transparent)' }}
                     >
                       Hammasini yoqish
@@ -871,7 +915,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                       onClick={() => {
                         if (onSave) onSave({ ...company, activeServices: [] });
                       }}
-                      className="px-3 py-2 text-micro font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
+                      className="px-3 py-2 text-micro font-semibold rounded-lg transition-all uppercase tracking-widest shadow-sm"
                       style={{ color: 'var(--danger)', background: 'color-mix(in srgb, var(--danger) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--danger) 20%, transparent)' }}
                     >
                       Hammasini o&apos;chirish
@@ -905,7 +949,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   ].map(service => {
                     const isActive = company.activeServices?.includes(service.key);
                     return (
-                      <label key={service.key} className="flex items-center gap-3 group cursor-pointer transition-all hover:bg-[var(--input-bg)] p-2 rounded-xl border border-transparent" onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--card-border)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}>
+                      <label key={service.key} className="flex items-center gap-3 group cursor-pointer transition-all hover:bg-[var(--input-bg)] p-2 rounded-xl border border-transparent">
                         <div className="relative flex items-center justify-center">
                           <input
                             type="checkbox"
@@ -936,7 +980,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
           {activeTab === 'kpi' && (
             <div className="space-y-6 animate-fade-in px-2">
               {isLoadingKpi ? (
-                <div className="dashboard-card p-10 flex flex-col items-center justify-center transition-colors">
+                <div className="dashboard-card p-5 flex flex-col items-center justify-center transition-colors">
                   <div className="animate-spin w-8 h-8 border-3 border-t-transparent rounded-full mb-4" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
                   <p className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>KPI ma&apos;lumotlari yuklanmoqda...</p>
                 </div>
@@ -944,7 +988,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 <div className="dashboard-card p-5 !shadow-sm">
                   <div className="flex items-center gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
                     <Calculator size={16} style={{ color: 'var(--text-muted)' }} />
-                    <h4 className="text-meta font-black uppercase tracking-widest mt-0.5 leading-none" style={{ color: 'var(--text)' }}>Mijoz KPI Soblamalari (Override)</h4>
+                    <h4 className="text-meta font-semibold uppercase tracking-widest mt-0.5 leading-none" style={{ color: 'var(--text)' }}>Mijoz KPI Soblamalari (Override)</h4>
                   </div>
 
                   <div className="space-y-4">
@@ -958,10 +1002,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         <div key={rule.id} className="p-4 rounded-xl border transition-all group hover:shadow-sm" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
                           <div className="flex justify-between items-start mb-4">
                             <div className="min-w-0 flex-1">
-                              <p className="text-meta font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>{rule.nameUz}</p>
+                              <p className="text-meta font-semibold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{rule.nameUz}</p>
                               <div className="flex items-center gap-3 mt-1.5">
                                 <span className="text-micro font-bold uppercase tracking-tight opacity-70" style={{ color: 'var(--text-muted)' }}>{rule.role}</span>
-                                <span className="px-2 py-1 rounded-lg text-micro font-black uppercase tracking-widest border" style={{
+                                <span className="px-2 py-1 rounded-lg text-micro font-semibold uppercase tracking-widest border" style={{
                                   background: rule.category === 'automation' ? 'color-mix(in srgb, var(--info) 10%, transparent)' : 'color-mix(in srgb, var(--warning) 10%, transparent)',
                                   color: rule.category === 'automation' ? 'var(--info)' : 'var(--warning)',
                                   borderColor: rule.category === 'automation' ? 'color-mix(in srgb, var(--info) 20%, transparent)' : 'color-mix(in srgb, var(--warning) 20%, transparent)'
@@ -972,19 +1016,19 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             </div>
                             <div className="ml-5 text-right">
                               <p className="text-micro font-bold uppercase tracking-tight" style={{ color: 'var(--text-muted)' }}>Standart</p>
-                              <p className="text-micro font-black tracking-tight mt-0.5" style={{ color: 'var(--accent-blue)' }}>+{rule.rewardPercent}/-{rule.penaltyPercent}%</p>
+                              <p className="text-micro font-semibold tracking-tight mt-0.5" style={{ color: 'var(--accent-blue)' }}>+{rule.rewardPercent}/-{rule.penaltyPercent}%</p>
                             </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-4 mt-4">
                             <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>
-                              <label className="text-micro font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: 'var(--success)' }}>Bonus %:</label>
+                              <label className="text-micro font-semibold uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: 'var(--success)' }}>Bonus %:</label>
                               <input
                                 type="number"
                                 step="0.1"
                                 disabled={isSaving}
                                 placeholder="Standart"
-                                className="flex-1 bg-transparent border-none outline-none text-meta font-black font-mono uppercase transition-colors disabled:opacity-50"
+                                className="flex-1 bg-transparent border-none outline-none text-meta font-semibold font-mono uppercase transition-colors disabled:opacity-50"
                                 style={{ color: 'var(--text)' }}
                                 value={currentReward}
                                 onBlur={async (e) => {
@@ -1019,13 +1063,13 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               />
                             </div>
                             <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>
-                              <label className="text-micro font-black uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: 'var(--danger)' }}>Jarima %:</label>
+                              <label className="text-micro font-semibold uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: 'var(--danger)' }}>Jarima %:</label>
                               <input
                                 type="number"
                                 step="0.1"
                                 disabled={isSaving}
                                 placeholder="Standart"
-                                className="flex-1 bg-transparent border-none outline-none text-meta font-black font-mono uppercase transition-colors disabled:opacity-50"
+                                className="flex-1 bg-transparent border-none outline-none text-meta font-semibold font-mono uppercase transition-colors disabled:opacity-50"
                                 style={{ color: 'var(--text)' }}
                                 value={currentPenalty}
                                 onBlur={async (e) => {
@@ -1075,9 +1119,30 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               )}
             </div>
           )}
+
+          {activeTab === 'tarix' && (
+            <div className="animate-fade-in px-2">
+              {/* E4: `AuditLog` allaqachon yozilardi, lekin foydalanuvchi turgan
+                  joyda ko'rinmasdi. Endi "kim, qachon, nimani o'zgartirdi"
+                  savoliga shu yerda javob bor. */}
+              <div className="dashboard-card p-5 !shadow-sm">
+                <div className="flex items-center gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'var(--brand-ghost)', color: 'var(--brand)' }}>
+                    <History size={18} />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>O&apos;zgarishlar tarixi</h2>
+                    <p className="text-meta" style={{ color: 'var(--text-muted)' }}>Kim, qachon va nimani o&apos;zgartirdi</p>
+                  </div>
+                </div>
+                <RecordTimeline tableName="Company" recordId={company.id} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 

@@ -3,6 +3,8 @@ import { getAvailableBalance } from "@/lib/balance";
 import { auth } from "@/lib/auth";
 import ExpensesClient from "./ExpensesClient";
 
+export const metadata = { title: "Xarajatlar" };
+
 export default async function ExpensesPage() {
   const session = await auth();
   const userRole = (session?.user?.role as string) || "";

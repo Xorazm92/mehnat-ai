@@ -3,6 +3,8 @@ import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/c
 import { isSeniorRole } from "@/lib/permissions";
 import KPIClient from "./KPIClient";
 
+export const metadata = { title: "KPI" };
+
 export default async function KpiPage() {
   const session = await auth();
   const userId = session?.user?.id ?? "";

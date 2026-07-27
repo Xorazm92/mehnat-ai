@@ -28,7 +28,7 @@ export async function getAvailableBalance(opts?: {
   const [paidPayments, kassaIncome, kassaExpense, approvedExpenses, payouts] =
     await Promise.all([
       prisma.payment.aggregate({
-        where: { status: "paid", deletedAt: null },
+        where: { status: { in: ["paid", "partial"] }, deletedAt: null },
         _sum: { amount: true },
       }),
       prisma.kassaEntry.aggregate({
@@ -95,7 +95,7 @@ async function movementInRange(
     typeof range.paymentPeriod === "string" ? range.paymentPeriod : range.paymentPeriod;
   const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
     db.payment.aggregate({
-      where: { status: "paid", deletedAt: null, period: periodWhere },
+      where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: periodWhere },
       _sum: { amount: true },
     }),
     db.kassaEntry.aggregate({
@@ -157,7 +157,7 @@ export async function getYearMovement(year: number): Promise<{ income: number; o
   const to = new Date(year + 1, 0, 1);
   const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
     prisma.payment.aggregate({
-      where: { status: "paid", deletedAt: null, period: { startsWith: `${year}-` } },
+      where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { startsWith: `${year}-` } },
       _sum: { amount: true },
     }),
     prisma.kassaEntry.aggregate({
@@ -188,7 +188,7 @@ export async function getMovementBefore(year: number): Promise<{ income: number;
   const to = new Date(year, 0, 1);
   const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
     prisma.payment.aggregate({
-      where: { status: "paid", deletedAt: null, period: { lt: `${year}-01` } },
+      where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { lt: `${year}-01` } },
       _sum: { amount: true },
     }),
     prisma.kassaEntry.aggregate({

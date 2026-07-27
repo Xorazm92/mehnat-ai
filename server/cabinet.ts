@@ -6,6 +6,121 @@ import { isSeniorRole } from "@/lib/permissions";
 import { getAvailableBalance } from "@/lib/balance";
 import { adjustmentMagnitude } from "@/lib/adjustments";
 import { serialize } from "@/lib/serialize";
+import { companyScopeWhere, type Actor } from "@/lib/access";
+import { mapMonthlyReportToOperationEntry, FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
+import type { ObligationStatus } from "@prisma/client";
+
+// ─────────────────────────────────────────────
+// Umumiy yordamchilar — dashboardlar bo'ylab bir xil semantika
+// ─────────────────────────────────────────────
+
+// Majburiyat "yopilmagan" statuslari (accepted/cancelled tashqarida).
+const OBLIGATION_NOT_DONE: ObligationStatus[] = [
+  "planned",
+  "in_progress",
+  "ready",
+  "sent",
+  "rejected",
+];
+
+// Hisobot katakchasi "bajarildi" deb sanaladigan qiymatlar (OperationModule bilan bir xil).
+const REPORT_DONE = new Set(["+", "accepted"]);
+// "Topshirildi — tasdiq kutmoqda" qiymatlari.
+const REPORT_PENDING = new Set(["topshirildi", "submitted"]);
+// "Bo'sh / kerak emas" — maxrajdan tashqarida.
+const REPORT_EMPTY = new Set(["", "0", "not_required"]);
+// Barcha hisobot maydonlari (matritsa universumi).
+const REPORT_FIELD_KEYS = Object.keys(FIELD_TO_DB_COLUMN);
+
+// Bitta firmaning joriy oy hisobot to'ldirilganligi.
+// Maxraj: requiredReports sozlangan bo'lsa — o'sha; aks holda (hozircha barcha
+// firmalarda bo'sh) shu oy REAL to'ldirilgan (holat qo'yilgan) kataklar. Shunday
+// qilib "0/0 → 100%" degan yolg'on ko'rsatkich chiqmaydi.
+function computeReportProgress(
+  report: Record<string, unknown> | null | undefined,
+  requiredKeys: string[],
+) {
+  const entry = report
+    ? (mapMonthlyReportToOperationEntry(
+        report as Parameters<typeof mapMonthlyReportToOperationEntry>[0],
+      ) as unknown as Record<string, unknown>)
+    : null;
+
+  let keys: string[];
+  if (requiredKeys.length > 0) {
+    keys = requiredKeys;
+  } else if (entry) {
+    // Faqat holat qo'yilgan (ishlanayotgan) kataklar.
+    keys = REPORT_FIELD_KEYS.filter((k) => {
+      const v = String(entry[k] ?? "").trim().toLowerCase();
+      return !REPORT_EMPTY.has(v);
+    });
+  } else {
+    keys = [];
+  }
+
+  const total = keys.length;
+  if (total === 0) return { total: 0, done: 0, pending: 0, missing: 0, percent: 0, hasData: false };
+
+  let done = 0;
+  let pending = 0;
+  for (const key of keys) {
+    const v = String(entry?.[key] ?? "").trim().toLowerCase();
+    if (REPORT_DONE.has(v)) done++;
+    else if (REPORT_PENDING.has(v)) pending++;
+  }
+  const missing = total - done - pending;
+  const percent = Math.round((done / total) * 100);
+  return { total, done, pending, missing, percent, hasData: true };
+}
+
+// ─────────────────────────────────────────────
+// DASHBOARD MUDDATLARI — har rol o'z ko'lamida (companyScopeWhere)
+// Barcha kabinetlar shu yagona funksiyani chaqiradi.
+// ─────────────────────────────────────────────
+export async function getDashboardDeadlines(limit = 6) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const actor: Actor = { id: session.user.id, role: session.user.role as string };
+  const now = new Date();
+  const soon = new Date();
+  soon.setDate(soon.getDate() + 14); // keyingi 2 hafta = "yaqin muddat"
+  const scope = companyScopeWhere(actor);
+
+  const [overdueCount, dueSoonCount, upcoming] = await Promise.all([
+    prisma.obligation.count({
+      where: { company: scope, status: { in: OBLIGATION_NOT_DONE }, dueAt: { lt: now } },
+    }),
+    prisma.obligation.count({
+      where: { company: scope, status: { in: OBLIGATION_NOT_DONE }, dueAt: { gte: now, lte: soon } },
+    }),
+    prisma.obligation.findMany({
+      where: { company: scope, status: { in: OBLIGATION_NOT_DONE } },
+      include: {
+        company: { select: { name: true } },
+        template: { select: { name: true, obligationType: true } },
+      },
+      orderBy: { dueAt: "asc" },
+      take: limit,
+    }),
+  ]);
+
+  return serialize({
+    overdueCount,
+    dueSoonCount,
+    upcoming: upcoming.map((o) => ({
+      id: o.id,
+      companyName: o.company.name,
+      templateName: o.template.name,
+      obligationType: o.template.obligationType,
+      periodKey: o.periodKey,
+      dueAt: o.dueAt,
+      status: o.status as string,
+      isOverdue: o.dueAt.getTime() < now.getTime(),
+    })),
+  });
+}
 
 // ─────────────────────────────────────────────
 // SHAXSIY KABINET ("Mening kabinetim") — har qanday rol uchun
@@ -66,6 +181,18 @@ export async function getMyCabinet() {
         chiefAccountantId: true,
         supervisorId: true,
         bankClientId: true,
+        contractAmount: true,
+        brandName: true,
+        directorName: true,
+        directorPhone: true,
+        accountantPerc: true,
+        accountantSum: true,
+        chiefAccountantPerc: true,
+        chiefAccountantSum: true,
+        supervisorPerc: true,
+        supervisorSum: true,
+        bankClientPerc: true,
+        bankClientSum: true,
       },
       orderBy: { name: "asc" },
     }),
@@ -156,7 +283,7 @@ export async function getAccountantCabinetData() {
   if (!session) throw new Error("Unauthorized");
 
   const userId = session.user.id;
-  const currentMonth = new Date().toISOString().slice(0, 7); // "2026-06"
+  const currentMonth = new Date().toISOString().slice(0, 7); // joriy oy "YYYY-MM"
 
   const [companies, recentPerformance, adjustments] = await Promise.all([
     // O'ziga biriktirilgan firmalar
@@ -209,13 +336,48 @@ export async function getAccountantCabinetData() {
   const approvedCount = recentPerformance.filter(
     (p) => p.status === "approved"
   ).length;
+  // "Kutmoqda" = hali tasdiqlanmagan (draft + submitted + rejected) — getMyCabinet
+  // bilan bir xil ta'rif. Bu shaxsiy ko'rinish, boshqaruvchi tasdiq navbati emas.
   const pendingCount = recentPerformance.filter(
-    (p) => p.status === "draft"
+    (p) => p.status !== "approved"
   ).length;
 
+  // Har firma uchun joriy oy hisobot to'ldirilganligi + umumiy yig'indi.
+  const companiesWithProgress = companies.map((c) => {
+    const progress = computeReportProgress(
+      (c.monthlyReports[0] as Record<string, unknown> | undefined) ?? null,
+      c.requiredReports,
+    );
+    return {
+      id: c.id,
+      name: c.name,
+      inn: c.inn,
+      taxRegime: c.taxRegime,
+      riskLevel: c.riskLevel,
+      kpiEnabled: c.kpiEnabled,
+      progress,
+    };
+  });
+
+  const reportTotals = companiesWithProgress.reduce(
+    (acc, c) => {
+      acc.required += c.progress.total;
+      acc.done += c.progress.done;
+      acc.pending += c.progress.pending;
+      return acc;
+    },
+    { required: 0, done: 0, pending: 0 },
+  );
+  // Maxraj bo'lmasa (hech qayerda hisobot belgilanmagan) — percent = null → UI "—".
+  const reportPercent =
+    reportTotals.required > 0
+      ? Math.round((reportTotals.done / reportTotals.required) * 100)
+      : null;
+
   return serialize({
-    companies,
-    companiesCount: companies.length,
+    companies: companiesWithProgress,
+    companiesCount: companiesWithProgress.length,
+    reportSummary: { ...reportTotals, percent: reportPercent },
     kpi: { totalScore, approvedCount, pendingCount, records: recentPerformance },
     adjustments,
     currentMonth,
@@ -433,11 +595,15 @@ export async function getChiefAccountantCabinetData() {
       },
     }),
 
-    // Tasdiqlash kutayotgan KPI lar (bosh buxgalter uchun)
+    // Tasdiqlash kutayotgan KPI lar — FAQAT shu bosh buxgalter jamoasi
+    // (aks holda butun tizimning submittedлари ko'rinib ketardi).
     prisma.monthlyPerformance.findMany({
       where: {
         status: "submitted",
         month: { startsWith: currentMonth },
+        employee: {
+          assignedCompanies: { some: { chiefAccountantId: userId } },
+        },
       },
       include: {
         employee: { select: { fullName: true, avatarColor: true, role: true } },
@@ -447,12 +613,15 @@ export async function getChiefAccountantCabinetData() {
       take: 20,
     }),
 
-    // Oylik maosh umumiy (joriy oy)
+    // Tasdiq kutayotgan oylik tuzatmalar — FAQAT shu jamoa a'zolari.
     prisma.payrollAdjustment.findMany({
       where: {
         month: { startsWith: currentMonth },
         isApproved: false,
         deletedAt: null,
+        employee: {
+          assignedCompanies: { some: { chiefAccountantId: userId } },
+        },
       },
       include: {
         employee: { select: { fullName: true, role: true } },

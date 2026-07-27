@@ -66,14 +66,14 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
     return (
         <div className="space-y-6 animate-fade-in p-6 bg-[var(--background)] min-h-dvh">
             {/* Header */}
-            <div className="dashboard-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+            <div className="dashboard-card p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[var(--primary)] to-[var(--accent-blue-hover)]"></div>
                 <div className="flex items-center gap-5 relative z-10">
                     <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-inner" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
                         <Shield size={28} />
                     </div>
                     <div>
-                        <h2 className="text-xl font-black leading-none uppercase tracking-widest" style={{ color: 'var(--text)' }}>
+                        <h2 className="text-sm font-semibold leading-none" style={{ color: 'var(--text)' }}>
                             {t.auditLogs}
                         </h2>
                         <p className="text-meta font-bold uppercase tracking-widest mt-2 leading-none" style={{ color: 'var(--text-muted)' }}>
@@ -87,7 +87,7 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                     <input
                         type="text"
                         placeholder={t.searchAudit.toUpperCase()}
-                        className="w-full pl-11 pr-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 placeholder:text-[var(--text-muted)] shadow-sm"
+                        className="w-full pl-11 pr-4 py-3 rounded-xl text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 placeholder:text-[var(--text-muted)] shadow-sm"
                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -98,14 +98,14 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
             {/* Mobil kartochkalar (Audit) */}
             <div className="md:hidden space-y-3">
                 {loading ? (
-                    <div className="dashboard-card p-12 flex flex-col items-center gap-3">
+                    <div className="dashboard-card p-5 flex flex-col items-center gap-3">
                         <div className="w-9 h-9 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
                         <p className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.loadingAudit}</p>
                     </div>
                 ) : filteredLogs.length === 0 ? (
-                    <div className="dashboard-card p-12 text-center">
+                    <div className="dashboard-card p-5 text-center">
                         <History size={36} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--text-muted)' }} />
-                        <span className="text-meta uppercase font-black tracking-[0.2em] opacity-60" style={{ color: 'var(--text-muted)' }}>{t.noDataFound}</span>
+                        <span className="text-meta uppercase font-semibold tracking-[0.2em] opacity-60" style={{ color: 'var(--text-muted)' }}>{t.noDataFound}</span>
                     </div>
                 ) : filteredLogs.map((log) => {
                     const isDel = log.action.includes('delete');
@@ -118,14 +118,14 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                                 <div className="flex items-center gap-2.5 min-w-0">
                                     <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }}><User size={15} /></div>
                                     <div className="min-w-0">
-                                        <div className="text-xs font-black uppercase tracking-tight truncate" style={{ color: 'var(--text)' }}>{log.profiles?.full_name || 'System Auto'}</div>
+                                        <div className="text-xs font-semibold tracking-tight truncate" style={{ color: 'var(--text)' }}>{log.profiles?.full_name || 'System Auto'}</div>
                                         <div className="text-micro font-bold tabular-nums" style={{ color: 'var(--text-muted)' }}>{formatUzDateNumeric(log.created_at)} {formatUzTime(log.created_at)}</div>
                                     </div>
                                 </div>
-                                <span className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg shrink-0" style={{ color: ac, background: `${ac}1a` }}>{log.action.replace('_', ' ')}</span>
+                                <span className="text-micro font-semibold uppercase tracking-widest px-2 py-1 rounded-lg shrink-0" style={{ color: ac, background: `${ac}1a` }}>{log.action.replace('_', ' ')}</span>
                             </div>
                             <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-                                <span className="text-micro font-black uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>{(log.entity_type || '').replace('_', ' ')}</span>
+                                <span className="text-micro font-semibold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>{(log.entity_type || '').replace('_', ' ')}</span>
                                 <span className="text-micro font-mono px-1.5 py-0.5 rounded-lg border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>ID: {log.entity_id?.slice(0, 8) || 'N/A'}</span>
                             </div>
                             <div className="text-micro font-mono mt-2 px-2 py-1.5 rounded-lg truncate" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }} title={JSON.stringify(log.details)}>{JSON.stringify(log.details)}</div>
@@ -137,14 +137,14 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
             {/* Audit Table (desktop) */}
             <div className="hidden md:block dashboard-card overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs uppercase tracking-widest">
+                    <table className="w-full text-left border-collapse text-xs">
                         <thead>
                             <tr style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                                <th className="px-6 py-4 text-micro font-black leading-none" style={{ color: 'var(--text-muted)' }}>{t.time}</th>
-                                <th className="px-6 py-4 text-micro font-black border-l leading-none" style={{ color: 'var(--text-muted)', borderColor: 'var(--card-border)' }}>{t.user}</th>
-                                <th className="px-6 py-4 text-micro font-black border-l leading-none" style={{ color: 'var(--text-muted)', borderColor: 'var(--card-border)' }}>{t.action}</th>
-                                <th className="px-6 py-4 text-micro font-black border-l leading-none" style={{ color: 'var(--text-muted)', borderColor: 'var(--card-border)' }}>{t.object}</th>
-                                <th className="px-6 py-4 text-micro font-black border-l leading-none" style={{ color: 'var(--text-muted)', borderColor: 'var(--card-border)' }}>{t.details}</th>
+                                <th className="px-6 py-4 text-micro font-semibold leading-none" style={{ color: 'var(--text-muted)' }}>{t.time}</th>
+                                <th className="px-6 py-4 text-micro font-semibold border-l leading-none" style={{ color: 'var(--text-muted)', borderColor: 'var(--card-border)' }}>{t.user}</th>
+                                <th className="px-6 py-4 text-micro font-semibold border-l leading-none" style={{ color: 'var(--text-muted)', borderColor: 'var(--card-border)' }}>{t.action}</th>
+                                <th className="px-6 py-4 text-micro font-semibold border-l leading-none" style={{ color: 'var(--text-muted)', borderColor: 'var(--card-border)' }}>{t.object}</th>
+                                <th className="px-6 py-4 text-micro font-semibold border-l leading-none" style={{ color: 'var(--text-muted)', borderColor: 'var(--card-border)' }}>{t.details}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y transition-colors">
@@ -180,7 +180,7 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                                     </td>
                                     <td className="px-6 py-4 border-l" style={{ borderColor: 'var(--card-border)' }}>
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-blue)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors icon-btn-accent" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }}>
                                                 <User size={16} />
                                             </div>
                                             <div className="flex flex-col">
@@ -192,7 +192,7 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 border-l" style={{ borderColor: 'var(--card-border)' }}>
-                                        <span className="px-3 py-1.5 rounded-lg text-micro font-black uppercase tracking-widest inline-block" style={{
+                                        <span className="px-3 py-1.5 rounded-lg text-micro font-semibold uppercase tracking-widest inline-block" style={{
                                             background: log.action.includes('delete') ? 'color-mix(in srgb, var(--danger) 10%, transparent)' :
                                                 log.action.includes('create') || log.action.includes('insert') ? 'color-mix(in srgb, var(--success) 10%, transparent)' :
                                                     log.action.includes('update') ? 'color-mix(in srgb, var(--warning) 10%, transparent)' :
@@ -214,7 +214,7 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 border-l" style={{ borderColor: 'var(--card-border)' }}>
-                                        <div className="max-w-[250px] truncate text-micro font-mono font-bold px-3 py-2 rounded-lg cursor-help transition-colors" title={JSON.stringify(log.details, null, 2)} style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                                        <div className="max-w-[250px] truncate text-micro font-mono font-bold px-3 py-2 rounded-lg cursor-help transition-colors" title={JSON.stringify(log.details, null, 2)} style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>
                                             {JSON.stringify(log.details)}
                                         </div>
                                     </td>

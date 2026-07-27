@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { getObligations } from "@/server/obligations";
 import DeadlinesClient from "./DeadlinesClient";
 
+export const metadata = { title: "Muddatlar" };
+
 export default async function DeadlinesPage() {
   const session = await auth();
   const role = (session?.user?.role as string) || "";

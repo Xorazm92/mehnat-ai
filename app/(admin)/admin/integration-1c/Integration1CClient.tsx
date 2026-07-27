@@ -10,6 +10,7 @@ import {
   createOneCMapping,
   removeOneCMapping,
 } from "@/server/oneCConnections";
+import { Button } from "@/components/ui/Button";
 
 interface Mapping {
   id: string;
@@ -86,7 +87,7 @@ export default function Integration1CClient({ connections, overview, companies }
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>1C integratsiya</h1>
+        <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>1C integratsiya</h1>
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>Agent ulanishlari, firma mapping va sync holati (1C→ASRO, bir yo'nalish)</p>
       </div>
 
@@ -96,7 +97,7 @@ export default function Integration1CClient({ connections, overview, companies }
           const m = STATUS_META[s];
           return (
             <div key={s} className="rounded-xl border p-3" style={{ borderColor: "var(--border, var(--rule))" }}>
-              <div className="text-2xl font-black" style={{ color: m.fg }}>{statusCount(s)}</div>
+              <div className="text-2xl font-semibold" style={{ color: m.fg }}>{statusCount(s)}</div>
               <div className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{m.label}</div>
             </div>
           );
@@ -123,7 +124,7 @@ export default function Integration1CClient({ connections, overview, companies }
         <label className="text-xs flex-1 min-w-[200px]" style={{ color: "var(--text-muted)" }}>Yangi agent ulanishi nomi
           <input className="block px-2.5 py-1.5 rounded-lg border text-sm w-full" style={inputStyle} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="ASRO agent — 1-baza" />
         </label>
-        <button disabled={pending} onClick={addConnection} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>+ Ulanish yaratish</button>
+        <Button variant="success" size="md" disabled={pending} onClick={addConnection}>+ Ulanish yaratish</Button>
       </div>
 
       {/* Token reveal — bir marta */}
@@ -180,7 +181,7 @@ export default function Integration1CClient({ connections, overview, companies }
                     <option value="">Firma tanlang…</option>
                     {companies.map((co) => <option key={co.id} value={co.id}>{co.name} ({co.inn})</option>)}
                   </select>
-                  <button disabled={pending || !mf.org.trim() || !mf.companyId} onClick={() => { run(() => createOneCMapping(c.id, mf.org, mf.companyId), "Mapping qo'shildi"); setMapForm({ ...mapForm, [c.id]: { org: "", companyId: "" } }); }} className="text-xs font-semibold px-2.5 py-1 rounded-lg text-white disabled:opacity-50" style={{ background: "var(--brand)" }}>+ Mapping</button>
+                  <Button variant="primary" size="sm" disabled={pending || !mf.org.trim() || !mf.companyId} onClick={() => { run(() => createOneCMapping(c.id, mf.org, mf.companyId), "Mapping qo'shildi"); setMapForm({ ...mapForm, [c.id]: { org: "", companyId: "" } }); }}>+ Mapping</Button>
                 </div>
               </div>
             </div>

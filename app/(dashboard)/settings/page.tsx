@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getUserById } from "@/server/users";
 import SettingsClient from "./SettingsClient";
 
+export const metadata = { title: "Sozlamalar" };
+
 export default async function SettingsPage() {
   const session = await auth();
   const userId = session?.user?.id ?? "";

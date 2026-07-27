@@ -4,6 +4,8 @@ import { canSeeViewWith, getHomeRoute, type UserRole } from "@/lib/permissions";
 import { getRoleViewOverrides } from "@/server/rbac";
 import AuditLogModule from "@/components/AuditLogModule";
 
+export const metadata = { title: "Audit jurnali" };
+
 export default async function AuditLogsPage() {
   const session = await auth();
   if (!session) redirect("/login");

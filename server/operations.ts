@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { checkCellWrite } from "@/lib/reportPermissions";
 import { revalidateTag } from "next/cache";
 import { Prisma, type ReportStatus } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
@@ -38,6 +39,10 @@ export async function getMonthlyReports(companyId: string, period?: string) {
 }
 
 export async function upsertMonthlyReport(data: Prisma.MonthlyReportUncheckedCreateInput) {
+  if (!data || !data.companyId || !data.period) {
+    throw new Error("companyId va period berilishi shart (upsertMonthlyReport)");
+  }
+
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
@@ -59,6 +64,26 @@ export async function upsertMonthlyReport(data: Prisma.MonthlyReportUncheckedCre
   for (const [k, v] of Object.entries(rawFields)) {
     const mapped = FIELD_TO_DB_COLUMN[k as OperationFieldKey] ?? k;
     fields[mapped] = v;
+  }
+
+  // ROL CHEGARASI — buxgalter o'z ishini o'zi tasdiqlay olmaydi va dalilsiz
+  // "topshirildi" qo'ya olmaydi. UI menyuni yashiradi, lekin haqiqiy chegara
+  // shu yerda: aks holda bitta so'rov bilan chetlab o'tilardi.
+  // Tasdiqlash/topshirish yo'llari alohida: server/proofs.ts.
+  if (!isSeniorRole(role)) {
+    const current = await prisma.monthlyReport.findUnique({
+      where: { companyId_period: { companyId, period } },
+    });
+    const currentRow = current as Record<string, unknown> | null;
+
+    for (const [dbCol, nextValue] of Object.entries(fields)) {
+      const reason = checkCellWrite({
+        role,
+        nextValue,
+        currentValue: currentRow ? currentRow[dbCol] : undefined,
+      });
+      if (reason) throw new Error(reason);
+    }
   }
 
   const result = await prisma.monthlyReport.upsert({

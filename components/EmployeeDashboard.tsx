@@ -186,7 +186,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <p className="text-micro font-bold uppercase text-[var(--text-secondary)] mb-1">Reyting</p>
-                            <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-white uppercase tracking-widest">Samaradorlik</h4>
+                            <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-white">Samaradorlik</h4>
                         </div>
                         <div className="w-10 h-10 bg-[var(--warning-bg)] text-[var(--warning)] rounded-lg flex items-center justify-center border border-[var(--warning-border)]">
                             <Award size={20} />
@@ -208,7 +208,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <p className="text-micro font-bold uppercase text-[var(--text-secondary)] mb-1">Ehtiyotkorlik</p>
-                            <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-white uppercase tracking-widest">Jarimalar</h4>
+                            <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-white">Jarimalar</h4>
                         </div>
                         <div className="w-10 h-10 bg-[var(--danger-bg)] text-[var(--danger)] rounded-lg flex items-center justify-center border border-[var(--danger-border)]">
                             <AlertCircle size={20} />
@@ -264,7 +264,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                         {performances.filter(p => p.calculatedScore > 0).length === 0 && (
                             <div className="text-center py-10 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] rounded-lg border border-dashed border-[var(--rule)]">
                                 <div className="text-2xl mb-2 opacity-50">🌱</div>
-                                <p className="font-bold text-[var(--text-secondary)] uppercase text-xs">Hozircha bonuslar mavjud emas</p>
+                                <p className="font-bold text-[var(--text-secondary)] text-xs">Hozircha bonuslar mavjud emas</p>
                             </div>
                         )}
                     </div>
@@ -303,7 +303,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                         {performances.filter(p => p.calculatedScore < 0).length === 0 && (
                             <div className="text-center py-10 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] rounded-lg border border-dashed border-[var(--rule)]">
                                 <div className="text-2xl mb-2 opacity-50">🛡️</div>
-                                <p className="font-bold text-[var(--text-secondary)] uppercase text-xs">A&apos;lo darajada! Hech qanday jarima yo&apos;q</p>
+                                <p className="font-bold text-[var(--text-secondary)] text-xs">A&apos;lo darajada! Hech qanday jarima yo&apos;q</p>
                             </div>
                         )}
                     </div>
@@ -314,7 +314,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
             <div className="bg-[var(--card-bg)] dark:bg-[var(--surface-2)] border border-[var(--rule)] shadow-sm rounded-lg p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 border-b border-[var(--rule)] pb-4">
                     <div>
-                        <h4 className="text-lg font-bold text-[var(--text-primary)] dark:text-white uppercase flex items-center gap-2">
+                        <h4 className="text-lg font-bold text-[var(--text-primary)] dark:text-white flex items-center gap-2">
                             <Activity className="text-[var(--accent-indigo)]" size={18} />
                             {t.kpiInitiatives}
                         </h4>
@@ -335,7 +335,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                 {myCompanies.length === 0 ? (
                     <div className="text-center py-20 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] rounded-lg border border-dashed border-[var(--rule)]">
                         <div className="text-4xl mb-4 opacity-50">🏝️</div>
-                        <p className="font-bold text-[var(--text-secondary)] uppercase text-xs">
+                        <p className="font-bold text-[var(--text-secondary)] text-xs">
                             {lang === 'uz' ? 'Hozircha faol firmalar mavjud emas' : 'Активных фирм пока нет'}
                         </p>
                     </div>

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Save, Check, Lock } from "lucide-react";
 import { ROLE_LABELS, VIEW_LABELS, type UserRole, type AppView } from "@/lib/permissions";
 import { saveRoleViews, type RoleViewMatrix } from "@/server/rbac";
+import { Button } from "@/components/ui/Button";
 
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
 
@@ -42,19 +43,14 @@ export default function RoleViewEditor({ initial }: { initial: RoleViewMatrix })
     <div className="space-y-3">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Rollar & Ruxsatlar</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Rollar & Ruxsatlar</h1>
           <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
             Har bir rol qaysi bo&apos;limlarni (menyu) ko&apos;rishini belgilang. Superadmin doim hammasini ko&apos;radi.
           </p>
         </div>
-        <button
-          onClick={save}
-          disabled={busy || !dirty}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white disabled:opacity-50"
-          style={{ background: "var(--accent-blue)" }}
-        >
+        <Button variant="primary" size="md" onClick={save} disabled={busy || !dirty}>
           <Save size={15} /> Saqlash
-        </button>
+        </Button>
       </div>
 
       {dirty && (

@@ -1,14 +1,17 @@
 "use client";
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Company, Staff, TaxType, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
-import { Plus, Search, Edit3, Trash2, LayoutGrid, List, Eye, EyeOff, ChevronLeft, ChevronRight, Download, Filter, Building2, Calculator, Users, DollarSign } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, LayoutGrid, List, Eye, EyeOff, Download, Filter, Building2, Calculator, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import OnboardingWizard from './OnboardingWizard';
 import { MonthPicker } from './ui/MonthPicker';
 import { periodsEqual } from '@/lib/periods';
 import { formatNum } from "@/lib/format";
 import RiskBadge from './RiskBadge';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { DataTable, type DataColumn } from '@/components/ui/DataTable';
+import { useTableState } from '@/hooks/useTableState';
 
 interface Props {
   companies: Company[];
@@ -23,8 +26,22 @@ interface Props {
 }
 
 const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect }) => {
+  const confirm = useConfirm();
   const t = translations[lang];
-  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Butun jadval holati URL'da: qidiruv, saralash, sahifa, zichlik va
+  // sakkizta filtr. Endi "mana bu 12 ta firma" havolasini yuborish mumkin.
+  const table = useTableState({
+    ns: 'org',
+    defaultSortKey: 'name',
+    defaultFilters: {
+      active: 'true', tax: 'all', status: 'all', emp: 'all',
+      risk: 'all', server: 'all', itpark: 'all', kpi: 'all',
+    },
+  });
+  const search = table.search;
+  const setSearch = table.setSearch;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingAssignments, setEditingAssignments] = useState<any[] | undefined>(undefined);
   const [isAdding, setIsAdding] = useState(false);
@@ -32,40 +49,27 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const [form, setForm] = useState<Partial<Company>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState<keyof Company>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [filterActive, setFilterActive] = useState<boolean | null>(true);
 
-  // Dual Scroll Logic
-  const topScrollRef = useRef<HTMLDivElement>(null);
-  const bottomScrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const top = topScrollRef.current;
-    const bottom = bottomScrollRef.current;
-    if (!viewMode || viewMode !== 'table' || !top || !bottom) return;
-
-    const syncTop = () => { if (bottom.scrollLeft !== top.scrollLeft) bottom.scrollLeft = top.scrollLeft; };
-    const syncBottom = () => { if (top.scrollLeft !== bottom.scrollLeft) top.scrollLeft = bottom.scrollLeft; };
-
-    top.addEventListener('scroll', syncTop);
-    bottom.addEventListener('scroll', syncBottom);
-
-    return () => {
-      top.removeEventListener('scroll', syncTop);
-      bottom.removeEventListener('scroll', syncBottom);
-    };
-  }, [viewMode]);
+  const filterActive: boolean | null =
+    table.filters.active === 'all' ? null : table.filters.active === 'true';
+  const setFilterActive = (v: boolean | null) =>
+    table.setFilter('active', v === null ? 'all' : String(v));
 
   // Smart Filters
-  const [filterTaxType, setFilterTaxType] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterEmployee, setFilterEmployee] = useState<string>('all');
-  const [filterRisk, setFilterRisk] = useState<string>('all');
-  const [filterServer, setFilterServer] = useState<string>('all');
-  const [filterItPark, setFilterItPark] = useState<string>('all');
-  const [filterKpi, setFilterKpi] = useState<string>('all');
+  const filterTaxType = table.filters.tax;
+  const setFilterTaxType = (v: string) => table.setFilter('tax', v);
+  const filterStatus = table.filters.status;
+  const setFilterStatus = (v: string) => table.setFilter('status', v);
+  const filterEmployee = table.filters.emp;
+  const setFilterEmployee = (v: string) => table.setFilter('emp', v);
+  const filterRisk = table.filters.risk;
+  const setFilterRisk = (v: string) => table.setFilter('risk', v);
+  const filterServer = table.filters.server;
+  const setFilterServer = (v: string) => table.setFilter('server', v);
+  const filterItPark = table.filters.itpark;
+  const setFilterItPark = (v: string) => table.setFilter('itpark', v);
+  const filterKpi = table.filters.kpi;
+  const setFilterKpi = (v: string) => table.setFilter('kpi', v);
   const [showFilters, setShowFilters] = useState(false);
 
   const itemsPerPage = 100;
@@ -84,14 +88,27 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
     return { stripe: 'var(--success)', verdict: 'verdict-green', label: 'Past risk' };
   };
 
+  /**
+   * Tanlangan davr uchun operatsiyalar — companyId bo'yicha bir marta indekslanadi.
+   * Avval `operations.find(o => o.companyId === c.id && periodsEqual(...))` har bir
+   * firma uchun, filtrlashda VA renderda alohida chaqirilardi.
+   */
+  const opByCompany = useMemo(() => {
+    const m = new Map<string, OperationEntry>();
+    for (const o of operations) {
+      if (periodsEqual(o.period, selectedPeriod)) m.set(o.companyId, o);
+    }
+    return m;
+  }, [operations, selectedPeriod]);
+
   const filtered = useMemo(() => {
     return companies
       .filter(c => {
         // Search: name, INN, or director name
-        const searchLower = search.toLowerCase();
+        const searchLower = table.debouncedSearch.toLowerCase();
         const matchesSearch =
           c.name.toLowerCase().includes(searchLower) ||
-          c.inn.includes(search) ||
+          c.inn.includes(table.debouncedSearch) ||
           (c.directorName?.toLowerCase().includes(searchLower));
 
         // Active/Archive filter
@@ -104,7 +121,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         const matchesStatus = filterStatus === 'all' || (c.companyStatus || 'active') === filterStatus;
 
         // Employee filter (accountant) - Use historical assignment for the selected period if available
-        const op = operations.find(o => o.companyId === c.id && periodsEqual(o.period, selectedPeriod));
+        const op = opByCompany.get(c.id);
         const currentAccountantId = op?.assigned_accountant_id || c.accountantId;
         const matchesEmployee = filterEmployee === 'all' || currentAccountantId === filterEmployee;
 
@@ -121,30 +138,120 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         const matchesKpi = filterKpi === 'all' || (filterKpi === 'yes' ? c.kpiEnabled : !c.kpiEnabled);
 
         return matchesSearch && matchesActive && matchesTax && matchesStatus && matchesEmployee && matchesRisk && matchesServer && matchesItPark && matchesKpi;
-      })
-      .sort((a, b) => {
-        const valA = a[sortField] || '';
-        const valB = b[sortField] || '';
-        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-        return 0;
       });
-  }, [companies, search, sortField, sortOrder, filterActive, filterTaxType, filterStatus, filterEmployee, filterRisk, filterServer, filterItPark, filterKpi, operations, selectedPeriod]);
+  }, [companies, table.debouncedSearch, filterActive, filterTaxType, filterStatus, filterEmployee, filterRisk, filterServer, filterItPark, filterKpi, opByCompany]);
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  // Kartochka ko'rinishi uchun sahifalash (jadvalni DataTable o'zi sahifalaydi).
+  const paginated = useMemo(
+    () => filtered.slice((table.page - 1) * itemsPerPage, table.page * itemsPerPage),
+    [filtered, table.page, itemsPerPage]
+  );
+
+  const orgColumns = useMemo<DataColumn<Company>[]>(() => [
+    {
+      key: 'name', header: t.companyName, width: '260px', sticky: true,
+      sortValue: c => c.name,
+      cell: (c) => {
+        const risk = getRiskIndicator(c);
+        return (
+          <div className="relative pl-3">
+            {/* Risk chizig'i — rang YOLG'IZ ma'no tashimasin uchun matnli nom `title` da */}
+            <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full" style={{ background: risk.stripe }} title={risk.label} />
+            <div className="truncate max-w-[210px] uppercase tracking-tight font-bold" title={c.name} style={{ color: 'var(--text)' }}>{c.name}</div>
+            {c.brandName && <div className="text-micro font-bold truncate uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{c.brandName}</div>}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'inn', header: t.inn, width: '110px',
+      sortValue: c => c.inn,
+      cell: c => <span className="font-mono text-meta font-bold" style={{ color: 'var(--text-secondary)' }}>{c.inn}</span>,
+    },
+    {
+      key: 'contract', header: 'SHARTNOMA', numeric: true, width: '140px',
+      sortValue: c => Number(opByCompany.get(c.id)?.contract_amount ?? c.contractAmount ?? 0),
+      exportValue: c => Number(opByCompany.get(c.id)?.contract_amount ?? c.contractAmount ?? 0),
+      cell: (c) => {
+        const amount = opByCompany.get(c.id)?.contract_amount ?? c.contractAmount;
+        return (
+          <span className="font-bold text-xs" style={{ color: 'var(--text)' }}>
+            {formatNum(amount) || '0'} <span className="text-micro font-bold uppercase ml-0.5" style={{ color: 'var(--text-muted)' }}>sum</span>
+          </span>
+        );
+      },
+    },
+    {
+      key: 'taxType', header: 'REJIM', align: 'center', width: '110px',
+      sortValue: c => c.taxType ?? '',
+      cell: c => (
+        <span className="c1-badge" style={{
+          background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)',
+          color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)',
+        }}>
+          {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'AYLANMA' : (c.taxType?.toUpperCase() || 'FIX'))}
+        </span>
+      ),
+    },
+    {
+      key: 'accountant', header: 'BUXGALTER', width: '170px',
+      sortValue: c => opByCompany.get(c.id)?.assigned_accountant_name ?? c.accountantName ?? '',
+      cell: (c) => {
+        const name = opByCompany.get(c.id)?.assigned_accountant_name ?? c.accountantName;
+        return (
+          <div className="flex items-center gap-1.5 truncate">
+            <Users size={12} style={{ color: 'var(--text-muted)' }} className="shrink-0" />
+            <span className="truncate text-meta font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{name || '—'}</span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'supervisor', header: 'NAZORATCHI', width: '160px',
+      sortValue: c => opByCompany.get(c.id)?.assigned_supervisor_name ?? c.supervisorName ?? '',
+      cell: (c) => {
+        const name = opByCompany.get(c.id)?.assigned_supervisor_name ?? c.supervisorName;
+        return <span className="truncate block text-meta font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>{name || '—'}</span>;
+      },
+    },
+    {
+      key: 'server', header: '1C SERVER', width: '140px',
+      sortValue: c => `${c.serverInfo ?? ''} ${c.serverName ?? ''}`.trim(),
+      cell: c => (
+        <div className="flex flex-col">
+          {c.serverInfo && <span className="text-micro font-semibold uppercase tracking-widest leading-none mb-0.5" style={{ color: 'var(--success)' }}>{c.serverInfo}</span>}
+          <span className="text-micro font-bold truncate uppercase tracking-tight" style={{ color: 'var(--text-muted)' }} title={c.serverName}>{c.serverName || '—'}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'actions', header: t.actions, align: 'center', width: '100px',
+      cell: c => (
+        <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
+          <button onClick={() => onCompanySelect(c)} className="icon-btn-sm rounded-lg" style={{ color: 'var(--accent-blue)' }} aria-label={`${c.name} — batafsil`}><Eye size={13} /></button>
+          <button onClick={() => startEdit(c)} className="icon-btn-sm rounded-lg" style={{ color: 'var(--accent-blue)' }} aria-label={`${c.name} — tahrirlash`}><Edit3 size={13} /></button>
+          <button onClick={() => handleDelete(c.id, c.name)} className="icon-btn-sm rounded-lg" style={{ color: 'var(--danger)' }} aria-label={`${c.name} — o'chirish`}><Trash2 size={13} /></button>
+        </div>
+      ),
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [t, opByCompany, onCompanySelect]);
+
 
   const handleExport = async () => {
     try {
       const { utils, writeFile } = await import('xlsx');
-      const headers = ['Nomi', 'INN', 'Buxgalter', 'Rejim', 'Login', 'Parol', 'Ega'];
+      // DIQQAT: Login/Parol ATAYLAB eksport qilinmaydi. Bular ASRO paroli emas —
+      // mijozning soliq portali kredensiali. Shifrlanmagan .xlsx Downloads'da qoladi,
+      // pochta orqali yuboriladi va xodim ishdan ketgach ham saqlanib qoladi.
+      // Ommaviy kredensial kerak bo'lsa — alohida, audit yoziladigan,
+      // super_admin'ga cheklangan amal orqali beriladi, fayl orqali emas.
+      const headers = ['Nomi', 'INN', 'Buxgalter', 'Rejim', 'Ega'];
       const rows = filtered.map(c => [
         c.name,
         c.inn,
         c.accountantName,
         c.taxRegime,
-        c.login || '',
-        c.password || '',
         c.ownerName || ''
       ]);
 
@@ -200,10 +307,14 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
     }
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`${name} firmasini o'chirishni tasdiqlaysizmi?`)) {
-      onDelete(id);
-    }
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: `"${name}" firmasi o'chirilsinmi?`,
+      description: "Firma ro'yxatdan olib tashlanadi. Bu amalni ortga qaytarib bo'lmaydi.",
+      confirmLabel: "O'chirish",
+      tone: 'danger',
+    });
+    if (ok) onDelete(id);
   };
 
   const handleSave = async (data?: Partial<Company>, assignments?: any[]) => {
@@ -243,10 +354,18 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
   return (
     <div className="w-full space-y-4 animate-fade-in pb-24 min-w-0">
+      {/* Bo'sh ro'yxat XATO EMAS. Ilgari bu yerda qizil "yuklanmadi" banneri turardi,
+          ya'ni hali firma qo'shilmagan yangi tizim ham, filtr hech narsa topmagan
+          holat ham nosozlikdek ko'rinardi. Haqiqiy so'rov xatosi endi `error.tsx`
+          ga chiqadi, bu yerda esa neytral holat ko'rsatiladi. */}
       {companies.length === 0 && (
-        <div className="rounded-lg p-6 text-center shadow-sm" style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)' }}>
-          <p className="font-bold text-meta uppercase tracking-widest leading-relaxed" style={{ color: 'var(--danger)' }}>
-            ⚠️ Hech qanday firma yuklanmadi. Sahifani yangilang yoki administratorga murojaat qiling.
+        <div className="empty-state rounded-lg" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
+          <Building2 size={32} style={{ color: 'var(--text-muted)', opacity: 0.35 }} />
+          <p className="font-bold text-meta uppercase tracking-widest mt-3" style={{ color: 'var(--text-secondary)' }}>
+            Hozircha firma yo&apos;q
+          </p>
+          <p className="text-body mt-1" style={{ color: 'var(--text-muted)' }}>
+            Birinchi firmani qo&apos;shish uchun &laquo;Yangi firma&raquo; tugmasidan foydalaning.
           </p>
         </div>
       )}
@@ -257,7 +376,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             <Building2 size={24} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg font-black uppercase tracking-wider truncate" style={{ color: 'var(--text)' }}>{t.organizations}</h2>
+            <h2 className="text-sm font-semibold tracking-wider truncate" style={{ color: 'var(--text)' }}>{t.organizations}</h2>
             <p className="text-meta font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>
               {t.totalFirms}: <span className="tabular-nums" style={{ color: 'var(--accent-blue)' }}>{filtered.length}</span>
             </p>
@@ -312,10 +431,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           <div className="flex items-center gap-2">
             <button
               onClick={handleExport}
-              className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
+              className="w-9 h-9 flex items-center justify-center rounded-lg transition-all icon-btn-accent"
               style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; }}
               title="Excelga eksport"
             >
               <Download size={16} />
@@ -323,10 +440,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
+              className="w-9 h-9 flex items-center justify-center rounded-lg transition-all icon-btn-accent"
               style={showFilters ? { background: 'var(--accent-blue-light)', border: '1px solid var(--accent-blue)', color: 'var(--accent-blue)' } : { background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
-              onMouseEnter={e => { if (!showFilters) { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; } }}
-              onMouseLeave={e => { if (!showFilters) { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; } }}
               title="Filtrlar"
             >
               <Filter size={16} />
@@ -381,7 +496,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{f.label}</label>
                 <select
                   value={f.value}
-                  onChange={(e) => { f.onChange(e.target.value); setCurrentPage(1); }}
+                  onChange={(e) => f.onChange(e.target.value)}
                   className="c1-input text-micro font-bold uppercase tracking-tight"
                 >
                   {f.options.map((o, i) => <option key={i} value={o.val}>{o.label}</option>)}
@@ -395,12 +510,10 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               onClick={() => {
                 setFilterTaxType('all'); setFilterStatus('all'); setFilterEmployee('all');
                 setFilterRisk('all'); setFilterServer('all'); setFilterItPark('all');
-                setFilterKpi('all'); setCurrentPage(1);
+                setFilterKpi('all');
               }}
-              className="px-3 py-1 text-micro font-bold transition-colors uppercase tracking-widest"
+              className="px-3 py-1 text-micro font-bold transition-colors uppercase tracking-widest icon-btn-danger"
               style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
             >
               Reset
             </button>
@@ -416,7 +529,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           placeholder="INN, firma nomi yoki direktor..."
           className="erp-input !pl-9 text-xs font-semibold"
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+          onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
@@ -460,7 +573,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                   <div className="absolute top-0 left-0 bottom-0 w-1" style={{ background: risk.stripe }} aria-hidden></div>
 
                   <div className="flex gap-3 mb-4 pl-2">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-black shrink-0 shadow-sm transition-transform group-hover:scale-105" style={{ background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}99)` }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-semibold shrink-0 shadow-sm transition-transform group-hover:scale-105" style={{ background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}99)` }}>
                       {c.name.charAt(0)}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -528,146 +641,57 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                     </div>
 
                     <div className="flex items-center gap-1 ml-2">
-                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="icon-btn-sm transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Edit3 size={15} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="icon-btn-sm transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}><Trash2 size={15} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="icon-btn-sm transition-all icon-btn-accent" style={{ color: 'var(--accent-blue)' }}><Edit3 size={15} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="icon-btn-sm transition-all icon-btn-danger" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
                     </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        {/* Jadval — faqat desktop 'table' rejimida */}
+        {/* Jadval — DataTable platformasi (faqat desktop 'table' rejimida) */}
         {viewMode === 'table' && (
-          <div className="hidden md:block dashboard-card overflow-hidden relative">
-            <div ref={bottomScrollRef} className="w-full overflow-x-auto">
-              <table className="erp-table w-full text-left min-w-[1000px]">
-                <thead>
-                  <tr>
-                    <th className="w-[40px] text-center">№</th>
-                    <th
-                      className="w-[240px] sticky left-0 z-20 cursor-pointer transition-colors"
-                      style={{ background: 'var(--table-header-bg)' }}
-                      onClick={() => { setSortField('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Building2 size={12} style={{ color: 'var(--text-muted)' }} />
-                        <span>{t.companyName} {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
-                      </div>
-                    </th>
-                    <th
-                      className="w-[100px] cursor-pointer transition-colors"
-                      onClick={() => { setSortField('inn'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }}
-                    >
-                      {t.inn} {sortField === 'inn' && (sortOrder === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th className="w-[130px]" style={{ color: 'var(--accent-blue)' }}>
-                      <div className="flex items-center justify-end gap-1"><DollarSign size={11} /> SHARTNOMA</div>
-                    </th>
-                    <th className="w-[110px] text-center">REJIM</th>
-                    <th className="w-[160px]">BUXGALTER</th>
-                    <th className="w-[150px]">NAZORATCHI</th>
-                    <th className="w-[130px]">1C SERVER</th>
-                    <th className="w-[90px] text-center">{t.actions}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.map((c, i) => {
-                    const risk = getRiskIndicator(c);
-                    const op = operations.find(o => o.companyId === c.id && periodsEqual(o.period, selectedPeriod));
-
-                    const displayAmount = op?.contract_amount ?? c.contractAmount;
-                    const displayAccountant = op?.assigned_accountant_name ?? c.accountantName;
-                    const displaySupervisor = op?.assigned_supervisor_name ?? c.supervisorName;
-
-                    return (
-                      <tr
-                        key={c.id}
-                        onClick={() => onCompanySelect(c)}
-                        className="group cursor-pointer transition-colors"
-                      >
-                        <td className="text-center font-mono text-micro font-bold" style={{ color: 'var(--text-muted)' }}>
-                          {c.originalIndex || (i + 1)}
-                        </td>
-                        <td className="sticky left-0 z-10 font-bold relative !pl-3" style={{ color: 'var(--text)', background: 'var(--card-bg)' }}>
-                          <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: risk.stripe }}></div>
-                          <div className="truncate max-w-[210px] uppercase tracking-tight" title={c.name}>{c.name}</div>
-                          {c.brandName && <div className="text-micro font-bold truncate uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{c.brandName}</div>}
-                        </td>
-                        <td className="font-mono text-meta font-bold" style={{ color: 'var(--text-secondary)' }}>
-                          {c.inn}
-                        </td>
-                        <td className="font-bold text-right text-xs tabular-nums" style={{ color: 'var(--text)' }}>
-                          {formatNum(displayAmount) || '0'} <span className="text-micro font-bold uppercase ml-0.5" style={{ color: 'var(--text-muted)' }}>sum</span>
-                        </td>
-                        <td className="text-center">
-                          <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)' }}>
-                            {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'AYLANMA' : (c.taxType?.toUpperCase() || 'FIX'))}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="flex items-center gap-1.5 truncate">
-                            <Users size={12} style={{ color: 'var(--text-muted)' }} className="shrink-0" />
-                            <span className="truncate text-meta font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{displayAccountant || '—'}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="truncate block text-meta font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>{displaySupervisor || '—'}</span>
-                        </td>
-                        <td>
-                          <div className="flex flex-col">
-                            {c.serverInfo && <span className="text-micro font-black uppercase tracking-widest leading-none mb-0.5" style={{ color: 'var(--success)' }}>{c.serverInfo}</span>}
-                            <span className="text-micro font-bold truncate uppercase tracking-tight" style={{ color: 'var(--text-muted)' }} title={c.serverName}>{c.serverName || '—'}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); onCompanySelect(c); }} className="w-7 h-7 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Batafsil"><Eye size={13} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="w-7 h-7 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Tahrirlash"><Edit3 size={13} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="w-7 h-7 flex items-center justify-center rounded-lg transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="O'chirish"><Trash2 size={13} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {paginated.length === 0 && (
-                <div className="py-24 flex flex-col items-center justify-center" style={{ color: 'var(--text-muted)' }}>
-                  <LayoutGrid size={48} className="mb-4 opacity-20" />
-                  <p className="font-bold uppercase tracking-[0.2em] text-meta opacity-60">{t.noData}</p>
-                </div>
+          <div className="hidden md:block">
+            <DataTable<Company>
+              caption="Firmalar ro'yxati"
+              rows={filtered}
+              columns={orgColumns}
+              rowKey={c => c.id}
+              sortKey={table.sortKey}
+              sortDir={table.sortDir}
+              onToggleSort={table.toggleSort}
+              density={table.density}
+              page={table.page}
+              pageSize={itemsPerPage}
+              onPageChange={table.setPage}
+              selected={selectedIds}
+              onSelectedChange={setSelectedIds}
+              onRowClick={c => onCompanySelect(c)}
+              emptyIcon={<LayoutGrid size={36} />}
+              emptyTitle={t.noData}
+              emptyDescription={table.isDirty ? "Qidiruv yoki filtrni o'zgartirib ko'ring." : undefined}
+              bulkActions={(ids) => (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const names = ids.map(id => companies.find(c => c.id === id)?.name).filter(Boolean).slice(0, 3).join(', ');
+                    const ok = await confirm({
+                      title: `${ids.length} ta firma o'chirilsinmi?`,
+                      description: `${names}${ids.length > 3 ? ` va yana ${ids.length - 3} ta` : ''}. Bu amalni ortga qaytarib bo'lmaydi.`,
+                      confirmLabel: "O'chirish",
+                      tone: 'danger',
+                    });
+                    if (!ok) return;
+                    for (const id of ids) onDelete(id);
+                    setSelectedIds(new Set());
+                  }}
+                  className="text-meta font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg"
+                  style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}
+                >
+                  O&apos;chirish
+                </button>
               )}
-            </div>
-          </div>
-        )}
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 dashboard-card p-3">
-            <p className="text-meta font-bold uppercase tracking-widest pl-2" style={{ color: 'var(--text-muted)' }}>
-              {t.page} <span style={{ color: 'var(--accent-blue)' }}>{currentPage}</span> / {totalPages}
-            </p>
-            <div className="flex gap-2 pr-1">
-              <button
-                onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                disabled={currentPage === 1}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg disabled:opacity-30 text-meta font-bold uppercase tracking-widest transition-all disabled:cursor-not-allowed"
-                style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
-                onMouseEnter={e => { if (currentPage !== 1) { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; } }}
-                onMouseLeave={e => { if (currentPage !== 1) { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; } }}
-              >
-                <ChevronLeft size={14} /> {t.prev}
-              </button>
-              <button
-                onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                disabled={currentPage === totalPages}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg disabled:opacity-30 text-meta font-bold uppercase tracking-widest transition-all disabled:cursor-not-allowed"
-                style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
-                onMouseEnter={e => { if (currentPage !== totalPages) { e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-light)'; } }}
-                onMouseLeave={e => { if (currentPage !== totalPages) { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--input-bg)'; } }}
-              >
-                {t.next} <ChevronRight size={14} />
-              </button>
-            </div>
+            />
           </div>
         )}
       </div>

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { formatNum } from "@/lib/format";
 import { getMarginOverview, type CompanyMargin } from "@/server/profitability";
 import { getInvoices, createInvoice, recordInvoicePayment, voidInvoice } from "@/server/invoices";
+import { Button } from "@/components/ui/Button";
 
 interface Invoice {
   id: string;
@@ -66,7 +67,7 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
     <div className="p-4 md:p-6 space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Rentabellik</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Rentabellik</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>Mijoz contribution margin (tushum − mehnat tannarxi) + qarzdorlik</p>
         </div>
         <input type="month" value={period} onChange={(e) => e.target.value && reload(e.target.value)} className="px-3 py-1.5 rounded-lg border text-sm" style={inputStyle} />
@@ -81,7 +82,7 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
           { label: "Qarzdorlik", val: totals.debt, fg: "var(--danger-dark)" },
         ].map((t) => (
           <div key={t.label} className="rounded-xl border p-3" style={{ borderColor: "var(--border, var(--rule))" }}>
-            <div className="text-lg font-black" style={{ color: t.fg }}>{money(t.val)}</div>
+            <div className="text-lg font-semibold" style={{ color: t.fg }}>{money(t.val)}</div>
             <div className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{t.label}</div>
           </div>
         ))}
@@ -118,7 +119,7 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
 
       {/* Invoices */}
       <div>
-        <h2 className="text-base font-bold mb-2" style={{ color: "var(--text-primary)" }}>Hisob-fakturalar ({period})</h2>
+        <h2 className="text-sm font-bold mb-2" style={{ color: "var(--text-primary)" }}>Hisob-fakturalar ({period})</h2>
         <div className="rounded-xl border p-4 flex flex-wrap items-end gap-3 mb-3" style={{ borderColor: "var(--border, var(--rule))" }}>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Firma
             <select className="block px-2.5 py-1.5 rounded-lg border text-sm" style={inputStyle} value={inv.companyId} onChange={(e) => setInv({ ...inv, companyId: e.target.value })}>
@@ -132,7 +133,7 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Muddat
             <input type="date" className="block px-2.5 py-1.5 rounded-lg border text-sm" style={inputStyle} value={inv.dueAt} onChange={(e) => setInv({ ...inv, dueAt: e.target.value })} />
           </label>
-          <button disabled={pending} onClick={submitInvoice} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>+ Hisob chiqarish</button>
+          <Button variant="success" size="md" disabled={pending} onClick={submitInvoice}>+ Hisob chiqarish</Button>
         </div>
 
         <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border, var(--rule))" }}>
@@ -161,7 +162,7 @@ export default function ProfitabilityClient({ initialPeriod, initialMargins, ini
                         {i.status !== "paid" && i.status !== "void" && (
                           <>
                             <input type="number" placeholder="to'lov" value={payInput[i.id] ?? ""} onChange={(e) => setPayInput({ ...payInput, [i.id]: e.target.value })} className="w-20 text-xs px-1.5 py-1 rounded-lg border" style={inputStyle} />
-                            <button disabled={pending} onClick={() => { const a = Number(payInput[i.id]); if (!(a > 0)) return toast.error("Summa kiriting"); run(() => recordInvoicePayment(i.id, a), "To'lov qayd etildi"); setPayInput({ ...payInput, [i.id]: "" }); }} className="text-xs font-semibold px-2 py-1 rounded-lg text-white disabled:opacity-50" style={{ background: "var(--brand)" }}>To'lov</button>
+                            <Button variant="primary" size="sm" disabled={pending} onClick={() => { const a = Number(payInput[i.id]); if (!(a > 0)) return toast.error("Summa kiriting"); run(() => recordInvoicePayment(i.id, a), "To'lov qayd etildi"); setPayInput({ ...payInput, [i.id]: "" }); }}>To'lov</Button>
                             <button disabled={pending} onClick={() => run(() => voidInvoice(i.id, "bekor"), "Bekor qilindi")} className="text-xs font-semibold px-2 py-1 rounded-lg disabled:opacity-50" style={{ background: "var(--danger-bg)", color: "var(--danger-dark)" }}>Bekor</button>
                           </>
                         )}

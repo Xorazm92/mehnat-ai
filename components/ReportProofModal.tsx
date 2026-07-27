@@ -3,10 +3,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { X, Upload, Clipboard, Check, Ban, Loader2, ImageIcon, Clock } from "lucide-react";
+import { X, Upload, Clipboard, Check, Ban, Loader2, ImageIcon, Clock, ZoomIn, ExternalLink } from "lucide-react";
 import { compressImageFile, compressDataUrl } from "@/lib/imageCompress";
 import { saveReportProof, getReportProof, reviewReportProof } from "@/server/proofs";
 import { formatUzDateNumeric, formatUzTime } from "@/lib/format";
+import { ImageZoomModal } from "@/components/ImageZoomModal";
+import { Button } from "@/components/ui/Button";
 
 interface ProofFull {
   id: string;
@@ -61,6 +63,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [lightbox, setLightbox] = useState(false); // to'liq ekran skrinshot ko'rinishi
+  const [uploadZoom, setUploadZoom] = useState(false); // yuklanayotgan skrinshot zoomi
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const open = !!state;
@@ -201,7 +204,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--card-border)" }}>
           <div>
-            <h3 className="text-sm font-black" style={{ color: "var(--text)" }}>
+            <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>
               {mode === "upload" ? "Hisobotni topshirish" : "Topshirilgan hisobot"}
             </h3>
             <p className="text-meta font-bold mt-0.5" style={{ color: "var(--text-3)" }}>
@@ -225,13 +228,28 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                 onChange={(e) => handleFile(e.target.files?.[0])}
               />
               {imgPreview ? (
-                <div className="relative">
+                <div className="relative group rounded-lg overflow-hidden border cursor-zoom-in" style={{ borderColor: "var(--card-border)", background: "var(--surface-2)" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imgPreview} alt="Skrinshot" className="w-full rounded-lg border" style={{ borderColor: "var(--card-border)", maxHeight: "40vh", objectFit: "contain", background: "var(--surface-2)" }} />
+                  <img
+                    src={imgPreview}
+                    alt="Skrinshot"
+                    onClick={() => setUploadZoom(true)}
+                    className="w-full rounded-lg"
+                    style={{ maxHeight: "40vh", objectFit: "contain" }}
+                  />
+                  <div
+                    onClick={() => setUploadZoom(true)}
+                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                  >
+                    <span className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur text-white text-xs font-bold border border-white/20 flex items-center gap-1.5">
+                      <ZoomIn size={15} /> Kattalashtirish
+                    </span>
+                  </div>
                   <button
+                    type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute top-2 right-2 text-micro font-bold px-2.5 py-1 rounded-lg shadow"
-                    style={{ background: "var(--card-bg)", color: "var(--text-2)", border: "1px solid var(--card-border)" }}
+                    className="absolute top-2 right-2 text-micro font-bold px-2.5 py-1 rounded-lg shadow-md z-10 hover:scale-105 transition-all"
+                    style={{ background: "var(--card-bg)", color: "var(--text)", border: "1px solid var(--card-border)" }}
                   >
                     O'zgartirish
                   </button>
@@ -264,10 +282,10 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                 <button onClick={onClose} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50" style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--card-border)" }}>
                   Bekor
                 </button>
-                <button onClick={handleSubmit} disabled={busy || !imgPreview} className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}>
+                <Button variant="primary" size="md" onClick={handleSubmit} disabled={busy || !imgPreview} className="flex-1">
                   {busy ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
                   Topshirish
-                </button>
+                </Button>
               </div>
             </>
           ) : (
@@ -291,18 +309,35 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                     {statusBadge(proof.status)}
                   </div>
 
-                  {/* Skrinshotni to'liq ekranda ochish. `data:` URL'ni yangi tabda
-                      ochib bo'lmaydi (brauzerlar bloklaydi) — shuning uchun ilova
-                      ichidagi lightbox ishlatamiz. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={proof.imageData}
-                    alt="Skrinshot"
-                    title="To'liq ochish uchun bosing"
-                    onClick={() => setLightbox(true)}
-                    className="w-full rounded-lg border cursor-zoom-in"
-                    style={{ borderColor: "var(--card-border)", maxHeight: "45vh", objectFit: "contain", background: "var(--surface-2)" }}
-                  />
+                  {/* Skrinshot preview: ustiga bosilsa to'liq zoom rejimida ochiladi */}
+                  <div className="relative group rounded-lg overflow-hidden border cursor-zoom-in" style={{ borderColor: "var(--card-border)", background: "var(--surface-2)" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={proof.imageData}
+                      alt="Skrinshot"
+                      onClick={() => setLightbox(true)}
+                      className="w-full rounded-lg transition-transform duration-200 group-hover:scale-[1.01]"
+                      style={{ maxHeight: "42vh", objectFit: "contain" }}
+                    />
+                    <div
+                      onClick={() => setLightbox(true)}
+                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-bold pointer-events-auto"
+                    >
+                      <span className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur border border-white/20 flex items-center gap-1.5 shadow-lg">
+                        <ZoomIn size={15} /> Kattalashtirish
+                      </span>
+                      <a
+                        href={`/reports/proof/${proof.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur border border-white/20 flex items-center gap-1.5 shadow-lg text-white"
+                        title="Alohida to'liq sahifada ochish"
+                      >
+                        <ExternalLink size={14} /> Yangi oynada
+                      </a>
+                    </div>
+                  </div>
 
                   {proof.note && (
                     <div className="mt-3 text-xs rounded-lg px-3 py-2" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>
@@ -343,10 +378,10 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                           <button onClick={() => { setShowReject(false); setRejectReason(""); }} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50" style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--card-border)" }}>
                             Orqaga
                           </button>
-                          <button onClick={() => handleReview("rejected")} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--danger), var(--danger-dark))" }}>
+                          <Button variant="danger" size="md" onClick={() => handleReview("rejected")} disabled={busy} className="flex-1">
                             {busy ? <Loader2 size={15} className="animate-spin" /> : <Ban size={15} />}
                             Rad etishni tasdiqlash
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ) : (
@@ -356,10 +391,10 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                           <Ban size={15} />
                           Rad etish
                         </button>
-                        <button onClick={() => handleReview("approved")} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "var(--success)" }}>
+                        <Button variant="success" size="md" onClick={() => handleReview("approved")} disabled={busy} className="flex-1">
                           {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                           Tasdiqlash
-                        </button>
+                        </Button>
                       </div>
                     )
                   )}
@@ -377,30 +412,24 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
       </div>
     </div>
 
-    {/* ── To'liq ekran lightbox (skrinshotni kattalashtirib ko'rish) ── */}
+    {/* ── Interaktiv to'liq ekran kattalashtirish (Zoom, Pan, Rotate, New Tab) ── */}
     {lightbox && proof && (
-      <div
-        className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-        style={{ background: "rgba(0,0,0,0.9)" }}
-        onMouseDown={() => setLightbox(false)}
-      >
-        <button
-          onClick={() => setLightbox(false)}
-          className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full text-white"
-          style={{ background: "rgba(255,255,255,0.12)" }}
-          title="Yopish (Esc)"
-        >
-          <X size={20} />
-        </button>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={proof.imageData}
-          alt="Skrinshot — to'liq"
-          onMouseDown={(e) => e.stopPropagation()}
-          className="max-w-full max-h-full rounded-lg shadow-2xl"
-          style={{ objectFit: "contain" }}
-        />
-      </div>
+      <ImageZoomModal
+        src={proof.imageData}
+        title={`${state?.companyName || ""} · ${state?.colLabel || proof.colKey}`}
+        subtitle={`${period} davri uchun topshirilgan skrinshot`}
+        proofId={proof.id}
+        onClose={() => setLightbox(false)}
+      />
+    )}
+
+    {uploadZoom && imgPreview && (
+      <ImageZoomModal
+        src={imgPreview}
+        title={`${state?.companyName || ""} · ${state?.colLabel || ""}`}
+        subtitle="Yuklanayotgan skrinshot preview"
+        onClose={() => setUploadZoom(false)}
+      />
     )}
     </>,
     document.body

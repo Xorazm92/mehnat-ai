@@ -128,7 +128,7 @@ export default function LoginPage() {
             <Logo />
           </div>
 
-          <h1 className="text-2xl font-semibold tracking-tight">Tizimga kirish</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Tizimga kirish</h1>
           <p className="mt-2 text-body" style={{ color: LOGIN_TEXT_DIM }}>
             Davom etish uchun hisobingizga kiring.
           </p>

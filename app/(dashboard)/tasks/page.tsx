@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { getTasks, getTaskFormData } from "@/server/tasks";
 import TasksClient from "./TasksClient";
 
+export const metadata = { title: "Vazifalar" };
+
 export default async function TasksPage() {
   const session = await auth();
   const userId = session?.user?.id || "";

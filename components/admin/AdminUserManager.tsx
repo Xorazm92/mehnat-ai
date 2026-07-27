@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { Plus, Search, Pencil, KeyRound, UserCheck, UserX, X } from "lucide-react";
 import { ROLES, ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { Button } from "@/components/ui/Button";
 
 export interface AdminUser {
   id: string;
@@ -114,19 +115,14 @@ export function AdminUserManager({
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Foydalanuvchilar</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Foydalanuvchilar</h1>
           <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
             {users.length} ta · {users.filter((u) => u.isActive).length} faol
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          disabled={busy}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white disabled:opacity-50"
-          style={{ background: "var(--accent-blue)" }}
-        >
+        <Button variant="primary" size="md" onClick={openCreate} disabled={busy}>
           <Plus size={15} /> Yangi
-        </button>
+        </Button>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -295,7 +291,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }} onClick={onClose}>
       <div className="w-full max-w-md rounded-xl p-5" style={card} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-black" style={{ color: "var(--text-primary)" }}>{title}</h3>
+          <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{title}</h3>
           <button onClick={onClose} className="icon-btn-sm" style={{ color: "var(--text-muted)" }}><X size={16} /></button>
         </div>
         {children}
@@ -308,7 +304,7 @@ function ModalActions({ onCancel, onSave, busy, disabled }: { onCancel: () => vo
   return (
     <div className="flex items-center justify-end gap-2 mt-5">
       <button onClick={onCancel} className="px-4 py-2 rounded-lg text-xs font-bold" style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>Bekor</button>
-      <button onClick={onSave} disabled={busy || disabled} className="px-4 py-2 rounded-lg text-xs font-bold text-white disabled:opacity-50" style={{ background: "var(--accent-blue)" }}>Saqlash</button>
+      <Button variant="primary" size="md" onClick={onSave} disabled={busy || disabled}>Saqlash</Button>
     </div>
   );
 }

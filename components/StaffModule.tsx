@@ -12,6 +12,11 @@ import {
   Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
 import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { DataTable, type DataColumn } from '@/components/ui/DataTable';
+import { useTableState } from '@/hooks/useTableState';
+import { exportRowsToCsv, exportRowsToExcel } from '@/lib/exportTable';
+import { Button } from "@/components/ui/Button";
 
 interface Props {
   staff: Staff[];
@@ -35,6 +40,7 @@ const STATUS_META: Record<string, { label: string; dot: string; c: string; bg: s
 };
 
 const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete, onResetPassword }) => {
+  const confirm = useConfirm();
   const t = translations[lang];
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,12 +48,25 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
   const [selected, setSelected] = useState<Staff | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // URL'dan userId o'qish (masalan Buxgalterlar holati bo'limidan o'tganda)
+  // Qidiruv/saralash/filtr/sahifa — URL'da. Endi filtrlangan ko'rinishni
+  // havola sifatida yuborish mumkin (avval hammasi faqat React state'da edi).
+  const table = useTableState({
+    ns: 'staff',
+    defaultSortKey: 'name',
+    defaultFilters: { role: 'all', status: 'all' },
+  });
+  const searchTerm = table.debouncedSearch;
+  const roleFilter = table.filters.role;
+  const statusFilter = table.filters.status;
+
+  const newParamHandledRef = React.useRef(false);
+
+  // URL'dan userId o'qish (masalan Buxgalterlar holati bo'limidan o'tganda),
+  // hamda `?new=1` bilan to'g'ridan-to'g'ri "yangi xodim" formasini ochish
+  // (Admin kabinetidagi "Yangi Xodim" tezkor havolasi shu yerga keladi).
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -55,6 +74,15 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       if (uid && staff.length > 0 && !selected) {
         const u = staff.find(s => s.id === uid);
         if (u) setSelected(u);
+      }
+      // Bir martalik: `useAutoRefresh` har 15 soniyada `staff` propini yangilaydi
+      // va bu effektni qayta ishga tushiradi. Qo'riqchisiz foydalanuvchi yopgan
+      // forma har yangilanishda o'z-o'zidan qayta ochilib turardi.
+      if (params.get('new') === '1' && !newParamHandledRef.current) {
+        newParamHandledRef.current = true;
+        setForm({ status: 'active', role: 'accountant' });
+        setNewPassword('');
+        setIsAdding(true);
       }
     }
   }, [staff]);
@@ -65,17 +93,139 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
   const openEdit = (person: Staff) => { setForm(person); setNewPassword(''); setIsAdding(true); };
   const closeForm = () => { setIsAdding(false); setForm({}); setNewPassword(''); };
 
+  /**
+   * Har bir xodimga biriktirilgan firmalar soni — BIR MARTA hisoblanadi.
+   * Avval bu har qatorda `companies.filter(...)` bilan qayta hisoblanardi:
+   * 45 xodim × 212 firma ≈ 9500 ta taqqoslash, har renderda, va aynan shu
+   * hisob karta ko'rinishida yana takrorlanardi.
+   */
+  const companyCountById = React.useMemo(() => {
+    const byId = new Map<string, number>();
+    const byName = new Map<string, number>();
+    for (const c of companies) {
+      const cc = c as { accountantId?: string; accountantName?: string };
+      if (cc.accountantId) byId.set(cc.accountantId, (byId.get(cc.accountantId) ?? 0) + 1);
+      else if (cc.accountantName) byName.set(cc.accountantName, (byName.get(cc.accountantName) ?? 0) + 1);
+    }
+    const out = new Map<string, number>();
+    for (const p of staff) out.set(p.id, (byId.get(p.id) ?? 0) + (byName.get(p.name) ?? 0));
+    return out;
+  }, [companies, staff]);
+
   const filteredStaff = React.useMemo(() => {
+    const q = searchTerm.toLowerCase();
     return staff.filter(person => {
-      const matchSearch = (person.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (person.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (person.phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchSearch = !q ||
+        (person.name || '').toLowerCase().includes(q) ||
+        (person.email || '').toLowerCase().includes(q) ||
+        (person.phone || '').toLowerCase().includes(q) ||
         (person.pinfl || '').includes(searchTerm);
       const matchRole = roleFilter === 'all' || person.role === roleFilter;
       const matchStatus = statusFilter === 'all' || person.status === statusFilter || (statusFilter === 'active' && !person.status);
       return matchSearch && matchRole && matchStatus;
     });
   }, [staff, searchTerm, roleFilter, statusFilter]);
+
+  const staffColumns = React.useMemo<DataColumn<Staff>[]>(() => [
+    {
+      key: 'name',
+      header: 'Xodim',
+      sortValue: p => p.name,
+      exportValue: p => p.name,
+      cell: (person) => {
+        const sm = STATUS_META[person.status || 'active'] || STATUS_META.active;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-semibold text-white" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
+                {person.name.charAt(0)}
+              </div>
+              <div className={`absolute -bottom-1 -right-1 w-3 h-3 border-2 rounded-full ${sm.dot}`} style={{ borderColor: 'var(--card-bg)' }} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-body font-bold truncate" style={{ color: 'var(--text)' }}>{person.name}</div>
+              <div className="text-micro font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                {person.pinfl ? `JSHSHIR: ${person.pinfl}` : person.id.slice(0, 8)}
+              </div>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'role',
+      header: 'Lavozim',
+      align: 'center',
+      sortValue: p => ROLE_LABELS[p.role as UserRole] || p.role,
+      cell: (person) => {
+        const roleColor = ROLE_COLORS[person.role as UserRole] || 'var(--text-muted)';
+        return (
+          <span className="text-micro font-semibold uppercase tracking-widest px-2.5 py-1 rounded-lg whitespace-nowrap"
+            style={{ color: roleColor, background: `${roleColor}1a`, border: `1px solid ${roleColor}40` }}>
+            {ROLE_LABELS[person.role as UserRole] || person.role}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'department',
+      header: "Bo'lim",
+      sortValue: p => p.department || '',
+      cell: p => <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>{p.department || '—'}</span>,
+    },
+    {
+      key: 'contact',
+      header: 'Aloqa',
+      sortValue: p => p.email || '',
+      exportValue: p => `${p.phone || ''} ${p.email || ''}`.trim(),
+      cell: p => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs font-bold" style={{ color: 'var(--text)' }}>{p.phone || '—'}</span>
+          <span className="text-micro font-bold truncate max-w-[180px]" style={{ color: 'var(--text-muted)' }}>{p.email || '—'}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'companies',
+      header: 'Firma',
+      numeric: true,
+      sortValue: p => companyCountById.get(p.id) ?? 0,
+      cell: p => <span style={{ color: 'var(--accent-blue)', fontWeight: 700 }}>{companyCountById.get(p.id) ?? 0}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Holat',
+      align: 'center',
+      sortValue: p => STATUS_META[p.status || 'active']?.label ?? '',
+      cell: (person) => {
+        const sm = STATUS_META[person.status || 'active'] || STATUS_META.active;
+        return (
+          <span className="text-micro font-semibold uppercase tracking-widest px-2.5 py-1 rounded-lg whitespace-nowrap"
+            style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
+        );
+      },
+    },
+    {
+      key: 'actions',
+      header: 'Boshqaruv',
+      align: 'right',
+      cell: (person) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="icon-btn-sm rounded-lg" style={{ color: 'var(--accent-blue)' }} aria-label={`${person.name} — tahrirlash`}>
+            <Edit3 size={15} />
+          </button>
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (await confirm({ title: `${person.name} faolsizlantirilsinmi?`, description: "Xodim tizimga kira olmaydi. Yozuvlari saqlanib qoladi.", confirmLabel: "Faolsizlantirish", tone: 'danger' })) onDelete(person.id);
+            }}
+            className="icon-btn-sm rounded-lg" style={{ color: 'var(--danger)' }} aria-label={`${person.name} — faolsizlantirish`}>
+            <Trash2 size={15} />
+          </button>
+        </div>
+      ),
+    },
+  ], [companyCountById, confirm, onDelete]);
 
   const handleSave = async () => {
     if (!form.name || !form.role) {
@@ -112,15 +262,16 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
         await onResetPassword(form.id!, newPassword);
       }
       const createdEmail = form.email;
-      const createdPw = form.password;
       import('sonner').then(({ toast }) => {
         if (isEditing) {
           toast.success("Xodim yangilandi");
         } else {
-          // Yangi xodimning login/parolini ko'rsatamiz — admin xodimga beradi
+          // Parol ATAYLAB ko'rsatilmaydi: uni administratorning o'zi shu formaga
+          // kiritgan, ya'ni allaqachon biladi — ekranga qayta chiqarish hech qanday
+          // ma'lumot bermaydi, faqat ochiq ofisda yelka ortidan o'qish xavfini yaratadi.
           toast.success("Yangi xodim qo'shildi", {
-            description: `Login: ${createdEmail}\nParol: ${createdPw}\n(bu ma'lumotni xodimga bering)`,
-            duration: 15000,
+            description: `Login: ${createdEmail} — parolni xodimga alohida yetkazing`,
+            duration: 8000,
           });
         }
       });
@@ -137,26 +288,22 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
   return (
     <div className="space-y-6 animate-fade-in pb-20">
       {/* Header */}
-      <div className="dashboard-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="dashboard-card p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md bg-gradient-to-br from-[var(--primary)] to-[var(--accent-blue-hover)]">
             <UserPlus size={24} />
           </div>
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>{t.staff}</h2>
+            <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>{t.staff}</h2>
             <p className="text-meta font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>
               {staff.length} ta xodim · {staff.filter(s => (s.status || 'active') === 'active').length} faol
             </p>
           </div>
         </div>
-        <button
-          onClick={openAdd}
-          className="font-bold px-6 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent-blue-hover))', color: '#fff' }}
-        >
+        <Button variant="primary" size="md" onClick={openAdd} className="whitespace-nowrap">
           <UserPlus size={16} />
           {t.addStaff}
-        </button>
+        </Button>
       </div>
 
       {/* Search + Filters */}
@@ -164,11 +311,12 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
         <div className="relative flex-grow">
           <input
             type="text"
-            className="w-full pl-12 pr-4 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20"
+            className="w-full pl-12 pr-4 py-3.5 rounded-xl text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20"
             style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
             placeholder="ISM, EMAIL, TELEFON YOKI JSHSHIR..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={table.search}
+            onChange={(e) => table.setSearch(e.target.value)}
+            aria-label="Xodimlarni qidirish"
           />
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
         </div>
@@ -178,7 +326,8 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
               className="w-full pl-12 pr-10 py-3.5 rounded-xl text-meta font-bold uppercase tracking-widest outline-none appearance-none sm:min-w-[200px]"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
+              onChange={(e) => table.setFilter('role', e.target.value)}
+              aria-label="Lavozim bo'yicha filtr"
             >
               <option value="all">BARCHA LAVOZIMLAR</option>
               {ROLE_OPTIONS.map(r => <option key={r} value={r}>{(ROLE_LABELS[r] || r).toUpperCase()}</option>)}
@@ -190,7 +339,8 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
               className="w-full pl-12 pr-10 py-3.5 rounded-xl text-meta font-bold uppercase tracking-widest outline-none appearance-none sm:min-w-[170px]"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => table.setFilter('status', e.target.value)}
+              aria-label="Holat bo'yicha filtr"
             >
               <option value="all">BARCHA HOLATLAR</option>
               <option value="active">FAOL (ISHDA)</option>
@@ -201,19 +351,51 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           </div>
         </div>
         <div className="flex items-center justify-end">
-          <TableToolbar view={viewMode} onViewChange={setViewMode} />
+          <TableToolbar
+            view={viewMode}
+            onViewChange={setViewMode}
+            onExport={() => exportRowsToExcel(filteredStaff, staffColumns, `xodimlar_${new Date().toISOString().slice(0, 10)}`)}
+          >
+            <button
+              type="button"
+              onClick={() => exportRowsToCsv(filteredStaff, staffColumns, `xodimlar_${new Date().toISOString().slice(0, 10)}`)}
+              className="font-bold px-3 py-2 rounded-xl text-meta uppercase tracking-widest shadow-sm"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+            >
+              CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => table.setDensity(table.density === 'compact' ? 'comfortable' : 'compact')}
+              aria-pressed={table.density === 'compact'}
+              className="font-bold px-3 py-2 rounded-xl text-meta uppercase tracking-widest shadow-sm"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+            >
+              {table.density === 'compact' ? 'Zich' : 'Keng'}
+            </button>
+            {table.isDirty && (
+              <button
+                type="button"
+                onClick={table.reset}
+                className="font-bold px-3 py-2 rounded-xl text-meta uppercase tracking-widest shadow-sm"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--danger)' }}
+              >
+                Tozalash
+              </button>
+            )}
+          </TableToolbar>
         </div>
       </div>
 
       {/* ANKETA — kengaytirilgan forma */}
       {isAdding && (
-        <div className="dashboard-card p-8 border-t-[4px] animate-fade-in" style={{ borderTopColor: 'var(--accent-blue)' }}>
+        <div className="dashboard-card p-5 border-t-[4px] animate-fade-in" style={{ borderTopColor: 'var(--accent-blue)' }}>
           <div className="flex items-center gap-4 mb-8">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm border" style={{ background: 'var(--accent-blue-light)', borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' }}>
               <UserPlus size={22} />
             </div>
             <div>
-              <h3 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text)' }}>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
                 {isEditing ? 'Xodim anketasini tahrirlash' : "Yangi xodim anketasi"}
               </h3>
               <p className="text-micro font-bold uppercase tracking-[0.2em] mt-1" style={{ color: 'var(--text-muted)' }}>
@@ -322,10 +504,10 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
 
           {/* Actions */}
           <div className="flex gap-4 pt-8 mt-4 justify-end" style={{ borderTop: '1px solid var(--card-border)' }}>
-            <button onClick={closeForm} className="px-8 py-3 rounded-xl text-meta font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
+            <button onClick={closeForm} className="px-8 py-3 rounded-xl text-meta font-semibold uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
               <X size={16} /> Bekor qilish
             </button>
-            <button onClick={handleSave} disabled={isSaving} className={`px-10 py-3 rounded-xl font-black text-meta uppercase tracking-widest flex items-center gap-3 shadow-md transition-all active:scale-95 ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-lg'}`} style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent-blue-hover))', color: 'white' }}>
+            <button onClick={handleSave} disabled={isSaving} className={`px-10 py-3 rounded-xl font-semibold text-meta uppercase tracking-widest flex items-center gap-3 shadow-md transition-all active:scale-95 ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-lg'}`} style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent-blue-hover))', color: 'white' }}>
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
               {isSaving ? 'SAQLANMOQDA...' : (isEditing ? 'YANGILASH' : "QO'SHISH")}
             </button>
@@ -334,39 +516,39 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       )}
 
       {/* MOBIL KARTOCHKA RO'YXATI (kichik ekranlar) */}
-      <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" : "hidden"}>
+      {/* Karta ko'rinishi — ATAYLAB unmount qilinadi. Avval `hidden` sinfi
+          bilan yashirilardi, ya'ni React ikkala ko'rinishni ham quraverardi. */}
+      {viewMode === 'grid' && (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredStaff.map((person) => {
-          const myCompanies = companies.filter(c => {
-            const cc = c as { accountantId?: string; accountantName?: string };
-            return cc.accountantId === person.id || cc.accountantName === person.name;
-          });
+          const myCompaniesCount = companyCountById.get(person.id) ?? 0;
           const status = person.status || 'active';
           const sm = STATUS_META[status] || STATUS_META.active;
           const roleColor = ROLE_COLORS[person.role as UserRole] || 'var(--text-muted)';
           return (
             <div key={person.id} onClick={() => setSelected(person)} className="dashboard-card p-4 flex items-center gap-3 cursor-pointer active:scale-[0.99] transition-transform">
               <div className="relative shrink-0">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-black text-white shadow-sm" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-semibold text-white shadow-sm" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
                   {person.name.charAt(0)}
                 </div>
                 <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 rounded-full ${sm.dot}`} style={{ borderColor: 'var(--card-bg)' }} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-black tracking-tight truncate" style={{ color: 'var(--text)' }}>{person.name}</span>
-                  <span className="text-micro font-black uppercase tracking-widest px-2 py-0.5 rounded-lg" style={{ color: roleColor, background: `${roleColor}1a` }}>{ROLE_LABELS[person.role as UserRole] || person.role}</span>
+                  <span className="text-sm font-semibold tracking-tight truncate" style={{ color: 'var(--text)' }}>{person.name}</span>
+                  <span className="text-micro font-semibold uppercase tracking-widest px-2 py-0.5 rounded-lg" style={{ color: roleColor, background: `${roleColor}1a` }}>{ROLE_LABELS[person.role as UserRole] || person.role}</span>
                 </div>
                 <div className="text-meta font-bold mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{person.phone || person.email || '—'}</div>
                 <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-micro font-black uppercase tracking-widest px-2 py-0.5 rounded-lg" style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
-                  <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>{myCompanies.length} firma</span>
+                  <span className="text-micro font-semibold uppercase tracking-widest px-2 py-0.5 rounded-lg" style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
+                  <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>{myCompaniesCount} firma</span>
                 </div>
               </div>
               <div className="flex flex-col gap-1.5 shrink-0">
                 <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="icon-btn-sm" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title="Tahrirlash">
                   <Edit3 size={15} />
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); if (confirm(person.name + (t.confirmDelete || " ni o'chirasizmi?"))) onDelete(person.id); }} className="icon-btn-sm" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title="O'chirish">
+                <button onClick={async (e) => { e.stopPropagation(); if (await confirm({ title: `${person.name} faolsizlantirilsinmi?`, description: "Xodim tizimga kira olmaydi. Yozuvlari saqlanib qoladi.", confirmLabel: "Faolsizlantirish", tone: 'danger' })) onDelete(person.id); }} className="icon-btn-sm" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title="O'chirish">
                   <Trash2 size={15} />
                 </button>
               </div>
@@ -374,107 +556,61 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           );
         })}
         {filteredStaff.length === 0 && (
-          <div className="dashboard-card p-12 text-center">
+          <div className="dashboard-card p-5 text-center">
             <Search size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
-            <span className="text-meta uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>MA&apos;LUMOT TOPILMADI</span>
+            <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>MA&apos;LUMOT TOPILMADI</span>
           </div>
         )}
       </div>
+      )}
 
-      {/* STAFF TABLE (desktop) */}
-      <div className={viewMode === 'list' ? "dashboard-card overflow-hidden overflow-x-auto" : "hidden"}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[960px]">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
-                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xodim</th>
-                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>Lavozim</th>
-                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Bo&apos;lim</th>
-                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Aloqa</th>
-                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>Firma</th>
-                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest text-center" style={{ color: 'var(--text-muted)' }}>Holat</th>
-                <th className="px-6 py-5 text-meta font-bold uppercase tracking-widest text-right" style={{ color: 'var(--text-muted)' }}>Boshqaruv</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStaff.map((person, i) => {
-                const myCompanies = companies.filter(c => {
-                  const cc = c as { accountantId?: string; accountantName?: string };
-                  return cc.accountantId === person.id || cc.accountantName === person.name;
+      {/* STAFF TABLE (desktop) — DataTable platformasi */}
+      {viewMode === 'list' && (
+        <DataTable<Staff>
+          caption="Xodimlar ro'yxati"
+          rows={filteredStaff}
+          columns={staffColumns}
+          rowKey={p => p.id}
+          sortKey={table.sortKey}
+          sortDir={table.sortDir}
+          onToggleSort={table.toggleSort}
+          density={table.density}
+          page={table.page}
+          pageSize={50}
+          onPageChange={table.setPage}
+          selected={selectedIds}
+          onSelectedChange={setSelectedIds}
+          onRowClick={person => setSelected(person)}
+          emptyIcon={<Search size={36} />}
+          emptyTitle="Xodim topilmadi"
+          emptyDescription={table.isDirty ? "Qidiruv yoki filtrni o'zgartirib ko'ring." : undefined}
+          bulkActions={(ids) => (
+            <button
+              type="button"
+              onClick={async () => {
+                const names = ids
+                  .map(id => staff.find(p => p.id === id)?.name)
+                  .filter(Boolean)
+                  .slice(0, 3)
+                  .join(', ');
+                const ok = await confirm({
+                  title: `${ids.length} ta xodim faolsizlantirilsinmi?`,
+                  description: `${names}${ids.length > 3 ? ` va yana ${ids.length - 3} ta` : ''}. Ular tizimga kira olmaydi, yozuvlari saqlanib qoladi.`,
+                  confirmLabel: 'Faolsizlantirish',
+                  tone: 'danger',
                 });
-                const status = person.status || 'active';
-                const sm = STATUS_META[status] || STATUS_META.active;
-                const roleColor = ROLE_COLORS[person.role as UserRole] || 'var(--text-muted)';
-                return (
-                  <tr
-                    key={person.id}
-                    onClick={() => setSelected(person)}
-                    className="transition-colors group cursor-pointer"
-                    style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--table-row-hover)'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)'}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center text-sm font-black text-white shadow-sm transition-transform group-hover:scale-110" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
-                            {person.name.charAt(0)}
-                          </div>
-                          <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 rounded-full ${sm.dot}`} style={{ borderColor: 'var(--card-bg)' }} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-body font-black tracking-tight truncate" style={{ color: 'var(--text)' }}>{person.name}</div>
-                          <div className="text-micro font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>{person.pinfl ? `JSHSHIR: ${person.pinfl}` : person.id.slice(0, 8)}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-micro font-black uppercase tracking-widest px-2.5 py-1 rounded-lg" style={{ color: roleColor, background: `${roleColor}1a`, border: `1px solid ${roleColor}40` }}>
-                        {ROLE_LABELS[person.role as UserRole] || person.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>{person.department || '—'}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <div className="text-xs font-bold tracking-tight" style={{ color: 'var(--text)' }}>{person.phone || '—'}</div>
-                        <div className="text-micro font-bold truncate max-w-[180px]" style={{ color: 'var(--text-muted)' }}>{person.email || '—'}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[36px] h-9 border text-xs font-black rounded-xl tabular-nums" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--accent-blue)' }}>
-                        {myCompanies.length}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-micro font-black uppercase tracking-widest px-2.5 py-1 rounded-lg" style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="icon-btn-sm transition-all" style={{ color: 'var(--accent-blue)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue-light)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="Tahrirlash">
-                          <Edit3 size={16} />
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); if (confirm(person.name + (t.confirmDelete || " ni o'chirasizmi?"))) onDelete(person.id); }} className="icon-btn-sm transition-all" style={{ color: 'var(--danger)' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="O'chirish">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filteredStaff.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-8 py-20 text-center">
-                    <Search size={40} className="mx-auto mb-4 opacity-20" style={{ color: 'var(--text-muted)' }} />
-                    <span className="text-meta uppercase font-black tracking-[0.3em] opacity-50" style={{ color: 'var(--text-muted)' }}>MA&apos;LUMOT TOPILMADI</span>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                if (!ok) return;
+                for (const id of ids) await onDelete(id);
+                setSelectedIds(new Set());
+              }}
+              className="text-meta font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg"
+              style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}
+            >
+              Faolsizlantirish
+            </button>
+          )}
+        />
+      )}
 
       {/* XODIM DETAL DRAWER */}
       {selected && (
@@ -496,7 +632,7 @@ function FormSection({ icon: Icon, title, children }: { icon: React.ElementType;
     <div className="mb-8">
       <div className="flex items-center gap-2 mb-4">
         <Icon size={15} style={{ color: 'var(--accent-blue)' }} />
-        <span className="text-meta font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-secondary)' }}>{title}</span>
+        <span className="text-meta font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--text-secondary)' }}>{title}</span>
         <div className="flex-1 h-px ml-2" style={{ background: 'var(--card-border)' }} />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">{children}</div>
@@ -530,7 +666,7 @@ function PasswordInput({ value, onChange, show, onToggle, onGenerate, placeholde
 function Field({ label, icon: Icon, children }: { label: string; icon?: React.ElementType; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-micro font-black uppercase tracking-widest ml-1 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+      <label className="text-micro font-semibold uppercase tracking-widest ml-1 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
         {Icon && <Icon size={12} />} {label}
       </label>
       {children}

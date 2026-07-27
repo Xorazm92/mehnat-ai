@@ -6,6 +6,7 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import OrganizationModule from "@/components/OrganizationModule";
 import CompanyDrawer from "@/components/CompanyDrawer";
 import { createCompany, updateCompany, deleteCompany } from "@/server/companies";
+import { getCurrentPeriodKey } from "@/lib/periods";
 import { Company, Staff, OperationEntry } from "@/types";
 
 interface Props {
@@ -18,7 +19,7 @@ interface Props {
 export default function OrganizationsClient({ companies, staff, operations }: Props) {
   const router = useRouter();
   useAutoRefresh();
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("2026-03");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(getCurrentPeriodKey());
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
   // router.refresh() dan keyin drawer'dagi ma'lumot server holati bilan

@@ -1,7 +1,9 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getBankCabinetData } from "@/server/cabinet";
+import { getBankCabinetData, getDashboardDeadlines } from "@/server/cabinet";
 import { BankCabinet } from "@/components/cabinets/BankCabinet";
+
+export const metadata = { title: "Bank kabineti" };
 
 export default async function BankCabinetPage() {
   const session = await auth();
@@ -15,14 +17,17 @@ export default async function BankCabinetPage() {
     redirect("/dashboard");
   }
 
-  const data = await getBankCabinetData().catch(() => ({
-    assignedCompanies: [],
-    companiesCount: 0,
-    kassaEntries: [],
-    kpiRecords: [],
-    balance: { income: 0, expense: 0, net: 0 },
-    currentMonth: new Date().toISOString().slice(0, 7),
-  }));
+  const [data, deadlines] = await Promise.all([
+    getBankCabinetData().catch(() => ({
+      assignedCompanies: [],
+      companiesCount: 0,
+      kassaEntries: [],
+      kpiRecords: [],
+      balance: { income: 0, expense: 0, net: 0 },
+      currentMonth: new Date().toISOString().slice(0, 7),
+    })),
+    getDashboardDeadlines().catch(() => ({ overdueCount: 0, dueSoonCount: 0, upcoming: [] })),
+  ]);
 
   return (
     <BankCabinet
@@ -33,6 +38,7 @@ export default async function BankCabinetPage() {
       kpiRecords={data.kpiRecords as any}
       balance={data.balance}
       currentMonth={data.currentMonth}
+      deadlines={deadlines as any}
     />
   );
 }

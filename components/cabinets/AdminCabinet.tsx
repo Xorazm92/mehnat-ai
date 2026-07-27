@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Users,
   Building2,
@@ -14,6 +15,8 @@ import {
 } from "lucide-react";
 import { CashFlowChart } from "./CashFlowChart";
 import BalanceOverview from "@/components/BalanceOverview";
+import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
+import { KpiCard } from "@/components/ui/KpiCard";
 import { formatUzDateTime, formatNum } from "@/lib/format";
 import type { BalanceBreakdown } from "@/types";
 
@@ -52,6 +55,7 @@ interface AdminCabinetProps {
   };
   balance?: BalanceBreakdown;
   monthlyCashFlow?: { month: string; income: number; expense: number }[];
+  deadlines?: { overdueCount: number; dueSoonCount: number; upcoming: DeadlineRow[] };
 }
 
 const roleLabelsMap: Record<string, string> = {
@@ -87,6 +91,7 @@ export function AdminCabinet({
   systemHealth,
   balance,
   monthlyCashFlow = [],
+  deadlines,
 }: AdminCabinetProps) {
   const isSuperAdmin = userRole === "super_admin";
   const totalUsers = userStats.reduce((s, r) => s + r._count, 0);
@@ -108,45 +113,37 @@ export function AdminCabinet({
       {balance && <BalanceOverview breakdown={balance} />}
 
       {/* Tizim holati */}
+      {/* Tizim holati — plitkalar drill-through havolalari */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Users size={16} style={{ color: "var(--accent-blue)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Faol Foydalanuvchilar</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{systemHealth.activeUsers}</div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--accent-indigo)" + "22", border: "1px solid rgba(99,102,241,0.2)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Building2 size={16} style={{ color: "var(--accent-indigo)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Faol Firmalar</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{systemHealth.activeCompanies}</div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp size={16} style={{ color: "var(--success)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI Bajarilishi</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>{systemHealth.kpiCompletionPercent ?? 0}%</div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Wallet size={16} style={{ color: "var(--warning)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Oylik Fondi</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {fmtMln(systemHealth.payrollFund ?? 0)}
-            <span className="text-xs font-bold ml-1" style={{ color: "var(--text-muted)" }}>so&apos;m</span>
-          </div>
-          {systemHealth.pendingKpi > 0 && (
-            <p className="text-micro mt-1" style={{ color: "var(--text-muted)" }}>{systemHealth.pendingKpi} KPI tasdiq kutmoqda</p>
-          )}
-        </div>
+        <KpiCard
+          label="Faol foydalanuvchilar" value={systemHealth.activeUsers} tone="brand"
+          icon={<Users size={15} />} href="/staff?staff_status=active"
+        />
+        <KpiCard
+          label="Faol firmalar" value={systemHealth.activeCompanies} tone="indigo"
+          icon={<Building2 size={15} />} href="/organizations"
+        />
+        <KpiCard
+          label="KPI bajarilishi" value={`${systemHealth.kpiCompletionPercent ?? 0}%`} tone="success" emphasize
+          icon={<TrendingUp size={15} />} href="/kpi"
+        />
+        <KpiCard
+          label="Oylik fondi" tone="warning"
+          icon={<Wallet size={15} />} href="/payroll"
+          value={<>{fmtMln(systemHealth.payrollFund ?? 0)}<span className="text-xs font-bold ml-1" style={{ color: "var(--text-muted)" }}>so&apos;m</span></>}
+          hint={systemHealth.pendingKpi > 0 ? `${systemHealth.pendingKpi} KPI tasdiq kutmoqda` : undefined}
+        />
       </div>
+
+      {/* Muddatlar — butun tizim bo'yicha */}
+      {deadlines && (
+        <DeadlinesWidget
+          overdueCount={deadlines.overdueCount}
+          dueSoonCount={deadlines.dueSoonCount}
+          upcoming={deadlines.upcoming}
+          scopeLabel="Butun tizim"
+        />
+      )}
 
       {/* Pul oqimi + Rollar bo'yicha (ASRO prototip layout) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -204,9 +201,7 @@ export function AdminCabinet({
             ) : (
               recentAudit.map((log) => (
                 <div key={log.id}
-                  className="flex items-center gap-3 p-3 transition-colors rounded-lg"
-                  onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
-                  onMouseLeave={e => e.currentTarget.style.background = ""}
+                  className="flex items-center gap-3 p-3 transition-colors rounded-lg row-hover"
                 >
                   {log.user ? (
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
@@ -246,24 +241,25 @@ export function AdminCabinet({
           {quickLinks.map((link) => {
             const Icon = link.icon;
             return (
-              <a key={link.href} href={link.href}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 hover:scale-105 hover:shadow-lg"
+              <Link key={link.href} href={link.href}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 hover:scale-105 hover:shadow-lg icon-btn-accent"
                 style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent-blue)"; e.currentTarget.style.color = "var(--accent-blue)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--card-border)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
               >
                 <Icon size={22} />
                 <span className="text-xs font-medium text-center">{link.label}</span>
-              </a>
+              </Link>
             );
           })}
-          <a href="/staff/new"
+          {/* `/staff/new` yo'nalishi mavjud emas edi — bu havola 404 qaytarardi.
+              Endi mavjud `/staff` sahifasiga `?new=1` bilan boradi va u yerda
+              "yangi xodim" formasi darhol ochiladi. */}
+          <Link href="/staff?new=1"
             className="flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 hover:scale-105 hover:shadow-lg"
             style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)", color: "var(--success)" }}
           >
             <UserPlus size={22} />
             <span className="text-xs font-medium text-center">Yangi Xodim</span>
-          </a>
+          </Link>
         </div>
       </div>
     </div>

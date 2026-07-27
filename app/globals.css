@@ -92,11 +92,11 @@
      panellar zaminga singib, "hamma yoq oq" bo'lib ko'rinardi. Endi kartalar
      kanvas ustida aniq turadi (Stripe/Linear "kanvasdagi kartalar" ko'rinishi),
      ammo hali ham tinch va sovuq emas. */
-  --bg-primary: #F1F2F5;
-  --bg-secondary: #FFFFFF;
-  --bg-card: #FFFFFF;
-  --bg-hover: #F0F2F4;
-  --bg-sunken: #F1F3F5;            /* jadval sarlavhasi, kirish maydoni zamini */
+  --bg-primary: #E7E8EC;
+  --bg-secondary: #F6F6F8;
+  --bg-card: #F6F6F8;
+  --bg-hover: #ECEDF1;
+  --bg-sunken: #EEEFF2;            /* jadval sarlavhasi, kirish maydoni zamini */
 
   /* ─── Chiziq (ierarxiyani KO'TARILISH emas, CHIZIQ tashiydi) ───
      Yumshatilgan: .12/.22 → .09/.15. Kartalar chegarasi endi sezilarli,
@@ -128,7 +128,7 @@
      Endi yumshoq siyoh (~14:1): hali ham tiniq, lekin ko'zga yumshoqroq. */
   --text-primary: #262C34;         /* oq ustida 14:1 */
   --text-secondary: #586371;       /* oq ustida 6.1:1 */
-  --text-muted: #646E7A;           /* oq 5.2:1 · sahifa 4.6:1 · sunken 4.7:1 — hamma joyda AA */
+  --text-muted: #5F6975;           /* oq 5.2:1 · sahifa 4.6:1 · sunken 4.7:1 — hamma joyda AA */
   --text-white: #FFFFFF;
 
   /* Eski komponentlar uchun taxalluslar */
@@ -140,22 +140,22 @@
   --danger-dark: #A6322A;
   --warning-light: rgba(143, 90, 12, 0.1);
   /* Surface/text shkalasi — amallar matritsasi (OperationModule) uchun */
-  --surface: #FFFFFF;
-  --surface-2: #F1F3F5;
+  --surface: #F6F6F8;
+  --surface-2: #EDEEF1;
   --text-2: #586371;
-  --text-3: #646E7A;
+  --text-3: #5F6975;
 
   /* ─── Sidebar ─── */
-  --sidebar-bg: #FFFFFF;
+  --sidebar-bg: #F6F6F8;
   --sidebar-border: rgba(23, 29, 38, 0.09);
   --sidebar-item-active-bg: rgba(15, 102, 174, 0.07);
   --sidebar-item-active-text: #0B5091;
-  --sidebar-item-hover-bg: #F0F2F4;
+  --sidebar-item-hover-bg: #ECEDF1;
   --sidebar-item-text: #586371;
   --sidebar-width: 240px;
 
   /* ─── Topbar ─── */
-  --topbar-bg: #FFFFFF;
+  --topbar-bg: #F6F6F8;
   --topbar-border: rgba(23, 29, 38, 0.09);
   --topbar-height: 64px;
 
@@ -164,7 +164,7 @@
      kanvasdan atigi bir necha piksel ko'tariladi. Bu kartaga chuqurlik va
      "premium" tugatilganlik beradi, lekin eski og'ir suzuvchi ko'rinishga
      qaytmaydi — soya deyarli sezilmaydi (Stripe/Linear karta soyasi). */
-  --card-bg: #FFFFFF;
+  --card-bg: #F6F6F8;
   --card-border: rgba(23, 29, 38, 0.11);
   --card-shadow: 0 1px 2px rgba(20, 28, 42, 0.04), 0 1px 3px -1px rgba(20, 28, 42, 0.05);
   --card-shadow-hover: 0 2px 4px rgba(20, 28, 42, 0.05), 0 6px 16px -6px rgba(20, 28, 42, 0.10);
@@ -176,16 +176,16 @@
   --shadow-overlay: 0 2px 4px rgba(24, 30, 40, 0.05), 0 12px 28px -6px rgba(24, 30, 40, 0.12), 0 28px 60px -12px rgba(24, 30, 40, 0.16);
 
   /* ─── Kirish maydoni ─── */
-  --input-bg: #FFFFFF;
+  --input-bg: #FCFCFD;
   --input-border: rgba(23, 29, 38, 0.16);
   --input-focus-border: #0F66AE;
   --input-focus-ring: rgba(15, 102, 174, 0.16);
   --input-text: #262C34;
 
   /* ─── Jadval ─── */
-  --table-header-bg: #F4F5F7;
-  --table-row-even: #FFFFFF;
-  --table-row-odd: #FFFFFF;        /* zebra o'rniga chiziq — qatorlarni chiziq ajratadi */
+  --table-header-bg: #EEEFF2;
+  --table-row-even: #F6F6F8;
+  --table-row-odd: #F6F6F8;        /* zebra o'rniga chiziq — qatorlarni chiziq ajratadi */
   --table-row-hover: rgba(15, 102, 174, 0.05);
   --table-border: rgba(23, 29, 38, 0.08);
 
@@ -936,6 +936,19 @@ input[type="radio"] {
   background: var(--table-row-hover);
 }
 
+/* Zichlik rejimi. DIQQAT: buni Tailwind yordamchi sinflari bilan qilib
+   bo'lmaydi — quyidagi `.erp-table tbody td` selektorining aniqligi (0,1,2)
+   `px-3`/`py-1.5` ning (0,1,0) aniqligidan yuqori, ya'ni utilita jim ravishda
+   e'tiborsiz qolardi. Shuning uchun zichlik atribut selektori bilan (0,2,2)
+   beriladi va u ustun chiqadi. */
+.erp-table[data-density="compact"] thead th {
+  padding: 0.4375rem 0.625rem;
+}
+
+.erp-table[data-density="compact"] tbody td {
+  padding: 0.3125rem 0.625rem;
+}
+
 .erp-table tbody td {
   padding: 0.625rem 0.875rem;
   font-size: var(--text-body);
@@ -1252,6 +1265,50 @@ input[type="radio"] {
   border: none;
   cursor: pointer;
   transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+/* Hover — CSS'da, JS'da EMAS.
+
+   `.icon-btn` da `:hover` qoidasi umuman yo'q edi, shuning uchun 46 joyda
+   `onMouseEnter={e => e.currentTarget.style...}` qo'lda yozilgan: bu CSS
+   kaskadini chetlab o'tadi, sensorli ekranda umuman ishlamaydi,
+   `prefers-reduced-motion` ga bo'ysunmaydi va har sichqoncha harakatida
+   uslub qayta hisoblanishiga majbur qiladi. */
+.icon-btn:hover,
+.icon-btn-sm:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Ton variantlari — o'chirish/tahrirlash kabi amallar uchun. */
+.icon-btn-danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.icon-btn-accent:hover {
+  background: var(--accent-blue-light);
+  color: var(--accent-blue);
+}
+
+.icon-btn-success:hover {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+/* Jadval qatori / ro'yxat elementi uchun. */
+.row-hover {
+  transition: background-color 0.12s ease;
+}
+
+.row-hover:hover {
+  background: var(--table-row-hover);
+}
+
+/* Eksport tugmasi — hover'da yashil (muvaffaqiyat toni). */
+.btn-export:hover {
+  color: var(--success);
+  border-color: var(--success);
 }
 
 .icon-btn:hover {

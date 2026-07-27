@@ -23,10 +23,18 @@ export function useDismissable<T extends HTMLElement = HTMLDivElement>(
   onClose: () => void,
 ): RefObject<T | null> {
   const ref = useRef<T | null>(null);
-  // onClose har renderда yangi bo'lishi mumkin — effektni qayta ulamaslik uchun
+  // onClose har renderda yangi bo'lishi mumkin — effektni qayta ulamaslik uchun
   // ref orqali eng so'nggi qiymatni ushlab turamiz.
+  //
+  // DIQQAT: ref RENDER paytida emas, effekt ichida yangilanadi. Avval u
+  // to'g'ridan-to'g'ri render tanasida yozilardi (`onCloseRef.current = onClose`),
+  // bu esa React 19 da taqiqlangan: konkurrent renderda bir marta boshlanib
+  // tashlab yuborilgan render ham ref'ni o'zgartirib, hali ekranda turgan
+  // eski daraxtni buzishi mumkin.
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!isOpen) return;

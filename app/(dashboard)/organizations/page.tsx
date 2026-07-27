@@ -1,6 +1,13 @@
 import { auth } from "@/lib/auth";
-import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
+import {
+  getCachedCompanies,
+  getCachedArchivedCompanies,
+  getCachedUsers,
+  getCachedOperations,
+} from "@/lib/cached-queries";
 import OrganizationsClient from "./OrganizationsClient";
+
+export const metadata = { title: "Firmalar" };
 
 // Prisma qatorini client `Company` shakliga keltiradi:
 // taxRegime -> taxType, relation nomlari (accountant.fullName -> accountantName),
@@ -37,9 +44,13 @@ export default async function OrganizationsPage() {
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role || "employee";
 
-  // Parallelda ma'lumotlarni cache'dan olish
-  const [companies, staff, operations] = await Promise.all([
+  // Parallelda ma'lumotlarni cache'dan olish.
+  // Arxiv alohida olinadi: ekrandagi "Faol / Arxiv / Barchasi" filtri mijoz
+  // tomonida `isActive` bo'yicha ishlaydi, shuning uchun arxivdagi firmalar ham
+  // ro'yxatda bo'lishi kerak — aks holda "Arxiv" doim bo'sh jadval qaytaradi.
+  const [companies, archivedCompanies, staff, operations] = await Promise.all([
     getCachedCompanies(userId, userRole),
+    getCachedArchivedCompanies(userRole),
     getCachedUsers(),
     getCachedOperations(userId, userRole),
   ]);
@@ -50,7 +61,7 @@ export default async function OrganizationsPage() {
     status: u.status || undefined,
   }));
 
-  const mappedCompanies = companies.map(mapCompany);
+  const mappedCompanies = [...companies, ...archivedCompanies].map(mapCompany);
 
   return (
     <div className="h-full">

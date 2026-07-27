@@ -3,6 +3,8 @@ import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/c
 import { getEffectiveReportColumns } from "@/server/report-columns";
 import ReportsClient from "./ReportsClient";
 
+export const metadata = { title: "Hisobotlar" };
+
 export default async function ReportsPage({
   searchParams,
 }: {

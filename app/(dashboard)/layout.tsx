@@ -5,6 +5,8 @@ import { DashboardTopBar } from "@/components/DashboardTopBar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MobileNavProvider } from "@/components/MobileNavContext";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { ConfirmProvider } from "@/components/ui/ConfirmDialog";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { getCachedUnreadCount } from "@/lib/cached-queries";
 import { getRoleViewOverrides } from "@/server/rbac";
 import { effectiveViewsForRole, type UserRole } from "@/lib/permissions";
@@ -23,11 +25,12 @@ export default async function DashboardLayout({
     userId ? getRoleViewOverrides().catch(() => ({})) : Promise.resolve({}),
   ]);
   // Admin tomonidan sozlangan menyu ko'rinishi (override) — bo'lmasa kod default'i
-  const allowedViews = effectiveViewsForRole(userRole as UserRole, roleViewOverrides) as string[];
+  const allowedViews = effectiveViewsForRole(userRole as UserRole, roleViewOverrides);
 
   return (
     <SessionProvider session={session}>
       <MobileNavProvider>
+      <ConfirmProvider>
       <div
         style={{
           display: "flex",
@@ -59,6 +62,7 @@ export default async function DashboardLayout({
             userRole={userRole}
             avatarColor={avatarColor}
             unreadCount={unreadCount}
+            allowedViews={allowedViews}
           />
 
           {/* Main content */}
@@ -70,6 +74,7 @@ export default async function DashboardLayout({
             className="flex-1 overflow-y-auto p-3 md:p-6 pb-[calc(76px_+_env(safe-area-inset-bottom,0px))] md:pb-6"
             style={{ minWidth: 0, background: "var(--bg-primary)" }}
           >
+            <Breadcrumbs className="mb-4" />
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </div>
@@ -77,6 +82,7 @@ export default async function DashboardLayout({
         {/* Mobil pastki navigatsiya (faqat kichik ekranlarda) */}
         <MobileBottomNav userRole={userRole} allowedViews={allowedViews} />
       </div>
+      </ConfirmProvider>
       </MobileNavProvider>
     </SessionProvider>
   );

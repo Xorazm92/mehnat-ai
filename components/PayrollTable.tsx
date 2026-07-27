@@ -9,6 +9,10 @@ import { getPayrollAdjustments, createPayrollAdjustment } from '@/server/payroll
 import { getPayouts, createPayout } from '@/server/payouts';
 import { groupDigits, ungroupDigits, submitOnCtrlEnter, formatNum } from '@/lib/format';
 import { adjustmentMagnitude } from '@/lib/adjustments';
+import { DataTable, type DataColumn } from "@/components/ui/DataTable";
+import { useTableState } from "@/hooks/useTableState";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/Button";
 
 interface Props {
     staff: Staff[];
@@ -21,6 +25,11 @@ interface Props {
 
 const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+
+    // Saralash/zichlik URL'da. Moliyaviy jadvalda saralash ayniqsa muhim:
+    // "kim eng ko'p qarzdor" yoki "kimning bonusi eng yuqori" savoliga
+    // avval umuman javob berib bo'lmasdi — saralash yo'q edi.
+    const table = useTableState({ ns: 'pay', defaultSortKey: 'name' });
     const [editingAdj, setEditingAdj] = useState<{ empId: string, type: 'bonus' | 'jarima' | 'avans' | 'payment', amount: number, reason: string } | null>(null);
     const [adjustmentsList, setAdjustmentsList] = useState<PayrollAdjustment[]>([]);
     // REAL berilgan pullar (Payout jadvali) — majburiyatdan alohida o'qiladi.
@@ -30,6 +39,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
     const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
     const [companyOverrides, setCompanyOverrides] = useState<CompanyKPIRule[]>([]);
     // Per-user column show/hide for the salary table, saved in this browser.
+    const [isLoading, setIsLoading] = useState(true);
     const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
     const [colPanelOpen, setColPanelOpen] = useState(false);
     useEffect(() => {
@@ -48,6 +58,10 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
     ];
 
     const loadMonthlyData = async () => {
+        // Yuklanish holati: busiz oy almashtirilganda jadval O'TGAN oyning
+        // raqamlarini joriy oyniki kabi ko'rsatib turardi — pul jadvalida bu
+        // eng yomon holat, chunki raqamlar ishonchli ko'rinadi.
+        setIsLoading(true);
         try {
             const [adj, perf, rules, payouts] = await Promise.all([
                 getPayrollAdjustments(month + '-01'),
@@ -81,6 +95,8 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
             setCompanyOverrides([]);
         } catch (e) {
             console.error("Error loading monthly data:", e);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -245,6 +261,96 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
         }).filter(s => s.companyCount > 0);
     }, [staff, companies, operations, month, adjustmentsList, performanceList, kpiRules, companyOverrides]);
 
+    type PayrollRow = (typeof summaries)[number];
+
+    const payrollColumns = useMemo<DataColumn<PayrollRow>[]>(() => [
+        {
+            key: 'name', header: 'Xodim',
+            sortValue: r => r.employeeName,
+            cell: r => (
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                        style={{ background: `hsl(${(r.employeeName.charCodeAt(0) * 37) % 360}, 60%, 50%)` }}>
+                        {r.employeeName.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-body font-semibold leading-none truncate" style={{ color: "var(--text-primary)" }}>{r.employeeName}</p>
+                        <p className="text-micro mt-0.5 leading-none" style={{ color: "var(--text-muted)" }}>
+                            {ROLE_LABELS[r.employeeRole] || r.employeeRole}
+                            <span className="ml-1.5 opacity-60">• {r.companyCount} firma</span>
+                        </p>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'base', header: "Stavka (so'm)", numeric: true,
+            sortValue: r => r.baseSalary,
+            cell: r => <span className="font-bold" style={{ color: "var(--text-primary)" }}>{formatNum(r.baseSalary)}</span>,
+        },
+        {
+            key: 'bonus', header: 'KPI Bonus', numeric: true, hidden: hiddenCols.has('bonus'),
+            sortValue: r => r.kpiBonus,
+            cell: r => <span className="font-bold" style={{ color: "var(--success)" }}>+{formatNum(r.kpiBonus)}</span>,
+        },
+        {
+            key: 'penalty', header: 'Jarima', numeric: true, hidden: hiddenCols.has('penalty'),
+            sortValue: r => r.kpiPenalty,
+            cell: r => <span className="font-bold" style={{ color: "var(--danger)" }}>{formatNum(r.kpiPenalty)}</span>,
+        },
+        {
+            key: 'manual', header: "Qo'shimcha", numeric: true, hidden: hiddenCols.has('manual'),
+            sortValue: r => r.manualBonuses,
+            cell: r => <span className="font-bold" style={{ color: "var(--accent-blue)" }}>{r.manualBonuses > 0 ? "+" : ""}{formatNum(r.manualBonuses)}</span>,
+        },
+        {
+            key: 'avans', header: 'Avans', numeric: true, hidden: hiddenCols.has('avans'),
+            sortValue: r => Math.abs(r.totalReceived),
+            cell: r => <span className="font-bold" style={{ color: "var(--warning)" }}>{formatNum(Math.abs(r.totalReceived))}</span>,
+        },
+        {
+            key: 'total', header: 'Jami maosh', numeric: true,
+            sortValue: r => r.totalSalary,
+            cell: r => <span className="text-sm font-semibold" style={{ color: "var(--accent-indigo)" }}>{formatNum(r.totalSalary)}</span>,
+        },
+        {
+            key: 'remaining', header: 'Qolgan', numeric: true, hidden: hiddenCols.has('remaining'),
+            sortValue: r => r.remainingBalance,
+            cell: r => (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold tabular-nums whitespace-nowrap"
+                    style={{
+                        background: r.remainingBalance <= 0 ? "var(--success-bg)" : "var(--warning-bg)",
+                        color: r.remainingBalance <= 0 ? "var(--success)" : "var(--warning)",
+                        border: `1px solid ${r.remainingBalance <= 0 ? "var(--success-border)" : "var(--warning-border)"}`,
+                    }}>
+                    {formatNum(r.remainingBalance)}
+                </span>
+            ),
+        },
+        {
+            key: 'actions', header: 'Amallar', align: 'center',
+            cell: r => (
+                <div className="flex gap-1.5 justify-center" onClick={e => e.stopPropagation()}>
+                    <button
+                        onClick={() => setEditingAdj({ empId: r.employeeId, type: "avans", amount: 0, reason: "" })}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-meta font-semibold"
+                        style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}
+                    >
+                        <HandCoins size={12} /> Avans
+                    </button>
+                    <button
+                        onClick={() => setEditingAdj({ empId: r.employeeId, type: "payment", amount: r.remainingBalance, reason: "Maosh to'lovi" })}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-meta font-semibold"
+                        style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}
+                    >
+                        <CheckCircle2 size={12} /> To&apos;lash
+                    </button>
+                </div>
+            ),
+        },
+    ], [hiddenCols]);
+
+
     const handleAddAdjustment = async () => {
         if (!editingAdj) return;
 
@@ -271,7 +377,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
             loadMonthlyData();
         } catch (e) {
             console.error(e);
-            alert((e as any)?.message || 'Xatolik yuz berdi');
+            toast.error((e as any)?.message || 'Xatolik yuz berdi');
         }
     };
 
@@ -315,7 +421,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                     </div>
                     <div className="px-5 py-2.5 rounded-xl" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
                         <p className="text-micro font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--success)" }}>Jami to&apos;lov</p>
-                        <p className="text-lg font-black tabular-nums leading-none" style={{ color: "var(--success)" }}>
+                        <p className="text-lg font-semibold tabular-nums leading-none" style={{ color: "var(--success)" }}>
                             {formatNum(summaries.reduce((a, b) => a + b.totalSalary, 0))}
                             <span className="text-meta font-bold ml-1.5" style={{ color: "var(--success)", opacity: 0.7 }}>so&apos;m</span>
                         </p>
@@ -355,8 +461,8 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                 <p className="text-micro mt-1 leading-none truncate" style={{ color: "var(--text-muted)" }}>{ROLE_LABELS[s.employeeRole] || s.employeeRole} • {s.companyCount} firma</p>
                             </div>
                             <div className="text-right shrink-0">
-                                <p className="text-2xs font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami</p>
-                                <p className="text-sm font-black tabular-nums leading-tight" style={{ color: "var(--accent-indigo)" }}>{formatNum(s.totalSalary)}</p>
+                                <p className="text-2xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami</p>
+                                <p className="text-sm font-semibold tabular-nums leading-tight" style={{ color: "var(--accent-indigo)" }}>{formatNum(s.totalSalary)}</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 mt-3">
@@ -369,20 +475,20 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                 { l: "Qolgan", v: formatNum(s.remainingBalance), c: s.remainingBalance <= 0 ? "var(--success)" : "var(--warning)" },
                             ].map((x, i) => (
                                 <div key={i} className="rounded-lg px-2 py-1.5 text-center" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
-                                    <div className="text-2xs font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{x.l}</div>
-                                    <div className="text-meta font-black tabular-nums mt-0.5 truncate" style={{ color: x.c }}>{x.v}</div>
+                                    <div className="text-2xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{x.l}</div>
+                                    <div className="text-meta font-semibold tabular-nums mt-0.5 truncate" style={{ color: x.c }}>{x.v}</div>
                                 </div>
                             ))}
                         </div>
                         <div className="flex gap-2 mt-3">
-                            <button onClick={() => setEditingAdj({ empId: s.employeeId, type: "avans", amount: 0, reason: "" })} className="flex-1 py-2 rounded-lg text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}><HandCoins size={13} /> Avans</button>
-                            <button onClick={() => setEditingAdj({ empId: s.employeeId, type: "payment", amount: s.remainingBalance, reason: "Maosh to'lovi" })} className="flex-1 py-2 rounded-lg text-meta font-black uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}><CheckCircle2 size={13} /> To&apos;lash</button>
+                            <button onClick={() => setEditingAdj({ empId: s.employeeId, type: "avans", amount: 0, reason: "" })} className="flex-1 py-2 rounded-lg text-meta font-semibold uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}><HandCoins size={13} /> Avans</button>
+                            <button onClick={() => setEditingAdj({ empId: s.employeeId, type: "payment", amount: s.remainingBalance, reason: "Maosh to'lovi" })} className="flex-1 py-2 rounded-lg text-meta font-semibold uppercase tracking-widest flex items-center justify-center gap-1.5" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}><CheckCircle2 size={13} /> To&apos;lash</button>
                         </div>
                     </div>
                 ))}
                 {summaries.length === 0 && (
                     <div className="rounded-xl p-12 text-center" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-                        <span className="text-meta uppercase font-black tracking-[0.2em] opacity-50" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot topilmadi</span>
+                        <span className="text-meta font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot topilmadi</span>
                     </div>
                 )}
             </div>
@@ -418,144 +524,19 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
 
             <div className="hidden md:block rounded-xl overflow-hidden" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse" style={{ minWidth: "900px" }}>
-                        <thead>
-                            <tr style={{ background: "var(--table-header-bg)", borderBottom: "2px solid var(--table-border)" }}>
-                                {[
-                                    { key: 'name', label: "Xodim", align: "left" },
-                                    { key: 'base', label: "Stavka (so'm)", align: "right", color: "var(--text-primary)" },
-                                    { key: 'bonus', label: "KPI Bonus", align: "right", color: "var(--success)" },
-                                    { key: 'penalty', label: "Jarima", align: "right", color: "var(--danger)" },
-                                    { key: 'manual', label: "Qo'shimcha", align: "right", color: "var(--accent-blue)" },
-                                    { key: 'avans', label: "Avans", align: "right", color: "var(--warning)" },
-                                    { key: 'total', label: "Jami maosh", align: "right", color: "var(--accent-indigo)" },
-                                    { key: 'remaining', label: "Qolgan", align: "right", color: "var(--success)" },
-                                    { key: 'actions', label: "Amallar", align: "center" },
-                                ].filter(h => !hiddenCols.has(h.key)).map((h, i) => (
-                                    <th key={i} className="px-4 py-3.5 text-micro font-bold uppercase tracking-wider whitespace-nowrap"
-                                        style={{ color: h.color || "var(--text-muted)", textAlign: h.align as any }}>
-                                        {h.label}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {summaries.map((s, i) => (
-                                <tr key={s.employeeId}
-                                    style={{
-                                        borderBottom: "1px solid var(--table-border)",
-                                        background: i % 2 === 0 ? "var(--table-row-even)" : "var(--table-row-odd)",
-                                    }}
-                                    className="group transition-colors"
-                                    onMouseEnter={e => (e.currentTarget.style.background = "var(--table-row-hover)")}
-                                    onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? "var(--table-row-even)" : "var(--table-row-odd)")}
-                                >
-                                    {/* Employee */}
-                                    <td className="px-4 py-3.5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                                                style={{ background: `hsl(${(s.employeeName.charCodeAt(0) * 37) % 360}, 60%, 50%)` }}>
-                                                {s.employeeName.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <p className="text-body font-semibold leading-none" style={{ color: "var(--text-primary)" }}>{s.employeeName}</p>
-                                                <p className="text-micro mt-0.5 leading-none" style={{ color: "var(--text-muted)" }}>
-                                                    {ROLE_LABELS[s.employeeRole] || s.employeeRole}
-                                                    <span className="ml-1.5 opacity-60">• {s.companyCount} firma</span>
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    {/* Stavka */}
-                                    <td className="px-4 py-3.5 text-right">
-                                        <span className="text-body font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
-                                            {formatNum(s.baseSalary)}
-                                        </span>
-                                    </td>
-                                    {/* KPI Bonus */}
-                                    {!hiddenCols.has('bonus') && (
-                                    <td className="px-4 py-3.5 text-right">
-                                        <span className="text-body font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--success)" }}>
-                                            +{formatNum(s.kpiBonus)}
-                                        </span>
-                                    </td>
-                                    )}
-                                    {/* Jarima */}
-                                    {!hiddenCols.has('penalty') && (
-                                    <td className="px-4 py-3.5 text-right">
-                                        <span className="text-body font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--danger)" }}>
-                                            {formatNum(s.kpiPenalty)}
-                                        </span>
-                                    </td>
-                                    )}
-                                    {/* Qo'shimcha */}
-                                    {!hiddenCols.has('manual') && (
-                                    <td className="px-4 py-3.5 text-right">
-                                        <span className="text-body font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--accent-blue)" }}>
-                                            {s.manualBonuses > 0 ? "+" : ""}{formatNum(s.manualBonuses)}
-                                        </span>
-                                    </td>
-                                    )}
-                                    {/* Avans */}
-                                    {!hiddenCols.has('avans') && (
-                                    <td className="px-4 py-3.5 text-right">
-                                        <span className="text-body font-bold tabular-nums whitespace-nowrap" style={{ color: "var(--warning)" }}>
-                                            {formatNum(Math.abs(s.totalReceived))}
-                                        </span>
-                                    </td>
-                                    )}
-                                    {/* Jami */}
-                                    <td className="px-4 py-3.5 text-right">
-                                        <span className="text-sm font-black tabular-nums whitespace-nowrap" style={{ color: "var(--accent-indigo)" }}>
-                                            {formatNum(s.totalSalary)}
-                                        </span>
-                                    </td>
-                                    {/* Qolgan */}
-                                    {!hiddenCols.has('remaining') && (
-                                    <td className="px-4 py-3.5 text-right">
-                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold tabular-nums whitespace-nowrap"
-                                            style={{
-                                                background: s.remainingBalance <= 0 ? "var(--success-bg)" : "var(--warning-bg)",
-                                                color: s.remainingBalance <= 0 ? "var(--success)" : "var(--warning)",
-                                                border: `1px solid ${s.remainingBalance <= 0 ? "var(--success-border)" : "var(--warning-border)"}`,
-                                            }}>
-                                            {formatNum(s.remainingBalance)}
-                                        </span>
-                                    </td>
-                                    )}
-                                    {/* Actions */}
-                                    <td className="px-4 py-3.5 text-center">
-                                        <div className="flex gap-1.5 justify-center opacity-30 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => setEditingAdj({ empId: s.employeeId, type: "avans", amount: 0, reason: "" })}
-                                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-meta font-semibold transition-all"
-                                                style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}
-                                                title="Avans berish"
-                                            >
-                                                <HandCoins size={12} /> Avans
-                                            </button>
-                                            <button
-                                                onClick={() => setEditingAdj({ empId: s.employeeId, type: "payment", amount: s.remainingBalance, reason: "Maosh to'lovi" })}
-                                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-meta font-semibold transition-all"
-                                                style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}
-                                                title="Maosh to'lash"
-                                            >
-                                                <CheckCircle2 size={12} /> To&apos;lash
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {summaries.length === 0 && (
-                                <tr>
-                                    <td colSpan={9} className="px-8 py-16 text-center">
-                                        <Wallet size={36} className="mx-auto mb-3" style={{ color: "var(--text-muted)", opacity: 0.4 }} />
-                                        <p className="text-body font-medium" style={{ color: "var(--text-muted)" }}>Bu oy uchun ma&apos;lumot topilmadi</p>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                    <DataTable<PayrollRow>
+                        caption="Oylik maosh jadvali"
+                        rows={summaries}
+                        columns={payrollColumns}
+                        rowKey={r => r.employeeId}
+                        sortKey={table.sortKey}
+                        sortDir={table.sortDir}
+                        onToggleSort={table.toggleSort}
+                        density={table.density}
+                        loading={isLoading}
+                        emptyIcon={<Wallet size={36} />}
+                        emptyTitle="Bu oy uchun ma'lumot topilmadi"
+                    />
                 </div>
             </div>
 
@@ -578,10 +559,8 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                                 <p className="text-meta mt-0.5" style={{ color: "var(--text-muted)" }}>Miqdor va sababni kiriting</p>
                             </div>
                             <button onClick={() => setEditingAdj(null)}
-                                className="p-2 rounded-lg transition-all"
-                                style={{ color: "var(--text-muted)" }}
-                                onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = ""; e.currentTarget.style.color = "var(--text-muted)"; }}>
+                                className="p-2 rounded-lg transition-all icon-btn-danger"
+                                style={{ color: "var(--text-muted)" }}>
                                 <MinusCircle size={18} className="rotate-45" />
                             </button>
                         </div>
@@ -604,11 +583,10 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                             </div>
                         </div>
                         <div className="px-6 pb-6 flex gap-3">
-                            <button onClick={() => setEditingAdj(null)} className="btn-secondary flex-1">Bekor qilish</button>
-                            <button onClick={handleAddAdjustment}
-                                className="btn-primary flex-1">
+                            <Button variant="secondary" size="md" onClick={() => setEditingAdj(null)} className="flex-1">Bekor qilish</Button>
+                            <Button variant="primary" size="md" onClick={handleAddAdjustment} className="flex-1">
                                 <Save size={15} /> Saqlash
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

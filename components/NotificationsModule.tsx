@@ -5,6 +5,8 @@ import { Language } from '@/types';
 import { Bell, Check, CheckCheck, AlertTriangle, Info, TrendingUp, Clock, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 
 export interface NotificationRecord {
     id: string;
@@ -77,17 +79,18 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
 
     return (
         <div className="space-y-4 animate-fade-in pb-20">
+      <PageHeader
+        icon={<Bell size={20} />}
+        title="Xabarlar"
+        description="Tizim bildirishnomalari va tasdiq so'rovlari"
+      />
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-2 p-1 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                     {(['all', 'unread'] as const).map(f => (
-                        <button key={f} onClick={() => setFilter(f)}
-                            className="px-4 py-2 rounded-lg text-meta font-bold uppercase tracking-widest transition-all"
-                            style={filter === f
-                                ? { background: 'var(--accent-blue)', color: '#fff' }
-                                : { color: 'var(--text-muted)' }}>
+                        <Button variant="primary" size="md" key={f} onClick={() => setFilter(f)} style={filter === f ? { background: 'var(--accent-blue)', color: '#fff' } : { color: 'var(--text-muted)' }}>
                             {f === 'all' ? (lang === 'uz' ? 'Barchasi' : 'Все') : (lang === 'uz' ? 'O\'qilmagan' : 'Непрочитанные')}
                             {f === 'unread' && unreadCount > 0 && <span className="ml-1.5">({unreadCount})</span>}
-                        </button>
+                        </Button>
                     ))}
                 </div>
                 <button onClick={markAll} disabled={busy || unreadCount === 0}
@@ -133,9 +136,9 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
                     );
                 })}
                 {list.length === 0 && (
-                    <div className="dashboard-card p-16 flex flex-col items-center" style={{ color: 'var(--text-muted)' }}>
+                    <div className="dashboard-card p-5 flex flex-col items-center" style={{ color: 'var(--text-muted)' }}>
                         <Bell size={48} className="mb-4 opacity-20" />
-                        <span className="text-meta uppercase font-bold tracking-[0.2em] opacity-60">{lang === 'uz' ? 'Xabarlar yo\'q' : 'Нет уведомлений'}</span>
+                        <span className="text-meta font-bold uppercase tracking-widest">{lang === 'uz' ? 'Xabarlar yo\'q' : 'Нет уведомлений'}</span>
                     </div>
                 )}
             </div>

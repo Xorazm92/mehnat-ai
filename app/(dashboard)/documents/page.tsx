@@ -4,6 +4,8 @@ import { getDocuments } from "@/server/documents";
 import { isSeniorRole } from "@/lib/permissions";
 import DocumentsClient from "./DocumentsClient";
 
+export const metadata = { title: "Hujjatlar" };
+
 export default async function DocumentsPage() {
   const session = await auth();
   const userId = session?.user?.id ?? "";

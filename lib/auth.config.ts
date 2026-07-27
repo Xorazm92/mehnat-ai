@@ -25,6 +25,7 @@ export const authConfig = {
   // v5 rejects the proxied Host and login breaks (previously depended on the
   // AUTH_TRUST_HOST env being remembered at deploy time).
   trustHost: true,
+  basePath: "/api/auth",
   useSecureCookies: USE_SECURE_COOKIES,
   session: { strategy: "jwt", maxAge: SESSION_MAX_AGE },
   pages: {

@@ -6,6 +6,8 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import ExpenseModule from "@/components/ExpenseModule";
 import { Expense, BalanceBreakdown } from "@/types";
 import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
+import { toast } from "sonner";
+import { usePrompt } from "@/components/ui/ConfirmDialog";
 
 interface Props {
   expenses: Expense[];
@@ -14,6 +16,7 @@ interface Props {
 }
 
 export default function ExpensesClient({ expenses, userRole, balance }: Props) {
+  const prompt = usePrompt();
   const router = useRouter();
   useAutoRefresh();
 
@@ -34,7 +37,7 @@ export default function ExpensesClient({ expenses, userRole, balance }: Props) {
       router.refresh();
     } catch (e) {
       // Balans yetarli emas / huquq yo'q — xabarni foydalanuvchiga ko'rsat
-      alert((e as Error).message);
+      toast.error((e as Error).message);
       throw e; // modal ochiq qolishi uchun xatoni yuqoriga qaytaramiz
     }
   };
@@ -46,13 +49,19 @@ export default function ExpensesClient({ expenses, userRole, balance }: Props) {
 
   const handleApprove = async (id: string) => {
     try { await approveExpense(id); router.refresh(); }
-    catch (e) { alert((e as Error).message); }
+    catch (e) { toast.error((e as Error).message); }
   };
   const handleReject = async (id: string) => {
-    const reason = window.prompt("Rad etish sababi:") || "";
+    const reason = await prompt({
+      title: "Xarajat rad etilsinmi?",
+      reasonLabel: "Rad etish sababi",
+      reasonPlaceholder: "Nima uchun rad etilyapti?",
+      confirmLabel: "Rad etish",
+      tone: "danger",
+    });
     if (!reason) return;
     try { await rejectExpense(id, reason); router.refresh(); }
-    catch (e) { alert((e as Error).message); }
+    catch (e) { toast.error((e as Error).message); }
   };
 
   return (

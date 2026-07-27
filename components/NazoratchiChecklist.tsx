@@ -9,6 +9,10 @@ import { deriveAttendanceKpi } from '@/server/attendance';
 import KpiEntryCard from './kpi/KpiEntryCard';
 import { formatNum } from "@/lib/format";
 import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { toast } from "sonner";
+import { usePrompt } from "@/components/ui/ConfirmDialog";
+import { SkeletonTable } from "@/components/ui/Skeleton";
+import { Button } from "@/components/ui/Button";
 
 interface Props {
     companies: Company[];
@@ -22,6 +26,7 @@ interface Props {
 type RoleGroup = { key: KpiSalaryRole; ruleRole: string; label: string; accent: string; employeeId?: string; employeeName?: string; base: number };
 
 const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentUserRole, currentUserId }) => {
+    const prompt = usePrompt();
     const staffById = useMemo(() => new Map(staff.map(s => [s.id, s.name])), [staff]);
     const nameOf = (id?: string | null, fallback?: string) => (id ? staffById.get(id) || fallback || '' : fallback || '');
     const t = translations[lang];
@@ -89,7 +94,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
         performances.find(p => p.companyId === companyId && p.employeeId === employeeId && p.ruleId === ruleId);
 
     const handleSaveEntry = async (rule: KPIRule, companyId: string, employeeId: string, input: KpiEntryInput) => {
-        if (!employeeId) { alert(lang === 'uz' ? 'Bu rol firmaga biriktirilmagan' : 'Роль не назначена'); return; }
+        if (!employeeId) { toast.error(lang === 'uz' ? 'Bu rol firmaga biriktirilmagan' : 'Роль не назначена'); return; }
         try {
             const saved = await upsertPerformance({
                 month: `${month}-01`,
@@ -111,7 +116,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                 return existing ? prev.map(p => (p.id === existing.id ? rec : p)) : [...prev, rec];
             });
         } catch (e) {
-            alert((e as Error).message);
+            toast.error((e as Error).message);
             loadData();
         }
     };
@@ -120,12 +125,18 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
         try {
             if (approve) await approvePerformance(perf.id);
             else {
-                const reason = window.prompt(t.rejectReason) || '';
+                const reason = await prompt({
+                    title: 'KPI natijasi rad etilsinmi?',
+                    reasonLabel: t.rejectReason,
+                    confirmLabel: 'Rad etish',
+                    tone: 'danger',
+                });
+                if (!reason) return;
                 if (!reason) return;
                 await rejectPerformance(perf.id, reason);
             }
             await loadData();
-        } catch (e) { alert((e as Error).message); }
+        } catch (e) { toast.error((e as Error).message); }
     };
 
     return (
@@ -139,7 +150,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                             style={{ background: 'linear-gradient(135deg, var(--accent-indigo), var(--accent-blue))' }}>
                             <Shield size={15} />
                         </div>
-                        <h3 className="text-body font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>{t.organizations}</h3>
+                        <h3 className="text-body font-bold" style={{ color: 'var(--text-primary)' }}>{t.organizations}</h3>
                     </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={14} style={{ color: 'var(--text-muted)' }} />
@@ -186,7 +197,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                         <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
                             style={{ borderBottom: '1px solid var(--card-border)', background: 'var(--table-header-bg)' }}>
                             <div>
-                                <h2 className="text-base font-bold uppercase mb-1" style={{ color: 'var(--text-primary)' }}>{selectedCompany.name}</h2>
+                                <h2 className="text-sm font-bold mb-1" style={{ color: 'var(--text-primary)' }}>{selectedCompany.name}</h2>
                                 <p className="text-meta font-bold" style={{ color: 'var(--text-muted)' }}>
                                     {lang === 'uz' ? 'Shartnoma' : 'Договор'}: {formatNum(contractAmount)} {lang === 'uz' ? "so'm" : 'сум'}
                                 </p>
@@ -252,14 +263,12 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                             />
                                                             {needsApproval && perf && canApprove && (
                                                                 <div className="flex gap-2">
-                                                                    <button onClick={() => changeStatus(perf, true)}
-                                                                        className="flex-1 py-1.5 rounded-lg text-micro font-bold uppercase text-white flex items-center justify-center gap-1" style={{ background: 'var(--success)' }}>
+                                                                    <Button variant="success" size="sm" onClick={() => changeStatus(perf, true)} className="flex-1">
                                                                         <CheckCircle2 size={12} /> {lang === 'uz' ? 'Tasdiqlash' : 'Одобрить'}
-                                                                    </button>
-                                                                    <button onClick={() => changeStatus(perf, false)}
-                                                                        className="flex-1 py-1.5 rounded-lg text-micro font-bold uppercase text-white flex items-center justify-center gap-1" style={{ background: 'var(--danger)' }}>
+                                                                    </Button>
+                                                                    <Button variant="danger" size="sm" onClick={() => changeStatus(perf, false)} className="flex-1">
                                                                         <XCircle size={12} /> {lang === 'uz' ? 'Rad etish' : 'Отклонить'}
-                                                                    </button>
+                                                                    </Button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -274,7 +283,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                     </div>
                                 );
                             })}
-                            {loading && <p className="text-center text-xs py-4" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Yuklanmoqda…' : 'Загрузка…'}</p>}
+                            {loading && <SkeletonTable rows={5} cols={4} />}
                         </div>
                     </>
                 ) : (
@@ -283,7 +292,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                             style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-muted)' }}>
                             <Shield size={32} />
                         </div>
-                        <h3 className="text-base font-bold uppercase mb-2" style={{ color: 'var(--text-primary)' }}>
+                        <h3 className="text-base font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
                             {(t as unknown as { selectCompany?: string }).selectCompany || (lang === 'uz' ? 'Firmani tanlang' : 'Выберите фирму')}
                         </h3>
                         <p className="text-body font-medium max-w-md" style={{ color: 'var(--text-muted)' }}>

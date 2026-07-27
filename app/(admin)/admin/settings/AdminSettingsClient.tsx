@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 import { upsertSystemSetting } from "@/server/system-settings";
+import { Button } from "@/components/ui/Button";
 
 interface Settings {
   appName: string;
@@ -51,7 +52,7 @@ export default function AdminSettingsClient({ settings }: { settings: Settings }
   return (
     <div className="space-y-5 max-w-2xl">
       <div>
-        <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Tizim sozlamalari</h1>
+        <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Tizim sozlamalari</h1>
         <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Global konfiguratsiya va modul bayroqlari</p>
       </div>
 
@@ -89,9 +90,9 @@ export default function AdminSettingsClient({ settings }: { settings: Settings }
         </p>
       </div>
 
-      <button onClick={save} disabled={busy} className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest text-white disabled:opacity-50" style={{ background: "var(--accent-blue)" }}>
+      <Button variant="primary" size="md" onClick={save} disabled={busy}>
         <Save size={15} /> Saqlash
-      </button>
+      </Button>
     </div>
   );
 }

@@ -310,6 +310,7 @@ model MonthlyReport {
   komSuv            String?
   komGaz            String?
   komSvet           String?
+  ekologiya         String?
 
   comment   String?
   updatedAt DateTime @updatedAt

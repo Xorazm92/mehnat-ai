@@ -78,6 +78,9 @@ export interface CreateTaskInput {
 
 export async function createTask(input: CreateTaskInput) {
   const actor = await requireActor();
+  if (!isSeniorRole(actor.role)) {
+    throw new Error("Vazifa yaratish ruxsati yo'q. Bu amal faqat rahbar yoki nazoratchilar uchun.");
+  }
   if (!input.title?.trim()) throw new Error("Sarlavha majburiy");
 
   // SLA siyosati — berilgan yoki taskType bo'yicha avto-moslash (aniq > default).

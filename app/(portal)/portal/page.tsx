@@ -1,6 +1,8 @@
 import { getPortalOverview, getPortalObligations, getPortalInvoices, getPortalRequests } from "@/server/portal";
 import PortalClient from "./PortalClient";
 
+export const metadata = { title: "Mijoz kabineti" };
+
 export default async function PortalPage() {
   const [overview, obligations, invoices, requests] = await Promise.all([
     getPortalOverview(),

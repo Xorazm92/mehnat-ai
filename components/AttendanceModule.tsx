@@ -6,6 +6,11 @@ import { translations } from '@/lib/translations';
 import { Calendar, Plus, Search, Edit3, Trash2, CheckCircle2, XCircle, Clock, UserCheck, DownloadCloud } from 'lucide-react';
 import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { DataTable, type DataColumn } from "@/components/ui/DataTable";
+import { useTableState } from "@/hooks/useTableState";
 
 export interface AttendanceRecord {
     id: string;
@@ -50,6 +55,8 @@ const fmtTime = (iso?: string) => {
 };
 
 const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSave, onDelete, onSyncEjurnal }) => {
+    const table = useTableState({ ns: 'att', defaultSortKey: 'user' });
+  const confirm = useConfirm();
     const t = translations[lang];
     const [isSyncing, setIsSyncing] = useState(false);
 
@@ -133,9 +140,56 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
             setIsSaving(false);
         }
     };
+    const attColumns = useMemo<DataColumn<typeof records[number]>[]>(() => [
+        {
+            key: 'user', header: 'Xodim',
+            sortValue: r => r.userName ?? '',
+            cell: r => <span className="text-body font-bold tracking-tight" style={{ color: 'var(--text)' }}>{r.userName}</span>,
+        },
+        {
+            key: 'status', header: t.status, width: '140px',
+            sortValue: r => r.status ?? '',
+            cell: r => {
+                const meta = STATUS_META[r.status] || STATUS_META.present;
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro font-bold uppercase tracking-widest whitespace-nowrap" style={{ background: meta.bg, color: meta.color }}>
+                        {meta.icon}{meta.labelUz}
+                    </span>
+                );
+            },
+        },
+        {
+            key: 'in', header: 'Kelish', align: 'center', width: '110px',
+            sortValue: r => r.checkIn ?? '',
+            exportValue: r => fmtTime(r.checkIn),
+            cell: r => <span className="text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtTime(r.checkIn)}</span>,
+        },
+        {
+            key: 'out', header: 'Ketish', align: 'center', width: '110px',
+            sortValue: r => r.checkOut ?? '',
+            exportValue: r => fmtTime(r.checkOut),
+            cell: r => <span className="text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtTime(r.checkOut)}</span>,
+        },
+        {
+            key: 'notes', header: t.comment,
+            sortValue: r => r.notes ?? '',
+            cell: r => <span className="text-xs font-bold truncate max-w-[240px] inline-block align-middle tracking-tight" style={{ color: 'var(--text)' }}>{r.notes || '—'}</span>,
+        },
+        {
+            key: 'actions', header: 'Amallar', align: 'right', width: '100px', hidden: !canEdit,
+            cell: r => (
+                <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => openEdit(r)} className="icon-btn-sm icon-btn-accent rounded-lg" style={{ color: 'var(--accent-blue)' }} aria-label={t.edit}><Edit3 size={15} /></button>
+                    <button onClick={() => handleDelete(r.id)} className="icon-btn-sm icon-btn-danger rounded-lg" style={{ color: 'var(--danger)' }} aria-label={t.delete}><Trash2 size={15} /></button>
+                </div>
+            ),
+        },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    ], [t, canEdit]);
+
 
     const handleDelete = async (id: string) => {
-        if (!confirm(lang === 'uz' ? "Yozuvni o'chirishni tasdiqlaysizmi?" : 'Удалить запись?')) return;
+        if (!await confirm({ title: "Yozuv o'chirilsinmi?", description: "Davomat yozuvi butunlay o'chiriladi.", confirmLabel: "O'chirish", tone: 'danger' })) return;
         try {
             await onDelete(id);
             toast.success(lang === 'uz' ? "O'chirildi" : 'Удалено');
@@ -147,6 +201,11 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
 
     return (
         <div className="space-y-4 animate-fade-in pb-20">
+      <PageHeader
+        icon={<Calendar size={20} />}
+        title="Davomat"
+        description="Xodimlar ish vaqti va yo'qliklar"
+      />
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {(['present', 'late', 'absent', 'excused'] as const).map(key => {
@@ -161,7 +220,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                                     {lang === 'uz' ? meta.labelUz : meta.labelRu}
                                 </span>
                             </div>
-                            <div className="text-3xl font-black tabular-nums leading-none" style={{ color: meta.color }}>{stats[key]}</div>
+                            <div className="text-3xl font-semibold tabular-nums leading-none" style={{ color: meta.color }}>{stats[key]}</div>
                         </div>
                     );
                 })}
@@ -175,7 +234,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                         type="date"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
-                        className="rounded-xl py-3 pl-12 pr-4 text-xs font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
+                        className="rounded-xl py-3 pl-12 pr-4 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                     />
                 </div>
@@ -184,7 +243,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                     <input
                         type="text"
                         placeholder="QIDIRISH..."
-                        className="w-full rounded-xl py-3 pl-12 pr-4 text-xs font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
+                        className="w-full rounded-xl py-3 pl-12 pr-4 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -194,7 +253,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                     <button
                         onClick={handleSyncEjurnal}
                         disabled={isSyncing}
-                        className="font-bold px-5 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md disabled:opacity-50"
+                        className="font-bold px-5 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap hover:shadow-md disabled:opacity-50"
                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--accent-blue)' }}
                         title="E-jurnaldan tanlangan kun davomatini yuklab olish"
                     >
@@ -203,14 +262,10 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                     </button>
                 )}
                 {canEdit && (
-                    <button
-                        onClick={openNew}
-                        className="font-bold px-5 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap uppercase tracking-widest hover:shadow-md text-white"
-                        style={{ background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-blue-hover))' }}
-                    >
+                    <Button variant="primary" size="md" onClick={openNew} className="whitespace-nowrap">
                         <Plus size={16} />
                         <span>{lang === 'uz' ? 'Davomat qo\'shish' : 'Добавить'}</span>
-                    </button>
+                    </Button>
                 )}
                 <div className="flex items-center justify-end">
                     <TableToolbar view={viewMode} onViewChange={setViewMode} />
@@ -222,9 +277,9 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                     return (
                         <div key={r.id} className="dashboard-card p-4 flex items-center gap-3">
                             <div className="flex-1 min-w-0">
-                                <div className="text-body font-black uppercase tracking-tight truncate" style={{ color: 'var(--text)' }}>{r.userName}</div>
+                                <div className="text-body font-semibold tracking-tight truncate" style={{ color: 'var(--text)' }}>{r.userName}</div>
                                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-micro font-black uppercase tracking-widest" style={{ background: meta.bg, color: meta.color }}>{meta.icon}{lang === 'uz' ? meta.labelUz : meta.labelRu}</span>
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-micro font-semibold uppercase tracking-widest" style={{ background: meta.bg, color: meta.color }}>{meta.icon}{lang === 'uz' ? meta.labelUz : meta.labelRu}</span>
                                     <span className="text-meta font-mono font-bold" style={{ color: 'var(--text-muted)' }}>{fmtTime(r.checkIn)} – {fmtTime(r.checkOut)}</span>
                                 </div>
                                 {r.notes && <div className="text-meta mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>{r.notes}</div>}
@@ -239,9 +294,9 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                     );
                 })}
                 {dayRecords.length === 0 && (
-                    <div className="dashboard-card p-12 text-center">
+                    <div className="dashboard-card p-5 text-center">
                         <Calendar size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
-                        <span className="text-meta uppercase font-black tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? "Bu kun uchun davomat yo'q" : 'Нет записей'}</span>
+                        <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? "Bu kun uchun davomat yo'q" : 'Нет записей'}</span>
                     </div>
                 )}
             </div>
@@ -249,59 +304,18 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
             {/* Table (desktop) */}
             <div className={viewMode === 'list' ? "dashboard-card overflow-hidden overflow-x-auto" : "hidden"}>
                 <div className="overflow-x-auto scrollbar-hide">
-                    <table className="w-full text-left border-collapse min-w-[800px]">
-                        <thead>
-                            <tr style={{ borderBottom: '1px solid var(--card-border)' }}>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Xodim' : 'Сотрудник'}</th>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest w-[140px]" style={{ color: 'var(--text-muted)' }}>{t.status}</th>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-center w-[110px]" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Kelish' : 'Приход'}</th>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-center w-[110px]" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Ketish' : 'Уход'}</th>
-                                <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</th>
-                                {canEdit && <th className="px-6 py-4 text-meta font-bold uppercase tracking-widest text-right w-[100px]" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Amallar' : 'Действия'}</th>}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {dayRecords.map((r, i) => {
-                                const meta = STATUS_META[r.status] || STATUS_META.present;
-                                return (
-                                    <tr key={r.id} className="transition-colors group" style={{ backgroundColor: i % 2 === 0 ? 'var(--card-bg)' : 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                                        <td className="px-6 py-4 text-body font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{r.userName}</td>
-                                        <td className="px-6 py-4">
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro font-bold uppercase tracking-widest" style={{ background: meta.bg, color: meta.color }}>
-                                                {meta.icon}
-                                                {lang === 'uz' ? meta.labelUz : meta.labelRu}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtTime(r.checkIn)}</td>
-                                        <td className="px-6 py-4 text-center text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtTime(r.checkOut)}</td>
-                                        <td className="px-6 py-4 text-xs font-bold truncate max-w-[240px] tracking-tight" style={{ color: 'var(--text)' }}>{r.notes || '—'}</td>
-                                        {canEdit && (
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => openEdit(r)} className="icon-btn-sm" style={{ color: 'var(--accent-blue)' }} title={t.edit}>
-                                                        <Edit3 size={16} />
-                                                    </button>
-                                                    <button onClick={() => handleDelete(r.id)} className="icon-btn-sm" style={{ color: 'var(--danger)' }} title={t.delete}>
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        )}
-                                    </tr>
-                                );
-                            })}
-                            {dayRecords.length === 0 && (
-                                <tr>
-                                    <td colSpan={canEdit ? 6 : 5} className="px-6 py-24 text-center">
-                                        <div className="flex flex-col items-center" style={{ color: 'var(--text-muted)' }}>
-                                            <Calendar size={48} className="mb-4 opacity-20" />
-                                            <span className="text-meta uppercase font-bold tracking-[0.2em] opacity-60">{lang === 'uz' ? "Bu kun uchun davomat yo'q" : 'Нет записей за этот день'}</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                    <DataTable
+                        caption="Davomat yozuvlari"
+                        rows={dayRecords}
+                        columns={attColumns}
+                        rowKey={r => r.id}
+                        sortKey={table.sortKey}
+                        sortDir={table.sortDir}
+                        onToggleSort={table.toggleSort}
+                        density={table.density}
+                        emptyIcon={<Calendar size={36} />}
+                        emptyTitle="Bu kun uchun yozuv yo'q"
+                    />
                 </div>
             </div>
 
@@ -311,7 +325,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                     <div className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0">
                         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
                         <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                            <h3 className="text-body font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>{lang === 'uz' ? 'Davomat yozuvi' : 'Запись посещаемости'}</h3>
+                            <h3 className="text-body font-bold" style={{ color: 'var(--text)' }}>{lang === 'uz' ? 'Davomat yozuvi' : 'Запись посещаемости'}</h3>
                             <button onClick={() => setIsModalOpen(false)} className="icon-btn-sm" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }}>
                                 <Plus size={20} className="rotate-45" />
                             </button>
@@ -321,7 +335,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                                 <div className="space-y-2 md:col-span-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Xodim' : 'Сотрудник'}</label>
                                     <select value={form.userId} onChange={(e) => setForm(f => ({ ...f, userId: e.target.value }))} required
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}>
                                         {staff.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
                                     </select>
@@ -329,13 +343,13 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
                                     <input type="date" value={form.date} onChange={(e) => setForm(f => ({ ...f, date: e.target.value }))} required
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }} />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.status}</label>
                                     <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}>
                                         {Object.entries(STATUS_META).map(([key, meta]) => (
                                             <option key={key} value={key}>{(lang === 'uz' ? meta.labelUz : meta.labelRu).toUpperCase()}</option>
@@ -345,19 +359,19 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Kelish vaqti' : 'Приход'}</label>
                                     <input type="time" value={form.checkIn} onChange={(e) => setForm(f => ({ ...f, checkIn: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }} />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Ketish vaqti' : 'Уход'}</label>
                                     <input type="time" value={form.checkOut} onChange={(e) => setForm(f => ({ ...f, checkOut: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }} />
                                 </div>
                                 <div className="space-y-2 md:col-span-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
                                     <input type="text" value={form.notes} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} placeholder={lang === 'uz' ? 'IXTIYORIY IZOH...' : 'КОММЕНТАРИЙ...'}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none uppercase tracking-tight"
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }} />
                                 </div>
                             </div>
@@ -367,11 +381,9 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                                     style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
                                     {t.cancel}
                                 </button>
-                                <button type="submit" disabled={isSaving}
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-meta text-white transition-all shadow-md hover:shadow-lg uppercase tracking-widest active:scale-95 disabled:opacity-60"
-                                    style={{ background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-blue-hover))' }}>
+                                <Button variant="primary" size="md" type="submit" disabled={isSaving} className="flex-1">
                                     {isSaving ? '...' : t.save}
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     </div>

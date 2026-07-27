@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
 import PayrollClient from "./PayrollClient";
 
+export const metadata = { title: "Oylik" };
+
 export default async function PayrollPage() {
   const session = await auth();
   const userId = session?.user?.id ?? "";

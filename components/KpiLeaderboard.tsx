@@ -7,8 +7,9 @@ import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "rec
 import { MONTHS_UZ } from "@/lib/periods";
 import { formatNum } from "@/lib/format";
 import { KPI_CATEGORY_UZ } from "@/lib/kpiLabels";
+import { SkeletonTable } from "@/components/ui/Skeleton";
 
-interface Props { lang: Language; }
+interface Props { lang: Language; hideBonus?: boolean; }
 
 interface LeaderRow {
   employeeId: string; name: string; role: string; ball: number;
@@ -38,7 +39,7 @@ const CAT_UZ = KPI_CATEGORY_UZ;
 const fmt = (v: number) => formatNum(Math.round(v));
 const barColor = (b: number) => (b >= 85 ? "var(--success)" : b >= 70 ? "var(--accent-blue)" : b >= 60 ? "var(--warning)" : "var(--danger)");
 
-const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
+const KpiLeaderboard: React.FC<Props> = ({ lang, hideBonus = false }) => {
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +53,15 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
   }, [month]);
 
   const s = data?.stats;
+
+  const statCards = [
+    { icon: TrendingUp, label: "O'rtacha ball", value: `${s?.avgBall ?? 0}`, color: "var(--accent-blue)", bg: "var(--accent-blue-light)" },
+    { icon: Award, label: "A'lo (85+)", value: `${s?.excellent ?? 0} xodim`, color: "var(--success)", bg: "var(--success-bg)" },
+    { icon: AlertTriangle, label: "Qoniqarsiz (<60)", value: `${s?.poor ?? 0} xodim`, color: "var(--danger)", bg: "var(--danger-bg)" },
+  ];
+  if (!hideBonus) {
+    statCards.push({ icon: Wallet, label: "Bonus fondi", value: `${fmt(s?.bonusFund ?? 0)} so'm`, color: "var(--warning)", bg: "var(--warning-bg)" });
+  }
 
   return (
     <div className="p-4 space-y-5 animate-fade-in">
@@ -73,16 +83,11 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { icon: TrendingUp, label: "O'rtacha ball", value: `${s?.avgBall ?? 0}`, color: "var(--accent-blue)", bg: "var(--accent-blue-light)" },
-          { icon: Award, label: "A'lo (85+)", value: `${s?.excellent ?? 0} xodim`, color: "var(--success)", bg: "var(--success-bg)" },
-          { icon: AlertTriangle, label: "Qoniqarsiz (<60)", value: `${s?.poor ?? 0} xodim`, color: "var(--danger)", bg: "var(--danger-bg)" },
-          { icon: Wallet, label: "Bonus fondi", value: `${fmt(s?.bonusFund ?? 0)} so'm`, color: "var(--warning)", bg: "var(--warning-bg)" },
-        ].map((c, i) => (
+      <div className={`grid grid-cols-2 ${hideBonus ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-4`}>
+        {statCards.map((c, i) => (
           <div key={i} className="rounded-xl p-4" style={{ background: c.bg, border: `1px solid ${c.color}33` }}>
             <div className="flex items-center gap-2 mb-2"><c.icon size={16} style={{ color: c.color }} /><span className="text-meta font-bold" style={{ color: "var(--text-muted)" }}>{c.label}</span></div>
-            <p className="text-lg font-black tabular-nums" style={{ color: c.color }}>{c.value}</p>
+            <p className="text-lg font-semibold tabular-nums" style={{ color: c.color }}>{c.value}</p>
           </div>
         ))}
       </div>
@@ -91,19 +96,19 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
         {/* Leaderboard */}
         <div className="lg:col-span-2 rounded-xl overflow-x-auto" style={{ background: "var(--card-bg)", border: "1px solid var(--rule)" }}>
           <div className="min-w-[420px]">
-          <div className="px-5 py-3 grid grid-cols-[40px_1fr_120px_90px_110px] gap-2 font-mono text-micro font-semibold uppercase" style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--rule-strong)", color: "var(--text-muted)", letterSpacing: "0.09em" }}>
-            <span>#</span><span>Xodim</span><span>Bajarilish</span><span className="text-center">Ball</span><span className="text-right">Bonus</span>
+          <div className={`px-5 py-3 grid ${hideBonus ? "grid-cols-[40px_1fr_120px_90px]" : "grid-cols-[40px_1fr_120px_90px_110px]"} gap-2 font-mono text-micro font-semibold uppercase`} style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--rule-strong)", color: "var(--text-muted)", letterSpacing: "0.09em" }}>
+            <span>#</span><span>Xodim</span><span>Bajarilish</span><span className="text-center">Ball</span>{!hideBonus && <span className="text-right">Bonus</span>}
           </div>
           <div className="max-h-[520px] overflow-y-auto">
             {loading ? (
-              <p className="text-center text-xs py-10" style={{ color: "var(--text-muted)" }}>Yuklanmoqda…</p>
+              <SkeletonTable rows={5} cols={3} />
             ) : (data?.leaderboard.length ?? 0) === 0 ? (
-              <p className="text-center text-xs py-10" style={{ color: "var(--text-muted)" }}>Bu oy uchun ma&apos;lumot yo&apos;q</p>
+              <SkeletonTable rows={5} cols={3} />
             ) : (
               data!.leaderboard.map((r, i) => {
                 const d = DARAJA[r.daraja];
                 return (
-                  <div key={r.employeeId} className="px-5 py-3 grid grid-cols-[40px_1fr_120px_90px_110px] gap-2 items-center" style={{ borderBottom: "1px solid var(--card-border)" }}>
+                  <div key={r.employeeId} className={`px-5 py-3 grid ${hideBonus ? "grid-cols-[40px_1fr_120px_90px]" : "grid-cols-[40px_1fr_120px_90px_110px]"} gap-2 items-center`} style={{ borderBottom: "1px solid var(--card-border)" }}>
                     <span className="font-mono text-xs font-semibold tabular-nums flex items-center" style={{ color: i < 3 ? "var(--brand)" : "var(--text-muted)" }}>{i === 0 ? <Trophy size={14} aria-label="Birinchi o'rin" /> : i + 1}</span>
                     <div className="min-w-0">
                       <p className="text-xs font-bold truncate" style={{ color: "var(--text-primary)" }}>{r.name}</p>
@@ -130,7 +135,9 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
                       <span className="text-body font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{r.ball}</span>
                       <span className="text-2xs font-bold px-1.5 py-0.5 rounded-lg" style={{ background: d.bg, color: d.fg, border: `1px solid ${d.bd}` }}>{d.label}</span>
                     </div>
-                    <span className="text-xs font-bold tabular-nums text-right" style={{ color: r.bonus > 0 ? "var(--success)" : "var(--text-muted)" }}>{r.bonus > 0 ? "+" + fmt(r.bonus) : "—"}</span>
+                    {!hideBonus && (
+                      <span className="text-xs font-bold tabular-nums text-right" style={{ color: r.bonus > 0 ? "var(--success)" : "var(--text-muted)" }}>{r.bonus > 0 ? "+" + fmt(r.bonus) : "—"}</span>
+                    )}
                   </div>
                 );
               })
@@ -147,7 +154,7 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
           const chartData = trend.map((t) => ({ name: MONTHS_UZ[Number(t.month.split("-")[1]) - 1]?.slice(0, 3) || t.month, ball: t.avgBall }));
           return (
             <div className="rounded-xl p-5" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
-              <div className="flex items-center gap-2 mb-3"><Activity size={15} style={{ color: "var(--accent-blue)" }} /><h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>Jamoa dinamikasi · 6 oy</h3></div>
+              <div className="flex items-center gap-2 mb-3"><Activity size={15} style={{ color: "var(--accent-blue)" }} /><h3 className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Jamoa dinamikasi · 6 oy</h3></div>
               <div style={{ width: "100%", height: 140 }}>
                 <ResponsiveContainer width="100%" height={140}>
                   <LineChart data={chartData} margin={{ top: 5, right: 8, left: -20, bottom: 0 }}>
@@ -164,7 +171,7 @@ const KpiLeaderboard: React.FC<Props> = ({ lang }) => {
 
         {/* Criteria breakdown */}
         <div className="rounded-xl p-5" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
-          <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "var(--text-primary)" }}>Mezonlar kesimi · jamoa</h3>
+          <h3 className="text-xs font-bold mb-4" style={{ color: "var(--text-primary)" }}>Mezonlar kesimi · jamoa</h3>
           {(data?.criteria.length ?? 0) === 0 ? (
             <p className="text-meta" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot yo&apos;q</p>
           ) : (

@@ -12,6 +12,7 @@ import {
   addTemplateApplicability,
   removeTemplateApplicability,
 } from "@/server/deadlineTemplates";
+import { Button } from "@/components/ui/Button";
 
 interface Applicability {
   id: string;
@@ -124,12 +125,12 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Muddat shablonlari</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Muddat shablonlari</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>Takrorlanuvchi majburiyat qoidalari — versiyalash + lifecycle</p>
         </div>
-        <button onClick={() => setShowForm((s) => !s)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white" style={{ background: "var(--brand)" }}>
+        <Button variant="primary" size="sm" onClick={() => setShowForm((s) => !s)}>
           {showForm ? "Bekor" : "+ Yangi shablon"}
-        </button>
+        </Button>
       </div>
 
       {showForm && (
@@ -180,9 +181,9 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
             <input className={input} style={inputStyle} type="date" value={f.effectiveTo} onChange={(e) => setF({ ...f, effectiveTo: e.target.value })} />
           </label>
           <div className="col-span-2 md:col-span-3">
-            <button disabled={pending} onClick={submitCreate} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>
+            <Button variant="success" size="md" disabled={pending} onClick={submitCreate}>
               Qoralama yaratish
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -243,7 +244,7 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
                         {CRITERIA_TYPES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                       <input value={a.value} onChange={(e) => setAppl({ ...appl, [t.id]: { ...a, value: e.target.value } })} placeholder="qiymat" className="text-meta px-1 py-0.5 rounded-lg border w-24" style={inputStyle} />
-                      <button disabled={pending || !a.value.trim()} onClick={() => { run(() => addTemplateApplicability(t.id, a.type, a.value), "Qamrov qo'shildi"); setAppl({ ...appl, [t.id]: { ...a, value: "" } }); }} className="text-meta font-semibold px-1.5 py-0.5 rounded-lg disabled:opacity-50" style={{ background: "var(--brand)", color: "#fff" }}>+</button>
+                      <Button variant="primary" size="md" disabled={pending || !a.value.trim()} onClick={() => { run(() => addTemplateApplicability(t.id, a.type, a.value), "Qamrov qo'shildi"); setAppl({ ...appl, [t.id]: { ...a, value: "" } }); }}>+</Button>
                     </span>
                   )}
                 </div>

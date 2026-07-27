@@ -31,7 +31,7 @@ export function RolePermissionMatrix() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-black" style={{ color: "var(--text-primary)" }}>Qobiliyatlar (server xavfsizligi)</h2>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Qobiliyatlar (server xavfsizligi)</h2>
         <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
           Kod bilan belgilangan RBAC — ma&apos;lumot uchun. Bu qobiliyatlar server tekshiruvlarini ta&apos;minlaydi
           (<span className="font-mono">lib/permissions.ts</span>). Menyu ko&apos;rinishini yuqoridagi jadvaldan sozlang.

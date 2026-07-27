@@ -177,7 +177,7 @@ export const calculateCompanySalaries = (
                 }
                 if (sc !== 0) {
                     kpiPercents.push(sc);
-                    details.push(`KPI ${sc > 0 ? '+' : ''}${sc}%: ${p.ruleNameUz || p.ruleName || p.ruleId}`);
+                    details.push(`KPI ${sc > 0 ? '+' : ''}${sc}%: ${(p as any).rule?.nameUz || (p as any).rule?.name || p.ruleId}`);
                 }
             }
             // Cap the bonus side at the role's KPI max (5% / 2.5% / 1%); penalties accumulate.

@@ -5,10 +5,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     <div className="min-h-dvh" style={{ background: "var(--bg, var(--bg-sunken))" }}>
       <header
         className="h-14 flex items-center justify-between px-4 md:px-6 border-b"
-        style={{ borderColor: "var(--border, var(--rule))", background: "var(--card, #fff)" }}
+        style={{ borderColor: "var(--border, var(--rule))", background: "var(--card-bg)" }}
       >
         <div className="flex items-center gap-2">
-          <span className="font-black text-base" style={{ color: "var(--text-primary)" }}>ASRO</span>
+          <span className="font-semibold text-base" style={{ color: "var(--text-primary)" }}>ASRO</span>
           <span className="text-xs" style={{ color: "var(--text-muted)" }}>Mijoz kabineti</span>
         </div>
         <form

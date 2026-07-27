@@ -11,10 +11,21 @@ import {
   getAdminCabinetData,
   getSupervisorCabinetData,
   getChiefAccountantCabinetData,
+  getAccountantCabinetData,
+  getDashboardDeadlines,
 } from "@/server/cabinet";
 import { AdminCabinet } from "@/components/cabinets/AdminCabinet";
 import { SupervisorCabinet } from "@/components/cabinets/SupervisorCabinet";
 import { ChiefAccountantCabinet } from "@/components/cabinets/ChiefAccountantCabinet";
+import { AccountantCabinet } from "@/components/cabinets/AccountantCabinet";
+
+export const metadata = { title: "Boshqaruv paneli" };
+
+// QOIDA: bu sahifada ma'lumot olishdagi xato YUTILMAYDI.
+// Ilgari har bir kabinet `.catch(() => nol qiymatlar)` ishlatardi va baza
+// yiqilganda ekran nollar bilan to'lardi — buxgalterga esa `percent: 100`,
+// ya'ni "hammasi topshirilgan" deb ko'rsatardi. Muddat nazorati tizimida bu
+// eng xavfli holat: yolg'on xotirjamlik. Endi xato `error.tsx` ga chiqadi.
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -24,20 +35,35 @@ export default async function DashboardPage() {
   const userRole = session.user?.role as string;
   const userName = session.user?.name || "";
 
-  // Buxgalter va bank-klient o'z kabinetiga yo'naltirilsin
-  if (userRole === "accountant") redirect("/cabinet");
+  // Bank-klient o'z maxsus kabinetiga yo'naltirilsin
   if (userRole === "bank_manager") redirect("/cabinet/bank");
+
+  // ─── BUXGALTER — operatsion dashboard ─────────────────────
+  if (userRole === "accountant") {
+    const [data, deadlines] = await Promise.all([
+      getAccountantCabinetData(),
+      getDashboardDeadlines(),
+    ]);
+
+    return (
+      <AccountantCabinet
+        userName={userName}
+        companies={data.companies as any}
+        companiesCount={data.companiesCount}
+        reportSummary={(data as any).reportSummary}
+        kpi={(data as any).kpi}
+        currentMonth={data.currentMonth}
+        deadlines={deadlines as any}
+      />
+    );
+  }
 
   // ─── SUPERVISOR ───────────────────────────────────────────
   if (userRole === "supervisor") {
-    const data = await getSupervisorCabinetData().catch(() => ({
-      supervisedCompanies: [],
-      companiesCount: 0,
-      accountants: [],
-      pendingKpi: [],
-      riskStats: [],
-      currentMonth: new Date().toISOString().slice(0, 7),
-    }));
+    const [data, deadlines] = await Promise.all([
+      getSupervisorCabinetData(),
+      getDashboardDeadlines(),
+    ]);
 
     return (
       <SupervisorCabinet
@@ -48,21 +74,17 @@ export default async function DashboardPage() {
         pendingKpi={data.pendingKpi as any}
         riskStats={data.riskStats as any}
         currentMonth={data.currentMonth}
+        deadlines={deadlines as any}
       />
     );
   }
 
   // ─── CHIEF ACCOUNTANT ─────────────────────────────────────
   if (userRole === "chief_accountant") {
-    const data = await getChiefAccountantCabinetData().catch(() => ({
-      chiefCompanies: [],
-      companiesCount: 0,
-      teamMembers: [],
-      pendingApprovals: [],
-      payrollSummary: [],
-      totalTeamScore: 0,
-      currentMonth: new Date().toISOString().slice(0, 7),
-    }));
+    const [data, deadlines] = await Promise.all([
+      getChiefAccountantCabinetData(),
+      getDashboardDeadlines(),
+    ]);
 
     return (
       <ChiefAccountantCabinet
@@ -74,27 +96,17 @@ export default async function DashboardPage() {
         payrollSummary={data.payrollSummary as any}
         totalTeamScore={data.totalTeamScore}
         currentMonth={data.currentMonth}
+        deadlines={deadlines as any}
       />
     );
   }
 
   // ─── ADMIN / SUPER_ADMIN ──────────────────────────────────
   if (["admin", "super_admin"].includes(userRole)) {
-    const data = await getAdminCabinetData().catch(() => ({
-      userStats: [],
-      companyStats: 0,
-      recentAudit: [],
-      systemHealth: {
-        activeUsers: 0,
-        activeCompanies: 0,
-        unreadNotifs: 0,
-        pendingKpi: 0,
-        kpiCompletionPercent: 0,
-        payrollFund: 0,
-      },
-      balance: undefined,
-      monthlyCashFlow: [],
-    }));
+    const [data, deadlines] = await Promise.all([
+      getAdminCabinetData(),
+      getDashboardDeadlines(),
+    ]);
 
     return (
       <AdminCabinet
@@ -106,22 +118,16 @@ export default async function DashboardPage() {
         systemHealth={data.systemHealth}
         balance={data.balance}
         monthlyCashFlow={(data as any).monthlyCashFlow ?? []}
+        deadlines={deadlines as any}
       />
     );
   }
 
   // ─── Fallback: umumiy dashboard — CACHED ──────────────────
   const [companyStats, operationStats] = await Promise.all([
-    getCachedCompanyStats(userId, userRole).catch(() => ({ total: 0, byTaxRegime: [], byRisk: [] })),
-    getCachedOperationSummary(userId, userRole).catch(() => ({
-      total: 0,
-      accepted: 0,
-      rejected: 0,
-      blocked: 0,
-      inProgress: 0,
-      pending: 0,
-    })),
-    getCachedUnreadCount(userId).catch(() => 0),
+    getCachedCompanyStats(userId, userRole),
+    getCachedOperationSummary(userId, userRole),
+    getCachedUnreadCount(userId),
   ]);
 
   const progressPercent =
@@ -152,7 +158,7 @@ export default async function DashboardPage() {
 
       <div className="dashboard-card p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-body font-semibold" style={{ color: "var(--text-primary)" }}>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Umumiy progress
           </h2>
           <span className="font-mono text-lg font-semibold tabular" style={{ color: "var(--text-primary)" }}>

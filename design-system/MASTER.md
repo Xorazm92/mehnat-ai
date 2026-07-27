@@ -10,7 +10,8 @@
 >
 > **Softening pass (premium/low-strain).** Palette values were then softened for a calmer,
 > Linear/Vercel/Notion-grade feel — token **names are unchanged and still authoritative, values are not**:
-> light `--brand #0F66AE`, dark `--brand #4FA3E3`; light page `--bg-primary #F4F5F6` with white cards,
+> light `--brand #0F66AE`, dark `--brand #4FA3E3`; light uses a soft off-white surface system
+> (`--bg-card #F6F6F8` on `--bg-primary #E7E8EC` ground, ~14% lift + `.11` border + whisper `--card-shadow`) — no pure white,
 > soft ink `--text-primary #262C34` (~14:1, down from near-black ~18:1); dark ground neutralised to
 > `#0F1116`/card `#181C23` with soft off-white `--text-primary #D9DEE4` (~12.6:1, down from ~13.5:1
 > glare); `--rule` hairlines lightened (.12/.22 → .09/.15 light, .10/.18 → .08/.14 dark); status colours

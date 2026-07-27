@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ALLOWED_VIEWS, getHomeRoute, type UserRole } from "@/lib/permissions";
+import { ALLOWED_VIEWS, getHomeRoute, ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { NAV_ITEMS, NAV_GROUP_LABELS, type NavGroup } from "@/lib/navigation";
 import { useMobileNav } from "@/components/MobileNavContext";
 import {
   LayoutDashboard,
@@ -28,37 +29,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-const ALL_NAV_ITEMS = [
-  { href: "/dashboard",     view: "dashboard",     label: "Dashboard",   icon: LayoutDashboard, group: "asosiy" },
-  { href: "/organizations", view: "organizations", label: "Firmalar",    icon: Building2,       group: "asosiy" },
-  { href: "/staff",         view: "staff",         label: "Xodimlar",    icon: Users,           group: "asosiy" },
-  { href: "/kpi",           view: "kpi",           label: "KPI",         icon: TrendingUp,      group: "asosiy" },
-  { href: "/fair-kpi",      view: "fair_kpi",      label: "Adolatli KPI", icon: Scale,          group: "asosiy" },
-  { href: "/deadlines",     view: "deadlines",     label: "Muddatlar",   icon: CalendarClock,   group: "asosiy" },
-  { href: "/tasks",         view: "tasks",         label: "Vazifalar",   icon: CheckSquare,     group: "asosiy" },
-  { href: "/reports",       view: "reports",       label: "Hisobotlar",  icon: FileText,        group: "moliya" },
-  { href: "/profitability", view: "profitability", label: "Rentabellik", icon: PiggyBank,       group: "moliya" },
-  { href: "/kassa",         view: "kassa",         label: "Kassa",       icon: Wallet,          group: "moliya" },
-  { href: "/expenses",      view: "expenses",      label: "Xarajatlar",  icon: Receipt,         group: "moliya" },
-  { href: "/payroll",       view: "payroll",       label: "Oylik",       icon: CreditCard,      group: "moliya" },
-  { href: "/attendance",    view: "attendance",    label: "Davomat",     icon: Calendar,        group: "boshqa" },
-  { href: "/documents",     view: "documents",     label: "Hujjatlar",   icon: FileText,        group: "boshqa" },
-  { href: "/inventory",     view: "inventory",     label: "Inventar",    icon: Package,         group: "boshqa" },
-  { href: "/notifications", view: "notifications", label: "Xabarlar",    icon: Bell,            group: "boshqa" },
-  { href: "/cabinet",       view: "cabinet",       label: "Kabinet",     icon: UserCircle,      group: "kabinet" },
-  { href: "/cabinet/bank",  view: "cabinet_bank",  label: "Bank",        icon: Banknote,        group: "kabinet" },
-  { href: "/admin",         view: "admin",         label: "Admin Panel", icon: ShieldCheck,     group: "admin" },
-  { href: "/audit-logs",    view: "audit_logs",    label: "Audit Log",   icon: ScrollText,      group: "admin" },
-  { href: "/settings",      view: "settings",      label: "Sozlamalar",  icon: Settings,        group: "admin" },
-];
-
-const GROUP_LABELS: Record<string, string> = {
-  asosiy: "ASOSIY",
-  moliya:  "MOLIYA",
-  boshqa:  "BOSHQA",
-  kabinet: "KABINET",
-  admin:   "ADMIN",
-};
+const ALL_NAV_ITEMS = NAV_ITEMS;
+const GROUP_LABELS = NAV_GROUP_LABELS;
 
 interface DashboardSidebarProps {
   userRole: string;
@@ -77,7 +49,7 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
   );
 
   // Group items
-  const groups = ["asosiy", "moliya", "boshqa", "kabinet", "admin"];
+  const groups: NavGroup[] = ["asosiy", "moliya", "boshqa", "kabinet", "admin"];
 
   return (
     <>
@@ -195,15 +167,11 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
               className="text-meta font-semibold truncate leading-none"
               style={{ color: "var(--text-primary)" }}
             >
-              {role === "super_admin"
-                ? "Super Admin"
-                : role === "chief_accountant"
-                ? "Bosh Buxgalter"
-                : role === "accountant"
-                ? "Buxgalter"
-                : role === "supervisor"
-                ? "Nazoratchi"
-                : role || "Foydalanuvchi"}
+              {/* Ilgali bu yerda rol nomlarining uchinchi nusxasi turardi va unda
+                  `admin` bilan `bank_manager` yo'q edi — natijada administrator
+                  o'z yon panelida xom `admin` satrini ko'rardi. Endi yagona
+                  manba: lib/permissions.ts → ROLE_LABELS. */}
+              {ROLE_LABELS[role as UserRole] || "Foydalanuvchi"}
             </p>
             <p
               className="font-mono text-micro mt-1 leading-none uppercase"

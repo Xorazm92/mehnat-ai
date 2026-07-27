@@ -98,6 +98,36 @@ export const getCachedCompanies = cache(
   }
 );
 
+const _getCachedArchivedCompanies = unstable_cache(
+  async () => {
+    return prisma.company.findMany({
+      where: { isActive: false },
+      include: {
+        accountant: { select: { id: true, fullName: true, avatarColor: true } },
+        supervisor: { select: { id: true, fullName: true } },
+        chiefAccountant: { select: { id: true, fullName: true } },
+        bankClient: { select: { id: true, fullName: true } },
+        departmentRef: { select: { id: true, name: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+  },
+  ["companies-archived"],
+  { tags: ["companies"], revalidate: 300 }
+);
+
+/**
+ * Arxivlangan firmalar — FAQAT "Firmalar" sahifasidagi Arxiv/Barchasi filtri uchun.
+ *
+ * Yuqoridagi `getCachedCompanies` ataylab `isActive: true` bilan qoladi: uni
+ * kengaytirish arxivdagi firmalarni matritsa, kassa, oylik va hujjatlar
+ * ekranlariga ham olib kirardi. Shuning uchun arxiv alohida so'rov bilan
+ * olinadi va faqat senior rollarga beriladi.
+ */
+export const getCachedArchivedCompanies = cache(
+  async (role: string) => (isSeniorRole(role) ? _getCachedArchivedCompanies() : [])
+);
+
 // ─────────────────────────────────────────────
 // USERS
 // ─────────────────────────────────────────────

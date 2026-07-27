@@ -5,6 +5,9 @@ import { isAdminRole, getHomeRoute, ROLE_LABELS, type UserRole } from "@/lib/per
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminTopbar } from "@/components/admin/AdminTopbar";
 import { MobileNavProvider } from "@/components/MobileNavContext";
+import { ConfirmProvider } from "@/components/ui/ConfirmDialog";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default async function AdminRootLayout({
   children,
@@ -23,6 +26,7 @@ export default async function AdminRootLayout({
           qo'llab-quvvatlash umuman yo'q edi: 230px yon panel 375px ekranning
           61% ini yeb, yopilmasdi. */}
       <MobileNavProvider>
+        <ConfirmProvider>
         <div
           className="flex h-dvh overflow-hidden"
           style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
@@ -34,9 +38,17 @@ export default async function AdminRootLayout({
               role={ROLE_LABELS[role as UserRole] ?? role}
               avatarColor={session.user.avatarColor ?? undefined}
             />
-            <main className="flex-1 overflow-y-auto">{children}</main>
+            {/* Dashboard qobig'ida ErrorBoundary bor edi, admin bo'limida yo'q —
+                ya'ni admin ekranidagi render xatosi butun sahifani oq qoldirardi. */}
+            <main className="flex-1 overflow-y-auto">
+              <div className="px-6 pt-4">
+                <Breadcrumbs />
+              </div>
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
           </div>
         </div>
+        </ConfirmProvider>
       </MobileNavProvider>
     </SessionProvider>
   );

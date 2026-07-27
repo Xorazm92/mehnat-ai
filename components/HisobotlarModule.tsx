@@ -4,9 +4,14 @@ import { Company, Staff, Language } from "@/types";
 import { FileText, Plus, X, Calendar, ShieldCheck, Download, Trash2, PenLine, Send, CheckCircle2 } from "lucide-react";
 import { getFinancialReports, getReportDeadlines, createFinancialReport, setReportStatus, deleteFinancialReport } from "@/server/reports";
 import { REPORT_TYPES } from "@/lib/reportTypes";
+import { isSeniorRole } from "@/lib/permissions";
 import { formatUzDayShort, formatNum } from "@/lib/format";
+import { useConfirm, usePrompt } from '@/components/ui/ConfirmDialog';
+import { toast } from "sonner";
+import { SkeletonTable } from "@/components/ui/Skeleton";
+import { Button } from "@/components/ui/Button";
 
-interface Props { companies: Company[]; staff: Staff[]; lang: Language; }
+interface Props { companies: Company[]; staff: Staff[]; lang: Language; userRole?: string; }
 
 interface Report {
   id: string; companyId: string; companyName: string; type: string; typeLabel: string;
@@ -26,7 +31,12 @@ const STATUS: Record<string, { label: string; fg: string; bg: string; bd: string
 const som = (v: number) => (v < 0 ? "−" : "") + formatNum(Math.abs(Math.round(v)));
 const MONTHS_UZ = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentyabr","Oktyabr","Noyabr","Dekabr"];
 
-const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
+const HisobotlarModule: React.FC<Props> = ({ companies, staff, userRole }) => {
+  const prompt = usePrompt();
+  const confirm = useConfirm();
+  // Moliyaviy hisobotni yaratish/holatini o'zgartirish/o'chirish server tomonda
+  // FAQAT senior rollar uchun (server/reports.ts). UI ham shunga mos gate qilinadi.
+  const isSenior = isSeniorRole(userRole ?? "");
   const [reports, setReports] = useState<Report[]>([]);
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,25 +54,47 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
   };
   useEffect(() => { load(); }, []);
 
+  // Server xatosini (masalan "Forbidden") ushlab, foydalanuvchiga ko'rsatamiz —
+  // aks holda ushlanmagan promise konsolga 500 bo'lib chiqadi.
+  const errMsg = (e: unknown) =>
+    e instanceof Error && /forbidden/i.test(e.message)
+      ? "Ruxsat yo'q — bu amal faqat rahbar rollar uchun."
+      : e instanceof Error ? e.message : "Amal bajarilmadi.";
+
   const advance = async (r: Report) => {
     const next = r.status === "preparing" ? "ready" : r.status === "ready" ? "signing" : r.status === "signing" ? "submitted" : null;
     if (!next) return;
-    await setReportStatus(r.id, next);
-    await load();
-    setViewing((v) => (v && v.id === r.id ? { ...v, status: next } : v));
+    try {
+      await setReportStatus(r.id, next);
+      await load();
+      setViewing((v) => (v && v.id === r.id ? { ...v, status: next } : v));
+    } catch (e) { toast.error(errMsg(e)); }
   };
   const reject = async (r: Report) => {
-    const reason = window.prompt("Rad etish sababi:") || "";
+    const reason = await prompt({
+      title: "Hisobot rad etilsinmi?",
+      reasonLabel: "Rad etish sababi",
+      reasonPlaceholder: "Nima to'g'rilanishi kerak?",
+      confirmLabel: "Rad etish",
+      tone: "danger",
+    });
     if (!reason) return;
-    await setReportStatus(r.id, "rejected", { rejectedReason: reason });
-    await load(); setViewing(null);
+    try {
+      await setReportStatus(r.id, "rejected", { rejectedReason: reason });
+      await load(); setViewing(null);
+    } catch (e) { toast.error(errMsg(e)); }
   };
-  const remove = async (id: string) => { if (confirm("Hisobotni o'chirasizmi?")) { await deleteFinancialReport(id); await load(); } };
+  const remove = async (id: string) => {
+    if (!await confirm({ title: "Hisobot o'chirilsinmi?", description: "Hisobot butunlay o'chiriladi.", confirmLabel: "O'chirish", tone: 'danger' })) return;
+    try { await deleteFinancialReport(id); await load(); } catch (e) { toast.error(errMsg(e)); }
+  };
   const submitCreate = async () => {
-    if (!form.companyId) { alert("Firmani tanlang"); return; }
-    await createFinancialReport({ companyId: form.companyId, type: form.type, period: form.period, deadline: form.deadline || null, assignedTo: form.assignedTo || null });
-    setCreating(false); setForm({ companyId: "", type: "profit_loss", period: "2026-H1", deadline: "", assignedTo: "" });
-    await load();
+    if (!form.companyId) { toast.error("Firmani tanlang"); return; }
+    try {
+      await createFinancialReport({ companyId: form.companyId, type: form.type, period: form.period, deadline: form.deadline || null, assignedTo: form.assignedTo || null });
+      setCreating(false); setForm({ companyId: "", type: "profit_loss", period: "2026-H1", deadline: "", assignedTo: "" });
+      await load();
+    } catch (e) { toast.error(errMsg(e)); }
   };
 
   // calendar (current month) with deadline markers
@@ -78,7 +110,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
   return (
     <div className="p-4 space-y-5 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 rounded-xl" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-xl" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
         <div className="flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white" style={{ background: "linear-gradient(135deg, var(--accent-blue), var(--accent-indigo))" }}><FileText size={20} /></div>
           <div>
@@ -86,7 +118,35 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
             <p className="text-meta mt-1 font-medium" style={{ color: "var(--text-muted)" }}>{reports.length} ta hisobot · {reports.filter(r => r.status !== "submitted").length} tasi jarayonda</p>
           </div>
         </div>
-        <button onClick={() => setCreating(true)} className="btn-primary flex items-center gap-2"><Plus size={15} /> Yangi hisobot</button>
+
+        {/* Real-time % progress widget */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="px-4 py-2 rounded-xl bg-[var(--surface-2)] border border-[var(--card-border)] flex items-center gap-3">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-micro font-bold uppercase text-[var(--text-muted)]">Topshirish:</span>
+                <span className="text-xs font-semibold tabular-nums text-[var(--accent-blue)]">
+                  {reports.length > 0 ? Math.round((reports.filter(r => r.status === "submitted").length / reports.length) * 100) : 0}%
+                </span>
+                <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-full text-micro font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  REAL-VAQT
+                </span>
+              </div>
+              <div className="w-36 h-2 bg-[var(--card-border)] rounded-full overflow-hidden mt-1">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${reports.length > 0 ? Math.round((reports.filter(r => r.status === "submitted").length / reports.length) * 100) : 0}%`,
+                    background: "linear-gradient(90deg, var(--accent-blue), var(--accent-indigo))",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {isSenior && <Button variant="primary" size="md" onClick={() => setCreating(true)}><Plus size={15} /> Yangi hisobot</Button>}
+        </div>
       </div>
 
       {/* Deadline cards */}
@@ -119,15 +179,14 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="px-4 py-10 text-center text-xs" style={{ color: "var(--text-muted)" }}>Yuklanmoqda…</td></tr>
+                  <tr><td colSpan={6} className="p-0"><SkeletonTable rows={5} cols={6} /></td></tr>
                 ) : reports.length === 0 ? (
                   <tr><td colSpan={6} className="px-4 py-12 text-center"><FileText size={30} className="mx-auto mb-2 opacity-30" style={{ color: "var(--text-muted)" }} /><p className="text-xs" style={{ color: "var(--text-muted)" }}>Hisobot yo&apos;q — &quot;Yangi hisobot&quot; bilan qo&apos;shing</p></td></tr>
                 ) : reports.map((r) => {
                   const s = STATUS[r.status] ?? STATUS.preparing;
                   const days = r.deadline ? Math.ceil((new Date(r.deadline).getTime() - Date.now()) / 86400000) : null;
                   return (
-                    <tr key={r.id} className="transition-colors cursor-pointer" style={{ borderBottom: "1px solid var(--card-border)" }} onClick={() => setViewing(r)}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--table-row-hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "")}>
+                    <tr key={r.id} className="transition-colors cursor-pointer row-hover" style={{ borderBottom: "1px solid var(--card-border)" }} onClick={() => setViewing(r)}>
                       <td className="px-4 py-3"><p className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>{r.typeLabel}</p><p className="text-micro" style={{ color: "var(--text-muted)" }}>{r.companyName}</p></td>
                       <td className="px-4 py-3 text-meta font-bold" style={{ color: "var(--text-secondary)" }}>{r.period}</td>
                       <td className="px-4 py-3 text-meta" style={{ color: "var(--text-secondary)" }}>{r.assigneeName || "—"}</td>
@@ -144,7 +203,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
 
         {/* Deadline calendar */}
         <div className="rounded-xl p-5" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>
-          <div className="flex items-center gap-2 mb-4"><Calendar size={16} style={{ color: "var(--accent-blue)" }} /><h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>{MONTHS_UZ[cal.m]} {cal.y}</h3></div>
+          <div className="flex items-center gap-2 mb-4"><Calendar size={16} style={{ color: "var(--accent-blue)" }} /><h3 className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>{MONTHS_UZ[cal.m]} {cal.y}</h3></div>
           <div className="grid grid-cols-7 gap-1 text-center text-micro font-bold mb-1" style={{ color: "var(--text-muted)" }}>{["Du","Se","Ch","Pa","Ju","Sh","Ya"].map((d) => <span key={d}>{d}</span>)}</div>
           <div className="grid grid-cols-7 gap-1">
             {Array.from({ length: cal.startDow }).map((_, i) => <span key={"e" + i} />)}
@@ -213,15 +272,17 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
               )}
               {viewing.rejectedReason && <p className="mt-4 text-meta font-bold" style={{ color: "var(--danger)" }}>Rad sababi: {viewing.rejectedReason}</p>}
             </div>
-            <div className="p-4 flex gap-3 flex-wrap" style={{ borderTop: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
-              {viewing.status !== "submitted" && viewing.status !== "rejected" && (
-                <button onClick={() => advance(viewing)} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                  {viewing.status === "preparing" ? <><CheckCircle2 size={15} /> Tayyor deb belgilash</> : viewing.status === "ready" ? <><PenLine size={15} /> Imzolashga yuborish</> : <><Send size={15} /> Imzolash va yuborish</>}
-                </button>
-              )}
-              {viewing.status !== "submitted" && <button onClick={() => reject(viewing)} className="btn-secondary" style={{ color: "var(--danger)" }}>Rad etish</button>}
-              <button onClick={() => remove(viewing.id)} className="btn-secondary"><Trash2 size={14} /></button>
-            </div>
+            {isSenior && (
+              <div className="p-4 flex gap-3 flex-wrap" style={{ borderTop: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
+                {viewing.status !== "submitted" && viewing.status !== "rejected" && (
+                  <Button variant="primary" size="md" onClick={() => advance(viewing)} className="flex-1">
+                    {viewing.status === "preparing" ? <><CheckCircle2 size={15} /> Tayyor deb belgilash</> : viewing.status === "ready" ? <><PenLine size={15} /> Imzolashga yuborish</> : <><Send size={15} /> Imzolash va yuborish</>}
+                  </Button>
+                )}
+                {viewing.status !== "submitted" && <Button variant="secondary" size="md" onClick={() => reject(viewing)}>Rad etish</Button>}
+                <Button variant="secondary" size="md" onClick={() => remove(viewing.id)}><Trash2 size={14} /></Button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -261,8 +322,8 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff }) => {
               </div>
             </div>
             <div className="p-4 flex gap-3" style={{ borderTop: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
-              <button onClick={() => setCreating(false)} className="btn-secondary flex-1">Bekor qilish</button>
-              <button onClick={submitCreate} className="btn-primary flex-1">Yaratish</button>
+              <Button variant="secondary" size="md" onClick={() => setCreating(false)} className="flex-1">Bekor qilish</Button>
+              <Button variant="primary" size="md" onClick={submitCreate} className="flex-1">Yaratish</Button>
             </div>
           </div>
         </div>

@@ -37,8 +37,8 @@ export default function BalanceOverview({ breakdown: b, variant = "full", title 
           </div>
           <div>
             <div className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{title}</div>
-            <div className="text-2xl font-black tabular-nums leading-tight" style={{ color: accent }}>
-              {som(b.balance)} <span className="text-body font-bold uppercase" style={{ color: "var(--text-muted)" }}>so&apos;m</span>
+            <div className="text-2xl font-semibold tabular-nums leading-tight" style={{ color: accent }}>
+              {som(b.balance)} <span className="text-body font-bold" style={{ color: "var(--text-muted)" }}>so&apos;m</span>
             </div>
             {negative && (
               <div className="text-meta font-bold mt-0.5" style={{ color: "var(--danger)" }}>
@@ -72,7 +72,7 @@ export default function BalanceOverview({ breakdown: b, variant = "full", title 
   ];
 
   return (
-    <div className="dashboard-card p-5 sm:p-6">
+    <div className="dashboard-card p-5 sm:p-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shrink-0" style={{ background: accent }}>
@@ -80,8 +80,8 @@ export default function BalanceOverview({ breakdown: b, variant = "full", title 
           </div>
           <div>
             <div className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{title}</div>
-            <div className="text-3xl font-black tabular-nums leading-tight" style={{ color: accent }}>
-              {som(b.balance)} <span className="text-sm font-bold uppercase" style={{ color: "var(--text-muted)" }}>so&apos;m</span>
+            <div className="text-3xl font-semibold tabular-nums leading-tight" style={{ color: accent }}>
+              {som(b.balance)} <span className="text-sm font-bold" style={{ color: "var(--text-muted)" }}>so&apos;m</span>
             </div>
           </div>
         </div>
@@ -90,13 +90,13 @@ export default function BalanceOverview({ breakdown: b, variant = "full", title 
             <div className="flex items-center gap-1.5 text-micro font-bold uppercase tracking-widest" style={{ color: "var(--success)" }}>
               <ArrowUpRight size={13} /> Kirim
             </div>
-            <div className="text-lg font-black tabular-nums" style={{ color: "var(--text-primary)" }}>{som(b.income)}</div>
+            <div className="text-lg font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>{som(b.income)}</div>
           </div>
           <div className="px-4 py-2 rounded-xl" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
             <div className="flex items-center gap-1.5 text-micro font-bold uppercase tracking-widest" style={{ color: "var(--danger)" }}>
               <ArrowDownRight size={13} /> Chiqim
             </div>
-            <div className="text-lg font-black tabular-nums" style={{ color: "var(--text-primary)" }}>{som(b.outflow)}</div>
+            <div className="text-lg font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>{som(b.outflow)}</div>
           </div>
         </div>
       </div>

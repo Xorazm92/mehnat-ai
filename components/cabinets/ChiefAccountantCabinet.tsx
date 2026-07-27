@@ -9,8 +9,12 @@ import {
   Award,
   DollarSign,
   FileCheck,
+  ShieldCheck,
 } from "lucide-react";
 import { formatUzMonthYear, formatNum } from "@/lib/format";
+import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { KpiCard } from "@/components/ui/KpiCard";
 
 interface TeamMember {
   id: string;
@@ -55,6 +59,7 @@ interface ChiefAccountantCabinetProps {
   payrollSummary: PayrollItem[];
   totalTeamScore: number;
   currentMonth: string;
+  deadlines: { overdueCount: number; dueSoonCount: number; upcoming: DeadlineRow[] };
 }
 
 export function ChiefAccountantCabinet({
@@ -66,6 +71,7 @@ export function ChiefAccountantCabinet({
   payrollSummary,
   totalTeamScore,
   currentMonth,
+  deadlines,
 }: ChiefAccountantCabinetProps) {
   const firstName = userName.split(" ")[0];
   const monthLabel = formatUzMonthYear(`${currentMonth}-01`);
@@ -78,42 +84,43 @@ export function ChiefAccountantCabinet({
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
+      {/* Sarlavha — `firstName` va `monthLabel` allaqachon hisoblanardi,
+          lekin HECH QAYERDA ko'rsatilmasdi: bu ekran umuman sarlavhasiz,
+          davr belgisisiz ochilardi. */}
+      <PageHeader
+        icon={<ShieldCheck size={20} />}
+        title={`Xush kelibsiz, ${firstName}`}
+        description={`Bosh buxgalter kabineti — ${monthLabel}`}
+      />
+
+      {/* Ko'rsatkichlar — endi bosiladigan. Bu fayl 344 qator bo'lib,
+          ichida BIRORTA ham havola yo'q edi. */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-xl p-4" style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Building2 size={16} style={{ color: "var(--accent-indigo)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Firmalar</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{companiesCount}</div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Users size={16} style={{ color: "var(--accent-blue)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Jamoa</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{teamMembers.length}</div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Clock size={16} style={{ color: "var(--warning)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI Kutmoqda</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--warning)" }}>{pendingApprovals.length}</div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Award size={16} style={{ color: "var(--success)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Jamoa KPI</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>
-            {totalTeamScore.toFixed(0)}
-          </div>
-        </div>
+        <KpiCard
+          label="Firmalar" value={companiesCount} tone="indigo"
+          icon={<Building2 size={15} />} href="/organizations"
+        />
+        <KpiCard
+          label="Jamoa" value={teamMembers.length} tone="brand"
+          icon={<Users size={15} />} href="/staff"
+        />
+        <KpiCard
+          label="KPI kutmoqda" value={pendingApprovals.length} tone="warning" emphasize
+          icon={<Clock size={15} />} href="/kpi"
+        />
+        <KpiCard
+          label="Jamoa KPI" value={Math.round(totalTeamScore)} tone="success" emphasize
+          icon={<TrendingUp size={15} />} href="/kpi"
+        />
       </div>
+
+      {/* Muddatlar — jamoa firmalari bo'yicha */}
+      <DeadlinesWidget
+        overdueCount={deadlines.overdueCount}
+        dueSoonCount={deadlines.dueSoonCount}
+        upcoming={deadlines.upcoming}
+        scopeLabel="Jamoa firmalari"
+      />
 
       {/* Jamoa ko'rsatkichlari + KPI tasdiqlash */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -146,10 +153,8 @@ export function ChiefAccountantCabinet({
                 return (
                   <div
                     key={member.id}
-                    className="flex items-center gap-4 p-4 transition-colors"
+                    className="flex items-center gap-4 p-4 transition-colors row-hover"
                     style={{ borderBottom: "1px solid var(--card-border)" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
-                    onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
                     <div
                       className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
@@ -211,10 +216,8 @@ export function ChiefAccountantCabinet({
                 pendingApprovals.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 p-3 transition-colors"
+                    className="flex items-center gap-3 p-3 transition-colors row-hover"
                     style={{ borderBottom: "1px solid var(--card-border)" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
-                    onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
                     <div
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
@@ -254,10 +257,8 @@ export function ChiefAccountantCabinet({
                 payrollSummary.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between gap-3 p-3 transition-colors"
+                    className="flex items-center justify-between gap-3 p-3 transition-colors row-hover"
                     style={{ borderBottom: "1px solid var(--card-border)" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
-                    onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>
@@ -293,10 +294,8 @@ export function ChiefAccountantCabinet({
           {chiefCompanies.slice(0, 9).map((company) => (
             <div
               key={company.id}
-              className="flex items-center gap-3 p-4 transition-colors"
+              className="flex items-center gap-3 p-4 transition-colors row-hover"
               style={{ background: "var(--input-bg)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--input-bg)"}
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(99,102,241,0.15)" }}>
                 <Building2 size={14} style={{ color: "var(--accent-indigo)" }} />

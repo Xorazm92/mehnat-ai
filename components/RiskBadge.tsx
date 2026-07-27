@@ -101,7 +101,7 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen(true); }}
         title="Risk darajasi nimani anglatadi? — bosing"
-        className={`inline-flex items-center gap-1 font-black uppercase tracking-widest rounded-lg shrink-0 transition-transform hover:scale-[1.03] ${compact ? "text-micro px-2 py-1" : "text-micro px-2.5 py-1.5"} ${className || ""}`}
+        className={`inline-flex items-center gap-1 font-semibold uppercase tracking-widest rounded-lg shrink-0 transition-transform hover:scale-[1.03] ${compact ? "text-micro px-2 py-1" : "text-micro px-2.5 py-1.5"} ${className || ""}`}
         style={{ color: meta.color, background: meta.bg, border: `1px solid ${meta.border}` }}
       >
         <span className={`verdict ${meta.verdict}`} aria-hidden>
@@ -125,7 +125,7 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--card-border)" }}>
               <div className="min-w-0">
-                <h3 className="text-sm font-black flex items-center gap-2" style={{ color: "var(--text)" }}>
+                <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text)" }}>
                   <span className={`verdict ${meta.verdict}`} aria-hidden><span className="verdict-mark" /></span> Risk darajasi: {meta.label}
                 </h3>
                 {companyName && (
@@ -145,7 +145,7 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
 
               {/* Nima uchun shu daraja */}
               <div>
-                <p className="text-micro font-black uppercase tracking-widest mb-1.5" style={{ color: "var(--text-muted)" }}>Nima uchun shu daraja?</p>
+                <p className="text-micro font-semibold uppercase tracking-widest mb-1.5" style={{ color: "var(--text-muted)" }}>Nima uchun shu daraja?</p>
                 <div className="flex items-start gap-2 text-xs" style={{ color: "var(--text-secondary, var(--text-2))" }}>
                   <Info size={14} className="mt-0.5 shrink-0" style={{ color: meta.color }} />
                   <span>{riskReason(level, companyStatus)}</span>
@@ -159,7 +159,7 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
 
               {/* Barcha darajalar shkalasi */}
               <div>
-                <p className="text-micro font-black uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>Darajalar shkalasi</p>
+                <p className="text-micro font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>Darajalar shkalasi</p>
                 <div className="space-y-2">
                   {(["low", "medium", "high"] as RiskLevel[]).map((lv) => {
                     const m = RISK_META[lv];
@@ -168,7 +168,7 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
                       <div key={lv} className="flex items-start gap-2.5 rounded-lg px-3 py-2" style={{ background: active ? m.bg : "var(--surface-2, var(--input-bg))", border: active ? `1px solid ${m.border}` : "1px solid transparent", opacity: active ? 1 : 0.75 }}>
                         <span className={`verdict ${m.verdict} mt-0.5`} aria-hidden><span className="verdict-mark" /></span>
                         <div className="min-w-0">
-                          <p className="text-meta font-black uppercase tracking-wide" style={{ color: m.color }}>{m.label}</p>
+                          <p className="text-meta font-semibold uppercase tracking-wide" style={{ color: m.color }}>{m.label}</p>
                           <p className="text-meta leading-snug" style={{ color: "var(--text-secondary, var(--text-2))" }}>{m.desc}</p>
                         </div>
                       </div>

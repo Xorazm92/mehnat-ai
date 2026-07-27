@@ -125,7 +125,7 @@ export function TableToolbar({
             <Filter size={14} />
             {filterCount > 0 && (
               <span
-                className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full text-micro font-black flex items-center justify-center"
+                className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full text-micro font-semibold flex items-center justify-center"
                 style={{ background: "var(--danger)", color: "#fff" }}
               >
                 {filterCount}
@@ -151,16 +151,8 @@ export function TableToolbar({
         <button
           type="button"
           onClick={onExport}
-          className={btnBase}
+          className={`${btnBase} btn-export`}
           style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-2)" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "var(--success)";
-            e.currentTarget.style.borderColor = "var(--success)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "var(--text-2)";
-            e.currentTarget.style.borderColor = "var(--border)";
-          }}
         >
           <Download size={14} /> {exportLabel}
         </button>

@@ -1,6 +1,8 @@
 import { getNotifications } from "@/server/audit";
 import NotificationsClient from "./NotificationsClient";
 
+export const metadata = { title: "Xabarlar" };
+
 export default async function NotificationsPage() {
   const notifications = await getNotifications();
 

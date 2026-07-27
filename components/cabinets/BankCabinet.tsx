@@ -11,6 +11,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { formatUzMonthYear, formatUzDateNumeric, formatNum } from "@/lib/format";
+import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
 
 interface AssignedCompany {
   id: string;
@@ -49,6 +50,7 @@ interface BankCabinetProps {
   kpiRecords: KpiRecord[];
   balance: { income: number; expense: number; net: number };
   currentMonth: string;
+  deadlines: { overdueCount: number; dueSoonCount: number; upcoming: DeadlineRow[] };
 }
 
 export function BankCabinet({
@@ -59,6 +61,7 @@ export function BankCabinet({
   kpiRecords,
   balance,
   currentMonth,
+  deadlines,
 }: BankCabinetProps) {
   const firstName = userName.split(" ")[0];
   const monthLabel = formatUzMonthYear(`${currentMonth}-01`);
@@ -76,7 +79,7 @@ export function BankCabinet({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Salom, {firstName}</h1>
+          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Salom, {firstName}</h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }} suppressHydrationWarning>
             Bank-Klient kabinetingiz — {monthLabel}
           </p>
@@ -142,6 +145,14 @@ export function BankCabinet({
         </div>
       </div>
 
+      {/* Muddatlar — biriktirilgan firmalar bo'yicha */}
+      <DeadlinesWidget
+        overdueCount={deadlines.overdueCount}
+        dueSoonCount={deadlines.dueSoonCount}
+        upcoming={deadlines.upcoming}
+        scopeLabel="Firmalarim"
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Biriktirilgan Firmalar */}
         <div className="glass-card overflow-hidden">
@@ -164,10 +175,8 @@ export function BankCabinet({
                 return (
                   <div
                     key={company.id}
-                    className="flex items-center gap-4 p-4 transition-colors group"
+                    className="flex items-center gap-4 p-4 transition-colors group row-hover"
                     style={{ borderBottom: "1px solid var(--card-border)" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
-                    onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "color-mix(in srgb, var(--brand) 15%, transparent)" }}>
                       <Banknote size={14} style={{ color: "var(--accent-blue)" }} />
@@ -221,10 +230,8 @@ export function BankCabinet({
                 kassaEntries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center gap-4 p-3 transition-colors"
+                    className="flex items-center gap-4 p-3 transition-colors row-hover"
                     style={{ borderBottom: "1px solid var(--card-border)" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
-                    onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
                     <div
                       className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"

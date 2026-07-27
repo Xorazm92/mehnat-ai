@@ -51,7 +51,7 @@ export function AdminOverview({ role, stats, recentAudit }: Props) {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-black" style={{ color: "var(--text-primary)" }}>
+        <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
           Boshqaruv paneli
         </h1>
         <p className="text-body font-medium mt-1" style={{ color: "var(--text-muted)" }}>
@@ -75,7 +75,7 @@ export function AdminOverview({ role, stats, recentAudit }: Props) {
                 </span>
                 <Icon size={16} style={{ color: t.color }} />
               </div>
-              <div className="mt-2 text-3xl font-black tabular-nums" style={{ color: "var(--text-primary)" }}>
+              <div className="mt-2 text-3xl font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>
                 {t.value}
               </div>
               <div className="text-meta font-semibold mt-0.5" style={{ color: "var(--text-muted)" }}>
@@ -149,7 +149,7 @@ export function AdminOverview({ role, stats, recentAudit }: Props) {
                   <span style={{ color: "var(--text-secondary)" }}>
                     {ROLE_LABELS[r as UserRole] ?? r}
                   </span>
-                  <span className="font-black tabular-nums" style={{ color: "var(--text-primary)" }}>{n}</span>
+                  <span className="font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>{n}</span>
                 </div>
               ))}
               {Object.keys(stats.byRole).length === 0 && (

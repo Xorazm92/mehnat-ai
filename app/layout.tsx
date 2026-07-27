@@ -87,7 +87,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="uz" className={`${plexSans.variable} ${plexMono.variable}`} suppressHydrationWarning>
+    <html lang="uz" className={`${plexSans.variable} ${plexMono.variable}`} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body>
         <ThemeProvider
           attribute="class"

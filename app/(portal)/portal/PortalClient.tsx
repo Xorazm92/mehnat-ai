@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatNum, formatUzDate } from "@/lib/format";
 import { createClientRequest } from "@/server/portal";
+import { Button } from "@/components/ui/Button";
 
 interface Overview { companyName: string; openObligations: number; unpaidInvoices: number; openTickets: number }
 interface Obl { id: string; templateName: string; periodKey: string; status: string; dueAt: string; isOverdue: boolean; hasEvidence: boolean }
@@ -34,7 +35,7 @@ export default function PortalClient({ overview, obligations, invoices, requests
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>{overview.companyName}</h1>
+        <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>{overview.companyName}</h1>
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>Xizmat holati, hisob-fakturalar va murojaatlar</p>
       </div>
 
@@ -45,7 +46,7 @@ export default function PortalClient({ overview, obligations, invoices, requests
           { label: "Ochiq murojaat", val: overview.openTickets },
         ].map((s) => (
           <div key={s.label} className={card} style={border}>
-            <div className="text-2xl font-black" style={{ color: "var(--text-primary)" }}>{s.val}</div>
+            <div className="text-2xl font-semibold" style={{ color: "var(--text-primary)" }}>{s.val}</div>
             <div className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{s.label}</div>
           </div>
         ))}
@@ -53,7 +54,7 @@ export default function PortalClient({ overview, obligations, invoices, requests
 
       {/* Obligations */}
       <section>
-        <h2 className="text-base font-bold mb-2" style={{ color: "var(--text-primary)" }}>Majburiyatlar</h2>
+        <h2 className="text-sm font-bold mb-2" style={{ color: "var(--text-primary)" }}>Majburiyatlar</h2>
         <div className="overflow-x-auto rounded-xl border" style={border}>
           <table className="w-full text-sm">
             <thead><tr style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>
@@ -77,7 +78,7 @@ export default function PortalClient({ overview, obligations, invoices, requests
 
       {/* Invoices */}
       <section>
-        <h2 className="text-base font-bold mb-2" style={{ color: "var(--text-primary)" }}>Hisob-fakturalar</h2>
+        <h2 className="text-sm font-bold mb-2" style={{ color: "var(--text-primary)" }}>Hisob-fakturalar</h2>
         <div className="overflow-x-auto rounded-xl border" style={border}>
           <table className="w-full text-sm">
             <thead><tr style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-muted)" }}>
@@ -100,11 +101,11 @@ export default function PortalClient({ overview, obligations, invoices, requests
 
       {/* Tickets */}
       <section>
-        <h2 className="text-base font-bold mb-2" style={{ color: "var(--text-primary)" }}>Murojaatlar</h2>
+        <h2 className="text-sm font-bold mb-2" style={{ color: "var(--text-primary)" }}>Murojaatlar</h2>
         <div className={`${card} mb-3 space-y-2`} style={border}>
           <input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} placeholder="Mavzu" className="w-full px-2.5 py-1.5 rounded-lg border text-sm" style={{ ...border, background: "transparent", color: "var(--text-primary)" }} />
           <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Savolingiz..." rows={2} className="w-full px-2.5 py-1.5 rounded-lg border text-sm" style={{ ...border, background: "transparent", color: "var(--text-primary)" }} />
-          <button disabled={pending} onClick={submit} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>Yuborish</button>
+          <Button variant="success" size="md" disabled={pending} onClick={submit}>Yuborish</Button>
         </div>
         <div className="space-y-2">
           {requests.map((r) => (

@@ -71,6 +71,13 @@ export const getCurrentPeriod = () => {
 };
 
 /**
+ * Joriy davr KALITI ("YYYY-MM") — server currentMonth bilan bir xil (UTC).
+ * UI period-selektorlarining REAL-VAQT standarti: hech qayerda oyni qotirmang,
+ * shu funksiyani chaqiring (server `new Date().toISOString().slice(0,7)` bilan mos).
+ */
+export const getCurrentPeriodKey = () => new Date().toISOString().slice(0, 7);
+
+/**
  * Returns the ISO-like key (YYYY-MM) for the month preceding the given key.
  */
 export const getPreviousPeriodKey = (key: string) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, X, Send, Bot, User as UserIcon, Loader2 } from "lucide-react";
 import { askFinanceAssistant } from "@/server/assistant";
 
@@ -17,11 +18,16 @@ const SUGGESTIONS = [
 ];
 
 export default function FinanceAssistant() {
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: WELCOME }]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -55,15 +61,13 @@ export default function FinanceAssistant() {
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-white text-body font-semibold transition-all shadow-sm shrink-0"
         style={{ background: "linear-gradient(135deg, var(--accent-purple), var(--brand))" }}
-        onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.08)")}
-        onMouseLeave={(e) => (e.currentTarget.style.filter = "")}
         title="AI moliyachi yordamchi"
       >
         <Sparkles size={15} />
         <span className="hidden lg:inline">AI yordamchi</span>
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <>
           <div className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div
@@ -77,11 +81,11 @@ export default function FinanceAssistant() {
                   <Bot size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black" style={{ color: "var(--text-primary)" }}>Moliyachi AI</h3>
+                  <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Moliyachi AI</h3>
                   <p className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Moliyaviy yordamchi · beta</p>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} className="icon-btn-sm transition-colors" style={{ color: "var(--text-muted)" }} onMouseEnter={(e) => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = ""; e.currentTarget.style.color = "var(--text-muted)"; }}>
+              <button onClick={() => setOpen(false)} className="icon-btn-sm transition-colors icon-btn-danger" style={{ color: "var(--text-muted)" }}>
                 <X size={18} />
               </button>
             </div>
@@ -118,7 +122,7 @@ export default function FinanceAssistant() {
               {messages.length === 1 && !typing && (
                 <div className="flex flex-wrap gap-2 pt-1">
                   {SUGGESTIONS.map((s) => (
-                    <button key={s} onClick={() => send(s)} className="text-meta font-semibold px-3 py-1.5 rounded-full transition-colors" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent-blue)"; e.currentTarget.style.color = "var(--accent-blue)"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--card-border)"; e.currentTarget.style.color = "var(--text-secondary)"; }}>
+                    <button key={s} onClick={() => send(s)} className="text-meta font-semibold px-3 py-1.5 rounded-full transition-colors icon-btn-accent" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>
                       {s}
                     </button>
                   ))}
@@ -145,7 +149,8 @@ export default function FinanceAssistant() {
               <p className="text-micro text-center mt-2" style={{ color: "var(--text-muted)" }}>Moliyachi AI xatolarga yo&apos;l qo&apos;yishi mumkin · beta</p>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </>
   );

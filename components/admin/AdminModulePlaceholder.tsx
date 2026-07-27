@@ -21,7 +21,7 @@ export function AdminModulePlaceholder({
       >
         <Icon size={30} />
       </div>
-      <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>
+      <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
         {mod?.labelUz ?? "Modul"}
       </h1>
       <p className="mt-2 max-w-md text-body font-medium" style={{ color: "var(--text-muted)" }}>

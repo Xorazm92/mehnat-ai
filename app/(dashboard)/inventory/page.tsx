@@ -2,6 +2,8 @@ import { getCachedUsers } from "@/lib/cached-queries";
 import { getInventory } from "@/server/inventory";
 import InventoryClient from "./InventoryClient";
 
+export const metadata = { title: "Inventar" };
+
 export default async function InventoryPage() {
   const [staff, inventory] = await Promise.all([
     getCachedUsers(),

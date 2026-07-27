@@ -75,6 +75,9 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   { key: "kom_suv", label: "Suv", short: "S💧", group: "Komunalka" },
   { key: "kom_gaz", label: "Gaz", short: "G🔥", group: "Komunalka" },
   { key: "kom_svet", label: "Svet", short: "E⚡", group: "Komunalka" },
+
+  // ═══ MAXSUS ═══
+  { key: "ekologiya", label: "Ekologiya", short: "EK", group: "Maxsus" },
 ];
 
 // Admin editor jadval qatori (barcha baza ustunlari + joriy sozlama)

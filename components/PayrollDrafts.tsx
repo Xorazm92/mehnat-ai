@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { formatNum } from "@/lib/format";
 import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 import { exportToExcel } from "@/lib/exportExcel";
+import { Button } from "@/components/ui/Button";
 
 interface Props {
     staff: Staff[];
@@ -236,7 +237,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                         <div className="px-3 py-2 rounded-xl flex flex-col items-start min-w-[140px]"
                             style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
                             <p className="text-micro font-bold uppercase tracking-widest mb-1" style={{ color: "var(--success)", opacity: 0.8 }}>Super Admin (7%)</p>
-                            <p className="text-sm font-black tabular-nums leading-none" style={{ color: "var(--success)" }}>{formatNum(superAdminCommission)} <span className="text-micro">UZS</span></p>
+                            <p className="text-sm font-semibold tabular-nums leading-none" style={{ color: "var(--success)" }}>{formatNum(superAdminCommission)} <span className="text-micro">UZS</span></p>
                         </div>
                     )}
                     <TableToolbar
@@ -259,7 +260,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                         filterCount={statusFilter !== 'all' ? 1 : 0}
                         filter={
                             <div className="flex flex-col gap-2">
-                                <p className="text-micro font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Holat</p>
+                                <p className="text-micro font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Holat</p>
                                 {([['all', 'Hammasi'], ['draft', 'Qoralama'], ['approved', 'Tasdiqlangan']] as const).map(([val, label]) => (
                                     <button key={val} type="button" onClick={() => setStatusFilter(val)}
                                         className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all"
@@ -324,10 +325,8 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                 {/* Asosiy Oylik */}
                                 <button
                                     onClick={() => setDetailModal({ type: 'base', employeeId: s.id, employeeName: s.name })}
-                                    className="w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs transition-all group"
+                                    className="w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs transition-all group icon-btn-accent"
                                     style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}
-                                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent-blue)"; e.currentTarget.style.background = "var(--accent-blue-light)"; }}
-                                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--card-border)"; e.currentTarget.style.background = "var(--input-bg)"; }}
                                 >
                                     <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
                                         <FileText size={13} />
@@ -341,8 +340,6 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                     onClick={() => setDetailModal({ type: 'bonus', employeeId: s.id, employeeName: s.name })}
                                     className="w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs transition-opacity"
                                     style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}
-                                    onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
-                                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                                 >
                                     <div className="flex items-center gap-2" style={{ color: "var(--success)" }}>
                                         <TrendingUp size={13} />
@@ -356,8 +353,6 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                     onClick={() => setDetailModal({ type: 'penalty', employeeId: s.id, employeeName: s.name })}
                                     className="w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs transition-opacity"
                                     style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}
-                                    onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
-                                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                                 >
                                     <div className="flex items-center gap-2" style={{ color: "var(--danger)" }}>
                                         <TrendingDown size={13} />
@@ -372,7 +367,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                 style={{ borderTop: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
                                 <div className="flex flex-col">
                                     <span className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami To&apos;lov</span>
-                                    <span className="text-base font-black tabular-nums" style={{ color: "var(--text-primary)" }}>{formatNum(draft.totalSalary)}</span>
+                                    <span className="text-base font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>{formatNum(draft.totalSalary)}</span>
                                 </div>
                                 {isApproved ? (
                                     <div className="px-3 py-1.5 rounded-lg text-micro font-bold uppercase cursor-not-allowed"
@@ -380,15 +375,11 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                         Saqlangan
                                     </div>
                                 ) : (
-                                    <button
-                                        onClick={() => handleApprove(s.id)}
-                                        disabled={savingId === s.id}
-                                        className="c1-btn c1-btn-primary px-4 py-2 text-micro disabled:opacity-50"
-                                    >
+                                    <Button variant="primary" size="md" onClick={() => handleApprove(s.id)} disabled={savingId === s.id}>
                                         {savingId === s.id ? '...' : (
                                             <><DollarSign size={11} />Tasdiqlash</>
                                         )}
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         </div>
@@ -401,7 +392,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                     <thead>
                         <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--card-border)" }}>
                             {["Xodim", "Asosiy", "Bonus", "Jarima", "Jami To'lov", "Holat", ""].map((h, i) => (
-                                <th key={i} className={`px-4 py-3 text-micro font-black uppercase tracking-widest ${i === 0 || i === 5 || i === 6 ? "text-left" : "text-right"}`}
+                                <th key={i} className={`px-4 py-3 text-micro font-semibold uppercase tracking-widest ${i === 0 || i === 5 || i === 6 ? "text-left" : "text-right"}`}
                                     style={{ color: "var(--text-muted)" }}>{h}</th>
                             ))}
                         </tr>
@@ -437,7 +428,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                     onClick={() => setDetailModal({ type: 'penalty', employeeId: s.id, employeeName: s.name })}>
                                     {formatNum(draft.kpiPenalty)}
                                 </td>
-                                <td className="px-4 py-3 text-right font-black tabular-nums text-sm" style={{ color: "var(--text-primary)" }}>
+                                <td className="px-4 py-3 text-right font-semibold tabular-nums text-sm" style={{ color: "var(--text-primary)" }}>
                                     {formatNum(draft.totalSalary)}
                                 </td>
                                 <td className="px-4 py-3">
@@ -457,10 +448,9 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                     {isApproved ? (
                                         <span className="text-micro font-bold uppercase" style={{ color: "var(--text-muted)" }}>Saqlangan</span>
                                     ) : (
-                                        <button onClick={() => handleApprove(s.id)} disabled={savingId === s.id}
-                                            className="c1-btn c1-btn-primary px-3 py-1.5 text-micro disabled:opacity-50">
+                                        <Button variant="primary" size="sm" onClick={() => handleApprove(s.id)} disabled={savingId === s.id}>
                                             {savingId === s.id ? '...' : (<><DollarSign size={11} />Tasdiqlash</>)}
-                                        </button>
+                                        </Button>
                                     )}
                                 </td>
                             </tr>
@@ -498,7 +488,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                     background: detailModal.type === 'base' ? "var(--accent-blue-light)" : detailModal.type === 'bonus' ? "var(--success-bg)" : "var(--danger-bg)"
                                 }}>
                                 <div>
-                                    <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+                                    <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                                         {detailModal.type === 'base' && <FileText size={16} style={{ color: "var(--accent-blue)" }} />}
                                         {detailModal.type === 'bonus' && <TrendingUp size={16} style={{ color: "var(--success)" }} />}
                                         {detailModal.type === 'penalty' && <TrendingDown size={16} style={{ color: "var(--danger)" }} />}
@@ -511,10 +501,8 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                     </p>
                                 </div>
                                 <button onClick={() => setDetailModal(null)}
-                                    className="p-1.5 rounded-lg transition-all"
+                                    className="p-1.5 rounded-lg transition-all icon-btn-danger"
                                     style={{ color: "var(--text-muted)" }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = ""; e.currentTarget.style.color = "var(--text-muted)"; }}
                                 >
                                     <X size={18} />
                                 </button>
@@ -523,7 +511,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                             {/* Total summary */}
                             <div className="px-6 py-3" style={{ borderBottom: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-xl font-black tabular-nums"
+                                    <span className="text-xl font-semibold tabular-nums"
                                         style={{ color: detailModal.type === 'base' ? "var(--text-primary)" : detailModal.type === 'bonus' ? "var(--success)" : "var(--danger)" }}>
                                         {detailModal.type === 'base' && formatNum(drafts[detailModal.employeeId]?.baseSalary)}
                                         {detailModal.type === 'bonus' && `+${formatNum(drafts[detailModal.employeeId]?.kpiBonus)}`}
@@ -548,9 +536,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                             </thead>
                                             <tbody>
                                                 {modalData.filter(b => b.baseAmount > 0).map((b, i) => (
-                                                    <tr key={i} style={{ borderBottom: "1px solid var(--table-border)" }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
-                                                        onMouseLeave={e => e.currentTarget.style.background = ""}>
+                                                    <tr key={i} style={{ borderBottom: "1px solid var(--table-border)" }} className="row-hover">
                                                         <td className="px-3 py-2 font-bold text-meta uppercase" style={{ color: "var(--text-primary)" }}>{b.companyName}</td>
                                                         <td className="px-3 py-2 text-center" style={{ borderLeft: "1px solid var(--table-border)" }}>
                                                             <span className="text-micro font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{b.role}</span>
@@ -573,7 +559,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                             <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--success-border)" }}>
                                                 <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "var(--success-bg)", borderBottom: "1px solid var(--success-border)" }}>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-bold uppercase" style={{ color: "var(--text-primary)" }}>{b.companyName}</span>
+                                                        <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>{b.companyName}</span>
                                                         <span className="text-micro font-bold uppercase" style={{ color: "var(--text-muted)" }}>({b.role})</span>
                                                     </div>
                                                     <span className="font-bold tabular-nums text-xs" style={{ color: "var(--success)" }}>+{formatNum(b.kpiBonus)}</span>
@@ -602,7 +588,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                             <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--danger-border)" }}>
                                                 <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "var(--danger-bg)", borderBottom: "1px solid var(--danger-border)" }}>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-bold uppercase" style={{ color: "var(--text-primary)" }}>{b.companyName}</span>
+                                                        <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>{b.companyName}</span>
                                                         <span className="text-micro font-bold uppercase" style={{ color: "var(--text-muted)" }}>({b.role})</span>
                                                     </div>
                                                     <span className="font-bold tabular-nums text-xs" style={{ color: "var(--danger)" }}>-{formatNum(b.kpiPenalty)}</span>
@@ -631,9 +617,9 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
 
                             {/* Modal Footer */}
                             <div className="p-4 flex justify-end" style={{ borderTop: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
-                                <button onClick={() => setDetailModal(null)} className="btn-secondary px-6">
+                                <Button variant="secondary" size="md" onClick={() => setDetailModal(null)}>
                                     Yopish
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>

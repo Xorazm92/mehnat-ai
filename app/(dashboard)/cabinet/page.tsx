@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getMyCabinet } from "@/server/cabinet";
 import MyCabinet, { type MyCabinetProps } from "@/components/cabinets/MyCabinet";
 
+export const metadata = { title: "Mening kabinetim" };
+
 // Shaxsiy kabinet — har qanday rol uchun ("Mening kabinetim").
 // Profil, biriktirilgan firmalar, KPI/oylik, davomat va parol o'zgartirish.
 export default async function CabinetPage() {

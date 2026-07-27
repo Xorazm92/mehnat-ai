@@ -1,0 +1,20 @@
+/**
+ * UI PRIMITIVLARI — yagona manba.
+ *
+ * Qoida: agar shu yerda mavjud primitiv ishni bajara olsa, sahifada qo'lda
+ * `<button>`/`<div className="fixed inset-0">` yozilmaydi. Primitiv yetarli
+ * bo'lmasa — uni KENGAYTIRING, forklamang. `CONSISTENCY.md:184`:
+ * "shared komponentlar forklashdan qiyinroq bo'ladigan darajada chuqur bo'lsin".
+ */
+
+export { Modal, type ModalProps, type ModalSize } from "./Modal";
+export { ConfirmProvider, useConfirm, type ConfirmOptions } from "./ConfirmDialog";
+export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from "./Button";
+export { Field, type FieldProps } from "./Field";
+export { Badge, type BadgeProps, type BadgeTone } from "./Badge";
+export { Card, type CardProps } from "./Card";
+export { EmptyState, type EmptyStateProps } from "./EmptyState";
+export { Skeleton, SkeletonTable, type SkeletonProps } from "./Skeleton";
+export { DataTable, type DataTableProps, type DataColumn } from "./DataTable";
+export { TableToolbar, type ViewMode } from "./TableToolbar";
+export { MonthPicker } from "./MonthPicker";

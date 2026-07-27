@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { formatNum } from "@/lib/format";
 import { formatUzDate } from "@/lib/format";
 import { setCostRate, removeCostRate } from "@/server/costRates";
+import { Button } from "@/components/ui/Button";
 
 interface Rate {
   id: string;
@@ -42,7 +43,7 @@ export default function CostRatesClient({ rates, users }: { rates: Rate[]; users
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Xodim tannarxi</h1>
+        <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Xodim tannarxi</h1>
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>To'liq soatlik qiymat (oylik + soliq + overhead). Effective-dated — yangi stavka avvalgini yopadi. Rentabellik (Faza D) shundan hisoblanadi.</p>
       </div>
 
@@ -62,7 +63,7 @@ export default function CostRatesClient({ rates, users }: { rates: Rate[]; users
         <label className="text-xs" style={{ color: "var(--text-muted)" }}>Izoh (ixt.)
           <input className={input} style={inputStyle} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} />
         </label>
-        <button disabled={pending} onClick={submit} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--success)" }}>O'rnatish</button>
+        <Button variant="success" size="md" disabled={pending} onClick={submit}>O'rnatish</Button>
       </div>
 
       {rates.length === 0 ? (

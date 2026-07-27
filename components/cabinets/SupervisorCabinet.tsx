@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { formatUzMonthYear } from "@/lib/format";
 import Link from "next/link";
+import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
+import { KpiCard } from "@/components/ui/KpiCard";
 
 interface SupervisedCompany {
   id: string;
@@ -53,6 +55,7 @@ interface SupervisorCabinetProps {
   pendingKpi: PendingKpi[];
   riskStats: RiskStat[];
   currentMonth: string;
+  deadlines: { overdueCount: number; dueSoonCount: number; upcoming: DeadlineRow[] };
 }
 
 export function SupervisorCabinet({
@@ -63,6 +66,7 @@ export function SupervisorCabinet({
   pendingKpi,
   riskStats,
   currentMonth,
+  deadlines,
 }: SupervisorCabinetProps) {
   const firstName = userName.split(" ")[0];
   const monthLabel = formatUzMonthYear(`${currentMonth}-01`);
@@ -74,39 +78,35 @@ export function SupervisorCabinet({
   return (
     <div className="space-y-6">
       {/* Stats */}
+      {/* Ko'rsatkichlar — har biri filtri qo'yilgan ro'yxatga olib boradi.
+          Avval plitkalar bosilmasdi: "12 ta yuqori risk" ni ko'rgan nazoratchi
+          qaysi firmalar ekanini bilish uchun filtrni qo'lda qayta terardi. */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Building2 size={16} style={{ color: "var(--accent-blue)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Firmalar</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{companiesCount}</div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--accent-indigo)" + "22", border: "1px solid rgba(99,102,241,0.2)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Users size={16} style={{ color: "var(--accent-indigo)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Buxgalterlar</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{accountants.length}</div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={16} style={{ color: "var(--danger)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Yuqori risk</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--danger)" }}>{highRisk}</div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Clock size={16} style={{ color: "var(--warning)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI Kutmoqda</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--warning)" }}>{pendingKpi.length}</div>
-        </div>
+        <KpiCard
+          label="Firmalar" value={companiesCount} tone="brand"
+          icon={<Building2 size={15} />} href="/organizations"
+        />
+        <KpiCard
+          label="Buxgalterlar" value={accountants.length} tone="indigo"
+          icon={<Users size={15} />} href="/staff?staff_role=accountant"
+        />
+        <KpiCard
+          label="Yuqori risk" value={highRisk} tone="danger" emphasize
+          icon={<AlertTriangle size={15} />} href="/organizations?org_risk=high"
+        />
+        <KpiCard
+          label="KPI kutmoqda" value={pendingKpi.length} tone="warning" emphasize
+          icon={<Clock size={15} />} href="/kpi"
+        />
       </div>
+
+      {/* Muddatlar — nazorat ostidagi firmalar bo'yicha */}
+      <DeadlinesWidget
+        overdueCount={deadlines.overdueCount}
+        dueSoonCount={deadlines.dueSoonCount}
+        upcoming={deadlines.upcoming}
+        scopeLabel="Nazorat firmalari"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Buxgalterlar holati */}
@@ -133,7 +133,7 @@ export function SupervisorCabinet({
                   <Link
                     href={`/staff?userId=${acc.id}`}
                     key={acc.id}
-                    className="flex items-center gap-4 p-4 hover:bg-black/5 dark:bg-white/5 transition-colors cursor-pointer"
+                    className="flex items-center gap-4 p-4 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
                   >
                     <div
                       className="w-9 h-9 rounded-xl flex items-center justify-center text-text-primary text-sm font-bold flex-shrink-0"
@@ -243,10 +243,8 @@ export function SupervisorCabinet({
                 pendingKpi.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 p-3 transition-colors"
+                    className="flex items-center gap-3 p-3 transition-colors row-hover"
                     style={{ borderBottom: "1px solid var(--card-border)" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "var(--table-row-hover)"}
-                    onMouseLeave={e => e.currentTarget.style.background = ""}
                   >
                     <div
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"

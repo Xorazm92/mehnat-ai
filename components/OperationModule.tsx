@@ -1,10 +1,13 @@
 "use client";
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { Company, OperationEntry, Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
-import { ChevronDown, Download, Search, RefreshCw, Info, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, Download, Search, RefreshCw, Info, SlidersHorizontal, BarChart2, PieChart, TrendingUp, CheckCircle2, AlertTriangle, XCircle, X } from 'lucide-react';
 import { MonthPicker } from './ui/MonthPicker';
+import { useConfirm } from './ui/ConfirmDialog';
+import { useTableState } from '@/hooks/useTableState';
 import { periodsEqual } from '@/lib/periods';
 import { toast } from 'sonner';
 import { upsertMonthlyReport, clearColumnForPeriod } from '@/server/operations';
@@ -12,7 +15,11 @@ import { createNotification } from '@/server/audit';
 import { getReportProofsMeta } from '@/server/proofs';
 import ReportProofModal, { ProofModalState } from './ReportProofModal';
 import { BASE_REPORT_COLUMNS, type ReportColumn } from '@/lib/reportColumns';
+import { tryGetColumnCategory, CATEGORY_LABEL_UZ, type ReportCategory } from '@/lib/reportGroups';
+import { allowedCellActions, canApproveCell, canEditMatrix, isReviewerOwnedValue, type CellAction } from '@/lib/reportPermissions';
+import { isSeniorRole } from '@/lib/permissions';
 import { useDismissable } from '@/hooks/useDismissable';
+import { Button } from "@/components/ui/Button";
 // ── Report Column Definitions ──────────────────────────────────
 // Ustunlar ta'rifi endi lib/reportColumns.ts da (BASE_REPORT_COLUMNS) — yagona manba.
 // Amaldagi (config qo'llangan) ro'yxat `reportColumns` prop orqali keladi;
@@ -26,6 +33,32 @@ import { useDismissable } from '@/hooks/useDismissable';
 // kataklar bo'sh, shuning uchun ular chekinadi va TO'LDIRILGAN statuslar
 // ajralib chiqadi (kulrang tabletkalar devori o'rniga).
 const tint = (c: string, pct: number) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
+
+// ── Kategoriya (bo'lim) ranglari ───────────────────────────────
+// Rang ustun KALITIDAN kelib chiqadi (lib/reportGroups.ts), guruh NOMIDAN emas.
+// Sabab: guruh nomini admin o'zgartira oladi — o'shanda rang yo'qolib qolardi.
+const CATEGORY_COLOR: Record<ReportCategory, string> = {
+  OPERATSION: 'var(--brand)',
+  SOLIQ: 'var(--warning)',
+  STATISTIKA: 'var(--info)',
+  MAXSUS: 'var(--accent-purple)',
+};
+
+const categoryOf = (key: string): ReportCategory | null => tryGetColumnCategory(key);
+const categoryColor = (key: string): string => {
+  const c = categoryOf(key);
+  return c ? CATEGORY_COLOR[c] : 'var(--text-3)';
+};
+
+/** Kategoriya almashadigan chegara ustunlari (shu ustundan keyin yangi bo'lim). */
+const buildCategoryEdges = (cols: readonly { key: string }[]): Set<string> => {
+  const edges = new Set<string>();
+  cols.forEach((c, i) => {
+    const next = cols[i + 1];
+    if (next && categoryOf(c.key) !== categoryOf(next.key)) edges.add(c.key);
+  });
+  return edges;
+};
 const getStatusStyle = (value: string) => {
   const v = String(value || '').trim().toLowerCase();
 
@@ -39,14 +72,38 @@ const getStatusStyle = (value: string) => {
   return { bg: tint('var(--info)', 13), text: 'var(--info)', icon: value, tooltip: value };
 };
 
-const AVAILABLE_STATUSES = [
-  { value: '+', label: 'Tasdiqlash (✓)', icon: '✓', color: 'text-[var(--success)]' },
-  { value: 'topshirildi', label: 'Topshirildi', icon: '·', color: 'text-[var(--brand)]' },
-  { value: '-', label: 'Bajarilmadi (-)', icon: '✗', color: 'text-[var(--danger)]' },
-  { value: 'kartoteka', label: 'Kartoteka', icon: '!', color: 'text-[var(--warning)]' },
-  { value: 'izoh', label: 'Matn yozish...', icon: '✎', color: 'text-[var(--brand)]' },
-  { value: '0', label: 'Tozalash', icon: '—', color: 'text-[var(--text-muted)]' },
-];
+// Katak amallarining ko'rinishi. Qaysi biri KIMGA ko'rinishi
+// lib/reportPermissions.ts da hal qilinadi — bu yerda faqat vizual meta.
+const STATUS_META: Record<CellAction, { label: string; icon: string; color: string }> = {
+  '+': { label: 'Tasdiqlash (✓)', icon: '✓', color: 'text-[var(--success)]' },
+  'topshirildi': { label: 'Topshirildi', icon: '·', color: 'text-[var(--brand)]' },
+  '-': { label: 'Bajarilmadi (-)', icon: '✗', color: 'text-[var(--danger)]' },
+  'kartoteka': { label: 'Kartoteka', icon: '!', color: 'text-[var(--warning)]' },
+  'izoh': { label: 'Matn yozish...', icon: '✎', color: 'text-[var(--brand)]' },
+  '0': { label: 'Tozalash', icon: '—', color: 'text-[var(--text-muted)]' },
+};
+
+/**
+ * Rolga mos amallar ro'yxati + kontekstga qarab aniqroq nom.
+ * - Buxgalter: "Tasdiqlash" YO'Q; "Topshirildi" → skrinshot oynasini ochadi.
+ * - Nazoratchi, dalil kutilayotgan katakda: "+/-" → tekshirish oynasiga boradi.
+ */
+const statusesForRole = (role: string, hasPendingProof: boolean) => {
+  const isAccountant = !isSeniorRole(role);
+  return allowedCellActions(role).map((value) => {
+    const meta = STATUS_META[value];
+    if (isAccountant && value === 'topshirildi') {
+      return { value, ...meta, label: 'Topshirish (skrinshot)' };
+    }
+    if (!isAccountant && hasPendingProof && value === '+') {
+      return { value, ...meta, label: 'Tekshirib tasdiqlash' };
+    }
+    if (!isAccountant && hasPendingProof && value === '-') {
+      return { value, ...meta, label: 'Tekshirib rad etish' };
+    }
+    return { value, ...meta };
+  });
+};
 
 interface StatusCellProps {
   value: string;
@@ -66,7 +123,17 @@ const PROOF_DOT: Record<string, string> = {
 
 const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, userRole, proofStatus, onRequestSubmit, onViewProof }) => {
   const style = getStatusStyle(value);
-  const isAccountant = userRole === 'accountant';
+  // "isAccountant" = tasdiqlash huquqi YO'Q degani (server bilan bir xil qoida).
+  const isAccountant = !canApproveCell(userRole);
+  const menuStatuses = useMemo(
+    () => statusesForRole(userRole, proofStatus === 'pending'),
+    [userRole, proofStatus]
+  );
+  // Tasdiqlangan yoki tekshiruvda turgan katak buxgalter uchun QULFLANGAN —
+  // server ham shuni rad etadi (lib/reportPermissions.checkCellWrite), shuning
+  // uchun bu yerda ham urinishga yo'l qo'ymaymiz.
+  const lockedForAccountant = isAccountant && isReviewerOwnedValue(value);
+  const effectiveReadOnly = readOnly || lockedForAccountant;
   const [isOpen, setIsOpen] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -100,11 +167,24 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
       }
     };
 
+    // M9: katak ochilmasi faqat sichqoncha bilan yopilardi. Klaviatura bilan
+    // ishlaydigan buxgalter uni yopa olmasdi — Escape hech qanday ta'sir
+    // qilmasdi (ustunlar paneli esa `useDismissable` orqali yopilardi).
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      setShowInput(false);
+      setIsOpen(false);
+      buttonRef.current?.focus();
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape, true);
     return () => {
       window.removeEventListener('scroll', updateCoords, true);
       window.removeEventListener('resize', updateCoords);
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape, true);
     };
   }, [isOpen]);
 
@@ -156,17 +236,21 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
       <button
         ref={buttonRef}
         onClick={() => {
-          if (!readOnly) setIsOpen(!isOpen);
+          if (!effectiveReadOnly) setIsOpen(!isOpen);
           else if (proofStatus) handleViewProof();
         }}
-        disabled={readOnly && !proofStatus}
+        disabled={effectiveReadOnly && !proofStatus}
         className={`w-full h-6 min-w-[24px] px-1 rounded-lg flex items-center justify-center text-micro font-bold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
           style.bg === 'transparent'
             ? 'border border-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--rule)]'
             : 'border border-black/5 dark:border-white/5 hover:opacity-80'
         }`}
         style={{ background: style.bg, color: style.text }}
-        title={proofStatus ? `${style.tooltip} · Skrinshot biriktirilgan` : style.tooltip}
+        title={
+          lockedForAccountant
+            ? `${style.tooltip} · Nazoratchi qaroridagi katak — o'zgartirib bo'lmaydi`
+            : proofStatus ? `${style.tooltip} · Skrinshot biriktirilgan` : style.tooltip
+        }
       >
         <span className="truncate w-full text-center block uppercase">{style.icon}</span>
       </button>
@@ -205,7 +289,7 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
                   <div className="h-px my-1" style={{ background: 'var(--border)' }} />
                 </>
               )}
-              {AVAILABLE_STATUSES.map((status) => (
+              {menuStatuses.map((status) => (
                 <button
                   key={status.value}
                   onClick={() => handleSelect(status.value)}
@@ -216,6 +300,14 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
                   {value === status.value && <div className="ml-auto w-1 h-1 rounded-full bg-[var(--brand)]"></div>}
                 </button>
               ))}
+              {isAccountant && (
+                <>
+                  <div className="h-px my-1" style={{ background: 'var(--border)' }} />
+                  <p className="px-3 py-1.5 text-2xs leading-snug" style={{ color: 'var(--text-3)' }}>
+                    Tasdiqlashni nazoratchi bajaradi.
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <form onSubmit={handleCustomSubmit} className="p-2">
@@ -228,8 +320,8 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
                 className="c1-input w-full text-xs font-bold mb-2"
               />
               <div className="flex gap-2">
-                <button type="button" onClick={() => setShowInput(false)} className="c1-btn c1-btn-secondary flex-1 py-1 px-2 text-micro">Bekor</button>
-                <button type="submit" className="c1-btn c1-btn-primary flex-1 py-1 px-2 text-micro">Saqlash</button>
+                <Button variant="secondary" size="sm" type="button" onClick={() => setShowInput(false)} className="flex-1">Bekor</Button>
+                <Button variant="primary" size="sm" type="submit" className="flex-1">Saqlash</Button>
               </div>
             </form>
           )}
@@ -256,6 +348,9 @@ const OperationRow = React.memo<{
 }>(({ row, idx, visibleColumns, userRole, activeServices, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
   const proofOf = (colKey: string) => (row.companyId ? proofMeta.get(`${row.companyId}::${colKey}`) : undefined);
+  const categoryEdges = useMemo(() => buildCategoryEdges(visibleColumns), [visibleColumns]);
+  const cellBorderRight = (key: string) =>
+    categoryEdges.has(key) ? `2px solid ${tint(categoryColor(key), 45)}` : '1px solid var(--border)';
 
   return (
     <tr className="group transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -265,11 +360,9 @@ const OperationRow = React.memo<{
       <td
         className="sticky left-10 z-20 px-3 py-1.5 transition-colors w-48 min-w-[192px] cursor-pointer"
         style={{ background: 'var(--surface)', borderRight: '1px solid var(--border)' }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'var(--surface)'}
         onClick={() => row.companyId && onCompanySelect(row.companyId as string)}
       >
-        <div className="max-w-[180px] truncate text-meta font-bold transition-colors" style={{ color: 'var(--text)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text)'} title={row.name}>
+        <div className="max-w-[180px] truncate text-meta font-bold transition-colors icon-btn-accent" style={{ color: 'var(--text)' }} title={row.name}>
           {row.name}
         </div>
       </td>
@@ -282,7 +375,7 @@ const OperationRow = React.memo<{
         </div>
       </td>
       {visibleColumns.map(col => {
-        const isReadOnly = !row.companyId || (userRole !== 'super_admin' && userRole !== 'admin' && userRole !== 'supervisor' && userRole !== 'chief_accountant' && userRole !== 'accountant');
+        const isReadOnly = !row.companyId || !canEditMatrix(userRole);
         const serviceDisabled = !isServiceEnabled(col.key);
 
         if ((col as any).isSplit) {
@@ -305,7 +398,7 @@ const OperationRow = React.memo<{
                   />
                 )}
               </td>
-              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: payDisabled ? 'var(--bg-sunken)' : tint('var(--warning)', 4) }}>
+              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: cellBorderRight(col.key), background: payDisabled ? 'var(--bg-sunken)' : tint('var(--warning)', 4) }}>
                 {payDisabled ? (
                   <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
                 ) : (
@@ -325,7 +418,7 @@ const OperationRow = React.memo<{
         }
 
         return (
-          <td key={col.key} className="px-0.5 py-0.5 text-center h-8 transition-colors group-hover:bg-[var(--surface-2)]" style={{ borderRight: '1px solid var(--border)', background: serviceDisabled ? 'var(--surface-2)' : 'transparent' }}>
+          <td key={col.key} className="px-0.5 py-0.5 text-center h-8 transition-colors group-hover:bg-[var(--surface-2)]" style={{ borderRight: cellBorderRight(col.key), background: serviceDisabled ? 'var(--surface-2)' : 'transparent' }}>
             {serviceDisabled ? (
               <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
             ) : (
@@ -399,20 +492,58 @@ const OperationModule: React.FC<Props> = ({
   // useMemo — barqaror referens (faqat prop o'zgarganda yangilanadi).
   const REPORT_COLUMNS = useMemo<ReportColumn[]>(() => reportColumns ?? BASE_REPORT_COLUMNS, [reportColumns]);
   const t = translations[lang as keyof typeof translations];
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const confirm = useConfirm();
+  /**
+   * M5: matritsa holati endi URL'da — qidiruv, buxgalter filtri, guruh, sahifa.
+   * Nazoratchi "shu buxgalterning kechikkanlari" ko'rinishini havola qilib
+   * yubora oladi; avval barcha filtr faqat React state'da edi va sahifa
+   * yangilansa yo'qolardi.
+   */
+  const table = useTableState({
+    ns: 'mx',
+    defaultFilters: { acc: 'all', grp: 'all' },
+    debounceMs: 300,
+  });
+  const search = table.search;
+  const setSearch = table.setSearch;
+  const debouncedSearch = table.debouncedSearch;
   const [rows, setRows] = useState<ReportRow[]>([]);
+  /**
+   * M7: sahifalash tugmalari `document.querySelector('.overflow-auto')` bilan
+   * hujjatdagi BIRINCHI mos elementni olardi — bu matritsa bo'lishi shart emas.
+   * Endi konteynerga to'g'ridan-to'g'ri ref beriladi.
+   */
+  const matrixScrollRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [filterGroup, setFilterGroup] = useState<string>('all');
-  const [filterAccountant, setFilterAccountant] = useState<string>('all');
+  const filterGroup = table.filters.grp;
+  const setFilterGroup = (v: string) => table.setFilter('grp', v);
+  /**
+   * M6: statistika oynasidagi kategoriya plitkalari uchun ALOHIDA filtr.
+   *
+   * Avval plitka `setFilterGroup(cat.category)` chaqirardi, ya'ni "SOLIQ"
+   * (ReportCategory enum) qiymatini `c.group` bilan solishtirardi — u yerda esa
+   * "Soliqlar", "Oylik", "Statistika" kabi BOSHQA taksonomiya bor. Ular hech
+   * qachon mos kelmasdi, natijada `visibleColumns` BO'SH qolib, foydalanuvchi
+   * plitkani bosgach butun matritsa yo'qolardi.
+   */
+  const [filterCategory, setFilterCategory] = useState<ReportCategory | 'all'>('all');
+  const filterAccountant = table.filters.acc;
+  const setFilterAccountant = (v: string) => table.setFilter('acc', v);
   // Per-user column show/hide, persisted per browser (no DB needed).
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
   const [colPanelOpen, setColPanelOpen] = useState(false);
   // Tashqi bosish / Escape'da yopiladi; profil menyusi kabi boshqa popover
   // ochilganда bu ham avtomatik yopiladi (bir vaqtda faqat bittasi ochiq).
   const colPanelRef = useDismissable<HTMLDivElement>(colPanelOpen, () => setColPanelOpen(false));
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 100;
+  const currentPage = table.page;
+  const setCurrentPage = (p: number) => table.setPage(p);
+  /**
+   * Virtualizatsiyadan keyin sahifalash deyarli keraksiz: DOM'da baribir ~34
+   * qator turadi. Chegara 250 ga ko'tarildi — 212 ta firma bitta uzluksiz
+   * ro'yxatga sig'adi va nazoratchi sahifa aylantirmasdan pastga suradi.
+   * Ma'lumot 250 dan oshsa, pager avtomatik qaytadi (himoya chegarasi).
+   */
+  const rowsPerPage = 250;
 
   // Stable refs for background logic to prevent callback churn
   const companiesRef = useRef(companies);
@@ -528,22 +659,44 @@ const OperationModule: React.FC<Props> = ({
     setIsLoading(false);
   }, [companies, operations, selectedPeriod, REPORT_COLUMNS]);
 
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
   // Removed data loading logic for obsolete formats.
 
 
   // ── Handle Cell Update ───────────────────────────────────────
+  /** Nazoratchilarga xabarnoma — parallel va katak yozuvidan mustaqil. */
+  const notifySupervisors = useCallback(async (colKey: string, newValue: string, companyName?: string) => {
+    const activeUserName = userNameRef.current || 'Buxgalter';
+    const colLabel = REPORT_COLUMNS.find(c => c.key === colKey)?.label || colKey;
+    const supervisors = (staffRef.current || [])
+      .filter(sv => (sv.role === 'supervisor' || sv.role === 'super_admin') && sv.id !== currentUserIdRef.current);
+    if (supervisors.length === 0) return;
+
+    let title = 'Yangi amal bajarildi';
+    let message = `${activeUserName} "${companyName}" firmasining "${colLabel}" holatini "${newValue}" qilib o'zgartirdi.`;
+    if (newValue === 'topshirildi') {
+      title = 'Tasdiqlash kutilmoqda';
+      message = `${activeUserName} "${companyName}" firmasining "${colLabel}" vazifasini topshirdi. Iltimos, tekshirib tasdiqlang.`;
+    } else if (newValue === '+') {
+      title = 'Vazifa tasdiqlandi';
+      message = `${companyName}: "${colLabel}" vazifasini ${activeUserName} tasdiqladi.`;
+    }
+
+    const results = await Promise.allSettled(
+      supervisors.map(sv => createNotification({
+        userId: sv.id, type: 'approval_request', title, message, link: '/reports',
+      }))
+    );
+    const failed = results.filter(r => r.status === 'rejected').length;
+    if (failed > 0) console.error(`[matrix] ${failed}/${supervisors.length} ta xabarnoma yuborilmadi`);
+  }, [REPORT_COLUMNS]);
+
   const handleCellUpdate = useCallback(async (companyId: string, colKey: string, newValue: string) => {
-    // 1. Optimistic Update
+    // 1. Optimistic Update — eski qiymatni saqlab qolamiz, chunki server
+    // rad etishi mumkin (masalan buxgalter tasdiqlangan katakni o'zgartirsa).
+    let prevValue: string | number | string[] | undefined;
     setRows(prevRows => prevRows.map(row => {
       if (row.companyId === companyId) {
+        prevValue = row[colKey];
         return { ...row, [colKey]: newValue };
       }
       return row;
@@ -560,37 +713,31 @@ const OperationModule: React.FC<Props> = ({
 
       onUpdate({ companyId, period: selectedPeriod, [colKey]: newValue });
 
-      // Notifications logic (non-blocking)
-      const activeUserName = userNameRef.current || 'Buxgalter';
-      const colLabel = REPORT_COLUMNS.find(c => c.key === colKey)?.label || colKey;
-      const supervisors = (staffRef.current || []).filter(s => s.role === 'supervisor' || s.role === 'super_admin');
-
-      for (const supervisor of supervisors) {
-        if (supervisor.id === currentUserIdRef.current) continue;
-
-        let title = 'Yangi amal bajarildi';
-        let message = `${activeUserName} "${company?.name}" firmasining "${colLabel}" holatini "${newValue}" qilib o'zgartirdi.`;
-
-        if (newValue === 'topshirildi') {
-          title = 'Tasdiqlash kutilmoqda';
-          message = `${activeUserName} "${company?.name}" firmasining "${colLabel}" vazifasini topshirdi. Iltimos, tekshirib tasdiqlang.`;
-        } else if (newValue === '+') {
-          title = 'Vazifa tasdiqlandi';
-          message = `${company?.name}: "${colLabel}" vazifasini ${activeUserName} tasdiqladi.`;
-        }
-
-        await createNotification({
-          userId: supervisor.id,
-          type: 'approval_request',
-          title: title,
-          message: message,
-          link: '/reports'
-        });
-      }
+      /**
+       * M10: xabarnomalar.
+       *
+       * Ikkita muammo bor edi. Birinchisi — izoh "non-blocking" deb yozilgan,
+       * lekin bu KETMA-KET `await` halqasi edi: har bir nazoratchi uchun alohida
+       * server chaqiruvi, katakni bosgan odam esa hammasini kutib turardi.
+       * Ikkinchisi va jiddiyrog'i — halqa `try` ICHIDA turardi, ya'ni bitta
+       * xabarnoma yuborilmasa `catch` ishga tushib, ALLAQACHON SAQLANGAN
+       * katakni ortga qaytarardi va xato ko'rsatardi.
+       *
+       * Endi ular parallel ketadi va yozuvdan keyin, alohida — xabarnoma
+       * xatosi hisobot yozuvining natijasiga ta'sir qilmaydi.
+       */
+      void notifySupervisors(colKey, newValue, company?.name);
 
     } catch (e: any) {
       console.error('Update error:', e);
-      toast.error('Saqlashda xatolik!');
+      // Optimistik o'zgarishni ORQAGA QAYTARISH — aks holda katak saqlanmagan
+      // qiymatni ko'rsatib turaveradi va foydalanuvchi ishonib qoladi.
+      setRows(prevRows => prevRows.map(row =>
+        row.companyId === companyId ? { ...row, [colKey]: prevValue } : row
+      ));
+      // Server sababni o'zbekcha qaytaradi (masalan "Tasdiqlash faqat
+      // nazoratchi huquqida") — uni yashirmasdan ko'rsatamiz.
+      toast.error(e?.message || 'Saqlashda xatolik!');
     }
   }, [selectedPeriod, onUpdate, REPORT_COLUMNS]); // Minimal dependencies
 
@@ -598,7 +745,31 @@ const OperationModule: React.FC<Props> = ({
   const handleClearColumn = useCallback(async (colKey: string) => {
     if (userRole !== 'super_admin') return;
     const colLabel = REPORT_COLUMNS.find(c => c.key === colKey)?.label || colKey;
-    if (!window.confirm(`Haqiqatdan ham "${colLabel}" ustunini "${selectedPeriod}" oy uchun tozalab tashlamoqchimisiz?`)) return;
+
+    // Ko'lam AYTIB beriladi: brauzerning `confirm` oynasi nechta katak
+    // yo'qolishini ko'rsata olmasdi. Ustun nomini qo'lda yozdirish esa
+    // tasodifan Enter bosib yuborishning oldini oladi.
+    const affected = rows.filter(r => String(r[colKey] ?? '').trim() !== '').length;
+    const ok = await confirm({
+      title: `"${colLabel}" ustuni tozalansinmi?`,
+      description: (
+        <>
+          <strong>{selectedPeriod}</strong> davri uchun{' '}
+          <strong>{affected} ta firmada</strong> to&apos;ldirilgan qiymat o&apos;chiriladi.
+          Bu amalni ortga qaytarib bo&apos;lmaydi.
+        </>
+      ),
+      confirmText: colLabel,
+      confirmLabel: 'Tozalash',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    // Optimistik tozalashdan OLDIN eski qiymatlarni saqlab qolamiz: server rad etsa,
+    // qaytarish uchun. Busiz muvaffaqiyatsiz tozalash ekranda bo'sh ustunni qoldirardi,
+    // bazada esa ma'lumot joyida turardi — xodim yo'q hisobotni "topshirilmagan" deb
+    // o'qib, butun oyni qayta kiritishga tushardi.
+    const snapshot = new Map(rows.map(r => [r.companyId, r[colKey]]));
 
     try {
       skipNextSyncRef.current = true;
@@ -608,9 +779,12 @@ const OperationModule: React.FC<Props> = ({
       toast.success('Ustun tozalandi');
     } catch (e) {
       console.error(e);
-      toast.error('Xatolik yuz berdi');
+      setRows(prev => prev.map(r =>
+        snapshot.has(r.companyId) ? { ...r, [colKey]: snapshot.get(r.companyId) } : r
+      ));
+      toast.error('Ustun tozalanmadi — qiymatlar qaytarildi');
     }
-  }, [selectedPeriod, userRole, onUpdate, REPORT_COLUMNS]);
+  }, [selectedPeriod, userRole, onUpdate, REPORT_COLUMNS, rows, confirm]);
 
   // ── Computed data ────────────────────────────────────────────
   const accountants = useMemo(() => {
@@ -627,8 +801,32 @@ const OperationModule: React.FC<Props> = ({
     return [...set].sort();
   }, [staff, rows]);
 
+  const visibleColumns = useMemo(() => {
+    let base = filterGroup === 'all' ? REPORT_COLUMNS : REPORT_COLUMNS.filter(c => c.group === filterGroup);
+    if (filterCategory !== 'all') {
+      base = base.filter(c => (tryGetColumnCategory(c.key as never) || 'OPERATSION') === filterCategory);
+    }
+    return base.filter(c => !hiddenCols.has(c.key));
+  }, [filterGroup, filterCategory, REPORT_COLUMNS, hiddenCols]);
+
+  /** Qator bo'yicha bajarilish: talab qilingan kataklardan nechtasi yopilgan. */
+  const rowCompletion = useCallback((row: ReportRow) => {
+    let total = 0, done = 0;
+    for (const col of visibleColumns) {
+      const check = (v: unknown) => {
+        const val = String(v ?? '').trim().toLowerCase();
+        if (!val || val === '0' || val === 'topshirmaydi') return;
+        total++;
+        if (val === '+' || val === 'topshirildi') done++;
+      };
+      check(row[col.key]);
+      if ((col as { isSplit?: boolean }).isSplit) check(row[(col as unknown as { payKey: string }).payKey]);
+    }
+    return total > 0 ? done / total : 0;
+  }, [visibleColumns]);
+
   const filteredRows = useMemo(() => {
-    return rows.filter(r => {
+    const out = rows.filter(r => {
       if (debouncedSearch) {
         const s = debouncedSearch.toLowerCase();
         if (!r.name.toLowerCase().includes(s) && !r.inn.includes(s) && !r.accountant.toLowerCase().includes(s)) return false;
@@ -636,7 +834,19 @@ const OperationModule: React.FC<Props> = ({
       if (filterAccountant !== 'all' && r.accountant !== filterAccountant) return false;
       return true;
     });
-  }, [rows, debouncedSearch, filterAccountant]);
+
+    // M3: matritsada saralash umuman yo'q edi — nazoratchi "eng ko'p qolgan
+    // firmalar" yoki "eng orqada qolgan buxgalter" bo'yicha tartiblay olmasdi.
+    const key = table.sortKey;
+    if (!key) return out;
+    const dir = table.sortDir === 'asc' ? 1 : -1;
+    return [...out].sort((a, b) => {
+      if (key === 'completion') return (rowCompletion(a) - rowCompletion(b)) * dir;
+      const av = String(a[key] ?? ''), bv = String(b[key] ?? '');
+      if (key === 'inn') return av.localeCompare(bv, undefined, { numeric: true }) * dir;
+      return av.localeCompare(bv, 'uz') * dir;
+    });
+  }, [rows, debouncedSearch, filterAccountant, table.sortKey, table.sortDir, rowCompletion]);
 
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
@@ -645,10 +855,65 @@ const OperationModule: React.FC<Props> = ({
 
   const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
 
-  // Reset page on search/filter
+  /**
+   * M2 — VIRTUALIZATSIYA.
+   *
+   * Sahifada 100 qator × ~57 katak ≈ 5,700 ta `StatusCell` bir vaqtda DOM'da
+   * turardi, har biri o'z `useState` ×3 va `useRef` ×2 bilan. `React.memo`
+   * yordam berardi, lekin komponentlar baribir yaratilardi va ilk render
+   * sezilarli sekin edi.
+   *
+   * Endi faqat ko'rinadigan qatorlar chiziladi (~20 + overscan). Yopishqoq
+   * sarlavha `<thead>` da qolgani uchun buzilmaydi; muzlatilgan ustunlar ham
+   * ta'sirlanmaydi, chunki virtualizatsiya faqat VERTIKAL.
+   *
+   * Qator balandligi qat'iy 32px (`h-8`), shuning uchun o'lchash shart emas.
+   */
+  /**
+   * Barqaror callback. Avval bu `<OperationRow>` ga inline arrow sifatida
+   * berilardi, ya'ni HAR renderda yangi havola bo'lardi va `React.memo`
+   * taqqoslashi doim `false` qaytarardi — memo umuman ishlamasdi.
+   */
+  const handleCompanySelect = useCallback((id: string) => {
+    const comp = companies.find(c => c.id === id);
+    if (comp) onCompanySelect(comp);
+  }, [companies, onCompanySelect]);
+
+  /**
+   * `<thead>` scroll konteynerida joy egallaydi (u `sticky`, `fixed` emas).
+   * Shu sababli tbody'ning birinchi qatori 0 dan emas, sarlavha balandligidan
+   * keyin boshlanadi. `scrollMargin` busiz virtualizer qaysi qatorni
+   * ko'rsatishni ~2 qatorga xato hisoblaydi.
+   */
+  const tbodyRef = useRef<HTMLTableSectionElement>(null);
+  const [scrollMargin, setScrollMargin] = useState(0);
+
   useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, filterAccountant, filterGroup, selectedPeriod]);
+    const measure = () => {
+      const tb = tbodyRef.current;
+      const sc = matrixScrollRef.current;
+      if (!tb || !sc) return;
+      setScrollMargin(tb.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [isLoading, visibleColumns.length]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: paginatedRows.length,
+    getScrollElement: () => matrixScrollRef.current,
+    estimateSize: () => 32,
+    overscan: 6,
+    scrollMargin,
+  });
+
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const padTop = virtualRows.length > 0 ? virtualRows[0].start - scrollMargin : 0;
+  const padBottom =
+    virtualRows.length > 0
+      ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
+      : 0;
 
   // Load / persist the hidden-column set for this browser.
   useEffect(() => {
@@ -669,12 +934,30 @@ const OperationModule: React.FC<Props> = ({
     });
   }, []);
 
-  const visibleColumns = useMemo(() => {
-    const base = filterGroup === 'all' ? REPORT_COLUMNS : REPORT_COLUMNS.filter(c => c.group === filterGroup);
-    return base.filter(c => !hiddenCols.has(c.key));
-  }, [filterGroup, REPORT_COLUMNS, hiddenCols]);
 
-  // Stats
+
+  // Sarlavha bandlari: KETMA-KET kelgan bir xil guruhli ustunlar bitta band.
+  // Avval guruh bo'yicha JAMI hisoblanardi va har guruhga bitta <th> chiqarilardi
+  // — admin ustunlarni aralashtirib tartiblasa (applyColumnConfig `order`), band
+  // colSpan'i pastdagi ustunlardan siljib ketardi. Endi band doim o'z ustunlari
+  // ustida turadi.
+  const headerBands = useMemo(() => {
+    const bands: { name: string; category: ReportCategory | null; span: number }[] = [];
+    visibleColumns.forEach(c => {
+      const visualCols = (c as any).isSplit ? 2 : 1;
+      const last = bands[bands.length - 1];
+      if (last && last.name === c.group) last.span += visualCols;
+      else bands.push({ name: c.group, category: categoryOf(c.key), span: visualCols });
+    });
+    return bands;
+  }, [visibleColumns]);
+
+  // Bo'lim chegarasi: shu ustundan KEYIN yangi kategoriya boshlanadi.
+  const categoryEdges = useMemo(() => buildCategoryEdges(visibleColumns), [visibleColumns]);
+
+  const [showStatsModal, setShowStatsModal] = useState(false);
+
+  // Real-time % stats calculation
   const stats = useMemo(() => {
     let done = 0, notDone = 0, na = 0, warning = 0, text = 0;
     const countValue = (v: string) => {
@@ -694,7 +977,86 @@ const OperationModule: React.FC<Props> = ({
         }
       });
     });
-    return { done, notDone, na, warning, text };
+
+    const totalRequired = done + notDone + warning + text;
+    const percent = totalRequired > 0 ? Math.round((done / totalRequired) * 100) : 0;
+    const exactPercent = totalRequired > 0 ? Number(((done / totalRequired) * 100).toFixed(1)) : 0;
+
+    return { done, notDone, na, warning, text, totalRequired, percent, exactPercent };
+  }, [filteredRows, visibleColumns]);
+
+  // Per-accountant real-time progress
+  const accountantProgress = useMemo(() => {
+    const map = new Map<string, { total: number; done: number; notDone: number; warning: number }>();
+    rows.forEach(row => {
+      const acc = row.accountant && row.accountant !== '—' ? row.accountant : 'Biriktirilmagan';
+      if (!map.has(acc)) map.set(acc, { total: 0, done: 0, notDone: 0, warning: 0 });
+      const entry = map.get(acc)!;
+
+      visibleColumns.forEach(col => {
+        const val = String(row[col.key] || '').trim().toLowerCase();
+        if (val && val !== '0' && val !== 'topshirmaydi') {
+          entry.total++;
+          if (val === '+' || val === 'topshirildi') entry.done++;
+          else if (val === '-') entry.notDone++;
+          else if (val === 'kartoteka') entry.warning++;
+        }
+        if ((col as any).isSplit) {
+          const pVal = String(row[(col as any).payKey] || '').trim().toLowerCase();
+          if (pVal && pVal !== '0' && pVal !== 'topshirmaydi') {
+            entry.total++;
+            if (pVal === '+' || pVal === 'topshirildi') entry.done++;
+            else if (pVal === '-') entry.notDone++;
+            else if (pVal === 'kartoteka') entry.warning++;
+          }
+        }
+      });
+    });
+
+    return Array.from(map.entries()).map(([name, data]) => ({
+      name,
+      total: data.total,
+      done: data.done,
+      notDone: data.notDone,
+      warning: data.warning,
+      percent: data.total > 0 ? Math.round((data.done / data.total) * 100) : 0
+    })).sort((a, b) => b.percent - a.percent);
+  }, [rows, visibleColumns]);
+
+  // Per-category real-time progress
+  const categoryProgress = useMemo(() => {
+    const map = new Map<ReportCategory, { total: number; done: number }>();
+    visibleColumns.forEach(col => {
+      const cat = tryGetColumnCategory(col.key as any) || 'OPERATSION';
+      if (!map.has(cat)) map.set(cat, { total: 0, done: 0 });
+      const entry = map.get(cat)!;
+
+      filteredRows.forEach(row => {
+        const val = String(row[col.key] || '').trim().toLowerCase();
+        if (val && val !== '0' && val !== 'topshirmaydi') {
+          entry.total++;
+          if (val === '+' || val === 'topshirildi') entry.done++;
+        }
+        if ((col as any).isSplit) {
+          const pVal = String(row[(col as any).payKey] || '').trim().toLowerCase();
+          if (pVal && pVal !== '0' && pVal !== 'topshirmaydi') {
+            entry.total++;
+            if (pVal === '+' || pVal === 'topshirildi') entry.done++;
+          }
+        }
+      });
+    });
+
+    return (['OPERATSION', 'SOLIQ', 'STATISTIKA', 'MAXSUS'] as ReportCategory[]).map(cat => {
+      const data = map.get(cat) || { total: 0, done: 0 };
+      return {
+        category: cat,
+        label: CATEGORY_LABEL_UZ[cat],
+        total: data.total,
+        done: data.done,
+        percent: data.total > 0 ? Math.round((data.done / data.total) * 100) : 0
+      };
+    });
   }, [filteredRows, visibleColumns]);
 
   const uniqueGroups = [...new Set(REPORT_COLUMNS.map(c => c.group))];
@@ -759,24 +1121,63 @@ const OperationModule: React.FC<Props> = ({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-5">
             <div>
-              <h1 className="text-sm font-black uppercase tracking-widest leading-tight" style={{ color: 'var(--text)' }}>{t.matrixTitle}</h1>
+              <h1 className="text-xl font-semibold leading-tight" style={{ color: 'var(--text)' }}>{t.matrixTitle}</h1>
               <p className="text-micro font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>
                 {filteredRows.length} / {rows.length} {t.taKorxona} · <span style={{ color: 'var(--primary)' }}>{selectedPeriod}</span>
               </p>
             </div>
-            {/* Mini Stats */}
-            <div className="hidden xl:flex items-center gap-3">
-              {[
-                { icon: '✓', count: stats.done, color: 'var(--success)', bg: tint('var(--success)', 12) },
-                { icon: '✗', count: stats.notDone, color: 'var(--danger)', bg: tint('var(--danger)', 12) },
-                { icon: '!', count: stats.warning, color: 'var(--warning)', bg: tint('var(--warning)', 12) },
-                { icon: '✎', count: stats.text, color: 'var(--primary)', bg: 'var(--primary-ghost)' },
-              ].map(s => (
-                <div key={s.icon} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <span className="font-bold text-meta w-4 h-4 flex items-center justify-center rounded-lg" style={{ color: s.color, background: s.bg }}>{s.icon}</span>
-                  <span className="font-bold text-meta tabular-nums" style={{ color: 'var(--text)' }}>{s.count}</span>
+            {/* Real-Time Percentage Progress Widget */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowStatsModal(true)}
+                className="flex items-center gap-3.5 px-3.5 py-1.5 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface)] border border-[var(--border)] transition-all cursor-pointer group shadow-sm"
+                title="Batafsil topshirish % statistikasini ko'rish"
+              >
+                <div className="flex flex-col items-start">
+                  <div className="flex items-center gap-2">
+                    <span className="text-micro font-semibold uppercase tracking-wider text-[var(--text-3)]">
+                      Topshirildi:
+                    </span>
+                    <span className="text-xs font-semibold tabular-nums text-[var(--primary)]">
+                      {stats.exactPercent}%
+                    </span>
+                    {/* Avval bu yerda "REAL-VAQT" yozuvi va pulsatsiyalanuvchi
+                        nuqta turardi. Bu noto'g'ri edi: ma'lumot `unstable_cache`
+                        orqali 5 daqiqagacha eskirgan bo'lishi mumkin, sahifa esa
+                        har 15 soniyada yangilanadi. Endi yorliq nimani anglatsa,
+                        shuni yozadi. `py-0.2` ham olib tashlandi — Tailwind'da
+                        bunday qadam yo'q, u jim ravishda hech narsa bermasdi. */}
+                    <span
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-micro font-bold"
+                      style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }}
+                      title="Sahifa har 15 soniyada yangilanadi"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--success)' }} />
+                      AVTO-YANGILANISH
+                    </span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-32 sm:w-44 h-2 bg-[var(--border)] rounded-full overflow-hidden mt-1">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${stats.percent}%`,
+                        // Xom hex o'rniga tokenlar: qorong'i rejimda palitra
+                        // qiymatlari fon bilan yetarli kontrast bermasdi.
+                        background:
+                          stats.percent >= 80
+                            ? 'var(--success)'
+                            : stats.percent >= 50
+                            ? 'var(--warning)'
+                            : 'var(--danger)',
+                      }}
+                    />
+                  </div>
                 </div>
-              ))}
+                <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--primary-ghost)] text-[var(--primary)] group-hover:scale-110 transition-transform">
+                  <BarChart2 size={16} />
+                </div>
+              </button>
             </div>
           </div>
 
@@ -789,6 +1190,39 @@ const OperationModule: React.FC<Props> = ({
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }} />
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-3)' }} />
             </div>
+
+            {/* Bajarilish bo'yicha saralash. Matritsada bo'sh ustun yo'q, shuning
+                uchun bu tartib asboblar panelidan boshqariladi. Nazoratchi uchun
+                eng kerakli savol shu: "qaysi firmalar eng orqada?" */}
+            <button
+              onClick={() => table.toggleSort('completion')}
+              aria-pressed={table.sortKey === 'completion'}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-meta font-bold uppercase tracking-widest shadow-sm"
+              style={
+                table.sortKey === 'completion'
+                  ? { background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }
+                  : { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }
+              }
+              title="Bajarilish foizi bo'yicha saralash"
+            >
+              Bajarilish
+              {table.sortKey === 'completion' && (table.sortDir === 'asc' ? ' ↑' : ' ↓')}
+            </button>
+
+            {/* Faol kategoriya chipi — statistika oynasidan qo'yilgan filtr
+                ko'rinmas bo'lib qolmasligi uchun. Busiz foydalanuvchi ustunlar
+                nega kamayganini bilmasdi va uni tozalay olmasdi. */}
+            {filterCategory !== 'all' && (
+              <button
+                onClick={() => setFilterCategory('all')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-meta font-bold uppercase tracking-widest shadow-sm"
+                style={{ background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                title="Kategoriya filtrini olib tashlash"
+              >
+                {CATEGORY_LABEL_UZ[filterCategory]}
+                <X size={13} />
+              </button>
+            )}
 
             {/* Accountant Filter */}
             <div className="relative">
@@ -862,7 +1296,7 @@ const OperationModule: React.FC<Props> = ({
                             groupCols.forEach(c => { if (allShown) next.add(c.key); else next.delete(c.key); });
                             return next;
                           })}
-                          className="w-full flex items-center justify-between text-micro font-black uppercase tracking-widest mb-1 hover:opacity-80"
+                          className="w-full flex items-center justify-between text-micro font-semibold uppercase tracking-widest mb-1 hover:opacity-80"
                           style={{ color: 'var(--text-3)' }}
                           title={allShown ? "Guruhni yashirish" : "Guruhni ko'rsatish"}
                         >
@@ -884,10 +1318,8 @@ const OperationModule: React.FC<Props> = ({
             </div>
 
             <button onClick={handleExport}
-              className="font-bold px-4 py-2 rounded-xl text-meta flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest"
+              className="font-bold px-4 py-2 rounded-xl text-meta flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest icon-btn-success"
               style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--success)'; e.currentTarget.style.borderColor = 'var(--success)'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
             >
               <Download size={14} /> Excel
             </button>
@@ -926,7 +1358,7 @@ const OperationModule: React.FC<Props> = ({
           (z-40) va uning USTUNLAR ochilma menyusidan oldinga o'tib ketardi
           (menyu o'rtasidan sarlavha teshib chiqardi). isolation:isolate
           jadvalning ichki z-indekslarini shu quti ichida ushlaydi. */}
-      <div className="flex-1 overflow-auto relative isolate dashboard-card mx-4 my-4 !shadow-sm">
+      <div ref={matrixScrollRef} className="flex-1 overflow-auto relative isolate dashboard-card mx-4 my-4 !shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
@@ -946,64 +1378,61 @@ const OperationModule: React.FC<Props> = ({
             <thead className="sticky top-0 z-50">
               {/* Group row */}
               <tr className="h-7">
-                <th colSpan={4} className="sticky top-0 left-0 z-[100] px-3 py-1.5 text-left text-micro font-black uppercase tracking-widest w-[408px] min-w-[408px]" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)', color: 'var(--text-3)' }}>
+                <th colSpan={4} className="sticky top-0 left-0 z-[100] px-3 py-1.5 text-left text-micro font-semibold uppercase tracking-widest w-[408px] min-w-[408px]" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)', color: 'var(--text-3)' }}>
                   {t.firmTable}
                 </th>
-                {(() => {
-                  const groupCounts = new Map<string, number>();
-                  visibleColumns.forEach(c => {
-                    const visualCols = (c as any).isSplit ? 2 : 1;
-                    groupCounts.set(c.group, (groupCounts.get(c.group) || 0) + visualCols);
-                  });
-
-                  // Har guruh bir xil darajada nozik tint oladi (color-mix,
-                  // 7%) — avval ba'zilari qattiq rgba, ba'zilari to'qroq -bg
-                  // token edi, natijada loyqa/notekis bandlar chiqardi.
-                  const groupColors: Record<string, { bg: string; color: string }> = {
-                    'Oylik': { bg: tint('var(--brand)', 7), color: 'var(--brand)' },
-                    'Soliqlar': { bg: tint('var(--warning)', 7), color: 'var(--warning)' },
-                    'Soliq H/T': { bg: tint('var(--accent-purple)', 7), color: 'var(--accent-purple)' },
-                    'Yillik': { bg: tint('var(--success)', 7), color: 'var(--success)' },
-                    'Statistika': { bg: tint('var(--info)', 7), color: 'var(--info)' },
-                    'IT Park': { bg: tint('var(--accent-indigo)', 7), color: 'var(--accent-indigo)' },
-                    'Komunalka': { bg: tint('var(--danger)', 7), color: 'var(--danger)' },
-                  };
-
-                  return [...groupCounts.entries()].map(([name, count]) => {
-                    const style = groupColors[name] || { bg: 'var(--surface-2)', color: 'var(--text-3)' };
-                    return (
-                      <th key={name} colSpan={count} className="sticky top-0 px-1 py-1.5 text-center text-micro font-black uppercase tracking-wider" style={{ background: `linear-gradient(${style.bg}, ${style.bg}), var(--surface-2)`, color: style.color, borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>
-                        {name}
-                      </th>
-                    );
-                  });
-                })()}
+                {headerBands.map((band, i) => {
+                  const color = band.category ? CATEGORY_COLOR[band.category] : 'var(--text-3)';
+                  const bg = band.category ? tint(color, 7) : 'var(--surface-2)';
+                  const nextIsNewCategory =
+                    headerBands[i + 1] && headerBands[i + 1].category !== band.category;
+                  return (
+                    <th
+                      key={`${band.name}-${i}`}
+                      colSpan={band.span}
+                      className="sticky top-0 px-1 py-1.5 text-center text-micro font-semibold uppercase tracking-wider"
+                      style={{
+                        background: `linear-gradient(${bg}, ${bg}), var(--surface-2)`,
+                        color,
+                        borderBottom: '1px solid var(--border)',
+                        // Bo'limlar orasida qalinroq chegara — bo'limlar ko'zga
+                        // darhol ajralib turadi.
+                        borderRight: nextIsNewCategory
+                          ? `2px solid ${tint(color, 45)}`
+                          : '1px solid var(--border)',
+                      }}
+                      title={band.category ? CATEGORY_LABEL_UZ[band.category] : undefined}
+                    >
+                      {band.name}
+                    </th>
+                  );
+                })}
               </tr>
               {/* Column header row */}
               <tr className="h-9">
                 <th className="sticky top-[28px] left-0 z-[100] px-2 py-2 text-center text-micro font-bold w-10 min-w-[40px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>#</th>
-                <th className="sticky top-[28px] left-10 z-[100] px-3 py-2 text-left text-micro font-bold w-48 min-w-[192px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>{t.companyName}</th>
-                <th className="md:sticky md:top-[28px] md:left-[232px] z-[100] px-1.5 py-2 text-center text-micro font-bold w-20 min-w-[80px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>INN</th>
-                <th className="md:sticky md:top-[28px] md:left-[312px] z-[100] px-2 py-2 text-left text-micro font-bold w-24 min-w-[96px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)' }}>BUXGALTER</th>
+                <th className="sticky top-[28px] left-10 z-[100] px-3 py-2 text-left text-micro font-bold w-48 min-w-[192px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }} aria-sort={table.sortKey === 'name' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('name')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">{t.companyName}{table.sortKey === 'name' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
+                <th className="md:sticky md:top-[28px] md:left-[232px] z-[100] px-1.5 py-2 text-center text-micro font-bold w-20 min-w-[80px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }} aria-sort={table.sortKey === 'inn' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('inn')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">INN{table.sortKey === 'inn' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
+                <th className="md:sticky md:top-[28px] md:left-[312px] z-[100] px-2 py-2 text-left text-micro font-bold w-24 min-w-[96px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)' }} aria-sort={table.sortKey === 'accountant' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('accountant')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">BUXGALTER{table.sortKey === 'accountant' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
                 {visibleColumns.map(col => {
                   if ((col as any).isSplit) {
                     return (
                       <React.Fragment key={col.key}>
                         <th
                           className="sticky top-[28px] px-0.5 py-2 text-center w-10 text-micro cursor-help"
-                          style={{ background: `linear-gradient(${tint('var(--success)', 8)}, ${tint('var(--success)', 8)}), var(--surface)`, borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
+                          style={{ background: `linear-gradient(${tint('var(--success)', 8)}, ${tint('var(--success)', 8)}), var(--surface)`, borderBottom: `2px solid ${tint(categoryColor(col.key), 35)}`, borderRight: '1px solid var(--border)' }}
                           title={col.label}
                         >
-                          <span className="text-micro font-black tracking-widest" style={{ color: 'var(--success)' }}>{col.short}</span>
-                          <div className="text-2xs font-black uppercase tracking-tighter" style={{ color: 'var(--success)', opacity: 0.75 }}>Xis.</div>
+                          <span className="text-micro font-semibold tracking-widest" style={{ color: 'var(--success)' }}>{col.short}</span>
+                          <div className="text-2xs font-semibold uppercase tracking-tighter" style={{ color: 'var(--success)', opacity: 0.75 }}>Xis.</div>
                         </th>
                         <th
                           className="sticky top-[28px] px-0.5 py-2 text-center w-10 cursor-help"
-                          style={{ background: `linear-gradient(${tint('var(--warning)', 8)}, ${tint('var(--warning)', 8)}), var(--surface)`, borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
+                          style={{ background: `linear-gradient(${tint('var(--warning)', 8)}, ${tint('var(--warning)', 8)}), var(--surface)`, borderBottom: `2px solid ${tint(categoryColor(col.key), 35)}`, borderRight: categoryEdges.has(col.key) ? `2px solid ${tint(categoryColor(col.key), 45)}` : '1px solid var(--border)' }}
                           title={`${col.label} to'lov`}
                         >
-                          <span className="text-micro font-black tracking-widest" style={{ color: 'var(--warning)' }}>{(col as any).payShort}</span>
-                          <div className="text-2xs font-black uppercase tracking-tighter" style={{ color: 'var(--warning)', opacity: 0.75 }}>To&apos;l</div>
+                          <span className="text-micro font-semibold tracking-widest" style={{ color: 'var(--warning)' }}>{(col as any).payShort}</span>
+                          <div className="text-2xs font-semibold uppercase tracking-tighter" style={{ color: 'var(--warning)', opacity: 0.75 }}>To&apos;l</div>
                         </th>
                       </React.Fragment>
                     );
@@ -1012,7 +1441,15 @@ const OperationModule: React.FC<Props> = ({
                     <th
                       key={col.key}
                       className="sticky top-[28px] px-0.5 py-2 text-center w-10 transition-colors cursor-help group/header"
-                      style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
+                      style={{
+                        background: 'var(--surface)',
+                        // Bo'lim rangidagi uzluksiz tag chizig'i — qaysi ustun
+                        // qaysi bo'limga tegishli ekani bir qarashda ko'rinadi.
+                        borderBottom: `2px solid ${tint(categoryColor(col.key), 35)}`,
+                        borderRight: categoryEdges.has(col.key)
+                          ? `2px solid ${tint(categoryColor(col.key), 45)}`
+                          : '1px solid var(--border)',
+                      }}
                       title={col.label + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
                       onContextMenu={(e) => {
                         if (userRole === 'super_admin' || userRole === 'admin') {
@@ -1020,12 +1457,8 @@ const OperationModule: React.FC<Props> = ({
                           handleClearColumn(col.key);
                         }
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'var(--surface)'}
                     >
-                      <span className="text-micro font-black uppercase tracking-widest transition-colors" style={{ color: 'var(--text-3)' }}
-                        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+                      <span className="text-micro font-semibold uppercase tracking-widest transition-colors icon-btn-accent" style={{ color: 'var(--text-3)' }}
                       >
                         {col.short}
                       </span>
@@ -1034,25 +1467,30 @@ const OperationModule: React.FC<Props> = ({
                 })}
               </tr>
             </thead>
-            <tbody>
-              {paginatedRows.map((row) => (
-                <OperationRow
-                  key={String(row.companyId || row.index)}
-                  row={row}
-                  idx={row.index - 1}
-                  visibleColumns={visibleColumns as any}
-                  userRole={userRole}
-                  activeServices={row.activeServices}
-                  proofMeta={proofMeta}
-                  onCellUpdate={handleCellUpdate}
-                  onCompanySelect={(id) => {
-                    const comp = companies.find(c => c.id === id);
-                    if (comp) onCompanySelect(comp);
-                  }}
-                  onRequestSubmit={openSubmitModal}
-                  onViewProof={openViewModal}
-                />
-              ))}
+            <tbody ref={tbodyRef}>
+              {/* Yuqoridagi ko'rinmas qatorlar o'rnini bo'sh balandlik egallaydi —
+                  scrollbar uzunligi to'g'ri qoladi. */}
+              {padTop > 0 && <tr aria-hidden="true" style={{ height: padTop }} />}
+              {virtualRows.map((v) => {
+                const row = paginatedRows[v.index];
+                if (!row) return null;
+                return (
+                  <OperationRow
+                    key={String(row.companyId || row.index)}
+                    row={row}
+                    idx={row.index - 1}
+                    visibleColumns={visibleColumns as any}
+                    userRole={userRole}
+                    activeServices={row.activeServices}
+                    proofMeta={proofMeta}
+                    onCellUpdate={handleCellUpdate}
+                    onCompanySelect={handleCompanySelect}
+                    onRequestSubmit={openSubmitModal}
+                    onViewProof={openViewModal}
+                  />
+                );
+              })}
+              {padBottom > 0 && <tr aria-hidden="true" style={{ height: padBottom }} />}
             </tbody>
           </table>
         )}
@@ -1080,21 +1518,18 @@ const OperationModule: React.FC<Props> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
-                setCurrentPage(p => Math.max(1, p - 1));
-                const matrix = document.querySelector('.overflow-auto');
-                if (matrix) matrix.scrollTo({ top: 0, behavior: 'smooth' });
+                setCurrentPage(Math.max(1, currentPage - 1));
+                matrixScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === 1}
               className="px-4 py-2 rounded-xl text-micro font-bold uppercase tracking-widest transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-              onMouseEnter={e => { if (!e.currentTarget.disabled) { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--text-3)'; } }}
-              onMouseLeave={e => { if (!e.currentTarget.disabled) { e.currentTarget.style.color = 'var(--text-2)'; e.currentTarget.style.borderColor = 'var(--border)'; } }}
             >
               ← Oldingi
             </button>
 
             <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-              <span className="text-meta font-black tabular-nums" style={{ color: 'var(--text)' }}>
+              <span className="text-meta font-semibold tabular-nums" style={{ color: 'var(--text)' }}>
                 {currentPage}
               </span>
               <span className="text-meta font-bold" style={{ color: 'var(--text-3)' }}>/</span>
@@ -1105,9 +1540,8 @@ const OperationModule: React.FC<Props> = ({
 
             <button
               onClick={() => {
-                setCurrentPage(p => Math.min(totalPages, p + 1));
-                const matrix = document.querySelector('.overflow-auto');
-                if (matrix) matrix.scrollTo({ top: 0, behavior: 'smooth' });
+                setCurrentPage(Math.min(totalPages, currentPage + 1));
+                matrixScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === totalPages || totalPages === 0}
               className="px-4 py-2 rounded-xl text-micro font-bold uppercase tracking-widest transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1118,6 +1552,188 @@ const OperationModule: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      {/* ── Real-Time Progress Details Modal ── */}
+      {showStatsModal && createPortal(
+        <div
+          className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowStatsModal(false)}
+        >
+          <div
+            className="w-full max-w-3xl max-h-[85vh] flex flex-col dashboard-card !p-0 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-4 flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-2)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }}>
+                  <TrendingUp size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-wider text-[var(--text)] flex items-center gap-2">
+                    <span>Hisobotlar Topshirish Statistikasi</span>
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-micro font-bold"
+                      style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }}>
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--success)' }} />
+                      AVTO-YANGILANISH
+                    </span>
+                  </h3>
+                  <p className="text-micro font-bold text-[var(--text-3)] mt-0.5">
+                    {selectedPeriod} davri bo'yicha topshirilish holati
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowStatsModal(false)}
+                className="p-2 rounded-xl text-[var(--text-3)] hover:bg-[var(--surface)] transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Overall Progress Large Banner */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-[var(--surface-2)] to-[var(--surface)] border border-[var(--border)] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold tracking-wider text-[var(--text-2)]">
+                    Umumiy Bajarilish Ko'rsatkichi
+                  </span>
+                  <span className="text-2xl font-semibold tabular-nums text-[var(--primary)]">
+                    {stats.exactPercent}%
+                  </span>
+                </div>
+                <div className="w-full h-3 bg-[var(--border)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${stats.percent}%`,
+                      background:
+                        stats.percent >= 80
+                          ? 'var(--success)'
+                          : stats.percent >= 50
+                          ? 'var(--warning)'
+                          : 'var(--danger)',
+                    }}
+                  />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                  <div className="p-3 rounded-xl" style={{ background: 'var(--success-bg)', border: '1px solid var(--success-border)', color: 'var(--success)' }}>
+                    <span className="text-micro font-bold uppercase tracking-wider block">Topshirildi</span>
+                    <span className="text-base font-semibold tabular-nums">{stats.done} ta</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500">
+                    <span className="text-micro font-bold uppercase tracking-wider block">Qolib ketgan (-)</span>
+                    <span className="text-base font-semibold tabular-nums">{stats.notDone} ta</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                    <span className="text-micro font-bold uppercase tracking-wider block">Kartoteka</span>
+                    <span className="text-base font-semibold tabular-nums">{stats.warning} ta</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500">
+                    <span className="text-micro font-bold uppercase tracking-wider block">Topshirilishi kutilgan</span>
+                    <span className="text-base font-semibold tabular-nums">{stats.totalRequired} ta</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category Breakdown */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold tracking-wider text-[var(--text-2)] flex items-center gap-2">
+                  <PieChart size={16} className="text-[var(--primary)]" />
+                  <span>Kategoriyalar bo'yicha % topshirilishi</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {categoryProgress.map((cat) => (
+                    <div
+                      key={cat.category}
+                      onClick={() => {
+                        setFilterCategory(cat.category);
+                        setShowStatsModal(false);
+                      }}
+                      className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)] transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-[var(--text)] group-hover:text-[var(--primary)]">
+                          {cat.label}
+                        </span>
+                        <span className="text-xs font-semibold tabular-nums text-[var(--primary)]">
+                          {cat.percent}% ({cat.done}/{cat.total})
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${cat.percent}%`,
+                            background:
+                              cat.percent >= 80 ? 'var(--success)' : cat.percent >= 50 ? 'var(--warning)' : 'var(--danger)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Accountant Leaderboard Progress */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold tracking-wider text-[var(--text-2)] flex items-center gap-2">
+                  <BarChart2 size={16} className="text-[var(--primary)]" />
+                  <span>Buxgalterlar bo'yicha topshirish foizi (%)</span>
+                </h4>
+                <div className="space-y-2">
+                  {accountantProgress.map((acc) => (
+                    <div
+                      key={acc.name}
+                      onClick={() => {
+                        setFilterAccountant(acc.name);
+                        setShowStatsModal(false);
+                      }}
+                      className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)] transition-all cursor-pointer flex items-center justify-between gap-4 group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span className="text-xs font-bold truncate text-[var(--text)] group-hover:text-[var(--primary)]">
+                          {acc.name}
+                        </span>
+                        <div className="flex-1 max-w-[200px] h-2 bg-[var(--border)] rounded-full overflow-hidden hidden sm:block">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${acc.percent}%`,
+                              background:
+                                acc.percent >= 80 ? 'var(--success)' : acc.percent >= 50 ? 'var(--warning)' : 'var(--danger)',
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-micro font-mono text-[var(--text-3)]">
+                          {acc.done}/{acc.total} bajarildi
+                        </span>
+                        <span className="text-xs font-semibold tabular-nums px-2.5 py-0.5 rounded-lg bg-[var(--surface)] text-[var(--primary)] border border-[var(--border)]">
+                          {acc.percent}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-[var(--border)] bg-[var(--surface-2)] flex justify-end">
+              <button
+                onClick={() => setShowStatsModal(false)}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-[var(--surface)] text-[var(--text-2)] border border-[var(--border)] hover:bg-[var(--surface-2)] transition-all"
+              >
+                Yopish
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       <ReportProofModal
         state={proofModal}

@@ -50,12 +50,12 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               <div className={`${isVersionError ? 'text-[var(--accent-indigo)]' : 'text-[var(--danger)]'}`}>
                 {isVersionError ? <Sparkles size={24} /> : <AlertCircle size={24} />}
               </div>
-              <h2 className="text-sm font-bold text-[var(--text-primary)] dark:text-white uppercase">
+              <h2 className="text-sm font-bold text-[var(--text-primary)] dark:text-white">
                 {isVersionError ? 'Yangi versiya tayyor' : 'Xatolik yuz berdi'}
               </h2>
             </div>
 
-            <h2 className="text-3xl font-black text-[var(--text-primary)] dark:text-white mb-3 text-center uppercase tracking-tight">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)] dark:text-white mb-3 text-center tracking-tight">
               {isVersionError ? 'Yangi versiya tayyor' : 'Xatolik yuz berdi'}
             </h2>
             <p className="text-[var(--text-secondary)] text-body mb-6 font-medium">

@@ -192,6 +192,14 @@ export const OPERATION_TEMPLATES: OperationTemplate[] = [
         assignedRole: 'accountant',
         deadlineDay: 30,
         frequency: 'monthly'
+    },
+    {
+        key: 'ekologiya',
+        nameUz: 'Ekologiya Hisoboti',
+        nameRu: 'Экологический отчет',
+        assignedRole: 'accountant',
+        deadlineDay: 15,
+        frequency: 'monthly'
     }
 ];
 
@@ -252,6 +260,7 @@ export const FIELD_TO_DB_COLUMN: Record<OperationFieldKey, string> = {
     kom_suv: 'komSuv',
     kom_gaz: 'komGaz',
     kom_svet: 'komSvet',
+    ekologiya: 'ekologiya',
 };
 
 /** Prisma MonthlyReport (camelCase) yozuvini OperationEntry (snake_case) shakliga o'giradi. */
@@ -305,5 +314,6 @@ export const MAP_JSON_FIELD_TO_KEY: Record<string, OperationFieldKey> = {
     'Chiqadigan soliqlar': 'chiqadigan_soliqlar',
     'Hisoblangan oylik': 'hisoblangan_oylik',
     'Debitor kreditor': 'debitor_kreditor',
-    'Foyda va zarar': 'foyda_va_zarar'
+    'Foyda va zarar': 'foyda_va_zarar',
+    'Ekologiya': 'ekologiya'
 };

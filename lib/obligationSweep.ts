@@ -52,7 +52,13 @@ export interface SweepResult {
 export type TelegramSender = (chatId: bigint, text: string) => Promise<void>;
 
 function isUniqueViolation(e: unknown): boolean {
-  return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return true;
+  if (typeof e === "object" && e !== null) {
+    const err = e as { code?: string; message?: string };
+    if (err.code === "P2002") return true;
+    if (typeof err.message === "string" && err.message.includes("Unique constraint failed")) return true;
+  }
+  return false;
 }
 
 export async function sweepDeadlines(

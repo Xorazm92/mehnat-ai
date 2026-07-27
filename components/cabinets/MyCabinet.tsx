@@ -20,12 +20,17 @@ import {
   XCircle,
   Award,
   Wallet,
+  X,
+  Trophy,
 } from "lucide-react";
+import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import KpiLeaderboard from "@/components/KpiLeaderboard";
 import { updateUser, changePassword } from "@/server/users";
 import { ROLE_LABELS, ROLE_COLORS, isSeniorRole, type UserRole } from "@/lib/permissions";
 import { formatUzMonthYear, formatUzDateNumeric, formatUzTime, formatNum } from "@/lib/format";
 import { kpiCategoryLabel, adjustmentTypeLabel } from "@/lib/kpiLabels";
 import RiskBadge from "@/components/RiskBadge";
+import { Button } from "@/components/ui/Button";
 
 // ─── Tiplar ────────────────────────────────────────────────
 interface Profile {
@@ -54,6 +59,18 @@ interface CabinetCompany {
   riskLevel: string | null;
   companyStatus: string | null;
   myRole: string;
+  contractAmount?: string | number;
+  brandName?: string | null;
+  directorName?: string | null;
+  directorPhone?: string | null;
+  accountantPerc?: number | null;
+  accountantSum?: number | null;
+  chiefAccountantPerc?: number | null;
+  chiefAccountantSum?: number | null;
+  supervisorPerc?: number | null;
+  supervisorSum?: number | null;
+  bankClientPerc?: number | null;
+  bankClientSum?: number | null;
 }
 interface KpiRecord {
   id: string;
@@ -94,6 +111,7 @@ const TABS = [
   { id: "profile", label: "Profil", icon: UserIcon },
   { id: "companies", label: "Firmalarim", icon: Building2 },
   { id: "kpi", label: "KPI & Oylik", icon: TrendingUp },
+  { id: "leaderboard", label: "Jamoa reytingi", icon: Trophy },
   { id: "attendance", label: "Davomat", icon: CalendarCheck },
   { id: "security", label: "Xavfsizlik", icon: ShieldCheck },
 ] as const;
@@ -150,21 +168,21 @@ export default function MyCabinet(props: MyCabinetProps) {
   return (
     <div className="space-y-6 animate-fade-in pb-20">
       {/* ─── HEADER ─────────────────────────────── */}
-      <div className="dashboard-card p-6 flex flex-col lg:flex-row lg:items-center gap-6">
+      <div className="dashboard-card p-5 flex flex-col lg:flex-row lg:items-center gap-6">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div
-            className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center text-2xl font-black text-white shadow-md"
+            className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center text-2xl font-semibold text-white shadow-md"
             style={{ backgroundColor: profile.avatarColor || roleColor }}
           >
             {profile.fullName.charAt(0)}
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg font-black tracking-tight truncate" style={{ color: "var(--text)" }}>
+            <h2 className="text-sm font-semibold tracking-tight truncate" style={{ color: "var(--text)" }}>
               {profile.fullName}
             </h2>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <span
-                className="text-micro font-black uppercase tracking-widest px-2.5 py-1 rounded-lg"
+                className="text-micro font-semibold uppercase tracking-widest px-2.5 py-1 rounded-lg"
                 style={{ color: roleColor, background: `${roleColor}1a`, border: `1px solid ${roleColor}40` }}
               >
                 {roleLabel}
@@ -177,10 +195,11 @@ export default function MyCabinet(props: MyCabinetProps) {
         </div>
 
         {/* stat chips */}
-        <div className="grid grid-cols-3 gap-3 shrink-0">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
           <HeaderStat icon={Building2} value={companies.length} label="Firmalar" color="var(--accent-blue)" />
           <HeaderStat icon={Award} value={Math.round(kpi.totalScore)} label="KPI ball" color="var(--accent-purple)" />
           <HeaderStat icon={CalendarCheck} value={attendanceSummary.presentDays} label="Kelgan kun" color="var(--success)" />
+          <HeaderStat icon={TrendingUp} value={profile.rating ?? 0} label="Reyting" color="var(--warning)" />
         </div>
       </div>
 
@@ -190,18 +209,9 @@ export default function MyCabinet(props: MyCabinetProps) {
           const Icon = t.icon;
           const active = tab === t.id;
           return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 whitespace-nowrap transition-all shrink-0"
-              style={
-                active
-                  ? { background: "var(--accent-blue)", color: "#fff", boxShadow: "0 4px 12px color-mix(in srgb, var(--brand) 25%, transparent)" }
-                  : { background: "var(--card-bg)", color: "var(--text-secondary)", border: "1px solid var(--card-border)" }
-              }
-            >
+            <Button variant="primary" size="md" key={t.id} onClick={() => setTab(t.id)} className="whitespace-nowrap shrink-0" style={ active ? { background: "var(--accent-blue)", color: "#fff", boxShadow: "0 4px 12px color-mix(in srgb, var(--brand) 25%, transparent)" } : { background: "var(--card-bg)", color: "var(--text-secondary)", border: "1px solid var(--card-border)" } }>
               <Icon size={15} /> {t.label}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -212,6 +222,7 @@ export default function MyCabinet(props: MyCabinetProps) {
       {tab === "kpi" && (
         <KpiTab kpi={kpi} adjustments={adjustments} payrollSummary={payrollSummary} monthLabel={monthLabel} />
       )}
+      {tab === "leaderboard" && <KpiLeaderboard lang="uz" hideBonus={true} />}
       {tab === "attendance" && <AttendanceTab attendance={attendance} summary={attendanceSummary} />}
       {tab === "security" && <SecurityTab userId={profile.id} />}
     </div>
@@ -226,7 +237,7 @@ function HeaderStat({
   color,
 }: {
   icon: React.ElementType;
-  value: number;
+  value: number | string;
   label: string;
   color: string;
 }) {
@@ -236,7 +247,7 @@ function HeaderStat({
       style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}
     >
       <Icon size={16} style={{ color }} />
-      <span className="text-lg font-black tabular-nums mt-0.5" style={{ color: "var(--text)" }}>
+      <span className="text-lg font-semibold tabular-nums mt-0.5" style={{ color: "var(--text)" }}>
         {value}
       </span>
       <span className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
@@ -287,7 +298,7 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Editable card */}
-      <div className="dashboard-card p-6 lg:col-span-2 space-y-5">
+      <div className="dashboard-card p-5 lg:col-span-2 space-y-5">
         <SectionTitle icon={UserIcon} title="Shaxsiy ma'lumotlar" hint="O'zingiz tahrirlashingiz mumkin" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="F.I.SH *">
@@ -350,15 +361,15 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
           </FormField>
         </div>
         <div className="flex justify-end pt-2">
-          <button onClick={save} disabled={saving} className="c1-btn c1-btn-primary flex items-center gap-2 px-8 py-3 text-xs">
+          <Button variant="primary" size="md" onClick={save} disabled={saving}>
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? "Saqlanmoqda..." : "Saqlash"}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Read-only card */}
-      <div className="dashboard-card p-6 space-y-4 h-fit">
+      <div className="dashboard-card p-5 space-y-4 h-fit">
         <SectionTitle icon={ShieldCheck} title="Hisob ma'lumotlari" hint="Faqat admin o'zgartiradi" />
         <InfoRow icon={Mail} label="Login (email)" value={profile.email} />
         <InfoRow icon={Briefcase} label="Lavozim" value={ROLE_LABELS[profile.role as UserRole] || profile.role} />
@@ -375,35 +386,166 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
 
 // ─── FIRMALARIM TAB ────────────────────────────────────────
 function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [selectedCompany, setSelectedCompany] = useState<CabinetCompany | null>(null);
+
   if (companies.length === 0) {
     return <EmptyState icon={Building2} text="Sizga hali firma biriktirilmagan" />;
   }
+
+  const getMyShare = (c: CabinetCompany) => {
+    let perc = 0;
+    let sum = 0;
+    if (c.myRole === 'accountant') { perc = Number(c.accountantPerc || 0); sum = Number(c.accountantSum || 0); }
+    else if (c.myRole === 'chief_accountant') { perc = Number(c.chiefAccountantPerc || 0); sum = Number(c.chiefAccountantSum || 0); }
+    else if (c.myRole === 'supervisor') { perc = Number(c.supervisorPerc || 0); sum = Number(c.supervisorSum || 0); }
+    else if (c.myRole === 'bank_manager') { perc = Number(c.bankClientPerc || 0); sum = Number(c.bankClientSum || 0); }
+    
+    if (sum > 0) return { type: 'fixed', value: sum };
+    if (perc > 0) {
+        const contract = Number(c.contractAmount || 0);
+        return { type: 'percent', perc, value: (contract * perc) / 100 };
+    }
+    return { type: 'none', value: 0 };
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-      {companies.map((c) => {
-        const roleC = ROLE_COLORS[c.myRole as UserRole] || "var(--text-muted)";
-        return (
-          <div key={c.id} className="dashboard-card p-5 flex flex-col gap-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="text-sm font-black truncate" style={{ color: "var(--text)" }}>{c.name}</div>
-                <div className="text-meta font-mono mt-0.5" style={{ color: "var(--text-muted)" }}>INN: {c.inn}</div>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableToolbar view={viewMode} onViewChange={setViewMode} />
+      </div>
+      
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {companies.map((c) => {
+            const roleC = ROLE_COLORS[c.myRole as UserRole] || "var(--text-muted)";
+            return (
+              <div key={c.id} onClick={() => setSelectedCompany(c)} className="dashboard-card p-5 flex flex-col gap-3 cursor-pointer hover:-translate-y-0.5 transition-all active:scale-[0.99]">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{c.name}</div>
+                    <div className="text-meta font-mono mt-0.5" style={{ color: "var(--text-muted)" }}>INN: {c.inn}</div>
+                  </div>
+                  {c.riskLevel && (
+                    <RiskBadge riskLevel={c.riskLevel} companyStatus={c.companyStatus} companyName={c.name} compact />
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-micro font-bold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: "var(--text-secondary)", background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
+                    {c.taxRegime === 'turnover' ? 'Aylanma' : c.taxRegime === 'fixed' ? 'Belgilangan' : c.taxRegime === 'nds_profit' ? 'QQS' : c.taxRegime}
+                  </span>
+                  <span className="text-micro font-semibold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: roleC, background: `${roleC}1a`, border: `1px solid ${roleC}40` }}>
+                    {ROLE_LABELS[c.myRole as UserRole] || c.myRole}
+                  </span>
+                </div>
               </div>
-              {c.riskLevel && (
-                <RiskBadge riskLevel={c.riskLevel} companyStatus={c.companyStatus} companyName={c.name} compact />
-              )}
+            );
+          })}
+        </div>
+      ) : (
+        <div className="dashboard-card overflow-hidden overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--card-border)" }}>
+                <th className="px-5 py-4 text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Firma nomi</th>
+                <th className="px-5 py-4 text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>INN</th>
+                <th className="px-5 py-4 text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Soliq rejimi</th>
+                <th className="px-5 py-4 text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Sizning rolingiz</th>
+                <th className="px-5 py-4 text-micro font-bold uppercase tracking-widest text-right" style={{ color: "var(--text-muted)" }}>Xavf darajasi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {companies.map((c, i) => {
+                const roleC = ROLE_COLORS[c.myRole as UserRole] || "var(--text-muted)";
+                return (
+                  <tr key={c.id} onClick={() => setSelectedCompany(c)} className="row-hover group cursor-pointer" style={{ borderBottom: "1px solid var(--card-border)" }}>
+                    <td className="px-5 py-3">
+                      <div className="font-bold text-sm tracking-tight truncate max-w-[200px]" style={{ color: "var(--text)" }}>{c.name}</div>
+                    </td>
+                    <td className="px-5 py-3 font-mono text-meta font-bold" style={{ color: "var(--text-secondary)" }}>{c.inn}</td>
+                    <td className="px-5 py-3">
+                      <span className="text-micro font-bold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: "var(--text-secondary)", background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
+                        {c.taxRegime === 'turnover' ? 'Aylanma' : c.taxRegime === 'fixed' ? 'Belgilangan' : c.taxRegime === 'nds_profit' ? 'QQS' : c.taxRegime}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className="text-micro font-semibold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: roleC, background: `${roleC}1a`, border: `1px solid ${roleC}40` }}>
+                        {ROLE_LABELS[c.myRole as UserRole] || c.myRole}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      {c.riskLevel ? <RiskBadge riskLevel={c.riskLevel} companyStatus={c.companyStatus} companyName={c.name} compact /> : <span style={{ color: "var(--text-muted)" }}>—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {selectedCompany && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in" onClick={() => setSelectedCompany(null)}>
+          <div className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute top-0 left-0 right-0 h-1" style={{ background: "var(--accent-blue)" }}></div>
+            <div className="px-6 py-5 flex justify-between items-start" style={{ borderBottom: "1px solid var(--card-border)" }}>
+              <div className="pr-4">
+                <h3 className="text-lg font-semibold tracking-tight leading-tight" style={{ color: "var(--text)" }}>{selectedCompany.name}</h3>
+                <p className="text-meta font-mono mt-1" style={{ color: "var(--text-muted)" }}>INN: {selectedCompany.inn}</p>
+              </div>
+              <button onClick={() => setSelectedCompany(null)} className="icon-btn-sm shrink-0" style={{ color: "var(--text-muted)", background: "var(--input-bg)" }}>
+                <X size={18} />
+              </button>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-micro font-bold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: "var(--text-secondary)", background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
-                {c.taxRegime === 'turnover' ? 'Aylanma' : c.taxRegime === 'fixed' ? 'Belgilangan' : c.taxRegime === 'nds_profit' ? 'QQS' : c.taxRegime}
-              </span>
-              <span className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: roleC, background: `${roleC}1a`, border: `1px solid ${roleC}40` }}>
-                {ROLE_LABELS[c.myRole as UserRole] || c.myRole}
-              </span>
+            
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+              {/* Umumiy malumotlar */}
+              <div className="space-y-4">
+                <h4 className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Umumiy ma&apos;lumotlar</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <InfoRow icon={Building2} label="Soliq rejimi" value={selectedCompany.taxRegime === 'turnover' ? 'Aylanma' : selectedCompany.taxRegime === 'fixed' ? 'Belgilangan' : selectedCompany.taxRegime === 'nds_profit' ? 'QQS' : selectedCompany.taxRegime} />
+                  <InfoRow icon={ShieldCheck} label="Xavf darajasi" value={selectedCompany.riskLevel === 'high' ? 'Yuqori' : selectedCompany.riskLevel === 'medium' ? 'O\'rta' : 'Past'} />
+                  {selectedCompany.directorName && <InfoRow icon={UserIcon} label="Direktor" value={selectedCompany.directorName} />}
+                  {selectedCompany.directorPhone && <InfoRow icon={Mail} label="Telefon" value={selectedCompany.directorPhone} />}
+                  {selectedCompany.brandName && <InfoRow icon={Award} label="Brend nomi" value={selectedCompany.brandName} />}
+                </div>
+              </div>
+
+              {/* Shartnoma va Ulush */}
+              <div className="space-y-4 pt-4" style={{ borderTop: "1px solid var(--card-border)" }}>
+                <h4 className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Shartnoma va Ulush</h4>
+                <div className="p-4 rounded-xl flex items-center justify-between" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
+                  <div>
+                    <div className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Shartnoma summasi</div>
+                    <div className="text-lg font-semibold tabular-nums mt-0.5" style={{ color: "var(--text)" }}>
+                      {formatNum(Number(selectedCompany.contractAmount || 0))} <span className="text-xs" style={{ color: "var(--text-muted)" }}>so&apos;m</span>
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--accent-blue-light)", color: "var(--accent-blue)" }}>
+                    <Wallet size={20} />
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl flex items-center justify-between" style={{ background: "color-mix(in srgb, var(--success) 12%, transparent)", border: "1px solid var(--success-border)" }}>
+                  <div>
+                    <div className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--success)" }}>Sizning ulushingiz ({ROLE_LABELS[selectedCompany.myRole as UserRole] || selectedCompany.myRole})</div>
+                    <div className="text-lg font-semibold tabular-nums mt-0.5" style={{ color: "var(--success)" }}>
+                      {(() => {
+                        const share = getMyShare(selectedCompany);
+                        if (share.type === 'none') return "0 so'm";
+                        return `${formatNum(share.value)} so'm ${share.type === 'percent' ? `(${share.perc}%)` : ''}`;
+                      })()}
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-white shadow-sm" style={{ color: "var(--success)" }}>
+                    <TrendingUp size={20} />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        );
-      })}
+        </div>
+      )}
     </div>
   );
 }
@@ -444,7 +586,7 @@ function KpiTab({
                   <div className="text-micro font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>{kpiCategoryLabel(r.rule?.category)}</div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-sm font-black tabular-nums" style={{ color: Number(r.calculatedScore) >= 0 ? "var(--success)" : "var(--danger)" }}>
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: Number(r.calculatedScore) >= 0 ? "var(--success)" : "var(--danger)" }}>
                     {Number(r.calculatedScore) > 0 ? "+" : ""}{Number(r.calculatedScore)}
                   </span>
                   <KpiStatusBadge status={r.status} />
@@ -472,11 +614,11 @@ function KpiTab({
                     <div className="text-meta truncate" style={{ color: "var(--text-muted)" }}>{a.reason || "Sabab ko'rsatilmagan"}</div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-body font-black tabular-nums" style={{ color: isNeg ? "var(--danger)" : "var(--success)" }}>
+                    <span className="text-body font-semibold tabular-nums" style={{ color: isNeg ? "var(--danger)" : "var(--success)" }}>
                       {isNeg ? "−" : "+"}{fmtMoney(a.amount)}
                     </span>
                     <span
-                      className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg"
+                      className="text-micro font-semibold uppercase tracking-widest px-2 py-1 rounded-lg"
                       style={a.isApproved ? { color: "var(--success)", background: "color-mix(in srgb, var(--success) 12%, transparent)" } : { color: "var(--warning)", background: "color-mix(in srgb, var(--warning) 12%, transparent)" }}
                     >
                       {a.isApproved ? "Tasdiqlangan" : "Kutilmoqda"}
@@ -539,7 +681,7 @@ function AttendanceTab({
                       <td className="px-5 py-3 text-xs tabular-nums" style={{ color: "var(--text-secondary)" }}>{fmtTime(a.checkIn)}</td>
                       <td className="px-5 py-3 text-xs tabular-nums" style={{ color: "var(--text-secondary)" }}>{fmtTime(a.checkOut)}</td>
                       <td className="px-5 py-3">
-                        <span className="inline-flex items-center gap-1.5 text-micro font-black uppercase tracking-widest px-2.5 py-1 rounded-lg" style={{ color: st.c, background: st.bg }}>
+                        <span className="inline-flex items-center gap-1.5 text-micro font-semibold uppercase tracking-widest px-2.5 py-1 rounded-lg" style={{ color: st.c, background: st.bg }}>
                           <StIcon size={12} /> {st.label}
                         </span>
                       </td>
@@ -586,7 +728,7 @@ function SecurityTab({ userId }: { userId: string }) {
   };
 
   return (
-    <div className="dashboard-card p-6 max-w-lg space-y-5">
+    <div className="dashboard-card p-5 max-w-lg space-y-5">
       <SectionTitle icon={ShieldCheck} title="Parolni o'zgartirish" hint="Xavfsizlik uchun kuchli parol tanlang" />
       <FormField label="Hozirgi parol">
         <input type="password" className="erp-input" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="••••••••" />
@@ -598,10 +740,10 @@ function SecurityTab({ userId }: { userId: string }) {
         <input type="password" className="erp-input" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" />
       </FormField>
       <div className="flex justify-end">
-        <button onClick={submit} disabled={saving || !current || !next} className="c1-btn c1-btn-primary flex items-center gap-2 px-8 py-3 text-xs">
+        <Button variant="primary" size="md" onClick={submit} disabled={saving || !current || !next}>
           {saving ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
           {saving ? "O'zgartirilmoqda..." : "Parolni yangilash"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -615,7 +757,7 @@ function SectionTitle({ icon: Icon, title, hint }: { icon: React.ElementType; ti
         <Icon size={18} />
       </div>
       <div>
-        <h3 className="text-body font-black uppercase tracking-widest" style={{ color: "var(--text)" }}>{title}</h3>
+        <h3 className="text-body font-semibold" style={{ color: "var(--text)" }}>{title}</h3>
         {hint && <p className="text-micro font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-muted)" }}>{hint}</p>}
       </div>
     </div>
@@ -625,7 +767,7 @@ function SectionTitle({ icon: Icon, title, hint }: { icon: React.ElementType; ti
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-micro font-black uppercase tracking-widest ml-1" style={{ color: "var(--text-muted)" }}>{label}</label>
+      <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={{ color: "var(--text-muted)" }}>{label}</label>
       {children}
     </div>
   );
@@ -651,7 +793,7 @@ function StatCard({ icon: Icon, value, label, color, small }: { icon: React.Elem
       <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color === "var(--accent-blue)" ? "var(--accent-blue-light)" : color + "1a"}`, color }}>
         <Icon size={18} />
       </div>
-      <div className={`${small ? "text-lg" : "text-2xl"} font-black tabular-nums`} style={{ color: "var(--text)" }}>{value}</div>
+      <div className={`${small ? "text-lg" : "text-2xl"} font-semibold tabular-nums`} style={{ color: "var(--text)" }}>{value}</div>
       <div className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</div>
     </div>
   );
@@ -666,7 +808,7 @@ function KpiStatusBadge({ status }: { status: string }) {
   };
   const s = map[status] || map.draft;
   return (
-    <span className="text-micro font-black uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: s.c, background: s.bg }}>
+    <span className="text-micro font-semibold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: s.c, background: s.bg }}>
       {s.label}
     </span>
   );
@@ -676,7 +818,7 @@ function EmptyState({ icon: Icon, text, inline }: { icon: React.ElementType; tex
   const body = (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <Icon size={40} className="opacity-20 mb-3" style={{ color: "var(--text-muted)" }} />
-      <span className="text-meta font-black uppercase tracking-[0.2em] opacity-60" style={{ color: "var(--text-muted)" }}>{text}</span>
+      <span className="text-meta font-semibold uppercase tracking-[0.2em] opacity-60" style={{ color: "var(--text-muted)" }}>{text}</span>
     </div>
   );
   return inline ? body : <div className="dashboard-card">{body}</div>;

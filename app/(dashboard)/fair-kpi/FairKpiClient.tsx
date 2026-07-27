@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { getFairKpiScores, computeFairKpiForPeriod } from "@/server/fairKpi";
+import { Button } from "@/components/ui/Button";
 
 interface Score {
   employeeId: string;
@@ -57,12 +58,12 @@ export default function FairKpiClient({ initialPeriod, initialScores }: { initia
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>Adolatli KPI (v2)</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Adolatli KPI (v2)</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>Weighted composite · complexity-normalized · delay-reason exclusion</p>
         </div>
         <div className="flex gap-2 items-center">
           <input type="month" value={period} onChange={(e) => e.target.value && load(e.target.value)} className="px-3 py-1.5 rounded-lg border text-sm" style={inputStyle} />
-          <button disabled={pending} onClick={recompute} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--brand)" }}>Qayta hisoblash</button>
+          <Button variant="primary" size="sm" disabled={pending} onClick={recompute}>Qayta hisoblash</Button>
         </div>
       </div>
 
@@ -97,7 +98,7 @@ export default function FairKpiClient({ initialPeriod, initialScores }: { initia
                 return (
                   <tr key={s.employeeId} className="border-t" style={{ borderColor: "var(--border, var(--bg-sunken))" }}>
                     <td className="px-3 py-2.5 font-medium" style={{ color: "var(--text-primary)" }}>{s.employeeName}</td>
-                    <td className="px-3 py-2.5 text-right"><span className="text-base font-black" style={{ color: scoreColor(comp) }}>{comp.toFixed(1)}</span></td>
+                    <td className="px-3 py-2.5 text-right"><span className="text-base font-semibold" style={{ color: scoreColor(comp) }}>{comp.toFixed(1)}</span></td>
                     {COMPONENTS.map((c) => {
                       const v = Number(s[c.key]);
                       return <td key={c.key} className="px-3 py-2.5 text-right" style={{ color: scoreColor(v) }}>{v.toFixed(0)}</td>;

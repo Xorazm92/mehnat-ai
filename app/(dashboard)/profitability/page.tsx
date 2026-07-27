@@ -2,6 +2,8 @@ import { getMarginOverview } from "@/server/profitability";
 import { getInvoices } from "@/server/invoices";
 import ProfitabilityClient from "./ProfitabilityClient";
 
+export const metadata = { title: "Rentabellik" };
+
 export default async function ProfitabilityPage() {
   const now = new Date();
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
