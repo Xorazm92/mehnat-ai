@@ -112,12 +112,36 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
       {/* Title + live score */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-bold text-xs leading-tight" style={{ color: "var(--text-primary)" }}>
-            {rule.nameUz || rule.name}
-          </p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="font-bold text-xs leading-tight" style={{ color: "var(--text-primary)" }}>
+              {rule.nameUz || rule.name}
+            </p>
+            {perf?.source && (
+              <span
+                className="px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider"
+                style={{
+                  background: perf.source === "system" ? "rgba(99, 102, 241, 0.15)" : perf.source === "supervisor" ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                  color: perf.source === "system" ? "#6366f1" : perf.source === "supervisor" ? "#f59e0b" : "#10b981",
+                  border: `1px solid ${perf.source === "system" ? "rgba(99, 102, 241, 0.3)" : perf.source === "supervisor" ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)"}`,
+                }}
+              >
+                {perf.source === "system" ? "⚡ Tizim dalili" : perf.source === "supervisor" ? "👤 Qo'lda" : "🤖 Bot"}
+              </span>
+            )}
+          </div>
           {rule.descriptionUz && (
             <p className="text-micro mt-1 leading-snug line-clamp-2" style={{ color: "var(--text-muted)" }}>
               {rule.descriptionUz}
+            </p>
+          )}
+          {/* Avtomatik baho ostidagi DALIL. Nazoratchi nega qizil ekanini
+              ko'rmasa, tasdiqlashi imzo chekishdan farq qilmaydi. */}
+          {perf?.notes && perf.source !== "supervisor" && (
+            <p
+              className="text-micro mt-1 leading-snug px-1.5 py-1 rounded"
+              style={{ color: "var(--text-secondary)", background: "var(--bg-sunken)" }}
+            >
+              {perf.notes}
             </p>
           )}
         </div>

@@ -527,6 +527,7 @@ model PayrollAdjustment {
   month          String
   employeeId     String
   employee       User      @relation(fields: [employeeId], references: [id])
+  companyId      String?
   adjustmentType String // 'bonus' | 'avans' | 'jarima' | 'payment' | 'manual' | 'other'
   amount         Decimal   @db.Decimal(12, 2)
   reason         String
@@ -861,8 +862,33 @@ model Attendance {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@index([userId])
+  // `date` is always stored at UTC midnight (both writers build it from a
+  // "YYYY-MM-DD" string), so one row per person per day. Without this, a repeated
+  // e-jurnal sync doubles earlyDays and pays a bonus that was never earned.
+  @@unique([userId, date])
   @@index([date])
+}
+
+// Kim kimning o'rniga ishladi. Reglament: uzrsiz kelmagan kun uchun yechilgan pul
+// o'sha kuni ishni bajargan xodimga o'tadi (ta'tilda — 50%).
+model ShiftCover {
+  id           String   @id @default(uuid())
+  date         DateTime
+  absentUserId String
+  coverUserId  String
+  companyId    String?
+  kind         String // 'absence' | 'vacation'
+  approvedById String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  // NO @@unique here on purpose. Postgres treats NULLs as distinct, so
+  // @@unique([date, absentUserId, companyId]) would happily accept two firm-wide
+  // (companyId = NULL) covers for the same day and pay the substitute twice.
+  // The migration installs two PARTIAL unique indexes instead — one for
+  // companyId IS NOT NULL, one for IS NULL. Prisma cannot express those.
+  @@index([coverUserId])
+  @@index([date, absentUserId])
 }
 
 model InventoryItem {

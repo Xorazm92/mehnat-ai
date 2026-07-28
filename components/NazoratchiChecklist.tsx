@@ -3,8 +3,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Company, KPIRule, MonthlyPerformance, Staff, Language, OperationEntry } from '@/types';
 import { Search, Shield, CheckCircle2, XCircle } from 'lucide-react';
 import { translations } from '@/lib/translations';
-import { capKpiPercent, type KpiEntryInput, type KpiSalaryRole } from '@/lib/kpiScoring';
-import { getKpiRules, getPerformanceForReview, upsertPerformance, approvePerformance, rejectPerformance } from '@/server/kpi';
+import { capKpiPercent, KPI_SALARY_CONFIG, type KpiEntryInput, type KpiSalaryRole } from '@/lib/kpiScoring';
+import { getKpiRules, getPerformanceForReview, upsertPerformance, approvePerformance, rejectPerformance, approveAutoPerformance } from '@/server/kpi';
+import { projectAllKpiForMonth } from '@/server/kpiProjection';
 import { deriveAttendanceKpi } from '@/server/attendance';
 import KpiEntryCard from './kpi/KpiEntryCard';
 import { formatNum } from "@/lib/format";
@@ -37,6 +38,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [loading, setLoading] = useState(false);
+    const [busy, setBusy] = useState(false);
 
     const canApprove = ['super_admin', 'admin', 'chief_accountant', 'supervisor'].includes((currentUserRole || '').toLowerCase());
 
@@ -82,11 +84,13 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     const roleGroups: RoleGroup[] = useMemo(() => {
         if (!selectedCompany) return [];
         const sc = selectedCompany;
-        const shareOf = (perc?: number | null, sum?: number | null) => (sum ? Number(sum) : contractAmount * (Number(perc || 0) / 100));
+        // base = the CONTRACT, not the person's share. calculateCompanySalaries pays
+        // `contract * kpiPercent / 100`, so showing a share-based figure here told the
+        // supervisor a penalty cost 10,000 while payroll actually deducted 50,000.
         return [
-            { key: 'accountant', ruleRole: 'accountant', label: lang === 'uz' ? 'Buxgalter' : 'Бухгалтер', accent: 'var(--success)', employeeId: sc.accountantId || undefined, employeeName: nameOf(sc.accountantId, sc.accountantName), base: shareOf(sc.accountantPerc, sc.accountantSum) },
-            { key: 'bank_client', ruleRole: 'bank_client', label: lang === 'uz' ? 'Bank-klient' : 'Банк-клиент', accent: 'var(--accent-indigo)', employeeId: sc.bankClientId || undefined, employeeName: nameOf(sc.bankClientId, sc.bankClientName), base: shareOf(sc.bankClientPerc, sc.bankClientSum) },
-            { key: 'supervisor', ruleRole: 'supervisor', label: lang === 'uz' ? 'Nazoratchi' : 'Назоратчи', accent: 'var(--warning)', employeeId: sc.supervisorId || undefined, employeeName: nameOf(sc.supervisorId, sc.supervisorName), base: shareOf(sc.supervisorPerc, sc.supervisorSum) },
+            { key: 'accountant', ruleRole: 'accountant', label: lang === 'uz' ? 'Buxgalter' : 'Бухгалтер', accent: 'var(--success)', employeeId: sc.accountantId || undefined, employeeName: nameOf(sc.accountantId, sc.accountantName), base: contractAmount },
+            { key: 'bank_client', ruleRole: 'bank_client', label: lang === 'uz' ? 'Bank-klient' : 'Банк-клиент', accent: 'var(--accent-indigo)', employeeId: sc.bankClientId || undefined, employeeName: nameOf(sc.bankClientId, sc.bankClientName), base: contractAmount },
+            { key: 'supervisor', ruleRole: 'supervisor', label: lang === 'uz' ? 'Nazoratchi' : 'Назоратчи', accent: 'var(--warning)', employeeId: sc.supervisorId || undefined, employeeName: nameOf(sc.supervisorId, sc.supervisorName), base: contractAmount },
         ];
     }, [selectedCompany, contractAmount, lang, staffById]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -119,6 +123,46 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
             toast.error((e as Error).message);
             loadData();
         }
+    };
+
+    // Dalildan avtomatik to'ldirilgan, hali tasdiqlanmagan takliflar soni.
+    // Faqat shular ommaviy tasdiqlanadi — qo'lda kiritilganlarga tegilmaydi.
+    const autoPending = useMemo(
+        () => performances.filter(p => p.status === 'submitted' && (p.source === 'system' || p.source === 'bot')),
+        [performances]
+    );
+
+    const runProjection = async () => {
+        setBusy(true);
+        try {
+            const res = await projectAllKpiForMonth(month);
+            toast.success(
+                lang === 'uz'
+                    ? `Dalildan ${res.totalWritten} ta taklif tayyorlandi`
+                    : `Подготовлено предложений: ${res.totalWritten}`
+            );
+            await loadData();
+        } catch (e) { toast.error((e as Error).message); }
+        finally { setBusy(false); }
+    };
+
+    const approveAllAuto = async () => {
+        const ok = await prompt({
+            title: lang === 'uz' ? 'Avtomatik bahlarni tasdiqlash' : 'Подтвердить авто-оценки',
+            // Tasdiq maoshga tushadi, shuning uchun soni aniq aytiladi.
+            reasonLabel: lang === 'uz'
+                ? `${autoPending.length} ta dalilga asoslangan baho tasdiqlanadi va MAOSHGA tushadi. Sabab/izoh:`
+                : `Будет подтверждено ${autoPending.length} оценок — они попадут в зарплату. Причина:`,
+            confirmLabel: lang === 'uz' ? 'Tasdiqlash' : 'Подтвердить',
+        });
+        if (!ok) return;
+        setBusy(true);
+        try {
+            const res = await approveAutoPerformance(`${month}-01`);
+            toast.success(lang === 'uz' ? `${res.approved} ta baho tasdiqlandi` : `Подтверждено: ${res.approved}`);
+            await loadData();
+        } catch (e) { toast.error((e as Error).message); }
+        finally { setBusy(false); }
     };
 
     const changeStatus = async (perf: MonthlyPerformance, approve: boolean) => {
@@ -216,13 +260,42 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                             />
                         </div>
 
+                        {/* Dalil qatlami boshqaruvi — nazoratchi 25 qoidani 200+ firma
+                            bo'yicha bittalab bosmasligi uchun. Ommaviy tugma FAQAT
+                            avtomatik takliflarga tegadi (ADR-0005). */}
+                        {canApprove && (
+                            <div className="px-5 py-3 flex flex-wrap items-center gap-3"
+                                style={{ borderBottom: '1px solid var(--card-border)' }}>
+                                <Button variant="secondary" size="sm" disabled={busy} onClick={runProjection}>
+                                    {lang === 'uz' ? 'Dalildan hisoblash' : 'Рассчитать по данным'}
+                                </Button>
+                                {autoPending.length > 0 ? (
+                                    <>
+                                        <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>
+                                            {lang === 'uz'
+                                                ? `${autoPending.length} ta avtomatik baho tasdiq kutmoqda`
+                                                : `${autoPending.length} авто-оценок ждут подтверждения`}
+                                        </span>
+                                        <Button variant="primary" size="sm" disabled={busy} onClick={approveAllAuto}>
+                                            {lang === 'uz' ? 'Barchasini tasdiqlash' : 'Подтвердить все'}
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>
+                                        {lang === 'uz' ? 'Tasdiq kutayotgan avtomatik baho yo’q' : 'Нет авто-оценок на подтверждении'}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+
                         <div className="flex-1 overflow-y-auto p-5 space-y-8">
                             {roleGroups.map(group => {
                                 const groupRules = rules.filter(r => r.role === group.ruleRole).sort((a, b) => a.sortOrder - b.sortOrder);
                                 if (groupRules.length === 0) return null;
                                 const percents = groupRules.map(r => Number(findPerf(selectedCompany.id, group.employeeId || '', r.id)?.calculatedScore) || 0);
                                 const capped = capKpiPercent(percents, group.key);
-                                const cap = { accountant: 5, bank_client: 2.5, supervisor: 1 }[group.key];
+                                // Reglament shifti bitta joyda turadi (lib/kpiScoring).
+                                const cap = KPI_SALARY_CONFIG[group.key]?.kpiMaxPercent ?? 0;
                                 return (
                                     <div key={group.key} className="animate-fade-in">
                                         <div className="flex items-center justify-between mb-4">

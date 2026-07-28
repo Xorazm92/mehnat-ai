@@ -127,12 +127,19 @@ function clampEnvelope(percent: number, rule: KpiRuleLike): number {
 // Salary envelopes (from spec.salary_structure)
 // =====================================================
 
-export type KpiSalaryRole = "accountant" | "bank_client" | "supervisor";
+export type KpiSalaryRole = "accountant" | "bank_client" | "supervisor" | "chief_accountant";
 
+// basePercent is documentation only — the payable base comes from Company.*Perc/*Sum.
+// kpiMaxPercent IS read, by capKpiPercent.
 export const KPI_SALARY_CONFIG: Record<KpiSalaryRole, { basePercent: number; kpiMaxPercent: number }> = {
   accountant: { basePercent: 20, kpiMaxPercent: 5 },
   bank_client: { basePercent: 5, kpiMaxPercent: 2.5 },
   supervisor: { basePercent: 5, kpiMaxPercent: 1 },
+  // The reglament defines bonus envelopes for three roles only. calculateCompanySalaries
+  // deliberately excludes chiefs from every accountant/bank/supervisor rule, so their KPI
+  // envelope is zero — not an invented figure, and not the Infinity that a missing key
+  // would hand to capKpiPercent. Chief pay is base-only, set per company.
+  chief_accountant: { basePercent: 0, kpiMaxPercent: 0 },
 };
 
 /**

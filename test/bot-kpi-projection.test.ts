@@ -16,7 +16,11 @@ const { prisma } = await import("@/lib/prisma");
 const { projectResponseKpiToPerformance } = await import("@/server/botKpiProjection");
 
 const TAG = `vitest-proj-${Date.now()}`;
+// KpiEvent.periodMonth is the bare form; MonthlyPerformance.month carries the
+// day suffix. The projection must bridge the two — writing the bare form there
+// would dodge @@unique and let a second row double-charge the same penalty.
 const MONTH = "2099-05";
+const PERF_MONTH = "2099-05-01";
 const ids = { company: "", accountant: "", senior: "", rule: "" };
 
 beforeAll(async () => {
@@ -54,7 +58,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.monthlyPerformance.deleteMany({ where: { month: MONTH, employeeId: ids.accountant } });
+  await prisma.monthlyPerformance.deleteMany({ where: { employeeId: ids.accountant } });
   await prisma.kpiEvent.deleteMany({ where: { employeeId: ids.accountant } });
   await prisma.company.deleteMany({ where: { id: ids.company } });
   await prisma.user.deleteMany({ where: { id: { in: [ids.accountant, ids.senior] } } });
@@ -65,7 +69,7 @@ const perfRow = () =>
   prisma.monthlyPerformance.findUnique({
     where: {
       month_companyId_employeeId_ruleId: {
-        month: MONTH, companyId: ids.company, employeeId: ids.accountant, ruleId: ids.rule,
+        month: PERF_MONTH, companyId: ids.company, employeeId: ids.accountant, ruleId: ids.rule,
       },
     },
   });

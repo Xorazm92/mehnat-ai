@@ -60,15 +60,18 @@ describe("computeFairKpiForPeriod", () => {
     expect(Number(mine.sla)).toBe(50);
     // Quality: defects 0 (obl3 excused), total 2 → 100
     expect(Number(mine.quality)).toBe(100);
-    // Volume: 3 obligations × complex(2.5) = 7.5 → 7.5/20 = 37.5
-    expect(Number(mine.volume)).toBe(37.5);
-    expect(Number(mine.volumePoints)).toBe(7.5);
+    // Volume counts FINISHED work only: obl1+obl2 are accepted, obl3 is rejected
+    // and earns nothing. 2 × complex(2.5) = 5 → 5/20 = 25.
+    // (Counting all three would score someone who delivered nothing the same as
+    // someone who delivered everything — see ADR-0006.)
+    expect(Number(mine.volume)).toBe(25);
+    expect(Number(mine.volumePoints)).toBe(5);
     // Discipline: (8 + 0.5×2)/10 = 90
     expect(Number(mine.discipline)).toBe(90);
     // Client neutral 100
     expect(Number(mine.client)).toBe(100);
-    // Composite = 50*.35 + 100*.25 + 100*.15 + 37.5*.15 + 90*.10 = 72.13
-    expect(Number(mine.composite)).toBeCloseTo(72.13, 1);
+    // Composite = 50*.35 + 100*.25 + 100*.15 + 25*.15 + 90*.10 = 70.25
+    expect(Number(mine.composite)).toBeCloseTo(70.25, 1);
     expect(mine.shadowMode).toBe(true);
   });
 

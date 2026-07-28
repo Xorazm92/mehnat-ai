@@ -58,7 +58,9 @@ const threeState = (bonus: number, penalty: number): Opt[] => [
   { key: "red", label_uz: "Bajarilmadi / kechikdi", color: "red", coeff: penalty },
 ];
 
-const RULES: RuleSeed[] = [
+// Exported so test/kpi-rule-envelope.test.ts can assert the reglament envelopes
+// (5% / 2.5% / 1%) without a database.
+export const RULES: RuleSeed[] = [
   // ===================== BUXGALTER (20% + max 5% KPI) =====================
   {
     name: "acc_attendance", nameUz: "Ishga kelish (08:30 gacha)", role: "accountant",
@@ -143,12 +145,42 @@ const RULES: RuleSeed[] = [
   {
     name: "acc_pnl_report", nameUz: "Foyda va zarar hisoboti", role: "accountant",
     category: "reports", inputTypeV2: "select", scope: "per_company", sortOrder: 12,
-    descriptionUz: "Foyda va zarar hisoboti guruhga vaqtida yuborilishi.",
-    maxBonus: 0.2, maxPenalty: -0.2, options: threeState(0.2, -0.2),
+    descriptionUz: "Foyda va zarar hisoboti guruhga vaqtida yuborilishi (max +0.1%).",
+    maxBonus: 0.1, maxPenalty: -0.1, options: threeState(0.1, -0.1),
+  },
+  {
+    name: "acc_materials", nameUz: "Material hisoboti (o'tgan oy)", role: "accountant",
+    category: "reports", inputTypeV2: "select", scope: "per_company", sortOrder: 13,
+    descriptionUz: "Materiallar hisoboti 15-sanagacha tayyor bo'lishi va topshirilishi.",
+    maxBonus: 0.1, maxPenalty: -0.1, options: threeState(0.1, -0.1),
+  },
+  {
+    name: "acc_letters", nameUz: "Xatlar hisobi", role: "accountant",
+    category: "automation", inputTypeV2: "counter", scope: "per_company", sortOrder: 14,
+    descriptionUz: "Kelib tushgan xatlar va uning ijobiy hal etilishi ko'rsatkichi.",
+    maxBonus: 0.0, maxPenalty: null,
+    options: [
+      { key: "received_letters", label_uz: "Kelgan xatlar soni", color: "yellow", coeff_per_unit: 0 },
+      { key: "resolved_letters", label_uz: "Ijobiy hal bo'lgan xatlar", color: "green", coeff_per_unit: 0 },
+    ],
+  },
+  {
+    name: "acc_payroll_posted", nameUz: "Oylik chiqdi + 6710 Kt tekshiruv", role: "accountant",
+    category: "reports", inputTypeV2: "select", scope: "per_company", sortOrder: 15,
+    // Kuzatuv bandi, alohida jarima EMAS: oylikning o'z vaqtidaligi allaqachon
+    // acc_payroll_report (0.2) da baholanadi — bu yerda ham foiz qo'yilsa, bitta
+    // kechikish uchun ikki marta jarima yechilardi. Reglamentda bunday band yo'q.
+    descriptionUz: "Oylik o'z vaqtida chiqdimi va 6710 hisobida Kt qoldiq qolmadimi — tekshiruv (pulga ta'sir qilmaydi).",
+    maxBonus: 0.0, maxPenalty: 0.0,
+    options: [
+      { key: "green", label_uz: "Oylik chiqdi, 6710 da Kt qoldiq yo'q", color: "green", coeff: 0 },
+      { key: "yellow", label_uz: "Qisman / aniqlanmadi", color: "yellow", coeff: 0 },
+      { key: "red", label_uz: "Oylik chiqmadi yoki 6710 da Kt qoldiq bor", color: "red", coeff: 0 },
+    ],
   },
   {
     name: "acc_critical_error", nameUz: "Tuzatib bo'lmaydigan xato", role: "accountant",
-    category: "penalty_only", inputTypeV2: "checkbox_penalty", scope: "per_company", sortOrder: 13,
+    category: "penalty_only", inputTypeV2: "checkbox_penalty", scope: "per_company", sortOrder: 16,
     descriptionUz: "Firmaga tuzatib bo'lmaydigan zarar keltiruvchi xatolar.",
     maxBonus: 0.0, maxPenalty: -1.0,
     options: [
@@ -158,7 +190,7 @@ const RULES: RuleSeed[] = [
   },
   {
     name: "acc_absence", nameUz: "Ish kuni kelmay qolish (uzrsiz)", role: "accountant",
-    category: "attendance", inputTypeV2: "counter", scope: "global", sortOrder: 14,
+    category: "attendance", inputTypeV2: "counter", scope: "global", sortOrder: 17,
     descriptionUz: "Uzrsiz kelmagan har kun uchun -1%. O'sha kuni ish qilgan nazoratchi maoshiga qo'shiladi.",
     maxBonus: 0.0, maxPenalty: null,
     options: [{ key: "absent_days", label_uz: "Kelmagan kunlar soni", color: "red", coeff_per_unit: -1.0, max_coeff: null }],

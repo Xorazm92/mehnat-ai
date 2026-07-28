@@ -10,6 +10,8 @@ import { startObligationWorker } from "./queues/obligation.worker";
 import { registerObligationSchedulers } from "./queues/obligation.queue";
 import { startIntegrationWorker } from "./queues/integration.worker";
 import { registerIntegrationSchedulers } from "./queues/integration.queue";
+import { startKpiWorker } from "./queues/kpi.worker";
+import { registerKpiSchedulers } from "./queues/kpi.queue";
 import { startCron } from "./cron/scheduler";
 import type { RawTelegramUpdate } from "./contexts/monitoring/domain/inbound-message";
 
@@ -22,11 +24,13 @@ async function main(): Promise<void> {
     startQuestionWorker(),
     startObligationWorker(),
     startIntegrationWorker(),
+    startKpiWorker(),
   ];
   const stopCron = startCron();
   // Compliance + integration schedulers live in Redis (repeatable), not setInterval.
   await registerObligationSchedulers();
   await registerIntegrationSchedulers();
+  await registerKpiSchedulers();
   console.log(`[bot] ${workers.length} worker(s) + cron + schedulers up · Redis ${config.redisUrl}`);
 
   const bot = config.botMode === "polling" ? getBot() : undefined;

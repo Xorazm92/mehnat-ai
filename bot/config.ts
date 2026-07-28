@@ -67,4 +67,6 @@ export const QUEUE = {
   OBLIGATION: "obligation",
   /** 1C integration: pending IntegrationEvent processing sweep (repeatable). */
   INTEGRATION: "integration",
+  /** KPI: monthly evidence → MonthlyPerformance proposals (repeatable). */
+  KPI: "kpi",
 } as const;

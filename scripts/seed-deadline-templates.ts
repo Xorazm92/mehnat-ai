@@ -58,7 +58,6 @@ const TEMPLATES: TplSeed[] = [
     periodicity: "monthly",
     anchorType: "fixed_day_of_month",
     dueDay: 15,
-    // universal (barcha yaroqli firma)
   },
   {
     code: "DAROMAD_AGENT",
@@ -85,6 +84,89 @@ const TEMPLATES: TplSeed[] = [
     anchorType: "fixed_day_of_month",
     dueMonth: 2,
     dueDay: 15,
+  },
+  // ASRO Reglament ichki oylik takrorlanuvchi vazifalari.
+  //
+  // ANCHOR TANLOVI — diqqat: `fixed_day_of_month` davrdan KEYINGI oyning N-kuniga
+  // bog'lanadi (rawDueDate `window.periodEnd` dan hisoblaydi). Shuning uchun:
+  //   - "o'tgan oy uchun" vazifalar (soliq, pul oqimi, material, 1C baza va
+  //     hisobotlar) → `fixed_day_of_month`, ya'ni iyun davri → iyul N-kuni. To'g'ri.
+  //   - Oyning O'ZIDA, oy oxirida bajariladigan vazifalar (raschot zarplata 25-31,
+  //     oylik chiqdimi) → `period_end_offset` + offsetDays 0, ya'ni iyun davri →
+  //     30-iyun. `fixed_day_of_month` + dueDay 31 ishlatilsa, ular bir oy kech
+  //     tushardi va KPI kechikkanni "o'z vaqtida" deb baholardi.
+  // Bonus: period_end_offset da fevral 31-kun muammosi umuman tug'ilmaydi.
+  {
+    code: "PAYROLL_CALC",
+    name: "Raschot zarplata (ish haqi)",
+    obligationType: "internal_task",
+    periodicity: "monthly",
+    anchorType: "period_end_offset",
+    offsetDays: 0,
+  },
+  {
+    code: "TAX_SCHEDULE",
+    name: "Soliq sana+summa (o'tgan oy)",
+    obligationType: "internal_task",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 9,
+  },
+  {
+    code: "AR_AP",
+    name: "Debitor-kreditor hisoboti",
+    obligationType: "internal_task",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 25,
+  },
+  {
+    code: "PNL_REPORT",
+    name: "Foyda va zarar hisoboti",
+    obligationType: "internal_task",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 25,
+  },
+  {
+    code: "CASHFLOW",
+    name: "Pul oqimlari hisoboti",
+    obligationType: "internal_task",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 5,
+  },
+  {
+    code: "MATERIALS",
+    name: "Material hisoboti (o'tgan oy)",
+    obligationType: "internal_task",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 15,
+  },
+  {
+    code: "LETTERS",
+    name: "Xatlar hisobi",
+    obligationType: "internal_task",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 10,
+  },
+  {
+    code: "ONEC_BASE",
+    name: "1C baza tayyor (o'tgan oy)",
+    obligationType: "internal_task",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 5,
+  },
+  {
+    code: "PAYROLL_POSTED",
+    name: "Oylik chiqdi + 6710 Kt tekshiruvi",
+    obligationType: "internal_task",
+    periodicity: "monthly",
+    anchorType: "period_end_offset",
+    offsetDays: 0,
   },
 ];
 

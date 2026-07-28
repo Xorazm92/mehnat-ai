@@ -8,8 +8,8 @@ export const toYearMonthKey = (period: string) => {
     const raw = String(period || '').trim();
     if (!raw) return '';
 
-    const isoMatch = raw.match(/^\d{4}-(0[1-9]|1[0-2])$/);
-    if (isoMatch) return raw;
+    const isoMatch = raw.match(/^(\d{4}-(0[1-9]|1[0-2]))/);
+    if (isoMatch) return isoMatch[1];
 
     const parts = raw.split(/\s+/).filter(Boolean);
     if (parts.length < 2) return '';
@@ -23,6 +23,33 @@ export const toYearMonthKey = (period: string) => {
 
     const month = String(idx + 1).padStart(2, '0');
     return `${year}-${month}`;
+};
+
+/**
+ * Transforms any period input into canonical MonthlyPerformance key format ("YYYY-MM-01").
+ */
+export const toPerformanceMonth = (period: string): string => {
+    const raw = String(period || '').trim();
+    if (!raw) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return `${raw.slice(0, 7)}-01`;
+    const ym = toYearMonthKey(raw);
+    if (ym) return `${ym}-01`;
+    return '';
+};
+
+/**
+ * Obligation.periodKey monthly form ("YYYY-MM" → "YYYY-MM07" emas, "YYYY-MM7"
+ * emas — aniq `2026-M07`). lib/deadlines.ts periodWindowFor shu formatni quradi.
+ *
+ * DIQQAT: `periodKey: { contains: "2026-07" }` HECH QACHON mos kelmaydi, chunki
+ * saqlangan qiymat "2026-M07". Shu sabab obligation bo'yicha qidiruvlar jimgina
+ * bo'sh qaytardi. Har doim shu funksiyadan foydalaning.
+ */
+export const toObligationMonthKey = (period: string): string => {
+    const ym = toYearMonthKey(period);
+    if (!ym) return '';
+    const [year, month] = ym.split('-');
+    return `${year}-M${month}`;
 };
 
 export const periodsEqual = (a: string, b: string) => {

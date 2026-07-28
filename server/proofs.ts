@@ -8,6 +8,7 @@ import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
 import type { OperationFieldKey } from "@/types";
 import { revalidateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { syncProofToObligation } from "@/lib/obligationBridge";
 
 // =====================================================
 // REPORT PROOFS — Buxgalter topshirgan skrinshot dalili + nazoratchi tasdig'i
@@ -97,6 +98,14 @@ export async function saveReportProof(input: {
     where: { companyId_period: { companyId: input.companyId, period: input.period } },
     create: { companyId: input.companyId, period: input.period, [dbCol]: "topshirildi" } as Prisma.MonthlyReportUncheckedCreateInput,
     update: { [dbCol]: "topshirildi" },
+  });
+
+  // 2b) Majburiyat statusini "sent" ga o'tkazish (Obligation bridge)
+  await syncProofToObligation({
+    companyId: input.companyId,
+    period: input.period,
+    colKey: input.colKey,
+    targetStatus: "sent",
   });
 
   // 3) Nazoratchilarga xabar (firma nazoratchisi + barcha tekshiruvchi rollar)
@@ -238,6 +247,14 @@ export async function reviewReportProof(input: {
     where: { companyId_period: { companyId: input.companyId, period: input.period } },
     create: { companyId: input.companyId, period: input.period, [dbCol]: cellValue } as Prisma.MonthlyReportUncheckedCreateInput,
     update: { [dbCol]: cellValue },
+  });
+
+  // Majburiyat statusini "accepted" yoki "rejected" ga o'tkazish (Obligation bridge)
+  await syncProofToObligation({
+    companyId: input.companyId,
+    period: input.period,
+    colKey: input.colKey,
+    targetStatus: input.decision === "approved" ? "accepted" : "rejected",
   });
 
   // Buxgalterga natijani xabar qilish

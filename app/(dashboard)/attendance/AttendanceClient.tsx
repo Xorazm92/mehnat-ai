@@ -4,6 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import AttendanceModule, { AttendanceRecord } from "@/components/AttendanceModule";
+import ShiftCoverPanel from "@/components/ShiftCoverPanel";
 import { Staff } from "@/types";
 import { upsertAttendance, deleteAttendance } from "@/server/attendance";
 import { syncEjurnalAttendance } from "@/server/ejurnal";
@@ -42,14 +43,21 @@ export default function AttendanceClient({ records, staff, canEdit }: Props) {
   };
 
   return (
-    <AttendanceModule
-      records={records}
-      staff={staff}
-      lang="uz"
-      canEdit={canEdit}
-      onSave={handleSave}
-      onDelete={handleDelete}
-      onSyncEjurnal={canEdit ? handleSyncEjurnal : undefined}
-    />
+    <div className="space-y-6">
+      <AttendanceModule
+        records={records}
+        staff={staff}
+        lang="uz"
+        canEdit={canEdit}
+        onSave={handleSave}
+        onDelete={handleDelete}
+        onSyncEjurnal={canEdit ? handleSyncEjurnal : undefined}
+      />
+      {/* Yo'qlik va o'rinbosarlik bir domen — nazoratchi allaqachon shu ekranda
+          kim kelmaganini ko'rib turadi, pulni ham shu yerdan o'tkazadi. */}
+      <div className="px-4 pb-6">
+        <ShiftCoverPanel staff={staff} canEdit={canEdit} />
+      </div>
+    </div>
   );
 }

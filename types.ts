@@ -510,7 +510,9 @@ export interface MonthlyPerformance {
   lateMinutes?: number;            // kechikkan daqiqalar
   absentDays?: number;             // uzrsiz kelmagan kunlar
   penaltyAmount?: number;          // qo'lda kiritilgan jarima (so'm)
-  source?: 'employee' | 'supervisor' | 'chief' | 'system';
+  // 'bot' = Telegram javob-vaqti ledgeri, 'system' = muddat/davomat dalili.
+  // Ikkalasi ham `status='submitted'` taklif yozadi va tasdiqni kutadi (ADR-0005).
+  source?: 'employee' | 'supervisor' | 'chief' | 'system' | 'bot';
   status?: 'draft' | 'submitted' | 'approved' | 'rejected';
   submittedBy?: string;
   submittedAt?: string;

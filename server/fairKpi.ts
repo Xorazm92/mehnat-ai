@@ -64,7 +64,10 @@ export async function computeFairKpiForPeriod(period: string) {
   });
   for (const o of obligations) {
     const a = touch(o.responsibleUserId!);
-    a.volumePoints += complexityWeight(o.company?.complexity);
+    // Volume = BAJARILGAN ish, biriktirilgan ish emas. Avval har bir obligation
+    // holatidan qat'i nazar ball berardi, ya'ni hech narsa qilmagan xodim ham
+    // hammasini tugatgan xodim bilan bir xil hajm ballini olardi (ADR-0006).
+    if (o.status === "accepted") a.volumePoints += complexityWeight(o.company?.complexity);
     const resolved = o.status === "accepted" || o.status === "rejected";
     const excused = !!o.delayApprovedById && o.delayReason != null && EXCUSED_REASONS.has(o.delayReason);
     if (resolved && !excused) {
@@ -82,7 +85,9 @@ export async function computeFairKpiForPeriod(period: string) {
   });
   for (const t of tasks) {
     const a = touch(t.assigneeUserId!);
-    a.volumePoints += complexityWeight(t.company?.complexity);
+    // Obligation bilan bir xil qoida: faqat tugatilgan ish hajmga kiradi.
+    // `cancelled` bajarilgan ish emas, shuning uchun ball bermaydi.
+    if (t.status === "done") a.volumePoints += complexityWeight(t.company?.complexity);
     if (t.status === "done" || t.status === "cancelled") {
       a.qualityTotal++;
       if (t.breaches.length > 0) a.defects++;

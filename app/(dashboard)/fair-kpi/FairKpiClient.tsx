@@ -67,9 +67,12 @@ export default function FairKpiClient({ initialPeriod, initialScores }: { initia
         </div>
       </div>
 
-      {/* Shadow-mode banner */}
-      <div className="rounded-lg border-2 px-4 py-2 text-sm font-semibold" style={{ borderColor: "var(--warning)", background: "var(--warning-bg)", color: "var(--warning)" }}>
-        ⚠️ SHADOW rejim — bu ballar oylikka TA'SIR QILMAYDI. 2–3 oy kuzatib, xodimlar bilan muhokama qilib, keyin bonus tizimiga ulanadi.
+      {/* Tahliliy qatlam ekanini aniq aytadi — "shadow rejim" vaqtinchalik holat
+          kabi o'qilardi, aslida bu doimiy rol taqsimoti (ADR-0005). */}
+      <div className="rounded-lg border-2 px-4 py-2 text-sm" style={{ borderColor: "var(--accent-indigo)", background: "var(--bg-sunken)", color: "var(--text)" }}>
+        <span className="font-semibold">📊 Tahliliy reyting — oylikka ta&apos;sir qilmaydi.</span>{" "}
+        Maosh reglament qoidalari bo&apos;yicha <b>KPI</b> sahifasida hisoblanadi. Bu yerdagi 0–100 ball
+        xodimlarni solishtirish va yuklamani ko&apos;rish uchun; bu yerda hech narsa to&apos;lanmaydi.
       </div>
 
       {/* Weights legend */}

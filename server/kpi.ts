@@ -6,6 +6,7 @@ import { isSeniorRole, isAdminRole } from "@/lib/permissions";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { serialize } from "@/lib/serialize";
 import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
+import { toPerformanceMonth } from "@/lib/periods";
 import { Prisma } from "@prisma/client";
 
 // =====================================================
@@ -165,10 +166,11 @@ async function findPerformance(opts: {
   employeeId?: string;
   approvedOnly: boolean;
 }) {
+  const monthKey = toPerformanceMonth(opts.month) || opts.month;
   return serialize(
     await prisma.monthlyPerformance.findMany({
       where: {
-        month: opts.month,
+        month: monthKey,
         ...(opts.employeeId ? { employeeId: opts.employeeId } : {}),
         ...(opts.approvedOnly ? { status: "approved" } : {}),
       },
@@ -279,8 +281,10 @@ export async function upsertPerformance(data: {
     data.value ??
     (score ? (score.color === "green" ? 1 : score.color === "red" ? -1 : 0) : 0);
 
+  const monthKey = toPerformanceMonth(data.month) || data.month;
+
   const payload = {
-    month: data.month,
+    month: monthKey,
     companyId: data.companyId,
     employeeId: data.employeeId,
     ruleId: data.ruleId,
@@ -306,8 +310,10 @@ export async function upsertPerformance(data: {
   // the rollup "may only ever touch rows that are still draft-and-system", while
   // "a Supervisor's edit mutates that same row"). Keying this guard on status instead
   // of source is what produced 281 duplicate rows and paid an accountant zero — ADR-0004.
+  // month is normalised above so "2026-07" and "2026-07-01" collide on the constraint
+  // instead of silently becoming two rows that both charge the same penalty.
   const naturalKey = {
-    month: data.month,
+    month: monthKey,
     companyId: data.companyId,
     employeeId: data.employeeId,
     ruleId: data.ruleId,
@@ -646,4 +652,62 @@ export async function getKpiLeaderboard(month: string) {
     criteria,
     monthlyTrend,
   });
+}
+
+/**
+ * Bir oyning avtomatik (`source` = 'system' | 'bot') takliflarini ommaviy
+ * tasdiqlaydi — nazoratchi 25 qoidani 200+ firma bo'yicha bittalab bosmasligi
+ * uchun.
+ *
+ * Ataylab TOR: faqat `submitted` va faqat avtomatik manbali qatorlar. Qo'lda
+ * kiritilgan (`source='supervisor'`) yoki allaqachon `approved` qatorlarga
+ * tegmaydi, ya'ni bu tugma hech qachon inson qaroriniing ustidan yozmaydi.
+ * Har bir tasdiq alohida auditga tushadi — approvePerformance bilan bir xil.
+ */
+export async function approveAutoPerformance(month: string, opts: { employeeId?: string; companyId?: string } = {}) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const role = session.user.role as string;
+  if (!["super_admin", "admin", "chief_accountant"].includes(role)) {
+    throw new Error("Forbidden");
+  }
+
+  const monthKey = toPerformanceMonth(month);
+  if (!monthKey) throw new Error("Oy formati noto'g'ri (YYYY-MM kutiladi)");
+
+  const targets = await prisma.monthlyPerformance.findMany({
+    where: {
+      month: monthKey,
+      status: "submitted",
+      source: { in: ["system", "bot"] },
+      ...(opts.employeeId ? { employeeId: opts.employeeId } : {}),
+      ...(opts.companyId ? { companyId: opts.companyId } : {}),
+    },
+    select: { id: true },
+  });
+  if (targets.length === 0) return { approved: 0 };
+
+  const ids = targets.map((t) => t.id);
+  const approvedAt = new Date();
+  await prisma.monthlyPerformance.updateMany({
+    where: { id: { in: ids } },
+    data: { status: "approved", approvedBy: session.user.id, approvedAt },
+  });
+
+  await recordAuditLog({
+    userId: session.user.id,
+    action: "update",
+    tableName: "MonthlyPerformance",
+    recordId: `bulk:${monthKey}`,
+    newData: {
+      status: "approved",
+      month: monthKey,
+      count: ids.length,
+      employeeId: opts.employeeId ?? null,
+      companyId: opts.companyId ?? null,
+    },
+  });
+
+  return { approved: ids.length };
 }
