@@ -40,7 +40,13 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     const [loading, setLoading] = useState(false);
     const [busy, setBusy] = useState(false);
 
-    const canApprove = ['super_admin', 'admin', 'chief_accountant', 'supervisor'].includes((currentUserRole || '').toLowerCase());
+    // Server gate'lari bir xil emas, UI ham shunga qarab ajratilishi kerak:
+    // approvePerformance / approveAutoPerformance faqat chief+ ga ruxsat beradi,
+    // rejectPerformance nazoratchiga ham. Bitta `canApprove` bilan nazoratchiga
+    // "Tasdiqlash" tugmasi ko'rinardi va bosilganda "Forbidden" qaytarardi.
+    const role = (currentUserRole || '').toLowerCase();
+    const canFinalApprove = ['super_admin', 'admin', 'chief_accountant'].includes(role);
+    const canReject = ['super_admin', 'admin', 'chief_accountant', 'supervisor'].includes(role);
 
     useEffect(() => { loadData(); }, [month]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -263,7 +269,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                         {/* Dalil qatlami boshqaruvi — nazoratchi 25 qoidani 200+ firma
                             bo'yicha bittalab bosmasligi uchun. Ommaviy tugma FAQAT
                             avtomatik takliflarga tegadi (ADR-0005). */}
-                        {canApprove && (
+                        {canReject && (
                             <div className="px-5 py-3 flex flex-wrap items-center gap-3"
                                 style={{ borderBottom: '1px solid var(--card-border)' }}>
                                 <Button variant="secondary" size="sm" disabled={busy} onClick={runProjection}>
@@ -334,11 +340,13 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                                         : undefined
                                                                 }
                                                             />
-                                                            {needsApproval && perf && canApprove && (
+                                                            {needsApproval && perf && canReject && (
                                                                 <div className="flex gap-2">
-                                                                    <Button variant="success" size="sm" onClick={() => changeStatus(perf, true)} className="flex-1">
-                                                                        <CheckCircle2 size={12} /> {lang === 'uz' ? 'Tasdiqlash' : 'Одобрить'}
-                                                                    </Button>
+                                                                    {canFinalApprove && (
+                                                                        <Button variant="success" size="sm" onClick={() => changeStatus(perf, true)} className="flex-1">
+                                                                            <CheckCircle2 size={12} /> {lang === 'uz' ? 'Tasdiqlash' : 'Одобрить'}
+                                                                        </Button>
+                                                                    )}
                                                                     <Button variant="danger" size="sm" onClick={() => changeStatus(perf, false)} className="flex-1">
                                                                         <XCircle size={12} /> {lang === 'uz' ? 'Rad etish' : 'Отклонить'}
                                                                     </Button>

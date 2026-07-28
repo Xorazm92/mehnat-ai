@@ -111,26 +111,85 @@ type SystemProposalPayload = Omit<
   keyof PerformanceNaturalKey
 >;
 
-/** `approved` yoki nazoratchi qo'li tekkan qatorni hech qachon bosmaymiz. */
-async function upsertSystemProposal(
-  naturalKey: PerformanceNaturalKey,
-  payload: SystemProposalPayload,
-  counters: { skippedApproved: number; updated: number }
-) {
-  const existing = await prisma.monthlyPerformance.findUnique({
-    where: { month_companyId_employeeId_ruleId: naturalKey },
-    select: { status: true, source: true },
+interface Proposal {
+  key: PerformanceNaturalKey;
+  payload: SystemProposalPayload;
+}
+
+const keyOf = (companyId: string, employeeId: string, ruleId: string) =>
+  `${companyId}|${employeeId}|${ruleId}`;
+
+/** Har bir yozuv uchun bittadan so'rov 2 000+ qatorli oyda daqiqalarga cho'zilardi. */
+const WRITE_CHUNK = 250;
+
+/**
+ * Takliflarni bir marta o'qib, bir necha paketda yozadi.
+ *
+ * Avval har qator uchun alohida `findUnique` + `upsert` qilinardi — 2 359 ta
+ * majburiyatda 4 700 dan ortiq ketma-ket so'rov, ~4 sekund; 53 ustunli to'liq
+ * oyda bu server action time-out'iga olib borardi. Endi: mavjud qatorlar BIR
+ * so'rovda o'qiladi, himoyalanganlari xotirada ajratiladi, qolgani
+ * `$transaction` paketlarida yoziladi.
+ *
+ * Himoya qoidasi o'zgarmaydi: `approved` yoki `source='supervisor'` qatorga
+ * tegilmaydi (ADR-0001).
+ */
+async function flushProposals(
+  month: string,
+  proposals: Proposal[]
+): Promise<{ updated: number; skippedApproved: number }> {
+  if (proposals.length === 0) return { updated: 0, skippedApproved: 0 };
+
+  const existing = await prisma.monthlyPerformance.findMany({
+    where: { month },
+    select: { companyId: true, employeeId: true, ruleId: true, status: true, source: true },
   });
-  if (existing?.status === "approved" || existing?.source === "supervisor") {
-    counters.skippedApproved++;
-    return;
+
+  const locked = new Set<string>();
+  for (const e of existing) {
+    if (e.status === "approved" || e.source === "supervisor") {
+      locked.add(keyOf(e.companyId, e.employeeId, e.ruleId));
+    }
   }
-  await prisma.monthlyPerformance.upsert({
-    where: { month_companyId_employeeId_ruleId: naturalKey },
-    create: { ...naturalKey, ...payload },
-    update: payload,
-  });
-  counters.updated++;
+
+  const writable = proposals.filter(
+    (p) => !locked.has(keyOf(p.key.companyId, p.key.employeeId, p.key.ruleId))
+  );
+  const skippedApproved = proposals.length - writable.length;
+
+  for (let i = 0; i < writable.length; i += WRITE_CHUNK) {
+    const chunk = writable.slice(i, i + WRITE_CHUNK);
+    await prisma.$transaction(
+      chunk.map((p) =>
+        prisma.monthlyPerformance.upsert({
+          where: { month_companyId_employeeId_ruleId: p.key },
+          create: { ...p.key, ...p.payload },
+          update: p.payload,
+        })
+      )
+    );
+  }
+
+  return { updated: writable.length, skippedApproved };
+}
+
+/**
+ * Bir nechta majburiyat BITTA qoidaga tushganda yakuniy baho.
+ *
+ * Masalan QQS, INPS, daromad-agent va soliq-jadvali — to'rttasi ham
+ * `acc_taxes_report` ga tegishli, ya'ni bir xil (oy, firma, xodim, qoida)
+ * kalitiga yozadi. Avval oxirgi ishlangani g'olib bo'lardi va natija sikl
+ * tartibiga bog'liq — INPS kechikkan bo'lsa ham QQS o'z vaqtida bo'lgani uchun
+ * yashil chiqib ketishi mumkin edi.
+ *
+ * Reglament: "hisobotlar vaqtida topshirilmaganligi uchun jarima" — bittasi
+ * kechiksa ham kechikkan hisoblanadi, shuning uchun ENG YOMONI g'olib.
+ */
+export function combineVerdicts(verdicts: EvidenceVerdict[]): EvidenceVerdict | null {
+  if (verdicts.length === 0) return null;
+  if (verdicts.includes("red")) return "red";
+  if (verdicts.includes("yellow")) return "yellow";
+  return "green";
 }
 
 /**
@@ -166,8 +225,17 @@ export async function evaluateObligationEvidence(
   const rules = await prisma.kpiRule.findMany({ where: { name: { in: ruleNames } } });
   const ruleByName = new Map(rules.map((r) => [r.name, r]));
 
-  const counters = { updated: 0, skippedApproved: 0 };
   let skippedNeutral = 0;
+
+  // Bir kalitga bir nechta majburiyat tushadi (4 ta soliq shabloni →
+  // acc_taxes_report), shuning uchun avval YIG'AMIZ, keyin bitta baho chiqaramiz.
+  interface Bucket {
+    key: PerformanceNaturalKey;
+    ruleId: string;
+    verdicts: EvidenceVerdict[];
+    evidence: string[];
+  }
+  const buckets = new Map<string, Bucket>();
 
   for (const ob of obligations) {
     const ruleName = TEMPLATE_CODE_TO_RULE_NAME[ob.template.code];
@@ -180,33 +248,57 @@ export async function evaluateObligationEvidence(
       continue;
     }
 
-    const score = computeRuleScore(rule as never, { selectedOption: verdict });
-    await upsertSystemProposal(
+    const k = keyOf(ob.companyId, ob.responsibleUserId!, rule.id);
+    const bucket =
+      buckets.get(k) ??
       {
-        month: perfMonth,
-        companyId: ob.companyId,
-        employeeId: ob.responsibleUserId!,
+        key: {
+          month: perfMonth,
+          companyId: ob.companyId,
+          employeeId: ob.responsibleUserId!,
+          ruleId: rule.id,
+        },
         ruleId: rule.id,
-      },
-      {
+        verdicts: [],
+        evidence: [],
+      };
+    bucket.verdicts.push(verdict);
+    bucket.evidence.push(
+      `${ob.template.code}: ${verdict === "green" ? "o'z vaqtida" : "kechikdi"} (muddat ${ob.dueAt
+        .toISOString()
+        .slice(0, 10)})`
+    );
+    buckets.set(k, bucket);
+  }
+
+  const proposals: Proposal[] = [];
+  for (const bucket of buckets.values()) {
+    const verdict = combineVerdicts(bucket.verdicts);
+    if (!verdict) continue;
+    const rule = rules.find((r) => r.id === bucket.ruleId);
+    if (!rule) continue;
+
+    const score = computeRuleScore(rule as never, { selectedOption: verdict });
+    proposals.push({
+      key: bucket.key,
+      payload: {
         selectedOption: verdict,
         value: new Prisma.Decimal(verdict === "green" ? 1 : verdict === "red" ? -1 : 0),
         calculatedScore: new Prisma.Decimal(score.percent),
         source: "system",
         status: "submitted",
         submittedAt: now,
-        notes: `Muddat dalili — ${ob.template.code}: ${ob.status}, muddat ${ob.dueAt
-          .toISOString()
-          .slice(0, 10)}`,
+        // Nazoratchi nega qizil ekanini ko'rsin — qaysi hisobot kechikkani.
+        notes: `Muddat dalili — ${bucket.evidence.join("; ")}`,
       },
-      counters
-    );
+    });
   }
 
+  const res = await flushProposals(perfMonth, proposals);
   return {
     processed: obligations.length,
-    updated: counters.updated,
-    skippedApproved: counters.skippedApproved,
+    updated: res.updated,
+    skippedApproved: res.skippedApproved,
     skippedNeutral,
   };
 }
@@ -263,7 +355,7 @@ export async function evaluateAttendanceEvidence(
     select: { id: true, accountantId: true, bankClientId: true, supervisorId: true },
   });
 
-  const counters = { updated: 0, skippedApproved: 0 };
+  const proposals: Proposal[] = [];
   let skippedNeutral = 0;
 
   for (const [userId, entry] of byUser.entries()) {
@@ -301,9 +393,9 @@ export async function evaluateAttendanceEvidence(
 
       const score = computeRuleScore(rule as never, job.input);
       for (const comp of userCompanies) {
-        await upsertSystemProposal(
-          { month: perfMonth, companyId: comp.id, employeeId: userId, ruleId: rule.id },
-          {
+        proposals.push({
+          key: { month: perfMonth, companyId: comp.id, employeeId: userId, ruleId: rule.id },
+          payload: {
             earlyDays: summary.earlyDays,
             lateMinutes: summary.lateMinutes,
             absentDays: summary.absentDays,
@@ -314,16 +406,16 @@ export async function evaluateAttendanceEvidence(
             submittedAt: now,
             notes: `Davomat dalili — ${summary.earlyDays} erta kun, ${summary.lateMinutes} daq kechikish, ${summary.absentDays} kelmagan kun`,
           },
-          counters
-        );
+        });
       }
     }
   }
 
+  const res = await flushProposals(perfMonth, proposals);
   return {
     processed: byUser.size,
-    updated: counters.updated,
-    skippedApproved: counters.skippedApproved,
+    updated: res.updated,
+    skippedApproved: res.skippedApproved,
     skippedNeutral,
   };
 }
@@ -375,7 +467,7 @@ export async function evaluateResponseEvidence(
   const rules = await prisma.kpiRule.findMany({ where: { name: { in: ruleNames } } });
   const ruleByName = new Map(rules.map((r) => [r.name, r]));
 
-  const counters = { updated: 0, skippedApproved: 0 };
+  const proposals: Proposal[] = [];
   let skippedNeutral = 0;
 
   for (const g of groups.values()) {
@@ -390,9 +482,9 @@ export async function evaluateResponseEvidence(
     }
 
     const score = computeRuleScore(rule as never, { selectedOption: color });
-    await upsertSystemProposal(
-      { month: perfMonth, companyId: g.companyId, employeeId: g.employeeId, ruleId: rule.id },
-      {
+    proposals.push({
+      key: { month: perfMonth, companyId: g.companyId, employeeId: g.employeeId, ruleId: rule.id },
+      payload: {
         selectedOption: color,
         earlyDays: 0,
         lateMinutes: 0,
@@ -406,14 +498,14 @@ export async function evaluateResponseEvidence(
         submittedAt: now,
         notes: `Bot: ${g.onTime} o'z vaqtida, ${g.late} kechikish (KPI ledger)`,
       },
-      counters
-    );
+    });
   }
 
+  const res = await flushProposals(perfMonth, proposals);
   return {
     groups: groups.size,
-    written: counters.updated,
-    skippedApproved: counters.skippedApproved,
+    written: res.updated,
+    skippedApproved: res.skippedApproved,
     skippedNeutral,
   };
 }

@@ -6,7 +6,7 @@
  * bosqichli jarayon (belgilash + menejer tasdig'i) ASRO ning adolat kafolati.
  */
 import { describe, it, expect } from "vitest";
-import { verdictForObligation, EXCUSED_DELAY_REASONS } from "@/lib/kpiEvidence";
+import { verdictForObligation, combineVerdicts, EXCUSED_DELAY_REASONS } from "@/lib/kpiEvidence";
 
 const DUE = new Date("2026-07-25T00:00:00Z");
 const BEFORE = new Date("2026-07-24T10:00:00Z");
@@ -75,5 +75,34 @@ describe("verdictForObligation", () => {
       });
       expect(verdictForObligation(lateButExcused, NOW_PAST_DUE)).toBeNull();
     });
+  });
+});
+
+describe("combineVerdicts — bir qoidaga bir nechta majburiyat tushganda", () => {
+  it("one late report poisons the whole rule", () => {
+    // QQS, INPS, daromad-agent va soliq-jadvali — to'rttasi ham acc_taxes_report.
+    // Bittasi kechiksa, reglament bo'yicha hisobot kechikkan hisoblanadi.
+    expect(combineVerdicts(["green", "green", "red", "green"])).toBe("red");
+  });
+
+  it("green only when every obligation was on time", () => {
+    expect(combineVerdicts(["green", "green", "green"])).toBe("green");
+    expect(combineVerdicts(["green"])).toBe("green");
+  });
+
+  it("yellow sits between — worse than green, better than red", () => {
+    expect(combineVerdicts(["green", "yellow"])).toBe("yellow");
+    expect(combineVerdicts(["yellow", "red"])).toBe("red");
+  });
+
+  it("no evidence means no verdict, not a zero", () => {
+    // Bo'sh ro'yxat "hammasi yaxshi" degani EMAS — baho umuman qo'yilmaydi.
+    expect(combineVerdicts([])).toBeNull();
+  });
+
+  it("is order-independent", () => {
+    // Avvalgi kod oxirgi ishlangan majburiyatni g'olib qilardi, ya'ni natija
+    // sikl tartibiga bog'liq edi.
+    expect(combineVerdicts(["red", "green"])).toBe(combineVerdicts(["green", "red"]));
   });
 });

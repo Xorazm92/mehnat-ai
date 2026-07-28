@@ -47,6 +47,18 @@ export async function assignShiftCover(input: {
   const coverDate = new Date(`${input.date}T00:00:00.000Z`);
   const companyId = input.companyId ?? null;
 
+  // ShiftCover ustunlarida User'ga FK yo'q, PayrollAdjustment.employeeId da esa
+  // BOR. Mavjud bo'lmagan xodim yozib qo'yilsa, xato faqat oy oxirida
+  // applyCoverTransfers ichida chiqadi va BUTUN o'tkazma to'plami yiqiladi.
+  // Shuning uchun kiritish paytida tekshiramiz.
+  const users = await prisma.user.findMany({
+    where: { id: { in: [input.absentUserId, input.coverUserId] }, isActive: true },
+    select: { id: true },
+  });
+  if (users.length !== 2) {
+    throw new Error("Xodim topilmadi yoki faol emas");
+  }
+
   // Prisma QISMIY unique indekslarni (companyId IS NULL / IS NOT NULL) compound
   // unique sifatida ifodalay olmaydi, shuning uchun upsert emas — topib-yozamiz.
   // Yagonalikni baza kafolatlaydi; bu yerda faqat qulay "almashtirish" mantiqi.
@@ -87,6 +99,10 @@ export async function assignShiftCover(input: {
 export async function getShiftCovers(startDate: string, endDate: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
+  // Kim qaysi kuni ishga kelmagani — HR ma'lumoti va pul o'tkazmasining asosi.
+  // Avval har qanday tizimga kirgan xodim butun tashkilotning yo'qliklarini
+  // o'qiy olardi.
+  if (!isSeniorRole(session.user.role as string)) throw new Error("Forbidden");
 
   const covers = await prisma.shiftCover.findMany({
     where: {

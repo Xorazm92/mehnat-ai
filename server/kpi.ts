@@ -214,8 +214,39 @@ export async function getPerformanceForReview(month: string, employeeId?: string
   const userId = session.user.id;
   const role = session.user.role as string;
   const targetEmployeeId = isSeniorRole(role) ? employeeId : userId;
+  const monthKey = toPerformanceMonth(month) || month;
 
-  return findPerformance({ month, employeeId: targetEmployeeId, approvedOnly: false });
+  // Ataylab SLIM: bu ekran oyning HAMMA qatorini oladi (2026-07 da 5 644 ta).
+  // `include: { rule: true }` har qator bilan qoidaning `options` JSON'ini
+  // takrorlab, javobni ~4.8 MB ga shishirardi — nazoratchi oyni almashtirgan
+  // har safar. Checklist qoidalarni getKpiRules() orqali alohida yuklaydi va
+  // `perf.rule` ga umuman tegmaydi.
+  return serialize(
+    await prisma.monthlyPerformance.findMany({
+      where: {
+        month: monthKey,
+        ...(targetEmployeeId ? { employeeId: targetEmployeeId } : {}),
+      },
+      select: {
+        id: true,
+        month: true,
+        companyId: true,
+        employeeId: true,
+        ruleId: true,
+        value: true,
+        calculatedScore: true,
+        selectedOption: true,
+        earlyDays: true,
+        lateMinutes: true,
+        absentDays: true,
+        penaltyAmount: true,
+        source: true,
+        status: true,
+        notes: true,
+      },
+      orderBy: { recordedAt: "desc" },
+    })
+  );
 }
 
 export async function upsertPerformance(data: {
