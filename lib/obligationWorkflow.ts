@@ -49,3 +49,13 @@ export function timingPatch(to: ObligationStatus, now: Date): Record<string, Dat
       return {};
   }
 }
+
+/**
+ * Bir sahifada ko'rsatiladigan eng ko'p majburiyat.
+ *
+ * Chegarasiz bo'lganda /deadlines butun jadvalni (8 295 qator) tortib, RSC
+ * payload'ini 17 MB ga yetkazardi va brauzer shuncha <tr> ni chizishga majbur
+ * bo'lardi. Odam baribir mingtalab qatorni ko'rmaydi — muddati eng yaqinlari
+ * kerak. `"use server"` fayl konstanta eksport qila olmagani uchun shu yerda.
+ */
+export const OBLIGATION_PAGE_SIZE = 300;

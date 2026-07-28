@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/access";
-import { canTransition, permissionForTransition, timingPatch } from "@/lib/obligationWorkflow";
+import { canTransition, permissionForTransition, timingPatch, OBLIGATION_PAGE_SIZE } from "@/lib/obligationWorkflow";
 import { revalidateTag } from "next/cache";
 import type { ObligationStatus, SubmissionStatus, EvidenceType, DelayReason } from "@prisma/client";
 
@@ -33,25 +33,55 @@ export async function getObligations(filter: ObligationFilter = {}) {
   const actor = await requireActor();
   const now = new Date();
 
+  const where = {
+    company: companyScopeWhere(actor),
+    ...(filter.status ? { status: filter.status } : {}),
+    ...(filter.periodKey ? { periodKey: filter.periodKey } : {}),
+    ...(filter.mine ? { responsibleUserId: actor.id } : {}),
+    ...(filter.overdue ? { dueAt: { lt: now }, status: { in: NOT_DONE } } : {}),
+  };
+
   const rows = await prisma.obligation.findMany({
-    where: {
-      company: companyScopeWhere(actor),
-      ...(filter.status ? { status: filter.status } : {}),
-      ...(filter.periodKey ? { periodKey: filter.periodKey } : {}),
-      ...(filter.mine ? { responsibleUserId: actor.id } : {}),
-      ...(filter.overdue ? { dueAt: { lt: now }, status: { in: NOT_DONE } } : {}),
-    },
-    include: {
+    where,
+    // `...o` bilan butun qator (kechikish izohlari, snapshotlar, vaqt tamg'alari)
+    // qaytardi; taxta bularning birortasini ko'rsatmaydi.
+    select: {
+      id: true,
+      periodKey: true,
+      dueAt: true,
+      status: true,
+      responsibleUserId: true,
+      delayReason: true,
+      delayMarkedById: true,
+      delayApprovedById: true,
       company: { select: { id: true, name: true } },
       template: { select: { id: true, name: true, obligationType: true } },
     },
     orderBy: [{ dueAt: "asc" }],
+    take: OBLIGATION_PAGE_SIZE,
   });
 
   return rows.map((o) => ({
     ...o,
     isOverdue: o.dueAt.getTime() < now.getTime() && NOT_DONE.includes(o.status),
   }));
+}
+
+/**
+ * Taxta yorliqlari uchun sanoqlar. Qatorlar chegaralangani uchun ularni
+ * xotirada sanab bo'lmaydi — aks holda "hammasi (300)" deb yolg'on ko'rsatardi.
+ */
+export async function getObligationCounts() {
+  const actor = await requireActor();
+  const now = new Date();
+  const scope = { company: companyScopeWhere(actor) };
+
+  const [all, mine, overdue] = await Promise.all([
+    prisma.obligation.count({ where: scope }),
+    prisma.obligation.count({ where: { ...scope, responsibleUserId: actor.id } }),
+    prisma.obligation.count({ where: { ...scope, dueAt: { lt: now }, status: { in: NOT_DONE } } }),
+  ]);
+  return { all, mine, overdue };
 }
 
 export async function getObligationById(id: string) {

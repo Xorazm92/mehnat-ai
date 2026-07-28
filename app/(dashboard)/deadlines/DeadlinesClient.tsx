@@ -73,26 +73,46 @@ function actionsFor(status: string): Action[] {
 const TERMINAL = new Set(["accepted", "cancelled"]);
 type Tab = "all" | "mine" | "overdue";
 
-export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; role: string; userId: string }) {
+interface Counts {
+  all: number;
+  mine: number;
+  overdue: number;
+}
+
+/** Bir marta chiziladigan qatorlar soni. */
+const RENDER_STEP = 50;
+
+export default function DeadlinesClient({
+  rows,
+  role,
+  userId,
+  counts,
+  pageSize,
+}: {
+  rows: Row[];
+  role: string;
+  userId: string;
+  counts: Counts;
+  pageSize: number;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [tab, setTab] = useState<Tab>("all");
+  const [visible, setVisible] = useState(RENDER_STEP);
   const isSenior = SENIOR.has(role);
 
-  const counts = useMemo(
-    () => ({
-      all: rows.length,
-      mine: rows.filter((r) => r.responsibleUserId === userId).length,
-      overdue: rows.filter((r) => r.isOverdue).length,
-    }),
-    [rows, userId],
-  );
-
+  // Sanoqlar serverdan keladi: `rows` eng yaqin `pageSize` ta bilan
+  // chegaralangan, shuning uchun ularni bu yerda sanash "hammasi (300)" degan
+  // yolg'on raqam berardi.
   const filtered = useMemo(() => {
     if (tab === "mine") return rows.filter((r) => r.responsibleUserId === userId);
     if (tab === "overdue") return rows.filter((r) => r.isOverdue);
     return rows;
   }, [rows, tab, userId]);
+
+  // Yorliq almashganda qaytadan boshidan chizamiz.
+  const shown = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
+  const truncated = counts.all > rows.length;
 
   const run = (fn: () => Promise<unknown>, ok: string) =>
     start(async () => {
@@ -126,7 +146,7 @@ export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; r
           {TABS.map((t) => (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => { setTab(t.key); setVisible(RENDER_STEP); }}
               className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
               style={{
                 background: tab === t.key ? "var(--sidebar-item-active-bg, var(--brand))" : "var(--bg-hover, var(--bg-sunken))",
@@ -162,7 +182,7 @@ export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; r
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => {
+              {shown.map((r) => {
                 const meta = STATUS_META[r.status] ?? STATUS_META.planned;
                 const acts = actionsFor(r.status).filter((a) => !a.senior || isSenior);
                 const canMarkDelay = !TERMINAL.has(r.status);
@@ -250,6 +270,24 @@ export default function DeadlinesClient({ rows, role, userId }: { rows: Row[]; r
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {(shown.length < filtered.length || truncated) && (
+        <div className="flex flex-wrap items-center justify-center gap-3 py-3 text-sm">
+          <span style={{ color: "var(--text-muted)" }}>
+            {shown.length} / {filtered.length} ko&apos;rsatilmoqda
+            {truncated && ` — jami ${counts.all} ta, eng yaqin ${pageSize} tasi yuklandi`}
+          </span>
+          {shown.length < filtered.length && (
+            <button
+              onClick={() => setVisible((v) => v + RENDER_STEP)}
+              className="px-3 py-1.5 rounded-lg text-sm font-semibold"
+              style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-primary)" }}
+            >
+              Yana {RENDER_STEP} ta
+            </button>
+          )}
         </div>
       )}
     </div>

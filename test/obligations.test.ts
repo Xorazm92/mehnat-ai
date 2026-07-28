@@ -83,6 +83,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // generateObligations shablon bo'yicha filtrlanmaydi — u BARCHA faol
+  // shablonlarni BARCHA yaroqli firmalarga qo'llaydi. Faqat o'z shablonlarimizni
+  // o'chirsak, real shablonlardan yaratilgan minglab 2097-yil qatori bazada
+  // qolib ketadi (bir marta 5 327 ta to'plangan va /deadlines sahifasini
+  // 17 MB ga shishirgan). Shuning uchun test DAVRLARINI butunlay tozalaymiz.
+  await prisma.obligation.deleteMany({ where: { periodKey: { startsWith: "2097-" } } });
   await prisma.obligation.deleteMany({ where: { templateId: { in: [ids.t1, ids.t2] } } });
   await prisma.companyObligationOverride.deleteMany({ where: { companyId: ids.company } });
   await prisma.deadlineTemplate.deleteMany({ where: { id: { in: [ids.t1, ids.t2] } } });
