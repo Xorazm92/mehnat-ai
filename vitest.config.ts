@@ -11,7 +11,8 @@ export default defineConfig({
     environment: "node",
     // test/**/*.test.ts  → integration tests that share one Postgres.
     // bot/**/*.spec.ts    → pure, DB-free domain unit tests (DDD domain layer).
-    include: ["test/**/*.test.ts", "bot/**/*.spec.ts"],
+    // lib/**/*.spec.ts    → pure, DB-free helpers shared by the app and the bot.
+    include: ["test/**/*.test.ts", "bot/**/*.spec.ts", "lib/**/*.spec.ts"],
     // Integration tests share one Postgres; parallel files would race on fixtures.
     fileParallelism: false,
     testTimeout: 30_000,

@@ -81,6 +81,11 @@ model User {
   // --- Telegram identity (KPI bot ↔ mehnat-ai user mapping) ---
   telegramUserId   BigInt? @unique
   telegramUsername String?
+  // `phone` ning oxirgi 9 raqami (lib/phone.ts#phoneKey) — bot `request_contact`
+  // orqali kelgan raqamni shu ustun bo'yicha qidiradi. ATAYIN @unique EMAS:
+  // prodda dublikat/bo'sh raqamlar bor, migratsiya ular tufayli yiqilmasligi
+  // kerak; noaniqlik (2+ mos xodim) ilova qatlamida rad etiladi.
+  phoneNormalized  String?
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -107,6 +112,7 @@ model User {
   @@index([email])
   @@index([role])
   @@index([isActive])
+  @@index([phoneNormalized])
 }
 
 // =====================================================
@@ -965,6 +971,7 @@ model TelegramMessage {
   kind            String // 'text'|'reply'|'edit'|'delete'|'reaction'|'media'|'voice'|'file'
   replyToId       BigInt?
   mediaType       String?
+  fileId          String? // Telegram file_id — chek/skrinshotni keyin yuklab olish uchun
   voiceTranscript String?  @db.Text // STT result
   createdAt       DateTime // Telegram message time
   loggedAt        DateTime @default(now()) // when the bot captured it

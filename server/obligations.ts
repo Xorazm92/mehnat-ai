@@ -10,7 +10,18 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/access";
-import { canTransition, permissionForTransition, timingPatch, OBLIGATION_PAGE_SIZE } from "@/lib/obligationWorkflow";
+import {
+  canTransition,
+  permissionForTransition,
+  timingPatch,
+  OBLIGATION_PAGE_SIZE,
+  OPEN_OBLIGATION_STATUSES,
+} from "@/lib/obligationWorkflow";
+import {
+  markObligationDelayReason,
+  approveObligationDelayReason,
+  reassignObligationTo,
+} from "@/lib/obligationDelay";
 import { revalidateTag } from "next/cache";
 import type { ObligationStatus, SubmissionStatus, EvidenceType, DelayReason } from "@prisma/client";
 
@@ -20,7 +31,7 @@ async function requireActor(): Promise<Actor> {
   return { id: session.user.id, role: session.user.role as string };
 }
 
-const NOT_DONE: ObligationStatus[] = ["planned", "in_progress", "ready", "sent", "rejected"];
+const NOT_DONE = OPEN_OBLIGATION_STATUSES;
 
 export interface ObligationFilter {
   status?: ObligationStatus;
@@ -136,80 +147,27 @@ export async function updateObligationStatus(id: string, toStatus: ObligationSta
   return { ok: true };
 }
 
+// Kechikish sababi va qayta biriktirish mantig'i lib/obligationDelay.ts'da —
+// bot worker'i ham aynan shu tekshiruv va audit izidan o'tishi uchun. Bu yerda
+// faqat auth + cache invalidatsiya qoladi.
+
 export async function setDelayReason(id: string, reason: DelayReason, comment?: string) {
   const actor = await requireActor();
-  const o = await prisma.obligation.findUnique({ where: { id }, select: { companyId: true } });
-  if (!o) throw new Error("Majburiyat topilmadi");
-  await assertCompanyPermission(prisma, actor, o.companyId, "delay-reason:mark");
-
-  const now = new Date();
-  await prisma.obligation.update({
-    where: { id },
-    data: {
-      delayReason: reason,
-      delayComment: comment ?? null,
-      delayMarkedById: actor.id,
-      delayMarkedAt: now,
-      // Belgilash tasdiqlashni bekor qiladi (qayta ko'rib chiqilishi kerak).
-      delayApprovedById: null,
-      delayApprovedAt: null,
-    },
-  });
-  await recordAuditLog({ userId: actor.id, action: "update", tableName: "Obligation", recordId: id, newData: { delayReason: reason } });
+  await markObligationDelayReason(prisma, actor, id, reason, comment);
   revalidateTag("obligations", "max");
   return { ok: true };
 }
 
-/**
- * Kechikish sababini MANAGER tasdiqlaydi — faqat shundan keyin KPI exclusion'ga
- * yaroqli (reviewer #7). Belgilanmagan sababni tasdiqlab bo'lmaydi.
- */
 export async function approveDelayReason(id: string) {
   const actor = await requireActor();
-  const o = await prisma.obligation.findUnique({
-    where: { id },
-    select: { companyId: true, delayMarkedById: true },
-  });
-  if (!o) throw new Error("Majburiyat topilmadi");
-  await assertCompanyPermission(prisma, actor, o.companyId, "delay-reason:approve");
-  if (!o.delayMarkedById) throw new Error("Avval kechikish sababi belgilanishi kerak");
-
-  await prisma.obligation.update({
-    where: { id },
-    data: { delayApprovedById: actor.id, delayApprovedAt: new Date() },
-  });
-  await recordAuditLog({ userId: actor.id, action: "update", tableName: "Obligation", recordId: id, newData: { delayApproved: true } });
+  await approveObligationDelayReason(prisma, actor, id);
   revalidateTag("obligations", "max");
   return { ok: true };
 }
 
 export async function reassignObligation(id: string, toUserId: string, reason?: string) {
   const actor = await requireActor();
-  const o = await prisma.obligation.findUnique({
-    where: { id },
-    select: { companyId: true, responsibleUserId: true },
-  });
-  if (!o) throw new Error("Majburiyat topilmadi");
-  await assertCompanyPermission(prisma, actor, o.companyId, "obligation:assign");
-
-  const now = new Date();
-  await prisma.$transaction([
-    prisma.obligation.update({
-      where: { id },
-      data: { responsibleUserId: toUserId, assignedById: actor.id, assignedAt: now },
-    }),
-    prisma.obligationAssignmentEvent.create({
-      data: { obligationId: id, fromUserId: o.responsibleUserId, toUserId, byUserId: actor.id, reason: reason ?? null },
-    }),
-  ]);
-  await recordAuditLog({
-    userId: actor.id,
-    action: "update",
-    tableName: "Obligation",
-    recordId: id,
-    oldData: { responsibleUserId: o.responsibleUserId },
-    newData: { responsibleUserId: toUserId },
-  });
+  await reassignObligationTo(prisma, actor, id, toUserId, reason);
   revalidateTag("obligations", "max");
   return { ok: true };
 }

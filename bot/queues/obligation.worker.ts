@@ -5,8 +5,9 @@ import { runGenerationLocked } from "../../lib/obligationRun";
 import { sweepDeadlines } from "../../lib/obligationSweep";
 import { sweepTaskSla } from "../../lib/taskSla";
 import { createRedisConnection } from "./connection";
-import { QUEUE, hasTelegramToken } from "../config";
+import { QUEUE, callbackSecret, hasTelegramToken } from "../config";
 import { sendMessage } from "../telegram/bot";
+import { makeEscalationSender } from "../contexts/escalation/interface/escalation-sender";
 import type { ObligationJob } from "./obligation.queue";
 
 /**
@@ -25,8 +26,17 @@ export function startObligationWorker(): Worker<ObligationJob> {
         return res;
       }
       // Telegram push faqat token bo'lsa (aks holda faqat in-app eslatma).
-      const notifyTelegram = hasTelegramToken() ? (chatId: bigint, text: string) => sendMessage(chatId, text) : undefined;
-      const res = await sweepDeadlines(prisma, { now: new Date(), notifyTelegram });
+      // `notifyTelegram` — mas'ulning shaxsiy chatiga oddiy eslatma;
+      // `sendEscalation` — nazoratchi/chiefga tugmali ogohlantirish.
+      const notifyTelegram = hasTelegramToken()
+        ? async (chatId: bigint, text: string) => {
+            await sendMessage(chatId, text);
+          }
+        : undefined;
+      const sendEscalation = hasTelegramToken()
+        ? makeEscalationSender(callbackSecret())
+        : undefined;
+      const res = await sweepDeadlines(prisma, { now: new Date(), notifyTelegram, sendEscalation });
       // Bir jadvalda task SLA breach'larini ham tekshiramiz.
       const sla = await sweepTaskSla(prisma, { now: new Date() });
       console.log(`[obligation.worker] sweep:`, res, "| task-sla:", sla);

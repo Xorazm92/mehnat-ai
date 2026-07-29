@@ -22,6 +22,20 @@ export function canTransition(from: ObligationStatus, to: ObligationStatus): boo
   return TRANSITIONS[from]?.includes(to) ?? false;
 }
 
+/**
+ * Hali bajarilmagan statuslar — "ochiq"/"muddati o'tgan" degan har qanday
+ * so'rovning asosi. `accepted`/`cancelled` yakunlangan, ular eslatma ham,
+ * eskalatsiya ham keltirib chiqarmaydi. Bir joyda turishi shart: bu ro'yxat
+ * bo'linib ketsa, sweep bir narsani, taxta boshqa narsani "ochiq" deb hisoblardi.
+ */
+export const OPEN_OBLIGATION_STATUSES: ObligationStatus[] = [
+  "planned",
+  "in_progress",
+  "ready",
+  "sent",
+  "rejected",
+];
+
 /** O'tish uchun kerak bo'lgan permission (assertCompanyPermission uchun). */
 export function permissionForTransition(to: ObligationStatus): string {
   switch (to) {

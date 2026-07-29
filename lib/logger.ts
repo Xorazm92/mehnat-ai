@@ -127,7 +127,12 @@ export type LoginFailureReason =
   | "missing_credentials"
   | "unknown_account"
   | "inactive_account"
-  | "bad_password";
+  | "bad_password"
+  // Telegram Mini App kirishi (lib/telegramInitData.ts sabablari). `invalid` —
+  // imzo/muddat/foydalanuvchi bilan bog'liq har qanday rad etish: tafsilotni
+  // ajratib logga yozish hujumchiga qaysi bosqichda to'xtaganini aytib qo'yardi.
+  | "telegram_invalid"
+  | "telegram_unlinked";
 
 /** Muvaffaqiyatsiz login urinishi. `login` normallashtirilgan (email) — PII, parol emas. */
 export function logLoginFailure(fields: {

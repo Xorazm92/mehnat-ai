@@ -1,10 +1,12 @@
 import type { PrismaClient } from "@prisma/client";
 import { handleCommand } from "../application/handle-command";
 import type { RawTelegramUpdate } from "../../monitoring/domain/inbound-message";
+import type { ReplyMarkup } from "../../../telegram/keyboard";
 
 export interface CommandReply {
   chatId: bigint;
   text: string;
+  replyMarkup?: ReplyMarkup;
 }
 
 /**
@@ -15,6 +17,7 @@ export interface CommandReply {
 export async function routeCommand(
   prisma: PrismaClient,
   update: RawTelegramUpdate,
+  opts: { secret: string },
 ): Promise<CommandReply | null> {
   const msg = update.message;
   if (!msg || !msg.from || !msg.text || !msg.text.startsWith("/")) return null;
@@ -22,16 +25,21 @@ export async function routeCommand(
   const chatId = BigInt(msg.chat.id);
   const replyFrom = msg.reply_to_message?.from;
 
-  const text = await handleCommand(prisma, {
+  const reply = await handleCommand(prisma, {
     chatId,
+    chatType: msg.chat.type ?? null,
     chatTitle: msg.chat.title ?? null,
     callerTelegramId: BigInt(msg.from.id),
     callerUsername: msg.from.username ?? null,
     text: msg.text,
+    secret: opts.secret,
     reply: replyFrom
       ? { telegramUserId: BigInt(replyFrom.id), username: replyFrom.username ?? null }
       : undefined,
   });
 
-  return text ? { chatId, text } : null;
+  if (!reply) return null;
+  return typeof reply === "string"
+    ? { chatId, text: reply }
+    : { chatId, text: reply.text, replyMarkup: reply.replyMarkup };
 }

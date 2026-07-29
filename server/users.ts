@@ -7,6 +7,7 @@ import { revalidateTag } from "next/cache";
 import bcrypt from "bcryptjs";
 import type { UserRole } from "@/lib/permissions";
 import { serialize } from "@/lib/serialize";
+import { phoneKey } from "@/lib/phone";
 
 // Safe field projection — never expose passwordHash to the client.
 const SAFE_USER_SELECT = {
@@ -143,6 +144,8 @@ export async function createUser(data: {
       passwordHash,
       role: data.role,
       phone: data.phone || null,
+      // Telegram `request_contact` shu ustun bo'yicha xodimni topadi.
+      phoneNormalized: phoneKey(data.phone),
       pinfl: data.pinfl || null,
       department: data.department || null,
       gender: data.gender || null,
@@ -194,6 +197,9 @@ export async function updateUser(
   // Sana maydonlarini xavfsiz Date'ga aylantirish
   const { birthDate, hiredAt, skillLevel, ...rest } = data;
   const updateData: Record<string, unknown> = { ...rest };
+  // `phone` o'zgarsa normallashgan nusxa ham yangilanishi shart, aks holda bot
+  // eski raqam bo'yicha qidiradi.
+  if (data.phone !== undefined) updateData.phoneNormalized = phoneKey(data.phone);
   if (birthDate !== undefined) updateData.birthDate = toDate(birthDate) ?? null;
   if (hiredAt !== undefined) updateData.hiredAt = toDate(hiredAt) ?? null;
   // Malaka darajasi — faqat rahbar rollar belgilaydi (xodim o'zini "tajribali"

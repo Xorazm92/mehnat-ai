@@ -12,3 +12,17 @@ import { config } from "../config";
 export function createRedisConnection(): Redis {
   return new Redis(config.redisUrl, { maxRetriesPerRequest: null });
 }
+
+let shared: Redis | undefined;
+
+/**
+ * One shared connection for ordinary key/value work (short-lived state such as
+ * the receipt window). Deliberately NOT for BullMQ — those need their own
+ * connections because blocking commands monopolise them. Per-message code must
+ * use this rather than `createRedisConnection`, which would open a new socket
+ * on every Telegram update.
+ */
+export function getSharedRedis(): Redis {
+  if (!shared) shared = new Redis(config.redisUrl);
+  return shared;
+}

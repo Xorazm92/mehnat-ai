@@ -38,24 +38,26 @@ function resolveWebhookUrl(): string {
   return `${base.replace(/\/$/, "")}/api/telegram/webhook`;
 }
 
-// Updates the bot actually captures. message_reaction & edited_message are NOT
-// in Telegram's default set, so they must be listed explicitly or they'll never
-// arrive at the webhook.
+// Updates the bot actually captures. message_reaction, edited_message and
+// my_chat_member are NOT in Telegram's default set, so they must be listed
+// explicitly or they'll never arrive at the webhook. `my_chat_member` is how
+// the bot learns it was added to a group and can offer the bind picker.
 const ALLOWED_UPDATES = [
   "message",
   "edited_message",
   "message_reaction",
   "callback_query",
+  "my_chat_member",
 ] as const;
 
+// The bot is button-driven: only the three commands that START an interaction
+// are advertised. /whoami, /stats, /link_me, /bind, /link, /kpi_award and
+// /kpi_penalty still work as hidden aliases (see handle-command.ts) but no
+// longer appear in the BotFather menu, so nobody is taught to type them.
 const COMMANDS = [
-  { command: "start", description: "Botni ishga tushirish" },
-  { command: "whoami", description: "Bog'langan profilingiz" },
-  { command: "stats", description: "Joriy oy KPI ko'rsatkichlari" },
-  { command: "link_me", description: "O'zingizni xodimga bog'lash" },
-  { command: "help", description: "Buyruqlar ro'yxati" },
-  { command: "bind", description: "Guruhni korxonaga bog'lash (admin)" },
-  { command: "link", description: "Xodimni Telegram akkauntga bog'lash (admin)" },
+  { command: "start", description: "Boshlash / qayta bog'lanish" },
+  { command: "menu", description: "Asosiy menyu" },
+  { command: "help", description: "Yordam" },
 ];
 
 async function main() {

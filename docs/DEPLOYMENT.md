@@ -71,6 +71,10 @@ TELEGRAM_BOT_TOKEN="<from @BotFather>"
 TELEGRAM_WEBHOOK_SECRET="<openssl rand -hex 32>"   # REQUIRED — webhook 503s without it
 TELEGRAM_ADMIN_TELEGRAM_ID="<your numeric TG id>"
 BOT_MODE="webhook"
+MINI_APP_URL="https://asro.uz"              # optional — falls back to AUTH_URL.
+                                            # MUST be https: Telegram rejects a
+                                            # web_app button on http, so the Mini
+                                            # App buttons vanish without it.
 
 GEMINI_API_KEY="<optional — powers the bot classifier AND the in-app AI assistant>"
 BILLING_ENABLED="true"
@@ -297,8 +301,14 @@ npm run bot:webhook info       # verify (url, pending_update_count, last_error)
 # npm run bot:webhook delete   # to switch back to polling
 ```
 
-It also opts in to `edited_message` + `message_reaction` (not delivered by
-default) and registers the command menu (`/start /whoami /help /bind /link`).
+It also opts in to `edited_message`, `message_reaction`, `callback_query` and
+`my_chat_member` (none delivered by default) and registers the command menu,
+which is now just `/start /menu /help` — the bot is button-driven.
+
+> **Re-run `npm run bot:webhook` after deploying a release that changes
+> `ALLOWED_UPDATES` or the command list.** Telegram keeps whatever was
+> registered last; without this, button presses (`callback_query`) and
+> group-join events (`my_chat_member`) are simply never delivered.
 
 **Sanity check** `bot:webhook info` should show your URL and
 `"last_error_message"` empty. A `401`/`403` there means the secret in `.env`
@@ -312,8 +322,24 @@ doesn't match what was registered.
 - [ ] `curl https://asro.uz/api/health` → `{"status":"ok","db":"ok"}` (200).
 - [ ] Browser: login at `https://asro.uz/login` with the admin account.
 - [ ] `npm run bot:webhook info` → correct URL, no `last_error`.
-- [ ] Add the bot to a Telegram group, send `/whoami` → it replies.
-- [ ] `/bind <INN>` in a group (as admin) → group binds to the company.
+- [ ] DM the bot `/start` as an unlinked staffer → "📱 Raqamni yuborish" button
+      appears; tapping it links the account and shows the menu.
+- [ ] Add the bot to a Telegram group **as an admin** → the bot DMs you a
+      company picker; tapping one binds the group (no `/bind` typing).
+- [ ] Press a menu button twice → the second press changes nothing (effects are
+      idempotent) and never leaves the button spinning.
+- [ ] Post a question in a bound group and let the deadline pass → the
+      Supervisor's **private chat** gets an alert with verdict buttons, and the
+      client group stays silent.
+- [ ] Press **📅 Bugun** in the menu → today's plan renders. The same content is
+      pushed at 08:50 Asia/Tashkent; verify the next morning that people with
+      nothing due received nothing at all.
+- [ ] Press **📊 Dashboard** in the menu → the Mini App opens *inside* Telegram
+      and shows numbers (not a login screen). Requires `MINI_APP_URL` (or
+      `AUTH_URL`) to be an **https** origin — Telegram rejects http.
+- [ ] In a bound client group, press **📄 Kvitansiya yuborish** and post a photo
+      → it arrives in the responsible accountant's private chat. Post another
+      photo without pressing the button → nothing is forwarded.
 - [ ] Post a question-like message in a bound group → a `Question` row is
       created (check DB / dashboard); leave it past the deadline → cron marks it
       `late` and records a KPI penalty.

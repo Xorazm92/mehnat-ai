@@ -58,6 +58,10 @@ function pathToView(path: string): AppView | null {
   if (path.startsWith("/cabinet/bank")) return "cabinet_bank";
   if (path.startsWith("/cabinet")) return "cabinet";
   if (path.startsWith("/dashboard")) return "dashboard";
+  // Telegram Mini App ekranlari — mavjud view ruxsatlaridan foydalanadi, ya'ni
+  // botdagi ekran ham, veb sahifa ham bir xil RBAC bilan qo'riqlanadi.
+  if (path.startsWith("/telegram-app/proof")) return "reports";
+  if (path.startsWith("/telegram-app/dashboard")) return "dashboard";
   return null;
 }
 
@@ -100,7 +104,15 @@ export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
   const isPortal = path.startsWith("/portal");
-  const isProtected = isPortal || PROTECTED_ROUTES.some((r) => path.startsWith(r));
+  // `/telegram-app` — Mini App handshake sahifasi: u ATAYIN ochiq, chunki
+  // sessiya aynan o'sha yerda `initData` orqali yaratiladi. Uning ostidagi
+  // ekranlar esa oddiy himoyalangan sahifalar.
+  const isTelegramApp = path.startsWith("/telegram-app");
+  const isTelegramHandshake = path === "/telegram-app";
+  const isProtected =
+    isPortal ||
+    (isTelegramApp && !isTelegramHandshake) ||
+    PROTECTED_ROUTES.some((r) => path.startsWith(r));
 
   // `secureCookie` MUST match how next-auth set the cookie (see USE_SECURE_COOKIES
   // in lib/auth.config.ts). It drives both the cookie name (`__Secure-` prefix)
@@ -115,6 +127,14 @@ export async function proxy(req: NextRequest) {
 
   // Login bo'lmagan foydalanuvchi himoyalangan sahifaga kirmoqchi
   if (!token && isProtected) {
+    // Telegram ichida /login sahifasini ko'rsatish ma'nosiz — u yerda email
+    // va parol so'raladi, holbuki foydalanuvchi allaqachon Telegramda. Uni
+    // handshake'ga qaytaramiz, u initData bilan kirib, shu yerga qaytaradi.
+    if (isTelegramApp) {
+      const handshake = new URL("/telegram-app", req.url);
+      handshake.searchParams.set("next", path);
+      return NextResponse.redirect(handshake);
+    }
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", path);
     return NextResponse.redirect(loginUrl);

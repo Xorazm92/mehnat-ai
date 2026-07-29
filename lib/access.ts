@@ -54,6 +54,9 @@ export const SENIOR_PERMISSIONS = new Set<string>([
   "obligation:assign",
   "delay-reason:approve",
   "invoice:manage",
+  // Eskalatsiya hukmi: jarima / ogohlantirish / sababli. KPI ledgeriga yozadi,
+  // oylikka emas — pul faqat chief ERP'da tasdiqlagach ushlanadi (ADR-0001).
+  "kpi:penalize",
 ]);
 
 type Db = Prisma.TransactionClient;

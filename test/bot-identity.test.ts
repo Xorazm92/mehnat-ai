@@ -22,6 +22,8 @@ const TAG = `vitest-id-${Date.now()}`;
 const ADMIN_TG = BigInt(990_000_000_001);
 const NONADMIN_TG = BigInt(990_000_000_002);
 const TARGET_TG = BigInt(990_000_000_003);
+/** Never linked to any User — exercises the onboarding branch of /start. */
+const UNLINKED_TG = BigInt(990_000_000_009);
 const CHAT_ID = BigInt(-1009000000000 - (Date.now() % 100000));
 
 const ids = { company: "", admin: "", nonAdmin: "", target: "" };
@@ -137,7 +139,12 @@ describe("authorizeAdmin", () => {
 });
 
 describe("handleCommand", () => {
-  const base = { chatId: CHAT_ID, chatTitle: "ACME group" };
+  const SECRET = "test-callback-secret";
+  const base = { chatId: CHAT_ID, chatTitle: "ACME group", secret: SECRET };
+
+  /** Handlers may answer with a bare string or with text plus a keyboard. */
+  const textOf = (reply: Awaited<ReturnType<typeof handleCommand>>): string =>
+    reply == null ? "" : typeof reply === "string" ? reply : reply.text;
 
   it("/whoami reports the linked profile", async () => {
     const reply = await handleCommand(prisma, {
@@ -145,8 +152,8 @@ describe("handleCommand", () => {
       callerTelegramId: ADMIN_TG,
       text: "/whoami",
     });
-    expect(reply).toContain("Admin");
-    expect(reply).toContain("admin");
+    expect(textOf(reply)).toContain("Admin");
+    expect(textOf(reply)).toContain("admin");
   });
 
   it("/bind is blocked for non-admins", async () => {
@@ -155,19 +162,55 @@ describe("handleCommand", () => {
       callerTelegramId: NONADMIN_TG,
       text: `/bind ${companyInn}`,
     });
-    expect(reply).toContain("⛔");
+    expect(textOf(reply)).toContain("⛔");
+  });
+
+  it("/start offers the contact button to an unlinked user in private", async () => {
+    const reply = await handleCommand(prisma, {
+      ...base,
+      chatId: UNLINKED_TG,
+      chatType: "private",
+      chatTitle: null,
+      callerTelegramId: UNLINKED_TG,
+      text: "/start",
+    });
+    expect(typeof reply).toBe("object");
+    const markup = (reply as { replyMarkup?: unknown }).replyMarkup as {
+      keyboard?: Array<Array<{ request_contact?: boolean }>>;
+    };
+    expect(markup.keyboard?.[0]?.[0]?.request_contact).toBe(true);
+  });
+
+  it("/start shows the menu to a linked user in private", async () => {
+    const reply = await handleCommand(prisma, {
+      ...base,
+      chatId: ADMIN_TG,
+      chatType: "private",
+      chatTitle: null,
+      callerTelegramId: ADMIN_TG,
+      text: "/start",
+    });
+    const markup = (reply as { replyMarkup?: unknown }).replyMarkup as {
+      inline_keyboard?: Array<Array<{ callback_data?: string }>>;
+    };
+    expect(markup.inline_keyboard?.[0]?.length).toBeGreaterThan(0);
+    expect(markup.inline_keyboard?.[0]?.[0]?.callback_data).toBeTruthy();
   });
 
   it("routeCommand handles a raw /bind update from an admin", async () => {
-    const reply = await routeCommand(prisma, {
-      update_id: 1,
-      message: {
-        message_id: 1,
-        chat: { id: Number(CHAT_ID), type: "supergroup", title: "ACME group" },
-        from: { id: Number(ADMIN_TG), username: "adminuser" },
-        text: `/bind ${companyInn}`,
+    const reply = await routeCommand(
+      prisma,
+      {
+        update_id: 1,
+        message: {
+          message_id: 1,
+          chat: { id: Number(CHAT_ID), type: "supergroup", title: "ACME group" },
+          from: { id: Number(ADMIN_TG), username: "adminuser" },
+          text: `/bind ${companyInn}`,
+        },
       },
-    });
+      { secret: SECRET },
+    );
     expect(reply).not.toBeNull();
     expect(reply!.text).toContain("✅");
   });

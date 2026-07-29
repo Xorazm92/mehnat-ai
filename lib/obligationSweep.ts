@@ -6,8 +6,21 @@
 // overdue) IDEMPOTENT yaratadi. Idempotency — NotificationDelivery dedupKey
 // (@@unique([channel, dedupKey])) → sweep necha marta ishlasa ham bir bosqich
 // bir marta yuboriladi. Reviewer #9.
-import { Prisma, type ObligationStatus } from "@prisma/client";
+//
+// Faza 2 (ADR-0007): eslatma MIJOZ GURUHIGA EMAS, mas'ul xodimning SHAXSIY
+// chatiga boradi — mijoz bizning ichki kechikishlarimizni ko'rmasligi kerak.
+// `due` va `overdue` bosqichlari qo'shimcha ravishda eskalatsiya zanjirini
+// ishga tushiradi (L1 nazoratchi → L2 bosh buxgalter).
+import { Prisma } from "@prisma/client";
 import { logServerError } from "@/lib/logger";
+import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
+import {
+  escalate,
+  escalationDedupKey,
+  ESCALATION_CHANNEL,
+  type EscalationLevel,
+  type EscalationSender,
+} from "@/lib/escalation";
 
 type Db = Prisma.TransactionClient;
 
@@ -15,7 +28,7 @@ const DAY = 86_400_000;
 const startOfUtcDay = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 
 /** accepted/cancelled — yakunlangan, eslatma yubormaymiz. */
-const OPEN_STATUSES: ObligationStatus[] = ["planned", "in_progress", "ready", "sent", "rejected"];
+const OPEN_STATUSES = OPEN_OBLIGATION_STATUSES;
 
 interface Milestone {
   key: string;
@@ -39,6 +52,16 @@ function reminderTitle(key: string): string {
   return `Majburiyat muddati yaqin (${key})`;
 }
 
+/**
+ * Qaysi bosqich zanjirni ko'taradi. D-5/D-3/D-1 — faqat mas'ulga eslatma;
+ * muddat kuni nazoratchi, ertasiga bosh buxgalter xabardor qilinadi.
+ */
+function escalationLevelFor(key: string): EscalationLevel | null {
+  if (key === "due") return 1;
+  if (key === "overdue:L1") return 2;
+  return null;
+}
+
 export interface SweepResult {
   scanned: number;
   markedOverdue: number;
@@ -46,6 +69,10 @@ export interface SweepResult {
   remindersDeduped: number;
   telegramSent: number;
   telegramDeduped: number;
+  /** Zanjir bo'ylab ko'tarilgan bosqichlar soni (L1 + L2). */
+  escalated: number;
+  /** Telegramda topilmagan mas'ullar (xodim botga /start bosmagan). */
+  noTelegram: number;
 }
 
 /** Telegram yuboruvchi — bot qatlamidan injeksiya qilinadi (sweep framework-free). */
@@ -63,7 +90,13 @@ function isUniqueViolation(e: unknown): boolean {
 
 export async function sweepDeadlines(
   db: Db,
-  opts: { now?: Date; notifyTelegram?: TelegramSender } = {},
+  opts: {
+    now?: Date;
+    /** Mas'ul xodimning shaxsiy chatiga eslatma yuboradi. */
+    notifyTelegram?: TelegramSender;
+    /** `due`/`overdue` bosqichlarida zanjirni ko'taradi (bot qatlami render qiladi). */
+    sendEscalation?: EscalationSender;
+  } = {},
 ): Promise<SweepResult> {
   const now = opts.now ?? new Date();
   const today = startOfUtcDay(now);
@@ -78,23 +111,45 @@ export async function sweepDeadlines(
       periodKey: true,
       companyId: true,
       company: { select: { name: true } },
+      template: { select: { name: true } },
     },
   });
 
-  // Telegram push yoqilgan bo'lsa — firma → chat(lar) mappingini oldindan yuklaymiz.
-  const chatMap = new Map<string, bigint[]>();
+  // Telegram push yoqilgan bo'lsa — mas'ul xodim → SHAXSIY chat mappingi.
+  // (Shaxsiy chatda chat_id = Telegram foydalanuvchi id'si.) Mijoz guruhi
+  // ataylab ishlatilmaydi — ADR-0007.
+  const dmMap = new Map<string, bigint>();
   if (opts.notifyTelegram && open.length) {
-    const companyIds = [...new Set(open.map((o) => o.companyId))];
-    const groups = await db.telegramGroup.findMany({
-      where: { companyId: { in: companyIds } },
-      select: { companyId: true, chatId: true },
-    });
-    for (const g of groups) {
-      if (g.companyId == null) continue;
-      const arr = chatMap.get(g.companyId) ?? [];
-      arr.push(g.chatId);
-      chatMap.set(g.companyId, arr);
+    const userIds = [...new Set(open.map((o) => o.responsibleUserId).filter((id): id is string => !!id))];
+    if (userIds.length) {
+      const users = await db.user.findMany({
+        where: { id: { in: userIds }, isActive: true, telegramUserId: { not: null } },
+        select: { id: true, telegramUserId: true },
+      });
+      for (const u of users) {
+        if (u.telegramUserId != null) dmMap.set(u.id, u.telegramUserId);
+      }
     }
+  }
+
+  // Allaqachon eskalatsiya qilingan bosqichlarni BITTA so'rovda oldindan
+  // yuklaymiz. Aks holda muddati o'tgan har bir majburiyat uchun `escalate`
+  // chaqirilib, faqat "band" ekanini bilish uchun so'rov qilinardi — soatlik
+  // sweep minglab qator ustidan yurishini hisobga olsak, bu sezilarli.
+  const dueOrPast = open.filter(
+    (o) => Math.floor((startOfUtcDay(o.dueAt).getTime() - today.getTime()) / DAY) <= 0,
+  );
+  const alreadyEscalated = new Set<string>();
+  if (dueOrPast.length) {
+    const keys = dueOrPast.flatMap((o) => [
+      escalationDedupKey("obligation", o.id, 1),
+      escalationDedupKey("obligation", o.id, 2),
+    ]);
+    const rows = await db.notificationDelivery.findMany({
+      where: { channel: ESCALATION_CHANNEL, dedupKey: { in: keys } },
+      select: { dedupKey: true },
+    });
+    for (const r of rows) if (r.dedupKey) alreadyEscalated.add(r.dedupKey);
   }
 
   const res: SweepResult = {
@@ -104,6 +159,8 @@ export async function sweepDeadlines(
     remindersDeduped: 0,
     telegramSent: 0,
     telegramDeduped: 0,
+    escalated: 0,
+    noTelegram: 0,
   };
 
   for (const o of open) {
@@ -116,60 +173,113 @@ export async function sweepDeadlines(
 
     for (const m of milestonesFor(daysUntil)) {
       const dedupKey = `obligation:${o.id}:reminder:${m.key}`;
-      try {
-        // Dedup ledger — bu qator bosqichni bir martaga qulflaydi.
-        await db.notificationDelivery.create({
-          data: {
-            channel: "inapp",
-            level: m.level,
-            dedupKey,
-            recipientId: o.responsibleUserId,
-            status: "sent",
-            sentAt: now,
-          },
-        });
-        res.remindersCreated++;
-        // In-app xabar — best-effort (delivery ledger'i vakolatli).
-        if (o.responsibleUserId) {
-          try {
-            await db.notification.create({
-              data: {
-                userId: o.responsibleUserId,
-                type: "obligation_reminder",
-                title: reminderTitle(m.key),
-                message: `Majburiyat ${o.periodKey} — muddat ${o.dueAt.toISOString().slice(0, 10)}`,
-                link: `/deadlines?obligation=${o.id}`,
-              },
-            });
-          } catch (err) {
-            logServerError("obligationSweep.notification", err, { obligationId: o.id });
-          }
-        }
-      } catch (e) {
-        if (isUniqueViolation(e)) res.remindersDeduped++;
-        else throw e;
-      }
-
-      // 2) Telegram kanal — alohida dedup (channel="telegram"), firma guruhiga.
-      if (opts.notifyTelegram) {
+      const existingInApp = await db.notificationDelivery.findUnique({
+        where: { channel_dedupKey: { channel: "inapp", dedupKey } },
+        select: { id: true },
+      });
+      if (existingInApp) {
+        res.remindersDeduped++;
+      } else {
         try {
+          // Dedup ledger — bu qator bosqichni bir martaga qulflaydi.
           await db.notificationDelivery.create({
-            data: { channel: "telegram", level: m.level, dedupKey, recipientId: o.responsibleUserId, status: "sent", sentAt: now },
+            data: {
+              channel: "inapp",
+              level: m.level,
+              dedupKey,
+              recipientId: o.responsibleUserId,
+              status: "sent",
+              sentAt: now,
+            },
           });
-          const chats = chatMap.get(o.companyId) ?? [];
-          const text = `⏰ ${reminderTitle(m.key)}\n${o.company.name} — ${o.periodKey}\nMuddat: ${o.dueAt.toISOString().slice(0, 10)}`;
-          for (const chatId of chats) {
+          res.remindersCreated++;
+          // In-app xabar — best-effort (delivery ledger'i vakolatli).
+          if (o.responsibleUserId) {
             try {
-              await opts.notifyTelegram(chatId, text);
+              await db.notification.create({
+                data: {
+                  userId: o.responsibleUserId,
+                  type: "obligation_reminder",
+                  title: reminderTitle(m.key),
+                  message: `Majburiyat ${o.periodKey} — muddat ${o.dueAt.toISOString().slice(0, 10)}`,
+                  link: `/deadlines?obligation=${o.id}`,
+                },
+              });
             } catch (err) {
-              logServerError("obligationSweep.telegram", err, { chatId: String(chatId) });
+              logServerError("obligationSweep.notification", err, { obligationId: o.id });
             }
           }
-          res.telegramSent++;
         } catch (e) {
-          if (isUniqueViolation(e)) res.telegramDeduped++;
+          if (isUniqueViolation(e)) res.remindersDeduped++;
           else throw e;
         }
+      }
+
+      // 2) Telegram kanal — alohida dedup (channel="telegram"), mas'ulning
+      //    SHAXSIY chatiga. Guruhga yozilmaydi (ADR-0007).
+      const dmChatId = o.responsibleUserId ? dmMap.get(o.responsibleUserId) : undefined;
+      if (opts.notifyTelegram && dmChatId != null) {
+        const existingTg = await db.notificationDelivery.findUnique({
+          where: { channel_dedupKey: { channel: "telegram", dedupKey } },
+          select: { id: true },
+        });
+        if (existingTg) {
+          res.telegramDeduped++;
+        } else {
+          try {
+            await db.notificationDelivery.create({
+              data: {
+                channel: "telegram",
+                level: m.level,
+                dedupKey,
+                recipientId: o.responsibleUserId,
+                targetChatId: dmChatId,
+                status: "sent",
+                sentAt: now,
+              },
+            });
+            const what = o.template?.name ? `${o.template.name} — ` : "";
+            const text =
+              `⏰ ${reminderTitle(m.key)}\n${what}${o.company.name} (${o.periodKey})\n` +
+              `Muddat: ${o.dueAt.toISOString().slice(0, 10)}`;
+            try {
+              await opts.notifyTelegram(dmChatId, text);
+              res.telegramSent++;
+            } catch (err) {
+              logServerError("obligationSweep.telegram", err, { chatId: String(dmChatId) });
+            }
+          } catch (e) {
+            if (isUniqueViolation(e)) res.telegramDeduped++;
+            else throw e;
+          }
+        }
+      } else if (opts.notifyTelegram && o.responsibleUserId) {
+        // Mas'ul bor, lekin bot unga yoza olmaydi — in-app eslatma qoldi.
+        res.noTelegram++;
+      }
+
+      // 3) Zanjir: muddat kuni nazoratchi, ertasiga bosh buxgalter.
+      const level = escalationLevelFor(m.key);
+      if (level != null && !alreadyEscalated.has(escalationDedupKey("obligation", o.id, level))) {
+        const what = o.template?.name ?? "Majburiyat";
+        const escalated = await escalate(
+          db,
+          {
+            kind: "obligation",
+            entityId: o.id,
+            companyId: o.companyId,
+            companyName: o.company.name,
+            responsibleUserId: o.responsibleUserId,
+            responsibleName: null,
+            detail:
+              `${what} (${o.periodKey}) — muddat ${o.dueAt.toISOString().slice(0, 10)}` +
+              (m.key === "due" ? ", bugun oxirgi kun." : ", muddat o'tdi."),
+            link: `/deadlines?obligation=${o.id}`,
+          },
+          level,
+          { sendEscalation: opts.sendEscalation, now },
+        );
+        if (escalated.claimed) res.escalated++;
       }
     }
   }

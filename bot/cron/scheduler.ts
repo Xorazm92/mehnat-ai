@@ -1,9 +1,12 @@
 import { prisma } from "../../lib/prisma";
-import { config, hasTelegramToken } from "../config";
+import { callbackSecret, config, hasTelegramToken } from "../config";
+import type { ReplyMarkup } from "../telegram/keyboard";
+import { receiptButton } from "../contexts/billing/application/receipt-flow";
 import { sendMessage } from "../telegram/bot";
 import { expireOverdueQuestions } from "../contexts/monitoring/application/expire-questions";
 import { recordQuestionKpi } from "../contexts/kpi/application/record-question-kpi";
 import { runBillingReminders } from "../contexts/billing/application/run-reminders";
+import { enqueueNotifyJob } from "../queues/notify.queue";
 import { autoManageReadiness, gatherChecklist } from "../../lib/monthClose";
 
 const SWEEP_INTERVAL_MS = 60_000;
@@ -24,9 +27,9 @@ function msUntilHour(hour: number, now = new Date()): number {
 
 /** Telegram sender for the cron: fails (not silently "sends") when misconfigured
  *  so a reminder is marked `failed`, never `sent`, without a token. */
-async function sendTelegram(chatId: bigint, text: string): Promise<void> {
+async function sendTelegram(chatId: bigint, text: string, replyMarkup?: unknown): Promise<void> {
   if (!hasTelegramToken()) throw new Error("TELEGRAM_BOT_TOKEN not set");
-  await sendMessage(chatId, text);
+  await sendMessage(chatId, text, { replyMarkup: replyMarkup as ReplyMarkup | undefined });
 }
 
 /**
@@ -45,6 +48,10 @@ export function startCron(): () => void {
       }
       if (expiredIds.length > 0) {
         console.log(`[cron] expired ${expiredIds.length} overdue question(s) → KPI`);
+        // Escalate now rather than waiting for the 5-minute scheduler: a
+        // supervisor is only useful if they hear about it while it still
+        // matters. The sweep itself is idempotent, so an extra run is free.
+        await enqueueNotifyJob({ kind: "escalate-questions" });
       }
     } catch (err) {
       console.error(`[cron] sweep failed: ${(err as Error).message}`);
@@ -53,7 +60,13 @@ export function startCron(): () => void {
 
   const runBilling = async () => {
     try {
-      const res = await runBillingReminders(prisma, currentPeriod(), { sendTelegram });
+      // The reminder carries a "📄 Kvitansiya yuborish" button, so a client
+      // can hand the receipt straight to the accountant instead of it sitting
+      // unnoticed in the group.
+      const res = await runBillingReminders(prisma, currentPeriod(), {
+        sendTelegram,
+        reminderKeyboard: receiptButton(callbackSecret()),
+      });
       console.log(`[cron] billing:`, res);
     } catch (err) {
       console.error(`[cron] billing failed: ${(err as Error).message}`);

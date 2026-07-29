@@ -6,8 +6,17 @@ import { buildReminderMessage } from "../domain/message";
 import { DEFAULT_ESCALATION, type EscalationConfig } from "../domain/debt";
 
 export interface BillingDeps {
-  /** Injected so the pipeline is testable without real Telegram. */
-  sendTelegram: (chatId: bigint, text: string) => Promise<void>;
+  /**
+   * Injected so the pipeline is testable without real Telegram. `replyMarkup`
+   * is opaque here on purpose — the keyboard is built by the caller, keeping
+   * this layer free of the callback-signing secret.
+   */
+  sendTelegram: (chatId: bigint, text: string, replyMarkup?: unknown) => Promise<void>;
+  /**
+   * Keyboard attached to the reminder in the client's group — the
+   * "📄 Kvitansiya yuborish" button. Omitted ⇒ plain text, as before.
+   */
+  reminderKeyboard?: unknown;
   now?: Date;
   escalation?: EscalationConfig;
 }
@@ -120,7 +129,7 @@ export async function runBillingReminders(
     });
 
     try {
-      await deps.sendTelegram(group.chatId, text);
+      await deps.sendTelegram(group.chatId, text, deps.reminderKeyboard);
     } catch (e) {
       await prisma.paymentReminder.update({
         where: { id: reminderId! },

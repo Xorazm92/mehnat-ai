@@ -33,11 +33,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # DB-free DDD domain specs (bot/**/*.spec.ts). The test/**/*.test.ts suite
-      # is integration-level (needs a seeded Postgres) — see the commented job
+      # DB-free specs: bot/**/*.spec.ts (DDD domain) + lib/**/*.spec.ts (pure
+      # helpers shared with the app). The test/**/*.test.ts suite is
+      # integration-level (needs a seeded Postgres) — see the commented job
       # below to enable it once seeding is scripted in CI.
       - name: Unit tests (domain)
-        run: npx vitest run bot/
+        run: npx vitest run bot/ lib/
 
   # ── Integration tests (opt-in) ────────────────────────────────────────────
   # Requires a Postgres service + `prisma migrate deploy` + KPI-rule seeding. Uncomment

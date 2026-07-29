@@ -27,6 +27,7 @@ function toMessageData(
     kind: m.kind,
     replyToId: m.replyToId ?? null,
     mediaType: m.mediaType ?? null,
+    fileId: m.fileId ?? null,
     createdAt: m.createdAt,
   };
 }

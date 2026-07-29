@@ -5,47 +5,73 @@ import { authorizeAdmin } from "./authorize";
 import { linkTelegramUser } from "./link-user";
 import { bindGroupToCompany } from "./bind-group";
 import { recordManualKpi, type ManualKind } from "../../kpi/application/manual-adjustment";
-import { rollupLedger } from "../../kpi/application/rollup";
-import { periodOf } from "../../kpi/domain/kpi-event";
+import { contactKeyboard, type ReplyMarkup } from "../../../telegram/keyboard";
+import { mainMenuKeyboard, renderMenu, renderMyKpi } from "../../interaction/application/menu";
 
 export interface CommandContext {
   chatId: bigint;
+  /** 'private' | 'group' | 'supergroup' | 'channel'. */
+  chatType?: string | null;
   chatTitle?: string | null;
   callerTelegramId: bigint;
   callerUsername?: string | null;
   text: string;
+  /** Signing secret for any inline keyboard the reply carries. */
+  secret: string;
   /** The user whose message this command replied to (used by /link). */
   reply?: { telegramUserId: bigint; username?: string | null };
 }
 
+export interface CommandReplyPayload {
+  text: string;
+  replyMarkup?: ReplyMarkup;
+}
+
+/** A handler may answer with plain text or with text plus a keyboard. */
+type CommandResult = string | CommandReplyPayload | null;
+
+/**
+ * The visible command surface is now just /start, /menu and /help — everything
+ * else is a button (see scripts/set-telegram-webhook.ts, which registers only
+ * those three with BotFather). The older commands below stay dispatchable as
+ * hidden aliases for one release so anyone mid-habit is not stranded.
+ */
 const HELP = [
-  "Buyruqlar:",
-  "/whoami — bog'langan profilingiz",
-  "/stats — joriy oy KPI ko'rsatkichlaringiz",
-  "/link_me <email yoki JSHSHIR> — o'zingizni xodim kartochkangizga bog'lash",
-  "/bind <INN yoki ID> — bu guruhni korxonaga bog'lash (admin)",
-  "/link <email yoki JSHSHIR> — xodim xabariga reply qilib, uni Telegram akkauntga bog'lash (admin)",
-  "/kpi_award <email|JSHSHIR> <foiz> [sabab] — qo'lda KPI bonusi (admin)",
-  "/kpi_penalty <email|JSHSHIR> <foiz> [sabab] — qo'lda KPI jarimasi (admin)",
-  "/help — ushbu ro'yxat",
+  "Bot tugmalar bilan ishlaydi.",
+  "",
+  "/start — boshlash yoki qayta bog'lanish",
+  "/menu — asosiy menyu",
+  "/help — ushbu yordam",
+  "",
+  "Muddat, KPI va eskalatsiya xabarlari o'zi kelib turadi — tugmani bosish kifoya.",
+].join("\n");
+
+const CONTACT_BUTTON = "📱 Raqamni yuborish";
+
+const ONBOARD_TEXT = [
+  "👋 ASRO boti.",
+  "",
+  "Sizni tanishim uchun pastdagi tugmani bosing — telefon raqamingiz orqali",
+  "xodim kartochkangizga avtomatik bog'lanasiz.",
 ].join("\n");
 
 const ADMIN_ONLY = "⛔ Bu buyruq faqat administratorlar uchun.";
 
 /**
- * Dispatch a slash command to its handler and return the reply text (or null to
- * stay silent — e.g. an unknown command). All work goes through application
+ * Dispatch a slash command to its handler and return the reply (or null to stay
+ * silent — e.g. an unknown command). All work goes through application
  * use-cases; this function only routes and authorizes.
  */
 export async function handleCommand(
   prisma: PrismaClient,
   ctx: CommandContext,
-): Promise<string | null> {
+): Promise<CommandResult> {
   const cmd = parseCommand(ctx.text);
   if (!cmd) return null;
 
   switch (cmd.name) {
     case "start":
+    case "menu":
       return start(prisma, ctx);
     case "whoami":
       return whoami(prisma, ctx);
@@ -103,68 +129,51 @@ async function kpiAdjust(
   return `✅ ${target.fullName}: ${sign}${res.points}% KPI ledger'ga yozildi (${reason}).`;
 }
 
-/** Friendly welcome / onboarding — context-aware, unlike the terse /whoami. */
-async function start(prisma: PrismaClient, ctx: CommandContext): Promise<string> {
+/**
+ * The one entry point: either the main menu (linked) or the one-tap contact
+ * request (unlinked). Nobody is asked to type an email or a PINFL.
+ *
+ * In a group chat this stays quiet — a contact keyboard cannot be shown there
+ * and the bot's group behaviour is silent by design.
+ */
+async function start(prisma: PrismaClient, ctx: CommandContext): Promise<CommandResult> {
   const user = await resolveUserByTelegramId(prisma, ctx.callerTelegramId);
-  const lines = ["👋 ASRO KPI bot."];
+  const isPrivate = ctx.chatType == null || ctx.chatType === "private";
+
   if (user) {
-    lines.push(`Siz: ${user.fullName} — ${user.role}.`, "KPI'ni ko'rish: /stats · Buyruqlar: /help");
-  } else {
-    lines.push(
-      "O'zingizni xodim kartochkangizga bog'lang:",
-      "/link_me <email yoki JSHSHIR>",
-      "So'ng /stats bilan KPI'ni ko'rasiz. Barcha buyruqlar: /help",
-    );
+    return isPrivate
+      ? { text: renderMenu(user.fullName), replyMarkup: mainMenuKeyboard(ctx.secret, user.role) }
+      : `Siz: ${user.fullName} — ${user.role}. Menyu uchun botga shaxsiy yozing.`;
   }
-  return lines.join("\n");
+
+  if (!isPrivate) {
+    return "Botga shaxsiy yozing va \"📱 Raqamni yuborish\" tugmasini bosing.";
+  }
+  return { text: ONBOARD_TEXT, replyMarkup: contactKeyboard(CONTACT_BUTTON) };
 }
 
 async function whoami(prisma: PrismaClient, ctx: CommandContext): Promise<string> {
   const user = await resolveUserByTelegramId(prisma, ctx.callerTelegramId);
   if (!user) {
-    return "Siz hali biror xodimga bog'lanmagansiz.\nBog'lanish uchun: /link_me <email yoki JSHSHIR>";
+    return "Siz hali biror xodimga bog'lanmagansiz.\n/start bosing va raqamingizni yuboring.";
   }
   const status = user.isActive ? "" : " (faol emas)";
   return `Siz: ${user.fullName} — ${user.role}${status}.`;
 }
 
-const KPI_TYPE_LABEL: Record<string, string> = {
-  response: "Javob (savollarga)",
-  attendance: "Davomat",
-  report: "Hisobot",
-  manual: "Qo'lda tuzatish",
-};
-
-/** The caller's own current-month KPI, summed live from the ledger (TT §5). */
+/** Hidden alias for the "📊 KPI ballarim" button. */
 async function stats(prisma: PrismaClient, ctx: CommandContext): Promise<string> {
   const user = await resolveUserByTelegramId(prisma, ctx.callerTelegramId);
-  if (!user) {
-    return "Avval o'zingizni bog'lang: /link_me <email yoki JSHSHIR>";
-  }
-  const period = periodOf(new Date());
-  const events = await prisma.kpiEvent.findMany({
-    where: { employeeId: user.id, periodMonth: period },
-    select: { type: true, points: true },
-  });
-  const roll = rollupLedger(events.map((e) => ({ type: e.type, points: Number(e.points) })));
-  if (roll.count === 0) {
-    return `📊 ${user.fullName} — ${period}\nBu oyda hali KPI hodisasi yo'q.`;
-  }
-  const breakdown = Object.entries(roll.byType)
-    .map(([t, v]) => `• ${KPI_TYPE_LABEL[t] ?? t}: ${v >= 0 ? "+" : ""}${v}`)
-    .join("\n");
-  return [
-    `📊 ${user.fullName} — ${period}`,
-    `Sof ball: ${roll.net >= 0 ? "+" : ""}${roll.net}`,
-    `Hodisalar: ${roll.count}`,
-    breakdown,
-  ].join("\n");
+  if (!user) return "Avval /start bosing va raqamingizni yuboring.";
+  return renderMyKpi(prisma, user);
 }
 
 /**
- * Self-service linking: the caller binds THEIR OWN Telegram account to their
- * employee record by email/PINFL. No admin needed. `requireUnlinkedTarget`
- * blocks binding to an employee already linked to someone else (anti-hijack).
+ * Self-service linking by email/PINFL — the FALLBACK route, kept for staff
+ * whose `phone` is missing or shared by two records. The primary route is the
+ * one-tap contact share handled in the message worker.
+ * `requireUnlinkedTarget` blocks binding to an employee already linked to
+ * someone else (anti-hijack).
  */
 async function linkMe(
   prisma: PrismaClient,

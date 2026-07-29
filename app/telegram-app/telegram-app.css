@@ -1,0 +1,172 @@
+/*
+ * Telegram Mini App uslublari.
+ *
+ * Telegram `--tg-theme-*` o'zgaruvchilarini o'zi in'ektsiya qiladi, shuning
+ * uchun ranglar SHU YERDAN olinadi va ilovaning o'z temasi bilan kurashilmaydi:
+ * foydalanuvchi Telegramda qorong'i tema tanlagan bo'lsa, oyna ham qorong'i
+ * ochiladi. `--tg-*` yo'q bo'lsa (brauzerda ochilgan) — zaxira qiymatlar.
+ */
+
+.tg-root {
+  --tg-bg: var(--tg-theme-bg-color, #ffffff);
+  --tg-fg: var(--tg-theme-text-color, #1c1c1e);
+  --tg-hint: var(--tg-theme-hint-color, #8e8e93);
+  --tg-link: var(--tg-theme-link-color, #0f66ae);
+  --tg-button: var(--tg-theme-button-color, #0f66ae);
+  --tg-button-fg: var(--tg-theme-button-text-color, #ffffff);
+  --tg-card: var(--tg-theme-secondary-bg-color, #f2f2f7);
+
+  min-height: 100dvh;
+  background: var(--tg-bg);
+  color: var(--tg-fg);
+  padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.tg-h1 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.tg-hint {
+  color: var(--tg-hint);
+  font-size: 13px;
+}
+
+/* ── Stat kartalar ─────────────────────────────────────────────────────── */
+
+.tg-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.tg-stat {
+  background: var(--tg-card);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.tg-stat--wide {
+  grid-column: 1 / -1;
+}
+
+.tg-stat__value {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.tg-stat__label {
+  color: var(--tg-hint);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.tg-stat--alert .tg-stat__value {
+  color: #d1453b;
+}
+
+/* ── Ro'yxat ───────────────────────────────────────────────────────────── */
+
+.tg-list {
+  background: var(--tg-card);
+  border-radius: 12px;
+  padding: 4px 12px;
+  margin: 10px 0;
+}
+
+.tg-list__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--tg-hint) 22%, transparent);
+}
+
+.tg-list__row:last-child {
+  border-bottom: 0;
+}
+
+.tg-list__num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* ── Forma ─────────────────────────────────────────────────────────────── */
+
+.tg-field {
+  margin: 12px 0;
+}
+
+.tg-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.tg-input,
+.tg-select {
+  width: 100%;
+  background: var(--tg-card);
+  color: var(--tg-fg);
+  border: 1px solid color-mix(in srgb, var(--tg-hint) 35%, transparent);
+  border-radius: 10px;
+  padding: 11px 12px;
+  font: inherit;
+  /* 16px'dan kichik bo'lsa iOS Safari fokusda sahifani zumlab yuboradi. */
+  font-size: 16px;
+}
+
+.tg-btn {
+  width: 100%;
+  background: var(--tg-button);
+  color: var(--tg-button-fg);
+  border: 0;
+  border-radius: 10px;
+  padding: 13px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tg-btn[disabled] {
+  opacity: 0.5;
+}
+
+.tg-preview {
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
+  display: block;
+}
+
+.tg-note {
+  border-radius: 10px;
+  padding: 11px 12px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.tg-note--ok {
+  background: color-mix(in srgb, #177c55 16%, transparent);
+}
+
+.tg-note--err {
+  background: color-mix(in srgb, #c43a31 16%, transparent);
+}
+
+.tg-center {
+  display: flex;
+  min-height: 60dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}

@@ -59,6 +59,36 @@ export function hasGemini(): boolean {
   return config.ai.geminiApiKey.length > 0;
 }
 
+/**
+ * Public base URL of the ERP, e.g. "https://asro.uz". Used for Mini App
+ * (`web_app`) buttons and deep links back into the web UI.
+ *
+ * Returns null unless it is HTTPS: Telegram silently refuses a `web_app` or
+ * `url` button on plain HTTP, so a local dev run must render no button at all
+ * rather than a dead one.
+ */
+export function appBaseUrl(): string | null {
+  const raw =
+    process.env.MINI_APP_URL ??
+    process.env.AUTH_URL ??
+    process.env.NEXTAUTH_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    "";
+  const trimmed = raw.replace(/\/$/, "");
+  return trimmed.startsWith("https://") ? trimmed : null;
+}
+
+/**
+ * HMAC key for signed `callback_data`. Reuses the webhook secret so there is
+ * one fewer thing to configure; falls back to the bot token for local polling
+ * runs where no webhook secret is set. Rotating either value invalidates
+ * buttons already sitting in chats — they answer "eskirgan" rather than
+ * misfire, which is the intended failure mode.
+ */
+export function callbackSecret(): string {
+  return config.telegram.webhookSecret || config.telegram.token || "asro-bot-local-dev";
+}
+
 /** BullMQ queue names. Kept as constants so producers/workers never drift. */
 export const QUEUE = {
   MESSAGE: "message",
@@ -69,4 +99,10 @@ export const QUEUE = {
   INTEGRATION: "integration",
   /** KPI: monthly evidence → MonthlyPerformance proposals (repeatable). */
   KPI: "kpi",
+  /**
+   * Outbound fan-out: escalation sweeps and (later) digests. Separate from the
+   * other queues so its worker can carry a rate limiter — Telegram caps sending
+   * at roughly 30 messages/second and a firm-wide sweep blows through that.
+   */
+  NOTIFY: "notify",
 } as const;

@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   parseInboundMessage,
+  parseCallbackQuery,
+  parseChatMemberUpdate,
+  parseContact,
   type RawTelegramUpdate,
 } from "./inbound-message";
 
@@ -105,5 +108,170 @@ describe("parseInboundMessage", () => {
     expect(m!.fromUserId).toBeUndefined();
     expect(m!.kind).toBe("text");
     expect(m!.createdAt).toBeInstanceOf(Date);
+  });
+
+  it("keeps the largest photo's file_id so the file can be fetched later", () => {
+    const m = parseInboundMessage(
+      upd({
+        message: {
+          message_id: 12,
+          date: DATE,
+          chat,
+          from,
+          photo: [{ file_id: "small" }, { file_id: "large" }],
+        },
+      }),
+    );
+    expect(m!.fileId).toBe("large");
+  });
+
+  it("returns null for the interactive updates, leaving them to their parsers", () => {
+    const cb = upd({
+      callback_query: { id: "q1", from, data: "sig:act:1" },
+    });
+    expect(parseInboundMessage(cb)).toBeNull();
+    expect(parseInboundMessage(upd({ my_chat_member: { chat, from } }))).toBeNull();
+  });
+});
+
+describe("parseCallbackQuery", () => {
+  it("extracts the query id, presser and host message", () => {
+    const cb = parseCallbackQuery(
+      upd({
+        callback_query: {
+          id: "q1",
+          from,
+          data: "abcdefgh:qpen:xyz",
+          message: { message_id: 55, chat },
+        },
+      }),
+    );
+    expect(cb).toEqual({
+      callbackQueryId: "q1",
+      fromUserId: BigInt(42),
+      fromUsername: "aziz",
+      chatId: BigInt(chat.id),
+      messageId: 55,
+      data: "abcdefgh:qpen:xyz",
+    });
+  });
+
+  it("tolerates a query whose host message is too old to be included", () => {
+    const cb = parseCallbackQuery(upd({ callback_query: { id: "q2", from } }));
+    expect(cb!.chatId).toBeUndefined();
+    expect(cb!.messageId).toBeUndefined();
+  });
+
+  it("returns null for a non-callback update", () => {
+    expect(parseCallbackQuery(upd({ message: { message_id: 1, chat, from } }))).toBeNull();
+  });
+});
+
+describe("parseChatMemberUpdate", () => {
+  it("flags the bot being added to a group", () => {
+    const cm = parseChatMemberUpdate(
+      upd({
+        my_chat_member: {
+          chat,
+          from,
+          date: DATE,
+          old_chat_member: { status: "left" },
+          new_chat_member: { status: "member" },
+        },
+      }),
+    );
+    expect(cm!.joined).toBe(true);
+    expect(cm!.chatId).toBe(BigInt(chat.id));
+    expect(cm!.actorTelegramId).toBe(BigInt(42));
+    expect(cm!.chatTitle).toBe("ACME");
+  });
+
+  it("does not treat a promotion to admin as joining", () => {
+    // Otherwise every permission change would re-trigger the bind prompt.
+    const cm = parseChatMemberUpdate(
+      upd({
+        my_chat_member: {
+          chat,
+          from,
+          old_chat_member: { status: "member" },
+          new_chat_member: { status: "administrator" },
+        },
+      }),
+    );
+    expect(cm!.joined).toBe(false);
+  });
+
+  it("does not treat removal as joining", () => {
+    const cm = parseChatMemberUpdate(
+      upd({
+        my_chat_member: {
+          chat,
+          from,
+          old_chat_member: { status: "administrator" },
+          new_chat_member: { status: "kicked" },
+        },
+      }),
+    );
+    expect(cm!.joined).toBe(false);
+  });
+});
+
+describe("parseContact", () => {
+  it("accepts the sender's own contact", () => {
+    const c = parseContact(
+      upd({
+        message: {
+          message_id: 3,
+          date: DATE,
+          chat: { id: 42, type: "private" },
+          from,
+          contact: { phone_number: "+998901234567", user_id: 42 },
+        },
+      }),
+    );
+    expect(c).toEqual({
+      chatId: BigInt(42),
+      fromUserId: BigInt(42),
+      fromUsername: "aziz",
+      phone: "+998901234567",
+      isOwn: true,
+    });
+  });
+
+  it("marks a forwarded third-party contact as not the sender's", () => {
+    const c = parseContact(
+      upd({
+        message: {
+          message_id: 4,
+          date: DATE,
+          chat: { id: 42, type: "private" },
+          from,
+          contact: { phone_number: "+998901112233", user_id: 999 },
+        },
+      }),
+    );
+    expect(c!.isOwn).toBe(false);
+  });
+
+  it("treats a contact card with no user_id as not the sender's", () => {
+    // Manually-typed contacts carry no user_id and must not link an account.
+    const c = parseContact(
+      upd({
+        message: {
+          message_id: 5,
+          date: DATE,
+          chat: { id: 42, type: "private" },
+          from,
+          contact: { phone_number: "+998901112233" },
+        },
+      }),
+    );
+    expect(c!.isOwn).toBe(false);
+  });
+
+  it("returns null when the message carries no contact", () => {
+    expect(
+      parseContact(upd({ message: { message_id: 6, chat, from, text: "salom" } })),
+    ).toBeNull();
   });
 });

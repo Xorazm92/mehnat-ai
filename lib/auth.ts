@@ -13,6 +13,7 @@ import {
 } from "@/lib/rateLimit";
 import { logLoginFailure, logLoginSuccess, logRateLimitBlock } from "@/lib/logger";
 import { revalidateSessionToken } from "@/lib/sessionRevalidation";
+import { verifyInitData } from "@/lib/telegramInitData";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -108,6 +109,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await recordLoginFailure(rules);
         logLoginFailure({ reason: "unknown_account", login, ip, kind: "unknown" });
         return null;
+      },
+    }),
+
+    // Telegram Mini App kirishi. Parol yo'q: Telegram bergan `initData` bot
+    // token bilan HMAC imzolangan, uni tekshirish o'zi identifikatsiya.
+    // Rate limit qo'yilmagan — imzoni topish uchun bot tokenini bilish kerak,
+    // ya'ni bu yerda "urinib ko'rish" degan hujum yo'zasi yo'q.
+    CredentialsProvider({
+      id: "telegram",
+      name: "Telegram Mini App",
+      credentials: { initData: { label: "initData", type: "text" } },
+      async authorize(credentials) {
+        const initData = typeof credentials?.initData === "string" ? credentials.initData : "";
+        const verified = verifyInitData(initData, process.env.TELEGRAM_BOT_TOKEN ?? "");
+        if (!verified.ok) {
+          // Sabab (imzo/muddat/bo'sh) faqat debug logga — foydalanuvchiga ham,
+          // audit satriga ham qaysi bosqichda to'xtagani chiqarilmaydi.
+          logLoginFailure({ reason: "telegram_invalid", kind: "staff" });
+          return null;
+        }
+
+        // Faqat OLDINDAN bog'langan xodim kira oladi. Bog'lash botda, telefon
+        // raqami orqali bo'ladi — Mini App yangi hisob ochmaydi.
+        const user = await prisma.user.findUnique({
+          where: { telegramUserId: verified.telegramUserId },
+        });
+        if (!user) {
+          logLoginFailure({ reason: "telegram_unlinked", kind: "staff" });
+          return null;
+        }
+        if (!user.isActive) {
+          logLoginFailure({ reason: "inactive_account", login: user.email, kind: "staff" });
+          return null;
+        }
+
+        logLoginSuccess({ userId: user.id, kind: "staff" });
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.fullName,
+          role: user.role,
+          avatarColor: user.avatarColor,
+        };
       },
     }),
   ],
