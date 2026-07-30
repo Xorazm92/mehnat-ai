@@ -75,11 +75,13 @@ fi
 # last, so a release that adds an update type (callback_query, my_chat_member)
 # or changes the command menu silently does nothing until this runs — buttons
 # and group-join events simply never arrive. Idempotent, so it is safe every time.
-if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
-  echo "▶ Re-registering the Telegram webhook + command menu…"
-  npx tsx scripts/set-telegram-webhook.ts || echo "⚠️  Webhook registration failed — run 'npm run bot:webhook' manually."
-else
-  echo "ℹ TELEGRAM_BOT_TOKEN not set — skipping webhook registration."
-fi
+# NOT gated on $TELEGRAM_BOT_TOKEN: the token lives in .env / .env.local, which
+# only the Node scripts read (scripts/load-env). Testing the shell variable
+# skipped this step on every server that keeps its secrets in a file — which is
+# all of them. The script itself fails loudly when the token really is missing,
+# and the `||` keeps that from aborting an otherwise-good deploy.
+echo "▶ Re-registering the Telegram webhook + command menu…"
+npx tsx scripts/set-telegram-webhook.ts \
+  || echo "⚠️  Webhook registration failed — run 'npm run bot:webhook' manually."
 
 echo "✅ Deploy complete — system verified login-capable."
