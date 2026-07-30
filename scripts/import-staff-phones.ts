@@ -21,6 +21,7 @@ import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { phoneKey, formatPhone } from "@/lib/phone";
 import { nameCandidates, scoreMatch, type MatchTier } from "@/lib/nameMatch";
+import type { UserRole } from "@/lib/permissions";
 
 interface RosterEntry {
   /** Ro'yxatdagi to'liq yozuv (lavozim/firma so'zlari bilan). */
@@ -95,10 +96,58 @@ const ROSTER: RosterEntry[] = [
 const MANUAL_MATCH: Record<string, string> = {
   // Ism juda uzoq (guzal ↔ gozaloy), lekin ikkalasi ham nazoratchi — bir odam.
   "Buxgalter Guzal nazoratchi": "Go'zaloy",
-  // Ikkita turli Azizbek bor. Bazadagi yagona "Azizbek" — aynan buxgalteri;
-  // bank-klient uchun alohida kartochka scripts/seed-staff-cards.ts da.
-  "Azizbek Buxgalter": "Azizbek",
+  // Ikkita turli Azizbek bor. Bazadagi "Azizbek" 70 ta firmada BANK-KLIENT
+  // (buxgalter sifatida bitta ham firmasi yo'q), demak u aynan "Azizbek
+  // Banking". Buxgalter uchun alohida kartochka scripts/seed-staff-cards.ts da.
+  "Azizbek Banking": "Azizbek",
 };
+
+/**
+ * Ro'yxat yorlig'idan lavozimni chiqaradi. `null` — yorliqda aniq belgi yo'q,
+ * demak rolga TEGILMAYDI (taxmin qilib odamning ko'rish doirasini
+ * o'zgartirmaymiz).
+ *
+ * Tartib muhim: "Mohira ... FinCo 2 bosh buxgalteri" ham "bank" ni o'z ichiga
+ * olmaydi, lekin "Muxriddin banking" ham "bosh" emas — shu bois eng aniq
+ * belgidan boshlanadi.
+ */
+function roleFromLabel(label: string): UserRole | null {
+  const l = label.toLowerCase();
+  if (/bosh\s*buxgalter/.test(l)) return "chief_accountant";
+  if (/nazoratchi/.test(l)) return "supervisor";
+  if (/\bbank/.test(l)) return "bank_manager";
+  return null;
+}
+
+/** Firma biriktiruvlari — rol taklifini tasdiqlash uchun dalil. */
+interface Assignments {
+  accountant: number;
+  bankClient: number;
+  supervisor: number;
+  chief: number;
+}
+
+/**
+ * Taklif qilingan rol firma biriktiruvlari bilan tasdiqlanadimi?
+ *
+ * Rolni o'zgartirish odamning KO'RISH DOIRASINI o'zgartiradi
+ * (lib/access.ts#companyScopeWhere): `bank_manager` firmalarni `bankClientId`
+ * bo'yicha ko'radi, `accountant` esa `accountantId` bo'yicha. Agar biriktiruv
+ * mos kelmasa, rolni o'zgartirish odamni firmalarisiz qoldirardi — shuning
+ * uchun dalilsiz o'zgartirmaymiz.
+ */
+function roleSupported(role: UserRole, a: Assignments): boolean {
+  switch (role) {
+    case "bank_manager":
+      return a.bankClient > 0;
+    case "supervisor":
+      return a.supervisor > 0;
+    case "chief_accountant":
+      return a.chief > 0;
+    default:
+      return a.accountant > 0;
+  }
+}
 
 /** Test/fixture hisoblari — importdan chetlatiladi. */
 function isFixture(fullName: string): boolean {
@@ -107,6 +156,7 @@ function isFixture(fullName: string): boolean {
 
 async function main(): Promise<void> {
   const apply = process.argv.includes("--apply");
+  const db = prisma;
 
   // 1) Ro'yxat ichidagi takrorlarni raqam bo'yicha birlashtiramiz.
   const byPhone = new Map<string, RosterEntry[]>();
@@ -205,6 +255,24 @@ async function main(): Promise<void> {
   }
   const collisions = [...plannedKeys.entries()].filter(([, names]) => names.length > 1);
 
+  // 5) ROL MOSLIGI. Yorliqda "banking"/"nazoratchi"/"bosh buxgalter" bo'lsa,
+  //    kartochkadagi rol shunga mos kelishi kerak — aks holda RBAC ham, botning
+  //    SLA oynasi ham noto'g'ri ishlaydi (bank-klient 5 daq, buxgalter 10 daq).
+  interface RoleChange { user: Row["user"]; from: UserRole; to: UserRole; a: Assignments; supported: boolean }
+  const roleChanges: RoleChange[] = [];
+  for (const m of matched) {
+    const want = roleFromLabel(m.entry.label);
+    if (!want || want === m.user.role) continue;
+    const [accountant, bankClient, supervisor, chief] = await Promise.all([
+      db.company.count({ where: { isActive: true, accountantId: m.user.id } }),
+      db.company.count({ where: { isActive: true, bankClientId: m.user.id } }),
+      db.company.count({ where: { isActive: true, supervisorId: m.user.id } }),
+      db.company.count({ where: { isActive: true, chiefAccountantId: m.user.id } }),
+    ]);
+    const a: Assignments = { accountant, bankClient, supervisor, chief };
+    roleChanges.push({ user: m.user, from: m.user.role as UserRole, to: want, a, supported: roleSupported(want, a) });
+  }
+
   // ── Hisobot ────────────────────────────────────────────────────────────────
   const pad = (s: string, n: number) => s.padEnd(n).slice(0, n);
 
@@ -242,6 +310,25 @@ async function main(): Promise<void> {
     }
   }
 
+  const okRoles = roleChanges.filter((r) => r.supported);
+  const iffyRoles = roleChanges.filter((r) => !r.supported);
+  if (okRoles.length) {
+    console.log(`\n🔧 ROL TUZATILADI (${okRoles.length}) — yorliq va firma biriktiruvi mos:`);
+    for (const r of okRoles) {
+      console.log(
+        `   ${pad(r.user.fullName, 12)} ${r.from} → ${r.to}   (bux ${r.a.accountant} / bank ${r.a.bankClient} / nazorat ${r.a.supervisor} / bosh ${r.a.chief})`,
+      );
+    }
+  }
+  if (iffyRoles.length) {
+    console.log(`\n⚠️  ROL MOS EMAS, LEKIN DALIL YO'Q (${iffyRoles.length}) — tegilmaydi:`);
+    for (const r of iffyRoles) {
+      console.log(
+        `   ${pad(r.user.fullName, 12)} ${r.from} → ${r.to}?  (bux ${r.a.accountant} / bank ${r.a.bankClient} / nazorat ${r.a.supervisor} / bosh ${r.a.chief})`,
+      );
+    }
+  }
+
   const linked = real.filter((u) => u.telegramUserId).length;
   console.log(`\n📊 Telegramga bog'langan: ${linked} / ${real.length}`);
 
@@ -276,7 +363,12 @@ async function main(): Promise<void> {
     });
     written++;
   }
-  console.log(`\n✅ ${written} ta xodim kartochkasi yangilandi.`);
+  let roleFixed = 0;
+  for (const r of roleChanges.filter((x) => x.supported)) {
+    await prisma.user.update({ where: { id: r.user.id }, data: { role: r.to } });
+    roleFixed++;
+  }
+  console.log(`\n✅ ${written} ta xodim kartochkasi yangilandi${roleFixed ? `, ${roleFixed} ta rol tuzatildi` : ""}.`);
   await prisma.$disconnect();
 }
 
