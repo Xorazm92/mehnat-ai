@@ -165,10 +165,25 @@ export async function getTrialBalance(db: Db, period?: string) {
   return { accounts, totalDebit, totalCredit, balanced: totalDebit === totalCredit };
 }
 
-/** CASH hisobining ledger bo'yicha qoldig'i (debit − credit). */
-export async function getLedgerCashBalance(db: Db): Promise<number> {
+/**
+ * CASH hisobining ledger bo'yicha qoldig'i (debit − credit).
+ *
+ * `throughPeriod` ("YYYY-MM") berilsa — SHU DAVR OXIRIGA bo'lgan qoldiq.
+ * Oy yopishda aynan shu kerak: 2026-07 ni yopayotganda 2026-09 dagi xarajat
+ * to'sqinlik qilmasligi kerak. Busiz o'tgan oyni yopish keyingi oylardagi
+ * harakatlarga bog'lanib qolardi — ya'ni bir marta minusga tushgan kassa
+ * butun tarixni qulflab qo'yardi.
+ *
+ * Davrsiz chaqirilsa — butun tarix bo'yicha (backfill hisobotlari uchun).
+ * "YYYY-MM" formatida leksikografik tartib xronologik tartib bilan bir xil,
+ * shuning uchun oddiy `lte` yetarli va `@@index([accountId, period])` ishlaydi.
+ */
+export async function getLedgerCashBalance(db: Db, throughPeriod?: string): Promise<number> {
   const agg = await db.ledgerEntry.aggregate({
-    where: { accountId: ACCOUNTS.CASH },
+    where: {
+      accountId: ACCOUNTS.CASH,
+      ...(throughPeriod ? { period: { lte: throughPeriod } } : {}),
+    },
     _sum: { debit: true, credit: true },
   });
   return r2(Number(agg._sum.debit ?? 0) - Number(agg._sum.credit ?? 0));

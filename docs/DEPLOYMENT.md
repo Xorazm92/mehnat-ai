@@ -305,10 +305,18 @@ It also opts in to `edited_message`, `message_reaction`, `callback_query` and
 `my_chat_member` (none delivered by default) and registers the command menu,
 which is now just `/start /menu /help` — the bot is button-driven.
 
-> **Re-run `npm run bot:webhook` after deploying a release that changes
-> `ALLOWED_UPDATES` or the command list.** Telegram keeps whatever was
-> registered last; without this, button presses (`callback_query`) and
-> group-join events (`my_chat_member`) are simply never delivered.
+`scripts/deploy.sh` now runs this itself at the end of every deploy, because
+Telegram keeps whatever was registered last: a release that adds an update type
+or changes the command list silently does nothing until it is re-registered, and
+button presses simply never arrive. Run it by hand only when deploying some
+other way.
+
+> **PM2 process names.** The web process must be the `asro-web` app defined in
+> `ecosystem.config.cjs`. Older servers ran it as a hand-started process named
+> `mehnat-ai` on the same port 3000 — `pm2 reload ecosystem.config.cjs` would
+> then bring up `asro-web` alongside it and the new one would die with
+> `EADDRINUSE`. `deploy.sh` retires a leftover `mehnat-ai` before reloading;
+> after the first deploy `pm2 list` should show only `asro-web` + `asro-bot`.
 
 **Sanity check** `bot:webhook info` should show your URL and
 `"last_error_message"` empty. A `401`/`403` there means the secret in `.env`

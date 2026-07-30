@@ -278,7 +278,7 @@ while it still matters.
   the `TELEGRAM_ADMIN_TELEGRAM_ID` bootstrap or an admin-role linked user; every bind/link audited.
 - Captured messages enriched with the resolved `userId`; `/whoami` reports the linked profile.
 - Verified: 43 unit + integration tests, plus a Redis→worker round-trip driving a real `/bind`
-  end-to-end. Live bot: **@kpinazoratbot**.
+  end-to-end. Live bot: **@asroanalizbot**.
 
 **Phase C (Question Engine) — done & verified:**
 - Cheap `looksLikeQuestion` gate → the `message` worker fans out to the `question` queue → the

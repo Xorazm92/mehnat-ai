@@ -174,7 +174,7 @@ export async function gatherChecklist(db: Db, year: number, month: number): Prom
       _sum: { amount: true },
     }),
     getTrialBalance(db, key),
-    getLedgerCashBalance(db),
+    getLedgerCashBalance(db, key),
     checkLedgerSourceIntegrity(db, key),
   ]);
 
@@ -330,7 +330,7 @@ export async function computeCloseFigures(db: Db, year: number, month: number): 
     }),
     db.user.count({ where: { isActive: true } }),
     db.company.count({ where: { isActive: true } }),
-    getLedgerCashBalance(db),
+    getLedgerCashBalance(db, key),
   ]);
 
   const net = movement.income - movement.outflow;

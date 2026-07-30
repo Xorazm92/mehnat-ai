@@ -35,6 +35,34 @@ async function cleanupYears() {
   await prisma.accountingPeriod.deleteMany({ where: { year: { in: [2094, 2095] } } });
 }
 
+/**
+ * Kassa qoldig'i JAMLANUVCHI kattalik: "manfiy emas" tekshiruvi yopilayotgan
+ * davrga qadar bo'lgan BUTUN tarixni o'qiydi (lib/ledger.ts#getLedgerCashBalance).
+ * Shuning uchun 2094-yilni tanlash bu testni izolyatsiya qilmaydi — undan
+ * oldingi har qanday minus qoldiq bu yerga ham o'tadi.
+ *
+ * Yechim: test o'z moliyaviy dunyosini ochadi — 2094-01 da kassaga shuncha
+ * kirim yozadiki, boshlang'ich qoldiq manfiy bo'lmasin. Da'volar nisbiy
+ * (closing = opening + harakat), shuning uchun bu ularga tegmaydi, va
+ * `cleanupYears()` 2094- ledgerini o'zi tozalaydi.
+ */
+async function seedNonNegativeOpeningCash(): Promise<void> {
+  const agg = await prisma.ledgerEntry.aggregate({
+    where: { accountId: "CASH", period: { lt: "2094-01" } },
+    _sum: { debit: true, credit: true },
+  });
+  const balance = Number(agg._sum.debit ?? 0) - Number(agg._sum.credit ?? 0);
+  if (balance >= 0) return;
+
+  await createKassaEntry({
+    type: "income",
+    category: `${TAG}-opening`,
+    amount: Math.ceil(-balance) + 1_000_000,
+    date: new Date(2094, 0, 5),
+    description: "vitest: boshlang'ich kassa qoldig'i",
+  });
+}
+
 beforeAll(async () => {
   await cleanupYears();
 
@@ -50,6 +78,9 @@ beforeAll(async () => {
     select: { id: true },
   });
   ids.company = company.id;
+
+  // Sessiya tayyor bo'lgach — kassa qoldig'ini manfiy bo'lmagan holatga keltiramiz.
+  await seedNonNegativeOpeningCash();
 
   // 2094-03 harakati: kirim 4M (payment) + 1M (kassa) = 5M; chiqim 500k (expense) + 300k (payout)
   await prisma.payment.create({

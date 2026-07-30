@@ -54,6 +54,14 @@ npx tsx scripts/preflight.ts
 
 # Restart the app if a process manager is present (never fatal if absent).
 if command -v pm2 >/dev/null 2>&1 && [ -f ecosystem.config.cjs ]; then
+  # A web process started outside ecosystem.config.cjs (historically named
+  # "mehnat-ai") still holds port 3000, so `pm2 reload` would bring up
+  # "asro-web" beside it and the new one would die with EADDRINUSE. Retire the
+  # stray first — ecosystem.config.cjs is the single source of truth.
+  if pm2 describe mehnat-ai >/dev/null 2>&1; then
+    echo "▶ Removing legacy PM2 process 'mehnat-ai' (superseded by asro-web)…"
+    pm2 delete mehnat-ai || true
+  fi
   echo "▶ Reloading PM2 (zero-downtime)…"
   pm2 reload ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
 elif command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files | grep -q '^asro-web'; then
@@ -61,6 +69,17 @@ elif command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files | grep -q
   sudo systemctl restart asro-web asro-bot
 else
   echo "ℹ No PM2/systemd unit detected — restart the app process manually."
+fi
+
+# Re-register the Telegram webhook. Telegram REMEMBERS whatever was registered
+# last, so a release that adds an update type (callback_query, my_chat_member)
+# or changes the command menu silently does nothing until this runs — buttons
+# and group-join events simply never arrive. Idempotent, so it is safe every time.
+if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
+  echo "▶ Re-registering the Telegram webhook + command menu…"
+  npx tsx scripts/set-telegram-webhook.ts || echo "⚠️  Webhook registration failed — run 'npm run bot:webhook' manually."
+else
+  echo "ℹ TELEGRAM_BOT_TOKEN not set — skipping webhook registration."
 fi
 
 echo "✅ Deploy complete — system verified login-capable."

@@ -40,8 +40,10 @@ afterAll(async () => {
 });
 
 describe("createTask", () => {
+  // Vazifa YARATISH senior rol talab qiladi (server/tasks.ts). Topshiriluvchi
+  // esa oddiy buxgalter bo'ladi — quyidagi egalik/scope testlari shunga tayanadi.
   it("creates a task and computes SLA due from the policy", async () => {
-    actor(ids.userA, "accountant");
+    actor(ids.userS, "supervisor");
     const t = await createTask({ companyId: ids.company, title: "Test vazifa", taskType: `${TAG}-type`, slaPolicyId: ids.policy, assigneeUserId: ids.userA });
     ids.task1 = t.id;
     const row = await prisma.task.findUnique({ where: { id: t.id }, select: { responseDueAt: true, resolutionDueAt: true, slaPolicyId: true } });
@@ -51,6 +53,14 @@ describe("createTask", () => {
 
     const t2 = await createTask({ title: "Ikkinchi", assigneeUserId: ids.userA });
     ids.task2 = t2.id;
+  });
+
+  it("refuses a plain accountant", async () => {
+    // Xodim o'ziga vazifa "yozib qo'yib", keyin uni yopib ketolmasligi kerak.
+    actor(ids.userA, "accountant");
+    await expect(createTask({ title: "Ruxsatsiz", assigneeUserId: ids.userA })).rejects.toThrow(
+      /ruxsati yo'q/i,
+    );
   });
 });
 

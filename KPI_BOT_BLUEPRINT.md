@@ -7,7 +7,7 @@
 >
 > **Faza B (Identity) ham bajarildi va tekshirildi:** Telegram↔xodim (`/link`), chat↔korxona (`/bind`),
 > `/whoami`, admin avtorizatsiya (bootstrap `TELEGRAM_ADMIN_TELEGRAM_ID` yoki admin-rol) + AuditLog;
-> capture xabarlari `userId` bilan boyitiladi. Jonli bot: **@kpinazoratbot**.
+> capture xabarlari `userId` bilan boyitiladi. Jonli bot: **@asroanalizbot**.
 >
 > **Faza C (Question Engine) ham bajarildi va tekshirildi:** `looksLikeQuestion` evristika darvozasi →
 > `message` worker `question` navbatiga fan-out → Question worker klassifikatsiya (**Gemini** `@google/genai`,
