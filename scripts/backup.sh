@@ -19,10 +19,30 @@ case "$TIER" in
   *) echo "Usage: backup.sh [daily|weekly|monthly]"; exit 2 ;;
 esac
 
-if [ -z "${DATABASE_URL:-}" ] && [ -f .env ]; then
-  DATABASE_URL="$(grep -E '^DATABASE_URL=' .env | head -1 | cut -d= -f2- | tr -d '"')"
+# Ilova bilan bir xil ustunlik: .env.local > .env (scripts/_bootstrap.ts,
+# bot/env.ts). Aks holda ikkisi farq qilganda BOSHQA baza zaxiralanardi.
+if [ -z "${DATABASE_URL:-}" ]; then
+  for f in .env.local .env; do
+    [ -f "$f" ] || continue
+    DATABASE_URL="$(grep -E '^DATABASE_URL=' "$f" | head -1 | cut -d= -f2- | tr -d '"')"
+    [ -n "$DATABASE_URL" ] && { echo "ℹ DATABASE_URL manbasi: $f"; break; }
+  done
 fi
 [ -n "${DATABASE_URL:-}" ] || { echo "✗ DATABASE_URL topilmadi (env yoki .env)"; exit 3; }
+
+# Prisma URL'ida libpq tushunmaydigan parametrlar bo'ladi (`?schema=public` va
+# hokazo) — pg_dump ularni ko'rsa "invalid URI query parameter" deb yiqiladi va
+# ZAXIRA OLINMAY QOLADI. Ularni olib tashlaymiz; sslmode kabi haqiqiy libpq
+# parametrlari joyida qoladi.
+PG_URL="$(node -e '
+const u = new URL(process.argv[1]);
+for (const k of ["schema", "connection_limit", "pool_timeout", "pgbouncer",
+                 "socket_timeout", "sslidentity", "sslcert", "sslpassword"]) {
+  u.searchParams.delete(k);
+}
+process.stdout.write(u.toString());
+' "$DATABASE_URL")"
+[ -n "$PG_URL" ] || { echo "✗ DATABASE_URL tahlil qilinmadi"; exit 3; }
 
 DIR="backups/$TIER"
 mkdir -p "$DIR"
@@ -30,7 +50,7 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 FILE="$DIR/asro_${STAMP}.dump"
 
 echo "▶ pg_dump ($TIER) → $FILE"
-pg_dump --format=custom --no-owner --dbname="$DATABASE_URL" --file="$FILE"
+pg_dump --format=custom --no-owner --dbname="$PG_URL" --file="$FILE"
 sha256sum "$FILE" > "$FILE.sha256"
 echo "  size: $(du -h "$FILE" | cut -f1)   sha256: $(cut -d' ' -f1 "$FILE.sha256")"
 
