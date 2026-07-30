@@ -5,22 +5,22 @@
  * (`User.phoneNormalized` ← lib/phone.ts#phoneKey, oxirgi 9 raqam). Raqamsiz
  * xodim "📱 Raqamni yuborish" tugmasini bosganda "topilmadi" javobini oladi.
  *
- * @username ni ham saqlaymiz, LEKIN u bog'lash uchun ishlatilmaydi: Telegram
- * Bot API @username ni raqamli id ga aylantira olmaydi. Bog'lanish faqat xodim
- * o'zi /start bosib kontaktini yuborganda yuz beradi. Username — admin uchun
- * "kimni chaqirish kerak" ma'lumoti.
+ * @username ham saqlanadi, LEKIN u bog'lash uchun ishlatilmaydi: Telegram Bot
+ * API @username ni raqamli id ga aylantira olmaydi. Bog'lanish faqat xodim o'zi
+ * kontaktini yuborganda yuz beradi. Username — admin uchun "kimni chaqirish
+ * kerak" ma'lumoti.
  *
- * ISHLATISH (avval QURUQ ishlaydi, hech narsa yozmaydi):
+ * ISHLATISH (standart holat — QURUQ, hech narsa yozilmaydi):
  *   npx tsx scripts/import-staff-phones.ts
  *   npx tsx scripts/import-staff-phones.ts --apply
  *
- * Ism moslashtirish TAXMINIY, shuning uchun standart holat — quruq ishlash.
- * Faqat aniq (exact/near) mosliklar yoziladi; shubhalilari hisobotga chiqadi
- * va ular bilan odam ishlaydi.
+ * Ism moslashtirish TAXMINIY (lib/nameMatch.ts). Faqat aniq mosliklar yoziladi;
+ * shubhali va topilmaganlar hisobotga chiqadi va ular bilan odam ishlaydi.
  */
 import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { phoneKey, formatPhone } from "@/lib/phone";
+import { nameCandidates, scoreMatch, type MatchTier } from "@/lib/nameMatch";
 
 interface RosterEntry {
   /** Ro'yxatdagi to'liq yozuv (lavozim/firma so'zlari bilan). */
@@ -28,9 +28,18 @@ interface RosterEntry {
   phone: string;
   /** @ belgisisiz; yo'q bo'lsa undefined. */
   username?: string;
+  /** Kadrlar izohi (masalan ishdan bo'shash) — hisobotda ko'rsatiladi. */
+  note?: string;
 }
 
-/** Joriy jamoa — foydalanuvchi bergan ro'yxat (2026-07-30). */
+/**
+ * Joriy jamoa (2026-07-30), berilgan ro'yxat AYNAN ko'chirilgan.
+ *
+ * Ataylab tozalanmagan: takror yozuv, Unicode qalin harflar, kirill ism va
+ * matn ichiga tushib qolgan kirill "а" — hammasi shu yerda qoladi, chunki
+ * skript aynan shunday kirishni hazm qila olishi kerak. Tozalash normalizatsiya
+ * qatlamining ishi (lib/nameMatch.ts), ro'yxatniki emas.
+ */
 const ROSTER: RosterEntry[] = [
   { label: "Alisher FinCo", phone: "+998 93 123 41 66" },
   { label: "Dilxushbek Buxgalter", phone: "+998 93 977 41 66", username: "dilxushbek_buxgalter" },
@@ -40,13 +49,17 @@ const ROSTER: RosterEntry[] = [
   { label: "Azizbek Buxgalter", phone: "+998 94 390 41 66", username: "Azizbek_Accountant" },
   { label: "Yorqinoy Bosh buxgalter", phone: "+998 94 513 41 66", username: "Buxgalter_Yorqinoy" },
   { label: "Buxgalter Guzal nazoratchi", phone: "+998 93 700 41 66", username: "Guzal_buxgalter" },
-  { label: "Mardon Buxgalter", phone: "+998 50 588 41 66", username: "buxgalter_Mardon" },
+  // Unicode matematik qalin harflar — NFKD ularni oddiy harfga qaytaradi.
+  { label: "𝐌𝐚𝐫𝐝𝐨𝐧 𝐁𝐮𝐱𝐠𝐚𝐥𝐭𝐞𝐫", phone: "+998 50 588 41 66", username: "buxgalter_Mardon" },
   { label: "Musobek Buxgalter", phone: "+998 94 622 41 66", username: "Musobek_Accountant" },
   { label: "Muxriddin banking FinCo 2", phone: "+998 93 077 41 66", username: "Muxriddin_Accountant" },
-  { label: "Sevara Shukurova", phone: "+998 94 744 41 66", username: "sevarabuxgalter55" },
-  { label: "Buxgalter Ahmadjon", phone: "+998 94 608 41 66", username: "Buxgalter_Ahmadjon" },
+  // "Sevarа" oxiridagi "а" — kirill (ko'zga ko'rinmaydi).
+  { label: "Sevarа Shukurova", phone: "+998 94 744 41 66", username: "sevarabuxgalter55" },
+  { label: "Buxgalter_Ahmadjon", phone: "+998 94 608 41 66", username: "Buxgalter_Ahmadjon" },
   { label: "Ilhom O'ktamov", phone: "+998 93 381 41 66" },
-  { label: "Mohira Yuldashevna FinCo 2 bosh buxgalteri", phone: "+998 94 623 41 66", username: "BoshBuxgalter_Mohira" },
+  // 15-o'rin — 2-yozuvning aynan takrori (bir xil raqam); skript birlashtiradi.
+  { label: "Dilxushbek Buxgalter", phone: "+998 93 977 41 66", username: "dilxushbek_buxgalter" },
+  { label: "Mohira Yuldashevna FinCo 2 bosh buxgaleri", phone: "+998 94 623 41 66", username: "BoshBuxgalter_Mohira" },
   { label: "Xumora Buxgalter", phone: "+998 94 717 41 66", username: "Xumora_Buxgalter" },
   { label: "Abdugʻani Buxgalter", phone: "+998 94 017 41 66", username: "Abdugani_buxgalter" },
   { label: "Adham buxgalter FinCo", phone: "+998 93 155 41 66", username: "adham_buxgalter" },
@@ -58,88 +71,19 @@ const ROSTER: RosterEntry[] = [
   { label: "Javohir buxgalter", phone: "+998 94 191 41 66", username: "Buxgalter_javohir" },
   { label: "Muslimbek Buxgalter nazoratchi", phone: "+998 93 550 41 66", username: "Muslimbek_buxgalter" },
   { label: "Buxgalter Mirabbos", phone: "+998 94 046 41 66", username: "Bookkeper_Mirabbos" },
+  { label: "Sevinch Buxgalter", phone: "+998 93 828 41 66", username: "Sevinch_Buxgalter" },
+  { label: "Elbek Ismatillayev FinCo 2", phone: "+998 50 999 41 66", username: "elbek_ismatillayev_accountant" },
+  { label: "Mohirbek Yo'ldoshov FinCo2", phone: "+998 50 877 41 66", username: "mohirbek_accountant" },
+  { label: "Abrorbek FinCo", phone: "+998 94 777 41 66", username: "abrorconsultant" },
+  // Yagona "41 66" bilan tugamaydigan raqam — boshqa SIM, korporativ blokdan emas.
+  { label: "Шерзод Мирсаидов chicken", phone: "+998 90 928 60 69", username: "mirsaidov_sh" },
+  {
+    label: "Otabek Buxgalter",
+    phone: "+998 93 500 41 66",
+    username: "Otabek_Buxgalter",
+    note: "bo'shash arafasida, vosstanovleniyasi bor",
+  },
 ];
-
-/**
- * Lavozim / firma so'zlari — ismni ajratib olish uchun tashlanadi.
- * "bank" AVVAL "banking" dan keyin kelmasligi uchun ro'yxat uzunlik bo'yicha
- * saralanadi (aks holda "banking" dan "ing" qolib ketardi).
- */
-const NOISE = [
-  "buxgalteri", "buxgalter", "bookkeper", "bookkeeper", "accountant",
-  "nazoratchi", "banking", "bank", "klient", "client",
-  "bosh", "finco", "trinity", "yuldashevna", "shukurova", "oktamov",
-];
-
-/**
- * Ismni solishtirish uchun yagona ko'rinishga keltiradi.
- *
- * O'zbek lotinida bir ism turlicha yoziladi: Axmadjon/Ahmadjon,
- * Xumora/Humora, Adxam/Adham. `x → h` almashtirish shuning uchun. Apostrof
- * variantlari (ʻ ' ' `) va o'/g' ham bir xillashtiriladi.
- */
-export function normalizeName(raw: string): string {
-  let s = raw.toLowerCase();
-  s = s.replace(/[ʻʼ‘’'`´]/g, ""); // apostroflar
-  // Kirill "а/е/о/с/р" lotin matniga aralashib ketishi mumkin (kopi-pasta).
-  s = s.replace(/[а]/g, "a").replace(/[е]/g, "e").replace(/[о]/g, "o")
-       .replace(/[с]/g, "c").replace(/[р]/g, "p");
-  s = s.replace(/x/g, "h"); // Axmadjon → ahmadjon
-  s = s.replace(/[^a-z]/g, "");
-  return s;
-}
-
-/** Ro'yxatdagi yozuvdan ism-nomzodlarni ajratadi. */
-export function nameCandidates(label: string): string[] {
-  const words = label
-    .toLowerCase()
-    .replace(/[ʻʼ‘’'`´]/g, "")
-    .split(/[\s_]+/)
-    .filter(Boolean);
-  const kept = words.filter((w) => !NOISE.includes(normalizeName(w)) && !/^\d+$/.test(w));
-  return kept.map(normalizeName).filter((w) => w.length >= 3);
-}
-
-/** Levenshtein masofasi — kichik yozuvlar uchun yetarli. */
-export function editDistance(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-  let prev = Array.from({ length: n + 1 }, (_, j) => j);
-  for (let i = 1; i <= m; i++) {
-    const cur = [i];
-    for (let j = 1; j <= n; j++) {
-      cur[j] = Math.min(
-        prev[j] + 1,
-        cur[j - 1] + 1,
-        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
-      );
-    }
-    prev = cur;
-  }
-  return prev[n];
-}
-
-export type MatchTier = "exact" | "near" | "weak" | "none";
-
-/** Ikki ism qanchalik mos — eng yaxshi nomzod bo'yicha. */
-export function scoreMatch(candidates: string[], dbName: string): { tier: MatchTier; distance: number } {
-  const target = normalizeName(dbName);
-  let best = Number.POSITIVE_INFINITY;
-  for (const c of candidates) {
-    if (c === target) return { tier: "exact", distance: 0 };
-    // Biri ikkinchisining boshlanishi bo'lsa (Dilhush ↔ Dilhushbek) — yaqin.
-    if (target.length >= 5 && (c.startsWith(target) || target.startsWith(c))) {
-      best = Math.min(best, 1);
-      continue;
-    }
-    best = Math.min(best, editDistance(c, target));
-  }
-  if (best <= 1) return { tier: "near", distance: best };
-  if (best <= 2) return { tier: "weak", distance: best };
-  return { tier: "none", distance: best };
-}
 
 /** Test/fixture hisoblari — importdan chetlatiladi. */
 function isFixture(fullName: string): boolean {
@@ -149,7 +93,7 @@ function isFixture(fullName: string): boolean {
 async function main(): Promise<void> {
   const apply = process.argv.includes("--apply");
 
-  // 1) Ro'yxat ichidagi takrorlar (bir odam ikki marta yozilgan bo'lishi mumkin).
+  // 1) Ro'yxat ichidagi takrorlarni raqam bo'yicha birlashtiramiz.
   const byPhone = new Map<string, RosterEntry[]>();
   for (const r of ROSTER) {
     const key = phoneKey(r.phone);
@@ -159,10 +103,12 @@ async function main(): Promise<void> {
     }
     byPhone.set(key, [...(byPhone.get(key) ?? []), r]);
   }
-  const dupes = [...byPhone.entries()].filter(([, list]) => list.length > 1);
-  for (const [key, list] of dupes) {
-    console.log(`ℹ️  Ro'yxatda takror (${key}): ${list.map((l) => l.label).join(" / ")} — bittasi olinadi`);
+  for (const [key, list] of byPhone) {
+    if (list.length > 1) {
+      console.log(`ℹ️  Takror (${key}): ${list.map((l) => l.label).join(" / ")} — bittasi olinadi`);
+    }
   }
+  console.log(`\nRo'yxat: ${ROSTER.length} yozuv → ${byPhone.size} noyob raqam`);
 
   const users = await prisma.user.findMany({
     where: { isActive: true },
@@ -170,16 +116,15 @@ async function main(): Promise<void> {
     orderBy: { fullName: "asc" },
   });
   const real = users.filter((u) => !isFixture(u.fullName));
+  console.log(`Bazada faol xodim: ${real.length} (test hisoblari hisobga olinmadi)\n`);
 
-  // 2) Har bir yozuv uchun eng yaxshi moslik.
   type Row = { user: (typeof real)[number]; entry: RosterEntry; tier: MatchTier };
   const matched: Row[] = [];
   const review: Row[] = [];
   const unmatched: RosterEntry[] = [];
 
-  // Avval HAR BIR yozuv uchun eng yaxshi nomzodni topamiz — hali hech kimni
-  // "band" qilmasdan. Band qilish birinchi kelganga ustunlik berardi va
-  // raqobatni yashirardi.
+  // 2) Har bir yozuv uchun eng yaqin kartochka — hali hech kimni band qilmasdan.
+  //    Band qilish birinchi kelganga ustunlik berardi va raqobatni yashirardi.
   const proposals = new Map<RosterEntry, { user: (typeof real)[number]; tier: MatchTier; distance: number }>();
   for (const [, list] of byPhone) {
     const entry = list[0];
@@ -194,15 +139,14 @@ async function main(): Promise<void> {
     else unmatched.push(entry);
   }
 
-  // RAQOBAT: bitta kartochkaga bir nechta yozuv da'vo qilsa — qaysi biri
-  // to'g'riligini kod hal qila olmaydi (masalan "Azizbek Banking" va "Azizbek
-  // Buxgalter", bazada esa bitta "Azizbek"). Ikkalasi ham qo'lda ko'rib
-  // chiqishga tushadi; birini tanlab yozish tanga tashlash bo'lardi.
+  // 3) RAQOBAT: bitta kartochkaga bir nechta yozuv da'vo qilsa, qaysi biri
+  //    to'g'riligini kod hal qila olmaydi ("Azizbek Banking" va "Azizbek
+  //    Buxgalter", bazada bitta "Azizbek"). Ikkalasi ham qo'lga tushadi —
+  //    birini tanlash tanga tashlash bo'lardi.
   const claimants = new Map<string, RosterEntry[]>();
   for (const [entry, p] of proposals) {
     claimants.set(p.user.id, [...(claimants.get(p.user.id) ?? []), entry]);
   }
-
   for (const [entry, p] of proposals) {
     const contested = (claimants.get(p.user.id) ?? []).length > 1;
     const row: Row = { user: p.user, entry, tier: contested ? "weak" : p.tier };
@@ -210,7 +154,7 @@ async function main(): Promise<void> {
     else review.push(row);
   }
 
-  // 3) TO'QNASHUV: ikki xodimga bir xil kalit tushsa, bog'lash "ambiguous"
+  // 4) TO'QNASHUV: ikki xodimga bir xil kalit tushsa, bog'lash "ambiguous"
   //    bo'lib ISHLAMAY QOLADI — shuning uchun yozishdan oldin tekshiramiz.
   const plannedKeys = new Map<string, string[]>();
   for (const m of matched) {
@@ -225,32 +169,44 @@ async function main(): Promise<void> {
   const collisions = [...plannedKeys.entries()].filter(([, names]) => names.length > 1);
 
   // ── Hisobot ────────────────────────────────────────────────────────────────
-  console.log(`\n✅ ANIQ MOSLIK (${matched.length}) — ${apply ? "yoziladi" : "yozilardi"}:`);
+  const pad = (s: string, n: number) => s.padEnd(n).slice(0, n);
+
+  console.log(`✅ ANIQ MOSLIK (${matched.length}) — ${apply ? "yoziladi" : "yozilardi"}:`);
   for (const m of matched) {
-    const was = m.user.phoneNormalized ? ` (eski: ${formatPhone(m.user.phone)})` : "";
+    const was = m.user.phoneNormalized ? "  (raqam yangilanadi)" : "";
+    const note = m.entry.note ? `  ⚑ ${m.entry.note}` : "";
     console.log(
-      `   ${m.user.fullName.padEnd(14)} [${m.user.role.padEnd(17)}] ← ${m.entry.label.padEnd(38)} ${formatPhone(m.entry.phone)}${was}`,
+      `   ${pad(m.user.fullName, 12)} [${pad(m.user.role, 16)}] ← ${pad(m.entry.label, 34)} ${formatPhone(m.entry.phone)}${was}${note}`,
     );
   }
 
   if (review.length) {
-    console.log(`\n🟡 SHUBHALI (${review.length}) — YOZILMAYDI, qo'lda tasdiqlang:`);
+    console.log(`\n🟡 SHUBHALI (${review.length}) — YOZILMAYDI, qo'lda hal qiling:`);
     for (const r of review) {
-      console.log(`   ${r.user.fullName.padEnd(14)} [${r.user.role.padEnd(17)}] ←? ${r.entry.label.padEnd(38)} ${formatPhone(r.entry.phone)}`);
+      console.log(
+        `   ${pad(r.user.fullName, 12)} [${pad(r.user.role, 16)}] ←? ${pad(r.entry.label, 34)} ${formatPhone(r.entry.phone)}`,
+      );
     }
   }
 
   if (unmatched.length) {
     console.log(`\n❌ BAZADA TOPILMADI (${unmatched.length}) — avval xodim kartochkasi yaratilsin:`);
-    for (const e of unmatched) console.log(`   ${e.label.padEnd(38)} ${formatPhone(e.phone)}`);
+    for (const e of unmatched) {
+      console.log(`   ${pad(e.label, 34)} ${formatPhone(e.phone)}${e.note ? `  ⚑ ${e.note}` : ""}`);
+    }
   }
 
   const claimed = new Set([...matched, ...review].map((r) => r.user.id));
   const leftover = real.filter((u) => !claimed.has(u.id));
   if (leftover.length) {
-    console.log(`\n⚪ RO'YXATDA YO'Q xodimlar (${leftover.length}) — raqamsiz qoladi, bot ularni tanimaydi:`);
-    for (const u of leftover) console.log(`   ${u.fullName} (${u.role})`);
+    console.log(`\n⚪ RO'YXATDA YO'Q (${leftover.length}) — raqamsiz qoladi, bot ularni tanimaydi:`);
+    for (const u of leftover) {
+      console.log(`   ${pad(u.fullName, 12)} [${pad(u.role, 16)}] ${u.phone ?? "raqam yo'q"}`);
+    }
   }
+
+  const linked = real.filter((u) => u.telegramUserId).length;
+  console.log(`\n📊 Telegramga bog'langan: ${linked} / ${real.length}`);
 
   if (collisions.length) {
     console.log(`\n🚨 TO'QNASHUV — bir raqam bir nechta xodimda. Bot bunday holatda bog'lashni RAD ETADI:`);
@@ -264,7 +220,7 @@ async function main(): Promise<void> {
   }
 
   if (collisions.length) {
-    console.error(`\n⛔ To'qnashuv bor — yozilmadi. Avval takror raqamlarni hal qiling.`);
+    console.error(`\n⛔ To'qnashuv bor — hech narsa yozilmadi. Avval takror raqamlarni hal qiling.`);
     await prisma.$disconnect();
     process.exitCode = 1;
     return;
