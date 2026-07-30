@@ -85,6 +85,21 @@ const ROSTER: RosterEntry[] = [
   },
 ];
 
+/**
+ * QO'LDA TASDIQLANGAN mosliklar — avtomatik moslashtirish topa olmagan yoki
+ * ikkilangan holatlar. Bu yerdagi yozuv `User.fullName` ga AYNAN teng bo'lishi
+ * kerak va u har qanday avtomatik taxminni bekor qiladi.
+ *
+ * Har biri odam tomonidan tasdiqlangan, taxmin emas.
+ */
+const MANUAL_MATCH: Record<string, string> = {
+  // Ism juda uzoq (guzal ↔ gozaloy), lekin ikkalasi ham nazoratchi — bir odam.
+  "Buxgalter Guzal nazoratchi": "Go'zaloy",
+  // Ikkita turli Azizbek bor. Bazadagi yagona "Azizbek" — aynan buxgalteri;
+  // bank-klient uchun alohida kartochka scripts/seed-staff-cards.ts da.
+  "Azizbek Buxgalter": "Azizbek",
+};
+
 /** Test/fixture hisoblari — importdan chetlatiladi. */
 function isFixture(fullName: string): boolean {
   return /^(test|vitest|super admin)/i.test(fullName.trim());
@@ -126,8 +141,22 @@ async function main(): Promise<void> {
   // 2) Har bir yozuv uchun eng yaqin kartochka — hali hech kimni band qilmasdan.
   //    Band qilish birinchi kelganga ustunlik berardi va raqobatni yashirardi.
   const proposals = new Map<RosterEntry, { user: (typeof real)[number]; tier: MatchTier; distance: number }>();
+  const pinnedEntries = new Set<RosterEntry>();
   for (const [, list] of byPhone) {
     const entry = list[0];
+
+    // Qo'lda tasdiqlangan moslik — taxmindan ustun.
+    const pinned = MANUAL_MATCH[entry.label];
+    if (pinned) {
+      const user = real.find((u) => u.fullName === pinned);
+      if (user) {
+        proposals.set(entry, { user, tier: "exact", distance: 0 });
+        pinnedEntries.add(entry);
+        continue;
+      }
+      console.error(`⚠️  MANUAL_MATCH "${entry.label}" → "${pinned}": bunday xodim topilmadi.`);
+    }
+
     const candidates = nameCandidates(entry.label);
     let best: { user: (typeof real)[number]; tier: MatchTier; distance: number } | null = null;
     for (const u of real) {
@@ -148,7 +177,15 @@ async function main(): Promise<void> {
     claimants.set(p.user.id, [...(claimants.get(p.user.id) ?? []), entry]);
   }
   for (const [entry, p] of proposals) {
-    const contested = (claimants.get(p.user.id) ?? []).length > 1;
+    const rivals = claimants.get(p.user.id) ?? [];
+    // Qo'lda tasdiqlangan da'vogar bo'lsa — raqobat tugagan: u yutadi, qolgani
+    // esa o'z kartochkasini kutayotgan begona (uni seed-staff-cards.ts yaratadi).
+    const pinnedRival = rivals.find((r) => pinnedEntries.has(r));
+    if (pinnedRival && pinnedRival !== entry) {
+      unmatched.push(entry);
+      continue;
+    }
+    const contested = !pinnedRival && rivals.length > 1;
     const row: Row = { user: p.user, entry, tier: contested ? "weak" : p.tier };
     if (!contested && (p.tier === "exact" || p.tier === "near")) matched.push(row);
     else review.push(row);
