@@ -3,7 +3,6 @@
 import React from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import SalaryKPIModule from "@/components/SalaryKPIModule";
-import BotKpiProjectionButton from "@/components/BotKpiProjectionButton";
 import { Company, Staff, OperationEntry } from "@/types";
 
 interface Props {
@@ -28,11 +27,6 @@ export default function KPIClient({
   useAutoRefresh();
   return (
     <div className="flex h-full flex-col">
-      {canProjectBotKpi && currentMonth && (
-        <div className="flex justify-end px-4 pt-3">
-          <BotKpiProjectionButton month={currentMonth} />
-        </div>
-      )}
       <div className="min-h-0 flex-1">
         <SalaryKPIModule
           companies={companies}
@@ -41,6 +35,8 @@ export default function KPIClient({
           lang="uz"
           currentUserRole={userRole}
           currentUserId={userId}
+          canProjectBotKpi={canProjectBotKpi}
+          currentMonth={currentMonth}
         />
       </div>
     </div>

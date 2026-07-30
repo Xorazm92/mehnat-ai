@@ -10,6 +10,7 @@ import EmployeeDashboard from './EmployeeDashboard';
 import PayrollTable from './PayrollTable';
 import KPIRulesManager from './KPIRulesManager';
 import KpiLeaderboard from './KpiLeaderboard';
+import BotKpiProjectionButton from './BotKpiProjectionButton';
 import { PageHeader } from "@/components/ui/PageHeader";
 
 interface Props {
@@ -19,9 +20,11 @@ interface Props {
     lang: Language;
     currentUserId?: string;
     currentUserRole?: string;
+    canProjectBotKpi?: boolean;
+    currentMonth?: string;
 }
 
-const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, lang, currentUserId = 'user-1', currentUserRole = 'manager' }) => {
+const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, lang, currentUserId = 'user-1', currentUserRole = 'manager', canProjectBotKpi, currentMonth }) => {
     // Default tab based on role could be set here
     const [activeTab, setActiveTab] = useState<'nazoratchi' | 'reyting' | 'employee' | 'payroll' | 'rules'>('nazoratchi');
 
@@ -104,7 +107,18 @@ const SalaryKPIModule: React.FC<Props> = ({ companies, operations = [], staff, l
       <PageHeader
         icon={<TrendingUp size={20} />}
         title="KPI va Oylik"
-        description="Ko'rsatkichlar, reyting va maosh hisobi"
+        description="Ko'rsatkichlar, reyting, telegram bot statistikasi va maosh hisobi"
+        actions={
+          canProjectBotKpi && currentMonth ? (
+            <div className="flex items-center gap-2.5">
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--rule)] bg-[var(--bg-sunken)] text-[var(--text-secondary)] text-xs font-medium">
+                <span className="w-2 h-2 rounded-full bg-[var(--accent-indigo)] animate-pulse" />
+                <span>Telegram Bot</span>
+              </div>
+              <BotKpiProjectionButton month={currentMonth} />
+            </div>
+          ) : null
+        }
       />
             {/* Standard Tab Navigation */}
             <div className="flex gap-1 overflow-x-auto border-b border-[var(--rule)] bg-[var(--card-bg)] dark:bg-[var(--surface)] pt-2 px-2 shadow-sm rounded-t">

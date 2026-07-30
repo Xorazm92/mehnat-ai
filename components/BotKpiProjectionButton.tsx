@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Bot, Loader2 } from "lucide-react";
 import { projectResponseKpiToPerformance } from "@/server/botKpiProjection";
 
 /**
@@ -36,10 +37,15 @@ export default function BotKpiProjectionButton({ month }: { month: string }) {
       type="button"
       onClick={run}
       disabled={pending}
-      title="Telegram bot javob KPI'sini shu oy uchun dashboardga chiqaradi (nazoratchi tasdiqlaydi)"
-      className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent-indigo)] px-3 py-2 text-sm font-medium text-white transition hover:bg-[var(--accent-indigo)] disabled:cursor-not-allowed disabled:opacity-60"
+      title={`Telegram bot javob ko'rsatkichlarini ${month} oyi uchun dashboardga chiqaradi (nazoratchi tasdiqlaydi)`}
+      className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent-indigo)] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Chiqarilmoqda…" : `Bot KPI'ni chiqarish (${month})`}
+      {pending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Bot className="h-3.5 w-3.5" />
+      )}
+      <span>{pending ? "Chiqarilmoqda…" : `Bot KPI'ni chiqarish (${month})`}</span>
     </button>
   );
 }

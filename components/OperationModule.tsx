@@ -34,9 +34,84 @@ import { Button } from "@/components/ui/Button";
 // ajralib chiqadi (kulrang tabletkalar devori o'rniga).
 const tint = (c: string, pct: number) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 
-// ── Kategoriya (bo'lim) ranglari ───────────────────────────────
-// Rang ustun KALITIDAN kelib chiqadi (lib/reportGroups.ts), guruh NOMIDAN emas.
-// Sabab: guruh nomini admin o'zgartira oladi — o'shanda rang yo'qolib qolardi.
+// ── Kategoriya va Guruh ranglari (Visual Contrast System) ──────
+export interface GroupStyle {
+  headerBg: string;
+  subHeaderBg: string;
+  cellBg: string;
+  text: string;
+  border: string;
+}
+
+const GROUP_STYLE_MAP: Record<string, GroupStyle> = {
+  "Oylik": {
+    headerBg: "color-mix(in srgb, #3b82f6 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, #3b82f6 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, #3b82f6 3.5%, transparent)",
+    text: "var(--accent-blue)",
+    border: "color-mix(in srgb, #3b82f6 45%, transparent)",
+  },
+  "Soliqlar": {
+    headerBg: "color-mix(in srgb, #10b981 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, #10b981 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, #10b981 3.5%, transparent)",
+    text: "var(--success)",
+    border: "color-mix(in srgb, #10b981 45%, transparent)",
+  },
+  "Soliq H/T": {
+    headerBg: "color-mix(in srgb, #f59e0b 22%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, #f59e0b 12%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, #f59e0b 4.5%, transparent)",
+    text: "var(--warning)",
+    border: "color-mix(in srgb, #f59e0b 50%, transparent)",
+  },
+  "Yillik": {
+    headerBg: "color-mix(in srgb, #8b5cf6 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, #8b5cf6 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, #8b5cf6 3.5%, transparent)",
+    text: "var(--accent-purple)",
+    border: "color-mix(in srgb, #8b5cf6 45%, transparent)",
+  },
+  "Statistika": {
+    headerBg: "color-mix(in srgb, #ec4899 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, #ec4899 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, #ec4899 3.5%, transparent)",
+    text: "var(--danger)",
+    border: "color-mix(in srgb, #ec4899 45%, transparent)",
+  },
+  "IT Park": {
+    headerBg: "color-mix(in srgb, #06b6d4 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, #06b6d4 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, #06b6d4 3.5%, transparent)",
+    text: "var(--info)",
+    border: "color-mix(in srgb, #06b6d4 45%, transparent)",
+  },
+  "Komunalka": {
+    headerBg: "color-mix(in srgb, #eab308 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, #eab308 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, #eab308 3.5%, transparent)",
+    text: "var(--warning)",
+    border: "color-mix(in srgb, #eab308 45%, transparent)",
+  },
+  "Maxsus": {
+    headerBg: "color-mix(in srgb, #6366f1 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, #6366f1 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, #6366f1 3.5%, transparent)",
+    text: "var(--accent-indigo)",
+    border: "color-mix(in srgb, #6366f1 45%, transparent)",
+  },
+};
+
+const getGroupStyle = (groupName: string): GroupStyle => {
+  return GROUP_STYLE_MAP[groupName] ?? {
+    headerBg: "var(--surface-2)",
+    subHeaderBg: "var(--surface-2)",
+    cellBg: "transparent",
+    text: "var(--text-secondary)",
+    border: "var(--border)",
+  };
+};
+
 const CATEGORY_COLOR: Record<ReportCategory, string> = {
   OPERATSION: 'var(--brand)',
   SOLIQ: 'var(--warning)',
@@ -45,17 +120,12 @@ const CATEGORY_COLOR: Record<ReportCategory, string> = {
 };
 
 const categoryOf = (key: string): ReportCategory | null => tryGetColumnCategory(key);
-const categoryColor = (key: string): string => {
-  const c = categoryOf(key);
-  return c ? CATEGORY_COLOR[c] : 'var(--text-3)';
-};
 
-/** Kategoriya almashadigan chegara ustunlari (shu ustundan keyin yangi bo'lim). */
-const buildCategoryEdges = (cols: readonly { key: string }[]): Set<string> => {
+const buildGroupEdges = (cols: readonly ReportColumn[]): Set<string> => {
   const edges = new Set<string>();
   cols.forEach((c, i) => {
     const next = cols[i + 1];
-    if (next && categoryOf(c.key) !== categoryOf(next.key)) edges.add(c.key);
+    if (next && c.group !== next.group) edges.add(c.key);
   });
   return edges;
 };
@@ -348,9 +418,7 @@ const OperationRow = React.memo<{
 }>(({ row, idx, visibleColumns, userRole, activeServices, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
   const proofOf = (colKey: string) => (row.companyId ? proofMeta.get(`${row.companyId}::${colKey}`) : undefined);
-  const categoryEdges = useMemo(() => buildCategoryEdges(visibleColumns), [visibleColumns]);
-  const cellBorderRight = (key: string) =>
-    categoryEdges.has(key) ? `2px solid ${tint(categoryColor(key), 45)}` : '1px solid var(--border)';
+  const groupEdges = useMemo(() => buildGroupEdges(visibleColumns), [visibleColumns]);
 
   return (
     <tr className="group transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -377,13 +445,16 @@ const OperationRow = React.memo<{
       {visibleColumns.map(col => {
         const isReadOnly = !row.companyId || !canEditMatrix(userRole);
         const serviceDisabled = !isServiceEnabled(col.key);
+        const st = getGroupStyle(col.group);
+        const isEdge = groupEdges.has(col.key);
+        const borderRightStyle = isEdge ? `2px solid ${st.border}` : '1px solid var(--border)';
 
         if ((col as any).isSplit) {
           const payKey = (col as any).payKey as string;
           const payDisabled = !isServiceEnabled(payKey);
           return (
             <React.Fragment key={col.key}>
-              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: serviceDisabled ? 'var(--bg-sunken)' : tint('var(--success)', 4) }}>
+              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: serviceDisabled ? 'var(--bg-sunken)' : `color-mix(in srgb, var(--success) 6%, ${st.cellBg})` }}>
                 {serviceDisabled ? (
                   <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
                 ) : (
@@ -398,7 +469,7 @@ const OperationRow = React.memo<{
                   />
                 )}
               </td>
-              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: cellBorderRight(col.key), background: payDisabled ? 'var(--bg-sunken)' : tint('var(--warning)', 4) }}>
+              <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: borderRightStyle, background: payDisabled ? 'var(--bg-sunken)' : `color-mix(in srgb, var(--warning) 6%, ${st.cellBg})` }}>
                 {payDisabled ? (
                   <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
                 ) : (
@@ -418,7 +489,7 @@ const OperationRow = React.memo<{
         }
 
         return (
-          <td key={col.key} className="px-0.5 py-0.5 text-center h-8 transition-colors group-hover:bg-[var(--surface-2)]" style={{ borderRight: cellBorderRight(col.key), background: serviceDisabled ? 'var(--surface-2)' : 'transparent' }}>
+          <td key={col.key} className="px-0.5 py-0.5 text-center h-8 transition-colors group-hover:opacity-90" style={{ borderRight: borderRightStyle, background: serviceDisabled ? 'var(--surface-2)' : st.cellBg }}>
             {serviceDisabled ? (
               <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
             ) : (
@@ -952,8 +1023,8 @@ const OperationModule: React.FC<Props> = ({
     return bands;
   }, [visibleColumns]);
 
-  // Bo'lim chegarasi: shu ustundan KEYIN yangi kategoriya boshlanadi.
-  const categoryEdges = useMemo(() => buildCategoryEdges(visibleColumns), [visibleColumns]);
+  // Guruh chegarasi: shu ustundan KEYIN yangi guruh boshlanadi.
+  const groupEdges = useMemo(() => buildGroupEdges(visibleColumns), [visibleColumns]);
 
   const [showStatsModal, setShowStatsModal] = useState(false);
 
@@ -1382,26 +1453,20 @@ const OperationModule: React.FC<Props> = ({
                   {t.firmTable}
                 </th>
                 {headerBands.map((band, i) => {
-                  const color = band.category ? CATEGORY_COLOR[band.category] : 'var(--text-3)';
-                  const bg = band.category ? tint(color, 7) : 'var(--surface-2)';
-                  const nextIsNewCategory =
-                    headerBands[i + 1] && headerBands[i + 1].category !== band.category;
+                  const st = getGroupStyle(band.name);
+                  const isLastBand = i === headerBands.length - 1;
                   return (
                     <th
                       key={`${band.name}-${i}`}
                       colSpan={band.span}
-                      className="sticky top-0 px-1 py-1.5 text-center text-micro font-semibold uppercase tracking-wider"
+                      className="sticky top-0 px-1 py-1.5 text-center text-micro font-extrabold uppercase tracking-wider"
                       style={{
-                        background: `linear-gradient(${bg}, ${bg}), var(--surface-2)`,
-                        color,
-                        borderBottom: '1px solid var(--border)',
-                        // Bo'limlar orasida qalinroq chegara — bo'limlar ko'zga
-                        // darhol ajralib turadi.
-                        borderRight: nextIsNewCategory
-                          ? `2px solid ${tint(color, 45)}`
-                          : '1px solid var(--border)',
+                        background: st.headerBg,
+                        color: st.text,
+                        borderBottom: `2px solid ${st.border}`,
+                        borderRight: isLastBand ? '1px solid var(--border)' : `2px solid ${st.border}`,
                       }}
-                      title={band.category ? CATEGORY_LABEL_UZ[band.category] : undefined}
+                      title={band.name}
                     >
                       {band.name}
                     </th>
@@ -1415,24 +1480,29 @@ const OperationModule: React.FC<Props> = ({
                 <th className="md:sticky md:top-[28px] md:left-[232px] z-[100] px-1.5 py-2 text-center text-micro font-bold w-20 min-w-[80px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }} aria-sort={table.sortKey === 'inn' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('inn')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">INN{table.sortKey === 'inn' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
                 <th className="md:sticky md:top-[28px] md:left-[312px] z-[100] px-2 py-2 text-left text-micro font-bold w-24 min-w-[96px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)' }} aria-sort={table.sortKey === 'accountant' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('accountant')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">BUXGALTER{table.sortKey === 'accountant' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
                 {visibleColumns.map(col => {
+                  const st = getGroupStyle(col.group);
+                  const groupEdges = buildGroupEdges(visibleColumns);
+                  const isEdge = groupEdges.has(col.key);
+                  const borderRightStyle = isEdge ? `2px solid ${st.border}` : '1px solid var(--border)';
+
                   if ((col as any).isSplit) {
                     return (
                       <React.Fragment key={col.key}>
                         <th
                           className="sticky top-[28px] px-0.5 py-2 text-center w-10 text-micro cursor-help"
-                          style={{ background: `linear-gradient(${tint('var(--success)', 8)}, ${tint('var(--success)', 8)}), var(--surface)`, borderBottom: `2px solid ${tint(categoryColor(col.key), 35)}`, borderRight: '1px solid var(--border)' }}
+                          style={{ background: `color-mix(in srgb, var(--success) 12%, ${st.subHeaderBg})`, borderBottom: `2px solid ${st.border}`, borderRight: '1px solid var(--border)' }}
                           title={col.label}
                         >
-                          <span className="text-micro font-semibold tracking-widest" style={{ color: 'var(--success)' }}>{col.short}</span>
-                          <div className="text-2xs font-semibold uppercase tracking-tighter" style={{ color: 'var(--success)', opacity: 0.75 }}>Xis.</div>
+                          <span className="text-micro font-bold tracking-widest" style={{ color: 'var(--success)' }}>{col.short}</span>
+                          <div className="text-2xs font-bold uppercase tracking-tighter" style={{ color: 'var(--success)', opacity: 0.85 }}>Xis.</div>
                         </th>
                         <th
                           className="sticky top-[28px] px-0.5 py-2 text-center w-10 cursor-help"
-                          style={{ background: `linear-gradient(${tint('var(--warning)', 8)}, ${tint('var(--warning)', 8)}), var(--surface)`, borderBottom: `2px solid ${tint(categoryColor(col.key), 35)}`, borderRight: categoryEdges.has(col.key) ? `2px solid ${tint(categoryColor(col.key), 45)}` : '1px solid var(--border)' }}
+                          style={{ background: `color-mix(in srgb, var(--warning) 12%, ${st.subHeaderBg})`, borderBottom: `2px solid ${st.border}`, borderRight: borderRightStyle }}
                           title={`${col.label} to'lov`}
                         >
-                          <span className="text-micro font-semibold tracking-widest" style={{ color: 'var(--warning)' }}>{(col as any).payShort}</span>
-                          <div className="text-2xs font-semibold uppercase tracking-tighter" style={{ color: 'var(--warning)', opacity: 0.75 }}>To&apos;l</div>
+                          <span className="text-micro font-bold tracking-widest" style={{ color: 'var(--warning)' }}>{(col as any).payShort}</span>
+                          <div className="text-2xs font-bold uppercase tracking-tighter" style={{ color: 'var(--warning)', opacity: 0.85 }}>To&apos;l</div>
                         </th>
                       </React.Fragment>
                     );
@@ -1442,15 +1512,11 @@ const OperationModule: React.FC<Props> = ({
                       key={col.key}
                       className="sticky top-[28px] px-0.5 py-2 text-center w-10 transition-colors cursor-help group/header"
                       style={{
-                        background: 'var(--surface)',
-                        // Bo'lim rangidagi uzluksiz tag chizig'i — qaysi ustun
-                        // qaysi bo'limga tegishli ekani bir qarashda ko'rinadi.
-                        borderBottom: `2px solid ${tint(categoryColor(col.key), 35)}`,
-                        borderRight: categoryEdges.has(col.key)
-                          ? `2px solid ${tint(categoryColor(col.key), 45)}`
-                          : '1px solid var(--border)',
+                        background: st.subHeaderBg,
+                        borderBottom: `2px solid ${st.border}`,
+                        borderRight: borderRightStyle,
                       }}
-                      title={col.label + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
+                      title={`${col.label} (${col.group})` + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
                       onContextMenu={(e) => {
                         if (userRole === 'super_admin' || userRole === 'admin') {
                           e.preventDefault();
@@ -1458,8 +1524,7 @@ const OperationModule: React.FC<Props> = ({
                         }
                       }}
                     >
-                      <span className="text-micro font-semibold uppercase tracking-widest transition-colors icon-btn-accent" style={{ color: 'var(--text-3)' }}
-                      >
+                      <span className="text-micro font-extrabold uppercase tracking-wider transition-colors" style={{ color: st.text }}>
                         {col.short}
                       </span>
                     </th>

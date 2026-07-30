@@ -111,10 +111,18 @@ export function useTableState({
   // ── Qidiruv: input darhol, filtrlash kechikib ────────────────
   const [localSearch, setLocalSearch] = useState(search);
 
-  // URL tashqaridan o'zgarsa (orqaga tugmasi, havola) inputni moslash.
-  useEffect(() => {
+  /**
+   * URL tashqaridan o'zgarsa (orqaga tugmasi, ulashilgan havola) input matnini
+   * moslash. Bu ATAYLAB effekt EMAS: React 19 effekt ichida sinxron `setState`
+   * ni kaskadli render sababi deb belgilaydi. Rasmiy naqsh — render paytida
+   * oldingi qiymat bilan solishtirib to'g'rilash; React shu renderni darhol
+   * qayta ishga tushiradi va oraliq holat ekranga chiqmaydi.
+   */
+  const [prevSearch, setPrevSearch] = useState(search);
+  if (search !== prevSearch) {
+    setPrevSearch(search);
     setLocalSearch(search);
-  }, [search]);
+  }
 
   const setSearch = useCallback((v: string) => setLocalSearch(v), []);
 

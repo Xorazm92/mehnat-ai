@@ -150,6 +150,22 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
       const responsibleUserId =
         ov?.action === "reassign" && ov.responsibleUserId ? ov.responsibleUserId : snap.accountantId;
 
+      const existing = await db.obligation.findUnique({
+        where: {
+          companyId_templateId_periodStart_periodEnd: {
+            companyId: c.id,
+            templateId: t.id,
+            periodStart: window.periodStart,
+            periodEnd: window.periodEnd,
+          },
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        res.skippedExisting++;
+        continue;
+      }
+
       try {
         await db.obligation.create({
           data: {

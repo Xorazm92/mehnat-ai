@@ -12,11 +12,38 @@
 
 export interface KnowledgeChunk {
   title: string;
-  category: "BHMS" | "TAX" | "LABOR";
+  category: "BHMS" | "TAX" | "LABOR" | "SYSTEM";
   content: string;
 }
 
 export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
+  // ── ASRO ERP TIZIMI VA FOYDALANISH YO'RIQNOMASI ──
+  {
+    title: "ASRO Tizimi — Rentabellik modulining mantiqi va manbalari",
+    category: "SYSTEM",
+    content: "Rentabellik (Profitability / Contribution Margin) — har bir mijoz (firma) autsorsingdan qancha sof foyda keltirishini ko'rsatadi. Formula: Margin = Tushum (paid Payment) − Mehnat tannarxi (TimeEntry soati × xodim stavkasi). Qarzdorlik — chiqarilgan Invoys minus to'langan summa. Bu bo'lim zarar keltirayotgan va mehnat ko'p talab etadigan firmalarning narxini qayta ko'rib chiqishga yordam beradi."
+  },
+  {
+    title: "ASRO Tizimi — Oylik berish va tasdiqlash tartibi",
+    category: "SYSTEM",
+    content: "Oylik berish 4 bosqichdan iborat: 1) Tizim Asosiy oylik + KPI bonus - Jarimalarni avto-hisoblaydi (Oylik Xomcho't). 2) Bosh buxgalter/Admin '$ TASDIQLASH' tugmasini bosib, oylik majburiyatini tan oladi. 3) Kassa admini 'To'lovlar tarixi / Payout' orqali real pul beradi (naqd, plastik, schyot). Qisman to'lash mumkin, majburiyatdan ortiqcha to'lov bloklanadi. 4) Avanslar oy oxiri oyligidan avtomatik chegiriladi."
+  },
+  {
+    title: "ASRO Tizimi — Kassa, Xarajatlar va manfiy balans (Overdraft)",
+    category: "SYSTEM",
+    content: "Xarajatlar fakt bo'yicha kiritiladi (taksi, ofis va b.). Oddiy buxgalterlar uchun kassada pul yetmasa xarajat taqiqlanadi (bloklanadi). Admin / Superadmin esa favqulodda holatda minus balans bilan xarajatni o'tkaza oladi. Kassadagi manfiy balans va byudjetdan oshish qizil banner hamda audit log bilan nazorat qilinadi."
+  },
+  {
+    title: "ASRO Tizimi — Hisobotlar va Amallar Matritsasi ranglari",
+    category: "SYSTEM",
+    content: "Har oy boshida har bir firmaga avtomatik soliq va oylik hisobotlari biriktiriladi. Matritsada guruhlar rangli tonlar bilan ajratilgan: Oylik (ko'k), Soliqlar (yashil), Soliq H/T (amber/oltin), Yillik (binafsha), Statistika (pushti), IT Park (sian), Komunalka (sariq), Maxsus (indigo). Vertikal qalin chiziqlar guruhlar chegarasini ko'rsatadi."
+  },
+  {
+    title: "ASRO Tizimi — KPI va Adolatli KPI",
+    category: "SYSTEM",
+    content: "KPI — xodimlarning o'z vaqtida topshirgan hisobotlari, vazifa va davomatiga qarab avtomatik hisoblanadigan bonus va jarimalar tizimi. Nazoratchi tomonidan tasdiqlangan KPI ballari to'g'ridan-to'g'ri oylik xomcho'tidagi bonus/jarima ustuniga ta'sir qiladi."
+  },
+
   // ── BHMS (Milliy standartlar) ──
   { title: "BHMS 1 — Hisob siyosati va moliyaviy hisobot", category: "BHMS", content: "Moliyaviy hisobotni tuzish tamoyillari: hisob siyosati, uzluksizlik, daromad va xarajatlarning mosligi. Hisobot haqqoniy va to'liq bo'lishi shart." },
   { title: "BHMS 2 — Asosiy faoliyatdan daromadlar", category: "BHMS", content: "Daromad tan olinadi: mulk huquqi xaridorga o'tsa, qiymatni ishonchli baholab bo'lsa, iqtisodiy naf ehtimoli bo'lsa. Tovar/xizmat, foiz, royalti, dividend." },
@@ -49,22 +76,24 @@ function buildKnowledgeBlock(): string {
   return KNOWLEDGE_CHUNKS.map((c) => `### [${c.category}] ${c.title}\n${c.content}`).join("\n\n");
 }
 
-export const ASSISTANT_SYSTEM_INSTRUCTION = `Sen — "ASRO Moliyachi AI", O'zbekiston buxgalteriya autsorsing firmasi uchun moliyaviy yordamchisan.
-Vazifang: xodimlarga BHMS (Buxgalteriya Hisobi Milliy Standartlari), Soliq Kodeksi va Mehnat Kodeksi bo'yicha savollariga aniq, qisqa va amaliy javob berish.
+export const ASSISTANT_SYSTEM_INSTRUCTION = `Sen — "ASRO Moliyachi AI", O'zbekiston buxgalteriya autsorsing firmalarini boshqarish ERP tizimi ("ASRO Boshqaruv Tizimi") hamda moliyaviy masalalar bo'yicha aqlli yordamchisan.
+
+VAZIFANG:
+1. Xodimlarga ASRO tizimidan foydalanish, modullar (Oylik, Rentabellik, Kassa, Xarajatlar, KPI, Hisobotlar matritsasi) mantiqi va qoidalari bo'yicha tushuntirish berish.
+2. BHMS (Buxgalteriya Hisobi Milliy Standartlari), Soliq Kodeksi va Mehnat Kodeksi bo'yicha savollarga amaliy va aniq javob berish.
 
 QOIDALAR:
-- HAR DOIM o'zbek tilida javob ber (agar foydalanuvchi boshqa tilda so'rasa, o'sha tilda).
-- Qisqa va aniq yoz. Kerak bo'lsa ro'yxat/bandlar bilan. Ortiqcha muqaddima yozma.
-- Quyidagi bilim bazasiga tayan. Bilim bazasida yo'q narsani taxmin qilma — bilmasang, "aniq ma'lumot uchun rasmiy manbaga (lex.uz) yoki bosh buxgalterga murojaat qiling" deb ayt.
-- ASRO tizimidagi JONLI ma'lumotlarni (aniq oylik summasi, KPI ballari, muddati o'tgan hisobotlar, kassa qoldig'i) SEN BILMAYSAN va TAXMIN QILMA. Bunday savollarda foydalanuvchini tegishli bo'limga yo'naltir:
-  • Oylik/maosh → "Oylik" bo'limi ("Jami to'lov")
-  • KPI ballari → "KPI" bo'limi
-  • Hisobot holati/muddatlar → "Hisobotlar" bo'limidagi "Amallar matritsasi"
-  • Kirim-chiqim/qoldiq → "Kassa" va "Xarajatlar" bo'limlari
-- Soliq/stavka hisob-kitoblarida umumiy formulani ko'rsat, lekin firma bo'yicha aniq raqamni o'zing o'ylab topma.
-- Moliyaviy maslahat huquqiy kafolat emasligini nazarda tut; muhim qarorlar uchun rasmiy tekshiruvni tavsiya qil.
+- HAR DOIM o'zbek tilida, do'stona, professional va aniq javob ber.
+- Tizim modullari va mantiqi bo'yicha savollarda quyidagi BILIM BAZASIdagi qoidalar va tartiblarga ko'ra tushuntirish ber:
+  • Rentabellik: Tushum (paid Payment) − Mehnat tannarxi (TimeEntry × stavka). Mijozlar marjasini va qarzdorlikni tahlil qiladi.
+  • Oylik berish: 1) Oylik Xomcho't avto-hisoblanadi. 2) Admin/Bosh buxgalter '$ TASDIQLASH' tugmasi bilan majburiyatni tasdiqlaydi. 3) Kassa admini 'Payout' orqali real pul beradi (kassa kamayadi). 4) Avanslar chegiriladi.
+  • Kassa / Xarajatlar: Xarajatlar fakt bo'yicha kiradi. Oddiy buxgalter uchun kassa yetmasa bloklanadi, Admin minus balans (overdraft) bera oladi. Qizil banner va audit log nazorat qiladi.
+  • Hisobotlar matritsasi: Oy boshida avto-biriktiriladi. Rangli guruhlar: Oylik (ko'k), Soliqlar (yashil), Soliq H/T (amber), Yillik (binafsha), Statistika (pushti), IT Park (sian), Komunalka (sariq), Maxsus (indigo).
+  • KPI: Bajargan vazifalar, hisobot muddatlari va davomat bo'yicha avto-bonus va jarimalar.
+- ASRO tizimidagi JONLI real ma'lumotlarni (foydalanuvchining shaxsiy oylik summasi, joriy kassa qoldig'i raqami) SEN JONLI KO'RMAYSAN. Shuning uchun foydalanuvchiga tizim modulini va mantiqni tushuntirib, tegishli bo'limga yo'naltir.
+- Kerak bo'lsa, tushunarli ro'yxatlar va qadamlar shaklida javob ber. Ortiqcha muqaddima yozma.
 
-BILIM BAZASI (O'zbekiston):
+BILIM BAZASI (ASRO Tizimi va O'zbekiston Qonunchiligi):
 ${buildKnowledgeBlock()}`;
 
 /**
@@ -75,26 +104,32 @@ ${buildKnowledgeBlock()}`;
 export function heuristicReply(userText: string): string {
   const t = userText.toLowerCase();
   let body: string;
-  if (t.includes("qqs") || t.includes("nds")) {
+  if (t.includes("rentabell") || t.includes("marja") || t.includes("tannarx")) {
+    body = "Rentabellik (Contribution Margin) — har bir mijozdan kelayotgan sof marjani ko'rsatadi. Formula: Margin = Tushum (Payment) − Mehnat tannarxi (TimeEntry × stavka). Zararli mijozlarni aniqlash uchun ishlatiladi.";
+  } else if (t.includes("oylik berish") || t.includes("oylik tasdiq") || t.includes("payout") || (t.includes("oylik") && t.includes("tartib"))) {
+    body = "Oylik berish tartibi:\n1. Tizim Asosiy oylik + KPI bonus - Jarimalarni avto-hisoblaydi (Oylik Xomcho't).\n2. Bosh buxgalter/Admin '$ TASDIQLASH' tugmasi bilan majburiyatni tasdiqlaydi.\n3. Kassa mas'uli 'Payout' orqali real pul beradi (kassa kamayadi).\n4. Avanslar oylikdan avtomatik chegiriladi.";
+  } else if (t.includes("balans") || t.includes("manfiy") || t.includes("overdraft") || t.includes("xarajat")) {
+    body = "Xarajatlar fakt bo'yicha kiritiladi. Oddiy buxgalterga kassada pul yetmasa xarajat taqiqlanadi (bloklanadi). Admin / Superadmin esa favqulodda holatda minus balans (overdraft) berishi mumkin — bu qizil banner va audit log bilan nazorat qilinadi.";
+  } else if (t.includes("qqs") || t.includes("nds")) {
     body = "QQS (qo'shilgan qiymat solig'i) — standart stavka 12%. Aylanmasi 1 mlrd so'mdan oshgan korxonalar uchun majburiy. Sotib olishda to'langan QQS sotishdagi QQSdan chegiriladi (offset).";
   } else if (t.includes("aylanma")) {
-    body = "Aylanmadan soliq (soddalashtirilgan tizim) — bazaviy stavka 4% (faoliyat turi va hududga qarab farqlanishi mumkin). Yillik tushumi 1 mlrd so'mgacha subyektlar uchun.";
+    body = "Aylanmadan soliq (soddalashtirilgan tizim) — bazaviy stavka 4%. Yillik tushumi 1 mlrd so'mgacha subyektlar uchun.";
   } else if (t.includes("foyda")) {
     body = "Foyda solig'i — umumiy stavka 15%; banklar va mobil aloqa operatorlari uchun 20%.";
   } else if (t.includes("jshds") || t.includes("daromad solig")) {
-    body = "JSHDS (jismoniy shaxs daromad solig'i) — 12%. Dividend va foizlar (rezident) — 5%.";
+    body = "JSHDS (jismoniy shaxs daromad solig'i) — 12%. Dividend va foizlar — 5%.";
   } else if (t.includes("ta'til") || t.includes("tatil") || t.includes("otpusk")) {
     body = "Mehnat Kodeksi bo'yicha yillik asosiy ta'til kamida 21 kalendar kun. Ish haftasi 40 soatdan oshmasligi kerak.";
   } else if (t.includes("oylik") || t.includes("maosh") || t.includes("fond")) {
     body = "Oylik fondi = firmalar bo'yicha rol ulushlari yig'indisi. Aniq raqamni ASRO'ning \"Oylik\" bo'limidagi \"Jami to'lov\" ko'rsatadi.";
   } else if (t.includes("kpi")) {
-    body = "KPI ballari nazoratchi/bosh buxgalter tasdig'iga qarab bonus yoki jarimaga aylanadi. O'z ballaringizni \"KPI\" bo'limida ko'rasiz.";
-  } else if (t.includes("hisobot") || t.includes("muddat")) {
-    body = "Muddati o'tgan hisobotlarni \"Hisobotlar\" bo'limidagi \"Amallar matritsasi\"dan ko'rasiz — bajarilmaganlari belgilangan bo'ladi.";
+    body = "KPI ballari bajarilgan vazifalar va hisobot muddatlariga qarab avto-hisoblanadi. Nazoratchi tasdiqlasa, bonus/jarima bo'lib oylik xomcho'tiga o'tadi.";
+  } else if (t.includes("hisobot") || t.includes("muddat") || t.includes("rang")) {
+    body = "Hisobotlar amallar matritsasida guruhlar rang bilan ajratilgan (Oylik - ko'k, Soliq - yashil, Soliq H/T - amber, Yillik - binafsha, Statistika - pushti, IT Park - sian va b.). Muddati o'tgan hisobotlar maxsus belgilanadi.";
   } else if (t.includes("bhms") || t.includes("standart")) {
     body = "BHMS — Buxgalteriya Hisobi Milliy Standartlari (1–24). Qaysi standart kerakligini ayting (masalan, BHMS 4 — tovar-moddiy zaxiralar), batafsil tushuntiraman.";
   } else {
-    body = "Savolingizni tushundim. Aniqroq javob uchun mavzuni (BHMS, soliq yoki mehnat) belgilab bering.";
+    body = "Savolingizni tushundim. ASRO tizimidan foydalanish (Rentabellik, Oylik, Kassa, KPI, Hisobotlar) yoki moliyaviy qonunchilik (BHMS, Soliq, Mehnat) bo'yicha savolingizni berishingiz mumkin.";
   }
   return body + "\n\n🔌 Eslatma: AI kaliti (GEMINI_API_KEY) sozlanmagani uchun bu soddalashtirilgan javob.";
 }

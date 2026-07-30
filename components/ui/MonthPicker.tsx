@@ -22,11 +22,16 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
         return isNaN(y) ? new Date().getFullYear() : y;
     });
 
-    useEffect(() => {
-        const parts = selectedPeriod.split(' ');
-        const y = parseInt(parts[0]);
+    // Tashqaridan davr o'zgarsa ko'rinadigan yilni moslash. Effekt EMAS:
+    // React 19 effekt ichidagi sinxron `setState` ni kaskadli render sababi
+    // deb belgilaydi. Rasmiy naqsh — render paytida oldingi qiymat bilan
+    // solishtirib to'g'rilash.
+    const [prevPeriod, setPrevPeriod] = useState(selectedPeriod);
+    if (selectedPeriod !== prevPeriod) {
+        setPrevPeriod(selectedPeriod);
+        const y = parseInt(selectedPeriod.split(' ')[0]);
         if (!isNaN(y)) setViewYear(y);
-    }, [selectedPeriod]);
+    }
 
     const updatePosition = () => {
         if (triggerRef.current) {

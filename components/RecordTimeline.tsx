@@ -73,10 +73,18 @@ export function RecordTimeline({
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [denied, setDenied] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  // Yozuv almashsa holatni render paytida tiklaymiz — effekt ichida sinxron
+  // `setState` qilish kaskadli render beradi (React 19 buni belgilaydi).
+  const key = `${tableName}:${recordId}`;
+  const [prevKey, setPrevKey] = useState(key);
+  if (key !== prevKey) {
+    setPrevKey(key);
     setEntries(null);
     setDenied(false);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
     getRecordHistory({ tableName, recordId, limit })
       .then((r) => { if (!cancelled) setEntries(r as unknown as Entry[]); })
       .catch(() => { if (!cancelled) { setDenied(true); setEntries([]); } });
