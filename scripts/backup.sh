@@ -50,7 +50,16 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 FILE="$DIR/asro_${STAMP}.dump"
 
 echo "▶ pg_dump ($TIER) → $FILE"
-pg_dump --format=custom --no-owner --dbname="$PG_URL" --file="$FILE"
+# Avval vaqtinchalik nomga yozamiz. pg_dump yarim yo'lda yiqilsa (masalan URL
+# xato yoki disk to'lsa), `set -e` skriptni to'xtatadi va joyida 0 baytli fayl
+# qolardi — u zaxiraga o'xshaydi, retention uni saqlaydi va tiklash kerak
+# bo'lganda bo'sh chiqadi. Faqat muvaffaqiyatli dump yakuniy nomga ko'chadi.
+TMP="$FILE.partial"
+trap 'rm -f "$TMP"' EXIT
+pg_dump --format=custom --no-owner --dbname="$PG_URL" --file="$TMP"
+[ -s "$TMP" ] || { echo "✗ pg_dump bo'sh fayl qaytardi"; exit 4; }
+mv "$TMP" "$FILE"
+trap - EXIT
 sha256sum "$FILE" > "$FILE.sha256"
 echo "  size: $(du -h "$FILE" | cut -f1)   sha256: $(cut -d' ' -f1 "$FILE.sha256")"
 
