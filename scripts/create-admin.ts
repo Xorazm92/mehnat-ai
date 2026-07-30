@@ -42,6 +42,23 @@ async function main(): Promise<void> {
       return;
     }
 
+    // ADMIN_EMAIL berilmagan bo'lsa ham, bazada admin bor-yo'qligini tekshiramiz.
+    // Busiz har bir oddiy re-deploy shu yerda 1-kod bilan yiqilardi: deploy.sh
+    // `set -e` bilan ishlaydi, ya'ni build ham, pm2 reload ham umuman
+    // bajarilmasdan qolardi — ilova esa eski versiyada turaverardi.
+    if (!email && !resetIfExists) {
+      const anyAdmin = await prisma.user.findFirst({
+        where: { role: { in: ["super_admin", "admin"] }, isActive: true },
+        select: { email: true, role: true },
+      });
+      if (anyAdmin) {
+        console.log(
+          `✓ Admin already exists: ${anyAdmin.email} (role: ${anyAdmin.role}). Nothing to do.`
+        );
+        return;
+      }
+    }
+
     if (!email || !password || password.length < 8) {
       console.error(
         "✗ To create the admin, set ADMIN_EMAIL and ADMIN_PASSWORD (min 8 chars).\n" +
