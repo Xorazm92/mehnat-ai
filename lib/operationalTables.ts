@@ -118,8 +118,12 @@ export const REFERENCE_TABLES: string[] = [
  * Spravochnikning bo'sh bo'lishi mumkin bo'lmagan qismi. Bularsiz tizim
  * ishlamaydi: kirish yo'q (`user`), mijoz yo'q (`company`), kim qaysi firmaga
  * biriktirilgani yo'q (`contractAssignment`), KPI hisoblanmaydi (`kpiRule`),
- * sozlama yo'q (`systemSetting`), muddat generatsiya qilinmaydi
- * (`deadlineTemplate`).
+ * sozlama yo'q (`systemSetting`).
+ *
+ * Bo'sh bo'lsa yagona javob — zaxiradan tiklash, chunki bu ma'lumot qo'lda
+ * yig'ilgan. `deadlineTemplate` ataylab bu ro'yxatda EMAS: u ham majburiy,
+ * lekin uni seed skripti qayta yarata oladi, ya'ni maslahat boshqa. Uni
+ * `verify-clean-start.ts` dagi checkTemplates() alohida tekshiradi.
  */
 export const REQUIRED_REFERENCE: string[] = [
   "user",
@@ -127,7 +131,6 @@ export const REQUIRED_REFERENCE: string[] = [
   "contractAssignment",
   "kpiRule",
   "systemSetting",
-  "deadlineTemplate",
 ];
 
 /**
