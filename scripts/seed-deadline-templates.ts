@@ -8,16 +8,50 @@
 //  3) Joriy davr uchun majburiyat generatsiyasi (catch-up=0 → tarixiy
 //     "kechikkan" uyumi yaratilmaydi; muddatlar oldinga qarab toza chiqadi).
 //
-// Ishga tushirish:  npx tsx scripts/seed-deadline-templates.ts
+// Ishga tushirish:
+//   npx tsx scripts/seed-deadline-templates.ts                # seed + generatsiya
+//   npx tsx scripts/seed-deadline-templates.ts --no-generate  # faqat shablon
+//
+// `--no-generate` clean-start uchun: shablon reset'dan OLDIN ekiladi (u
+// spravochnik, tozalashdan omon qoladi), majburiyat esa reset'dan KEYIN
+// `scripts/generate-obligations.ts` bilan yaratiladi. Aks holda bu yerda
+// yaratilgan majburiyatlarni reset darhol o'chirib yuborardi.
 import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { runGenerationLocked } from "@/lib/obligationRun";
 import type { Periodicity, DeadlineAnchorType } from "@prisma/client";
 
 // contractDate yo'q firmalar uchun taxminiy xizmat-boshlanish sanasi.
+// EFFECTIVE_FROM dan oldin bo'lishi shart, aks holda isCompanyEligible
+// firmani "hali shartnoma yo'q" deb chetlab o'tadi.
 const CONTRACT_BACKFILL = new Date(Date.UTC(2026, 0, 1)); // 2026-01-01
-// Shablonlar kuchga kirish sanasi (davr boshidan oldin bo'lishi shart).
-const EFFECTIVE_FROM = new Date(Date.UTC(2026, 0, 1)); // 2026-01-01
+
+/**
+ * CLEAN-START CHEGARASI — bu sana shunchaki "shablon qachondan amal qiladi"
+ * emas, u catch-up'ni ham to'sadi.
+ *
+ * Kunlik 06:00 generatsiyasi `catchUpMonths: 2` bilan ishlaydi
+ * (bot/queues/obligation.worker.ts) va `ref` ni 0, 1, 2 oy orqaga suradi
+ * (lib/obligationRun.ts). Generator esa shablonlarni `effectiveFrom <= ref`
+ * bo'yicha filtrlaydi (lib/obligations.ts). Ya'ni sana 2026-01-01 bo'lsa,
+ * 1-avgustdagi cron IYUN davrini ham yaratardi — uning muddatlari 5–25 iyul,
+ * darhol kechikkan. NotificationDelivery (dedup jurnali) tozalashda o'chgani
+ * uchun hech narsa to'smaydi va soatlik sweep har firma × har shablon uchun
+ * qizil eskalatsiya yuborardi.
+ *
+ * 2026-07-01: iyun va undan oldingi davrlar HECH QACHON yaratilmaydi, iyul
+ * davri (avgustda topshiriladigan real ish) esa yaratiladi.
+ */
+const EFFECTIVE_FROM = new Date(Date.UTC(2026, 6, 1)); // 2026-07-01
+
+/**
+ * `period_end_offset` shablonlari uchun alohida chegara. Ularning iyul davri
+ * muddati 31-iyul, ya'ni tizim xodimlarga topshirilgan kunning o'zida
+ * allaqachon o'tgan bo'lardi (212 firma × 2 shablon = 424 ta "kechikkan").
+ * Bu ish iyulda, tizimsiz bajarilgan — uni kechikkan deb yozish noto'g'ri.
+ * Shuning uchun ular avgust davridan boshlanadi (muddat: 31-avgust).
+ */
+const EFFECTIVE_FROM_IN_MONTH = new Date(Date.UTC(2026, 7, 1)); // 2026-08-01
 
 interface TplSeed {
   code: string;
@@ -28,6 +62,8 @@ interface TplSeed {
   dueDay?: number;
   dueMonth?: number;
   offsetDays?: number;
+  /** Standart EFFECTIVE_FROM dan farq qilsa. */
+  effectiveFrom?: Date;
   applicability?: { criteriaType: string; criteriaValue: string }[];
 }
 
@@ -103,6 +139,7 @@ const TEMPLATES: TplSeed[] = [
     periodicity: "monthly",
     anchorType: "period_end_offset",
     offsetDays: 0,
+    effectiveFrom: EFFECTIVE_FROM_IN_MONTH,
   },
   {
     code: "TAX_SCHEDULE",
@@ -167,10 +204,13 @@ const TEMPLATES: TplSeed[] = [
     periodicity: "monthly",
     anchorType: "period_end_offset",
     offsetDays: 0,
+    effectiveFrom: EFFECTIVE_FROM_IN_MONTH,
   },
 ];
 
 async function main() {
+  const noGenerate = process.argv.includes("--no-generate");
+
   const admin = await prisma.user.findFirst({
     where: { role: { in: ["super_admin", "admin"] }, isActive: true },
     select: { id: true },
@@ -186,6 +226,7 @@ async function main() {
 
   // ── 2) Shablonlar (upsert + applicability reconcile) ────────
   for (const t of TEMPLATES) {
+    const effectiveFrom = t.effectiveFrom ?? EFFECTIVE_FROM;
     const tpl = await prisma.deadlineTemplate.upsert({
       where: { code_version: { code: t.code, version: 1 } },
       create: {
@@ -199,7 +240,7 @@ async function main() {
         dueMonth: t.dueMonth ?? null,
         offsetDays: t.offsetDays ?? null,
         adjustmentPolicy: "next_workday",
-        effectiveFrom: EFFECTIVE_FROM,
+        effectiveFrom,
         effectiveTo: null,
         lifecycle: "active",
         active: true,
@@ -216,7 +257,7 @@ async function main() {
         dueMonth: t.dueMonth ?? null,
         offsetDays: t.offsetDays ?? null,
         adjustmentPolicy: "next_workday",
-        effectiveFrom: EFFECTIVE_FROM,
+        effectiveFrom,
         lifecycle: "active",
         active: true,
       },
@@ -236,7 +277,16 @@ async function main() {
     const scope = t.applicability?.length
       ? t.applicability.map((a) => `${a.criteriaType}=${a.criteriaValue}`).join(", ")
       : "universal";
-    console.log(`   ✓ ${t.code.padEnd(18)} ${t.periodicity.padEnd(9)} → ${scope}`);
+    const from = effectiveFrom.toISOString().slice(0, 10);
+    console.log(`   ✓ ${t.code.padEnd(18)} ${t.periodicity.padEnd(9)} ${from} → ${scope}`);
+  }
+
+  if (noGenerate) {
+    const n = await prisma.deadlineTemplate.count({ where: { lifecycle: "active", active: true } });
+    console.log(`\n2) Shablon: ${n} ta faol. Generatsiya o'tkazib yuborildi (--no-generate).`);
+    console.log("   Majburiyatlarni keyin yarating:  npx tsx scripts/generate-obligations.ts");
+    await prisma.$disconnect();
+    return;
   }
 
   // ── 3) Generatsiya (faqat joriy davr, catch-up yo'q) ─────────

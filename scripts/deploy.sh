@@ -34,10 +34,15 @@ npm ci
 echo "▶ [3/7] Applying database migrations (prisma migrate deploy)…"
 npx prisma migrate deploy
 
-# 4) Seed REAL reference data (KPI rules) required by the KPI engine + bot.
-#    No mock/demo data is ever seeded in production.
-echo "▶ [4/7] Seeding KPI rules (real reference data)…"
+# 4) Seed REAL reference data (KPI rules + deadline templates) required by the
+#    KPI engine, the compliance engine and the bot. No mock/demo data is ever
+#    seeded in production. Both are idempotent upserts.
+#    `--no-generate`: seeding must not create obligations as a side effect —
+#    generation is a separate, explicit step (scripts/generate-obligations.ts),
+#    otherwise every deploy would silently backfill periods.
+echo "▶ [4/7] Seeding reference data (KPI rules + deadline templates)…"
 npx tsx scripts/seed-kpi-rules-v2.ts
+npx tsx scripts/seed-deadline-templates.ts --no-generate
 
 # 5) Bootstrap the admin — idempotent; only creates it when missing.
 echo "▶ [5/7] Ensuring admin account…"
