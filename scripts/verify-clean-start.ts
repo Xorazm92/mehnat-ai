@@ -68,24 +68,40 @@ function parseAuditMin(): number | null {
 
 /** 1. Operatsion jadvallar bo'sh. */
 async function checkOperational(postGenerate: boolean): Promise<void> {
-  const dirty: Array<[string, number]> = [];
+  const blocking: Array<[string, number]> = [];
+  const refilled: Array<[string, number]> = [];
   for (const t of OPERATIONAL_TABLES) {
     // post-generate rejimida majburiyatning O'ZI to'lgan bo'lishi kerak;
     // uning bola jadvallari (topshirish/hodisa) esa baribir bo'sh — ular
     // workflow davomida paydo bo'ladi, generatsiyada emas.
     if (postGenerate && t.model === "obligation") continue;
     const n = await delegate(t.model).count();
-    if (n > 0) dirty.push([t.model, n]);
+    if (n === 0) continue;
+    (t.refillsWhenLive ? refilled : blocking).push([t.model, n]);
   }
-  if (dirty.length > 0) {
-    const rows = dirty.map(([m, n]) => `      ${String(n).padStart(7)}  ${m}`).join("\n");
+
+  if (blocking.length > 0) {
+    const rows = blocking.map(([m, n]) => `      ${String(n).padStart(7)}  ${m}`).join("\n");
     err(
-      `Operatsion ma'lumot qolgan (${dirty.length} jadval):\n${rows}\n` +
+      `Operatsion ma'lumot qolgan (${blocking.length} jadval):\n${rows}\n` +
         "    Tozalash to'liq o'tmagan. Qayta ishga tushiring:\n" +
         "      npx tsx scripts/reset-operational-data.ts --apply --confirm=RESET",
     );
   } else {
-    console.log(`  ✓ operatsion jadvallar bo'sh (${OPERATIONAL_TABLES.length - (postGenerate ? 1 : 0)} ta tekshirildi)`);
+    const checked = OPERATIONAL_TABLES.length - (postGenerate ? 1 : 0);
+    console.log(`  ✓ operatsion jadvallar bo'sh (${checked} ta tekshirildi)`);
+  }
+
+  // Bular tizim ishga tushgach o'z-o'zidan to'ladi. Xato DEB HISOBLAMAYMIZ:
+  // aks holda bot yoqilgandan keyingi tekshiruv operatorga prod resetini
+  // QAYTA bosishni maslahat berardi — tozalash aslida joyida bo'lsa ham.
+  if (refilled.length > 0) {
+    const rows = refilled.map(([m, n]) => `  ${String(n).padStart(7)}  ${m}`).join("\n");
+    warn(
+      `Tizim ishga tushgandan keyin qayta to'lgan jadvallar (bu NORMAL, reset qayta kerak emas):\n${rows}\n` +
+        "  Eslatma/xabar oqimi tiklangan. Agar hali hech narsa ishga tushmagan bo'lishi\n" +
+        "  kerak bo'lsa, pm2 holatini tekshiring.",
+    );
   }
 }
 

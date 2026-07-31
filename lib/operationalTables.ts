@@ -20,6 +20,14 @@ export interface OperationalTable {
   model: string;
   /** Nima uchun operatsion deb hisoblanadi — hisobotda shu matn chiqadi. */
   why: string;
+  /**
+   * Tizim ishga tushishi bilan odam aralashuvisiz qayta to'ladi (sweep
+   * eslatma yozadi, Telegram yangilanish yuboradi). Tozalashda o'chadi, lekin
+   * keyin bo'sh emasligi NORMAL — `verify-clean-start.ts` bularni xato emas,
+   * ogohlantirish deb hisoblaydi. Aks holda bot yoqilgandan keyingi tekshiruv
+   * "tozalash o'tmagan" deb resetni QAYTA ishlatishni maslahat berardi.
+   */
+  refillsWhenLive?: true;
 }
 
 /**
@@ -38,8 +46,8 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "answer", why: "javoblar" },
   { model: "question", why: "mijoz savollari (SLA)" },
   { model: "clientRequest", why: "mijoz portali murojaatlari" },
-  { model: "telegramMessage", why: "guruh xabarlari tarixi" },
-  { model: "processedUpdate", why: "Telegram dedup jurnali" },
+  { model: "telegramMessage", why: "guruh xabarlari tarixi", refillsWhenLive: true },
+  { model: "processedUpdate", why: "Telegram dedup jurnali", refillsWhenLive: true },
 
   // Vazifa / SLA
   { model: "slaBreach", why: "SLA buzilishlari" },
@@ -47,8 +55,8 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "task", why: "vazifalar" },
 
   // Xabarnomalar
-  { model: "notificationDelivery", why: "yetkazish jurnali (eskalatsiya dedup)" },
-  { model: "notification", why: "ilova ichidagi xabarlar" },
+  { model: "notificationDelivery", why: "yetkazish jurnali (eskalatsiya dedup)", refillsWhenLive: true },
+  { model: "notification", why: "ilova ichidagi xabarlar", refillsWhenLive: true },
   { model: "paymentReminder", why: "to'lov eslatmalari tarixi" },
 
   // Moliya: ledger va davr
@@ -81,7 +89,7 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "operation", why: "yillik hisobot statuslari (foyda/forma/statistika)" },
 
   // Integratsiya (IntegrationEvent.syncRunId = SetNull → tartib erkin)
-  { model: "integrationEvent", why: "1C hodisalari navbati" },
+  { model: "integrationEvent", why: "1C hodisalari navbati", refillsWhenLive: true },
   { model: "syncError", why: "1C sinxron xatolari (DLQ)" },
   { model: "syncRun", why: "1C sinxron yugurishlari tarixi" },
 ];
