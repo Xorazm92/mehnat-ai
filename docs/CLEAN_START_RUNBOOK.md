@@ -10,6 +10,34 @@ Bu hujjat — qadam-baqadam tartib. Har bir qadamning **nega** kerakligi va
 > **Bu hujjat ma'lumot o'chiradi.** 6-qadam qaytarib bo'lmaydi. Unga
 > yetgunga qadar 3-qadam (zaxira) bajarilgan va tekshirilgan bo'lishi shart.
 
+## Bajarilgan: 2026-07-31
+
+Bu tartib prodda to'liq bajarildi. Natija — keyingi safar nimani kutish
+kerakligining o'lchovi:
+
+| Qadam | Natija |
+|---|---|
+| Zaxira | `asro_20260730T190631Z.dump` (820K, 60 TABLE DATA bloki), sha256 tasdiqlangan, offsite nusxa olingan |
+| Billing | `false` (`.env` + `.env.local`), bot restartdan keyin `billing reminders scheduled` logi yo'q |
+| Shablon | 15 ta; 211 firmaga `contractDate` backfill |
+| Reset | **15 260** qator o'chdi (dry-run'da 11 868 edi — oradagi vaqtda bot 2 544 majburiyat va 983 eslatma yaratib ulgurgan) |
+| Verify | `✓ CLEAN START OK`, `AuditLog = 54` saqlangan |
+| Generatsiya | **2 544** majburiyat: `2026-M07` 1 935, `2026-Q3` 185, `2026-Y` 424. Kechikkan **0**, mas'ulsiz **0** |
+| Catch-up sinovi | Kunlik cron logi: `generate: [ 2544, 0, 0 ]` — 1 va 2 oy orqaga **0** yaratildi, ya'ni `effectiveFrom` chegarasi ishlaydi |
+
+Yaratilgan muddatlar taqsimoti (dam olish kunlari surilgan):
+
+```
+2026-08-05  424    pul oqimi + 1C baza
+2026-08-10  424    soliq sana+summa (09-avgust yakshanba → surildi) + xatlar
+2026-08-17  636    INPS + daromad + material (15-avgust shanba → surildi)
+2026-08-20   27    QQS (faqat QQS to'lovchilar)
+2026-08-25  424    debitor-kreditor + foyda-zarar
+2026-10-15  185    aylanma soliq (2026-Q3)
+2027-02-15  212    moliyaviy hisobot
+2027-03-01  212    foyda solig'i
+```
+
 Tegishli fayllar: [`lib/operationalTables.ts`](../lib/operationalTables.ts)
 (nima o'chadi, nima qoladi), [`scripts/reset-operational-data.ts`](../scripts/reset-operational-data.ts),
 [`scripts/verify-clean-start.ts`](../scripts/verify-clean-start.ts),
