@@ -24,6 +24,9 @@ kerakligining o'lchovi:
 | Verify | `✓ CLEAN START OK`, `AuditLog = 54` saqlangan |
 | Generatsiya | **2 544** majburiyat: `2026-M07` 1 935, `2026-Q3` 185, `2026-Y` 424. Kechikkan **0**, mas'ulsiz **0** |
 | Catch-up sinovi | Kunlik cron logi: `generate: [ 2544, 0, 0 ]` — 1 va 2 oy orqaga **0** yaratildi, ya'ni `effectiveFrom` chegarasi ishlaydi |
+| Sweep sinovi | `scanned: 2544, markedOverdue: 0, remindersCreated: 424, telegramSent: 0, noTelegram: 424` — 5-avgust muddatli D-5 eslatmalari ilova ichida yaratildi, Telegramga hech narsa ketmadi (hali hech kim `/link_me` qilmagan) |
+| Xodimlar | 26 → **34** faol. 4 yangi kartochka + 4 bo'sh qobiq to'ldirildi, "FinCo 2" bo'limi yaratildi (bosh: Mohira Yuldashevna). 31 kartochkaga telefon yozildi. **Parolsiz 0** |
+| Arxivlash | DAVLATGAZ va AMUDARYO GAZ SERVIS (mijoz ketgan) → 210 faol firma, ularning 24 majburiyati bekor qilindi |
 
 Yaratilgan muddatlar taqsimoti (dam olish kunlari surilgan):
 
@@ -324,11 +327,31 @@ done   # hammasi 307 bo'lishi kerak
 
 ## 10. Xodim ma'lumotlarini kiritish
 
-Telefon raqamlari (avval quruq ishlash, keyin qo'llash):
+Tartib muhim: avval **kartochka**, keyin **telefon**. Telefon importi faqat
+mavjud kartochkaga yozadi, shuning uchun teskarisi ishlamaydi.
 
 ```bash
+npx tsx scripts/seed-staff-cards.ts               # dry-run
+npx tsx scripts/seed-staff-cards.ts --apply       # kartochka + "FinCo 2" bo'limi
 npx tsx scripts/import-staff-phones.ts            # dry-run
-npx tsx scripts/import-staff-phones.ts --apply
+npx tsx scripts/import-staff-phones.ts --apply    # raqam + rol tuzatish
+```
+
+> **Parollar ataylab chiqarilmaydi** (prod loglariga tushmasligi uchun).
+> Kerak bo'lsa `PRINT_PASSWORDS=1 npx tsx scripts/seed-staff-cards.ts --apply`
+> ni O'ZINGIZ terminalda ishlating, yoki admin paneldan tiklang. Xodimlar
+> botga telefon orqali kiradi — veb paroli faqat dashboard uchun kerak.
+
+`seed-staff-cards.ts` "bo'sh qobiq" (nofaol, raqamsiz, tarixsiz kartochka)
+topsa yangisini yaratmay o'shani egallaydi va to'liq ismga qayta nomlaydi —
+shuning uchun qayta ishga tushirish dublikat hosil qilmaydi.
+
+**Mijoz ketgan bo'lsa** firmani shu bosqichda arxivlang, aks holda unga har oy
+yangi majburiyat yaratiladi va billing uni qarzdor deb hisoblaydi:
+
+```bash
+npx tsx scripts/deactivate-company.ts "FIRMA NOMI"           # dry-run
+npx tsx scripts/deactivate-company.ts "FIRMA NOMI" --apply
 ```
 
 Qolgan import/tuzatishlarni shu bosqichda qiling — bular spravochnik, ya'ni
