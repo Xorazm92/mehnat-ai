@@ -97,8 +97,10 @@ const NEW_STAFF: NewStaff[] = [
   },
   // Guruh belgisi yo'q — bo'lim qo'yilmaydi (taxmin qilmaymiz).
   { fullName: "Sevinch", role: "accountant", phone: "+998 93 828 41 66", username: "Sevinch_Buxgalter" },
-  // "FinCo" (2 emas) — birinchi guruh; bazadagi "Abrorbek FinCo" ham "Yorqinoy" yorlig'ida.
-  { fullName: "Alisher", role: "accountant", phone: "+998 93 123 41 66", department: "Yorqinoy" },
+  // Alisher — kompaniya rahbari (CEO), shuning uchun `admin`: butun tizimni
+  // ko'radi, bitta firmaga biriktirilmaydi. Buxgalter emas, ya'ni unga
+  // majburiyat ham biriktirilmaydi (generator faqat `accountantId` ni oladi).
+  { fullName: "Alisher", role: "admin", phone: "+998 93 123 41 66" },
   // Bo'shash arafasida: kartochka yaratiladi, ketsa isActive=false yetarli —
   // linkTelegramByPhone nofaol kartochkani o'zi e'tiborsiz qoldiradi.
   { fullName: "Otabek", role: "accountant", phone: "+998 93 500 41 66", username: "Otabek_Buxgalter" },
