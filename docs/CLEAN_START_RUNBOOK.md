@@ -301,15 +301,24 @@ pm2 start ecosystem.config.cjs --only asro-web
 
 Brauzerda admin bilan kiring va tekshiring:
 
-- [ ] Bosh dashboard — daromad/xarajat/KPI ko'rsatkichlari **0**
+- [ ] `/dashboard` — daromad/xarajat/KPI ko'rsatkichlari **0**
 - [ ] `/kassa` — bo'sh, balans 0
-- [ ] `/payments` — bo'sh
 - [ ] `/expenses` — bo'sh
 - [ ] `/payroll` — hisoblangan oylik yo'q
-- [ ] KPI sahifalari — ball yo'q
+- [ ] `/kpi` va `/fair-kpi` — ball yo'q
+- [ ] `/reports` — matritsa bo'sh
 - [ ] `/deadlines` — **to'la**, avgust muddatlari ko'rinadi (8-qadam natijasi)
-- [ ] `/companies` — 212 firma joyida
-- [ ] Xodimlar ro'yxati — 26 faol xodim joyida
+- [ ] `/organizations` — 212 firma joyida
+- [ ] `/staff` — 26 faol xodim joyida
+
+Buyruq qatoridan auth darvozasini tekshirish (kirmagan foydalanuvchi
+`/login` ga uloqtirilishi kerak, 404 emas):
+
+```bash
+for p in /dashboard /kassa /expenses /payroll /kpi /reports /deadlines /organizations /staff; do
+  printf "%-16s → %s\n" "$p" "$(curl -s -o /dev/null -w '%{http_code}' "https://asro.uz$p")"
+done   # hammasi 307 bo'lishi kerak
+```
 
 ---
 
