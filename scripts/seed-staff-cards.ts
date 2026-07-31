@@ -150,34 +150,64 @@ async function main(): Promise<void> {
   //    yaratilgan-u, hech qachon to'ldirilmagan. Ular uchun yangi kartochka
   //    ochish takror hosil qilardi, shuning uchun bo'shi to'ldirilib
   //    faollashtiriladi. Tarixi bor kartochkaga esa TEGILMAYDI.
-  const existing = await prisma.user.findMany({
-    where: { fullName: { in: NEW_STAFF.map((s) => s.fullName) } },
-    select: { id: true, fullName: true, isActive: true, phone: true },
+  const cards = await prisma.user.findMany({
+    where: { NOT: { OR: [{ fullName: { startsWith: "TEST" } }, { fullName: { startsWith: "vitest" } }] } },
+    select: {
+      id: true, fullName: true, isActive: true, phone: true, telegramUserId: true,
+      _count: {
+        select: {
+          assignedCompanies: true, supervisedCompanies: true, chiefCompanies: true,
+          bankClientCompanies: true, contractAssignments: true, performanceRecords: true,
+          chiefDepartments: true,
+        },
+      },
+    },
   });
-  const byName = new Map(existing.map((e) => [e.fullName, e]));
+  const byName = new Map(cards.map((e) => [e.fullName, e]));
 
-  const todo = NEW_STAFF.filter((s) => !byName.has(s.fullName));
-  const revive = NEW_STAFF.filter((s) => {
-    const e = byName.get(s.fullName);
-    return e != null && !e.isActive && !e.phone;
-  });
-  const skipped = NEW_STAFF.filter((s) => {
-    const e = byName.get(s.fullName);
-    return e != null && (e.isActive || !!e.phone);
-  });
+  /**
+   * BO'SH QOBIQ — yaratilgan-u hech qachon ishlatilmagan kartochka: nofaol,
+   * raqamsiz, Telegramsiz va HECH QANDAY bog'lanishsiz. Bunday kartochkaning
+   * yo'qotadigan tarixi yo'q, shuning uchun uni egallash xavfsiz.
+   */
+  const isEmptyShell = (c: (typeof cards)[number]) =>
+    !c.isActive && !c.phone && c.telegramUserId == null &&
+    Object.values(c._count).every((n) => n === 0);
+
+  /**
+   * Ism aynan mos kelmasa ham qobiqni topamiz: ro'yxatda familiya bilan
+   * ("Elbek Ismatillayev"), bazada esa faqat ism ("Elbek") bo'lishi mumkin.
+   * Faqat BO'SH qobiqqa ruxsat — tarixi bor kartochkaga hech qachon
+   * tegilmaydi, u haqiqatan boshqa odam bo'lishi mumkin (mavjud "Azizbek"
+   * 70 firmada bank-klient, ro'yxatdagi "Azizbek (buxgalter)" esa boshqa odam).
+   */
+  function findShell(fullName: string) {
+    const exact = byName.get(fullName);
+    if (exact) return isEmptyShell(exact) ? exact : null;
+    const cand = nameCandidates(fullName);
+    const fuzzy = cards.filter((c) => isEmptyShell(c) && scoreMatch(cand, c.fullName).tier === "exact");
+    // Bittadan ko'p qobiq mos kelsa — qaysi biri ekani noaniq, tegmaymiz.
+    return fuzzy.length === 1 ? fuzzy[0] : null;
+  }
+
+  const shellOf = new Map<string, (typeof cards)[number]>();
+  for (const s of NEW_STAFF) {
+    const shell = findShell(s.fullName);
+    if (shell) shellOf.set(s.fullName, shell);
+  }
+
+  const revive = NEW_STAFF.filter((s) => shellOf.has(s.fullName));
+  const skipped = NEW_STAFF.filter((s) => !shellOf.has(s.fullName) && byName.has(s.fullName));
+  const todo = NEW_STAFF.filter((s) => !shellOf.has(s.fullName) && !byName.has(s.fullName));
 
   // 3) EHTIMOLIY TAKROR: ismi boshqacha yozilgan, lekin o'zagi bir xil
   //    kartochka bormi? ("Mohirbek" ↔ "Mohirbek Yo'ldoshov"). Bu yerda
   //    to'xtatmaymiz — ba'zan ular haqiqatan turli odam — lekin ogohlantiramiz,
   //    aks holda takror jimgina paydo bo'lardi.
-  const allCards = await prisma.user.findMany({
-    where: { NOT: { OR: [{ fullName: { startsWith: "TEST" } }, { fullName: { startsWith: "vitest" } }] } },
-    select: { fullName: true, isActive: true },
-  });
   const nearDupes: Array<{ want: string; existing: string; active: boolean }> = [];
   for (const s of todo) {
     const cand = nameCandidates(s.fullName);
-    for (const c of allCards) {
+    for (const c of cards) {
       if (c.fullName === s.fullName) continue;
       if (scoreMatch(cand, c.fullName).tier === "exact") {
         nearDupes.push({ want: s.fullName, existing: c.fullName, active: c.isActive });
@@ -195,9 +225,13 @@ async function main(): Promise<void> {
     );
   }
   if (revive.length) {
-    console.log(`\n♻️  BO'SH QOBIQ TO'LDIRILADI (${revive.length}) — nofaol, raqamsiz kartochka:`);
+    console.log(`\n♻️  BO'SH QOBIQ TO'LDIRILADI (${revive.length}) — nofaol, raqamsiz, tarixsiz kartochka:`);
     for (const s of revive) {
-      console.log(`   ${s.fullName.padEnd(22)} ${s.role.padEnd(17)} ${formatPhone(s.phone)}  ${s.department ?? "(bo'limsiz)"}`);
+      const shell = shellOf.get(s.fullName)!;
+      const renamed = shell.fullName !== s.fullName ? `  ("${shell.fullName}" → "${s.fullName}")` : "";
+      console.log(
+        `   ${s.fullName.padEnd(22)} ${s.role.padEnd(17)} ${formatPhone(s.phone)}  ${s.department ?? "(bo'limsiz)"}${renamed}`,
+      );
     }
   }
   if (skipped.length) {
@@ -256,10 +290,14 @@ async function main(): Promise<void> {
 
   let revived = 0;
   for (const s of revive) {
-    const card = byName.get(s.fullName)!;
+    const card = shellOf.get(s.fullName)!;
     await prisma.user.update({
       where: { id: card.id },
       data: {
+        // Qobiq ismi qisqa bo'lishi mumkin ("Elbek") — to'liq ismga
+        // yangilaymiz, aks holda ikkita "Elbek" ni ajratib bo'lmaydi va
+        // import-staff-phones.ts ularni abadiy "shubhali" deb belgilardi.
+        fullName: s.fullName,
         isActive: true,
         role: s.role,
         phone: formatPhone(s.phone),
@@ -268,6 +306,12 @@ async function main(): Promise<void> {
         ...(s.department ? { department: s.department } : {}),
       },
     });
+    if (s.departmentChief) {
+      await prisma.department.update({
+        where: { id: department.id },
+        data: { chiefAccountantId: card.id },
+      });
+    }
     revived++;
   }
 
