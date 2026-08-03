@@ -101,24 +101,24 @@ export async function clearColumnForPeriod(period: string, colKey: string) {
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
-  // In Prisma, we can't dynamically set a column to null easily in updateMany. 
-  // We can do an executeRaw or just fetch and update. Since records might be large, executeRaw is safer.
-  // Actually, wait, Prisma allows dynamic update if we cast it, but updateMany is strict.
-  // Let's use Prisma's updateMany but we can't use dynamic keys directly in type-safe updateMany.
-  // Workaround: 
-  const reports = await prisma.monthlyReport.findMany({ where: { period } });
-  
-  // Update sequentially or in parallel
-  const updates = reports.map(r => 
-    prisma.monthlyReport.update({
-      where: { id: r.id },
-      data: { [colKey]: null }
-    })
-  );
-  
-  await prisma.$transaction(updates);
+  // Matritsa kaliti DB ustuni EMAS: UI "pul_oqimlari" yuboradi, ustun esa
+  // "pulOqimlari". Kalitni to'g'ridan-to'g'ri berish tozalashni nomi tasodifan
+  // bir xil bo'lgan ustunlarda (didox, xatlar, inps…) ishlatib, qolganlarida
+  // Prisma xatosiga olib kelardi — "ba'zi ustun tozalanadi, ba'zisi yo'q".
+  // Bu — barcha monthlyReport yozuvlari uchun bir xil qoida (server/proofs.ts).
+  const dbCol = FIELD_TO_DB_COLUMN[colKey as OperationFieldKey];
+  // Noma'lum kalitni rad etamiz: `data` ga kelgan nom to'g'ridan-to'g'ri
+  // ustunga aylanadi, ya'ni tekshiruvsiz qoldirish ixtiyoriy maydonni
+  // nolga tenglash imkonini berardi.
+  if (!dbCol) throw new Error("Noto'g'ri ustun kaliti");
+
+  const res = await prisma.monthlyReport.updateMany({
+    where: { period },
+    data: { [dbCol]: null } as Prisma.MonthlyReportUncheckedUpdateManyInput,
+  });
+
   revalidateTag("operations", "max");
-  return { success: true };
+  return { success: true, cleared: res.count };
 }
 
 // =====================================================
