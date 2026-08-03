@@ -9,6 +9,7 @@
  *   2. the database is reachable
  *   3. the schema is applied (the User table exists)
  *   4. the User table is NON-EMPTY and an active admin account exists
+ *   5. the live database MATCHES schema.prisma (no drift)
  *
  * Exits non-zero with a clear message when any hard check fails, so the deploy
  * pipeline aborts instead of shipping a login-broken system.
@@ -17,7 +18,11 @@
  *   npx tsx scripts/preflight.ts env   → env-only (fast, no DB) — run early in deploy
  *   npx tsx scripts/preflight.ts       → full check (env + DB + schema + admin) — run at the end
  */
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { loadEnv, makePrisma, countAdmins } from "./_bootstrap";
+
+const run = promisify(execFile);
 
 loadEnv();
 
@@ -96,10 +101,62 @@ async function checkDatabase(): Promise<void> {
   }
 }
 
+/**
+ * 5. Does the live database actually match schema.prisma?
+ *
+ * `migrate deploy` only replays the migration files; it cannot know about a
+ * column that was added to the schema and never given a migration. Prisma
+ * Client is generated FROM the schema, so that gap is invisible until a query
+ * touches the missing column at runtime — and then every write to that table
+ * fails, not just the new field. That is exactly how a single unmigrated
+ * `MonthlyReport.ekologiya` turned every screenshot upload into a 500.
+ *
+ * `--exit-code`: 0 = in sync, 2 = drift, 1 = the diff itself failed.
+ */
+async function checkSchemaDrift(): Promise<void> {
+  try {
+    await run(
+      "npx",
+      [
+        "prisma",
+        "migrate",
+        "diff",
+        "--from-config-datasource",
+        "--to-schema",
+        "prisma/schema.prisma",
+        "--script",
+        "--exit-code",
+      ],
+      { timeout: 60_000 },
+    );
+  } catch (e) {
+    const e2 = e as { code?: number; stdout?: string };
+    if (e2.code === 2) {
+      const sql = (e2.stdout ?? "")
+        .split("\n")
+        .filter((l) => l.trim() && !l.startsWith("--") && !l.includes("Prisma config"))
+        .slice(0, 10)
+        .map((l) => `      ${l.trim()}`)
+        .join("\n");
+      (isProd ? err : warn)(
+        "Database does NOT match prisma/schema.prisma. Queries touching these will fail at runtime:\n" +
+          `${sql}\n` +
+          "    Write a migration for it (never `migrate dev` on a shared DB), then:\n" +
+          "      npx prisma migrate deploy",
+      );
+      return;
+    }
+    warn(`Schema drift check could not run: ${(e as Error)?.message?.split("\n")[0] ?? e}`);
+  }
+}
+
 async function main(): Promise<void> {
   const mode = process.argv[2];
   checkEnv();
-  if (mode !== "env") await checkDatabase();
+  if (mode !== "env") {
+    await checkDatabase();
+    await checkSchemaDrift();
+  }
 
   const errors = problems.filter((p) => p.level === "error");
   const warns = problems.filter((p) => p.level === "warn");
