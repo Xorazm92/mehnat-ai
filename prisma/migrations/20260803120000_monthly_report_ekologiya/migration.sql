@@ -1,0 +1,14 @@
+-- MonthlyReport.ekologiya — amallar matritsasidagi "Ekologiya" ustuni.
+--
+-- Ustun schema.prisma ga va lib/reportColumns.ts ga qo'shilgan, lekin
+-- migratsiyasi yozilmagan edi. Prodda natija: matritsaning ISTALGAN kataki
+-- saqlanmasdi — `monthlyReport.upsert()` butun qatorni yozadi, shuning uchun
+-- bitta yetishmayotgan ustun POST /reports ni 500 qilardi, faqat "Ekologiya"
+-- kataginigina emas. O'qish yo'li ham (`findMany`) shu sababdan yiqilardi.
+--
+-- Qo'lda yozilgan: schema'da bu migratsiyaga tegishli bo'lmagan boshqa
+-- o'zgarishlar ham bor, shuning uchun `migrate dev` ISHLATILMAYDI.
+--
+-- IF NOT EXISTS: dev bazalar `db push` bilan qurilgan va ustun ularda
+-- allaqachon bor — bu migratsiya o'sha bazalarda ham xatosiz o'tishi kerak.
+ALTER TABLE "MonthlyReport" ADD COLUMN IF NOT EXISTS "ekologiya" TEXT;
