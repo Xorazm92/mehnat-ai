@@ -3,13 +3,27 @@ import { createRedisConnection } from "./connection";
 import { QUEUE } from "../config";
 
 /** Notify queue payload: which outbound job to run. */
-export interface NotifyJob {
-  kind:
-    /** Walk unanswered `late` questions up the escalation ladder. */
-    | "escalate-questions"
-    /** Morning plan to every linked staffer who has something to do. */
-    | "daily-digest";
-}
+export type NotifyJob =
+  | {
+      /** Walk unanswered `late` questions up the escalation ladder. */
+      kind: "escalate-questions";
+    }
+  | {
+      /** Morning plan to every linked staffer who has something to do. */
+      kind: "daily-digest";
+    }
+  | {
+      /**
+       * Erase a message we sent, after a delay. Parollar uchun: xabar chatda
+       * qolsa, u ham "oylab saqlanadi" — aynan qochmoqchi bo'lgan xavf.
+       *
+       * Redis'da turadi, `setTimeout` da emas: bot 2 daqiqa ichida qayta ishga
+       * tushsa ham parol o'chiriladi.
+       */
+      kind: "delete-message";
+      chatId: string;
+      messageId: number;
+    };
 
 // Singleton across HMR/module reloads (see message.queue.ts for rationale).
 const g = globalThis as unknown as { __notifyQueue?: Queue<NotifyJob> };
@@ -55,6 +69,6 @@ export async function registerNotifySchedulers(): Promise<void> {
 }
 
 /** One-off enqueue — used right after questions are marked late. */
-export async function enqueueNotifyJob(job: NotifyJob): Promise<void> {
-  await getNotifyQueue().add(job.kind, job);
+export async function enqueueNotifyJob(job: NotifyJob, opts: { delayMs?: number } = {}): Promise<void> {
+  await getNotifyQueue().add(job.kind, job, opts.delayMs ? { delay: opts.delayMs } : undefined);
 }

@@ -21,6 +21,8 @@ export const ACTION = {
   MENU_TODAY: "mday",
   /** Menu → portfolio overview. Senior roles only. */
   MENU_TEAM: "mteam",
+  /** Menu → issue a fresh website password to the caller's private chat. */
+  MENU_PASSWORD: "mpwd",
 
   // ── Escalation verdicts ("<questionId>" / "<obligationId>") ──────────────
   /** Question: dock KPI points and ask the chief to confirm in the ERP. */

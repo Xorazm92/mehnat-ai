@@ -10,6 +10,7 @@ import type { CallbackOutcome } from "../domain/outbound";
 import { resolveUserByTelegramId } from "../../identity/application/identity-service";
 import { authorizeAdmin } from "../../identity/application/authorize";
 import { handleBindPage, handleBindPick } from "../../identity/application/bind-suggest";
+import { issueWebPassword } from "../../identity/application/issue-password";
 import {
   handleObligationExcuse,
   handleObligationTake,
@@ -176,6 +177,13 @@ async function dispatch(
           replyMarkup: backToMenuKeyboard(opts.secret),
         },
       };
+    case ACTION.MENU_PASSWORD:
+      // Menyu ATAYIN qayta chizilmaydi (`edit` yo'q): parol alohida, o'tkinchi
+      // xabarda keladi. Menyuga yozilsa, uni o'chirish menyuni ham yo'q qilardi.
+      return issueWebPassword(prisma, user, {
+        chatId: callback.chatId ?? callback.fromUserId,
+        fromUserId: callback.fromUserId,
+      });
     default:
       return { answer: EXPIRED, alert: true };
   }

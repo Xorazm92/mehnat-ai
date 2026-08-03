@@ -164,6 +164,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.kind = user.kind ?? "staff";
         token.companyId = user.companyId ?? null;
         token.checkedAt = Date.now();
+        // Mutlaq sessiya muddatining boshlanishi. FAQAT shu yerda —
+        // `user` mavjud bo'lgan, ya'ni haqiqiy kirish bo'lgan paytda —
+        // qo'yiladi. Keyingi so'rovlar buni yangilamaydi, shuning uchun
+        // muddat faollikda cho'zilmaydi.
+        token.loginAt = Date.now();
         return token;
       }
 

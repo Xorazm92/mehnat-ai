@@ -1,4 +1,5 @@
 import { trySendMessage } from "./bot";
+import { enqueueNotifyJob } from "../queues/notify.queue";
 import type { OutboundMessage } from "../contexts/interaction/domain/outbound";
 
 export interface DeliveryReport {
@@ -23,6 +24,21 @@ export async function deliver(messages: OutboundMessage[]): Promise<DeliveryRepo
     const res = await trySendMessage(m.chatId, m.text, { replyMarkup: m.replyMarkup });
     if (res.ok) {
       report.sent++;
+      // O'tkinchi xabar — o'chirishni navbatga qo'yamiz (Redis'da turadi, ya'ni
+      // bot qayta ishga tushsa ham bajariladi). Navbat ishlamasa xabar chatda
+      // qolib ketadi, shuning uchun bu jimgina o'tkazib yuborilmaydi.
+      if (m.ephemeralMs && res.messageId != null) {
+        try {
+          await enqueueNotifyJob(
+            { kind: "delete-message", chatId: m.chatId.toString(), messageId: res.messageId },
+            { delayMs: m.ephemeralMs },
+          );
+        } catch (err) {
+          console.error(
+            `[telegram] o'chirish navbatga qo'yilmadi (${m.chatId}/${res.messageId}): ${(err as Error).message}`,
+          );
+        }
+      }
       continue;
     }
     if (res.reason === "no_private_chat") {

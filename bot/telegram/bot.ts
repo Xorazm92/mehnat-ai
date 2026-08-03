@@ -203,3 +203,26 @@ export async function answerCallbackQuery(
     console.warn(`[telegram] answerCallbackQuery failed: ${(err as Error).message}`);
   }
 }
+
+/**
+ * Delete a message we sent. Used for credentials that must not linger in the
+ * chat history — the whole point of handing out a password over Telegram is
+ * defeated if it stays there forever.
+ *
+ * Never throws: the message may already be gone (user deleted it, or a retry
+ * ran twice), and that is the desired end state either way.
+ */
+export async function deleteMessage(
+  chatId: bigint | number,
+  messageId: number,
+): Promise<boolean> {
+  const bot = getBot();
+  if (!bot) return false;
+  try {
+    await bot.api.deleteMessage(Number(chatId), messageId);
+    return true;
+  } catch (err) {
+    console.warn(`[telegram] deleteMessage failed (${chatId}/${messageId}): ${(err as Error).message}`);
+    return false;
+  }
+}

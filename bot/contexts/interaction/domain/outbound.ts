@@ -16,6 +16,12 @@ export interface OutboundMessage {
    * never pressed Start), so the worker logs it instead of throwing.
    */
   bestEffort?: boolean;
+  /**
+   * Delete this message after N ms. For anything that must not live in the
+   * chat history — a password handed out over Telegram is only as short-lived
+   * as the message carrying it.
+   */
+  ephemeralMs?: number;
 }
 
 export interface CallbackOutcome {

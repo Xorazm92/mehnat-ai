@@ -7,6 +7,7 @@ import { createRedisConnection } from "./connection";
 import { QUEUE, callbackSecret, hasTelegramToken } from "../config";
 import { makeEscalationSender } from "../contexts/escalation/interface/escalation-sender";
 import { makeDigestSender } from "../contexts/digest/interface/digest-sender";
+import { deleteMessage } from "../telegram/bot";
 import type { NotifyJob } from "./notify.queue";
 
 /**
@@ -39,6 +40,13 @@ export function startNotifyWorker(): Worker<NotifyJob> {
         const res = await runDailyDigest(prisma, { send, now });
         console.log(`[notify.worker] daily digest:`, res);
         return res;
+      }
+
+      if (job.data.kind === "delete-message") {
+        // Parol xabarini o'chirish. Xabar allaqachon yo'q bo'lsa ham muvaffaqiyat:
+        // maqsad "chatda parol qolmasin", "aynan biz o'chirdik" emas.
+        const ok = await deleteMessage(BigInt(job.data.chatId), job.data.messageId);
+        return { deleted: ok };
       }
 
       return { skipped: true };

@@ -16,8 +16,19 @@ export const USE_SECURE_COOKIES =
   process.env.NODE_ENV === "production" ||
   (process.env.AUTH_URL ?? process.env.NEXTAUTH_URL)?.startsWith("https://") === true;
 
-// 7 kun — ish haftasiga mos session muddati.
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
+/**
+ * 24 soat — MUTLAQ sessiya muddati.
+ *
+ * Avval 7 kun edi, lekin JWT strategiyasida token faollikda qayta beriladi,
+ * ya'ni har kuni ishlaydigan xodim amalda HECH QACHON chiqmasdi: bir marta
+ * kirilgan brauzer oylab ochiq qolardi. Endi muddat kirish paytidan boshlab
+ * sanaladi va faollik uni uzaytirmaydi — `lib/sessionRevalidation.ts` dagi
+ * `loginAt` tekshiruvi buni majburlaydi.
+ *
+ * Kundalik qayta kirish to'siq emas: xodim parolni istalgan payt botdagi
+ * "🔑 Sayt paroli" tugmasidan oladi.
+ */
+export const SESSION_MAX_AGE = 60 * 60 * 24;
 
 export const authConfig = {
   // The app is always served behind a trusted proxy (nginx/ALB) in prod or on

@@ -43,7 +43,10 @@ export function mainMenuKeyboard(secret: string, role?: string): InlineKeyboardM
       cbButton("📅 Bugun", encodeCallback(secret, ACTION.MENU_TODAY)),
       cbButton("📋 Vazifalarim", encodeCallback(secret, ACTION.MENU_TASKS)),
     ],
-    [cbButton("📊 KPI ballarim", encodeCallback(secret, ACTION.MENU_KPI))],
+    [
+      cbButton("📊 KPI ballarim", encodeCallback(secret, ACTION.MENU_KPI)),
+      cbButton("🔑 Sayt paroli", encodeCallback(secret, ACTION.MENU_PASSWORD)),
+    ],
     role && isSeniorRole(role)
       ? [cbButton("🏢 Portfelim", encodeCallback(secret, ACTION.MENU_TEAM))]
       : null,
