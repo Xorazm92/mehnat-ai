@@ -32,7 +32,8 @@ export async function syncProofToObligation(opts: {
   companyId: string;
   period: string; // e.g. "2026-07" or "2026-07-01" or "2026 Iyul"
   colKey: string;
-  targetStatus: "sent" | "accepted" | "rejected";
+  /** `planned` — katak tozalanganda ortga qaytarish. */
+  targetStatus: "planned" | "sent" | "accepted" | "rejected";
 }) {
   const code = COL_KEY_TO_TEMPLATE_CODE[opts.colKey];
   if (!code) return;
@@ -63,6 +64,37 @@ export async function syncProofToObligation(opts: {
     data: {
       status: opts.targetStatus,
       ...patch,
+      // Ortga qaytarishda vaqt belgilari ham tozalanadi: aks holda majburiyat
+      // "planned", lekin `sentAt` to'ldirilgan holatda qolib, hisobotlarda
+      // topshirilgan bo'lib ko'rinardi. `timingPatch` faqat oldinga yuradi.
+      ...(opts.targetStatus === "planned"
+        ? { sentAt: null, acceptedAt: null, completedAt: null }
+        : {}),
     },
   });
+}
+
+/**
+ * Katak tozalanganda uning IZINI ham tozalaydi.
+ *
+ * Katakni bo'shatish yolg'iz yetarli emas edi: biriktirilgan skrinshot
+ * (`ReportProof`) va u ko'targan majburiyat holati joyida qolardi. Natijada
+ * matritsada katak bo'sh ko'rinardi, lekin ustida dalil nuqtasi turaverardi va
+ * nazoratchi hech qanday qiymati yo'q katak uchun "kutilmoqda" dalilni ko'rardi
+ * — foydalanuvchi buni "tozalash ishlamadi" deb o'qiydi.
+ *
+ * Dalilni O'CHIRISH ataylab: buxgalter topshirilgan yoki tasdiqlangan katakni
+ * tozalay olmaydi (`checkCellWrite` → `isReviewerOwnedValue`), ya'ni bu yerga
+ * faqat nazoratchi/administrator yetib keladi va tozalash uning ongli qarori.
+ */
+export async function clearCellEvidence(opts: {
+  companyId: string;
+  period: string;
+  colKey: string;
+}): Promise<{ proofsRemoved: number }> {
+  const { count } = await prisma.reportProof.deleteMany({
+    where: { companyId: opts.companyId, period: opts.period, colKey: opts.colKey },
+  });
+  await syncProofToObligation({ ...opts, targetStatus: "planned" });
+  return { proofsRemoved: count };
 }

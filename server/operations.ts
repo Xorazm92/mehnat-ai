@@ -3,7 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
-import { checkCellWrite } from "@/lib/reportPermissions";
+import { checkCellWrite, CELL_EMPTY } from "@/lib/reportPermissions";
+import { clearCellEvidence } from "@/lib/obligationBridge";
 import { revalidateTag } from "next/cache";
 import { Prisma, type ReportStatus } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
@@ -38,7 +39,20 @@ export async function getMonthlyReports(companyId: string, period?: string) {
   );
 }
 
-export async function upsertMonthlyReport(data: Prisma.MonthlyReportUncheckedCreateInput) {
+/**
+ * Matritsa katagini yozish uchun kirish.
+ *
+ * ATAYIN `Prisma.MonthlyReportUncheckedCreateInput` EMAS: chaqiruvchilar
+ * matritsa kalitlarini (`snake_case`) yuboradi va bu funksiya ularni ustun
+ * nomlariga o'giradi. Prisma tipini e'lon qilish yolg'on shartnoma edi —
+ * shuning uchun chaqiruv joylarida uni jimlatuvchi cast paydo bo'lgan.
+ */
+export type MonthlyReportWriteInput = {
+  companyId: string;
+  period: string;
+} & Partial<Record<OperationFieldKey, string | null>>;
+
+export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
   if (!data || !data.companyId || !data.period) {
     throw new Error("companyId va period berilishi shart (upsertMonthlyReport)");
   }
@@ -91,8 +105,22 @@ export async function upsertMonthlyReport(data: Prisma.MonthlyReportUncheckedCre
     create: { companyId, period, ...fields } as Prisma.MonthlyReportUncheckedCreateInput,
     update: fields as Prisma.MonthlyReportUncheckedUpdateInput,
   });
+
+  // Katak tozalangan bo'lsa, uning izini ham tozalaymiz — biriktirilgan
+  // skrinshot va u ko'targan majburiyat holati aks holda qolib ketardi.
+  for (const [rawKey, value] of Object.entries(rawFields)) {
+    if (!isClearedValue(value)) continue;
+    await clearCellEvidence({ companyId, period, colKey: rawKey });
+  }
+
   revalidateTag("operations", "max");
   return serialize(result);
+}
+
+/** Katak "bo'shatildi" deb hisoblanadigan qiymatlar. */
+function isClearedValue(value: unknown): boolean {
+  const v = String(value ?? "").trim().toLowerCase();
+  return v === "" || v === CELL_EMPTY;
 }
 
 export async function clearColumnForPeriod(period: string, colKey: string) {
@@ -117,8 +145,20 @@ export async function clearColumnForPeriod(period: string, colKey: string) {
     data: { [dbCol]: null } as Prisma.MonthlyReportUncheckedUpdateManyInput,
   });
 
+  // Katak tozalash bilan bir xil qoida: ustun bo'shatilsa, o'sha ustunga
+  // biriktirilgan dalillar ham ketadi va majburiyatlar `planned` ga qaytadi.
+  // Aks holda bo'sh ustun ustida dalil nuqtalari qolib ketardi.
+  const affected = await prisma.reportProof.findMany({
+    where: { period, colKey },
+    select: { companyId: true },
+    distinct: ["companyId"],
+  });
+  for (const { companyId } of affected) {
+    await clearCellEvidence({ companyId, period, colKey });
+  }
+
   revalidateTag("operations", "max");
-  return { success: true, cleared: res.count };
+  return { success: true, cleared: res.count, proofsRemoved: affected.length };
 }
 
 // =====================================================

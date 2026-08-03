@@ -17,7 +17,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidateTag: () => {} }));
 
 const { prisma } = await import("@/lib/prisma");
-const { clearColumnForPeriod } = await import("@/server/operations");
+const { clearColumnForPeriod, upsertMonthlyReport } = await import("@/server/operations");
 
 const TAG = `vitest-clear-${Date.now()}`;
 const PERIOD = "1998-07"; // real ma'lumot bilan to'qnashmaydigan davr
@@ -44,11 +44,27 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.reportProof.deleteMany({ where: { companyId: ids.company } });
   await prisma.monthlyReport.deleteMany({ where: { companyId: ids.company } });
   await prisma.company.deleteMany({ where: { id: ids.company } });
   await prisma.user.deleteMany({ where: { id: ids.user } });
   await prisma.$disconnect();
 });
+
+/** Katakka biriktirilgan skrinshot dalili. */
+async function attachProof(colKey: string) {
+  await prisma.reportProof.create({
+    data: {
+      companyId: ids.company,
+      period: PERIOD,
+      colKey,
+      imageData: "data:image/png;base64,AAAA",
+      status: "pending",
+      submittedById: ids.user,
+      submittedByName: "Clear Tester",
+    },
+  });
+}
 
 describe("clearColumnForPeriod", () => {
   it("nomi DB ustunidan FARQ qiladigan ustunni tozalaydi", async () => {
@@ -96,5 +112,47 @@ describe("clearColumnForPeriod", () => {
     SESSION.user.role = "accountant";
     await expect(clearColumnForPeriod(PERIOD, "didox")).rejects.toThrow(/Forbidden/);
     SESSION.user.role = "super_admin";
+  });
+
+  it("ustun tozalanganda biriktirilgan DALIL ham ketadi", async () => {
+    await attachProof("pul_oqimlari");
+    await clearColumnForPeriod(PERIOD, "pul_oqimlari");
+
+    const left = await prisma.reportProof.count({
+      where: { companyId: ids.company, period: PERIOD, colKey: "pul_oqimlari" },
+    });
+    // Dalil qolsa, matritsada bo'sh katak ustida "skrinshot bor" nuqtasi
+    // turaverardi — foydalanuvchi buni "tozalash ishlamadi" deb o'qiydi.
+    expect(left).toBe(0);
+  });
+});
+
+describe("katakni tozalash (upsertMonthlyReport)", () => {
+  it("katak bo'shatilganda dalil ham o'chadi", async () => {
+    await prisma.monthlyReport.upsert({
+      where: { companyId_period: { companyId: ids.company, period: PERIOD } },
+      create: { companyId: ids.company, period: PERIOD, yerSoligi: "topshirildi" },
+      update: { yerSoligi: "topshirildi" },
+    });
+    await attachProof("yer_soligi");
+
+    // "0" = CELL_EMPTY, ya'ni katak menyusidagi "Tozalash".
+    await upsertMonthlyReport({ companyId: ids.company, period: PERIOD, yer_soligi: "0" });
+
+    const left = await prisma.reportProof.count({
+      where: { companyId: ids.company, period: PERIOD, colKey: "yer_soligi" },
+    });
+    expect(left).toBe(0);
+  });
+
+  it("oddiy qiymat yozilganda dalilga TEGILMAYDI", async () => {
+    await attachProof("suv_soligi");
+    await upsertMonthlyReport({ companyId: ids.company, period: PERIOD, suv_soligi: "+" });
+
+    const left = await prisma.reportProof.count({
+      where: { companyId: ids.company, period: PERIOD, colKey: "suv_soligi" },
+    });
+    // Tasdiqlash dalilni saqlab qolishi kerak — u tasdiqning asosi.
+    expect(left).toBe(1);
   });
 });
