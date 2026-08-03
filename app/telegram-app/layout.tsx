@@ -21,15 +21,20 @@ export const viewport: Viewport = {
  * is ~380px wide inside Telegram and every pixel of app chrome is a pixel not
  * spent on the task.
  *
- * `telegram-web-app.js` must load BEFORE our code runs, since the handshake
- * reads `window.Telegram.WebApp.initData` on mount. It also injects the
- * `--tg-theme-*` variables the stylesheet builds on, so the app follows whatever
- * theme the user has set in Telegram rather than fighting it.
+ * `telegram-web-app.js` injects both `window.Telegram.WebApp` (the handshake
+ * reads `initData` from it) and the `--tg-theme-*` variables the stylesheet
+ * builds on, so the app follows whatever theme the user set in Telegram rather
+ * than fighting it.
+ *
+ * Strategiya `afterInteractive`: `beforeInteractive` faqat ILDIZ layout'da
+ * ishlaydi, bu yerda yozilsa Next uni baribir kechiktirib yuklaydi — ya'ni
+ * "kafolat" xayoliy bo'lardi. Shuning uchun handshake SDK'ni kutadi
+ * (`waitForWebApp`) va bu yerda haqiqiy strategiya yoziladi.
  */
 export default function TelegramAppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="tg-root">
-      <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+      <Script src="https://telegram.org/js/telegram-web-app.js" strategy="afterInteractive" />
       {children}
     </div>
   );
