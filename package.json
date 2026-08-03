@@ -23,6 +23,7 @@
     "seed:deadlines": "tsx scripts/seed-deadline-templates.ts --no-generate",
     "obligations:generate": "tsx scripts/generate-obligations.ts",
     "verify:clean-start": "tsx scripts/verify-clean-start.ts",
+    "smoke:telegram": "tsx scripts/smoke-telegram-app.ts",
     "backup": "bash scripts/backup.sh",
     "preflight": "tsx scripts/preflight.ts",
     "deploy": "bash scripts/deploy.sh",

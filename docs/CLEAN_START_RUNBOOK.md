@@ -388,6 +388,19 @@ Logda tekshiring:
 - [ ] `[cron] month-closing: …` chiqadi — bu normal.
 - [ ] `[obligation.worker] sweep:` birinchi soatlik yugurish natijasi.
 
+Mini App tugmalarini ("Dalil yuklash", "Dashboard") telefonsiz tekshirish:
+
+```bash
+npx tsx scripts/smoke-telegram-app.ts     # kutilgan: ✓ MINI APP OK
+```
+
+> **Nega alohida tekshiriladi.** Mini App Telegram freymi ichida ochiladi, ya'ni
+> u buzilganda sahifa baribir HTTP 200 qaytaradi — faqat Telegramdagi oyna
+> **bo'sh** ko'rinadi. `curl` bilan 200 ko'rish yetarli emas; smoke test
+> freymlash sarlavhalarini va ekran ichida haqiqiy UI bloklari borligini
+> tekshiradi. `/telegram-app` yo'lida `X-Frame-Options` BO'LMASLIGI kerak
+> (o'rniga `frame-ancestors` — u faqat Telegramga ruxsat beradi).
+
 > **Birinchi sweep nima qiladi.** 2026-08-05 muddatli ~424 majburiyat uchun
 > "D-5" bosqichi ishga tushadi va **ilova ichida** eslatma yaratadi. Telegramga
 > hech narsa ketmaydi: hozircha **0 xodim** botga bog'langan (`telegramUserId`
