@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Building2, Users, FileText, Wallet, Receipt, CreditCard,
   Calendar, TrendingUp, Settings, Bell, Package, ScrollText, UserCircle,
-  Banknote, PiggyBank, CalendarClock, CheckSquare, Scale, ShieldCheck,
+  Banknote, HandCoins, CalendarClock, CheckSquare, Scale, ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import type { AppView } from "@/lib/permissions";
@@ -38,7 +38,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/deadlines",     view: "deadlines",     label: "Muddatlar",        icon: CalendarClock,   group: "asosiy",  keywords: "muddat deadline kechikish" },
   { href: "/tasks",         view: "tasks",         label: "Vazifalar",        icon: CheckSquare,     group: "asosiy",  keywords: "vazifa topshiriq task" },
   { href: "/reports",       view: "reports",       label: "Hisobotlar",       icon: FileText,        group: "moliya",  keywords: "hisobot matritsa report" },
-  { href: "/profitability", view: "profitability", label: "Rentabellik",      icon: PiggyBank,       group: "moliya",  keywords: "foyda rentabellik marja" },
+  { href: "/profitability", view: "profitability", label: "Rentabellik",      icon: HandCoins,       group: "moliya",  keywords: "foyda rentabellik marja" },
   { href: "/kassa",         view: "kassa",         label: "Kassa",            icon: Wallet,          group: "moliya",  keywords: "kirim to'lov naqd" },
   { href: "/expenses",      view: "expenses",      label: "Xarajatlar",       icon: Receipt,         group: "moliya",  keywords: "chiqim xarajat rasxod" },
   { href: "/payroll",       view: "payroll",       label: "Oylik",            icon: CreditCard,      group: "moliya",  keywords: "maosh zarplata avans" },

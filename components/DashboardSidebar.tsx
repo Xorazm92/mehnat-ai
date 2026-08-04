@@ -16,7 +16,7 @@ import {
   Receipt,
   CalendarClock,
   CheckSquare,
-  PiggyBank,
+  HandCoins,
   Scale,
   CreditCard,
   UserCircle,
