@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { companyScopeWhere, companyRelations, assertCompanyPermission } from "@/lib/access";
 import { checkCellWrite, CELL_EMPTY } from "@/lib/reportPermissions";
 import { clearCellEvidence } from "@/lib/obligationBridge";
 import { revalidateTag } from "next/cache";
@@ -22,11 +23,8 @@ export async function getMonthlyReports(companyId: string, period?: string) {
   const userId = session.user.id;
   const role = session.user.role as string;
 
-  // Access check
-  if (!isSeniorRole(role)) {
-    const company = await prisma.company.findUnique({ where: { id: companyId } });
-    if (company?.accountantId !== userId) throw new Error("Forbidden");
-  }
+  // Obyekt-scope: firma portfelda bo'lishi shart (rolga qaramay)
+  await assertCompanyPermission(prisma, { id: userId, role }, companyId, "report:read");
 
   return serialize(
     await prisma.monthlyReport.findMany({
@@ -63,10 +61,24 @@ export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
   const userId = session.user.id;
   const role = session.user.role as string;
 
-  if (!isSeniorRole(role)) {
-    const company = await prisma.company.findUnique({ where: { id: data.companyId } });
-    if (company?.accountantId !== userId) throw new Error("Forbidden");
-  }
+  const company = await prisma.company.findUnique({
+    where: { id: data.companyId },
+    select: {
+      accountantId: true,
+      supervisorId: true,
+      chiefAccountantId: true,
+      bankClientId: true,
+      departmentRef: { select: { chiefAccountantId: true } },
+    },
+  });
+  if (!company) throw new Error("Company not found");
+
+  // Obyekt-scope: begona firmaning matritsasiga yozib bo'lmaydi (IDOR).
+  await assertCompanyPermission(prisma, { id: userId, role }, data.companyId, "report:write");
+
+  // Shu firmadagi mas'uliyat — nazoratchi o'zi buxgalteri bo'lgan firmada
+  // buxgalter huquqi bilan ishlaydi (o'z-o'zini nazorat bloki).
+  const relations = companyRelations(company, userId);
 
   const { companyId, period, ...rawFields } = data;
 
@@ -80,11 +92,14 @@ export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
     fields[mapped] = v;
   }
 
-  // ROL CHEGARASI — buxgalter o'z ishini o'zi tasdiqlay olmaydi va dalilsiz
+  // HUQUQ CHEGARASI — buxgalter o'z ishini o'zi tasdiqlay olmaydi va dalilsiz
   // "topshirildi" qo'ya olmaydi. UI menyuni yashiradi, lekin haqiqiy chegara
   // shu yerda: aks holda bitta so'rov bilan chetlab o'tilardi.
   // Tasdiqlash/topshirish yo'llari alohida: server/proofs.ts.
-  if (!isSeniorRole(role)) {
+  //
+  // Tekshiruv HAR DOIM ishlaydi (ilgari faqat "senior bo'lmasa"): nazoratchi
+  // ham o'zi buxgalteri bo'lgan firmada shu chegaraga tushadi.
+  {
     const current = await prisma.monthlyReport.findUnique({
       where: { companyId_period: { companyId, period } },
     });
@@ -93,6 +108,7 @@ export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
     for (const [dbCol, nextValue] of Object.entries(fields)) {
       const reason = checkCellWrite({
         role,
+        relations,
         nextValue,
         currentValue: currentRow ? currentRow[dbCol] : undefined,
       });
@@ -175,10 +191,7 @@ export async function getOperations(filters?: {
   const userId = session.user.id;
   const role = session.user.role as string;
 
-  let companyFilter = {};
-  if (!isSeniorRole(role)) {
-    companyFilter = { company: { accountantId: userId } };
-  }
+  const companyFilter = { company: companyScopeWhere({ id: userId, role }) };
 
   return serialize(
     await prisma.operation.findMany({
@@ -221,10 +234,7 @@ export async function upsertOperation(data: {
   const userId = session.user.id;
   const role = session.user.role as string;
 
-  if (!isSeniorRole(role)) {
-    const company = await prisma.company.findUnique({ where: { id: data.companyId } });
-    if (company?.accountantId !== userId) throw new Error("Forbidden");
-  }
+  await assertCompanyPermission(prisma, { id: userId, role }, data.companyId, "operation:write");
 
   const { companyId, period, ...fields } = data;
 
@@ -244,9 +254,7 @@ export async function getOperationSummary(period?: string) {
   const userId = session.user.id;
   const role = session.user.role as string;
 
-  const companyFilter = isSeniorRole(role)
-    ? {}
-    : { company: { accountantId: userId } };
+  const companyFilter = { company: companyScopeWhere({ id: userId, role }) };
 
   const periodFilter = period ? { period } : {};
 
@@ -303,9 +311,7 @@ export async function getDeadlines() {
   const soon = new Date();
   soon.setDate(today.getDate() + 7);
 
-  const companyFilter = isSeniorRole(role)
-    ? {}
-    : { company: { accountantId: userId } };
+  const companyFilter = { company: companyScopeWhere({ id: userId, role }) };
 
   return serialize(
     await prisma.operation.findMany({

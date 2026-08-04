@@ -20,6 +20,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { isAdminRole, isSeniorRole } from "@/lib/permissions";
+import { staffScopeFilter } from "@/lib/access";
 import { assertSufficientFunds } from "@/lib/balance";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
@@ -63,8 +64,12 @@ export async function getPayouts(filters?: { month?: string; employeeId?: string
   if (!session) throw new Error("Unauthorized");
 
   const role = session.user.role as string;
-  // Oddiy xodim faqat o'z payoutlarini ko'radi.
-  const employeeId = isSeniorRole(role) ? filters?.employeeId : (session.user.id as string);
+  // Oddiy xodim faqat o'z payoutlarini, senior — portfelidagi xodimlarnikini.
+  const employeeId = await staffScopeFilter(
+    prisma,
+    { id: session.user.id as string, role },
+    filters?.employeeId,
+  );
 
   return serialize(
     await prisma.payout.findMany({

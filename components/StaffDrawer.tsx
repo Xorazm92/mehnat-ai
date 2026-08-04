@@ -35,17 +35,27 @@ const STATUS_META: Record<string, { label: string; c: string; bg: string }> = {
 const fmtDate = (s?: string | null) => (s ? formatUzDate(s) : "—");
 const fmtMoney = (n?: number) => formatNum(n);
 
-// Xodimning firmadagi roli va ulushini aniqlash
-function companyRoleFor(c: Company, personId: string, personName: string): { role: UserRole; perc?: number; sum?: number } | null {
-  if (c.accountantId === personId || c.accountantName === personName)
-    return { role: "accountant", perc: c.accountantPerc, sum: c.accountantSum };
-  if (c.chiefAccountantId === personId || c.chiefAccountantName === personName)
-    return { role: "chief_accountant", perc: c.chiefAccountantPerc, sum: c.chiefAccountantSum };
-  if (c.supervisorId === personId || c.supervisorName === personName)
-    return { role: "supervisor", perc: c.supervisorPerc, sum: c.supervisorSum };
-  if (c.bankClientId === personId || c.bankClientName === personName)
-    return { role: "bank_manager", perc: c.bankClientPerc, sum: c.bankClientSum };
-  return null;
+/**
+ * Xodimning firmadagi mas'uliyat(lar)i va ulushi.
+ *
+ * BIR firmada BIR NECHTA rol bo'lishi mumkin (masalan buxgalter + nazoratchi),
+ * shuning uchun massiv qaytadi: ilgari birinchi moslik qaytarilib, qolgan
+ * ulushlar "Firmalar" ro'yxatida umuman ko'rinmasdi.
+ *
+ * Solishtirish faqat ID bo'yicha — ism bo'yicha moslash bir xil ismli ikki
+ * xodimni chalkashtirardi.
+ */
+function companyRolesFor(c: Company, personId: string): { role: UserRole; perc?: number; sum?: number }[] {
+  const out: { role: UserRole; perc?: number; sum?: number }[] = [];
+  if (c.accountantId === personId)
+    out.push({ role: "accountant", perc: c.accountantPerc, sum: c.accountantSum });
+  if (c.chiefAccountantId === personId)
+    out.push({ role: "chief_accountant", perc: c.chiefAccountantPerc, sum: c.chiefAccountantSum });
+  if (c.supervisorId === personId)
+    out.push({ role: "supervisor", perc: c.supervisorPerc, sum: c.supervisorSum });
+  if (c.bankClientId === personId)
+    out.push({ role: "bank_manager", perc: c.bankClientPerc, sum: c.bankClientSum });
+  return out;
 }
 
 type TabId = "login" | "shaxsiy" | "ish" | "firmalar";
@@ -64,8 +74,7 @@ export default function StaffDrawer({ person, companies, onClose, onEdit, onRese
   const [activeTab, setActiveTab] = useState<TabId>("login");
 
   const assigned = companies
-    .map((c) => ({ company: c, meta: companyRoleFor(c, person.id, person.name) }))
-    .filter((x) => x.meta !== null) as { company: Company; meta: NonNullable<ReturnType<typeof companyRoleFor>> }[];
+    .flatMap((c) => companyRolesFor(c, person.id).map((meta) => ({ company: c, meta })));
 
   const tabs: { id: TabId; label: string; icon: React.ElementType; count?: number }[] = [
     { id: "login", label: "Login", icon: KeyRound },
@@ -209,7 +218,7 @@ export default function StaffDrawer({ person, companies, onClose, onEdit, onRese
                     const rc = ROLE_COLORS[meta.role] || "var(--text-muted)";
                     const share = meta.sum && meta.sum > 0 ? `${fmtMoney(meta.sum)} so'm` : meta.perc ? `${meta.perc}%` : "—";
                     return (
-                      <div key={c.id} className="p-3.5 rounded-xl flex items-center justify-between gap-3" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+                      <div key={`${c.id}::${meta.role}`} className="p-3.5 rounded-xl flex items-center justify-between gap-3" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
                         <div className="min-w-0">
                           <div className="text-body font-semibold truncate" style={{ color: "var(--text)" }}>{c.name}</div>
                           <div className="text-meta font-mono mt-0.5" style={{ color: "var(--text-muted)" }}>INN: {c.inn}</div>

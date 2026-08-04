@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { scopedStaffIds } from "@/lib/access";
 import { revalidateTag } from "next/cache";
 import bcrypt from "bcryptjs";
 import type { UserRole } from "@/lib/permissions";
@@ -43,12 +44,16 @@ export async function getUsers() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
+  const userId = session.user.id as string;
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
+  // Portfeldagi firmalarga biriktirilgan xodimlar (+ o'zi). Admin — hammasi.
+  const ids = await scopedStaffIds(prisma, { id: userId, role });
+
   return serialize(
     await prisma.user.findMany({
-      where: { isActive: true },
+      where: { isActive: true, ...(ids ? { id: { in: ids } } : {}) },
       select: {
         id: true,
         email: true,

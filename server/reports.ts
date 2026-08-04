@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { companyScopeWhere } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
 import { REPORT_TYPES } from "@/lib/reportTypes";
 import { Prisma } from "@prisma/client";
@@ -11,18 +12,9 @@ import { Prisma } from "@prisma/client";
 // FINANCIAL REPORTS (Moliyaviy hisobotlar) — ASRO Hisobotlar moduli
 // =====================================================
 
-// Senior rollar barcha hisobotlarni ko'radi; buxgalter faqat o'ziga tegishli
-// (asosiy accountantId yoki JAMOA orqali biriktirilgan) firmalar hisobotini.
+// Har kim faqat o'z portfelidagi firmalarning hisobotini ko'radi (admin — hammasini).
 function reportScopeWhere(userId: string, role: string): Prisma.FinancialReportWhereInput {
-  if (isSeniorRole(role)) return {};
-  return {
-    company: {
-      OR: [
-        { accountantId: userId },
-        { contractAssignments: { some: { userId, isActive: true, role: "accountant" } } },
-      ],
-    },
-  };
+  return { company: companyScopeWhere({ id: userId, role }) };
 }
 
 export async function getFinancialReports(period?: string) {

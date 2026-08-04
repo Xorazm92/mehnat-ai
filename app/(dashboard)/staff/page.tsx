@@ -11,7 +11,7 @@ export default async function StaffPage() {
 
   // Parallelda ma'lumotlarni cache'dan olish
   const [staff, companies, operations] = await Promise.all([
-    getCachedUsers(),
+    getCachedUsers(userId, userRole),
     getCachedCompanies(userId, userRole),
     getCachedOperations(userId, userRole),
   ]);

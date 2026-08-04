@@ -18,7 +18,7 @@ export default async function ReportsPage({
 
   const [companies, staff, operations, reportColumns] = await Promise.all([
     getCachedCompanies(userId, userRole),
-    getCachedUsers(),
+    getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
     getEffectiveReportColumns(),
   ]);

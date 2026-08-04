@@ -15,7 +15,7 @@ export default async function KpiPage() {
 
   const [companies, staff, operations] = await Promise.all([
     getCachedCompanies(userId, userRole),
-    getCachedUsers(),
+    getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
   ]);
 

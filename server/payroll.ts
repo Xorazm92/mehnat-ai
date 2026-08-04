@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { staffScopeFilter } from "@/lib/access";
 import { assertSufficientFunds } from "@/lib/balance";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger } from "@/lib/ledger";
@@ -25,7 +26,7 @@ export async function getPayrollAdjustments(month: string, employeeId?: string) 
   const userId = session.user.id;
   const role = session.user.role as string;
 
-  const targetId = isSeniorRole(role) ? employeeId : userId;
+  const targetId = await staffScopeFilter(prisma, { id: userId, role }, employeeId);
 
   return serialize(
     await prisma.payrollAdjustment.findMany({
@@ -254,7 +255,21 @@ async function computeEmployeeSalary(employeeId: string, month: string) {
         ],
       },
     }),
-    prisma.monthlyReport.findMany({ where: { period: month.slice(0, 7) } }),
+    // Faqat shu xodim biriktirilgan firmalarning hisobotlari — ilgari BARCHA
+    // firmalarniki o'qilardi va oylik hisobiga begona ma'lumot kirardi.
+    prisma.monthlyReport.findMany({
+      where: {
+        period: month.slice(0, 7),
+        company: {
+          OR: [
+            { accountantId: employeeId },
+            { bankClientId: employeeId },
+            { supervisorId: employeeId },
+            { chiefAccountantId: employeeId },
+          ],
+        },
+      },
+    }),
     prisma.monthlyPerformance.findMany({
       where: { month, employeeId, status: "approved" },
     }),

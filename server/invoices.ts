@@ -20,7 +20,7 @@ async function requireActor(): Promise<Actor> {
 
 export async function getInvoices(filter: { period?: string; companyId?: string } = {}) {
   const actor = await requireActor();
-  const scope: Prisma.InvoiceWhereInput = isSeniorRole(actor.role) ? {} : { company: companyScopeWhere(actor) };
+  const scope: Prisma.InvoiceWhereInput = { company: companyScopeWhere(actor) };
   return prisma.invoice.findMany({
     where: { deletedAt: null, ...scope, ...(filter.period ? { period: filter.period } : {}), ...(filter.companyId ? { companyId: filter.companyId } : {}) },
     include: { company: { select: { name: true } } },

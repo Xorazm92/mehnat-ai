@@ -11,7 +11,7 @@ export default async function PayrollPage() {
 
   const [companies, staff, operations] = await Promise.all([
     getCachedCompanies(userId, userRole),
-    getCachedUsers(),
+    getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
   ]);
 

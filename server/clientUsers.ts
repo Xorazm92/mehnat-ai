@@ -58,7 +58,7 @@ export async function setClientUserActive(id: string, active: boolean) {
 /** Staff (scoped) mijoz murojaatlarini ko'radi. */
 export async function getStaffClientRequests(filter: { status?: string } = {}) {
   const actor = await requireStaff();
-  const scope: Prisma.ClientRequestWhereInput = isSeniorRole(actor.role) ? {} : { company: companyScopeWhere(actor) };
+  const scope: Prisma.ClientRequestWhereInput = { company: companyScopeWhere(actor) };
   return prisma.clientRequest.findMany({
     where: { ...scope, ...(filter.status ? { status: filter.status } : {}) },
     include: { company: { select: { name: true } } },

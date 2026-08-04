@@ -8,6 +8,7 @@ export const metadata = { title: "Davomat" };
 
 export default async function AttendancePage() {
   const session = await auth();
+  const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role || "employee";
   const canEdit = isSeniorRole(userRole);
 
@@ -16,7 +17,7 @@ export default async function AttendancePage() {
   from.setDate(from.getDate() - 30);
 
   const [staff, attendance] = await Promise.all([
-    getCachedUsers(),
+    getCachedUsers(userId, userRole),
     getAttendance({ from }),
   ]);
 

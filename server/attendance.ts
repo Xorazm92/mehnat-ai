@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { staffScopeFilter } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
 import { classifyArrival, aggregateMonthlyAttendance } from "@/lib/attendance";
 
@@ -22,8 +23,12 @@ export async function getAttendance(filters?: {
   const currentUserId = session.user.id as string;
   const role = session.user.role as string;
 
-  // Senior rollar hammani ko'radi; boshqalar faqat o'zini
-  const targetUserId = isSeniorRole(role) ? filters?.userId : currentUserId;
+  // Oddiy xodim faqat o'zini; senior — portfelidagi xodimlarni.
+  const targetUserId = await staffScopeFilter(
+    prisma,
+    { id: currentUserId, role },
+    filters?.userId,
+  );
 
   let dateFilter = {};
   if (filters?.date) {

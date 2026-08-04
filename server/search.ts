@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { companyScopeWhere, scopedStaffIds } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
 import type { Prisma } from "@prisma/client";
 
@@ -30,23 +31,11 @@ export async function globalSearch(term: string): Promise<SearchResults> {
     { inn: { contains: q } },
   ];
 
-  // Firmalar — senior barchasini, boshqalar faqat biriktirilganini ko'radi
-  const companyWhere: Prisma.CompanyWhereInput = senior
-    ? { isActive: true, OR: searchOr }
-    : {
-        isActive: true,
-        AND: [
-          {
-            OR: [
-              { accountantId: userId },
-              { supervisorId: userId },
-              { chiefAccountantId: userId },
-              { bankClientId: userId },
-            ],
-          },
-          { OR: searchOr },
-        ],
-      };
+  // Firmalar — faqat portfeldagilar (admin uchun companyScopeWhere bo'sh)
+  const companyWhere: Prisma.CompanyWhereInput = {
+    isActive: true,
+    AND: [companyScopeWhere({ id: userId, role }), { OR: searchOr }],
+  };
 
   const [companies, staff] = await Promise.all([
     prisma.company.findMany({
@@ -55,11 +44,14 @@ export async function globalSearch(term: string): Promise<SearchResults> {
       orderBy: { name: "asc" },
       take: 6,
     }),
-    // Xodimlar qidiruvi faqat senior rollar uchun
+    // Xodimlar qidiruvi faqat senior rollar uchun, va faqat PORTFELдаги
+    // firmalarga biriktirilgan xodimlar bo'yicha.
     senior
-      ? prisma.user.findMany({
+      ? scopedStaffIds(prisma, { id: userId, role }).then((staffIds) =>
+        prisma.user.findMany({
           where: {
             isActive: true,
+            ...(staffIds ? { id: { in: staffIds } } : {}),
             OR: [
               { fullName: { contains: q, mode: "insensitive" } },
               { email: { contains: q, mode: "insensitive" } },
@@ -69,7 +61,7 @@ export async function globalSearch(term: string): Promise<SearchResults> {
           select: { id: true, fullName: true, role: true },
           orderBy: { fullName: "asc" },
           take: 6,
-        })
+        }))
       : Promise.resolve([] as { id: string; fullName: string; role: string }[]),
   ]);
 

@@ -77,16 +77,18 @@ export const ROLE_PERMISSIONS: Record<UserRole, Capability[]> = {
     "view_own_kpi",
     "submit_reports",
   ],
+  // "view_all_companies" ATAYLAB yo'q: bosh buxgalter ham o'z portfeliga
+  // cheklanadi (chiefAccountantId + boshqaradigan Department).
   [ROLES.CHIEF_ACCOUNTANT]: [
-    "view_all_companies",
     "manage_staff",
     "view_salaries",
     "approve_kpi",
     "view_own_kpi",
     "submit_reports",
   ],
+  // "view_all_companies" ATAYLAB yo'q: nazoratchi faqat o'zi biriktirilgan
+  // firmalarni ko'radi (nazorat + buxgalteriya + bank firmalari birlashmasi).
   [ROLES.SUPERVISOR]: [
-    "view_all_companies",
     "manage_staff",
     "approve_kpi",
     "view_salaries",
@@ -324,9 +326,20 @@ export const isAdminRole = (role: string): boolean => {
   return (["super_admin", "admin"] as string[]).includes(role);
 };
 
+/**
+ * "Bu amalni umuman bajara oladimi" — tasdiqlash, xodim boshqarish, oylik ko'rish.
+ *
+ * DIQQAT: bu predikat "qaysi FIRMALARNI ko'radi" degan savolga javob BERMAYDI.
+ * Firma ro'yxati faqat biriktiruvdan kelib chiqadi — lib/access.ts
+ * `companyScopeWhere`. Ilgari shu ikkisi chalkashtirilgani uchun nazoratchi
+ * tizimdagi barcha firmalarni ko'rardi.
+ */
 export const isSeniorRole = (role: string): boolean => {
   return (["super_admin", "admin", "chief_accountant", "supervisor"] as string[]).includes(role);
 };
+
+/** Firma ro'yxati cheklanmaydigan rollar — faqat admin. */
+export const canSeeAllCompanies = (role: string): boolean => isAdminRole(role);
 
 export const getHomeRoute = (role: string): string => {
   return ROLE_HOME_ROUTES[role as UserRole] || "/dashboard";

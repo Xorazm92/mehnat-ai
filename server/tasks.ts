@@ -7,7 +7,7 @@
 // firmalari vazifalarini ko'radi. Har mutatsiya event + audit yozadi.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
+import { isAdminRole, isSeniorRole } from "@/lib/permissions";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { companyScopeWhere, type Actor } from "@/lib/access";
 import { canTransitionTask, taskTimingPatch, computeSlaDue } from "@/lib/taskWorkflow";
@@ -27,7 +27,7 @@ async function assertCanAct(actor: Actor, taskId: string): Promise<{ companyId: 
     select: { companyId: true, status: true, assigneeUserId: true, createdBy: true, firstResponseAt: true },
   });
   if (!t) throw new Error("Vazifa topilmadi");
-  if (isSeniorRole(actor.role) || t.assigneeUserId === actor.id || t.createdBy === actor.id) return t;
+  if (isAdminRole(actor.role) || t.assigneeUserId === actor.id || t.createdBy === actor.id) return t;
   if (t.companyId) {
     const inScope = await prisma.company.findFirst({ where: { id: t.companyId, ...companyScopeWhere(actor) }, select: { id: true } });
     if (inScope) return t;
@@ -43,7 +43,9 @@ export interface TaskFilter {
 
 export async function getTasks(filter: TaskFilter = {}) {
   const actor = await requireActor();
-  const scope: Prisma.TaskWhereInput = isSeniorRole(actor.role)
+  // Admin hammasini; qolganlar — o'ziga tayinlangan/yaratgan + portfeldagi
+  // firmalarning vazifalari. Firmasiz vazifa faqat ishtirokchilarga ko'rinadi.
+  const scope: Prisma.TaskWhereInput = isAdminRole(actor.role)
     ? {}
     : { OR: [{ assigneeUserId: actor.id }, { createdBy: actor.id }, { company: companyScopeWhere(actor) }] };
 
@@ -164,7 +166,7 @@ export async function getTaskFormData() {
   const [users, companies] = await Promise.all([
     prisma.user.findMany({ where: { isActive: true }, select: { id: true, fullName: true }, orderBy: { fullName: "asc" } }),
     prisma.company.findMany({
-      where: isSeniorRole(actor.role) ? { isActive: true } : { isActive: true, ...companyScopeWhere(actor) },
+      where: { isActive: true, ...companyScopeWhere(actor) },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isSeniorRole } from "@/lib/permissions";
+import { assertCompanyPermission } from "@/lib/access";
 
 export const runtime = "nodejs";
 
@@ -21,15 +21,17 @@ export async function GET(
 
     const proof = await prisma.reportProof.findUnique({
       where: { id },
-      include: { company: { select: { id: true, name: true, accountantId: true } } },
+      include: { company: { select: { id: true, name: true } } },
     });
 
     if (!proof) {
       return NextResponse.json({ error: "Dalil topilmadi" }, { status: 404 });
     }
 
-    // Access control
-    if (!isSeniorRole(role) && proof.company.accountantId !== userId) {
+    // Obyekt-scope: dalil portfeldagi firmaga tegishli bo'lishi shart
+    try {
+      await assertCompanyPermission(prisma, { id: userId, role }, proof.companyId, "proof:read");
+    } catch {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

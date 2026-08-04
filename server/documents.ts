@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { companyScopeWhere } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
 
 // =====================================================
@@ -16,10 +17,8 @@ export async function getDocuments(companyId?: string) {
   const userId = session.user.id as string;
   const role = session.user.role as string;
 
-  // Senior rollar barcha firmalar hujjatlarini; accountant faqat o'ziga biriktirilgan
-  const companyFilter = isSeniorRole(role)
-    ? {}
-    : { company: { accountantId: userId } };
+  // Faqat portfeldagi firmalarning hujjatlari (admin — hammasi)
+  const companyFilter = { company: companyScopeWhere({ id: userId, role }) };
 
   return serialize(
     await prisma.document.findMany({

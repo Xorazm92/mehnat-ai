@@ -5,7 +5,7 @@
 // =====================================================
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
+import { isAdminRole, isSeniorRole } from "@/lib/permissions";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/access";
 import { resolveRate, computeCost, type RatePeriod } from "@/lib/timeCost";
@@ -70,7 +70,7 @@ export interface TimeFilter {
 
 export async function getTimeEntries(filter: TimeFilter = {}) {
   const actor = await requireActor();
-  const scope: Prisma.TimeEntryWhereInput = isSeniorRole(actor.role)
+  const scope: Prisma.TimeEntryWhereInput = isAdminRole(actor.role)
     ? {}
     : { OR: [{ userId: actor.id }, { company: companyScopeWhere(actor) }] };
   const dateFilter =

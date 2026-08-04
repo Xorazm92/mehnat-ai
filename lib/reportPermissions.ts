@@ -4,8 +4,13 @@
 // Bu fayl ATAYLAB toza TypeScript (prisma/auth import qilmaydi), chunki uni
 // ham klient (menyuni filtrlash), ham server action (majburlash) ishlatadi.
 // Klientdagi filtr faqat QULAYLIK; haqiqiy chegara serverda — assertCellWrite.
+//
+// DIQQAT: huquq ROL + AYNAN SHU FIRMADAGI MAS'ULIYAT dan kelib chiqadi.
+// Bitta odam bir firmada nazoratchi, boshqasida buxgalter bo'lishi mumkin
+// (bazadagi haqiqiy holat) — shuning uchun har bir funksiya `relations` oladi.
 
-import { isSeniorRole } from "@/lib/permissions";
+import { isAdminRole, isSeniorRole } from "@/lib/permissions";
+import type { CompanyRelation } from "@/lib/access";
 
 /** Katakning maxsus (matn bo'lmagan) qiymatlari. */
 export const CELL_APPROVED = "+";
@@ -22,6 +27,15 @@ export type CellAction =
   | typeof CELL_EMPTY
   | "izoh";
 
+/** Shu firmadagi mas'uliyatlar. Iterable — Set ham, massiv ham bo'ladi. */
+export type Relations = Iterable<CompanyRelation>;
+
+const has = (relations: Relations | undefined, rel: CompanyRelation): boolean => {
+  if (!relations) return false;
+  for (const r of relations) if (r === rel) return true;
+  return false;
+};
+
 /** Matritsani umuman tahrirlay oladigan rollar (bank_manager — faqat o'qish). */
 const MATRIX_EDITOR_ROLES = [
   "super_admin",
@@ -36,12 +50,26 @@ export function canEditMatrix(role: string): boolean {
 }
 
 /**
- * Tasdiqlash (+) — FAQAT nazoratchi rollari. Buxgalter o'z ishini o'zi
+ * Shu firmada nazorat huquqi bormi?
+ *
+ * O'Z-O'ZINI NAZORAT BLOKI: nazoratchi/bosh buxgalter o'zi buxgalteriyasini
+ * yuritadigan firmada oddiy buxgalter sifatida ishlaydi — u yerda tasdiqlay
+ * olmaydi. Aks holda o'z ishini o'zi qabul qilib qo'yardi.
+ */
+export function isCompanyReviewer(role: string, relations?: Relations): boolean {
+  if (isAdminRole(role)) return true;
+  if (!isSeniorRole(role)) return false;
+  if (has(relations, "accountant")) return false;
+  return has(relations, "supervisor") || has(relations, "chief_accountant");
+}
+
+/**
+ * Tasdiqlash (+) — FAQAT shu firmaning nazoratchisi. Buxgalter o'z ishini o'zi
  * tasdiqlay olmaydi: u skrinshot bilan topshiradi, qarorni nazoratchi qabul
  * qiladi (server/proofs.ts → reviewReportProof).
  */
-export function canApproveCell(role: string): boolean {
-  return isSeniorRole(role);
+export function canApproveCell(role: string, relations?: Relations): boolean {
+  return isCompanyReviewer(role, relations);
 }
 
 /**
@@ -49,16 +77,16 @@ export function canApproveCell(role: string): boolean {
  * orqali, skrinshot bilan o'tishi shart. Aks holda dalil talabi bir so'rov bilan
  * chetlab o'tilardi.
  */
-export function canMarkSubmittedDirectly(role: string): boolean {
-  return isSeniorRole(role);
+export function canMarkSubmittedDirectly(role: string, relations?: Relations): boolean {
+  return isCompanyReviewer(role, relations);
 }
 
 /**
  * Rol uchun katak menyusida ko'rinadigan amallar (tartib saqlanadi).
  */
-export function allowedCellActions(role: string): CellAction[] {
+export function allowedCellActions(role: string, relations?: Relations): CellAction[] {
   if (!canEditMatrix(role)) return [];
-  if (isSeniorRole(role)) {
+  if (isCompanyReviewer(role, relations)) {
     return [CELL_APPROVED, CELL_SUBMITTED, CELL_FAILED, CELL_KARTOTEKA, "izoh", CELL_EMPTY];
   }
   // Buxgalter: tasdiqlash yo'q. "Topshirish" menyuda bor, lekin u qiymat
@@ -74,6 +102,8 @@ export function isReviewerOwnedValue(value: unknown): boolean {
 
 export interface CellWriteCheck {
   role: string;
+  /** Yozuvchining AYNAN SHU firmadagi mas'uliyatlari. */
+  relations?: Relations;
   /** Yozilayotgan yangi qiymat. */
   nextValue: unknown;
   /** Katakning hozirgi qiymati (bilingan bo'lsa) — ortga qaytarishni bloklash uchun. */
@@ -84,9 +114,14 @@ export interface CellWriteCheck {
  * Yozishga ruxsat bormi? Ruxsat bo'lmasa — sabab matni, bo'lsa — null.
  * Server action shu natijani xatoga aylantiradi.
  */
-export function checkCellWrite({ role, nextValue, currentValue }: CellWriteCheck): string | null {
+export function checkCellWrite({
+  role,
+  relations,
+  nextValue,
+  currentValue,
+}: CellWriteCheck): string | null {
   if (!canEditMatrix(role)) return "Bu amal uchun ruxsat yo'q";
-  if (isSeniorRole(role)) return null;
+  if (isCompanyReviewer(role, relations)) return null;
 
   const next = String(nextValue ?? "").trim().toLowerCase();
 

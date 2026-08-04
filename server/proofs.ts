@@ -2,7 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
+import { companyScopeWhere, companyRelations, assertCompanyPermission } from "@/lib/access";
+import { isCompanyReviewer } from "@/lib/reportPermissions";
 import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
 import type { OperationFieldKey } from "@/types";
@@ -52,8 +53,8 @@ export async function saveReportProof(input: {
   });
   if (!company) throw new Error("Firma topilmadi");
 
-  // Faqat senior rollar yoki firmaga biriktirilgan buxgalter topshira oladi
-  if (!isSeniorRole(role) && company.accountantId !== userId) throw new Error("Forbidden");
+  // Firma portfelda bo'lishi shart (IDOR himoyasi)
+  await assertCompanyPermission(prisma, { id: userId, role }, input.companyId, "proof:submit");
 
   const me = await prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } });
   const myName = me?.fullName || session.user.name || "Buxgalter";
@@ -148,9 +149,10 @@ export async function getReportProofsMeta(period: string) {
   const userId = session.user.id as string;
   const role = session.user.role as string;
 
-  const where: Prisma.ReportProofWhereInput = isSeniorRole(role)
-    ? { period }
-    : { period, company: { accountantId: userId } };
+  const where: Prisma.ReportProofWhereInput = {
+    period,
+    company: companyScopeWhere({ id: userId, role }),
+  };
 
   const proofs = await prisma.reportProof.findMany({
     where,
@@ -179,13 +181,7 @@ export async function getReportProof(companyId: string, period: string, colKey: 
   const userId = session.user.id as string;
   const role = session.user.role as string;
 
-  if (!isSeniorRole(role)) {
-    const company = await prisma.company.findUnique({
-      where: { id: companyId },
-      select: { accountantId: true },
-    });
-    if (company?.accountantId !== userId) throw new Error("Forbidden");
-  }
+  await assertCompanyPermission(prisma, { id: userId, role }, companyId, "proof:read");
 
   const proof = await prisma.reportProof.findUnique({
     where: { companyId_period_colKey: { companyId, period, colKey } },
@@ -212,8 +208,22 @@ export async function reviewReportProof(input: {
   const userId = session.user.id as string;
   const role = session.user.role as string;
 
-  // Faqat tekshiruvchi (nazoratchi + admin) rollar tasdiqlay/rad eta oladi
-  if (!isSeniorRole(role)) throw new Error("Forbidden");
+  // Faqat AYNAN SHU firmaning nazoratchisi tasdiqlay/rad eta oladi. Nazoratchi
+  // o'zi buxgalteriyasini yuritadigan firmada o'z dalilini tasdiqlay olmaydi.
+  const reviewCompany = await prisma.company.findUnique({
+    where: { id: input.companyId },
+    select: {
+      accountantId: true,
+      supervisorId: true,
+      chiefAccountantId: true,
+      bankClientId: true,
+      departmentRef: { select: { chiefAccountantId: true } },
+    },
+  });
+  if (!reviewCompany) throw new Error("Firma topilmadi");
+  if (!isCompanyReviewer(role, companyRelations(reviewCompany, userId))) {
+    throw new Error("Bu firmada tasdiqlash huquqingiz yo'q");
+  }
 
   const dbCol = dbColumnFor(input.colKey);
 

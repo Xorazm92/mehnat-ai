@@ -4,6 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { isAdminRole, isSeniorRole } from "@/lib/permissions";
+import { companyScopeWhere, assertCompanyPermission } from "@/lib/access";
+
+// Ofis kassasi va xarajatlari FIRMAGA bog'lanmagan (KassaEntry.companyId
+// ixtiyoriy, Expense'da umuman yo'q) — shuning uchun portfel filtri bu yerda
+// ma'noga ega emas va chegara ROL ro'yxati bo'lib qoladi. Nazoratchi bu
+// ro'yxatda YO'Q: u moliya roli emas, lekin ilgari `isSeniorRole` orqali butun
+// ofis xarajatlarini ko'rardi.
+const FINANCE_ROLES = ["super_admin", "admin", "chief_accountant", "bank_manager"];
+const isFinanceRole = (role: string) => FINANCE_ROLES.includes(role);
+
 import { canApproveExpense } from "@/lib/expenseApproval";
 import { assertSufficientFunds } from "@/lib/balance";
 import { assertPeriodOpen } from "@/lib/periodLock";
@@ -73,7 +83,7 @@ export async function createKassaEntry(data: {
   if (!session) throw new Error("Unauthorized");
 
   const role = session.user.role as string;
-  if (!isSeniorRole(role) && role !== "bank_manager") throw new Error("Forbidden");
+  if (!isFinanceRole(role)) throw new Error("Forbidden");
 
   if (data.type !== "income" && data.type !== "expense") {
     throw new Error("Kassa turi noto'g'ri: 'income' yoki 'expense' bo'lishi kerak");
@@ -212,7 +222,7 @@ export async function getExpenses(filters?: {
   if (!session) throw new Error("Unauthorized");
 
   const role = session.user.role as string;
-  if (!isSeniorRole(role) && role !== "bank_manager") throw new Error("Forbidden");
+  if (!isFinanceRole(role)) throw new Error("Forbidden");
 
   return serialize(
     await prisma.expense.findMany({
@@ -264,7 +274,7 @@ export async function createExpense(data: {
   const role = session.user.role as string;
   // Xarajat kiritish — xarajatlar bo'limini ko'ra oladigan rollar bilan bir xil
   // (getExpenses); aks holda buxgalter <1 mln xarajatni avto-tasdiq bilan o'tkaza olardi.
-  if (!isSeniorRole(role) && role !== "bank_manager") throw new Error("Forbidden");
+  if (!isFinanceRole(role)) throw new Error("Forbidden");
   assertPositiveAmount(data.amount, "Xarajat summasi");
   await assertPeriodOpen(prisma, data.date, "xarajat");
 
@@ -483,14 +493,20 @@ export async function getPayments(period?: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
+  const userId = session.user.id as string;
   const role = session.user.role as string;
-  if (!["super_admin", "admin", "chief_accountant", "supervisor", "bank_manager"].includes(role)) {
+  if (!isFinanceRole(role) && role !== "supervisor") {
     throw new Error("Forbidden");
   }
 
+  // To'lov FIRMAGA bog'langan — portfeldan tashqaridagilar ko'rinmaydi.
   return serialize(
     await prisma.payment.findMany({
-      where: { deletedAt: null, ...(period ? { period } : {}) },
+      where: {
+        deletedAt: null,
+        ...(period ? { period } : {}),
+        company: companyScopeWhere({ id: userId, role }),
+      },
       include: {
         company: { select: { id: true, name: true, inn: true, contractAmount: true } },
       },
@@ -511,8 +527,12 @@ export async function upsertPayment(data: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
+  const userId = session.user.id as string;
   const role = session.user.role as string;
-  if (!isSeniorRole(role) && role !== "bank_manager") throw new Error("Forbidden");
+  if (!isFinanceRole(role)) throw new Error("Forbidden");
+
+  // Obyekt-scope: begona firmaga to'lov yozib bo'lmaydi (IDOR)
+  await assertCompanyPermission(prisma, { id: userId, role }, data.companyId, "payment:write");
 
   if (!["paid", "pending", "partial", "overdue"].includes(data.status)) {
     throw new Error("To'lov holati noto'g'ri");

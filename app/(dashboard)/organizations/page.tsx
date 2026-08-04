@@ -50,8 +50,8 @@ export default async function OrganizationsPage() {
   // ro'yxatda bo'lishi kerak — aks holda "Arxiv" doim bo'sh jadval qaytaradi.
   const [companies, archivedCompanies, staff, operations] = await Promise.all([
     getCachedCompanies(userId, userRole),
-    getCachedArchivedCompanies(userRole),
-    getCachedUsers(),
+    getCachedArchivedCompanies(userId, userRole),
+    getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
   ]);
 

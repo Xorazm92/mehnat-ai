@@ -40,7 +40,7 @@ export async function getMarginOverview(period: string): Promise<CompanyMargin[]
   const { start, endExclusive } = periodRange(period);
 
   const companies = await prisma.company.findMany({
-    where: { isActive: true, ...(isSeniorRole(actor.role) ? {} : companyScopeWhere(actor)) },
+    where: { isActive: true, ...companyScopeWhere(actor) },
     select: { id: true, name: true },
   });
   if (companies.length === 0) return [];

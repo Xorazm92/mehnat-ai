@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole, isAdminRole } from "@/lib/permissions";
+import { companyScopeWhere, staffScopeFilter } from "@/lib/access";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { serialize } from "@/lib/serialize";
 import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
@@ -163,7 +164,8 @@ export async function deleteKpiRule(id: string) {
 
 async function findPerformance(opts: {
   month: string;
-  employeeId?: string;
+  /** Bitta id, yoki portfeldagi xodimlar ro'yxati (lib/access.ts staffScopeFilter). */
+  employeeId?: string | { in: string[] };
   approvedOnly: boolean;
 }) {
   const monthKey = toPerformanceMonth(opts.month) || opts.month;
@@ -197,8 +199,8 @@ export async function getMonthlyPerformance(month: string, employeeId?: string) 
   const userId = session.user.id;
   const role = session.user.role as string;
 
-  // Non-senior users can only see their own
-  const targetEmployeeId = isSeniorRole(role) ? employeeId : userId;
+  // Non-senior users can only see their own; senior — portfelidagi xodimlar.
+  const targetEmployeeId = await staffScopeFilter(prisma, { id: userId, role }, employeeId);
 
   return findPerformance({ month, employeeId: targetEmployeeId, approvedOnly: true });
 }
@@ -213,7 +215,7 @@ export async function getPerformanceForReview(month: string, employeeId?: string
 
   const userId = session.user.id;
   const role = session.user.role as string;
-  const targetEmployeeId = isSeniorRole(role) ? employeeId : userId;
+  const targetEmployeeId = await staffScopeFilter(prisma, { id: userId, role }, employeeId);
   const monthKey = toPerformanceMonth(month) || month;
 
   // Ataylab SLIM: bu ekran oyning HAMMA qatorini oladi (2026-07 da 5 644 ta).
@@ -275,7 +277,10 @@ export async function upsertPerformance(data: {
 
   // Senior bo'lmagan xodim faqat O'ZI uchun, faqat 'submitted' holatda yozadi —
   // boshqa xodimga baho qo'yish yoki o'z bahosini 'approved' qilish mumkin emas.
-  if (!isSeniorRole(callerRole)) {
+  //
+  // Senior o'ZIGA baho qo'yayotgan bo'lsa ham xuddi shu chegara: nazoratchi
+  // o'zi buxgalteri bo'lgan firmada o'z KPI'sini "approved" qilib qo'ya olardi.
+  if (!isSeniorRole(callerRole) || (data.employeeId === submittedBy && !isAdminRole(callerRole))) {
     if (data.employeeId !== submittedBy) throw new Error("Forbidden");
     data.status = "submitted";
     data.source = "employee";
@@ -573,24 +578,42 @@ const darajaOf = (ball: number): KpiLeaderRow["daraja"] =>
 export async function getKpiLeaderboard(month: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-  const isSenior = isSeniorRole(session.user.role as string);
+  const userId = session.user.id as string;
+  const role = session.user.role as string;
+  const isSenior = isSeniorRole(role);
+  const scope = companyScopeWhere({ id: userId, role });
 
-  const [perfs, companies] = await Promise.all([
-    prisma.monthlyPerformance.findMany({
-      // Approved only. A self-assessed 'submitted' row counting toward the
-      // leaderboard's bonusFund would let an employee inflate it unreviewed.
-      where: { month, status: "approved" },
-      select: {
-        employeeId: true,
-        companyId: true,
-        selectedOption: true,
-        calculatedScore: true,
-        employee: { select: { fullName: true, role: true } },
-        rule: { select: { category: true } },
-      },
-    }),
-    prisma.company.findMany({ select: { id: true, contractAmount: true } }),
-  ]);
+  // MonthlyPerformance'da `company` relatsiyasi yo'q (faqat companyId ustuni),
+  // shuning uchun avval portfeldagi firma id'lari olinadi.
+  const companies = await prisma.company.findMany({
+    where: scope,
+    select: { id: true, contractAmount: true },
+  });
+  // Admin uchun scope bo'sh — id ro'yxati bilan cheklamaymiz (213 ta IN o'rniga).
+  const companyFilter =
+    Object.keys(scope).length === 0
+      ? {}
+      : { OR: [{ companyId: { in: companies.map((c) => c.id) } }, { employeeId: userId }] };
+
+  const perfs = await prisma.monthlyPerformance.findMany({
+    // Approved only. A self-assessed 'submitted' row counting toward the
+    // leaderboard's bonusFund would let an employee inflate it unreviewed.
+    // Portfeldan tashqaridagi firmalar bo'yicha KPI ko'rinmaydi (o'zinikidan
+    // tashqari) — ilgari reyting butun tizim bo'ylab ochiq edi.
+    where: {
+      month,
+      status: "approved",
+      ...companyFilter,
+    },
+    select: {
+      employeeId: true,
+      companyId: true,
+      selectedOption: true,
+      calculatedScore: true,
+      employee: { select: { fullName: true, role: true } },
+      rule: { select: { category: true } },
+    },
+  });
 
   const contractOf = new Map(companies.map((c) => [c.id, Number(c.contractAmount) || 0]));
 

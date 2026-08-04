@@ -17,7 +17,7 @@ import ReportProofModal, { ProofModalState } from './ReportProofModal';
 import { BASE_REPORT_COLUMNS, type ReportColumn } from '@/lib/reportColumns';
 import { tryGetColumnCategory, CATEGORY_LABEL_UZ, type ReportCategory } from '@/lib/reportGroups';
 import { allowedCellActions, canApproveCell, canEditMatrix, isReviewerOwnedValue, type CellAction } from '@/lib/reportPermissions';
-import { isSeniorRole } from '@/lib/permissions';
+import { companyRelations, type CompanyRelation } from '@/lib/access';
 import { useDismissable } from '@/hooks/useDismissable';
 import { Button } from "@/components/ui/Button";
 // ── Report Column Definitions ──────────────────────────────────
@@ -158,9 +158,10 @@ const STATUS_META: Record<CellAction, { label: string; icon: string; color: stri
  * - Buxgalter: "Tasdiqlash" YO'Q; "Topshirildi" → skrinshot oynasini ochadi.
  * - Nazoratchi, dalil kutilayotgan katakda: "+/-" → tekshirish oynasiga boradi.
  */
-const statusesForRole = (role: string, hasPendingProof: boolean) => {
-  const isAccountant = !isSeniorRole(role);
-  return allowedCellActions(role).map((value) => {
+const statusesForRole = (role: string, relations: CompanyRelation[], hasPendingProof: boolean) => {
+  // "isAccountant" = SHU firmada tasdiqlash huquqi yo'q degani.
+  const isAccountant = !canApproveCell(role, relations);
+  return allowedCellActions(role, relations).map((value) => {
     const meta = STATUS_META[value];
     if (isAccountant && value === 'topshirildi') {
       return { value, ...meta, label: 'Topshirish (skrinshot)' };
@@ -180,6 +181,8 @@ interface StatusCellProps {
   onUpdate: (newValue: string) => void;
   readOnly?: boolean;
   userRole: string;
+  /** Foydalanuvchining AYNAN SHU firmadagi mas'uliyatlari. */
+  relations: CompanyRelation[];
   proofStatus?: string; // 'pending' | 'approved' | 'rejected'
   onRequestSubmit?: () => void;
   onViewProof?: () => void;
@@ -191,13 +194,14 @@ const PROOF_DOT: Record<string, string> = {
   rejected: 'var(--danger)',
 };
 
-const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, userRole, proofStatus, onRequestSubmit, onViewProof }) => {
+const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, userRole, relations, proofStatus, onRequestSubmit, onViewProof }) => {
   const style = getStatusStyle(value);
   // "isAccountant" = tasdiqlash huquqi YO'Q degani (server bilan bir xil qoida).
-  const isAccountant = !canApproveCell(userRole);
+  // Nazoratchi o'zi buxgalteri bo'lgan firmada ham shu tarmoqqa tushadi.
+  const isAccountant = !canApproveCell(userRole, relations);
   const menuStatuses = useMemo(
-    () => statusesForRole(userRole, proofStatus === 'pending'),
-    [userRole, proofStatus]
+    () => statusesForRole(userRole, relations, proofStatus === 'pending'),
+    [userRole, relations, proofStatus]
   );
   // Tasdiqlangan yoki tekshiruvda turgan katak buxgalter uchun QULFLANGAN —
   // server ham shuni rad etadi (lib/reportPermissions.checkCellWrite), shuning
@@ -401,7 +405,7 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
       )}
     </div>
   );
-}, (prev, next) => prev.value === next.value && prev.readOnly === next.readOnly && prev.proofStatus === next.proofStatus);
+}, (prev, next) => prev.value === next.value && prev.readOnly === next.readOnly && prev.proofStatus === next.proofStatus && prev.relations === next.relations);
 
 // ── Memoized Table Row ─────────────────────────────────────────
 const OperationRow = React.memo<{
@@ -409,13 +413,14 @@ const OperationRow = React.memo<{
   idx: number;
   visibleColumns: ReportColumn[];
   userRole: string;
+  relations: CompanyRelation[];
   activeServices: string[];
   proofMeta: Map<string, string>;
   onCellUpdate: (companyId: string, colKey: string, newValue: string) => void;
   onCompanySelect: (companyId: string) => void;
   onRequestSubmit: (companyId: string, colKey: string) => void;
   onViewProof: (companyId: string, colKey: string) => void;
-}>(({ row, idx, visibleColumns, userRole, activeServices, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
+}>(({ row, idx, visibleColumns, userRole, relations, activeServices, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
   const proofOf = (colKey: string) => (row.companyId ? proofMeta.get(`${row.companyId}::${colKey}`) : undefined);
   const groupEdges = useMemo(() => buildGroupEdges(visibleColumns), [visibleColumns]);
@@ -463,6 +468,7 @@ const OperationRow = React.memo<{
                     onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId as string, col.key as string, String(newValue))}
                     readOnly={isReadOnly}
                     userRole={userRole}
+                    relations={relations}
                     proofStatus={proofOf(col.key)}
                     onRequestSubmit={() => row.companyId && onRequestSubmit(row.companyId as string, col.key as string)}
                     onViewProof={() => row.companyId && onViewProof(row.companyId as string, col.key as string)}
@@ -478,6 +484,7 @@ const OperationRow = React.memo<{
                     onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId as string, payKey as string, String(newValue))}
                     readOnly={isReadOnly}
                     userRole={userRole}
+                    relations={relations}
                     proofStatus={proofOf(payKey)}
                     onRequestSubmit={() => row.companyId && onRequestSubmit(row.companyId as string, payKey as string)}
                     onViewProof={() => row.companyId && onViewProof(row.companyId as string, payKey as string)}
@@ -498,6 +505,7 @@ const OperationRow = React.memo<{
                 onUpdate={(newValue) => row.companyId && onCellUpdate(row.companyId as string, col.key as string, String(newValue))}
                 readOnly={isReadOnly}
                 userRole={userRole}
+                relations={relations}
                 proofStatus={proofOf(col.key)}
                 onRequestSubmit={() => row.companyId && onRequestSubmit(row.companyId as string, col.key as string)}
                 onViewProof={() => row.companyId && onViewProof(row.companyId as string, col.key as string)}
@@ -949,6 +957,23 @@ const OperationModule: React.FC<Props> = ({
     const comp = companies.find(c => c.id === id);
     if (comp) onCompanySelect(comp);
   }, [companies, onCompanySelect]);
+
+  /**
+   * Firma → foydalanuvchining SHU firmadagi mas'uliyatlari.
+   *
+   * Huquq rolning o'zidan emas, biriktiruvdan kelib chiqadi: nazoratchi o'zi
+   * buxgalteriyasini yuritadigan firmada tasdiqlay olmaydi. Massiv havolasi
+   * barqaror bo'lishi kerak — `StatusCell` memo taqqoslashi shunga tayanadi.
+   */
+  const relationsByCompany = useMemo(() => {
+    const map = new Map<string, CompanyRelation[]>();
+    if (!currentUserId) return map;
+    for (const c of companies) {
+      map.set(c.id, [...companyRelations(c, currentUserId)]);
+    }
+    return map;
+  }, [companies, currentUserId]);
+  const EMPTY_RELATIONS = useRef<CompanyRelation[]>([]).current;
 
   /**
    * `<thead>` scroll konteynerida joy egallaydi (u `sticky`, `fixed` emas).
@@ -1546,6 +1571,7 @@ const OperationModule: React.FC<Props> = ({
                     idx={row.index - 1}
                     visibleColumns={visibleColumns as any}
                     userRole={userRole}
+                    relations={(row.companyId && relationsByCompany.get(row.companyId)) || EMPTY_RELATIONS}
                     activeServices={row.activeServices}
                     proofMeta={proofMeta}
                     onCellUpdate={handleCellUpdate}

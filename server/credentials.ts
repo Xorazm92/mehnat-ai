@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
+import { isAdminRole } from "@/lib/permissions";
 import { serialize } from "@/lib/serialize";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { PRIMARY_SERVICE } from "@/lib/credentials";
@@ -12,14 +12,15 @@ import { PRIMARY_SERVICE } from "@/lib/credentials";
 // Parollar bazada AES-256-GCM bilan shifrlanadi (lib/crypto.ts).
 // =====================================================
 
-// Firma bo'yicha kirish huquqi: senior rollar yoki biriktirilgan xodim
+// Firma parollariga kirish huquqi: ADMIN, yoki aynan shu firmaning
+// buxgalteri/bank-klienti. Nazoratchi va bosh buxgalter parol bilan ishlamaydi.
 async function assertCompanyAccess(companyId: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
   const userId = session.user.id;
   const role = session.user.role as string;
-  if (isSeniorRole(role)) return session;
+  if (isAdminRole(role)) return session;
 
   const company = await prisma.company.findUnique({
     where: { id: companyId },

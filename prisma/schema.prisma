@@ -225,6 +225,10 @@ model Company {
 
   @@index([accountantId])
   @@index([supervisorId])
+  // Portfel scope'i (lib/access.ts companyScopeWhere) to'rtala mas'ul ustunini
+  // ham OR bilan so'raydi — ikkitasi indekssiz qolgan edi.
+  @@index([chiefAccountantId])
+  @@index([bankClientId])
   @@index([inn])
   @@index([isActive])
   @@index([departmentId])
@@ -709,6 +713,8 @@ model ContractAssignment {
 
   @@index([companyId])
   @@index([userId])
+  // Scope'dagi `contractAssignments: { some: { userId, isActive } }` uchun.
+  @@index([userId, isActive])
 }
 
 // =====================================================

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole, isAdminRole } from "@/lib/permissions";
+import { companyScopeWhere, assertCompanyPermission } from "@/lib/access";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { revalidateTag } from "next/cache";
 import type { TaxRegime, StatsType } from "@prisma/client";
@@ -45,8 +46,12 @@ interface CredentialCarrier {
   password: string | null;
 }
 
+// Faqat ADMIN, yoki AYNAN SHU firmaning buxgalteri/bank-klienti. Nazoratchi va
+// bosh buxgalter ko'ra olmaydi: ular parol bilan ishlamaydi, lekin ilgari
+// `isSeniorRole` orqali barcha firmalarning soliq.uz parolini olardi (Excel
+// eksportga ham tushardi).
 function canSeeCredentials(row: CredentialCarrier, userId: string, role: string): boolean {
-  return isSeniorRole(role) || row.accountantId === userId || row.bankClientId === userId;
+  return isAdminRole(role) || row.accountantId === userId || row.bankClientId === userId;
 }
 
 async function withPrimaryCredential<T extends CredentialCarrier>(
@@ -86,52 +91,16 @@ export async function getCompanies() {
   const userId = session.user.id;
   const role = session.user.role as string;
 
-  // Super admin, admin, chief, supervisor — all companies
-  if (isSeniorRole(role)) {
-    const rows = await prisma.company.findMany({
-      where: { isActive: true },
-      include: {
-        accountant: { select: { id: true, fullName: true, avatarColor: true } },
-        supervisor: { select: { id: true, fullName: true } },
-        chiefAccountant: { select: { id: true, fullName: true } },
-        bankClient: { select: { id: true, fullName: true } },
-        departmentRef: { select: { id: true, name: true } },
-      },
-      orderBy: { name: "asc" },
-    });
-    return serialize(await withPrimaryCredential(rows, userId, role));
-  }
-
-  // Bank manager
-  if (role === "bank_manager") {
-    const rows = await prisma.company.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          { bankClientId: userId },
-          { contractAssignments: { some: { userId, isActive: true, role: "bank_manager" } } },
-        ],
-      },
-      include: {
-        accountant: { select: { id: true, fullName: true, avatarColor: true } },
-        bankClient: { select: { id: true, fullName: true } },
-      },
-      orderBy: { name: "asc" },
-    });
-    return serialize(await withPrimaryCredential(rows, userId, role));
-  }
-
-  // Accountant — own companies (primary accountantId or JAMOA-tab team assignment)
+  // Portfel: odam HAR QANDAY mas'uliyat bilan biriktirilgan firmalar
+  // (nazorat + buxgalteriya + bank birlashmasi). Admin uchun — hammasi.
   const rows = await prisma.company.findMany({
-    where: {
-      isActive: true,
-      OR: [
-        { accountantId: userId },
-        { contractAssignments: { some: { userId, isActive: true, role: "accountant" } } },
-      ],
-    },
+    where: { isActive: true, ...companyScopeWhere({ id: userId, role }) },
     include: {
       accountant: { select: { id: true, fullName: true, avatarColor: true } },
+      supervisor: { select: { id: true, fullName: true } },
+      chiefAccountant: { select: { id: true, fullName: true } },
+      bankClient: { select: { id: true, fullName: true } },
+      departmentRef: { select: { id: true, name: true } },
     },
     orderBy: { name: "asc" },
   });
@@ -166,10 +135,9 @@ export async function getCompanyById(id: string) {
 
   if (!company) throw new Error("Company not found");
 
-  // Access check
-  if (!isSeniorRole(role) && company.accountantId !== userId) {
-    throw new Error("Forbidden");
-  }
+  // Obyekt-scope: portfelda bo'lishi shart. Ilgari bu yerda faqat `accountantId`
+  // tekshirilardi — bank-klient ro'yxatda ko'rgan firmasini ochib ham bo'lmasdi.
+  await assertCompanyPermission(prisma, { id: userId, role }, id, "company:read");
 
   const [withCred] = await withPrimaryCredential([company], userId, role);
   return serialize(withCred);
@@ -382,9 +350,7 @@ export async function updateCompany(
   const company = await prisma.company.findUnique({ where: { id } });
   if (!company) throw new Error("Company not found");
 
-  if (!isSeniorRole(role) && company.accountantId !== userId) {
-    throw new Error("Forbidden");
-  }
+  await assertCompanyPermission(prisma, { id: userId, role }, id, "company:update");
 
   const data = sanitizeCompanyData(companyData);
 
@@ -547,9 +513,7 @@ export async function getCompanyStats() {
   const userId = session.user.id;
   const role = session.user.role as string;
 
-  const where = isSeniorRole(role)
-    ? { isActive: true }
-    : { accountantId: userId, isActive: true };
+  const where = { isActive: true, ...companyScopeWhere({ id: userId, role }) };
 
   const [total, byTaxRegime, byRisk] = await Promise.all([
     prisma.company.count({ where }),

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isSeniorRole } from "@/lib/permissions";
+import { assertCompanyPermission, companyRelations } from "@/lib/access";
+import { isCompanyReviewer } from "@/lib/reportPermissions";
 import { notFound, redirect } from "next/navigation";
 import ProofViewClient from "./ProofViewClient";
 
@@ -29,6 +30,8 @@ export default async function ProofViewPage({
           accountantId: true,
           supervisorId: true,
           chiefAccountantId: true,
+          bankClientId: true,
+          departmentRef: { select: { chiefAccountantId: true } },
         },
       },
     },
@@ -38,12 +41,15 @@ export default async function ProofViewPage({
     notFound();
   }
 
-  // Access check
-  if (!isSeniorRole(role) && proof.company.accountantId !== userId) {
+  // Obyekt-scope: dalil portfeldagi firmaga tegishli bo'lishi shart
+  try {
+    await assertCompanyPermission(prisma, { id: userId, role }, proof.companyId, "proof:read");
+  } catch {
     redirect("/403");
   }
 
-  const canReview = isSeniorRole(role);
+  // Tasdiqlash — faqat shu firmaning nazoratchisi (o'z-o'zini nazorat bloki)
+  const canReview = isCompanyReviewer(role, companyRelations(proof.company, userId));
 
   return (
     <ProofViewClient

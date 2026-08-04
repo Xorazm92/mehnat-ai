@@ -3,47 +3,86 @@
 // =====================================================
 // Reviewer #11: ikki alohida operatsiya — (1) qaysi kompaniyalarni KO'RA oladi
 // (companyScopeWhere → Prisma where), (2) muayyan kompaniyada AMAL bajara oladi
-// (assertCompanyPermission → rol gate + obyekt-scope). server/obligations.ts va
-// kelajakda companies/operations shu yagona qatlamdan foydalanadi.
+// (assertCompanyPermission → rol gate + obyekt-scope).
 //
-// Eslatma: mavjud getCompanies supervisor/chief'ni "hammani ko'radi" deb
-// hisoblaydi; bu yerda ular PORTFELIga cheklanadi (to'g'riroq). getCompanies
-// migratsiyasi alohida refactor (regressiya xavfi) — hozir tegilmaydi.
+// ASOSIY QOIDA: ROL = nima qila olasan, BIRIKTIRUV = qaysi firmada.
+// Bu ikkisi avval chalkashtirilgan edi — firma ro'yxati `isSeniorRole` orqali
+// hal qilinardi va nazoratchi/bosh buxgalter BARCHA firmalarni ko'rardi.
+// Endi ro'yxat faqat biriktiruvdan kelib chiqadi: odam bir firmada nazoratchi,
+// boshqasida buxgalter, uchinchisida bank-klient bo'lishi mumkin (bazadagi
+// haqiqiy holat), va uchalasi ham uning portfeliga kiradi.
 import type { Prisma } from "@prisma/client";
-import { isSeniorRole } from "@/lib/permissions";
+import { isAdminRole, isSeniorRole } from "@/lib/permissions";
 
 export interface Actor {
   id: string;
   role: string;
 }
 
-/** Foydalanuvchi ko'ra oladigan kompaniyalar filtri (rol bo'yicha). */
+/** Firmada odam egallashi mumkin bo'lgan mas'uliyat turlari. */
+export type CompanyRelation = "accountant" | "supervisor" | "chief_accountant" | "bank_manager";
+
+/** Firma qatoridan scope uchun kerak bo'ladigan minimal maydonlar. */
+export interface CompanySlots {
+  accountantId?: string | null;
+  supervisorId?: string | null;
+  chiefAccountantId?: string | null;
+  bankClientId?: string | null;
+  /** Bosh buxgalter firmaga to'g'ridan-to'g'ri emas, departament orqali biriktirilishi mumkin. */
+  departmentRef?: { chiefAccountantId?: string | null } | null;
+}
+
+/**
+ * Foydalanuvchi ko'ra oladigan kompaniyalar filtri — BIRIKTIRUV bo'yicha.
+ *
+ * Rolga qaramaydi (admindan tashqari): nazoratchining buxgalteriyasini yuritadigan
+ * firmalari ham, bank-klientning buxgalteriya firmalari ham shu birlashmaga tushadi.
+ */
 export function companyScopeWhere(actor: Actor): Prisma.CompanyWhereInput {
-  switch (actor.role) {
-    case "super_admin":
-    case "admin":
-      return {}; // hammasi
-    case "supervisor":
-      return { supervisorId: actor.id };
-    case "chief_accountant":
-      return {
-        OR: [{ chiefAccountantId: actor.id }, { departmentRef: { chiefAccountantId: actor.id } }],
-      };
-    case "bank_manager":
-      return {
-        OR: [
-          { bankClientId: actor.id },
-          { contractAssignments: { some: { userId: actor.id, isActive: true, role: "bank_manager" } } },
-        ],
-      };
-    default: // accountant
-      return {
-        OR: [
-          { accountantId: actor.id },
-          { contractAssignments: { some: { userId: actor.id, isActive: true, role: "accountant" } } },
-        ],
-      };
+  if (isAdminRole(actor.role)) return {}; // super_admin, admin — hammasi
+
+  return {
+    OR: [
+      { accountantId: actor.id },
+      { supervisorId: actor.id },
+      { chiefAccountantId: actor.id },
+      { bankClientId: actor.id },
+      // Bosh buxgalter boshqaradigan departamentdagi firmalar.
+      { departmentRef: { chiefAccountantId: actor.id } },
+      // JAMOA-tab biriktiruvi. ATAYLAB `role` bo'yicha filtrlanmaydi: bazada imlo
+      // bir xil emas (supervisor/controller, chief_accountant/chief), va har qanday
+      // turdagi aktiv biriktiruv "bu firma meniki" degani.
+      { contractAssignments: { some: { userId: actor.id, isActive: true } } },
+    ],
+  };
+}
+
+/** Shu firmada foydalanuvchining BARCHA mas'uliyatlari (bir nechta bo'lishi mumkin). */
+export function companyRelations(company: CompanySlots, userId: string): Set<CompanyRelation> {
+  const rels = new Set<CompanyRelation>();
+  if (company.accountantId === userId) rels.add("accountant");
+  if (company.supervisorId === userId) rels.add("supervisor");
+  if (
+    company.chiefAccountantId === userId ||
+    company.departmentRef?.chiefAccountantId === userId
+  ) {
+    rels.add("chief_accountant");
   }
+  if (company.bankClientId === userId) rels.add("bank_manager");
+  return rels;
+}
+
+/**
+ * Shu firmada nazorat (tasdiqlash/rad etish) huquqi bormi?
+ *
+ * O'Z-O'ZINI NAZORAT BLOKI: nazoratchi o'zi buxgalteriyasini yuritadigan firmada
+ * o'z ishini tasdiqlay olmaydi — u yerda oddiy buxgalter sifatida ishlaydi.
+ */
+export function isReviewerOn(company: CompanySlots, actor: Actor): boolean {
+  if (isAdminRole(actor.role)) return true;
+  const rels = companyRelations(company, actor.id);
+  if (rels.has("accountant")) return false;
+  return rels.has("supervisor") || rels.has("chief_accountant");
 }
 
 /** Senior-darajali (manager/reviewer) amallar — oddiy buxgalter bajara olmaydi. */
@@ -62,6 +101,66 @@ export const SENIOR_PERMISSIONS = new Set<string>([
 type Db = Prisma.TransactionClient;
 
 /**
+ * Portfeldagi firmalarga biriktirilgan xodimlar id'lari (+ o'zi).
+ * Admin uchun `null` — filtrsiz, ya'ni barcha xodimlar.
+ */
+export async function scopedStaffIds(db: Db, actor: Actor): Promise<string[] | null> {
+  const scope = companyScopeWhere(actor);
+  if (Object.keys(scope).length === 0) return null; // admin
+
+  const companies = await db.company.findMany({
+    where: { isActive: true, ...scope },
+    select: {
+      accountantId: true,
+      supervisorId: true,
+      chiefAccountantId: true,
+      bankClientId: true,
+      contractAssignments: { where: { isActive: true }, select: { userId: true } },
+    },
+  });
+
+  const ids = new Set<string>([actor.id]);
+  for (const c of companies) {
+    for (const id of [c.accountantId, c.supervisorId, c.chiefAccountantId, c.bankClientId]) {
+      if (id) ids.add(id);
+    }
+    for (const a of c.contractAssignments) ids.add(a.userId);
+  }
+  return [...ids];
+}
+
+/**
+ * Xodim-kesimidagi so'rovlar uchun (`employeeId` / `userId`) filtr qiymati.
+ *
+ * Ilgari bu joylarda `isSeniorRole(role) ? requestedId : actor.id` yozilardi:
+ * senior `requestedId` bermasa filtr UMUMAN qo'yilmasdi va butun tizimning
+ * oyligi/KPI'si/davomati qaytardi; bergan taqdirda esa istalgan begona xodimni
+ * so'ray olardi. Endi:
+ *   - oddiy xodim  → faqat o'zi
+ *   - senior       → portfelidagi xodimlar (begona id → xato)
+ *   - admin        → cheklovsiz (`undefined`)
+ */
+export async function staffScopeFilter(
+  db: Db,
+  actor: Actor,
+  requestedId?: string,
+): Promise<string | { in: string[] } | undefined> {
+  if (!isSeniorRole(actor.role)) return actor.id;
+  if (isAdminRole(actor.role)) return requestedId || undefined;
+
+  const allowed = await scopedStaffIds(db, actor);
+  if (allowed === null) return requestedId || undefined;
+
+  if (requestedId) {
+    if (!allowed.includes(requestedId)) {
+      throw new Error("Bu xodim ma'lumotiga ruxsatingiz yo'q");
+    }
+    return requestedId;
+  }
+  return { in: allowed };
+}
+
+/**
  * Muayyan kompaniyada `permission` amalini bajarishga ruxsatni tasdiqlaydi.
  * (1) admin → to'liq; (2) senior-only amal bo'lsa rol tekshiriladi;
  * (3) OBYEKT-scope: kompaniya foydalanuvchi ko'rish doirasida bo'lishi shart
@@ -73,7 +172,7 @@ export async function assertCompanyPermission(
   companyId: string,
   permission: string,
 ): Promise<void> {
-  if (actor.role === "super_admin" || actor.role === "admin") return;
+  if (isAdminRole(actor.role)) return;
 
   if (SENIOR_PERMISSIONS.has(permission) && !isSeniorRole(actor.role)) {
     throw new Error("Ruxsat yo'q: bu amal uchun senior rol talab qilinadi");
