@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
 import { DateField } from "@/components/ui/DateField";
+import { TemplateOverridesPanel } from "@/components/admin/TemplateOverridesPanel";
 
 interface Applicability {
   id: string;
@@ -85,6 +86,7 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
   const [showForm, setShowForm] = useState(false);
   const [f, setF] = useState({ ...EMPTY });
   const [appl, setAppl] = useState<Record<string, { type: string; value: string }>>({});
+  const [overridesFor, setOverridesFor] = useState<{ id: string; name: string } | null>(null);
 
   const run = (fn: () => Promise<unknown>, ok: string) =>
     start(async () => {
@@ -220,6 +222,12 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
                         {nx.label}
                       </button>
                     )}
+                    <button disabled={pending} onClick={() => setOverridesFor({ id: t.id, name: t.name })}
+                      title="Qaysi firmalarga tegishli emas"
+                      className="text-xs font-semibold px-2.5 py-1 rounded-lg disabled:opacity-50"
+                      style={{ background: "var(--bg-hover, var(--bg-sunken))", color: "var(--text-secondary)" }}>
+                      Istisnolar
+                    </button>
                     {(t.lifecycle === "active" || t.lifecycle === "approved") && (
                       <button disabled={pending} onClick={() => run(() => createNewVersion(t.id), "Yangi versiya yaratildi")} className="text-xs font-semibold px-2.5 py-1 rounded-lg disabled:opacity-50" style={{ background: "var(--bg-hover, var(--accent-indigo-light))", color: "var(--accent-indigo)" }}>
                         Yangi versiya
@@ -254,6 +262,15 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
             );
           })}
         </div>
+      )}
+
+      {overridesFor && (
+        <TemplateOverridesPanel
+          templateId={overridesFor.id}
+          templateName={overridesFor.name}
+          open
+          onClose={() => setOverridesFor(null)}
+        />
       )}
     </div>
   );
