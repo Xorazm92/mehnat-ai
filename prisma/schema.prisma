@@ -1565,6 +1565,21 @@ model DeadlineTemplate {
   approvedById String?
   approvedAt   DateTime?
 
+  /** Matritsa ustuni kaliti (OperationFieldKey). Bir nechta template bitta
+      kalitga tushishi mumkin (QQS_DECL / AYLANMA_SOLIQ) — qaysi biri amal
+      qilishini TemplateApplicability hal qiladi. */
+  matrixKey String?
+  /** `KpiRule.name`. null = bu majburiyat KPI'ga umuman tushmaydi
+      (komunalka, IT Park — ADR-0009). */
+  kpiRuleName String?
+  /** Normativ mehnat (daqiqa). Sig'im va rentabellik shundan hisoblanadi —
+      qo'lda timer'dan emas (ADR-0010). */
+  normativeMinutes Int?
+  /** `sent`/`accepted` uchun dalil majburiymi. */
+  evidenceRequired Boolean @default(true)
+  /** Eskalatsiya zanjiri ishlaydimi (`client_service` uchun false). */
+  escalates Boolean @default(true)
+
   createdBy String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1577,6 +1592,7 @@ model DeadlineTemplate {
   @@index([lifecycle])
   @@index([active])
   @@index([obligationType])
+  @@index([matrixKey])
 }
 
 // Template kompaniyaga tegishlimi — faqat taxRegime emas. Bir template →
@@ -1761,12 +1777,21 @@ model SubmissionEvidence {
   submissionId String
   submission   ObligationSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   type         EvidenceType
+  /** Ombor havolasi — `disk://yyyy/mm/<sha256>.<ext>`. Base64 EMAS. */
   storageRef   String
   note         String?
+  /** Bayt yaxlitligi: qayta yuklangan bir xil fayl bir xil sha256 beradi. */
+  sha256       String?
+  byteSize     Int?
+  mimeType     String?
+  /** Qaysi `IntegrationEvent` olib kelgan (import kelib chiqishi). */
+  sourceEventId String?
   createdById  String?
   createdAt    DateTime             @default(now())
 
+  @@unique([submissionId, storageRef])
   @@index([submissionId])
+  @@index([sha256])
 }
 
 // =====================================================
