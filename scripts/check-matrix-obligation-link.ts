@@ -11,7 +11,7 @@ import "./load-env";
 //   npx tsx scripts/check-matrix-obligation-link.ts 2026-07
 
 import { prisma } from "@/lib/prisma";
-import { COL_KEY_TO_TEMPLATE_CODES, UNMAPPED_TEMPLATE_CODES } from "@/lib/obligationBridge";
+import { COL_KEY_TO_TEMPLATE_CODES, UNMAPPED_TEMPLATE_CODES } from "@/lib/reportTemplateMap";
 import { BASE_REPORT_COLUMNS } from "@/lib/reportColumns";
 import { toObligationMonthKey, toYearMonthKey } from "@/lib/periods";
 

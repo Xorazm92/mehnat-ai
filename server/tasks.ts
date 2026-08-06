@@ -11,9 +11,43 @@ import { isAdminRole, isSeniorRole } from "@/lib/platform/permissions";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/platform/access";
 import { canTransitionTask, taskTimingPatch } from "@/lib/engines/workflow/taskWorkflow";
-import { syncTaskDoneToObligation } from "@/lib/obligationBridge";
 import { updateTag } from "next/cache";
 import type { Prisma, TaskStatus, TaskPriority } from "@prisma/client";
+
+/**
+ * Vazifa yopilganda uning MANBA majburiyatini `ready` ga ko'taradi.
+ *
+ * Ilgari bu `lib/obligationBridge.ts` da edi; ko'prik olib tashlangach (matritsa
+ * yozuvi endi `lib/domains/accounting/matrixWrite.ts` orqali ketadi) shu bitta
+ * holat bu yerda qoldi, chunki u katak emas — VAZIFA yon ta'siri va
+ * majburiyatni ID bo'yicha biladi.
+ *
+ * Faqat oldinga: allaqachon `sent`/`accepted` bo'lgan majburiyat ortga
+ * tortilmaydi, bekor qilingani esa tirilmaydi.
+ */
+async function markObligationReady(obligationId: string, actorId?: string | null): Promise<boolean> {
+  const o = await prisma.obligation.findUnique({
+    where: { id: obligationId },
+    select: { id: true, status: true },
+  });
+  if (!o) return false;
+  const blocked: string[] = ["ready", "sent", "accepted", "cancelled"];
+  if (blocked.includes(o.status)) return false;
+
+  await prisma.$transaction([
+    prisma.obligation.update({ where: { id: o.id }, data: { status: "ready" } }),
+    prisma.obligationStatusEvent.create({
+      data: {
+        obligationId: o.id,
+        fromStatus: o.status,
+        toStatus: "ready",
+        byUserId: actorId ?? null,
+        note: "Bog'langan vazifa yakunlandi",
+      },
+    }),
+  ]);
+  return true;
+}
 
 async function requireActor(): Promise<Actor> {
   const session = await auth();
@@ -142,7 +176,7 @@ export async function updateTaskStatus(id: string, toStatus: TaskStatus, note?: 
   // ilgari xodim vazifani `done` qilib, majburiyatni "kechikkan" holda
   // qoldirardi va bir ishni ikkinchi joyda qaytadan belgilashi kerak edi.
   if (toStatus === "done" && t.obligationId) {
-    await syncTaskDoneToObligation(t.obligationId, actor.id);
+    await markObligationReady(t.obligationId, actor.id);
     updateTag("obligations");
   }
 

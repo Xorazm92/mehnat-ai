@@ -10,7 +10,20 @@ import { normalizePeriodKey, isFuturePeriod, formatPeriodLabel } from "@/lib/per
 import type { OperationFieldKey } from "@/types";
 import { updateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
-import { syncProofToObligation } from "@/lib/obligationBridge";
+import { applyObligationStatus, type MatrixWriteOutcome } from "@/lib/domains/accounting/matrixWrite";
+import { logger } from "@/lib/platform/logger";
+
+/**
+ * Majburiyat sinxronizatsiyasi dalil oqimini TO'XTATMAYDI — skrinshot
+ * saqlangan bo'lsa u saqlangan bo'lib qolishi kerak. Lekin JIM ham qolmaydi:
+ * eski `obligationBridge` har nosozlikda jimgina qaytardi va oylar davomida
+ * deyarli hech narsa qilmaganini hech kim sezmadi (ADR-0009).
+ */
+function reportSync(outcome: MatrixWriteOutcome, ctx: Record<string, unknown>) {
+  if (outcome.ok) return;
+  logger.warn({ event: "matrix.obligation_sync_failed", reason: outcome.reason, detail: outcome.detail, ...ctx },
+    "matritsa yozuvi majburiyatga tushmadi");
+}
 
 // =====================================================
 // REPORT PROOFS — Buxgalter topshirgan skrinshot dalili + nazoratchi tasdig'i
@@ -159,16 +172,18 @@ export async function saveReportProof(input: {
     update: { [dbCol]: "topshirildi" },
   });
 
-  // 2b) Majburiyat statusini "sent" ga o'tkazish + yuborish urinishini dalil
-  // bilan yozish (Obligation bridge — manba shu yerda yangilanadi)
-  await syncProofToObligation({
-    companyId: input.companyId,
-    period: period,
-    colKey: input.colKey,
-    targetStatus: "sent",
-    proofId: proof.id,
-    actorId: userId,
-  });
+  // 2b) Majburiyat statusini "sent" ga o'tkazish
+  reportSync(
+    await applyObligationStatus(prisma, {
+      companyId: input.companyId,
+      period: input.period,
+      matrixKey: input.colKey,
+      status: "sent",
+      userId,
+      note: `proof:${input.colKey}`,
+    }),
+    { companyId: input.companyId, period: input.period, colKey: input.colKey },
+  );
 
   // 3) Nazoratchilarga xabar (firma nazoratchisi + barcha tekshiruvchi rollar)
   const reviewerIds = new Set<string>();
@@ -336,16 +351,18 @@ export async function reviewReportProof(input: {
     update: { [dbCol]: cellValue },
   });
 
-  // Majburiyat statusini "accepted" yoki "rejected" ga o'tkazish + oxirgi
-  // yuborish urinishining natijasini yopish (Obligation bridge)
-  await syncProofToObligation({
-    companyId: input.companyId,
-    period: period,
-    colKey: input.colKey,
-    targetStatus: input.decision === "approved" ? "accepted" : "rejected",
-    proofId: proof.id,
-    actorId: userId,
-  });
+  // Majburiyat statusini "accepted" yoki "rejected" ga o'tkazish
+  reportSync(
+    await applyObligationStatus(prisma, {
+      companyId: input.companyId,
+      period: input.period,
+      matrixKey: input.colKey,
+      status: input.decision === "approved" ? "accepted" : "rejected",
+      userId,
+      note: `proof-review:${input.colKey}`,
+    }),
+    { companyId: input.companyId, period: input.period, colKey: input.colKey },
+  );
 
   // Buxgalterga natijani xabar qilish
   const company = await prisma.company.findUnique({

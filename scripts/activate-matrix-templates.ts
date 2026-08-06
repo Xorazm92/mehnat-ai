@@ -27,7 +27,7 @@ import "./load-env";
 //   npx tsx scripts/activate-matrix-templates.ts --apply    # yozadi
 
 import { prisma } from "@/lib/prisma";
-import { COL_KEY_TO_TEMPLATE_CODES } from "@/lib/obligationBridge";
+import { COL_KEY_TO_TEMPLATE_CODES } from "@/lib/reportTemplateMap";
 
 /** Faollashtiriladigan shablon → uni boshqaradigan matritsa ustuni. */
 const CODE_TO_COL: Record<string, string> = {
@@ -50,7 +50,7 @@ async function main() {
   // shablon faollashadi-yu, matritsa uni hech qachon harakatga keltirmaydi.
   for (const [code, colKey] of Object.entries(CODE_TO_COL)) {
     if (!COL_KEY_TO_TEMPLATE_CODES[colKey]?.includes(code)) {
-      throw new Error(`Mos kelmadi: ${colKey} → ${code} (lib/obligationBridge.ts bilan sinxron emas)`);
+      throw new Error(`Mos kelmadi: ${colKey} → ${code} (lib/reportTemplateMap.ts bilan sinxron emas)`);
     }
   }
 

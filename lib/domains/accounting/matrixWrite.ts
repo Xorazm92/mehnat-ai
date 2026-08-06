@@ -78,6 +78,20 @@ export interface CellWrite {
   userId?: string | null;
 }
 
+export interface StatusWrite {
+  companyId: string;
+  period: string;
+  matrixKey: string;
+  status: ObligationStatus;
+  userId?: string | null;
+  /** `kartoteka` semantikasi — tasdiqlanmagan kechikish sababi yoziladi. */
+  markDelay?: boolean;
+  /** Katak bo'shatilganda vaqt maydonlari tozalanadi. */
+  clearTiming?: boolean;
+  /** `ObligationStatusEvent.note` uchun manba belgisi. */
+  note?: string;
+}
+
 function refDateFor(period: string): Date | null {
   const ym = toYearMonthKey(period);
   if (!ym) return null;
@@ -96,7 +110,26 @@ function refDateFor(period: string): Date | null {
 export async function applyCellWrite(db: Db, w: CellWrite): Promise<MatrixWriteOutcome> {
   const meaning = meaningOf(w.value);
   if (meaning.status === null) return { ok: true, skipped: "comment_only" };
+  return applyObligationStatus(db, {
+    companyId: w.companyId,
+    period: w.period,
+    matrixKey: w.matrixKey,
+    status: meaning.status,
+    markDelay: meaning.markDelay,
+    clearTiming: meaning.clearTiming,
+    userId: w.userId,
+    note: `matrix:${w.matrixKey}`,
+  });
+}
 
+/**
+ * Holatni to'g'ridan-to'g'ri qo'llaydi.
+ *
+ * `server/proofs.ts` katak qiymatini emas, MAQSAD holatini biladi (dalil
+ * yuborildi → `sent`, tasdiqlandi → `accepted`), shuning uchun unga qiymatni
+ * teskari xaritalash kerak emas.
+ */
+export async function applyObligationStatus(db: Db, w: StatusWrite): Promise<MatrixWriteOutcome> {
   const ref = refDateFor(w.period);
   if (!ref) return { ok: false, reason: "bad_period", detail: w.period };
 
@@ -115,6 +148,7 @@ export async function applyCellWrite(db: Db, w: CellWrite): Promise<MatrixWriteO
   if (templates.length === 0) {
     return { ok: false, reason: "no_template", detail: w.matrixKey };
   }
+  const meaning = { status: w.status, markDelay: w.markDelay, clearTiming: w.clearTiming };
 
   // Bir ustunga bir nechta template tushishi mumkin (QQS_DECL / AYLANMA_SOLIQ
   // — soliq rejimiga qarab). Firma uchun qaysi biri amal qilishini generator
@@ -158,7 +192,7 @@ export async function applyCellWrite(db: Db, w: CellWrite): Promise<MatrixWriteO
         fromStatus: from,
         toStatus: to,
         byUserId: w.userId ?? null,
-        note: `matrix:${w.matrixKey}`,
+        note: w.note ?? `matrix:${w.matrixKey}`,
       },
     });
     return { ok: true, obligationId: obligation.id, from, to };

@@ -35,6 +35,22 @@ describe("matrixKey yaxlitligi", () => {
     expect(bad.map((t) => `${t.code}→${t.matrixKey}`)).toEqual([]);
   });
 
+  it("tasdiqlangan moslamalar joyida (eski COL_KEY_TO_TEMPLATE_CODE qamrovi)", () => {
+    // Bu juftliklar `test/kpiEvidence.test.ts` da KONSTANTA ustidan
+    // tekshirilardi va shu sabab uning uchta buzuq yozuvi ham muzlab qolgan
+    // edi. Endi ular BAZAGA qarshi tekshiriladi — ya'ni haqiqatan amal
+    // qiladigan moslamalar.
+    const byKey = new Map(templates.filter((t) => t.matrixKey).map((t) => [t.matrixKey!, t.code]));
+    const expected: Record<string, string> = {
+      pul_oqimlari: "CASHFLOW", debitor_kreditor: "AR_AP", tovar_ostatka: "MATERIALS",
+      one_c: "ONEC_BASE", xatlar: "LETTERS", hisoblangan_oylik: "PAYROLL_CALC",
+      chiqadigan_soliqlar: "TAX_SCHEDULE", foyda_va_zarar: "PNL_REPORT",
+    };
+    for (const [key, code] of Object.entries(expected)) {
+      expect(byKey.get(key), key).toBe(code);
+    }
+  });
+
   it("bitta matritsa ustuniga bir nechta template tushishi MUMKIN", () => {
     // QQS_DECL va AYLANMA_SOLIQ ikkalasi `aylanma_qqs` ga tushadi — qaysi biri
     // amal qilishini applicability hal qiladi. Bu xato emas, model.

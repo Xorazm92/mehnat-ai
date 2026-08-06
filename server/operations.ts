@@ -5,7 +5,8 @@ import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/platform/permissions";
 import { companyRelations, assertCompanyPermission } from "@/lib/platform/access";
 import { checkCellWrite, CELL_EMPTY } from "@/lib/reportPermissions";
-import { clearCellEvidence, syncCellToObligation } from "@/lib/obligationBridge";
+import { applyCellWrite } from "@/lib/domains/accounting/matrixWrite";
+import { logger } from "@/lib/platform/logger";
 import { updateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
@@ -51,6 +52,28 @@ export type MonthlyReportWriteInput = {
   companyId: string;
   period: string;
 } & Partial<Record<OperationFieldKey, string | null>>;
+
+/**
+ * Katak bo'shatilganda: skrinshot dalili o'chadi va majburiyat `planned` ga
+ * qaytadi.
+ *
+ * Ilgari bu `lib/obligationBridge.ts:clearCellEvidence` da edi va u ikki xil
+ * ishni birlashtirardi — dalil o'chirish (proof masalasi) va holat qaytarish
+ * (majburiyat masalasi). Ikkinchisi endi `applyCellWrite` da; birinchisi shu
+ * yerda qoladi, chunki u aynan matritsa yozuvining yon ta'siri.
+ */
+async function clearCellEvidence(companyId: string, period: string, colKey: string) {
+  await prisma.reportProof.deleteMany({ where: { companyId, period, colKey } });
+  const outcome = await applyCellWrite(prisma, {
+    companyId, period, matrixKey: colKey, value: CELL_EMPTY,
+  });
+  if (!outcome.ok) {
+    logger.warn(
+      { event: "matrix.obligation_sync_failed", reason: outcome.reason, detail: outcome.detail, companyId, period, colKey },
+      "katak tozalandi, majburiyat qaytarilmadi",
+    );
+  }
+}
 
 /**
  * Yozuv natijasi. KUTILGAN qoida rad etishlari (kelajak davr, tasdiqlangan
@@ -174,11 +197,8 @@ export async function upsertMonthlyReport(
   // qolaverardi (buxgalter bir ishni ikki joyda belgilashga majbur edi).
   // Tozalash alohida yo'l: u dalilni ham olib tashlaydi.
   for (const [rawKey, value] of Object.entries(rawFields)) {
-    if (isClearedValue(value)) {
-      await clearCellEvidence({ companyId, period, colKey: rawKey, actorId: userId });
-    } else {
-      await syncCellToObligation({ companyId, period, colKey: rawKey, value, actorId: userId });
-    }
+    if (!isClearedValue(value)) continue;
+    await clearCellEvidence(companyId, period, rawKey);
   }
 
   /**
@@ -248,9 +268,13 @@ export async function clearColumnForPeriod(rawPeriod: string, colKey: string) {
   // Katak tozalash bilan bir xil qoida: ustun bo'shatilsa, o'sha ustunga
   // biriktirilgan dalillar ham ketadi va majburiyatlar `planned` ga qaytadi.
   // Aks holda bo'sh ustun ustida dalil nuqtalari qolib ketardi.
-  const affected = new Set([...withValue, ...withProof].map((r) => r.companyId));
-  for (const companyId of affected) {
-    await clearCellEvidence({ companyId, period, colKey, actorId: session.user.id });
+  const affected = await prisma.reportProof.findMany({
+    where: { period, colKey },
+    select: { companyId: true },
+    distinct: ["companyId"],
+  });
+  for (const { companyId } of affected) {
+    await clearCellEvidence(companyId, period, colKey);
   }
 
   updateTag("operations");

@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { toPerformanceMonth, toYearMonthKey } from "../lib/periods";
-import { COL_KEY_TO_TEMPLATE_CODE } from "../lib/obligationBridge";
 import { TEMPLATE_CODE_TO_RULE_NAME } from "../lib/kpiEvidence";
 
 describe("KPI Period Normalization", () => {
@@ -16,18 +15,10 @@ describe("KPI Period Normalization", () => {
   });
 });
 
-describe("Obligation Bridge Mappings", () => {
-  it("maps matrix column keys to correct Obligation template codes", () => {
-    expect(COL_KEY_TO_TEMPLATE_CODE["pul_oqimlari"]).toBe("CASHFLOW");
-    expect(COL_KEY_TO_TEMPLATE_CODE["debitor_kreditor"]).toBe("AR_AP");
-    expect(COL_KEY_TO_TEMPLATE_CODE["tovar_ostatka"]).toBe("MATERIALS");
-    expect(COL_KEY_TO_TEMPLATE_CODE["one_c"]).toBe("ONEC_BASE");
-    expect(COL_KEY_TO_TEMPLATE_CODE["xatlar"]).toBe("LETTERS");
-    expect(COL_KEY_TO_TEMPLATE_CODE["hisoblangan_oylik"]).toBe("PAYROLL_CALC");
-    expect(COL_KEY_TO_TEMPLATE_CODE["chiqadigan_soliqlar"]).toBe("TAX_SCHEDULE");
-    expect(COL_KEY_TO_TEMPLATE_CODE["foyda_va_zarar"]).toBe("PNL_REPORT");
-  });
-
+// Matritsa ustuni → template moslamasi endi bu yerda EMAS. U konstanta ustidan
+// tekshirilardi va shu sabab buzuq yozuvlarni joyida ushlab turardi; hozir u
+// `test/matrix-template-coverage.test.ts` da, bazaga qarshi.
+describe("KPI rule mapping", () => {
   it("maps template codes back to KPI rules", () => {
     expect(TEMPLATE_CODE_TO_RULE_NAME["CASHFLOW"]).toBe("acc_cashflow");
     expect(TEMPLATE_CODE_TO_RULE_NAME["AR_AP"]).toBe("acc_debitor");
