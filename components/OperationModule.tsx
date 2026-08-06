@@ -11,6 +11,7 @@ import { useTableState } from '@/hooks/useTableState';
 import { periodsEqual } from '@/lib/periods';
 import { formatNum } from '@/lib/format';
 import { toast } from 'sonner';
+import { writeSheet } from '@/lib/exportTable';
 import { upsertMonthlyReport, clearColumnForPeriod } from '@/server/operations';
 import { createNotification } from '@/server/audit';
 import { getReportProofsMeta } from '@/server/proofs';
@@ -1820,8 +1821,6 @@ const OperationModule: React.FC<Props> = ({
   // Export
   const handleExport = async () => {
     try {
-      const { utils, writeFile } = await import('xlsx');
-
       const headerCols: string[] = [];
       visibleColumns.forEach(c => {
         headerCols.push(c.label);
@@ -1839,32 +1838,10 @@ const OperationModule: React.FC<Props> = ({
           vals.push(cellFor(c.key));
           if ((c as any).isSplit) vals.push(cellFor((c as any).payKey));
         });
-        return [
-          r.index,
-          r.name,
-          r.inn,
-          r.accountant,
-          r.taxType,
-          ...vals
-        ];
+        return [r.index, r.name, r.inn, r.accountant, r.taxType, ...vals];
       });
 
-      const ws = utils.aoa_to_sheet([header, ...data]);
-      const wb = utils.book_new();
-      utils.book_append_sheet(wb, ws, "Operatsiyalar");
-
-      // Auto-size columns (rough approximation)
-      const colWidths = header.map((h, i) => {
-        let max = h.length;
-        data.forEach(row => {
-          const val = String(row[i] || '');
-          if (val.length > max) max = val.length;
-        });
-        return { wch: Math.min(max + 2, 50) };
-      });
-      ws['!cols'] = colWidths;
-
-      writeFile(wb, `operatsiyalar_${selectedPeriod}.xlsx`);
+      await writeSheet(header, data, `operatsiyalar_${selectedPeriod}`, 'Operatsiyalar');
       toast.success('Excel fayl yuklab olindi');
     } catch (error) {
       console.error('Export error:', error);

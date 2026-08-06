@@ -30,24 +30,88 @@ function buildMatrix<T>(rows: T[], columns: ExportColumn<T>[]) {
   return { header, body };
 }
 
-/** Excel (.xlsx). `xlsx` dinamik import qilinadi — u ~800KB. */
+/**
+ * Formula injection himoyasi. `=`, `+`, `-`, `@` bilan boshlangan katak Excel'da
+ * FORMULA sifatida bajariladi — `=cmd|...` kabi qator boshqa mashinada buyruq
+ * ishga tushirishi mumkin. Oldiga apostrof qo'yamiz.
+ *
+ * Bu ilgari faqat CSV yo'lida bor edi; xlsx yo'li himoyasiz qolgan, holbuki
+ * xavf aynan Excel'da. Endi ikkalasi bitta funksiyadan o'tadi.
+ */
+export function neutralizeFormula(v: string): string {
+  return /^[=+\-@]/.test(v) ? `'${v}` : v;
+}
+
+/**
+ * Yagona .xlsx yozuvchi — matritsa beriladi, brauzer faylni yuklab oladi.
+ *
+ * Ilgari eksport TO'RT joyda alohida yozilgan edi (`lib/exportExcel.ts`,
+ * shu fayl, `OperationModule`, `OrganizationModule`) va faqat bittasida
+ * formula himoyasi bor edi. Endi hammasi shu yerdan o'tadi.
+ *
+ * `exceljs` dinamik import qilinadi — u katta, va eksport kamdan-kam kerak.
+ */
+export async function writeSheet(
+  header: string[],
+  // `null`/`undefined` ataylab qabul qilinadi: chaqiruvchilar ixtiyoriy
+  // maydonlarni to'g'ridan-to'g'ri uzatadi va ular bo'sh katakka aylanadi.
+  body: (string | number | null | undefined)[][],
+  filename: string,
+  sheetName = "Ma'lumot",
+): Promise<void> {
+  const ExcelJS = (await import("exceljs")).default;
+  const wb = new ExcelJS.Workbook();
+  // Excel varaq nomini 31 belgi bilan cheklaydi va : \ / ? * [ ] ni rad etadi.
+  const ws = wb.addWorksheet(sheetName.replace(/[:\\/?*[\]]/g, " ").slice(0, 31) || "Sheet1");
+
+  ws.addRow(header.map(neutralizeFormula));
+  for (const row of body) {
+    ws.addRow(row.map((c) => (typeof c === "number" ? c : neutralizeFormula(String(c ?? "")))));
+  }
+  ws.getRow(1).font = { bold: true };
+
+  ws.columns.forEach((col, i) => {
+    const widest = Math.max(header[i]?.length ?? 0, ...body.map((r) => String(r[i] ?? "").length));
+    col.width = Math.min(widest + 2, 50);
+  });
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/** Ustun ta'riflaridan .xlsx. */
 export async function exportRowsToExcel<T>(
   rows: T[],
   columns: ExportColumn<T>[],
   filename: string,
-  sheetName = "Ma'lumot"
+  sheetName = "Ma'lumot",
 ) {
-  const { utils, writeFile } = await import("xlsx");
   const { header, body } = buildMatrix(rows, columns);
-  const ws = utils.aoa_to_sheet([header, ...body]);
+  await writeSheet(header, body, filename, sheetName);
+}
 
-  ws["!cols"] = header.map((h, i) => ({
-    wch: Math.min(Math.max(h.length, ...body.map((r) => r[i].length)) + 2, 50),
-  }));
-
-  const wb = utils.book_new();
-  utils.book_append_sheet(wb, ws, sheetName);
-  writeFile(wb, filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`);
+/**
+ * Tekis obyektlar massividan .xlsx — kalitlar sarlavhaga aylanadi.
+ * `lib/exportExcel.ts` ning o'rnini bosadi.
+ */
+export async function exportObjectsToExcel(
+  rows: Record<string, unknown>[],
+  filename: string,
+  sheetName = "Ma'lumot",
+) {
+  const header = rows.length ? Object.keys(rows[0]) : [];
+  const body = rows.map((r) => header.map((h) => (r[h] === null || r[h] === undefined ? "" : String(r[h]))));
+  await writeSheet(header, body, filename, sheetName);
 }
 
 /**
@@ -58,9 +122,7 @@ export function exportRowsToCsv<T>(rows: T[], columns: ExportColumn<T>[], filena
   const { header, body } = buildMatrix(rows, columns);
 
   const escape = (v: string) => {
-    // Formula injection: `=`, `+`, `-`, `@` bilan boshlanuvchi katak Excel'da
-    // formula sifatida bajariladi. Oldiga apostrof qo'yib zararsizlantiramiz.
-    const safe = /^[=+\-@]/.test(v) ? `'${v}` : v;
+    const safe = neutralizeFormula(v);
     return /[",\n;]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
   };
 

@@ -24,7 +24,8 @@
 | S1 | `npm audit --omit=dev` = 0 high/critical | ❌ **12 ta**: 11 tasi `npm audit fix` bilan, 1 tasi (`xlsx`) tuzatilmaydi | A4 / alohida PR |
 | S1a | `next-auth`/`@auth/core` **critical** (3 ta advisory) | ❌ `beta.31 → beta.32` — auth, alohida PR va qo'lda smoke talab qiladi | alohida PR |
 | S1b | `next` 16.2.10 → 16.3.0 (**high**), `sharp`, `postcss`, `fast-uri` | ❌ freymvork minor bump — AGENTS.md bu Next.js standart emasligini ogohlantiradi | alohida PR |
-| S1c | `xlsx@0.18.5` ReDoS + prototype pollution | ❌ tuzatish yo'q → almashtirish kerak; 4 ta eksport implementatsiyasi bilan birga | A5 |
+| S1c | `xlsx@0.18.5` ReDoS + prototype pollution | ✅ **olib tashlandi** → `exceljs@4.4.0`; 4 ta eksport implementatsiyasi 1 ga yig'ildi | A5 |
+| S1d | `exceljs` → `uuid@8.3.2` (moderate) | ⚠️ **qabul qilingan**: ogohlantirish `v3/v5/v6` ni `buf` bilan chaqirishga tegishli; exceljs faqat `uuid.v4()` ni argumentsiz chaqiradi (`cf-rule-ext-xform.js`) — yo'l erishib bo'lmaydigan. "Tuzatish" 3.4.0 ga semver-major orqaga qaytish bo'lardi |
 | S2 | Har yozuv API/action'da zod validatsiya | ⚠️ qisman | doimiy |
 | S3 | Tashqi API'da rate limit | ⚠️ `lib/rateLimit.ts` bor; `/api/integration/1c` da yo'q | A6 |
 | S4 | Sirlar faqat env/vault; repo'da plaintext yo'q | ✅ `lib/crypto.ts` AES-256-GCM | ✅ |

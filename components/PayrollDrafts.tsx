@@ -11,8 +11,8 @@ import { PAYROLL_BASIS_DEFAULT, PAYROLL_BASIS_LABELS, type PayrollBasis } from '
 import type { CompanyAssignment } from '@/lib/kpiLogic';
 import { toast } from 'sonner';
 import { formatNum } from "@/lib/format";
-import { TableToolbar } from "@/components/ui/TableToolbar";
-import { exportToExcel } from "@/lib/exportExcel";
+import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { exportObjectsToExcel } from "@/lib/exportTable";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
 import { ROLE_LABELS, ASSIGNMENT_ROLE_LABELS, type UserRole, type AssignmentRole } from "@/lib/platform/permissions";
@@ -225,7 +225,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
     });
 
     const handleExport = () => {
-        exportToExcel(
+        void exportObjectsToExcel(
             rows.map(({ s, draft, isApproved }) => ({
                 'Xodim': s.name,
                 'Lavozim': userRoleLabel(s.role),

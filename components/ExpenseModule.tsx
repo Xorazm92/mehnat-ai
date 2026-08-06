@@ -6,7 +6,7 @@ import { useViewMode } from '@/hooks/useViewMode';
 import { Expense, Language } from '@/types';
 import { translations } from '@/lib/translations';
 import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { exportToExcel } from '@/lib/exportExcel';
+import { exportObjectsToExcel } from '@/lib/exportTable';
 import { canApproveExpense } from '@/lib/expenseApproval';
 import BalanceOverview from '@/components/BalanceOverview';
 import { TableToolbar } from '@/components/ui/TableToolbar';
@@ -209,7 +209,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
             Summa: e.amount || 0,
             Holat: STATUS_UZ[e.status || 'approved'] || e.status || '',
         }));
-        exportToExcel(rows, `xarajatlar-${todayKey()}`, 'Xarajatlar');
+        void exportObjectsToExcel(rows, `xarajatlar-${new Date().toISOString().slice(0, 10)}`, 'Xarajatlar');
     };
     const pct = (a: number, b: number) => (b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0);
     const limitColor = (p: number) => (p >= 100 ? 'var(--danger)' : p >= 90 ? 'var(--warning)' : 'var(--accent-blue)');

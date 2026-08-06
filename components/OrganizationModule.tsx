@@ -6,6 +6,7 @@ import { Company, Staff, TaxType, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
 import { Plus, Search, Edit3, Trash2, LayoutGrid, List, Eye, EyeOff, Download, Filter, Building2, Calculator, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { writeSheet } from '@/lib/exportTable';
 import OnboardingWizard from './OnboardingWizard';
 import { MonthPicker } from './ui/MonthPicker';
 import { periodsEqual } from '@/lib/periods';
@@ -321,7 +322,6 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
   const handleExport = async () => {
     try {
-      const { utils, writeFile } = await import('xlsx');
       // DIQQAT: Login/Parol ATAYLAB eksport qilinmaydi. Bular ASRO paroli emas —
       // mijozning soliq portali kredensiali. Shifrlanmagan .xlsx Downloads'da qoladi,
       // pochta orqali yuboriladi va xodim ishdan ketgach ham saqlanib qoladi.
@@ -336,22 +336,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         c.ownerName || ''
       ]);
 
-      const ws = utils.aoa_to_sheet([headers, ...rows]);
-
-      // Auto-width
-      const wscols = headers.map((h, i) => {
-        let max = h.length;
-        rows.forEach(r => {
-          const val = String(r[i] || '');
-          if (val.length > max) max = val.length;
-        });
-        return { wch: max + 2 };
-      });
-      ws['!cols'] = wscols;
-
-      const wb = utils.book_new();
-      utils.book_append_sheet(wb, ws, "Tashkilotlar");
-      writeFile(wb, `tashkilotlar_export.xlsx`);
+      await writeSheet(headers, rows, 'tashkilotlar_export', 'Tashkilotlar');
       toast.success('Excel fayl yuklab olindi');
     } catch (error) {
       console.error('Export error:', error);
