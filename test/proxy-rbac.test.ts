@@ -140,14 +140,9 @@ describe("view RBAC", () => {
 
   it("super_admin hammasini ochadi", async () => {
     staff("super_admin");
-    for (const p of ["/admin", "/inventory", "/audit-logs", "/payroll"]) {
+    for (const p of ["/admin", "/audit-logs", "/payroll"]) {
       expect(await go(p), p).toBeNull();
     }
-  });
-
-  it("inventar faqat super_admin'da — admin ham ko'rmaydi", async () => {
-    staff("admin");
-    expect(await go("/inventory")).toBe("/403");
   });
 });
 

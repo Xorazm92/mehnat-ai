@@ -31,6 +31,27 @@ the git tag `archive/accounting-core-v1` pins the code, and one command restores
 working code because it is currently unused is how a team loses six weeks of thinking; the cost of
 keeping a pointer to it is a paragraph.
 
+## Amendment, 2026-08-06 — the archive is deferred
+
+The argument above rests on "zero callers", which is true and turned out to be incomplete. Four of
+the six exports — `lockPeriod`, `unlockPeriod`, `closeYear`, `getOpeningBalance` — are covered by
+`test/period-lock.test.ts` and `test/year-closing.test.ts`: **11 tests, 252 lines**. Nobody calls
+them from the app, but somebody sat down and specified how they must behave.
+
+That makes archiving a **product decision**, not a cleanup. Removing the file removes those tests,
+and with them the recorded answer to "may a locked period be written to?" and "what does closing a
+year do to opening balances?". Cleanup deletes things nobody decided about; this is not that.
+
+So: the two genuinely dead exports (`getAccountingPeriods`, `getFinancialSnapshots`) are gone, and
+the rest stays until the question is answered explicitly. The question is narrow —
+
+> Does the firm want a period lock and a year close for its **own** operational cash, or does it
+> want neither because 1C already does it?
+
+If neither, archive the file and its two test suites together, as one decision with one record. If
+the lock is wanted, the code is not dead — it is unfinished, and it needs a caller rather than a
+tag. Either answer is fine; the wrong move is to archive it as though the question never existed.
+
 ## Consequences
 
 - [Modda 1](../CONSTITUTION.md) forbids **new period-closing ceremony**, not double-entry. An
