@@ -408,10 +408,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
     if (finalData.name && finalData.inn) {
       setIsSaving(true);
       try {
-        console.log('[OrganizationModule] handleSave starting onSave...');
         await onSave({ ...finalData, id: editingId || finalData.id }, assignments);
-        console.log('[OrganizationModule] handleSave onSave resolved');
-
         setEditingId(null);
         setIsAdding(false);
         setForm({});
@@ -421,7 +418,6 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         console.error('[OrganizationModule] handleSave error:', error);
         toast.error(friendlyError(error, "Saqlashda xatolik yuz berdi. Qaytadan kiring yoki ruxsatni tekshiring."));
       } finally {
-        console.log('[OrganizationModule] handleSave finally - setting isSaving to false');
         setIsSaving(false);
       }
     } else {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logServerError } from "@/lib/platform/logger";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertCompanyPermission } from "@/lib/platform/access";
@@ -69,7 +70,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Proof image GET error:", error);
+    logServerError("api.proofs.image", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

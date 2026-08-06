@@ -14,7 +14,7 @@
 | T1 | Integratsiya testlari CI'da har PR'da ishlaydi | ✅ `integration` job yozildi (Postgres + Redis + seed) | A4 |
 | T2 | Har yangi server action uchun scope + IDOR testi | ✅ namuna: `test/obligation-access.test.ts` | doimiy |
 | T3 | Har sof funksiya uchun `*.spec.ts` (DB'siz) | ✅ 20 ta spec fayl | doimiy |
-| T4 | `proxy.ts` (butun view-RBAC) testlangan | ❌ **0 ta test** | A4 |
+| T4 | `proxy.ts` (butun view-RBAC) testlangan | ✅ 22 test — RBAC, portal izolyatsiyasi, override, fail-open | A4 |
 | T5 | Konstitutsiya testi yashil | ✅ 6 assertion, CI'da | A1 |
 
 ## 2. Xavfsizlik
@@ -35,7 +35,10 @@
 
 | # | Chegara | Holat | Blok |
 |---|---|---|---|
-| O1 | Structured log (pino); `console.*` = 0 | ⚠️ `lib/logger.ts` bor, 30 ta `console.*` qolgan | A4 |
+| O1 | So'rov yo'lidagi server kodi faqat pino orqali log qiladi | ✅ `server/` `lib/` `app/api/` = 0 console, ESLint `error` bilan qulflangan | A4 |
+| O1a | Klientda `console.log` yo'q (`error`/`warn` ruxsat) | ✅ 3 ta debug qoldig'i olib tashlandi; ESLint `allow: [error, warn]` | A4 |
+| O1b | `bot/` pino'ga o'tadi | ⚠️ 39 ta console — ESLint `warn`, alohida o'zgarish | keyin |
+| O1c | `proxy.ts` / `instrumentation.ts` console ishlatadi | ✅ **qasddan** — pino Edge'da ishlamaydi, ESLint `off` + izoh | ✅ |
 | O2 | Error tracking + release tag + alert kanali | ❌ faqat `MONITORING_WEBHOOK_URL` | A4 |
 | O3 | Navbat holati ko'rinadi (DLQ, sweep, oxirgi ishga tushish) | ⚠️ `/admin/integration-1c` da qisman | A6 |
 

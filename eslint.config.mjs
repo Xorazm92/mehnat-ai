@@ -39,6 +39,10 @@ const eslintConfig = defineConfig([
       // Type-safety debt in legacy components/scripts. All new code is any-free;
       // this is burned down incrementally. Warning keeps it visible, not blocking.
       "@typescript-eslint/no-explicit-any": "warn",
+
+      // Browser code has no server logger, so console.error/warn in a catch block
+      // is the right tool. console.log is not — it is debug residue that ships.
+      "no-console": ["error", { allow: ["error", "warn"] }],
     },
   },
   {
@@ -86,6 +90,37 @@ const eslintConfig = defineConfig([
         },
       ],
     },
+  },
+  {
+    // Request-path server code logs through lib/platform/logger.ts (pino):
+    // structured, and it redacts password/token/cookie/secret keys at any depth.
+    // console bypasses that, so one stray object dump could put a credential in
+    // the logs. This layer is already clean — the rule keeps it that way.
+    files: ["server/**/*.ts", "lib/**/*.ts", "app/api/**/*.ts"],
+    rules: { "no-console": "error" },
+  },
+  {
+    // The bot is a long-running Node process and pino is available to it, so its
+    // 39 console calls are genuine debt — but converting them is its own change,
+    // not a rider on a security pass. Visible, not blocking; same treatment the
+    // react-hooks rules above already get.
+    files: ["bot/**/*.ts"],
+    rules: { "no-console": "warn" },
+  },
+  {
+    // CLI entrypoints: console IS the user interface. An operator running
+    // `tsx scripts/generate-obligations.ts` reads stdout, not a log aggregator.
+    files: ["scripts/**/*.ts", "prisma/**/*.ts"],
+    rules: { "no-console": "off" },
+  },
+  {
+    // proxy.ts runs on the Edge runtime and instrumentation.ts serves both
+    // runtimes; pino is Node-only — lib/platform/logger.ts says so in its own
+    // header ("proxy.ts dan HECH QACHON import qilinmasin"). Importing it here
+    // breaks the build, or worse, puts a failure mode inside the error handler.
+    // console is deliberate in exactly these two files.
+    files: ["proxy.ts", "instrumentation.ts"],
+    rules: { "no-console": "off" },
   },
 ]);
 

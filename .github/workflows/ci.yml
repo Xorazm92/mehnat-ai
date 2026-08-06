@@ -55,7 +55,7 @@ jobs:
       # schema and source tree as text and needs no database. Everything else in
       # test/**/*.test.ts runs in the integration job below.
       - name: Unit tests (domain + constitution)
-        run: npx vitest run bot/ lib/ test/constitution.test.ts
+        run: npx vitest run bot/ lib/ test/constitution.test.ts test/proxy-rbac.test.ts
 
   # ── Integration tests ─────────────────────────────────────────────────────
   # The other ~440 tests. They were written against a real Postgres and had never
