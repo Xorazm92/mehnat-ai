@@ -11,22 +11,25 @@
 
 | # | Chegara | Holat | Blok |
 |---|---|---|---|
-| T1 | Integratsiya testlari (425 ta) CI'da har PR'da ishlaydi | ❌ `.github/workflows/ci.yml` da izohga olingan | A4 |
+| T1 | Integratsiya testlari CI'da har PR'da ishlaydi | ✅ `integration` job yozildi (Postgres + Redis + seed) | A4 |
 | T2 | Har yangi server action uchun scope + IDOR testi | ✅ namuna: `test/obligation-access.test.ts` | doimiy |
 | T3 | Har sof funksiya uchun `*.spec.ts` (DB'siz) | ✅ 20 ta spec fayl | doimiy |
 | T4 | `proxy.ts` (butun view-RBAC) testlangan | ❌ **0 ta test** | A4 |
-| T5 | Konstitutsiya testi yashil | ❌ hali yozilmagan | A1 |
+| T5 | Konstitutsiya testi yashil | ✅ 6 assertion, CI'da | A1 |
 
 ## 2. Xavfsizlik
 
 | # | Chegara | Holat | Blok |
 |---|---|---|---|
-| S1 | `npm audit --omit=dev` = 0 high/critical | ❌ `xlsx@0.18.5` — ReDoS + prototype pollution | A4 |
+| S1 | `npm audit --omit=dev` = 0 high/critical | ❌ **12 ta**: 11 tasi `npm audit fix` bilan, 1 tasi (`xlsx`) tuzatilmaydi | A4 / alohida PR |
+| S1a | `next-auth`/`@auth/core` **critical** (3 ta advisory) | ❌ `beta.31 → beta.32` — auth, alohida PR va qo'lda smoke talab qiladi | alohida PR |
+| S1b | `next` 16.2.10 → 16.3.0 (**high**), `sharp`, `postcss`, `fast-uri` | ❌ freymvork minor bump — AGENTS.md bu Next.js standart emasligini ogohlantiradi | alohida PR |
+| S1c | `xlsx@0.18.5` ReDoS + prototype pollution | ❌ tuzatish yo'q → almashtirish kerak; 4 ta eksport implementatsiyasi bilan birga | A5 |
 | S2 | Har yozuv API/action'da zod validatsiya | ⚠️ qisman | doimiy |
 | S3 | Tashqi API'da rate limit | ⚠️ `lib/rateLimit.ts` bor; `/api/integration/1c` da yo'q | A6 |
 | S4 | Sirlar faqat env/vault; repo'da plaintext yo'q | ✅ `lib/crypto.ts` AES-256-GCM | ✅ |
-| S5 | Bildirishnoma qabul qiluvchisi chaqiruvchida emas | ❌ `server/audit.ts:133` | A4 |
-| S6 | O'z ishini o'zi tasdiqlash bloklangan — **hamma yo'lda** | ❌ `/deadlines` da teshik bor | A4 |
+| S5 | Bildirishnoma qabul qiluvchisi chaqiruvchida emas | ✅ `scopedStaffIds` bilan cheklandi + 7 test | A4 |
+| S6 | O'z ishini o'zi tasdiqlash bloklangan — **hamma yo'lda** | ✅ `REVIEWER_PERMISSIONS` + 5 test | A4 |
 
 ## 3. Kuzatuv
 

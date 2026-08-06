@@ -204,6 +204,29 @@ export const SENIOR_PERMISSIONS = new Set<string>([
   "kpi:penalize",
 ]);
 
+/**
+ * Senior roldan TASHQARI, aktyor o'sha firmada buxgalter BO'LMASLIGI ham shart
+ * bo'lgan amallar — ya'ni "o'z ishini o'zi tasdiqlash" taqiqi.
+ *
+ * Matritsa buni `lib/reportPermissions.ts#isCompanyReviewer` orqali boshidan
+ * bloklagan; `assertCompanyPermission` esa faqat ROLni tekshirgan, shuning
+ * uchun `/deadlines` da buxgalter ham, nazoratchi ham bo'lgan xodim o'z
+ * majburiyatini qabul qila olardi. Bu ro'yxat ikkala yo'lni tenglashtiradi.
+ *
+ * `obligation:cancel` ham shu yerda: bekor qilish terminal holat va u
+ * majburiyatni KPI'dan chiqaradi — o'tkazib yuborilgan muddatni o'zi bekor
+ * qilish aynan qochish yo'li.
+ *
+ * `obligation:assign` va `invoice:manage` bu yerda EMAS: ular baholash emas,
+ * boshqaruv amallari.
+ */
+export const REVIEWER_PERMISSIONS = new Set<string>([
+  "obligation:accept",
+  "obligation:reject",
+  "obligation:cancel",
+  "delay-reason:approve",
+]);
+
 type Db = Prisma.TransactionClient;
 
 /**
@@ -286,9 +309,21 @@ export async function assertCompanyPermission(
 
   const inScope = await db.company.findFirst({
     where: { id: companyId, ...companyScopeWhere(actor) },
-    select: { id: true },
+    select: {
+      id: true,
+      accountantId: true,
+      supervisorId: true,
+      chiefAccountantId: true,
+      bankClientId: true,
+      departmentRef: { select: { chiefAccountantId: true } },
+    },
   });
   if (!inScope) {
     throw new Error("Bu kompaniyaga ruxsatingiz yo'q");
+  }
+
+  // O'z ishini o'zi tasdiqlay olmaydi — senior rol ham bunga ruxsat bermaydi.
+  if (REVIEWER_PERMISSIONS.has(permission) && !isReviewerOn(inScope, actor)) {
+    throw new Error("Ruxsat yo'q: o'z ishingizni o'zingiz tasdiqlay olmaysiz");
   }
 }

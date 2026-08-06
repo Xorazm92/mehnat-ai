@@ -19,7 +19,7 @@ const {
 } = await import("@/server/obligations");
 
 const TAG = `vitest-oblacc-${Date.now()}`;
-const ids = { userA: "", userB: "", userS: "", company: "", template: "", obl1: "", obl2: "" };
+const ids = { userSA: "", ownCompany: "", ownObl: "", userA: "", userB: "", userS: "", company: "", template: "", obl1: "", obl2: "" };
 
 const actor = (id: string, role: string) => {
   SESSION.user.id = id;
@@ -84,16 +84,54 @@ beforeAll(async () => {
   });
   ids.template = t.id;
 
+  // Self-review fixture: a SUPERVISOR who is also the accountant on their own
+  // company. Senior by role, so every role-only gate lets them through.
+  const sa = await prisma.user.create({
+    data: { email: `${TAG}-sa@v.local`, fullName: "SA", passwordHash: "x", role: "supervisor" },
+    select: { id: true },
+  });
+  ids.userSA = sa.id;
+  const own = await prisma.company.create({
+    data: {
+      name: `${TAG} O'zi MChJ`,
+      inn: "000000001",
+      taxRegime: "vat",
+      isActive: true,
+      companyStatus: "active",
+      contractDate: new Date(Date.UTC(2097, 0, 1)),
+      accountantId: sa.id, // buxgalter ham O'ZI
+      supervisorId: sa.id, // nazoratchi ham O'ZI
+    },
+    select: { id: true },
+  });
+  ids.ownCompany = own.id;
+
   ids.obl1 = await makeObligation(6, "2097-M07");
   ids.obl2 = await makeObligation(7, "2097-M08");
+
+  const ownObl = await prisma.obligation.create({
+    data: {
+      companyId: own.id,
+      templateId: t.id,
+      templateVersion: 1,
+      periodStart: new Date(Date.UTC(2097, 8, 1)),
+      periodEnd: new Date(Date.UTC(2097, 9, 1)),
+      periodKey: "2097-M09",
+      dueAt: new Date(Date.UTC(2097, 9, 20)),
+      status: "sent",
+      responsibleUserId: sa.id,
+    },
+    select: { id: true },
+  });
+  ids.ownObl = ownObl.id;
 });
 
 afterAll(async () => {
   await prisma.obligation.deleteMany({ where: { templateId: ids.template } }); // events cascade
   await prisma.deadlineTemplate.deleteMany({ where: { id: ids.template } });
-  await prisma.company.deleteMany({ where: { id: ids.company } });
-  await prisma.auditLog.deleteMany({ where: { userId: { in: [ids.userA, ids.userB, ids.userS] } } });
-  await prisma.user.deleteMany({ where: { id: { in: [ids.userA, ids.userB, ids.userS] } } });
+  await prisma.company.deleteMany({ where: { id: { in: [ids.company, ids.ownCompany] } } });
+  await prisma.auditLog.deleteMany({ where: { userId: { in: [ids.userA, ids.userB, ids.userS, ids.userSA] } } });
+  await prisma.user.deleteMany({ where: { id: { in: [ids.userA, ids.userB, ids.userS, ids.userSA] } } });
   await prisma.$disconnect();
 });
 
@@ -141,6 +179,65 @@ describe("status transitions", () => {
 
   it("illegal transition is blocked (planned → accepted)", async () => {
     actor(ids.userS, "supervisor");
+    await expect(updateObligationStatus(ids.obl2, "accepted")).rejects.toThrow(/Noqonuniy/);
+  });
+});
+
+// A senior role is not a licence to sign off your own work. The matrix has
+// blocked this since lib/reportPermissions.ts (isCompanyReviewer returns false
+// when the actor is the company's accountant); assertCompanyPermission never
+// did, so /deadlines let a supervisor-who-is-also-the-accountant accept their
+// own obligation. Same hole reached reject and delay-reason approval.
+describe("self-review (senior on their own company)", () => {
+  let seq = 0;
+  /** Fresh obligation each time — these cases mutate status, so they must not share one. */
+  async function own(status: "sent" | "in_progress") {
+    const m = 9 + seq++;
+    const o = await prisma.obligation.create({
+      data: {
+        companyId: ids.ownCompany,
+        templateId: ids.template,
+        templateVersion: 1,
+        periodStart: new Date(Date.UTC(2098, m, 1)),
+        periodEnd: new Date(Date.UTC(2098, m + 1, 1)),
+        periodKey: `2098-M${String(m + 1).padStart(2, "0")}`,
+        dueAt: new Date(Date.UTC(2098, m + 1, 20)),
+        status,
+        responsibleUserId: ids.userSA,
+      },
+      select: { id: true },
+    });
+    return o.id;
+  }
+
+  it("cannot accept an obligation on a company where they are the accountant", async () => {
+    actor(ids.userSA, "supervisor");
+    await expect(updateObligationStatus(await own("sent"), "accepted")).rejects.toThrow(/o'z ishi/i);
+  });
+
+  it("cannot reject it either", async () => {
+    actor(ids.userSA, "supervisor");
+    await expect(updateObligationStatus(await own("sent"), "rejected")).rejects.toThrow(/o'z ishi/i);
+  });
+
+  it("cannot approve their own delay reason", async () => {
+    actor(ids.userSA, "supervisor");
+    const id = await own("in_progress");
+    await setDelayReason(id, "client_delay", "o'zim belgiladim");
+    await expect(approveDelayReason(id)).rejects.toThrow(/o'z ishi/i);
+  });
+
+  it("but may still move it forward as the person doing the work", async () => {
+    actor(ids.userSA, "supervisor");
+    const id = await own("in_progress");
+    await updateObligationStatus(id, "ready");
+    const o = await prisma.obligation.findUnique({ where: { id }, select: { status: true } });
+    expect(o!.status).toBe("ready");
+  });
+
+  it("an uninvolved supervisor is unaffected", async () => {
+    actor(ids.userS, "supervisor");
+    // Fails on the state machine, not on permission — the guard did not overreach.
     await expect(updateObligationStatus(ids.obl2, "accepted")).rejects.toThrow(/Noqonuniy/);
   });
 });

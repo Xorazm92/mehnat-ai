@@ -52,38 +52,78 @@ jobs:
 
       # DB-free specs: bot/**/*.spec.ts (DDD domain) + lib/**/*.spec.ts (pure
       # helpers shared with the app) + test/constitution.test.ts, which reads the
-      # schema and source tree as text and needs no database. The rest of
-      # test/**/*.test.ts is integration-level (needs a seeded Postgres) — see the
-      # commented job below to enable it once seeding is scripted in CI.
+      # schema and source tree as text and needs no database. Everything else in
+      # test/**/*.test.ts runs in the integration job below.
       - name: Unit tests (domain + constitution)
         run: npx vitest run bot/ lib/ test/constitution.test.ts
 
-  # ── Integration tests (opt-in) ────────────────────────────────────────────
-  # Requires a Postgres service + `prisma migrate deploy` + KPI-rule seeding. Uncomment
-  # and wire a seed step once the seed scripts are made CI-idempotent.
-  #
-  # integration:
-  #   name: Integration tests (Postgres)
-  #   runs-on: ubuntu-latest
-  #   services:
-  #     postgres:
-  #       image: postgres:16
-  #       env:
-  #         POSTGRES_USER: asro
-  #         POSTGRES_PASSWORD: asro
-  #         POSTGRES_DB: asro_test
-  #       ports: ["5432:5432"]
-  #       options: >-
-  #         --health-cmd "pg_isready -U asro" --health-interval 10s
-  #         --health-timeout 5s --health-retries 5
-  #   env:
-  #     DATABASE_URL: postgresql://asro:asro@localhost:5432/asro_test?schema=public
-  #     AUTH_SECRET: ci-test-secret-not-for-production
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with: { node-version-file: .nvmrc, cache: npm }
-  #     - run: npm ci
-  #     - run: npx prisma migrate deploy
-  #     - run: npx tsx scripts/seed-kpi-rules-v2.ts
-  #     - run: npm test
+  # ── Integration tests ─────────────────────────────────────────────────────
+  # The other ~440 tests. They were written against a real Postgres and had never
+  # run in CI, which meant the majority of this project's test suite protected
+  # nothing on a pull request.
+  integration:
+    name: Integration tests (Postgres)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: asro
+          POSTGRES_PASSWORD: asro
+          POSTGRES_DB: asro_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U asro" --health-interval 10s
+          --health-timeout 5s --health-retries 5
+      # Not strictly required — lib/rateLimit.ts falls back to in-memory and
+      # login-rate-limit.test.ts skips itself when Redis is absent. Present so
+      # those tests actually execute rather than silently opting out.
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s
+          --health-timeout 5s --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://asro:asro@localhost:5432/asro_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      # Test-only. lib/crypto.ts reads CREDENTIALS_SECRET ?? AUTH_SECRET, so this
+      # one value covers session signing and the credential vault.
+      AUTH_SECRET: ci-test-secret-not-for-production
+      NEXTAUTH_SECRET: ci-test-secret-not-for-production
+      AUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:3000
+      LOG_LEVEL: silent
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # migrate deploy, never migrate dev — see docs/CONSTITUTION.md.
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      # Two suites resolve KPI rules by name and throw a named error when the
+      # seed is missing (bot-kpi-projection, kpi-evidence-projection). The seed
+      # upserts on the unique `name`, so re-running is safe.
+      - name: Seed KPI rules
+        run: npx tsx scripts/seed-kpi-rules-v2.ts
+
+      # bot-escalation builds an obligation from whichever template exists and
+      # returns null when there are none — without this its verdict-button cases
+      # would quietly no-op and CI would look green while testing less.
+      # --no-generate: templates only, no obligation generation.
+      - name: Seed deadline templates
+        run: npx tsx scripts/seed-deadline-templates.ts --no-generate
+
+      - name: Integration tests
+        run: npm test

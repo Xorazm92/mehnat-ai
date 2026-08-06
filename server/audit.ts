@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole, isSeniorRole } from "@/lib/platform/permissions";
+import { scopedStaffIds } from "@/lib/platform/access";
 import { updateTag } from "next/cache";
 import type { AuditAction } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
@@ -148,6 +149,20 @@ export async function createNotification(data: {
   // yopib bo'lmaydi — lekin kontentni cheklaymiz: faqat ma'lum turlar, faqat
   // ilova ichidagi havola (tashqi/javascript: URL forging emas), oqilona uzunlik.
   if (!NOTIFICATION_TYPES.has(data.type)) throw new Error("Bildirishnoma turi noto'g'ri");
+
+  // QABUL QILUVCHI ham cheklanadi. Kontent tekshiruvi kimga yuborilishini
+  // cheklamagan: har qanday tizimga kirgan xodim ixtiyoriy foydalanuvchiga
+  // bildirishnoma yozib, "tasdiqlang" turidagi havola bilan uni ilovaning
+  // istalgan sahifasiga yo'naltira olardi. Endi faqat o'z portfeli bilan
+  // bog'liq xodimlar (va o'zi); admin uchun cheklov yo'q — `scopedStaffIds`
+  // unga `null` qaytaradi.
+  const allowed = await scopedStaffIds(prisma, {
+    id: session.user.id as string,
+    role: session.user.role as string,
+  });
+  if (allowed && !allowed.includes(data.userId)) {
+    throw new Error("Ruxsat yo'q: bu foydalanuvchiga bildirishnoma yubora olmaysiz");
+  }
   const link = data.link?.trim();
   if (link && (!link.startsWith("/") || link.startsWith("//"))) {
     throw new Error("Havola ilova ichidagi yo'l bo'lishi kerak");
