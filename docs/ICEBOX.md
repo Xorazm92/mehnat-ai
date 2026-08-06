@@ -77,6 +77,31 @@ asosiy ekranida turadi. Uning o'rniga **yetakchi ko'rsatkich** quriladi (kelajak
 arifmetika, tarix talab qilmaydi).
 **Nima o'zgarsa:** ≥ 12 oy majburiyat natijasi **va** ≥ 50 belgilangan xavf o'tishi.
 
+### UI arxitektura — auditdan qolganlar
+**Sana:** 2026-08-07 · **Manba:** [`AUDIT_REBASELINE.md`](./AUDIT_REBASELINE.md)
+
+**Matritsa virtualizatsiyasi** (~5 700 katak bir vaqtda mount qilinadi).
+*Nega hozir emas:* B blokda `OperationModule` `MonthlyReport` jadvalidan
+`Obligation` proyeksiyasiga aylanadi. Hozir virtualizatsiya qilingan grid qayta
+yoziladi. *Nima o'zgarsa:* B blok o'qish yo'lini almashtiradi.
+
+**`useSearchParams` — ulashiladigan filtrlangan ko'rinishlar** (bugun **0**).
+*Nega hozir emas:* C blokdagi Director Cockpit baribir shu mexanizmni talab
+qiladi (har blok bosiladigan va o'z filtri bilan havola bo'lishi kerak). Ikki
+marta qurmaslik uchun birga qilinadi. *Nima o'zgarsa:* C blok boshlanadi.
+
+**`.erp-table` migratsiyasi** (20 jadvaldan 1 tasida).
+*Nega hozir emas:* eng katta jadvallar B/C blokda o'zgaradi.
+
+**Inline `style={{}}`** — 2 049 → 2 005.
+*Nega hozir emas:* primitivlar qurilgan, lekin ommaviy migratsiya alohida qiymat
+bermaydi; fayl tegilganda ko'chsin. Bu kosmetik qarz, xavf emas.
+
+**Qolgan 15 ta qo'lda yozilgan modal.**
+*Nega hozir emas:* eng kattalari (`OperationModule`, `OrganizationModule`,
+`PayrollDrafts`, `ExpenseModule`) B blokda qayta yoziladi.
+*Ushlab turuvchi:* `lib/modalSemantics.spec.ts` ratchet — yangisi qo'shilmaydi.
+
 ---
 
 ## Darvoza ortidagilar
