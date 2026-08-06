@@ -180,14 +180,3 @@ export async function createNotification(data: {
   updateTag("notifications");
   return serialize(result);
 }
-
-export async function getUnreadCount() {
-  const session = await auth();
-  if (!session) return 0;
-
-  const userId = session.user.id;
-
-  return prisma.notification.count({
-    where: { userId, isRead: false },
-  });
-}

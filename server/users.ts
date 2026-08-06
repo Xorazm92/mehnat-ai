@@ -95,20 +95,6 @@ export async function getUserById(id: string) {
     })
   );
 }
-
-// Joriy foydalanuvchining o'z profili (har qanday autentifikatsiyalangan xodim ko'ra oladi)
-export async function getMyProfile() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-
-  return serialize(
-    await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: SAFE_USER_SELECT,
-    })
-  );
-}
-
 export async function createUser(data: {
   email: string;
   fullName: string;

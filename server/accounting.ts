@@ -28,17 +28,6 @@ function assertYearMonth(year: number, month: number) {
   if (!Number.isInteger(month) || month < 1 || month > 12) throw new Error("Oy 1-12 oralig'ida bo'lishi kerak");
 }
 
-export async function getAccountingPeriods(year?: number) {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  return serialize(
-    await prisma.accountingPeriod.findMany({
-      where: { companyId: null, ...(year ? { year } : {}) },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
-    })
-  );
-}
-
 async function setPeriodStatus(year: number, month: number, status: "OPEN" | "LOCKED", userId: string) {
   const existing = await prisma.accountingPeriod.findFirst({
     where: { companyId: null, year, month },
@@ -86,17 +75,6 @@ export async function unlockPeriod(year: number, month: number) {
   const userId = await requireSuperAdmin();
   assertYearMonth(year, month);
   return serialize(await setPeriodStatus(year, month, "OPEN", userId));
-}
-
-export async function getFinancialSnapshots() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  return serialize(
-    await prisma.financialSnapshot.findMany({
-      where: { companyId: null },
-      orderBy: { period: "desc" },
-    })
-  );
 }
 
 /**

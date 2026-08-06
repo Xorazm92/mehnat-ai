@@ -478,54 +478,6 @@ export async function rejectPerformance(id: string, reason: string) {
 
   return serialize(rejected);
 }
-
-// =====================================================
-// KPI SUMMARY (per employee per month)
-// =====================================================
-
-export async function getEmployeeKpiSummary(month: string) {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-
-  const role = session.user.role as string;
-  if (!isSeniorRole(role)) throw new Error("Forbidden");
-
-  const performances = await prisma.monthlyPerformance.findMany({
-    // Approved only — ADR-0001: nothing pays on 'submitted'.
-    where: { month, status: "approved" },
-    include: {
-      employee: { select: { id: true, fullName: true, role: true } },
-      rule: { select: { nameUz: true, category: true } },
-    },
-  });
-
-  // Group by employee
-  interface EmpKpiSummary {
-    employeeId: string;
-    employeeName: string;
-    employeeRole: (typeof performances)[number]["employee"]["role"];
-    totalScore: number;
-    entries: typeof performances;
-  }
-  const byEmployee: Record<string, EmpKpiSummary> = {};
-  for (const p of performances) {
-    const eid = p.employeeId;
-    if (!byEmployee[eid]) {
-      byEmployee[eid] = {
-        employeeId: eid,
-        employeeName: p.employee.fullName,
-        employeeRole: p.employee.role,
-        totalScore: 0,
-        entries: [],
-      };
-    }
-    byEmployee[eid].totalScore += Number(p.calculatedScore);
-    byEmployee[eid].entries.push(p);
-  }
-
-  return serialize(Object.values(byEmployee));
-}
-
 export async function getCompanyKpiRules(companyId: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
