@@ -72,12 +72,11 @@ describe("Modda 2 — Obligation yagona ish birligi", () => {
 
   it("no second 'company × period × status' table appears", () => {
     // Frozen allowlist of models keyed uniquely on a company and a period.
-    // Operation leaves in block A5, MonthlyReport in block B — shrinking is fine.
+    // Operation left in block A5; MonthlyReport leaves in block B — shrinking is fine.
     const ALLOWED = new Set([
       "MonthlyReport",
       "ReportProof",
       "Payment",
-      "Operation",
       "MonthlyPerformance",
       "AccountingPeriod",
       "FinancialSnapshot",

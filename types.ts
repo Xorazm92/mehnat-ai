@@ -408,15 +408,7 @@ export interface OperationEntry {
   stat_1_nnt?: string;
   jismoniy_ijara?: string;
 
-  // Legacy fields (backward compatibility for Dashboard, Analysis, etc.)
-  profitTaxStatus?: ReportStatus;
-  form1Status?: ReportStatus;
-  form2Status?: ReportStatus;
-  statsStatus?: ReportStatus;
-
   comment?: string;
-  profitTaxDeadline?: string;
-  statsDeadline?: string;
   updatedAt: string;
   assigned_accountant_id?: string;
   assigned_accountant_name?: string;
