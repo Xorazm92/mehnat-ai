@@ -74,12 +74,21 @@ interface TplSeed {
   /** Standart EFFECTIVE_FROM dan farq qilsa. */
   effectiveFrom?: Date;
   applicability?: { criteriaType: string; criteriaValue: string }[];
+  /** Matritsa ustuni kaliti (`OperationFieldKey`). null = ustuni yo'q. */
+  matrixKey?: string | null;
+  /**
+   * `draft` — generator uni OLMAYDI (`lifecycle: "active"` filtri), ya'ni
+   * majburiyat yaratilmaydi. Bosh buxgalter ko'rib chiqib `/admin/deadline-templates`
+   * dan `active` ga o'tkazadi. Standart: `active` (tasdiqlangan 15 talik).
+   */
+  lifecycle?: "draft" | "active";
 }
 
 // Tasdiqlangan to'plam (foydalanuvchi 2026-07-24). Sanalar = keyingi davr kuni.
 const TEMPLATES: TplSeed[] = [
   {
     code: "QQS_DECL",
+    matrixKey: "aylanma_qqs",
     name: "QQS deklaratsiyasi",
     obligationType: "tax_declaration",
     periodicity: "monthly",
@@ -89,6 +98,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "AYLANMA_SOLIQ",
+    matrixKey: "aylanma_qqs",
     name: "Aylanma soliq",
     obligationType: "tax_declaration",
     periodicity: "monthly",
@@ -98,6 +108,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "INPS_IJTIMOIY",
+    matrixKey: "inps",
     name: "INPS va ijtimoiy soliq",
     obligationType: "tax_declaration",
     periodicity: "monthly",
@@ -106,6 +117,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "DAROMAD_AGENT",
+    matrixKey: "daromad_soliq",
     name: "Daromad solig'i (soliq agenti)",
     obligationType: "tax_declaration",
     periodicity: "monthly",
@@ -114,6 +126,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "FOYDA_YILLIK",
+    matrixKey: "foyda_soliq",
     name: "Foyda solig'i hisoboti (choraklik)",
     obligationType: "tax_declaration",
     periodicity: "quarterly",
@@ -122,6 +135,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "MOLIYAVIY_YILLIK",
+    matrixKey: "moliyaviy_natija",
     name: "Moliyaviy hisobot",
     obligationType: "financial_statement",
     periodicity: "annual",
@@ -325,6 +339,7 @@ const TEMPLATES: TplSeed[] = [
   // Bonus: period_end_offset da fevral 31-kun muammosi umuman tug'ilmaydi.
   {
     code: "PAYROLL_CALC",
+    matrixKey: "hisoblangan_oylik",
     name: "Raschot zarplata (ish haqi)",
     obligationType: "internal_task",
     periodicity: "monthly",
@@ -334,6 +349,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "TAX_SCHEDULE",
+    matrixKey: "chiqadigan_soliqlar",
     name: "Soliq sana+summa (o'tgan oy)",
     obligationType: "internal_task",
     periodicity: "monthly",
@@ -342,6 +358,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "AR_AP",
+    matrixKey: "debitor_kreditor",
     name: "Debitor-kreditor hisoboti",
     obligationType: "internal_task",
     periodicity: "monthly",
@@ -350,6 +367,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "PNL_REPORT",
+    matrixKey: "foyda_va_zarar",
     name: "Foyda va zarar hisoboti",
     obligationType: "internal_task",
     periodicity: "monthly",
@@ -358,6 +376,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "CASHFLOW",
+    matrixKey: "pul_oqimlari",
     name: "Pul oqimlari hisoboti",
     obligationType: "internal_task",
     periodicity: "monthly",
@@ -366,6 +385,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "MATERIALS",
+    matrixKey: "tovar_ostatka",
     name: "Material hisoboti (o'tgan oy)",
     obligationType: "internal_task",
     periodicity: "monthly",
@@ -374,6 +394,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "LETTERS",
+    matrixKey: "xatlar",
     name: "Xatlar hisobi",
     obligationType: "internal_task",
     periodicity: "monthly",
@@ -382,6 +403,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "ONEC_BASE",
+    matrixKey: "one_c",
     name: "1C baza tayyor (o'tgan oy)",
     obligationType: "internal_task",
     periodicity: "monthly",
@@ -390,6 +412,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "PAYROLL_POSTED",
+    matrixKey: null, // matritsada ustuni yo'q — bu ichki reglament
     name: "Oylik chiqdi + 6710 Kt tekshiruvi",
     obligationType: "internal_task",
     periodicity: "monthly",
@@ -397,6 +420,51 @@ const TEMPLATES: TplSeed[] = [
     offsetDays: 0,
     effectiveFrom: EFFECTIVE_FROM_IN_MONTH,
   },
+
+  // ── QORALAMALAR ────────────────────────────────────────────────────────
+  // Manba: `lib/operationTemplates.ts:OPERATION_TEMPLATES` — firmaning O'Z
+  // muddat bilimi, u yerda 25 kalit uchun `deadlineDay` + `frequency` yozilgan
+  // va bugungacha HECH KIM o'qimagan (o'lik kod). Bu yerga ko'chirilgach u
+  // ishlaydigan ma'lumotga aylanadi.
+  //
+  // Hammasi `lifecycle: "draft"` — generator faqat `active` ni oladi, ya'ni
+  // BIRORTA majburiyat yaratilmaydi. Bosh buxgalter har birini ko'rib chiqib
+  // `/admin/deadline-templates` dan `active` ga o'tkazadi.
+  //
+  // Applicability ATAYLAB bo'sh qoldirilgan: "kimga tegishli" savoli aynan
+  // intervyu talab qiladigan qism, va bo'sh applicability = universal, ya'ni
+  // uni `draft` holatida qoldirish xavfsiz. `active` ga o'tkazishdan OLDIN
+  // to'ldirilishi shart — aks holda 213 firmaga tegib ketadi.
+  { code: "BUX_BALANS", matrixKey: "buxgalteriya_balansi", name: "Buxgalteriya balansi",
+    obligationType: "financial_statement", periodicity: "quarterly",
+    anchorType: "fixed_day_of_month", dueDay: 30, lifecycle: "draft" },
+  { code: "YER_SOLIQ", matrixKey: "yer_soligi", name: "Yer solig'i",
+    obligationType: "tax_declaration", periodicity: "annual",
+    anchorType: "fixed_day_of_month", dueDay: 25, lifecycle: "draft" },
+  { code: "MOL_MULK_SOLIQ", matrixKey: "mol_mulk_soligi", name: "Mol-mulk solig'i",
+    obligationType: "tax_declaration", periodicity: "annual",
+    anchorType: "fixed_day_of_month", dueDay: 25, lifecycle: "draft" },
+  { code: "SUV_SOLIQ", matrixKey: "suv_soligi", name: "Suv solig'i",
+    obligationType: "tax_declaration", periodicity: "annual",
+    anchorType: "fixed_day_of_month", dueDay: 25, lifecycle: "draft" },
+  { code: "BONAK", matrixKey: "bonak", name: "Bo'nak (avans)",
+    obligationType: "tax_payment", periodicity: "monthly",
+    anchorType: "fixed_day_of_month", dueDay: 10, lifecycle: "draft" },
+  { code: "ITPARK_OYLIK", matrixKey: "itpark_oylik", name: "IT Park hisoboti",
+    obligationType: "client_service", periodicity: "quarterly",
+    anchorType: "fixed_day_of_month", dueDay: 10, lifecycle: "draft" },
+  { code: "DIDOX_FLOW", matrixKey: "didox", name: "Didox (e-aylanma)",
+    obligationType: "internal_task", periodicity: "monthly",
+    anchorType: "fixed_day_of_month", dueDay: 10, lifecycle: "draft" },
+  { code: "AVTOKAMERAL", matrixKey: "avtokameral", name: "Avtokameral nazorat",
+    obligationType: "internal_task", periodicity: "monthly",
+    anchorType: "fixed_day_of_month", dueDay: 15, lifecycle: "draft" },
+  { code: "MY_MEHNAT", matrixKey: "my_mehnat", name: "my.mehnat.uz nazorati",
+    obligationType: "internal_task", periodicity: "monthly",
+    anchorType: "fixed_day_of_month", dueDay: 10, lifecycle: "draft" },
+  { code: "EKOLOGIYA", matrixKey: "ekologiya", name: "Ekologiya hisoboti",
+    obligationType: "tax_declaration", periodicity: "monthly",
+    anchorType: "fixed_day_of_month", dueDay: 15, lifecycle: "draft" },
 ];
 
 async function main() {
@@ -430,13 +498,15 @@ async function main() {
         dueDay: t.dueDay ?? null,
         dueMonth: t.dueMonth ?? null,
         offsetDays: t.offsetDays ?? null,
+        matrixKey: t.matrixKey ?? null,
         adjustmentPolicy: "next_workday",
         effectiveFrom,
         effectiveTo: null,
-        lifecycle: "active",
+        lifecycle: t.lifecycle ?? "active",
         active: true,
-        approvedById: createdBy ?? null,
-        approvedAt: new Date(),
+        // Qoralama tasdiqlanmagan — uni odam ko'rib chiqishi kerak.
+        approvedById: (t.lifecycle ?? "active") === "active" ? (createdBy ?? null) : null,
+        approvedAt: (t.lifecycle ?? "active") === "active" ? new Date() : null,
         createdBy: createdBy ?? null,
       },
       update: {
@@ -447,9 +517,11 @@ async function main() {
         dueDay: t.dueDay ?? null,
         dueMonth: t.dueMonth ?? null,
         offsetDays: t.offsetDays ?? null,
+        matrixKey: t.matrixKey ?? null,
         adjustmentPolicy: "next_workday",
         effectiveFrom,
-        lifecycle: "active",
+        // Qayta ekishda lifecycle TEGILMAYDI: bosh buxgalter `active` ga
+        // o'tkazgan qoralamani skript orqaga qaytarmasin.
         active: true,
       },
     });

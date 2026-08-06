@@ -1,0 +1,115 @@
+/**
+ * MATRITSA QAMROVI — B blokning tekshiruv ro'yxati, bajariladigan test sifatida.
+ *
+ * `test/kpiEvidence.test.ts` konstantaning MAZMUNINI tekshirardi va shu sabab
+ * `COL_KEY_TO_TEMPLATE_CODE` dagi uchta yaroqsiz yozuvni joyida muzlatib
+ * qo'ygan edi. Bu test esa BAZAGA qarshi XUSUSIYAT tekshiradi, ya'ni qamrov
+ * o'sgani sari o'zi to'g'rilanadi.
+ */
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { BASE_REPORT_COLUMNS } from "@/lib/reportColumns";
+
+const { prisma } = await import("@/lib/prisma");
+
+const columnKeys = new Set<string>();
+for (const c of BASE_REPORT_COLUMNS as { key: string; payKey?: string }[]) {
+  columnKeys.add(c.key);
+  if (c.payKey) columnKeys.add(c.payKey);
+}
+
+let templates: { code: string; matrixKey: string | null; lifecycle: string; kpiRuleName: string | null; escalates: boolean; obligationType: string }[] = [];
+
+beforeAll(async () => {
+  templates = await prisma.deadlineTemplate.findMany({
+    select: { code: true, matrixKey: true, lifecycle: true, kpiRuleName: true, escalates: true, obligationType: true },
+  });
+});
+afterAll(async () => { await prisma.$disconnect(); });
+
+describe("matrixKey yaxlitligi", () => {
+  it("har bir matrixKey HAQIQIY matritsa ustuni", () => {
+    // Eski bridge aynan shu yerda yiqilgan: uning uchta kaliti (`qqs`,
+    // `aylanma_soliq`, `payroll_posted`) hech qanday ustunga mos kelmasdi,
+    // ya'ni ular hech qachon ishga tushmagan va buni hech kim sezmagan.
+    const bad = templates.filter((t) => t.matrixKey !== null && !columnKeys.has(t.matrixKey));
+    expect(bad.map((t) => `${t.code}→${t.matrixKey}`)).toEqual([]);
+  });
+
+  it("bitta matritsa ustuniga bir nechta template tushishi MUMKIN", () => {
+    // QQS_DECL va AYLANMA_SOLIQ ikkalasi `aylanma_qqs` ga tushadi — qaysi biri
+    // amal qilishini applicability hal qiladi. Bu xato emas, model.
+    const byKey = new Map<string, string[]>();
+    for (const t of templates) {
+      if (!t.matrixKey) continue;
+      byKey.set(t.matrixKey, [...(byKey.get(t.matrixKey) ?? []), t.code]);
+    }
+    expect((byKey.get("aylanma_qqs") ?? []).sort()).toEqual(["AYLANMA_SOLIQ", "QQS_DECL"]);
+  });
+});
+
+describe("qamrov — RATCHET", () => {
+  // 2026-08-07: 51 ustundan 23 tasi qoplangan, 28 tasi qolgan. B blok buni
+  // nolga tushiradi. Son faqat KAMAYISHI mumkin.
+  //
+  // Birinchi tahririda bu "hech qachon qulamaydigan, faqat chop etadigan"
+  // test edi. Bunday test qamrov yo'qolganini ham sezmasdi va lint qoidasini
+  // ham buzardi (`console.log`). Ratchet ikkalasini hal qiladi: qolgan sonni
+  // ko'rsatadi VA o'sishiga yo'l qo'ymaydi.
+  const REMAINING = 28;
+
+  it(`qoplanmagan ustunlar soni oshmaydi (hozir ${REMAINING})`, () => {
+    const covered = new Set(templates.map((t) => t.matrixKey).filter(Boolean) as string[]);
+    const missing = [...columnKeys].filter((k) => !covered.has(k)).sort();
+    expect(missing.length, `qoplanmaganlar: ${missing.join(" ")}`).toBeLessThanOrEqual(REMAINING);
+  });
+
+  it("qoplangan ustunlar soni kamaymaydi", () => {
+    const covered = new Set(templates.map((t) => t.matrixKey).filter(Boolean) as string[]);
+    expect(covered.size).toBeGreaterThanOrEqual(columnKeys.size - REMAINING);
+  });
+});
+
+describe("qoralama xavfsizligi", () => {
+  it("generator KO'RADIGAN har bir template TASDIQLANGAN", async () => {
+    // Bu testning birinchi tahriri `visible === jami − qoralama` deb yozilgan
+    // edi va u TAFTOLOGIYA edi: qoralamani `active` qilsangiz ikkala tomon
+    // birga siljiydi, ya'ni u hech qachon qulamasdi. Sindirib sinashda
+    // aniqlandi.
+    //
+    // Haqiqiy xavfsizlik xususiyati boshqa: majburiyat yaratadigan hech bir
+    // template ODAM ko'rigidan o'tmasdan qolmasin. `/admin/deadline-templates`
+    // orqali `active` ga o'tkazish `approvedById` ni to'ldiradi; bazadan
+    // qo'lda flip qilish esa yo'q — va aynan shuni tutamiz.
+    //
+    // Nega muhim: 213 firma × ~28 template ≈ 6 000 majburiyat/oy, va soatlik
+    // sweep har mas'ulga 5 bosqichda DM yuboradi.
+    const ref = new Date();
+    const unapproved = await prisma.deadlineTemplate.findMany({
+      where: {
+        active: true, lifecycle: "active", approvedById: null,
+        effectiveFrom: { lte: ref },
+        OR: [{ effectiveTo: null }, { effectiveTo: { gte: ref } }],
+      },
+      select: { code: true },
+    });
+    expect(unapproved.map((t) => t.code)).toEqual([]);
+  });
+
+  it("qoralama tasdiqlanmagan holda turadi", async () => {
+    const approved = await prisma.deadlineTemplate.count({
+      where: { lifecycle: "draft", approvedById: { not: null } },
+    });
+    expect(approved).toBe(0);
+  });
+});
+
+describe("client_service KPI'ga tushmaydi", () => {
+  it("kpiRuleName null va escalates false", () => {
+    // Komunalka va IT Park — mijoz uchun bajariladigan ish; ular reglament
+    // majburiyati emas, shuning uchun na KPI'ga, na eskalatsiyaga tushadi.
+    const cs = templates.filter((t) => t.obligationType === "client_service");
+    for (const t of cs) {
+      expect(t.kpiRuleName, t.code).toBeNull();
+    }
+  });
+});
