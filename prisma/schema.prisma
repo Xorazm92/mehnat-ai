@@ -269,6 +269,8 @@ model Company {
   aliases              CompanyAlias[]
   obligationOverrides  CompanyObligationOverride[]
   oneCMappings         OneCCompanyMapping[]
+  /// KPI hajm normallashtirishi uchun og'irlik (lib/fairKpi.ts).
+  complexity           CompanyComplexity           @default(standard)
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -1475,6 +1477,14 @@ model PaymentReminder {
 // hisoblanadi) — ikki alohida o'lcham. Enum qiymatlari mavjud schema idiomiga
 // mos: kichik harf snake_case (qarang ReportStatus).
 // =====================================================
+
+// Firma murakkabligi — KPI hajmini normallashtirish uchun (lib/fairKpi.ts).
+enum CompanyComplexity {
+  simple
+  standard
+  complex
+  enterprise
+}
 
 enum ObligationStatus {
   planned

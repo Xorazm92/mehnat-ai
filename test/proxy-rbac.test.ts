@@ -138,6 +138,20 @@ describe("view RBAC", () => {
     expect(await go("/reports")).toBe("/403");
   });
 
+  it("kabina — faqat senior rollarga", async () => {
+    // Kabina butun portfelning xavfini va xodimlarning yuklamasini ko'rsatadi.
+    // Buxgalter uni ko'rmasligi kerak, va bu qoida navigatsiyada yashirish
+    // bilan emas, MARSHRUTDA majburlanadi.
+    for (const role of ["super_admin", "admin", "chief_accountant", "supervisor"]) {
+      staff(role);
+      expect(await go("/cockpit"), role).toBeNull();
+    }
+    for (const role of ["accountant", "bank_manager"]) {
+      staff(role);
+      expect(await go("/cockpit"), role).toBe("/403");
+    }
+  });
+
   it("super_admin hammasini ochadi", async () => {
     staff("super_admin");
     for (const p of ["/admin", "/payroll", "/organizations"]) {

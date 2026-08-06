@@ -19,6 +19,7 @@ import { getPrisma } from "@/lib/prisma";
 // Himoyalangan yo'llar
 const PROTECTED_ROUTES = [
   "/admin",
+  "/cockpit",
   "/dashboard",
   "/organizations",
   "/reports",

@@ -14,6 +14,7 @@ export type UserRole = (typeof ROLES)[keyof typeof ROLES];
 
 export type AppView =
   | "dashboard"
+  | "cockpit"
   | "organizations"
   | "staff"
   | "reports"
@@ -109,6 +110,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Capability[]> = {
 export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
   [ROLES.SUPER_ADMIN]: [
     "dashboard",
+    "cockpit",
     "organizations",
     "staff",
     "reports",
@@ -126,6 +128,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
   ],
   [ROLES.ADMIN]: [
     "dashboard",
+    "cockpit",
     "organizations",
     "staff",
     "reports",
@@ -147,6 +150,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
   ],
   [ROLES.CHIEF_ACCOUNTANT]: [
     "dashboard",
+    "cockpit",
     "organizations",
     "staff",
     "reports",
@@ -165,6 +169,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
   ],
   [ROLES.SUPERVISOR]: [
     "dashboard",
+    "cockpit",
     "organizations",
     "staff",
     "reports",
@@ -251,6 +256,7 @@ export const ROLE_COLORS: Record<UserRole, string> = {
 // Barcha view'lar ro'yxati (AppView union bilan mos) — admin RBAC editori uchun
 export const ALL_VIEWS: AppView[] = [
   "dashboard",
+  "cockpit",
   "organizations",
   "staff",
   "reports",
@@ -274,6 +280,7 @@ export const ALL_VIEWS: AppView[] = [
 
 export const VIEW_LABELS: Record<AppView, string> = {
   dashboard: "Boshqaruv paneli",
+  cockpit: "Kabina",
   organizations: "Firmalar",
   staff: "Xodimlar",
   reports: "Hisobotlar",

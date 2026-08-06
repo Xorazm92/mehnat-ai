@@ -2,6 +2,7 @@ import {
   LayoutDashboard, Building2, Users, FileText, Wallet, Receipt, CreditCard, Calendar, TrendingUp, Bell, ScrollText, UserCircle, Banknote, HandCoins, CalendarClock, ShieldCheck,
   Grid3x3, Trophy, CheckSquare, Settings, User, AlarmClock, Calculator, History, Lock, type LucideIcon,
   Scale,
+  Gauge, Package,
 } from "lucide-react";
 import type { AppView } from "@/lib/platform/permissions";
 import { KPI_CONFIG_ROLES, KPI_REVIEW_ROLES } from "@/lib/kpiTabs";
@@ -45,6 +46,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",     view: "dashboard",     label: "Boshqaruv paneli", icon: LayoutDashboard, group: "asosiy",  keywords: "dashboard bosh sahifa asosiy" },
+  { href: "/cockpit",       view: "cockpit",       label: "Kabina",           icon: Gauge,           group: "asosiy",  keywords: "cockpit kabina direktor umumiy" },
   { href: "/organizations", view: "organizations", label: "Firmalar",         icon: Building2,       group: "asosiy",  keywords: "korxona kompaniya mijoz tashkilot" },
   { href: "/staff",         view: "staff",         label: "Xodimlar",         icon: Users,           group: "asosiy",  keywords: "hodim kadr jamoa xizmatchi" },
   { href: "/kpi",           view: "kpi",           label: "KPI",              icon: TrendingUp,      group: "asosiy",  keywords: "reyting ball ko'rsatkich" },
