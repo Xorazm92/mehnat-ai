@@ -91,7 +91,7 @@ describe("period lock", () => {
   });
 
   it("unlock re-opens the period for writes", async () => {
-    const period = await unlockPeriod(YEAR, 5);
+    const period = await unlockPeriod(YEAR, 5, "tuzatish uchun ochildi");
     expect(period.status).toBe("OPEN");
 
     const entry = await createKassaEntry({

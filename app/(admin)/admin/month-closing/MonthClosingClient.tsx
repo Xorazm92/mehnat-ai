@@ -6,14 +6,15 @@
 // super_admin bilan qo'riqlangan — bu UI faqat qulaylik qatlami.
 
 import React, { useState } from "react";
-import { ModalLayer } from "@/components/ui/ModalLayer";
-import { CalendarCheck2, Lock, LockOpen, RefreshCw, Printer, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { CalendarCheck2, Lock, LockOpen, RefreshCw, Printer, AlertTriangle, CheckCircle2, XCircle, Archive } from "lucide-react";
 import { getMonthClosingBoard, validateMonth, closeMonth, reopenMonth } from "@/server/monthClosing";
+import { closeYear, getYearClosingState } from "@/server/accounting";
 import { formatNum } from "@/lib/format";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/actionError";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { ModalLayer } from "@/components/ui/ModalLayer";
 
 interface ChecklistItem {
   key: string;
@@ -52,6 +53,21 @@ interface Board {
   months: MonthRow[];
 }
 
+interface YearState {
+  year: number;
+  openingBalance: number | null;
+  openMonths: number[];
+  closed: boolean;
+  snapshot: {
+    id: string;
+    openingBalance: number;
+    closingBalance: number;
+    income: number;
+    outflow: number;
+    createdAt: string;
+  } | null;
+}
+
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   OPEN: { label: "OCHIQ", bg: "var(--info-bg)", color: "var(--accent-blue)" },
   READY_TO_CLOSE: { label: "TAYYOR", bg: "var(--success-bg)", color: "var(--success)" },
@@ -65,9 +81,11 @@ const MONTH_NAMES = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul",
 
 export default function MonthClosingClient({
   initialBoard,
+  initialYearState,
   isSuperAdmin,
 }: {
   initialBoard: Board;
+  initialYearState: YearState;
   isSuperAdmin: boolean;
 }) {
   const confirm = useConfirm();
@@ -77,10 +95,43 @@ export default function MonthClosingClient({
   const [busy, setBusy] = useState<string | null>(null);
   const [reopenTarget, setReopenTarget] = useState<MonthRow | null>(null);
   const [reopenReason, setReopenReason] = useState("");
+  const [yearState, setYearState] = useState<YearState>(initialYearState);
 
   const reload = async (y: number) => {
-    const b = await getMonthClosingBoard(y);
+    const [b, ys] = await Promise.all([getMonthClosingBoard(y), getYearClosingState(y)]);
     setBoard(b as unknown as Board);
+    setYearState(ys as unknown as YearState);
+  };
+
+  /**
+   * Yilni yopish. Server uchta shartni tekshiradi (snapshot yo'q · 12 oy LOCKED ·
+   * ledger butun) — bu yerda faqat birinchi ikkitasi OLDINDAN ko'rsatiladi, ya'ni
+   * tugma bosilmasidan oldin nima yetishmayotgani ma'lum bo'ladi.
+   */
+  const handleCloseYear = async () => {
+    const ok = await confirm({
+      title: `${yearState.year} yilini yopish`,
+      description:
+        "Snapshot yoziladi va 12 oyning hammasi QULFLANADI. Qaytarish uchun " +
+        "oyni alohida ochish kerak bo'ladi — sabab bilan va auditga tushadi.",
+      // Yozdirib tasdiqlash: yil yopilishi qaytarilmaydi va butun moliyaviy
+      // yilni qulflaydi — tasodifiy bosishdan himoya.
+      confirmText: String(yearState.year),
+      confirmLabel: "Yilni yopish",
+      tone: "danger",
+    });
+    if (!ok) return;
+
+    setBusy("close-year");
+    try {
+      await closeYear(yearState.year);
+      toast.success(`${yearState.year} yili yopildi`);
+      await reload(yearState.year);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
   };
 
   const changeYear = async (y: number) => {
@@ -169,6 +220,66 @@ export default function MonthClosingClient({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Yil yopilishi — oylik jadval bilan bir sahifada, chunki bu bitta ish:
+          12 oy yopiladi, keyin yil. Alohida admin moduli qo'shilmadi. */}
+      <div className="rounded-xl p-4" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "var(--input-bg)", color: "var(--text-secondary)" }}>
+              <Archive size={17} />
+            </div>
+            <div>
+              <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                {yearState.year} yil yopilishi
+              </div>
+              <div className="text-meta mt-0.5" style={{ color: "var(--text-muted)" }}>
+                {yearState.closed
+                  ? "Yil yopilgan — snapshot yozilgan va 12 oy qulflangan."
+                  : yearState.openMonths.length > 0
+                    ? `Avval barcha oylar yopilsin. Ochiq: ${yearState.openMonths.map((m) => MONTH_NAMES[m - 1]).join(", ")}`
+                    : "Barcha oylar yopilgan — yilni yopish mumkin."}
+              </div>
+            </div>
+          </div>
+
+          {isSuperAdmin && !yearState.closed && (
+            <button
+              onClick={handleCloseYear}
+              disabled={yearState.openMonths.length > 0 || busy !== null}
+              className="px-3.5 py-2 rounded-lg text-xs font-bold disabled:opacity-40 flex items-center gap-1.5"
+              style={{ background: "var(--danger)", color: "#fff" }}
+            >
+              <Lock size={13} />
+              {busy === "close-year" ? "Yopilmoqda…" : "Yilni yopish"}
+            </button>
+          )}
+        </div>
+
+        {yearState.snapshot && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4" style={{ borderTop: "1px solid var(--card-border)" }}>
+            {([
+              ["Ochilish qoldig'i", yearState.snapshot.openingBalance],
+              ["Kirim", yearState.snapshot.income],
+              ["Chiqim", yearState.snapshot.outflow],
+              ["Yopilish qoldig'i", yearState.snapshot.closingBalance],
+            ] as const).map(([label, value]) => (
+              <div key={label}>
+                <div className="text-micro uppercase" style={{ color: "var(--text-muted)" }}>{label}</div>
+                <div className="font-mono text-sm font-semibold mt-0.5" style={{ color: "var(--text-primary)" }}>
+                  {formatNum(value)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!yearState.closed && yearState.openingBalance !== null && (
+          <div className="text-meta mt-3 pt-3" style={{ color: "var(--text-muted)", borderTop: "1px solid var(--card-border)" }}>
+            O&apos;tgan yildan ochilish qoldig&apos;i: <span className="font-mono" style={{ color: "var(--text-primary)" }}>{formatNum(yearState.openingBalance)}</span>
+          </div>
+        )}
       </div>
 
       {/* Months table */}

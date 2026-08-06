@@ -24,12 +24,14 @@ technique:
 | | |
 |---|---|
 | **Kept** — Operational Finance | `lib/ledger.ts`, `LedgerEntry`, `Kassa`, `Expense`, `Payout`, `Payroll`, month closing |
-| **Archived** — bookkeeping ceremony | `server/accounting.ts`: period lock/unlock, year close, snapshot listing |
+| **Proposed for archive** — bookkeeping ceremony | `server/accounting.ts`: period lock/unlock, year close, snapshot listing |
 
-Archived, not deleted: `docs/archive/accounting-core/` records what it was and why it was removed,
-the git tag `archive/accounting-core-v1` pins the code, and one command restores it. Deleting
-working code because it is currently unused is how a team loses six weeks of thinking; the cost of
-keeping a pointer to it is a paragraph.
+*(That second row was the original proposal. It was amended once and then answered — see below.
+`server/accounting.ts` stays.)*
+
+The proposal was to archive rather than delete: a note in `docs/archive/`, a git tag pinning the
+code, one command to restore. Deleting working code because it is currently unused is how a team
+loses six weeks of thinking; the cost of keeping a pointer to it is a paragraph.
 
 ## Amendment, 2026-08-06 — the archive is deferred
 
@@ -48,9 +50,23 @@ the rest stays until the question is answered explicitly. The question is narrow
 > Does the firm want a period lock and a year close for its **own** operational cash, or does it
 > want neither because 1C already does it?
 
-If neither, archive the file and its two test suites together, as one decision with one record. If
-the lock is wanted, the code is not dead — it is unfinished, and it needs a caller rather than a
-tag. Either answer is fine; the wrong move is to archive it as though the question never existed.
+## Answered, 2026-08-07 — the firm wants it; the code was unfinished
+
+Year closing now has a UI, inside `/admin/month-closing` rather than as a new admin module: closing
+twelve months and then closing the year is one job, and Article 10 asks what a new screen deletes.
+`getYearClosingState` shows what is still missing *before* the button is pressed, and `unlockPeriod`
+now requires a reason, matching `reopenMonth`'s discipline — reopening a closed period silently is
+how a financial correction loses its "why".
+
+One thing is deliberately **not** surfaced: `lockPeriod`. `closeMonth` owns the
+`AccountingPeriod` state machine (`lib/periodLock.ts` says so in its header) and gates a month
+behind a checklist. `lockPeriod` writes the same rows with no checklist, so giving it a button
+would put a bypass next to the control it bypasses. `closeYear` does not use it — it writes periods
+directly inside its own transaction — so the export survives only as `test/period-lock.test.ts`'s
+lever for putting a period into LOCKED. That test's real subject is the write guard in
+`lib/periodLock.ts`, which is valuable and unaffected. Retiring the export means giving that test a
+different setup lever; worth doing, and small, but it is a separate change from shipping a
+feature.
 
 ## Consequences
 
@@ -64,5 +80,8 @@ tag. Either answer is fine; the wrong move is to archive it as though the questi
 - The firm's own staff payroll stays core. It is the output of KPI — 63 employees are paid from it —
   and it is not the same thing as keeping a client's books. Client payroll (`my_mehnat`,
   `hisoblangan_oylik`) is an **obligation**, tracked but not computed here.
-- If the firm ever does decide to keep its own books in ASRO, this ADR is the thing to supersede,
-  and the restore path is one tag away. That is the point of archiving rather than deleting.
+- Nothing was archived in the end. The two-step — amend when "zero callers" proved incomplete, then
+  answer — is the record worth keeping: the original reasoning was sound and its evidence was not,
+  and a deletion made on it would have taken 11 tests of the financial core with it.
+- If the firm ever decides to keep its own books in ASRO — statements, tax-purpose closing — this
+  ADR is the thing to supersede. Article 1 forbids that, and Article 1 is amendable by ADR.

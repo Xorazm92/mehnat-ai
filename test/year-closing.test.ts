@@ -16,7 +16,7 @@ vi.mock("@/lib/auth", () => ({ auth: async () => SESSION }));
 vi.mock("server-only", () => ({}));
 
 const { prisma } = await import("@/lib/prisma");
-const { closeYear, getOpeningBalance, unlockPeriod } = await import("@/server/accounting");
+const { closeYear, getOpeningBalance, unlockPeriod, getYearClosingState } = await import("@/server/accounting");
 const { createExpense } = await import("@/server/kassa");
 
 const TAG = `vitest-close-${Date.now()}`;
@@ -122,7 +122,7 @@ describe("year closing", () => {
   });
 
   it("unlocking one month of a closed year is possible for corrections", async () => {
-    const period = await unlockPeriod(YEAR, 9);
+    const period = await unlockPeriod(YEAR, 9, "sentabr xarajati kech kelib tushdi");
     expect(period.status).toBe("OPEN");
 
     const exp = await createExpense({
@@ -135,5 +135,40 @@ describe("year closing", () => {
     const row = await prisma.kassaEntry.findUnique({ where: { id: exp.id }, select: { id: true } });
     await prisma.ledgerEntry.deleteMany({ where: { sourceId: row!.id } });
     await prisma.kassaEntry.deleteMany({ where: { id: row!.id } });
+  });
+});
+
+// UI paneli uchun holat — tugma bosilmasidan OLDIN nima yetishmayotgani
+// ko'rinishi kerak, aks holda foydalanuvchi xato matnini kutadi.
+describe("getYearClosingState", () => {
+  it("yopilmagan yilda 12 oyning hammasi ochiq deb sanaladi", async () => {
+    const st = (await getYearClosingState(YEAR + 5)) as unknown as {
+      closed: boolean;
+      openMonths: number[];
+      snapshot: unknown;
+    };
+    expect(st.closed).toBe(false);
+    expect(st.snapshot).toBeNull();
+    // Qator umuman yo'q → "OPEN" deb qaraladi, ya'ni yopishga ruxsat berilmaydi.
+    expect(st.openMonths).toHaveLength(12);
+  });
+
+  it("yopilgan yilda snapshot qaytaradi", async () => {
+    const st = (await getYearClosingState(YEAR)) as unknown as {
+      closed: boolean;
+      openMonths: number[];
+      snapshot: { closingBalance: number; income: number } | null;
+    };
+    expect(st.closed).toBe(true);
+    expect(st.snapshot).not.toBeNull();
+    // Yuqoridagi test tuzatish uchun bitta oyni ochgan — panel buni ko'rsatadi.
+    expect(st.openMonths).toEqual([9]);
+  });
+
+  it("super_admin bo'lmagan ham KO'RA oladi (bu o'qish amali)", async () => {
+    SESSION.user.role = "chief_accountant";
+    const st = (await getYearClosingState(YEAR)) as unknown as { closed: boolean };
+    expect(st.closed).toBe(true);
+    SESSION.user.role = "super_admin";
   });
 });

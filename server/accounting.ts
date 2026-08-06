@@ -28,7 +28,13 @@ function assertYearMonth(year: number, month: number) {
   if (!Number.isInteger(month) || month < 1 || month > 12) throw new Error("Oy 1-12 oralig'ida bo'lishi kerak");
 }
 
-async function setPeriodStatus(year: number, month: number, status: "OPEN" | "LOCKED", userId: string) {
+async function setPeriodStatus(
+  year: number,
+  month: number,
+  status: "OPEN" | "LOCKED",
+  userId: string,
+  reason?: string,
+) {
   const existing = await prisma.accountingPeriod.findFirst({
     where: { companyId: null, year, month },
   });
@@ -40,6 +46,9 @@ async function setPeriodStatus(year: number, month: number, status: "OPEN" | "LO
           status,
           lockedBy: status === "LOCKED" ? userId : null,
           lockedAt: status === "LOCKED" ? new Date() : null,
+          ...(status === "OPEN" && reason
+            ? { reopenedBy: userId, reopenedAt: new Date(), reopenReason: reason }
+            : {}),
         },
       })
     : await prisma.accountingPeriod.create({
@@ -50,6 +59,9 @@ async function setPeriodStatus(year: number, month: number, status: "OPEN" | "LO
           status,
           lockedBy: status === "LOCKED" ? userId : null,
           lockedAt: status === "LOCKED" ? new Date() : null,
+          ...(status === "OPEN" && reason
+            ? { reopenedBy: userId, reopenedAt: new Date(), reopenReason: reason }
+            : {}),
         },
       });
 
@@ -59,7 +71,7 @@ async function setPeriodStatus(year: number, month: number, status: "OPEN" | "LO
     tableName: "AccountingPeriod",
     recordId: row.id,
     oldData: { status: existing?.status ?? "OPEN" },
-    newData: { year, month, status },
+    newData: { year, month, status, ...(reason ? { reason } : {}) },
   });
 
   return row;
@@ -71,10 +83,24 @@ export async function lockPeriod(year: number, month: number) {
   return serialize(await setPeriodStatus(year, month, "LOCKED", userId));
 }
 
-export async function unlockPeriod(year: number, month: number) {
+/**
+ * Yopilgan oyni tuzatish uchun ochish.
+ *
+ * SABAB MAJBURIY — `reopenMonth` bilan bir xil intizom. Yopilgan davrni jimgina
+ * ochish moliyaviy yozuvlarni o'zgartirish imkonini beradi va keyin nima uchun
+ * ochilgani hech qayerda qolmaydi; audit yozuvi sababsiz "kim" ga javob beradi,
+ * "nega" ga emas.
+ *
+ * Bu asosan YOPILGAN YIL ichidagi oyni tuzatish uchun (test/year-closing.test.ts
+ * shu holatni qamraydi). Oddiy oy uchun `reopenMonth` ishlatilsin — u to'liq
+ * holat mashinasidan o'tadi.
+ */
+export async function unlockPeriod(year: number, month: number, reason: string) {
   const userId = await requireSuperAdmin();
   assertYearMonth(year, month);
-  return serialize(await setPeriodStatus(year, month, "OPEN", userId));
+  const why = reason?.trim();
+  if (!why) throw new Error("Ochish sababi majburiy");
+  return serialize(await setPeriodStatus(year, month, "OPEN", userId, why));
 }
 
 /**
@@ -177,24 +203,47 @@ export async function getOpeningBalance(year: number) {
   return snapshot ? Number(snapshot.closingBalance) : null;
 }
 
-export async function getAccountingPeriods(year?: number) {
+/**
+ * Yil yopilishi paneli uchun holat.
+ *
+ * `closeYear` uchta shartni talab qiladi va ular UI'da OLDINDAN ko'rinishi
+ * kerak — aks holda tugma bosiladi va xato matni bilan qaytadi:
+ *   1) yil hali yopilmagan (snapshot yo'q),
+ *   2) 12 oyning hammasi LOCKED,
+ *   3) jurnal butun (Σdebit == Σcredit) — buni `closeYear` o'zi tekshiradi.
+ */
+export async function getYearClosingState(year: number) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-  return serialize(
-    await prisma.accountingPeriod.findMany({
-      where: { companyId: null, ...(year ? { year } : {}) },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
-    })
-  );
-}
 
-export async function getFinancialSnapshots() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  return serialize(
-    await prisma.financialSnapshot.findMany({
-      where: { companyId: null },
-      orderBy: { period: "desc" },
-    })
+  const [snapshot, periods, openingBalance] = await Promise.all([
+    prisma.financialSnapshot.findFirst({ where: { companyId: null, period: String(year) } }),
+    prisma.accountingPeriod.findMany({
+      where: { companyId: null, year },
+      select: { month: true, status: true },
+    }),
+    getOpeningBalance(year),
+  ]);
+
+  const byMonth = new Map(periods.map((p) => [p.month, p.status]));
+  const openMonths = Array.from({ length: 12 }, (_, i) => i + 1).filter(
+    (m) => (byMonth.get(m) ?? "OPEN") !== "LOCKED",
   );
+
+  return serialize({
+    year,
+    openingBalance,
+    openMonths,
+    closed: Boolean(snapshot),
+    snapshot: snapshot
+      ? {
+          id: snapshot.id,
+          openingBalance: Number(snapshot.openingBalance),
+          closingBalance: Number(snapshot.closingBalance),
+          income: Number(snapshot.income),
+          outflow: Number(snapshot.outflow),
+          createdAt: snapshot.createdAt,
+        }
+      : null,
+  });
 }
