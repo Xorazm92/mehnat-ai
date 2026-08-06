@@ -22,6 +22,9 @@ import {
   resolveTariffPreset,
   type TariffPreset,
 } from "@/lib/tariffPresets";
+import { overlayObligations, type ObligationCell } from "@/lib/domains/accounting/matrixRead";
+import { getMigrationFlags } from "@/lib/featureFlags";
+import { toObligationMonthKey } from "@/lib/periods";
 
 // Firma ro'yxati BIRIKTIRUV bo'yicha cheklanadi (lib/access.ts). Ilgari bu yerda
 // rol bo'yicha uch tarmoq bor edi va "senior" tarmog'i argumentsiz cache'langani
@@ -263,16 +266,58 @@ export const getCachedUsers = cache(async (userId: string, role: string) => {
 // KPI/Oylik/Hisobotlar sahifalari oylik hisobot-checklist ma'lumotini (Didox, 1C, soliqlar va h.k.)
 // kutadi (frontend turi: OperationEntry). Yillik/choraklik "Operation" statistikasi uchun
 // alohida `getCachedOperationSummary` bor.
+/**
+ * Proyeksiya oynasining pastki chegarasi.
+ *
+ * `AVAILABLE_PERIODS` 2024-yildan boshlanadi — matritsa undan oldingi davrni
+ * ko'rsata olmaydi. Chegarasiz bu so'rov to'liq rollout'dan keyin (~6 000
+ * majburiyat/oy) yillar bo'yicha o'sardi va har render'da o'qilardi.
+ */
+const PROJECTION_FLOOR = new Date(Date.UTC(2024, 0, 1));
+
 const _getCachedOperations = unstable_cache(
   async (userId: string, role: string) => {
+    const scope = scopeFor(userId, role);
     const reports = await prisma.monthlyReport.findMany({
-      where: { company: scopeFor(userId, role) },
+      where: { company: scope },
       orderBy: [{ period: "desc" }],
     });
-    return reports.map(mapMonthlyReportToOperationEntry);
+    const base = reports.map(mapMonthlyReportToOperationEntry);
+
+    // Bayroq o'chiq — bugungi xulq, bironta qo'shimcha so'rovsiz.
+    const flags = await getMigrationFlags(prisma);
+    if (!flags.matrix_read_projection) return base;
+
+    const rows = await prisma.obligation.findMany({
+      where: {
+        company: scope,
+        periodStart: { gte: PROJECTION_FLOOR },
+        template: { lifecycle: "active", matrixKey: { not: null } },
+      },
+      select: {
+        companyId: true, periodStart: true, periodEnd: true,
+        status: true, delayReason: true, updatedAt: true,
+        template: { select: { matrixKey: true } },
+      },
+      orderBy: { updatedAt: "asc" },
+    });
+
+    const cells: ObligationCell[] = rows.map((r) => ({
+      companyId: r.companyId,
+      matrixKey: r.template.matrixKey as string,
+      periodStart: r.periodStart,
+      periodEnd: r.periodEnd,
+      status: r.status,
+      delayReason: r.delayReason,
+      updatedAt: r.updatedAt,
+    }));
+    return overlayObligations(base, cells);
   },
   ["operations-scoped"],
-  { tags: ["operations", "companies"], revalidate: 300 }
+  // "obligations" — bayroq yoqilganda matritsa majburiyat o'zgarishidan ham
+  // eskiradi, va `revalidateTag("obligations")` allaqachon har status
+  // o'zgarishida chaqiriladi.
+  { tags: ["operations", "companies", "obligations"], revalidate: 300 }
 );
 
 /** Operatsiyalarni (oylik hisobot-checklist) cache'dan olish (render ichida deduplicate) */
