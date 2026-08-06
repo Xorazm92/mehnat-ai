@@ -33,12 +33,30 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Modda 10 — every PR touching app/ or components/ must name the product
+      # promise it strengthens (docs/PRODUCT.md §2). The machine enforces that a
+      # promise is named; a human still decides whether the claim is true.
+      - name: Constitution — Modda 10 (promise id)
+        if: github.event_name == 'pull_request'
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD \
+             | grep -qE '^(app|components)/'; then
+            if ! printf '%s' "$BODY" | grep -qE '\bP[1-5]\b'; then
+              echo "::error::PR touches app/ or components/ but names no promise."
+              echo "Add P1…P5 to the PR body — see docs/CONSTITUTION.md Modda 10."
+              exit 1
+            fi
+          fi
+
       # DB-free specs: bot/**/*.spec.ts (DDD domain) + lib/**/*.spec.ts (pure
-      # helpers shared with the app). The test/**/*.test.ts suite is
-      # integration-level (needs a seeded Postgres) — see the commented job
-      # below to enable it once seeding is scripted in CI.
-      - name: Unit tests (domain)
-        run: npx vitest run bot/ lib/
+      # helpers shared with the app) + test/constitution.test.ts, which reads the
+      # schema and source tree as text and needs no database. The rest of
+      # test/**/*.test.ts is integration-level (needs a seeded Postgres) — see the
+      # commented job below to enable it once seeding is scripted in CI.
+      - name: Unit tests (domain + constitution)
+        run: npx vitest run bot/ lib/ test/constitution.test.ts
 
   # ── Integration tests (opt-in) ────────────────────────────────────────────
   # Requires a Postgres service + `prisma migrate deploy` + KPI-rule seeding. Uncomment
