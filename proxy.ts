@@ -27,7 +27,6 @@ const PROTECTED_ROUTES = [
   "/kpi",
   "/payroll",
   "/staff",
-  "/audit-logs",
   "/cabinet",
   "/expenses",
   "/kassa",

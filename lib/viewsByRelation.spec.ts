@@ -29,7 +29,6 @@ const NEVER_BY_RELATION: AppView[] = [
   "kassa",
   "kassa_expense",
   "organizations",
-  "audit_logs",
   "admin",
   "settings",
 ];

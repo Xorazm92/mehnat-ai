@@ -29,7 +29,6 @@ export type AppView =
   | "cabinet"
   | "cabinet_bank"
   | "payroll"
-  | "audit_logs"
   | "attendance"
   | "notifications"
   | "settings"
@@ -120,7 +119,6 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "expenses",
     "cabinet",
     "payroll",
-    "audit_logs",
     "attendance",
     "notifications",
     "settings",
@@ -142,7 +140,6 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "expenses",
     "cabinet",
     "payroll",
-    "audit_logs",
     "attendance",
     "notifications",
     "settings",
@@ -269,7 +266,6 @@ export const ALL_VIEWS: AppView[] = [
   "cabinet",
   "cabinet_bank",
   "payroll",
-  "audit_logs",
   "attendance",
   "notifications",
   "settings",
@@ -293,7 +289,6 @@ export const VIEW_LABELS: Record<AppView, string> = {
   cabinet: "Kabinet",
   cabinet_bank: "Bank kabineti",
   payroll: "Oylik",
-  audit_logs: "Audit jurnali",
   attendance: "Davomat",
   notifications: "Xabarlar",
   settings: "Sozlamalar",

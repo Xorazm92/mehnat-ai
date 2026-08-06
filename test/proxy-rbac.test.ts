@@ -140,7 +140,7 @@ describe("view RBAC", () => {
 
   it("super_admin hammasini ochadi", async () => {
     staff("super_admin");
-    for (const p of ["/admin", "/audit-logs", "/payroll"]) {
+    for (const p of ["/admin", "/payroll", "/organizations"]) {
       expect(await go(p), p).toBeNull();
     }
   });

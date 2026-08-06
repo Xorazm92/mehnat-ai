@@ -72,7 +72,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/cabinet",       view: "cabinet",       label: "Mening kabinetim", icon: UserCircle,      group: "kabinet", keywords: "profil shaxsiy kabinet" },
   { href: "/cabinet/bank",  view: "cabinet_bank",  label: "Bank kabineti",    icon: Banknote,        group: "kabinet", parent: "/cabinet", keywords: "bank klient" },
   { href: "/admin",         view: "admin",         label: "Admin panel",      icon: ShieldCheck,     group: "admin",   keywords: "admin sozlash boshqaruv" },
-  { href: "/audit-logs",    view: "audit_logs",    label: "Audit jurnali",    icon: ScrollText,      group: "admin",   keywords: "audit jurnal log tarix" },
   // `/settings` menyudan olib tashlandi — u `/cabinet` ning KUCHSIZROQ
   // nusxasi edi: bir xil profil formasi va bir xil parol o'zgartirish, faqat
   // JSHSHIR/jinsi/tug'ilgan sana/ma'lumot maydonlarisiz. Ikkita joyda bitta

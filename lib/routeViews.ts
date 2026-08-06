@@ -15,7 +15,6 @@ import type { AppView } from "@/lib/platform/permissions";
  */
 export function pathToView(path: string): AppView | null {
   if (path.startsWith("/admin")) return "admin";
-  if (path.startsWith("/audit-logs")) return "audit_logs";
   if (path.startsWith("/organizations")) return "organizations";
   if (path.startsWith("/staff")) return "staff";
   if (path.startsWith("/reports")) return "reports";

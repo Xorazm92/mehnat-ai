@@ -114,11 +114,6 @@ export function AdminOverview({ role, stats, recentAudit }: Props) {
                           >
                             <Icon size={17} />
                           </div>
-                          {m.status === "soon" && (
-                            <span className="text-2xs font-bold px-1.5 py-0.5 rounded-lg uppercase" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
-                              Soon
-                            </span>
-                          )}
                         </div>
                         <div className="mt-2.5 text-body font-bold" style={{ color: "var(--text-primary)" }}>
                           {m.labelUz}

@@ -88,18 +88,6 @@ export function AdminSidebar({ userRole }: { userRole: string }) {
                     >
                       <Icon size={16} className="shrink-0" />
                       <span className="truncate flex-1">{m.labelUz}</span>
-                      {m.status === "soon" && (
-                        <span
-                          className="ml-auto font-mono text-micro font-semibold px-1.5 py-0.5 rounded uppercase"
-                          style={{
-                            background: "var(--warning-bg)",
-                            color: "var(--warning)",
-                            letterSpacing: "0.06em",
-                          }}
-                        >
-                          Soon
-                        </span>
-                      )}
                     </Link>
                   );
                 })}
