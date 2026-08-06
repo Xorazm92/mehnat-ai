@@ -56,7 +56,8 @@
 
 | # | Chegara | Holat | Blok |
 |---|---|---|---|
-| U1 | Klaviatura navigatsiyasi + fokus tuzog'i asosiy oqimlarda | ⚠️ `design-system/ACCESSIBILITY.md` A1–A9 ochiq | D |
+| U1 | Klaviatura navigatsiyasi + fokus tuzog'i asosiy oqimlarda | ⚠️ `components/ui/Modal` primitivi tayyor; **15 ta qo'lda yozilgan modal** hali ko'chmagan — ratchet bilan ushlab turilgan (`lib/modalSemantics.spec.ts`) | D |
+| U1a | Ochiq dialog ustida polling to'xtaydi | ⚠️ `useAutoRefresh` markazlashgan tekshiruv qiladi, lekin u faqat `role="dialog"` bo'lgan 5 ta modalda ishlaydi — qolgan 15 tasi ko'rinmaydi | U1 bilan birga |
 | U2 | WCAG AA kontrast | ⚠️ | D |
 | U3 | Cockpit LCP < 2.5s | ❌ o'lchanmagan | C2 |
 | U4 | Matritsa 213×47 < 1.5s | ❌ o'lchanmagan | B2 |

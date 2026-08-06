@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
-import { ModalLayer } from "@/components/ui/ModalLayer";
 import { Staff, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance, KPIRule, CompanyKPIRule } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
 import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2, SlidersHorizontal, Users, Briefcase, TrendingUp, AlertTriangle, Clock, Trash2 } from 'lucide-react';
@@ -27,6 +26,7 @@ import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
 import { MonthPicker } from "./ui/MonthPicker";
 import { useDismissable } from "@/hooks/useDismissable";
+import { Modal } from "@/components/ui/Modal";
 
 interface Props {
     staff: Staff[];
@@ -439,10 +439,18 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
             setBusyAdj(null);
         }
     };
+    const [savingAdj, setSavingAdj] = useState(false);
 
     const handleAddAdjustment = async () => {
         if (!editingAdj) return;
+        // Summa validatsiyasi: 0 yuborilishi mumkin edi va u jimgina yozilardi.
+        if (!Number.isFinite(editingAdj.amount) || Math.abs(editingAdj.amount) <= 0) {
+            toast.error("Summa noldan katta bo'lishi kerak");
+            return;
+        }
+        if (savingAdj) return;
 
+        setSavingAdj(true);
         try {
             if (editingAdj.type === 'payment') {
                 // REAL pul berish — Payout jadvaliga (majburiyat tekshiruvi va
@@ -467,6 +475,8 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
         } catch (e) {
             console.error(e);
             toast.error((e as any)?.message || 'Xatolik yuz berdi');
+        } finally {
+            setSavingAdj(false);
         }
     };
 
@@ -691,54 +701,58 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
             )}
 
             {/* Adjustment Modal */}
-            {editingAdj && (
-                <ModalLayer open={!!editingAdj} onClose={() => setEditingAdj(null)} label="Oylik tuzatmasi">
-                    <div className="w-full max-w-md rounded-xl overflow-hidden animate-scale-in"
-                        style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}
-                        onClick={e => e.stopPropagation()}
-                        onKeyDown={submitOnCtrlEnter(handleAddAdjustment)}>
-                        <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: "1px solid var(--card-border)" }}>
-                            <div>
-                                <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-                                    {editingAdj.type === "bonus" ? "Bonus belgilash" :
-                                        editingAdj.type === "jarima" ? "Jarima yozish" :
-                                            editingAdj.type === "avans" ? "Avans berish" : "Maosh to'lovi"}
-                                </h3>
-                                <p className="text-meta mt-0.5" style={{ color: "var(--text-muted)" }}>Miqdor va sababni kiriting</p>
-                            </div>
-                            <button onClick={() => setEditingAdj(null)}
-                                className="p-2 rounded-lg transition-all icon-btn-danger"
-                                style={{ color: "var(--text-muted)" }}>
-                                <MinusCircle size={18} className="rotate-45" />
-                            </button>
+
+            {/* Tuzatish modali — `Modal` primitivi orqali: fokus tuzog'i, Escape,
+                fokusni qaytarish va `role="dialog"` shu yerdan keladi. Oxirgisi
+                `useAutoRefresh` ning ochiq dialog ustida pauza qilishini ham
+                yoqadi — ilgari bu forma ostidan 15 soniyalik refresh o'tardi. */}
+            <Modal
+                open={Boolean(editingAdj)}
+                onClose={() => setEditingAdj(null)}
+                dismissable={!savingAdj}
+                size="md"
+                title={
+                    editingAdj?.type === "bonus" ? "Bonus belgilash" :
+                    editingAdj?.type === "jarima" ? "Jarima yozish" :
+                    editingAdj?.type === "avans" ? "Avans berish" : "Maosh to'lovi"
+                }
+                description="Miqdor va sababni kiriting"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="secondary" size="md" onClick={() => setEditingAdj(null)} disabled={savingAdj} className="flex-1">
+                            Bekor qilish
+                        </Button>
+                        <Button variant="primary" size="md" onClick={handleAddAdjustment} disabled={savingAdj} className="flex-1">
+                            <Save size={15} /> {savingAdj ? "Saqlanmoqda…" : "Saqlash"}
+                        </Button>
+                    </div>
+                }
+            >
+                {editingAdj && (
+                    <div className="space-y-4" onKeyDown={submitOnCtrlEnter(handleAddAdjustment)}>
+                        <div>
+                            <label htmlFor="adj-amount" className="block text-meta font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                                Summa (so&apos;m)
+                            </label>
+                            <input id="adj-amount" type="text" inputMode="numeric" autoFocus
+                                className="erp-input text-sm font-bold"
+                                value={groupDigits(editingAdj.amount || "")}
+                                onChange={e => setEditingAdj({ ...editingAdj, amount: Number(ungroupDigits(e.target.value)) })}
+                                placeholder="0" />
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-meta font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Summa (so&apos;m)</label>
-                                <input type="text" inputMode="numeric"
-                                    className="erp-input text-sm font-bold"
-                                    value={groupDigits(editingAdj.amount || "")}
-                                    onChange={e => setEditingAdj({ ...editingAdj, amount: Number(ungroupDigits(e.target.value)) })}
-                                    placeholder="0" />
-                            </div>
-                            <div>
-                                <label className="block text-meta font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Sabab / Izoh</label>
-                                <textarea
-                                    className="erp-input min-h-[90px] resize-none"
-                                    value={editingAdj.reason}
-                                    onChange={e => setEditingAdj({ ...editingAdj, reason: e.target.value })}
-                                    placeholder="Tafsilotlarni kiriting..." />
-                            </div>
-                        </div>
-                        <div className="px-6 pb-6 flex gap-3">
-                            <Button variant="secondary" size="md" onClick={() => setEditingAdj(null)} className="flex-1">Bekor qilish</Button>
-                            <Button variant="primary" size="md" onClick={handleAddAdjustment} className="flex-1">
-                                <Save size={15} /> Saqlash
-                            </Button>
+                        <div>
+                            <label htmlFor="adj-reason" className="block text-meta font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                                Sabab / Izoh
+                            </label>
+                            <textarea id="adj-reason"
+                                className="erp-input min-h-[90px] resize-none"
+                                value={editingAdj.reason}
+                                onChange={e => setEditingAdj({ ...editingAdj, reason: e.target.value })}
+                                placeholder="Tafsilotlarni kiriting..." />
                         </div>
                     </div>
-                </ModalLayer>
-            )}
+                )}
+            </Modal>
         </div>
     );
 };
