@@ -103,8 +103,6 @@ describe("Modda 2 — Obligation yagona ish birligi", () => {
 
 describe("Modda 4a — bog'liqlik o'qi ichkariga qaraydi", () => {
   // AST, not regex: regex misses `import type`, re-exports and multi-line imports.
-  // Vacuously green until block A2 creates lib/engines/ — the rule bites the
-  // moment the directory exists, which is exactly when it can be obeyed.
   const ENGINES = join(ROOT, "lib/engines");
 
   function internalImports(file: string): string[] {
@@ -134,40 +132,23 @@ describe("Modda 4a — bog'liqlik o'qi ichkariga qaraydi", () => {
 });
 
 describe("Modda 4b — core domen lug'atini bilmaydi", () => {
-  // RATCHET. Files destined for lib/engines/ (docs/ARCHITECTURE.md §3), checked
-  // where they live today so the rule bites before the move.
+  // RATCHET — may only fall. Opened at 20 (2026-08-06); block A3 took it to 7 by
+  // replacing CompanyFacts with SubjectFacts, so the 13 taxRegime/statsType hits
+  // in applicability.ts and obligations.ts are gone.
   //
-  // Baseline 20, measured 2026-08-06, and it is two different things:
-  //   13 — real leakage: applicability.ts (7) + obligations.ts (6), all
-  //        taxRegime/statsType. Block A3 removes these via SubjectFacts.
-  //    7 — role labels: "bosh buxgalter" in obligationSweep.ts (3) and
-  //        escalation.ts (4). Organisational, not fiscal — an audit firm has a
-  //        chief auditor. Accepted leak, capped so it cannot grow.
-  const BASELINE = 20;
+  // The remaining 7 are role labels: "bosh buxgalter" in obligationSweep.ts (3)
+  // and escalation.ts (4). Organisational, not fiscal — an audit firm has a chief
+  // auditor, and the L1→L2 ladder itself is generic. Retiring them means moving
+  // escalation's display strings into the domain layer, which is not worth a PR
+  // today; capped here so the debt cannot grow.
+  const BASELINE = 7;
   const VOCAB = /\b(soliq|qqs|inps|vat|taxRegime|statsType|didox|buxgalter)\b/gi;
-
-  const DESTINED = [
-    "lib/deadlines.ts",
-    "lib/applicability.ts",
-    "lib/obligations.ts",
-    "lib/obligationRun.ts",
-    "lib/obligationDelay.ts",
-    "lib/obligationWorkflow.ts",
-    "lib/taskWorkflow.ts",
-    "lib/taskSla.ts",
-    "lib/obligationSweep.ts",
-    "lib/escalation.ts",
-    "lib/dailyDigest.ts",
-    "lib/margin.ts",
-    "lib/timeCost.ts",
-  ];
 
   it(`domain vocabulary in engine-bound files never grows (baseline ${BASELINE})`, () => {
     const perFile: Record<string, number> = {};
     let total = 0;
-    for (const rel of [...DESTINED, ...walk(join(ROOT, "lib/engines")).map((f) => relative(ROOT, f))]) {
-      const p = join(ROOT, rel);
-      if (!existsSync(p)) continue; // moved in A2 — counted at its new path
+    for (const p of walk(join(ROOT, "lib/engines"))) {
+      const rel = relative(ROOT, p);
       const n = (readFileSync(p, "utf8").match(VOCAB) ?? []).length;
       if (n) perFile[rel] = n;
       total += n;

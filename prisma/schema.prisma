@@ -260,13 +260,14 @@ model Company {
   obligations          Obligation[]
   tasks                Task[]
   debtSnapshots        DebtSnapshot[]
-  contracts            Contract[]            @relation("ClientContracts")
-  ownFirmContracts     Contract[]            @relation("OwnFirmContracts")
-  ownFirmAccounts      BankAccount[]         @relation("OwnFirmAccounts")
-  ownFirmFiscalDevices FiscalDevice[]        @relation("OwnFirmFiscalDevices")
-  ownFirmChannels      DisbursementChannel[] @relation("ChannelOwnFirm")
+  contracts            Contract[]                  @relation("ClientContracts")
+  ownFirmContracts     Contract[]                  @relation("OwnFirmContracts")
+  ownFirmAccounts      BankAccount[]               @relation("OwnFirmAccounts")
+  ownFirmFiscalDevices FiscalDevice[]              @relation("OwnFirmFiscalDevices")
+  ownFirmChannels      DisbursementChannel[]       @relation("ChannelOwnFirm")
   bankTransactions     BankTransaction[]
   aliases              CompanyAlias[]
+  obligationOverrides  CompanyObligationOverride[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -662,10 +663,10 @@ model Document {
   title   String
   note    String?
 
-  fileData String  @db.Text // data:<mime>;base64,...
+  fileData String @db.Text // data:<mime>;base64,...
   fileName String
   fileType String
-  fileSize Int     @default(0)
+  fileSize Int    @default(0)
 
   /// Hujjat sanasi (imzolangan/berilgan) va amal qilish muddati.
   /// `expiresAt` bo'lsa muddati yaqinlashganda ogohlantirish ko'rsatiladi —
@@ -675,8 +676,8 @@ model Document {
 
   uploadedById   String?
   uploadedByName String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   /// Moliyaviy bo'lmasa ham yumshoq o'chiriladi: shartnoma skani xato bilan
   /// o'chirilsa uni qaytarib bo'lmasdi.
@@ -1568,8 +1569,9 @@ model DeadlineTemplate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  applicability TemplateApplicability[]
-  obligations   Obligation[]
+  applicability       TemplateApplicability[]
+  obligations         Obligation[]
+  obligationOverrides CompanyObligationOverride[]
 
   @@unique([code, version])
   @@index([lifecycle])
@@ -1609,6 +1611,34 @@ model BusinessCalendarDay {
 // Muayyan kompaniya+template+davr uchun aniq majburiyat.
 // status = ish-jarayoni; isOverdue = (dueAt < now AND status NOT IN
 // (accepted, cancelled)) — HISOBLANADI, saqlanmaydi.
+// Firma darajasidagi ISTISNO — shablon qoidasini bitta firmada
+// o'chiradi, muddatini surdi yoki mas'ulini almashtiradi.
+//
+// Bu model bir marta olib tashlangan edi ("UI'ga ulanmagan, bitta ham yozuvi
+// yo'q"). E'tiroz o'rinli edi va u qoplandi: endi istisnoga admin ekrani bor
+// (components/admin/TemplateOverridesPanel.tsx) va har birida `reason` majburiy
+// — ya'ni qoida ko'rinmas emas.
+model CompanyObligationOverride {
+  id         String           @id @default(uuid())
+  companyId  String
+  company    Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  templateId String
+  template   DeadlineTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  action            String // disable | custom_due | reassign
+  customDueDay      Int?
+  customOffsetDays  Int?
+  responsibleUserId String?
+  reason            String
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, templateId])
+  @@index([companyId])
+}
+
 model Obligation {
   id              String           @id @default(uuid())
   companyId       String

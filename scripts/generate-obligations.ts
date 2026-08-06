@@ -21,6 +21,7 @@
 import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { runGenerationLocked } from "@/lib/engines/obligation/obligationRun";
+import { loadCompanySubjects } from "@/lib/domains/accounting/subjects";
 
 function parseCatchUp(): number {
   const arg = process.argv.find((a) => a.startsWith("--catch-up="));
@@ -50,7 +51,7 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n📅 MAJBURIYAT GENERATSIYASI (faol shablon: ${templates}, catch-up: ${catchUpMonths} oy)\n`);
-  const gen = await runGenerationLocked(prisma, { catchUpMonths, createdBy: admin?.id });
+  const gen = await runGenerationLocked(prisma, { catchUpMonths, createdBy: admin?.id, loadSubjects: loadCompanySubjects });
 
   if (gen.skipped === "locked") {
     // Jimgina "0 yaratildi" deb ketish eng yomoni: operator generatsiya

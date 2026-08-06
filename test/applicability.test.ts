@@ -1,40 +1,46 @@
+// Engine qatlami — DOMEN-NEYTRAL. Bu yerda soliq rejimi ham, statistika turi
+// ham yo'q: engine faqat `attributes` lug'atini taqqoslaydi. Buxgalteriya
+// ustunlari qanday atributga aylanishi domen testida:
+// lib/domains/accounting/subjects.spec.ts
 import { describe, it, expect } from "vitest";
 import {
-  isCompanyEligible,
+  isSubjectEligible,
   templateApplies,
-  type CompanyFacts,
+  isDisabledByOverride,
+  type SubjectFacts,
 } from "@/lib/engines/obligation/applicability";
 
-const base: CompanyFacts = {
-  id: "c1",
+const base: SubjectFacts = {
+  id: "s1",
   isActive: true,
-  companyStatus: "active",
-  contractDate: new Date(Date.UTC(2026, 0, 1)),
-  taxRegime: "vat",
-  statsType: "kb1",
-  activeServices: ["buxgalteriya", "payroll"],
-  hasLandTax: false,
-  hasWaterTax: false,
-  hasPropertyTax: false,
-  hasExciseTax: false,
+  status: "active",
+  startedAt: new Date(Date.UTC(2026, 0, 1)),
+  attributes: {
+    regime: "alpha",
+    tier: "t1",
+    services: ["core", "extra"],
+  },
 };
 const ref = new Date(Date.UTC(2026, 6, 1));
 
-describe("isCompanyEligible", () => {
-  it("faol + active status + shartnoma boshlangan → yaroqli", () => {
-    expect(isCompanyEligible(base, ref)).toBe(true);
+describe("isSubjectEligible", () => {
+  it("faol + active status + xizmat boshlangan → yaroqli", () => {
+    expect(isSubjectEligible(base, ref)).toBe(true);
   });
   it("isActive=false → yaroqsiz", () => {
-    expect(isCompanyEligible({ ...base, isActive: false }, ref)).toBe(false);
+    expect(isSubjectEligible({ ...base, isActive: false }, ref)).toBe(false);
   });
-  it("companyStatus != active → yaroqsiz", () => {
-    expect(isCompanyEligible({ ...base, companyStatus: "suspended" }, ref)).toBe(false);
+  it("status != active → yaroqsiz", () => {
+    expect(isSubjectEligible({ ...base, status: "suspended" }, ref)).toBe(false);
   });
-  it("contractDate yo'q → yaroqsiz", () => {
-    expect(isCompanyEligible({ ...base, contractDate: null }, ref)).toBe(false);
+  it("status=null → active deb qaraladi", () => {
+    expect(isSubjectEligible({ ...base, status: null }, ref)).toBe(true);
   });
-  it("shartnoma kelajakda → yaroqsiz (xizmat boshlanmagan)", () => {
-    expect(isCompanyEligible({ ...base, contractDate: new Date(Date.UTC(2026, 8, 1)) }, ref)).toBe(false);
+  it("startedAt yo'q → yaroqsiz", () => {
+    expect(isSubjectEligible({ ...base, startedAt: null }, ref)).toBe(false);
+  });
+  it("xizmat kelajakda boshlanadi → yaroqsiz", () => {
+    expect(isSubjectEligible({ ...base, startedAt: new Date(Date.UTC(2026, 8, 1)) }, ref)).toBe(false);
   });
 });
 
@@ -42,32 +48,46 @@ describe("templateApplies", () => {
   it("bo'sh applicability → universal (true)", () => {
     expect(templateApplies([], base)).toBe(true);
   });
-  it("tax_regime mos", () => {
-    expect(templateApplies([{ criteriaType: "tax_regime", criteriaValue: "vat" }], base)).toBe(true);
-    expect(templateApplies([{ criteriaType: "tax_regime", criteriaValue: "turnover" }], base)).toBe(false);
+  it("skalyar atribut aniq mos kelishi kerak", () => {
+    expect(templateApplies([{ criteriaType: "regime", criteriaValue: "alpha" }], base)).toBe(true);
+    expect(templateApplies([{ criteriaType: "regime", criteriaValue: "beta" }], base)).toBe(false);
   });
-  it("type ichida OR (stats_type ro'yxati)", () => {
+  it("type ichida OR", () => {
     const crit = [
-      { criteriaType: "stats_type", criteriaValue: "micro" },
-      { criteriaType: "stats_type", criteriaValue: "kb1" },
+      { criteriaType: "tier", criteriaValue: "t0" },
+      { criteriaType: "tier", criteriaValue: "t1" },
     ];
     expect(templateApplies(crit, base)).toBe(true);
   });
-  it("typelar aro AND (tax_regime VA service_key)", () => {
+  it("typelar aro AND", () => {
     const crit = [
-      { criteriaType: "tax_regime", criteriaValue: "vat" },
-      { criteriaType: "service_key", criteriaValue: "didox" },
+      { criteriaType: "regime", criteriaValue: "alpha" },
+      { criteriaType: "services", criteriaValue: "premium" },
     ];
-    expect(templateApplies(crit, base)).toBe(false); // didox activeServices'da yo'q
-    expect(templateApplies(crit, { ...base, activeServices: [...base.activeServices, "didox"] })).toBe(true);
-  });
-  it("vat_payer=true faqat vat rejimiga", () => {
-    expect(templateApplies([{ criteriaType: "vat_payer", criteriaValue: "true" }], base)).toBe(true);
+    expect(templateApplies(crit, base)).toBe(false); // premium ro'yxatda yo'q
     expect(
-      templateApplies([{ criteriaType: "vat_payer", criteriaValue: "true" }], { ...base, taxRegime: "turnover" }),
-    ).toBe(false);
+      templateApplies(crit, { ...base, attributes: { ...base.attributes, services: ["core", "premium"] } }),
+    ).toBe(true);
   });
-  it("noma'lum kriteriya → mos emas", () => {
+  it("ro'yxat atributi includes bo'yicha", () => {
+    expect(templateApplies([{ criteriaType: "services", criteriaValue: "core" }], base)).toBe(true);
+    expect(templateApplies([{ criteriaType: "services", criteriaValue: "yo'q" }], base)).toBe(false);
+  });
+  it("noma'lum kriteriya → mos emas (oq ro'yxat semantikasi)", () => {
     expect(templateApplies([{ criteriaType: "unknown_x", criteriaValue: "y" }], base)).toBe(false);
+  });
+  it("e'lon qilinmagan atribut → mos emas, bo'sh qiymatga ham", () => {
+    expect(templateApplies([{ criteriaType: "missing", criteriaValue: "" }], base)).toBe(false);
+  });
+});
+
+describe("isDisabledByOverride", () => {
+  it("action=disable → true", () => {
+    expect(isDisabledByOverride({ action: "disable", customDueDay: null, customOffsetDays: null, responsibleUserId: null })).toBe(true);
+  });
+  it("reassign/custom_due/undefined → false", () => {
+    expect(isDisabledByOverride({ action: "reassign", customDueDay: null, customOffsetDays: null, responsibleUserId: "u2" })).toBe(false);
+    expect(isDisabledByOverride(undefined)).toBe(false);
+    expect(isDisabledByOverride(null)).toBe(false);
   });
 });

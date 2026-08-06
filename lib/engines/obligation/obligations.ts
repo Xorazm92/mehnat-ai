@@ -11,17 +11,37 @@ import { Prisma } from "@prisma/client";
 import {
   periodWindowFor,
   computeDueAt,
+  rawDueDate,
+  adjustForWorkday,
   makeWorkdayPredicate,
 } from "@/lib/engines/obligation/deadlines";
 import {
-  isCompanyEligible,
+  isSubjectEligible,
   templateApplies,
-  type CompanyFacts,
+  isDisabledByOverride,
+  type SubjectFacts,
+  type OverrideFacts,
 } from "@/lib/engines/obligation/applicability";
 
 type Db = Prisma.TransactionClient;
 
+/** Subyekt + majburiyatga snapshot qilinadigan mas'ullar. */
+export interface SubjectRow extends SubjectFacts {
+  responsibleUserId: string | null;
+  backupUserId: string | null;
+}
+
+/**
+ * Subyektlarni yuklovchi. Engine domen jadvalini o'zi so'ramaydi — qaysi
+ * ustunlar o'qilishi va ular qanday atributga aylanishi domen qatlamida
+ * (Konstitutsiya 4a/4b). Buxgalteriya uchun:
+ * `lib/domains/accounting/subjects.ts#loadCompanySubjects`.
+ */
+export type SubjectLoader = (db: Db) => Promise<SubjectRow[]>;
+
 export interface GenerateOptions {
+  /** Subyektlarni yuklovchi — majburiy, standarti yo'q (domen tanlaydi). */
+  loadSubjects: SubjectLoader;
   /** Davrni aniqlaydigan sana. Standart — hozir. */
   ref?: Date;
   /** Audit uchun kim ishga tushirgani (createdBy/assignedById). */
@@ -39,6 +59,7 @@ export interface GenerateResult {
   cancelledNotApplicable: number;
 }
 
+const ovKey = (companyId: string, templateId: string) => `${companyId}::${templateId}`;
 
 function isUniqueViolation(e: unknown): boolean {
   return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
@@ -48,7 +69,7 @@ function isUniqueViolation(e: unknown): boolean {
  * `ref` davri uchun majburiyatlarni yaratadi (idempotent). Bir necha davr
  * (catch-up) uchun turli `ref` bilan qayta chaqiriladi.
  */
-export async function generateObligations(db: Db, opts: GenerateOptions = {}): Promise<GenerateResult> {
+export async function generateObligations(db: Db, opts: GenerateOptions): Promise<GenerateResult> {
   const ref = opts.ref ?? new Date();
 
   // 1) Faol, kuchdagi, tasdiqlangan (active lifecycle) templatelar.
@@ -62,48 +83,23 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
     include: { applicability: true },
   });
 
-  // 2) Yaroqli kompaniyalar (contractDate/kelajak tekshiruvi kodda).
-  const companies = await db.company.findMany({
-    where: { isActive: true },
-    select: {
-      id: true,
-      isActive: true,
-      companyStatus: true,
-      contractDate: true,
-      taxRegime: true,
-      statsType: true,
-      activeServices: true,
-      accountantId: true,
-      supervisorId: true,
-      chiefAccountantId: true,
-      hasLandTax: true,
-      hasWaterTax: true,
-      hasPropertyTax: true,
-      hasExciseTax: true,
-    },
-  });
-  const facts: Map<string, CompanyFacts> = new Map();
-  const roleSnap: Map<string, { accountantId: string | null; backupId: string | null }> = new Map();
-  const eligible = companies.filter((c) => {
-    const f: CompanyFacts = {
-      id: c.id,
-      isActive: c.isActive,
-      companyStatus: c.companyStatus,
-      contractDate: c.contractDate,
-      taxRegime: c.taxRegime,
-      statsType: c.statsType,
-      activeServices: c.activeServices,
-      hasLandTax: c.hasLandTax,
-      hasWaterTax: c.hasWaterTax,
-      hasPropertyTax: c.hasPropertyTax,
-      hasExciseTax: c.hasExciseTax,
-    };
-    facts.set(c.id, f);
-    roleSnap.set(c.id, { accountantId: c.accountantId, backupId: c.supervisorId ?? c.chiefAccountantId });
-    return isCompanyEligible(f, ref);
+  // 2) Yaroqli subyektlar (startedAt/kelajak tekshiruvi kodda). Domen yuklaydi.
+  const subjects = await opts.loadSubjects(db);
+  const facts = new Map<string, SubjectFacts>();
+  const roleSnap = new Map<string, { accountantId: string | null; backupId: string | null }>();
+  const eligible = subjects.filter((s) => {
+    facts.set(s.id, s);
+    roleSnap.set(s.id, { accountantId: s.responsibleUserId, backupId: s.backupUserId });
+    return isSubjectEligible(s, ref);
   });
 
-  // 3) Biznes kalendar (kichik jadval → to'liq yuklaymiz).
+  // 3) Override'lar (company+template kaliti bo'yicha).
+  const overrides = await db.companyObligationOverride.findMany();
+  const ovMap = new Map<string, OverrideFacts>(
+    overrides.map((o) => [ovKey(o.companyId, o.templateId), o as unknown as OverrideFacts]),
+  );
+
+  // 4) Biznes kalendar (kichik jadval → to'liq yuklaymiz).
   const calDays = await db.businessCalendarDay.findMany();
   const isWorkday = makeWorkdayPredicate(
     calDays.map((d) => ({ date: d.date, isWorkday: d.isWorkday, isHoliday: d.isHoliday })),
@@ -166,16 +162,28 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
         }
         continue;
       }
-      // Muddat — shablon qoidasi + biznes kalendar. Firma-darajali istisno
-      // (`CompanyObligationOverride`) olib tashlandi: u UI'ga hech qachon
-      // ulanmagan, bitta ham yozuvi bo'lmagan va "qoida qayerda?" degan
-      // savolga ikkinchi javob berardi. Istisno kerak bo'lsa — shablonning
-      // applicability mezoni orqali, ya'ni ko'rinadigan qoida bilan.
-      const dueAt = computeDueAt(t, window, isWorkday);
+      const ov = ovMap.get(ovKey(c.id, t.id));
+      if (isDisabledByOverride(ov)) {
+        res.skippedNotApplicable++;
+        continue;
+      }
 
-      // Mas'ul snapshot — firma buxgalteri.
+      // Muddat — custom_due override bo'lsa qoidani almashtiradi.
+      let dueAt = computeDueAt(t, window, isWorkday);
+      if (ov?.action === "custom_due" && (ov.customDueDay != null || ov.customOffsetDays != null)) {
+        const customRule = {
+          anchorType: ov.customDueDay != null ? ("fixed_day_of_month" as const) : ("period_end_offset" as const),
+          dueDay: ov.customDueDay,
+          dueMonth: null,
+          offsetDays: ov.customOffsetDays,
+        };
+        dueAt = adjustForWorkday(rawDueDate(customRule, window), t.adjustmentPolicy, isWorkday);
+      }
+
+      // Mas'ul snapshot — reassign override > kompaniya buxgalteri.
       const snap = roleSnap.get(c.id)!;
-      const responsibleUserId = snap.accountantId;
+      const responsibleUserId =
+        ov?.action === "reassign" && ov.responsibleUserId ? ov.responsibleUserId : snap.accountantId;
 
       const existing = await db.obligation.findUnique({
         where: {
@@ -221,20 +229,6 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
 
   return res;
 }
-
-// ─────────────────────────────────────────────
-// MAJBURIYAT TURKUMI — ekran yorlig'i
-// ─────────────────────────────────────────────
-//
-// `DeadlineTemplate.obligationType` — sxemada ERKIN satr ("erkin turkum"),
-// ya'ni yangi qiymat migratsiyasiz qo'shilishi mumkin. Shuning uchun bu
-// yerda qat'iy `Record<Enum, string>` emas, fallback'li funksiya:
-// noma'lum qiymat ham o'qiladigan ko'rinishda chiqadi, `internal_task`
-// bo'lib qolmaydi.
-//
-// Auditdagi holat: Ishlar ro'yxatida har bir qator ostida xom qiymat
-// (`internal_task`, `tax_declaration`) chizilardi — 30 qatorli ekranda
-// 30 marta. Buxgalter uchun bu na ma'lumot, na tushunarli.
 
 const OBLIGATION_TYPE_LABELS: Record<string, string> = {
   tax_declaration: "Soliq hisoboti",

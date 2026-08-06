@@ -7,6 +7,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 const { prisma } = await import("@/lib/prisma");
 const { generateObligations } = await import("@/lib/engines/obligation/obligations");
+const { loadCompanySubjects } = await import("@/lib/domains/accounting/subjects");
 
 const TAG = `vitest-obl-${Date.now()}`;
 const SVC = `${TAG}-svc`; // faqat test kompaniyasi ega bo'ladigan xizmat kaliti
@@ -90,6 +91,7 @@ afterAll(async () => {
   // 17 MB ga shishirgan). Shuning uchun test DAVRLARINI butunlay tozalaymiz.
   await prisma.obligation.deleteMany({ where: { periodKey: { startsWith: "2097-" } } });
   await prisma.obligation.deleteMany({ where: { templateId: { in: [ids.t1, ids.t2] } } });
+  await prisma.companyObligationOverride.deleteMany({ where: { companyId: ids.company } });
   await prisma.deadlineTemplate.deleteMany({ where: { id: { in: [ids.t1, ids.t2] } } });
   await prisma.company.deleteMany({ where: { id: ids.company } });
   await prisma.user.deleteMany({ where: { id: ids.user } });
@@ -98,7 +100,7 @@ afterAll(async () => {
 
 describe("generateObligations", () => {
   it("creates one obligation for the eligible+applicable company, with snapshot", async () => {
-    const res = await generateObligations(prisma, { ref: REF, createdBy: ids.user });
+    const res = await generateObligations(prisma, { ref: REF, createdBy: ids.user, loadSubjects: loadCompanySubjects });
     expect(res.created).toBeGreaterThanOrEqual(1);
 
     const obl = await prisma.obligation.findFirst({
@@ -117,7 +119,7 @@ describe("generateObligations", () => {
   });
 
   it("is idempotent — a second run creates nothing new", async () => {
-    const res = await generateObligations(prisma, { ref: REF, createdBy: ids.user });
+    const res = await generateObligations(prisma, { ref: REF, createdBy: ids.user, loadSubjects: loadCompanySubjects });
     expect(res.created).toBe(0);
     expect(res.skippedExisting).toBeGreaterThanOrEqual(1);
 
@@ -127,4 +129,16 @@ describe("generateObligations", () => {
     expect(count).toBe(1); // dublikat yo'q
   });
 
+  it("disable override suppresses generation for a fresh period", async () => {
+    await prisma.companyObligationOverride.create({
+      data: { companyId: ids.company, templateId: ids.t1, action: "disable", reason: "test disable" },
+    });
+    const nextRef = new Date(Date.UTC(2097, 7, 15)); // 2097-08 → yangi davr
+    await generateObligations(prisma, { ref: nextRef, createdBy: ids.user, loadSubjects: loadCompanySubjects });
+
+    const obl = await prisma.obligation.findFirst({
+      where: { companyId: ids.company, templateId: ids.t1, periodKey: "2097-M08" },
+    });
+    expect(obl).toBeNull(); // disable bilan yaratilmadi
+  });
 });

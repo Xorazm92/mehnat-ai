@@ -19,6 +19,7 @@
 import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { runGenerationLocked } from "@/lib/engines/obligation/obligationRun";
+import { loadCompanySubjects } from "@/lib/domains/accounting/subjects";
 import type { Periodicity, DeadlineAnchorType } from "@prisma/client";
 
 // contractDate yo'q firmalar uchun taxminiy xizmat-boshlanish sanasi.
@@ -480,7 +481,7 @@ async function main() {
   }
 
   // ── 3) Generatsiya (faqat joriy davr, catch-up yo'q) ─────────
-  const gen = await runGenerationLocked(prisma as any, { catchUpMonths: 0, createdBy });
+  const gen = await runGenerationLocked(prisma as any, { catchUpMonths: 0, createdBy, loadSubjects: loadCompanySubjects });
   if (gen.skipped === "locked") {
     console.log("3) Generatsiya: boshqa jarayon lock ushlab turibdi — o'tkazib yuborildi");
   } else {

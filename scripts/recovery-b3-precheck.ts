@@ -21,7 +21,8 @@
 import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { periodWindowFor, computeDueAt, makeWorkdayPredicate, dateKey } from "@/lib/engines/obligation/deadlines";
-import { isCompanyEligible, templateApplies, type CompanyFacts } from "@/lib/engines/obligation/applicability";
+import { isSubjectEligible, templateApplies, type SubjectFacts } from "@/lib/engines/obligation/applicability";
+import { toSubject } from "@/lib/domains/accounting/subjects";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -195,26 +196,17 @@ async function main(): Promise<void> {
       hasWaterTax: true,
       hasPropertyTax: true,
       hasExciseTax: true,
+      accountantId: true,
+      supervisorId: true,
+      chiefAccountantId: true,
     },
   });
 
-  const facts = new Map<string, CompanyFacts>();
+  const facts = new Map<string, SubjectFacts>();
   const eligible = companies.filter((c) => {
-    const f: CompanyFacts = {
-      id: c.id,
-      isActive: c.isActive,
-      companyStatus: c.companyStatus,
-      contractDate: c.contractDate,
-      taxRegime: c.taxRegime,
-      statsType: c.statsType,
-      activeServices: c.activeServices,
-      hasLandTax: c.hasLandTax,
-      hasWaterTax: c.hasWaterTax,
-      hasPropertyTax: c.hasPropertyTax,
-      hasExciseTax: c.hasExciseTax,
-    };
+    const f = toSubject(c);
     facts.set(c.id, f);
-    return isCompanyEligible(f, ref);
+    return isSubjectEligible(f, ref);
   });
 
   console.log(`     Faol firma ${companies.length} → yaroqli ${eligible.length} (contractDate/status gate)`);

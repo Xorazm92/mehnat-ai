@@ -7,7 +7,11 @@
 // oldini oladi). Catch-up: joriy davr + oxirgi N oyni qayta ko'radi (downtime
 // vaqtida o'tkazib yuborilgan davrlar ham yaratiladi; idempotent). Reviewer #8.
 import type { PrismaClient } from "@prisma/client";
-import { generateObligations, type GenerateResult } from "@/lib/engines/obligation/obligations";
+import {
+  generateObligations,
+  type GenerateResult,
+  type SubjectLoader,
+} from "@/lib/engines/obligation/obligations";
 
 // Barqaror advisory lock kaliti (obligation generatsiyasiga xos).
 const GEN_LOCK = 918273645;
@@ -19,7 +23,7 @@ export interface RunGenerationResult {
 
 export async function runGenerationLocked(
   prisma: PrismaClient,
-  opts: { now?: Date; catchUpMonths?: number; createdBy?: string } = {},
+  opts: { loadSubjects: SubjectLoader; now?: Date; catchUpMonths?: number; createdBy?: string },
 ): Promise<RunGenerationResult> {
   const now = opts.now ?? new Date();
   const catchUp = Math.max(0, opts.catchUpMonths ?? 2);
@@ -38,7 +42,9 @@ export async function runGenerationLocked(
       for (let i = 0; i <= catchUp; i++) {
         const ref = new Date(now);
         ref.setUTCMonth(ref.getUTCMonth() - i);
-        results.push(await generateObligations(tx, { ref, createdBy: opts.createdBy }));
+        results.push(
+          await generateObligations(tx, { ref, createdBy: opts.createdBy, loadSubjects: opts.loadSubjects }),
+        );
       }
       return { results };
     },

@@ -21,7 +21,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveServiceTerm, roundToMonthStart } from "@/lib/terms";
 import { periodKeyOf } from "@/lib/periods";
-import { isCompanyEligible, type CompanyFacts } from "@/lib/engines/obligation/applicability";
+import { isSubjectEligible, type SubjectFacts } from "@/lib/engines/obligation/applicability";
 import { logServerError } from "@/lib/platform/logger";
 
 type Db = Prisma.TransactionClient | typeof prisma;
@@ -63,23 +63,17 @@ export async function generateMonthlyPayments(
   };
 
   for (const c of companies) {
-    // isCompanyEligible faqat isActive/companyStatus/contractDate ko'radi —
-    // to'liq CompanyFacts (taxRegime va h.k.) shart emas, shuning uchun
-    // qolgan maydonlar bo'sh qiymat bilan to'ldiriladi.
-    const facts: CompanyFacts = {
+    // Yaroqlilik gate'i faqat isActive/status/boshlanish sanasini ko'radi —
+    // applicability atributlari (soliq rejimi va h.k.) bu yerda kerak emas,
+    // shuning uchun `attributes` bo'sh qoladi.
+    const facts: SubjectFacts = {
       id: c.id,
       isActive: c.isActive,
-      companyStatus: c.companyStatus,
-      contractDate: c.contractDate,
-      taxRegime: "vat",
-      statsType: null,
-      activeServices: [],
-      hasLandTax: false,
-      hasWaterTax: false,
-      hasPropertyTax: false,
-      hasExciseTax: false,
+      status: c.companyStatus,
+      startedAt: c.contractDate,
+      attributes: {},
     };
-    if (!isCompanyEligible(facts, ref)) continue;
+    if (!isSubjectEligible(facts, ref)) continue;
     res.companiesEligible++;
 
     try {
