@@ -28,42 +28,33 @@ function assertYearMonth(year: number, month: number) {
   if (!Number.isInteger(month) || month < 1 || month > 12) throw new Error("Oy 1-12 oralig'ida bo'lishi kerak");
 }
 
-async function setPeriodStatus(
-  year: number,
-  month: number,
-  status: "OPEN" | "LOCKED",
-  userId: string,
-  reason?: string,
-) {
+/**
+ * Davrni OCHADI (faqat `unlockPeriod` uchun).
+ *
+ * QULFLASH ataylab yo'q: `AccountingPeriod` holat mashinasini
+ * `server/monthClosing.ts` boshqaradi va u oyni checklist ortida yopadi
+ * (`lib/periodLock.ts` sarlavhasiga qarang). Bu yerdan qulflash o'sha
+ * checklist'ni chetlab o'tardi. `closeYear` ham buni chaqirmaydi — u 12 oyni
+ * o'z tranzaksiyasi ichida yozadi. Qarang: ADR-0011.
+ */
+async function setPeriodOpen(year: number, month: number, userId: string, reason: string) {
+  const status = "OPEN" as const;
   const existing = await prisma.accountingPeriod.findFirst({
     where: { companyId: null, year, month },
   });
 
+  const data = {
+    status,
+    lockedBy: null,
+    lockedAt: null,
+    reopenedBy: userId,
+    reopenedAt: new Date(),
+    reopenReason: reason,
+  };
+
   const row = existing
-    ? await prisma.accountingPeriod.update({
-        where: { id: existing.id },
-        data: {
-          status,
-          lockedBy: status === "LOCKED" ? userId : null,
-          lockedAt: status === "LOCKED" ? new Date() : null,
-          ...(status === "OPEN" && reason
-            ? { reopenedBy: userId, reopenedAt: new Date(), reopenReason: reason }
-            : {}),
-        },
-      })
-    : await prisma.accountingPeriod.create({
-        data: {
-          companyId: null,
-          year,
-          month,
-          status,
-          lockedBy: status === "LOCKED" ? userId : null,
-          lockedAt: status === "LOCKED" ? new Date() : null,
-          ...(status === "OPEN" && reason
-            ? { reopenedBy: userId, reopenedAt: new Date(), reopenReason: reason }
-            : {}),
-        },
-      });
+    ? await prisma.accountingPeriod.update({ where: { id: existing.id }, data })
+    : await prisma.accountingPeriod.create({ data: { companyId: null, year, month, ...data } });
 
   await recordAuditLog({
     userId,
@@ -71,16 +62,10 @@ async function setPeriodStatus(
     tableName: "AccountingPeriod",
     recordId: row.id,
     oldData: { status: existing?.status ?? "OPEN" },
-    newData: { year, month, status, ...(reason ? { reason } : {}) },
+    newData: { year, month, status, reason },
   });
 
   return row;
-}
-
-export async function lockPeriod(year: number, month: number) {
-  const userId = await requireSuperAdmin();
-  assertYearMonth(year, month);
-  return serialize(await setPeriodStatus(year, month, "LOCKED", userId));
 }
 
 /**
@@ -100,7 +85,7 @@ export async function unlockPeriod(year: number, month: number, reason: string) 
   assertYearMonth(year, month);
   const why = reason?.trim();
   if (!why) throw new Error("Ochish sababi majburiy");
-  return serialize(await setPeriodStatus(year, month, "OPEN", userId, why));
+  return serialize(await setPeriodOpen(year, month, userId, why));
 }
 
 /**

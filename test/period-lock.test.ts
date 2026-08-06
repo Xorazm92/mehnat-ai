@@ -13,7 +13,7 @@ vi.mock("@/lib/auth", () => ({ auth: async () => SESSION }));
 vi.mock("server-only", () => ({}));
 
 const { prisma } = await import("@/lib/prisma");
-const { lockPeriod, unlockPeriod } = await import("@/server/accounting");
+const { unlockPeriod } = await import("@/server/accounting");
 const { createKassaEntry, createExpense } = await import("@/server/kassa");
 const { createPayrollAdjustment, approveEmployeeSalary } = await import("@/server/payroll");
 
@@ -42,15 +42,34 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+/**
+ * Davrni LOCKED holatiga qo'yish — to'g'ridan-to'g'ri yozuv bilan.
+ *
+ * Ilgari bu yerda `lockPeriod` chaqirilardi. U olib tashlandi: `closeMonth`
+ * `AccountingPeriod` holat mashinasini boshqaradi va oyni checklist ortida
+ * yopadi, `lockPeriod` esa o'sha qatorlarga checklist'siz yozardi (ADR-0011).
+ *
+ * Bu testning ASL mavzusi qulflash amali emas — u `lib/periodLock.ts` dagi
+ * YOZUV QO'RIQCHISI: yopilgan oyga moliyaviy yozuv tushmasligi. Shuning uchun
+ * holatni qanday o'rnatish muhim emas, qo'riqchi nima qilishi muhim.
+ */
+async function lockDirectly(year: number, month: number) {
+  const existing = await prisma.accountingPeriod.findFirst({ where: { companyId: null, year, month } });
+  const data = { status: "LOCKED", lockedBy: ids.user, lockedAt: new Date() };
+  return existing
+    ? prisma.accountingPeriod.update({ where: { id: existing.id }, data })
+    : prisma.accountingPeriod.create({ data: { companyId: null, year, month, ...data } });
+}
+
 describe("period lock", () => {
-  it("only super_admin can lock or unlock a period", async () => {
+  it("only super_admin can unlock a period", async () => {
     SESSION.user.role = "admin";
-    await expect(lockPeriod(YEAR, 5)).rejects.toThrow(/Superadmin/);
+    await expect(unlockPeriod(YEAR, 5, "sabab")).rejects.toThrow(/Superadmin/);
     SESSION.user.role = "super_admin";
   });
 
-  it("locks a period and blocks every financial mutation into it", async () => {
-    const period = await lockPeriod(YEAR, 5);
+  it("a locked period blocks every financial mutation into it", async () => {
+    const period = await lockDirectly(YEAR, 5);
     expect(period.status).toBe("LOCKED");
 
     // Xarajat — yopiq oy sanasi bilan
@@ -103,13 +122,14 @@ describe("period lock", () => {
     expect(entry.id).toBeTruthy();
   });
 
-  it("audited who locked and unlocked, and when", async () => {
+  it("unlocking is audited, with the reason", async () => {
+    // Qulflashning auditi bu yerda emas — u `closeMonth` ning ishi va
+    // test/month-closing.test.ts da tekshiriladi.
     const audits = await prisma.auditLog.findMany({
       where: { tableName: "AccountingPeriod", userId: ids.user },
     });
-    expect(audits.length).toBeGreaterThanOrEqual(2); // lock + unlock
-    const statuses = audits.map((a) => (a.newData as { status?: string })?.status);
-    expect(statuses).toContain("LOCKED");
-    expect(statuses).toContain("OPEN");
+    const opened = audits.filter((a) => (a.newData as { status?: string })?.status === "OPEN");
+    expect(opened.length).toBeGreaterThanOrEqual(1);
+    expect((opened[0].newData as { reason?: string })?.reason).toBeTruthy();
   });
 });

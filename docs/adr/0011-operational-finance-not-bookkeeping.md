@@ -58,15 +58,18 @@ twelve months and then closing the year is one job, and Article 10 asks what a n
 now requires a reason, matching `reopenMonth`'s discipline — reopening a closed period silently is
 how a financial correction loses its "why".
 
-One thing is deliberately **not** surfaced: `lockPeriod`. `closeMonth` owns the
+`lockPeriod` is **removed**, not merely left without a button. `closeMonth` owns the
 `AccountingPeriod` state machine (`lib/periodLock.ts` says so in its header) and gates a month
-behind a checklist. `lockPeriod` writes the same rows with no checklist, so giving it a button
-would put a bypass next to the control it bypasses. `closeYear` does not use it — it writes periods
-directly inside its own transaction — so the export survives only as `test/period-lock.test.ts`'s
-lever for putting a period into LOCKED. That test's real subject is the write guard in
-`lib/periodLock.ts`, which is valuable and unaffected. Retiring the export means giving that test a
-different setup lever; worth doing, and small, but it is a separate change from shipping a
-feature.
+behind a checklist; `lockPeriod` wrote the same rows with no checklist. `closeYear` never used it —
+it writes the twelve periods directly inside its own transaction — so its only remaining caller was
+`test/period-lock.test.ts`, using it as a lever to reach the LOCKED state. That test's real subject
+is the write guard in `lib/periodLock.ts`, so the lever was replaced with a direct row write and
+every assertion stayed. Audit coverage for *locking* was never that test's job either: it belongs
+to `closeMonth` and lives in `test/month-closing.test.ts`.
+
+The private helper that remains is named `setPeriodOpen` and can only open a period. A function
+that cannot express the unsafe operation is a better guarantee than a comment asking people not to
+call it.
 
 ## Consequences
 
