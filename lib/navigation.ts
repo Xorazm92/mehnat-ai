@@ -41,6 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/profitability", view: "profitability", label: "Rentabellik",      icon: HandCoins,       group: "moliya",  keywords: "foyda rentabellik marja" },
   { href: "/kassa",         view: "kassa",         label: "Kassa",            icon: Wallet,          group: "moliya",  keywords: "kirim to'lov naqd" },
   { href: "/kassa/kirim",   view: "kassa_income",  label: "Kirim kassa",      icon: Banknote,        group: "moliya",  keywords: "vipiska bank kirim tushum vypiska plastik" },
+  { href: "/kassa/chiqim",  view: "kassa_expense", label: "Chiqim kassa",     icon: CreditCard,      group: "moliya",  keywords: "rasxod chiqim tranzit karta xodim kanal" },
   { href: "/expenses",      view: "expenses",      label: "Xarajatlar",       icon: Receipt,         group: "moliya",  keywords: "chiqim xarajat rasxod" },
   { href: "/payroll",       view: "payroll",       label: "Oylik",            icon: CreditCard,      group: "moliya",  keywords: "maosh zarplata avans" },
   { href: "/attendance",    view: "attendance",    label: "Davomat",          icon: Calendar,        group: "boshqa",  keywords: "kelish ketish tabel" },

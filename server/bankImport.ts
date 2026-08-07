@@ -236,6 +236,29 @@ async function readWorkbook(file: File): Promise<Workbook> {
   return workbook;
 }
 
+/**
+ * Tanilmagan fayl uchun TASHXIS matni.
+ *
+ * "Format tanilmadi" degan xabar o'zi yetarli emas: na foydalanuvchi, na
+ * ishlab chiquvchi faylda nima borligini bilmaydi. Shuning uchun har bir
+ * sahifaning nomi, qator soni va birinchi qatorlaridagi qiymatlar
+ * ko'rsatiladi — shu matnni yuborsangiz format qo'shish uchun yetarli.
+ */
+function describeWorkbook(workbook: Workbook): string {
+  const lines: string[] = [];
+  for (const [name, rows] of Object.entries(workbook)) {
+    lines.push(`• Sahifa "${name}" — ${rows.length} qator`);
+    for (const row of rows.slice(0, 4)) {
+      const cells = Object.values(row)
+        .filter((v) => v != null && String(v).trim() !== "")
+        .slice(0, 6)
+        .map((v) => String(v).slice(0, 34));
+      if (cells.length) lines.push(`    ${cells.join(" | ")}`);
+    }
+  }
+  return lines.join("\n");
+}
+
 /** Fayl 1C "Реализация" reestrimi (plastik) — vipiska emasmi. */
 function findPlastikSheet(workbook: Workbook) {
   for (const rows of Object.values(workbook)) {
@@ -327,9 +350,9 @@ export async function previewStatement(formData: FormData): Promise<UploadOutcom
       ok: false,
       error:
         `${(e as Error).message}\n\n` +
-        `Faylda topilgan sahifalar: ${Object.keys(workbook).join(", ")}. ` +
         `Kutilgani — bank vipiskasi ("Лицевой счет" yoki "Сведения о работе счета") ` +
-        `yoki 1C "Реализация" reestri.`,
+        `yoki 1C "Реализация" reestri.\n\n` +
+        `FAYL TARKIBI (shu matnni ishlab chiquvchiga yuboring):\n${describeWorkbook(workbook)}`,
     };
   }
 

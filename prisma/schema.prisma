@@ -2007,6 +2007,51 @@ model DisbursementChannel {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  entries TransitEntry[]
+
+  @@unique([type, cardMask])
   @@index([isActive])
   @@index([employeeId])
+}
+
+/// TRANZIT HARAKATI — xodim kartasidagi pul oqimi.
+///
+/// Ba'zi to'lovlar o'zini-o'zi band qilgan xodim kartasi orqali o'tadi:
+///   bank hisobi ──(kirim)──► xodim kartasi ──(chiqim)──► ijara / aloqa / ovqat
+///
+/// Kartaga tushgan pul HALI XARAJAT EMAS — u firmaning pulligicha qoladi,
+/// faqat boshqa joyda turadi. Xarajat kartadan sarflanganda yuz beradi.
+/// Shuning uchun:
+///   kirim  → faqat TransitEntry (KassaEntry YOZILMAYDI — aks holda xarajat
+///            ikki marta: kartaga chiqqanda ham, sarflanganda ham sanalardi);
+///   chiqim → TransitEntry + KassaEntry(expense) — mana shu haqiqiy xarajat.
+///
+/// Natijada har bir karta bo'yicha "qancha berildi / qancha sarflandi /
+/// qancha qoldi" ko'rinadi.
+model TransitEntry {
+  id        String              @id @default(uuid())
+  channelId String
+  channel   DisbursementChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  /// 'in' — kartaga tushdi · 'out' — kartadan sarflandi
+  direction String
+  amount    Decimal  @db.Decimal(14, 2)
+  date      DateTime
+  /// Chiqim toifasi (ijara | aloqa | ovqat | ...). Kirimda bo'sh.
+  category    String?
+  description String?
+
+  /// Kirim manbai — vipiskadagi karta o'tkazmasi.
+  bankTransactionId String?
+  /// Chiqim natijasi — yozilgan KassaEntry (FK emas, soft-delete bilan yashaydi).
+  kassaEntryId String?
+
+  /// Takrorlanmaslik: "bank:<txId>" (kirim) yoki "out:<uuid>".
+  dedupKey String @unique
+
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@index([channelId, date])
+  @@index([direction])
 }

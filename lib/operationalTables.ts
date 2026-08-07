@@ -64,6 +64,10 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "financialSnapshot", why: "oy yopish suratlari" },
   { model: "accountingPeriod", why: "hisob davrlari (qulflar)" },
 
+  // Moliya: tranzit (xodim kartasi) — KassaEntry'dan OLDIN, chunki chiqim
+  // yozuvi o'sha yerda hosil bo'ladi. Kanallarning O'ZI spravochnik.
+  { model: "transitEntry", why: "xodim kartasidagi pul harakati" },
+
   // Moliya: bank vipiskasi (Payment'dan OLDIN — allocation unga bog'langan)
   { model: "paymentAllocation", why: "bank tranzaksiyasining to'lovga taqsimoti" },
   { model: "bankTransaction", why: "vipiskadagi xom tranzaksiyalar" },

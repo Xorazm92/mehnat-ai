@@ -1,0 +1,285 @@
+// =====================================================
+// TRANZIT KASSA — xodim kartasi orqali o'tadigan pul
+// =====================================================
+//
+// MUAMMO. Ba'zi to'lovlar o'zini-o'zi band qilgan xodimning kartasi orqali
+// qilinadi: bank hisobidan kartaga pul o'tkaziladi, keyin o'sha kartadan
+// ijara, aloqa, ovqat to'lanadi. Iyul vipiskasida bunday 77 ta o'tkazma bor
+// (547 mln so'm) — ya'ni chiqimning eng katta qismi. Kartaga chiqqandan keyin
+// pul qayerga ketgani tizimda umuman ko'rinmasdi.
+//
+// YECHIM — uch bosqichli zanjir:
+//
+//   bank hisobi ──(1: kirim)──► xodim kartasi ──(2: chiqim)──► ijara/aloqa/...
+//
+// XARAJAT QACHON YUZ BERADI. Kartaga tushgan pul HALI XARAJAT EMAS: u
+// firmaning puli, faqat boshqa joyda turibdi. Xarajat kartadan sarflanganda
+// yuz beradi. Shuning uchun:
+//   kirim  → faqat `TransitEntry`. `KassaEntry` YOZILMAYDI — aks holda bitta
+//            xarajat ikki marta sanalardi (kartaga chiqqanda va sarflanganda).
+//   chiqim → `TransitEntry` + `KassaEntry(expense)` — mana shu haqiqiy xarajat.
+//
+// Natijada har bir karta bo'yicha "qancha berildi / qancha sarflandi / qancha
+// qoldi" ko'rinadi, va tizimda "sarflanmagan" pul ham yo'qolmaydi.
+
+import { Prisma } from "@prisma/client";
+import { randomUUID } from "node:crypto";
+
+type Db = Prisma.TransactionClient;
+
+/** Kanal turlari. `employee_card` — o'zini-o'zi band qilgan xodim kartasi. */
+export const CHANNEL_TYPES = ["employee_card", "own_bank", "cash", "plastik"] as const;
+export type ChannelType = (typeof CHANNEL_TYPES)[number];
+
+export const CHANNEL_TYPE_LABELS: Record<ChannelType, string> = {
+  employee_card: "Xodim kartasi",
+  own_bank: "O'z bank hisobi",
+  cash: "Naqd",
+  plastik: "Plastik terminal",
+};
+
+export interface ChannelBalance {
+  id: string;
+  type: string;
+  label: string;
+  cardMask: string | null;
+  employeeId: string | null;
+  employeeName: string | null;
+  isActive: boolean;
+  /** Kartaga tushgan jami. */
+  totalIn: number;
+  /** Kartadan sarflangan jami. */
+  totalOut: number;
+  /** Sarflanmay turgan qoldiq. */
+  balance: number;
+  entryCount: number;
+  lastMovementAt: Date | null;
+}
+
+/**
+ * Har bir kanal bo'yicha qoldiq.
+ *
+ * Qoldiq SAQLANMAYDI, har safar harakatlardan hisoblanadi — saqlangan qoldiq
+ * vaqt o'tib haqiqatdan uzoqlashadi va uni tiklash imkoni bo'lmaydi
+ * (loyihada `Payment.amount` ham xuddi shu sababdan taqsimotlardan qayta
+ * hisoblanadi).
+ */
+export async function getChannelBalances(
+  db: Db,
+  opts: { includeInactive?: boolean } = {}
+): Promise<ChannelBalance[]> {
+  const channels = await db.disbursementChannel.findMany({
+    where: opts.includeInactive ? {} : { isActive: true },
+    select: {
+      id: true,
+      type: true,
+      label: true,
+      cardMask: true,
+      isActive: true,
+      employeeId: true,
+      employee: { select: { fullName: true } },
+    },
+    orderBy: [{ isActive: "desc" }, { label: "asc" }],
+  });
+  if (channels.length === 0) return [];
+
+  const sums = await db.transitEntry.groupBy({
+    by: ["channelId", "direction"],
+    _sum: { amount: true },
+    _count: { _all: true },
+    _max: { date: true },
+  });
+
+  const key = (channelId: string, direction: string) => `${channelId}:${direction}`;
+  const byKey = new Map(sums.map((s) => [key(s.channelId, s.direction), s]));
+
+  return channels.map((c) => {
+    const inRow = byKey.get(key(c.id, "in"));
+    const outRow = byKey.get(key(c.id, "out"));
+    const totalIn = Number(inRow?._sum.amount ?? 0);
+    const totalOut = Number(outRow?._sum.amount ?? 0);
+    const dates = [inRow?._max.date, outRow?._max.date].filter(Boolean) as Date[];
+
+    return {
+      id: c.id,
+      type: c.type,
+      label: c.label,
+      cardMask: c.cardMask,
+      employeeId: c.employeeId,
+      employeeName: c.employee?.fullName ?? null,
+      isActive: c.isActive,
+      totalIn,
+      totalOut,
+      balance: totalIn - totalOut,
+      entryCount: (inRow?._count._all ?? 0) + (outRow?._count._all ?? 0),
+      lastMovementAt: dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null,
+    };
+  });
+}
+
+/**
+ * Bank vipiskasidagi karta o'tkazmasini kanalga bog'laydi (zanjirning 1-qadami).
+ *
+ * `KassaEntry` ATAYIN yozilmaydi — yuqoridagi izohga qarang.
+ * Idempotent: bitta bank tranzaksiyasi bir marta.
+ */
+export async function recordTransitIn(
+  db: Db,
+  input: {
+    channelId: string;
+    bankTransactionId: string;
+    amount: number;
+    date: Date;
+    description?: string | null;
+    createdBy?: string | null;
+  }
+): Promise<{ entryId: string; alreadyLinked: boolean }> {
+  const dedupKey = `bank:${input.bankTransactionId}`;
+
+  const existing = await db.transitEntry.findUnique({
+    where: { dedupKey },
+    select: { id: true },
+  });
+  if (existing) return { entryId: existing.id, alreadyLinked: true };
+
+  const entry = await db.transitEntry.create({
+    data: {
+      channelId: input.channelId,
+      direction: "in",
+      amount: new Prisma.Decimal(input.amount.toFixed(2)),
+      date: input.date,
+      description: input.description ?? null,
+      bankTransactionId: input.bankTransactionId,
+      dedupKey,
+      createdBy: input.createdBy ?? null,
+    },
+    select: { id: true },
+  });
+
+  // Tranzaksiya endi hal qilingan — chiqim navbatida qolmasin.
+  await db.bankTransaction.update({
+    where: { id: input.bankTransactionId },
+    data: {
+      status: "posted",
+      expenseCategory: "xodim_kartasi",
+      postedAt: new Date(),
+      postedBy: input.createdBy ?? null,
+    },
+  });
+
+  return { entryId: entry.id, alreadyLinked: false };
+}
+
+export class InsufficientTransitFunds extends Error {
+  constructor(
+    readonly available: number,
+    readonly requested: number
+  ) {
+    super(
+      `Kartada yetarli mablag' yo'q. Qoldiq: ${Math.round(available).toLocaleString("en-US")} so'm, ` +
+        `so'ralgan: ${Math.round(requested).toLocaleString("en-US")} so'm.`
+    );
+    this.name = "InsufficientTransitFunds";
+  }
+}
+
+/**
+ * Kartadan qilingan xarajatni yozadi (zanjirning 2-qadami).
+ *
+ * `KassaEntry(expense)` MANA SHU YERDA yoziladi — haqiqiy xarajat shu.
+ * Qoldiqdan ortiq sarflashga yo'l qo'yilmaydi: kartada bo'lmagan pulni
+ * sarflash yozuvi daftarni ma'nosiz qilardi.
+ */
+export async function recordTransitOut(
+  db: Db,
+  input: {
+    channelId: string;
+    amount: number;
+    date: Date;
+    category: string;
+    description?: string | null;
+    companyId?: string | null;
+    createdBy?: string | null;
+    /** Qoldiqdan ortiq sarflashga ruxsat (admin tuzatishi uchun). */
+    allowOverdraft?: boolean;
+  }
+): Promise<{ entryId: string; kassaEntryId: string; balanceAfter: number }> {
+  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+    throw new Error("Summa musbat son bo'lishi kerak");
+  }
+
+  const [balances] = await getChannelBalances(db, { includeInactive: true }).then((list) =>
+    [list.find((c) => c.id === input.channelId)]
+  );
+  if (!balances) throw new Error("Kanal topilmadi");
+
+  if (!input.allowOverdraft && input.amount > balances.balance) {
+    throw new InsufficientTransitFunds(balances.balance, input.amount);
+  }
+
+  const kassaEntry = await db.kassaEntry.create({
+    data: {
+      companyId: input.companyId ?? null,
+      type: "expense",
+      category: input.category,
+      amount: new Prisma.Decimal(input.amount.toFixed(2)),
+      description: input.description ?? `${balances.label} kartasidan xarajat`,
+      date: input.date,
+      channelId: input.channelId,
+      createdBy: input.createdBy ?? null,
+    },
+    select: { id: true },
+  });
+
+  const entry = await db.transitEntry.create({
+    data: {
+      channelId: input.channelId,
+      direction: "out",
+      amount: new Prisma.Decimal(input.amount.toFixed(2)),
+      date: input.date,
+      category: input.category,
+      description: input.description ?? null,
+      kassaEntryId: kassaEntry.id,
+      dedupKey: `out:${randomUUID()}`,
+      createdBy: input.createdBy ?? null,
+    },
+    select: { id: true },
+  });
+
+  return {
+    entryId: entry.id,
+    kassaEntryId: kassaEntry.id,
+    balanceAfter: balances.balance - input.amount,
+  };
+}
+
+/** Bitta kanalning harakatlar tarixi (eng yangisi birinchi). */
+export async function getChannelLedger(db: Db, channelId: string, limit = 100) {
+  return db.transitEntry.findMany({
+    where: { channelId },
+    select: {
+      id: true,
+      direction: true,
+      amount: true,
+      date: true,
+      category: true,
+      description: true,
+      bankTransactionId: true,
+      kassaEntryId: true,
+      createdAt: true,
+    },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    take: limit,
+  });
+}
+
+/** Umumiy tranzit qoldig'i — hali sarflanmay turgan pul. */
+export async function getTotalTransitBalance(db: Db): Promise<number> {
+  const sums = await db.transitEntry.groupBy({
+    by: ["direction"],
+    _sum: { amount: true },
+  });
+  const total = (dir: string) =>
+    Number(sums.find((s) => s.direction === dir)?._sum.amount ?? 0);
+  return total("in") - total("out");
+}
