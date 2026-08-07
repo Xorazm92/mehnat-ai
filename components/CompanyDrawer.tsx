@@ -145,6 +145,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
       ? { type: 'fixed', value: Number(sum) }
       : { type: 'percent', value: Number(perc || 0) };
 
+  /** Firma shartnomalari (Contract jadvali). Eski bitta ustun o'rniga. */
+  const contractList: {
+    id: string; number: string; signedAt: string | null;
+    amount: number | null; source?: string; ownFirmName?: string | null;
+  }[] = ((company as unknown as { contracts?: unknown[] })?.contracts ?? []) as never;
+
   // Sarlavha va rol filtri yagona manbadan — lib/permissions.ts.
   const roleLabelFor = (role: string): string => {
     const canonical = normalizeAssignmentRole(role);
@@ -834,13 +840,54 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
                 <div className="dashboard-card p-5 !shadow-sm">
                   <p className="text-micro font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Shartnoma Raqami</p>
-                  <p className="text-body font-semibold tracking-tight" style={{ color: 'var(--text)' }}>{company.contractNumber || '—'}</p>
+                  <p className="text-body font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
+                    {contractList.length > 0
+                      ? contractList.map(k => k.number).join(', ')
+                      : company.contractNumber || '—'}
+                  </p>
                 </div>
                 <div className="dashboard-card p-5 !shadow-sm">
                   <p className="text-micro font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Sana</p>
-                  <p className="text-body font-semibold tracking-tight" style={{ color: 'var(--text)' }}>{company.contractDate || '—'}</p>
+                  <p className="text-body font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
+                    {contractList[0]?.signedAt || company.contractDate || '—'}
+                  </p>
                 </div>
               </div>
+
+              {/* Shartnomalar ro'yxati — 1C reestridan.
+                  Eski `Company.contractNumber` bitta ustun edi va bitta mijozda
+                  bir nechta shartnoma bo'lishini ko'tarolmasdi. */}
+              {contractList.length > 0 && (
+                <div className="dashboard-card overflow-hidden !shadow-sm">
+                  <div className="px-3 py-2 flex items-center justify-between" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
+                    <h4 className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>
+                      Shartnomalar ({contractList.length})
+                    </h4>
+                    <span className="text-micro font-bold tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                      {formatNum(contractList.reduce((sum, k) => sum + (k.amount ?? 0), 0))} so&apos;m
+                    </span>
+                  </div>
+                  <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
+                    {contractList.map(k => (
+                      <div key={k.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="text-body font-semibold tracking-tight truncate" style={{ color: 'var(--text)' }}>
+                            {k.number}
+                          </p>
+                          <p className="text-micro" style={{ color: 'var(--text-muted)' }}>
+                            {k.signedAt ? formatUzDate(k.signedAt) : 'sana ko\'rsatilmagan'}
+                            {k.ownFirmName ? ` · ${k.ownFirmName}` : ''}
+                            {k.source === '1c_import' ? ' · 1C' : ''}
+                          </p>
+                        </div>
+                        <span className="text-body font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text)' }}>
+                          {k.amount != null ? `${formatNum(k.amount)} so'm` : '—'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="dashboard-card overflow-hidden !shadow-sm">
                 <div className="p-5 text-center" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>

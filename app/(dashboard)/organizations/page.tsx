@@ -37,6 +37,14 @@ function mapCompany(c: any) {
     bankClientSum: c.bankClientSum != null ? Number(c.bankClientSum) : null,
     currentBalance: c.currentBalance != null ? Number(c.currentBalance) : null,
     contractDate: c.contractDate ? new Date(c.contractDate).toISOString().slice(0, 10) : null,
+    contracts: (c.contracts ?? []).map((k: any) => ({
+      id: k.id,
+      number: k.number,
+      signedAt: k.signedAt ? new Date(k.signedAt).toISOString().slice(0, 10) : null,
+      amount: k.amount != null ? Number(k.amount) : null,
+      source: k.source,
+      ownFirmName: k.ownFirm?.name ?? null,
+    })),
   };
 }
 

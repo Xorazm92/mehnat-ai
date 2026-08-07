@@ -41,6 +41,22 @@ const COMPANY_INCLUDE = {
   // chiefAccountantId — klientda `companyRelations` uchun: bosh buxgalter
   // firmaga departament orqali ham biriktirilgan bo'lishi mumkin.
   departmentRef: { select: { id: true, name: true, chiefAccountantId: true } },
+  // Shartnomalar firma kartochkasida ko'rinishi kerak. Eski
+  // `Company.contractNumber` bitta ustun — u 213 firmadan atigi 2 tasida
+  // to'ldirilgan va bitta mijozda bir nechta shartnoma bo'lishini
+  // ko'tarolmaydi. Haqiqiy manba — `Contract` jadvali (1C reestridan).
+  contracts: {
+    where: { isActive: true },
+    select: {
+      id: true,
+      number: true,
+      signedAt: true,
+      amount: true,
+      source: true,
+      ownFirm: { select: { id: true, name: true } },
+    },
+    orderBy: { number: "asc" },
+  },
 } as const;
 
 // ─────────────────────────────────────────────
