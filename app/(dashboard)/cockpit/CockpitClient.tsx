@@ -10,9 +10,13 @@
 // Har raqamning yonida uning sababi turadi (Konstitutsiya, 7-modda). Ball
 // `null` bo'lsa "—" ko'rsatiladi, 0 EMAS: o'lchanmagan narsani "a'lo" deb
 // ko'rsatish — aynan e'tibor kerak bo'lgan firmani yashirish.
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AlertTriangle, Clock, Users, ShieldCheck, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+import { AlertTriangle, Clock, Users, ShieldCheck, ArrowRight, RefreshCw } from "lucide-react";
+import { persistRiskLevels } from "@/server/twin";
+import { Button } from "@/components/ui/Button";
 import { formatUzDayShort, formatNum } from "@/lib/format";
 import type { TimelineBucket, TimelineItem } from "@/server/timeline";
 import type { CompanyTwin, StaffCapacity } from "@/lib/domains/accounting/twinCompute";
@@ -90,7 +94,32 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
   twins: CompanyTwin[];
   capacity: StaffCapacity[];
 }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
   const [horizon, setHorizon] = useState<string>("overdue");
+
+  /**
+   * Hisoblangan xavfni `Company.riskLevel` ga yozadi.
+   *
+   * ATAYLAB tugma, avtomatik emas: bu yozuv 7 ta boshqa ekranda ko'rinadigan
+   * qiymatni o'zgartiradi va audit iziga tushadi. Sahifa ochilganda jimgina
+   * bajarilsa, firmalar ro'yxatidagi rang o'zgarishi kimning qarori ekani
+   * hech qayerda qolmasdi.
+   */
+  const syncRisk = () =>
+    start(async () => {
+      try {
+        const r = await persistRiskLevels(period);
+        toast.success(
+          r.updated > 0
+            ? `${r.updated} firmaning xavf darajasi yangilandi`
+            : "Xavf darajalari allaqachon dolzarb",
+        );
+        router.refresh();
+      } catch (e) {
+        toast.error((e as Error).message || "Xatolik");
+      }
+    });
   const active = timeline.find((b) => b.key === horizon) ?? timeline[0];
 
   // Xavf bo'yicha saralash: o'lchanmaganlar (null) OXIRIDA emas, alohida —
@@ -110,6 +139,12 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
       <div className="flex items-baseline gap-3">
         <h1 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Kabina</h1>
         <span className="text-meta" style={{ color: "var(--text-muted)" }}>{period} · {twins.length} firma</span>
+        <span className="ml-auto">
+          <Button variant="secondary" size="sm" disabled={pending} onClick={syncRisk}>
+            <RefreshCw size={12} className="inline mr-1" />
+            Xavf darajalarini yozish
+          </Button>
+        </span>
       </div>
 
       {/* 1 — UFQ: oynalar kesishmaydi, ya'ni sanoqlarni qo'shsa jami chiqadi. */}
