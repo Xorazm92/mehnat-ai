@@ -29,16 +29,27 @@ const TONE: Record<ConcernLevel, { fg: string; bg: string }> = {
   high: { fg: "var(--danger-dark)", bg: "var(--danger-bg)" },
 };
 
-function ScoreChip({ score, suffix = "%" }: { score: Score | null; suffix?: string }) {
+/**
+ * Ball nishoni.
+ *
+ * Rang — YAGONA belgi emas: qiymat matn sifatida turadi va `aria-label` uni
+ * nomi bilan aytadi ("Xavf 42 foiz"). Aks holda ekran o'quvchi "42" deb
+ * o'qirdi — nimaning 42 ekani rangda qolib ketardi.
+ *
+ * `—` ekran o'quvchida "tire" bo'lib chiqadi, shuning uchun u yashiriladi va
+ * o'rniga "o'lchanmagan" o'qiladi.
+ */
+function ScoreChip({ label, score, suffix = "%" }: { label: string; score: Score | null; suffix?: string }) {
   const level: ConcernLevel = score?.level ?? "unknown";
   const tone = TONE[level];
+  const unmeasured = score?.value == null;
   return (
     <span
       className="inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-bold tabular-nums"
       style={{ background: tone.bg, color: tone.fg }}
-      title={score?.reasons.map((r) => r.detail).join(" · ") || "o'lchanmagan"}
+      aria-label={unmeasured ? `${label}: o'lchanmagan` : `${label} ${formatNum(score!.value!)}${suffix}`}
     >
-      {score?.value == null ? "—" : `${formatNum(score.value)}${suffix}`}
+      {unmeasured ? <span aria-hidden="true">—</span> : `${formatNum(score!.value!)}${suffix}`}
     </span>
   );
 }
@@ -156,6 +167,7 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
             <button
               key={b.key}
               onClick={() => setHorizon(b.key)}
+              aria-pressed={on}
               className="rounded-xl px-3 py-2.5 text-left transition"
               style={{
                 background: on ? "var(--accent-blue-light)" : "var(--surface)",
@@ -211,7 +223,7 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
                   className="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:opacity-80"
                   style={{ borderBottom: "1px solid var(--rule)" }}
                 >
-                  <ScoreChip score={t.risk} />
+                  <ScoreChip label="Xavf" score={t.risk} />
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>
                       {t.name}
@@ -243,7 +255,7 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
                   className="flex items-center gap-3 px-2 py-1.5"
                   style={{ borderBottom: "1px solid var(--rule)" }}
                 >
-                  <ScoreChip score={c.score} />
+                  <ScoreChip label="Yuklama" score={c.score} />
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>
                       {c.fullName}
@@ -276,7 +288,7 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
                   className="flex items-center gap-3 px-2 py-1.5"
                   style={{ borderBottom: "1px solid var(--rule)" }}
                 >
-                  <ScoreChip score={t.compliance} />
+                  <ScoreChip label="Muvofiqlik" score={t.compliance} />
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>
                       {t.name}
