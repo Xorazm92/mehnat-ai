@@ -299,6 +299,20 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
                 </div>
               </div>
 
+              {preview.warnings && preview.warnings.length > 0 && (
+                <div
+                  className="p-3 rounded-lg space-y-1"
+                  style={{ background: "var(--warning-bg)", border: "1px solid var(--warning)" }}
+                >
+                  <div className="text-meta font-semibold" style={{ color: "var(--warning)" }}>
+                    Tekshirish kerak
+                  </div>
+                  {preview.warnings.map((w, i) => (
+                    <p key={i} className="text-meta" style={{ color: "var(--text-secondary)" }}>{w}</p>
+                  ))}
+                </div>
+              )}
+
               {preview.duplicateCount > 0 && (
                 <p className="text-meta" style={{ color: "var(--warning)" }}>
                   Bu faylning {preview.duplicateCount} ta qatori allaqachon bazada bor — ular qayta

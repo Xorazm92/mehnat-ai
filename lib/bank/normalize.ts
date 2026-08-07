@@ -68,9 +68,19 @@ export function toDate(value: unknown): Date | null {
   return null;
 }
 
-/** Sana qatoriga o'xshaydimi (yangi tranzaksiya boshlanishini aniqlash uchun). */
-export const looksLikeDate = (value: unknown): boolean =>
-  typeof value === "string" && DMY.test(value.trim());
+/**
+ * Sana qatoriga o'xshaydimi (yangi tranzaksiya boshlanishini aniqlash uchun).
+ *
+ * Ikkala ko'rinish ham qabul qilinadi: "02.07.2026" va Excel serial
+ * (46150.46...). Ba'zi eksportlarda "Лицевой счет" formati ham sanani son
+ * bilan beradi — faqat matnni tekshirsak, bunday faylda birorta ham
+ * tranzaksiya topilmasdi.
+ */
+export const looksLikeDate = (value: unknown): boolean => {
+  if (typeof value === "string") return DMY.test(value.trim());
+  if (typeof value === "number") return Number.isFinite(value) && value >= 20000 && value <= 200000;
+  return false;
+};
 
 /** Bo'sh joylarni yig'ib, matnni tozalaydi. Bo'sh bo'lsa null. */
 export function cleanText(value: unknown): string | null {

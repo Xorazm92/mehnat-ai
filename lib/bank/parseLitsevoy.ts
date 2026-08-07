@@ -40,6 +40,68 @@ export function isLitsevoyFormat(rows: SheetRow[]): boolean {
   });
 }
 
+export interface StatementHeader {
+  accountNumber: string | null;
+  accountInn: string | null;
+  holderName: string | null;
+  periodFrom: Date | null;
+  periodTo: Date | null;
+  openingBalance: number | null;
+}
+
+/**
+ * Vipiska sarlavhasi (hisob, STIR, egasi, davr, ochilish qoldig'i).
+ *
+ * ALOHIDA funksiya, chunki ba'zi eksportlarda sarlavha bloki bilan
+ * tranzaksiyalar HAR XIL SAHIFADA bo'ladi: "Sheet1" da hisob ma'lumoti,
+ * "Sheet2" da qatorlar. Bunda tranzaksiya sahifasida hisob raqami
+ * topilmaydi va vipiskani hech qaysi hisobga bog'lab bo'lmasdi.
+ */
+export function readStatementHeader(rows: SheetRow[]): StatementHeader {
+  const result: StatementHeader = {
+    accountNumber: null,
+    accountInn: null,
+    holderName: null,
+    periodFrom: null,
+    periodTo: null,
+    openingBalance: null,
+  };
+  if (rows.length === 0) return result;
+
+  const columns = Object.keys(rows[0]);
+  for (const row of rows) {
+    // Sarlavha ma'lumoti odatda 1-ustunda, lekin har doim ham emas.
+    for (const [index, key] of columns.entries()) {
+      const text = cleanText(row[key]);
+      if (!text) continue;
+
+      if (/Лицевой счет/i.test(text)) {
+        result.accountNumber = extractAccount(text) ?? result.accountNumber;
+      } else if (/Клиент\s*:/i.test(text)) {
+        result.accountInn = extractInn(text) ?? result.accountInn;
+      } else if (/Период выписки/i.test(text)) {
+        const m = PERIOD_RE.exec(text);
+        if (m) {
+          result.periodFrom = toDate(m[1]);
+          result.periodTo = toDate(m[2]);
+        }
+      } else if (/Входящий остаток/i.test(text)) {
+        // Qoldiq odatda "Дебет" ustunida (5-ustun), lekin qatordagi
+        // oxirgi songa ham tayanamiz.
+        const candidate = columns.slice(index + 1).map((c) => row[c]).find((v) => toAmount(v) !== 0);
+        result.openingBalance = toAmount(candidate);
+      } else if (
+        !result.holderName &&
+        index === 0 &&
+        !/выписка|дата|проводки|наименование|назначение/i.test(text)
+      ) {
+        result.holderName = text;
+      }
+    }
+  }
+  return result;
+}
+
 export function parseLitsevoy(rows: SheetRow[]): ParsedStatement {
   if (rows.length === 0) throw new BankStatementParseError("Vipiska bo'sh");
 
@@ -56,41 +118,9 @@ export function parseLitsevoy(rows: SheetRow[]): ParsedStatement {
     throw new BankStatementParseError(`Sarlavha qatori ("${HEADER_MARKER}") topilmadi`);
   }
 
-  // ── Sarlavha bloki: hisob raqami, STIR, egasi, davr, ochilish qoldig'i ──
-  let accountNumber: string | null = null;
-  let accountInn: string | null = null;
-  let holderName: string | null = null;
-  let periodFrom: Date | null = null;
-  let periodTo: Date | null = null;
-  let openingBalance: number | null = null;
-
-  for (const row of rows.slice(0, headerIndex)) {
-    const text = cleanText(row[colDate]);
-    if (!text) continue;
-
-    if (/Лицевой счет/i.test(text)) {
-      accountNumber = extractAccount(text) ?? accountNumber;
-      continue;
-    }
-    if (/Клиент\s*:/i.test(text)) {
-      accountInn = extractInn(text) ?? accountInn;
-      continue;
-    }
-    if (/Период выписки/i.test(text)) {
-      const m = PERIOD_RE.exec(text);
-      if (m) {
-        periodFrom = toDate(m[1]);
-        periodTo = toDate(m[2]);
-      }
-      continue;
-    }
-    if (/Входящий остаток/i.test(text)) {
-      openingBalance = toAmount(row[colDebit]);
-      continue;
-    }
-    // Qolgan sarlavha qatori — hisob egasining nomi.
-    if (!holderName && !/выписка/i.test(text)) holderName = text;
-  }
+  // Sarlavha bloki shu sahifaning yuqorisida bo'lishi mumkin; bo'lmasa
+  // chaqiruvchi (parseWorkbook) uni boshqa sahifadan to'ldiradi.
+  const header = readStatementHeader(rows.slice(0, headerIndex));
 
   // ── Tranzaksiyalar ─────────────────────────────────────────────────────
   const transactions: ParsedTransaction[] = [];
@@ -157,12 +187,7 @@ export function parseLitsevoy(rows: SheetRow[]): ParsedStatement {
 
   return {
     format: "litsevoy",
-    accountNumber,
-    accountInn,
-    holderName,
-    periodFrom,
-    periodTo,
-    openingBalance,
+    ...header,
     closingBalance: null,
     transactions,
   };

@@ -228,7 +228,20 @@ export type UploadOutcome<T> = { ok: true; data: T } | { ok: false; error: strin
 async function readWorkbook(file: File): Promise<Workbook> {
   const buffer = Buffer.from(await file.arrayBuffer());
   const XLSX = await import("xlsx");
-  const wb = XLSX.read(buffer, { type: "buffer", cellDates: false });
+
+  // KIRILL KODLASHI. Eski `.xls` (BIFF) fayllar matnni Unicode'da emas,
+  // kod sahifasida (cp1251) saqlaydi. Kod jadvali ulanmasa `xlsx` kirill
+  // harflarini "����" qilib beradi — natijada "Дата/время" kabi
+  // belgilar mos kelmay, format tanilmay qolardi. Aynan shu holat bo'ldi.
+  try {
+    const cptable = await import("xlsx/dist/cpexcel.full.mjs");
+    (XLSX as unknown as { set_cptable: (t: unknown) => void }).set_cptable(cptable);
+  } catch {
+    // Kod jadvali yo'q bo'lsa ham davom etamiz: .xlsx (Unicode) fayllar
+    // baribir to'g'ri o'qiladi.
+  }
+
+  const wb = XLSX.read(buffer, { type: "buffer", cellDates: false, codepage: 1251 });
   const workbook: Workbook = {};
   for (const name of wb.SheetNames) {
     workbook[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: null });
@@ -392,6 +405,7 @@ export async function previewStatement(formData: FormData): Promise<UploadOutcom
       expenseSum: expense.reduce((sum, t) => sum + t.amount, 0),
       duplicateCount,
       unknownAccount: !account,
+      warnings: parsed.warnings,
       sample: parsed.transactions.slice(0, 40).map((t) => ({
         valueDate: t.valueDate.toISOString(),
         docNumber: t.docNumber,

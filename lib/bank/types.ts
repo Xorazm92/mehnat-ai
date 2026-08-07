@@ -39,6 +39,12 @@ export interface ParsedStatement {
   openingBalance: number | null;
   closingBalance: number | null;
   transactions: ParsedTransaction[];
+  /**
+   * Parser ishonchsiz deb hisoblagan holatlar (masalan sana vipiska davridan
+   * tashqarida). Import to'xtatilmaydi, lekin foydalanuvchiga ko'rsatiladi —
+   * noto'g'ri sana to'lovni noto'g'ri oyga yozib, qarzdorlikni buzadi.
+   */
+  warnings?: string[];
 }
 
 /**
@@ -62,6 +68,8 @@ export interface StatementPreview {
   duplicateCount: number;
   /** Hisob bazada topilmadi — yuklab bo'lmaydi. */
   unknownAccount: boolean;
+  /** Parser shubhali deb topgan holatlar (sana davrdan tashqarida va h.k.). */
+  warnings?: string[];
   sample: {
     valueDate: string;
     docNumber: string | null;

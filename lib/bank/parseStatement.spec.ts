@@ -15,7 +15,7 @@ import {
   extractCardTransfer,
   isPostableExpense,
 } from "@/lib/bank/classifyExpense";
-import { toAmount, toDate, extractInn, extractAccount } from "@/lib/bank/normalize";
+import { toAmount, toDate, extractInn, extractAccount, looksLikeDate } from "@/lib/bank/normalize";
 import { parsePlastikFile } from "@/lib/bank/parsePlastik";
 
 // ── FORMAT A: "Лицевой счет" — bitta tranzaksiya 3-4 qatorda ──────────────
@@ -442,5 +442,70 @@ describe("parsePlastik", () => {
 
   it("sarlavhasiz faylni JIM YUTMAYDI", () => {
     expect(() => parsePlastikFile('{ "a": 1 }')).toThrow(BankStatementParseError);
+  });
+});
+
+// ── IKKI SAHIFALI VIPISKA (real prod holati) ─────────────────────────────
+describe("ikki sahifali vipiska", () => {
+  // Ruslan yuklagan faylda sarlavha "Sheet1" da, tranzaksiyalar "Sheet2" da
+  // edi — va sana Excel serial ko'rinishida. Har ikkalasi ham parserni
+  // to'xtatib qo'ygan.
+  const sheet1 = [
+    { A: "Лицевой счет No 20208000600767792001", B: null, C: null, D: null, E: null, F: null },
+    { A: "Клиент: 00767792 ИНН: 304868808", B: null, C: null, D: null, E: null, F: null },
+    { A: 'ООО "BAROKAT TEAM"', B: null, C: null, D: null, E: null, F: null },
+    { A: "Период выписки с 01.08.2026 по 07.08.2026", B: null, C: null, D: null, E: null, F: null },
+  ];
+  const sheet2 = [
+    { A: "Дата/время", B: "Номер документа", C: "Оп", D: "Корреспондент", E: "Дебет", F: "Кредит" },
+    { A: "проводки", B: null, C: null, D: "Наименование", E: null, F: null },
+    { A: null, B: null, C: null, D: "Назначение платежа", E: null, F: null },
+    // Sana — SERIAL son, matn emas.
+    { A: 46150.46194444445, B: "260804068", C: "21", D: "МФО:01121 Счет:20208000807186204001 ИНН:301234567", E: 0, F: 2000000 },
+    { A: null, B: null, C: null, D: 'ООО "TEST MIJOZ"', E: null, F: null },
+    { A: null, B: null, C: null, D: "оплата сог дог №09/26БК от 05.01.2026г", E: null, F: null },
+    { A: 46150.4969212963, B: "760", C: "21", D: "МФО:01158 Счет:20208000304408186001 ИНН:302345678", E: 0, F: 20000000 },
+  ];
+
+  it("sarlavhani BOSHQA sahifadan to'ldiradi", () => {
+    const parsed = parseWorkbook({ Sheet1: sheet1, Sheet2: sheet2 });
+    expect(parsed.accountNumber).toBe("20208000600767792001");
+    expect(parsed.accountInn).toBe("304868808");
+    expect(parsed.holderName).toContain("BAROKAT TEAM");
+    expect(parsed.periodFrom?.toISOString().slice(0, 10)).toBe("2026-08-01");
+  });
+
+  it("serial sanali tranzaksiyalarni o'qiydi", () => {
+    const parsed = parseWorkbook({ Sheet1: sheet1, Sheet2: sheet2 });
+    expect(parsed.transactions).toHaveLength(2);
+    const [first] = parsed.transactions;
+    expect(first.direction).toBe("income");
+    expect(first.amount).toBe(2_000_000);
+    expect(first.counterpartyInn).toBe("301234567");
+    expect(first.counterpartyName).toContain("TEST MIJOZ");
+    expect(first.purpose).toContain("09/26БК");
+    // Serial 46150 → 2026-05-08 (1900 tizimi). Davr esa avgust deb yozilgan,
+    // ya'ni fayl ichida nomuvofiqlik bor — parser buni OGOHLANTIRISH bilan
+    // belgilaydi, jim o'tkazib yubormaydi.
+    expect(first.valueDate.toISOString().slice(0, 10)).toBe("2026-05-08");
+  });
+
+  it("sana davrdan tashqarida bo'lsa OGOHLANTIRADI", () => {
+    const parsed = parseWorkbook({ Sheet1: sheet1, Sheet2: sheet2 });
+    expect(parsed.warnings?.length).toBeGreaterThan(0);
+    expect(parsed.warnings?.[0]).toContain("davridan tashqarida");
+  });
+
+  it("sahifa tartibi teskari bo'lsa ham ishlaydi", () => {
+    const parsed = parseWorkbook({ Sheet2: sheet2, Sheet1: sheet1 });
+    expect(parsed.accountNumber).toBe("20208000600767792001");
+    expect(parsed.transactions).toHaveLength(2);
+  });
+
+  it("looksLikeDate serial sonni ham tanidi", () => {
+    expect(looksLikeDate(46150.46)).toBe(true);
+    expect(looksLikeDate("02.07.2026")).toBe(true);
+    expect(looksLikeDate(21)).toBe(false); // "Оп" kodi sana emas
+    expect(looksLikeDate("salom")).toBe(false);
   });
 });
