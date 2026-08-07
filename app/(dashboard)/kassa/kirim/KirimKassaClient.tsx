@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Upload, Link2, EyeOff, Banknote, CreditCard, Wallet, Search } from "lucide-react";
+import { Upload, Link2, EyeOff, Banknote, CreditCard, Wallet, Search, AlertTriangle } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { formatNum, formatUzDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
@@ -78,6 +78,8 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
 
   const fileInput = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<StatementPreview | null>(null);
+  /** Serverdan kelgan tushunarli xato — prod'da toast matni umumiy bo'lib qoladi. */
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
@@ -103,18 +105,35 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
     );
   }, [unmatched, search]);
 
+  const reset = () => {
+    setPreview(null);
+    setPendingFile(null);
+    setUploadError(null);
+    if (fileInput.current) fileInput.current.value = "";
+  };
+
   const onPick = async (file: File) => {
     setBusy(true);
     setPendingFile(file);
+    setUploadError(null);
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const result = await previewStatement(fd);
-      setPreview(result);
+      const res = await previewStatement(fd);
+      if (res.ok) {
+        setPreview(res.data);
+      } else {
+        // Server action XATO OTSA, prod'da matn brauzerga yetmaydi (Next.js
+        // uni yashiradi). Shuning uchun kutilgan xatolar natija sifatida
+        // qaytariladi va aynan shu yerda ko'rsatiladi.
+        setPreview(null);
+        setUploadError(res.error);
+      }
     } catch (e) {
-      toast.error((e as Error).message || "Faylni o'qib bo'lmadi");
       setPreview(null);
-      setPendingFile(null);
+      setUploadError(
+        (e as Error).message || "Faylni o'qib bo'lmadi. Fayl turini tekshiring (.xlsx / .xls)."
+      );
     } finally {
       setBusy(false);
     }
@@ -123,26 +142,26 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   const onConfirm = async () => {
     if (!pendingFile) return;
     setBusy(true);
+    setUploadError(null);
     try {
       const fd = new FormData();
       fd.append("file", pendingFile);
-      const res = (await commitStatementUpload(fd)) as {
-        rowsInserted: number;
-        rowsDuplicate: number;
-        account: string;
-        match: { matchedByInn: number; stillUnmatched: number };
-      };
+      const res = await commitStatementUpload(fd);
+      if (!res.ok) {
+        setUploadError(res.error);
+        return;
+      }
+      const d = res.data;
       toast.success(
-        `${res.account}: ${res.rowsInserted} ta yozildi` +
-          (res.rowsDuplicate > 0 ? `, ${res.rowsDuplicate} ta dublikat tashlandi` : "") +
-          ` · ${res.match.matchedByInn} ta moslashtirildi`
+        `${d.account}: ${d.rowsInserted} ta yozildi` +
+          (d.rowsDuplicate > 0 ? `, ${d.rowsDuplicate} ta dublikat tashlandi` : "") +
+          ` · ${d.matched} ta moslashtirildi` +
+          (d.stillUnmatched > 0 ? ` · ${d.stillUnmatched} tasi qo'lda hal qilinadi` : "")
       );
-      setPreview(null);
-      setPendingFile(null);
-      if (fileInput.current) fileInput.current.value = "";
+      reset();
       router.refresh();
     } catch (e) {
-      toast.error((e as Error).message || "Yuklashda xatolik");
+      setUploadError((e as Error).message || "Yuklashda xatolik");
     } finally {
       setBusy(false);
     }
@@ -209,6 +228,27 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           </div>
         </div>
       </div>
+
+      {/* Xato paneli — toast emas, chunki matn uzun va o'qilishi kerak */}
+      {uploadError && (
+        <div
+          className="p-4 rounded-xl flex items-start gap-3"
+          style={{ background: "var(--danger-bg)", border: "1px solid var(--danger)" }}
+        >
+          <AlertTriangle size={18} style={{ color: "var(--danger)" }} className="mt-0.5 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold" style={{ color: "var(--danger)" }}>
+              Faylni yuklab bo'lmadi
+            </div>
+            <p className="text-meta mt-1 whitespace-pre-line" style={{ color: "var(--text-secondary)" }}>
+              {uploadError}
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={reset}>
+            Yopish
+          </Button>
+        </div>
+      )}
 
       {/* Oldindan ko'rish */}
       {preview && (
@@ -303,16 +343,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
                 <Button variant="primary" size="md" disabled={busy} onClick={onConfirm}>
                   Tasdiqlash va yuklash
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  disabled={busy}
-                  onClick={() => {
-                    setPreview(null);
-                    setPendingFile(null);
-                    if (fileInput.current) fileInput.current.value = "";
-                  }}
-                >
+                <Button variant="secondary" size="md" disabled={busy} onClick={reset}>
                   Bekor qilish
                 </Button>
               </div>
