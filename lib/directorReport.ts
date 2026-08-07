@@ -42,8 +42,15 @@ export interface DirectorReport {
   debt: { companies: number; total: number; red: number };
   obligations: { overdue: number; dueToday: number };
   pending: { expenses: number; proofs: number };
-  /** Bank vipiskasidan moslashtirilmagan tranzaksiyalar (Faza 4 dan keyin). */
-  unmatchedBankTx: number;
+  /**
+   * Bank vipiskasidan hal qilinmagan qatorlar — IKKI XIL ISH, shuning uchun
+   * alohida sanaladi:
+   *   income  — mijoz topilmagan kirim; bank-klient qo'lda bog'laydi;
+   *   expense — toifalanmagan chiqim; kassaga faqat admin yozadi.
+   * Ilgari ikkalasi bitta raqamga qo'shilgani uchun direktor 350 ta ish
+   * borday ko'rardi, holbuki kirim navbatida atigi 49 tasi bor edi.
+   */
+  unmatchedBank: { income: number; expense: number };
 }
 
 export interface DirectorRecipient {
@@ -98,7 +105,7 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
     debt: debts,
     obligations: { overdue, dueToday },
     pending: { expenses: pendingExpenses, proofs: pendingProofs },
-    unmatchedBankTx: await countUnmatchedBankTx(db),
+    unmatchedBank: await countUnmatchedBank(db),
   };
 }
 
@@ -152,19 +159,24 @@ async function countPendingProofs(db: Db): Promise<number> {
 }
 
 /**
- * Moslashtirilmagan bank tranzaksiyalari. Model hali migratsiya qilinmagan
- * bo'lsa 0 qaytaradi — hisobot shu sababdan yiqilmasligi kerak.
+ * Hal qilinmagan bank qatorlari, yo'nalish bo'yicha ajratilgan.
+ * Model hali migratsiya qilinmagan bo'lsa nol qaytaradi — hisobot shu
+ * sababdan yiqilmasligi kerak (prodda aynan shunday holat bo'ldi).
  */
-async function countUnmatchedBankTx(db: Db): Promise<number> {
+async function countUnmatchedBank(db: Db): Promise<{ income: number; expense: number }> {
   const model = (db as Record<string, unknown>).bankTransaction as
     | { count(args: unknown): Promise<number> }
     | undefined;
-  if (!model) return 0;
+  if (!model) return { income: 0, expense: 0 };
   try {
-    return await model.count({ where: { status: "unmatched" } });
+    const [income, expense] = await Promise.all([
+      model.count({ where: { status: "unmatched", direction: "income" } }),
+      model.count({ where: { status: "unmatched", direction: "expense" } }),
+    ]);
+    return { income, expense };
   } catch (err) {
     logServerError("directorReport.bankTx", err);
-    return 0;
+    return { income: 0, expense: 0 };
   }
 }
 
@@ -178,7 +190,8 @@ export function isReportEmpty(r: DirectorReport): boolean {
     r.obligations.dueToday === 0 &&
     r.pending.expenses === 0 &&
     r.pending.proofs === 0 &&
-    r.unmatchedBankTx === 0
+    r.unmatchedBank.income === 0 &&
+    r.unmatchedBank.expense === 0
   );
 }
 
@@ -314,6 +327,11 @@ function summarizeForInApp(r: DirectorReport): string {
   }
   if (r.obligations.overdue > 0) parts.push(`Muddati o'tgan: ${r.obligations.overdue} ta`);
   if (r.pending.expenses > 0) parts.push(`Tasdiq kutmoqda: ${r.pending.expenses} ta xarajat`);
-  if (r.unmatchedBankTx > 0) parts.push(`Moslashtirilmagan: ${r.unmatchedBankTx} ta tranzaksiya`);
+  if (r.unmatchedBank.income > 0) {
+    parts.push(`Moslashtirilmagan kirim: ${r.unmatchedBank.income} ta`);
+  }
+  if (r.unmatchedBank.expense > 0) {
+    parts.push(`Toifalanmagan chiqim: ${r.unmatchedBank.expense} ta`);
+  }
   return parts.join(". ") + ".";
 }

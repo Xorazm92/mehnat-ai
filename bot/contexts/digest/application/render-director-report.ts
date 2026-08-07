@@ -58,8 +58,13 @@ export function renderDirectorReport(report: DirectorReport): string {
   if (report.pending.proofs > 0) {
     alerts.push(`📎 Ko'rib chiqilmagan dalil: ${report.pending.proofs} ta`);
   }
-  if (report.unmatchedBankTx > 0) {
-    alerts.push(`🔗 Moslashtirilmagan bank tranzaksiyasi: ${report.unmatchedBankTx} ta`);
+  // Ikki xil ish, ikki xil odam: kirimni bank-klient bog'laydi, chiqimni
+  // admin toifalaydi. Bitta raqamga qo'shilsa manzara buziladi.
+  if (report.unmatchedBank.income > 0) {
+    alerts.push(`🔗 Mijozi topilmagan kirim: ${report.unmatchedBank.income} ta (bank-klient)`);
+  }
+  if (report.unmatchedBank.expense > 0) {
+    alerts.push(`🧮 Toifalanmagan chiqim: ${report.unmatchedBank.expense} ta (admin)`);
   }
 
   if (alerts.length > 0) {
