@@ -368,6 +368,15 @@ doesn't match what was registered.
   and the `ProcessedUpdate` ledger dedups, so at-least-once is safe.
 - **Backups**: RDS automated backups + PITR. The KPI ledger (`KpiEvent`) and
   payroll data are financial — treat backups as mandatory.
+- **Prove the backups restore, quarterly.** `bash scripts/backup.sh daily`
+  writes a dump plus a sha256 sidecar; `bash scripts/restore-drill.sh` then
+  restores the newest dump into a *separate*, timestamped database, compares
+  row counts against the live one, prints the RTO, and drops the scratch
+  database. It never writes to the source. A dump nobody has restored is a
+  file, not a backup — it can be empty, truncated, or built from a schema that
+  no longer loads, and the day you find out is the day you needed it. The role
+  running it needs `CREATEDB`; without it the script stops before touching
+  anything and says so. Record the date and RTO in `docs/QUALITY_BAR.md` (R2).
 - **Health**: point the ALB target-group health check (or an uptime monitor) at
   `/api/health` (200 vs 503 drains unhealthy instances).
 - **Gemini quota**: if `GEMINI_API_KEY` is unset or rate-limited, the bot falls

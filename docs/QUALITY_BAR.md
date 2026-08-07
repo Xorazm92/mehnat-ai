@@ -47,10 +47,28 @@
 
 | # | Chegara | Holat | Blok |
 |---|---|---|---|
-| R1 | RPO ≤ 24 soat, RTO ≤ 2 soat | ⚠️ `scripts/backup.sh` bor | D |
-| R2 | Tiklash mashqi kvartalda 1 marta, yozib qo'yiladi | ❌ hech qachon bajarilmagan | D |
+| R1 | RPO ≤ 24 soat, RTO ≤ 2 soat | ⚠️ `backup.sh` (kunlik) + `restore-drill.sh` (RTO o'lchaydi) | D |
+| R2 | Tiklash mashqi kvartalda 1 marta, yozib qo'yiladi | ⚠️ `scripts/restore-drill.sh` yozildi; lokal rolda CREATEDB yo'q — staging'da bajarilishi kerak | D |
 | R3 | Migratsiya faqat `migrate deploy` | ✅ 17 migratsiya + baseline | ✅ |
-| R4 | Qaytarilmas o'chirish oldidan dump + checksum + tiklash sinovi | — | D |
+| R4 | Qaytarilmas o'chirish oldidan dump + checksum + tiklash sinovi | ⚠️ `restore-drill.sh` shu uch qadamni bajaradi | D |
+
+### Tiklash mashqi qanday bajariladi
+
+```bash
+bash scripts/backup.sh daily          # dump + sha256
+bash scripts/restore-drill.sh         # eng yangi dump'ni ALOHIDA bazaga tiklaydi
+```
+
+Mashq manba bazaga hech qachon yozmaydi: u vaqt tamg'ali yangi baza yaratadi,
+unga tiklaydi, ETTITA asosiy jadvalning QATOR sanog'ini manba bilan
+solishtiradi, RTO ni o'lchaydi va bazani o'chiradi.
+
+Qator sanog'i solishtiriladi, jadval sanog'i emas — sxema tiklanib ma'lumot
+tiklanmasligi mumkin, va bu eng yomon holat: hammasi joyida ko'rinadi.
+
+Rolga `CREATEDB` kerak (`ALTER ROLE <user> CREATEDB;`). Huquq yo'q bo'lsa
+skript BOSHIDA to'xtaydi va nima qilish kerakligini aytadi — yarim tiklangan
+holatda emas.
 
 ## 5. Foydalanuvchi
 
