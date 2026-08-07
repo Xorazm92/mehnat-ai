@@ -15,7 +15,7 @@ import Link from "next/link";
 import { AlertTriangle, Clock, Users, ShieldCheck, ArrowRight } from "lucide-react";
 import { formatUzDayShort, formatNum } from "@/lib/format";
 import type { TimelineBucket, TimelineItem } from "@/server/timeline";
-import type { CompanyTwin, StaffCapacity } from "@/server/twin";
+import type { CompanyTwin, StaffCapacity } from "@/lib/domains/accounting/twinCompute";
 import type { ConcernLevel, Score } from "@/lib/engines/analytics/twin";
 
 const TONE: Record<ConcernLevel, { fg: string; bg: string }> = {

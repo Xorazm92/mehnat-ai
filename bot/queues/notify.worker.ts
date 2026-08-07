@@ -4,11 +4,13 @@ import { prisma } from "../../lib/prisma";
 import { sweepQuestionEscalations } from "../../lib/engines/automation/escalation";
 import { runDailyDigest } from "../../lib/engines/automation/dailyDigest";
 import { runDirectorReport } from "../../lib/directorReport";
+import { runTwinAlerts } from "../../lib/domains/accounting/twinAlertRun";
 import { createRedisConnection } from "./connection";
 import { QUEUE, callbackSecret, hasTelegramToken } from "../config";
 import { makeEscalationSender } from "../contexts/escalation/interface/escalation-sender";
 import { makeDigestSender } from "../contexts/digest/interface/digest-sender";
 import { makeDirectorSender } from "../contexts/digest/interface/director-sender";
+import { makeAlertSender } from "../contexts/escalation/interface/alert-sender";
 import { deleteMessage } from "../telegram/bot";
 import { deliver } from "../telegram/deliver";
 import type { NotifyJob } from "./notify.queue";
@@ -72,6 +74,15 @@ export function startNotifyWorker(): Worker<NotifyJob> {
           })),
         );
         return report;
+      }
+      if (job.data.kind === "twin-alerts") {
+        const now = new Date();
+        // Digest bilan bir xil yuboruvchi shakli: token yo'q bo'lsa `send`
+        // berilmaydi va ishchi band qilib, jim o'tadi.
+        const send = hasTelegramToken() ? makeAlertSender() : undefined;
+        const res = await runTwinAlerts(prisma, { send, now });
+        console.log(`[notify.worker] twin alerts:`, res);
+        return res;
       }
 
       if (job.data.kind === "delete-message") {

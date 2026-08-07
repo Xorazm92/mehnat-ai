@@ -36,6 +36,14 @@ export type NotifyJob =
     }
   | {
       /**
+       * Ball chegarasidan o'tganlarni senior rollarga xabar qiladi. Kuniga
+       * bir marta yetarli: bu shoshilinch emas, U YO'NALISH — muddat
+       * eskalatsiyasi allaqachon alohida va tezroq ishlaydi.
+       */
+      kind: "twin-alerts";
+    }
+  | {
+      /**
        * Erase a message we sent, after a delay. Parollar uchun: xabar chatda
        * qolsa, u ham "oylab saqlanadi" — aynan qochmoqchi bo'lgan xavf.
        *
@@ -80,6 +88,14 @@ export async function registerNotifySchedulers(): Promise<void> {
     "notify-escalate-questions",
     { pattern: "*/5 * * * *", tz: "Asia/Tashkent" },
     { name: "escalate-questions", data: { kind: "escalate-questions" } },
+  );
+  // 09:10 — kunlik digest tarqalgandan keyin. Tartib muhim: digest "bugun
+  // nima qilaman", ogohlantirish esa "nimaga e'tibor beraman" — ikkinchisi
+  // birinchisining ustiga tushishi kerak, aksincha emas.
+  await q.upsertJobScheduler(
+    "notify-twin-alerts",
+    { pattern: "10 9 * * *", tz: "Asia/Tashkent" },
+    { name: "twin-alerts", data: { kind: "twin-alerts" } },
   );
   // 08:50 — ish boshlanishidan sal oldin, kun rejasini ko'rib olishga ulguradi.
   // Bir odamga kuniga bitta: dedupKey "digest:<userId>:<YYYY-MM-DD>".
