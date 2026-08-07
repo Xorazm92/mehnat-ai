@@ -33,11 +33,17 @@ const HEADER_MARKER = "Дата/время";
 
 const PERIOD_RE = /с\s*(\d{2}\.\d{2}\.\d{4})\s*по\s*(\d{2}\.\d{2}\.\d{4})/i;
 
+/**
+ * Sarlavha katagi ikki ko'rinishda keladi:
+ *   "Дата/время"                (Excel eksporti — alohida qator)
+ *   "Дата/время\nпроводки"      (HTML eksporti — bitta katakda ikki satr)
+ * Shuning uchun aniq tenglik emas, boshlanishi tekshiriladi.
+ */
+const isHeaderCell = (value: unknown): boolean =>
+  typeof value === "string" && value.trim().startsWith(HEADER_MARKER);
+
 export function isLitsevoyFormat(rows: SheetRow[]): boolean {
-  return rows.some((r) => {
-    const first = Object.values(r)[0];
-    return typeof first === "string" && first.trim() === HEADER_MARKER;
-  });
+  return rows.some((r) => isHeaderCell(Object.values(r)[0]));
 }
 
 export interface StatementHeader {
@@ -57,6 +63,21 @@ export interface StatementHeader {
  * "Sheet2" da qatorlar. Bunda tranzaksiya sahifasida hisob raqami
  * topilmaydi va vipiskani hech qaysi hisobga bog'lab bo'lmasdi.
  */
+/**
+ * Sarlavhaning birinchi qatorida ko'pincha fayl yaratilgan vaqt turadi
+ * ("07 августа 2026 г. 17:26") — u hisob EGASI emas. Xizmat matnlari va
+ * sana/vaqtga o'xshash qiymatlar chetlatiladi.
+ */
+function isHolderName(text: string): boolean {
+  if (/выписка|дата|проводки|наименование|назначение|остаток|период|клиент|счет/i.test(text)) {
+    return false;
+  }
+  // "07 августа 2026 г. 17:26" yoki "01.08.2026 12:10"
+  if (/\d{1,2}[\s.]\S+[\s.]\d{4}/.test(text) && /\d{1,2}:\d{2}/.test(text)) return false;
+  if (/^\d{1,2}[.\/]\d{1,2}[.\/]\d{2,4}/.test(text)) return false;
+  return true;
+}
+
 export function readStatementHeader(rows: SheetRow[]): StatementHeader {
   const result: StatementHeader = {
     accountNumber: null,
@@ -90,11 +111,7 @@ export function readStatementHeader(rows: SheetRow[]): StatementHeader {
         // oxirgi songa ham tayanamiz.
         const candidate = columns.slice(index + 1).map((c) => row[c]).find((v) => toAmount(v) !== 0);
         result.openingBalance = toAmount(candidate);
-      } else if (
-        !result.holderName &&
-        index === 0 &&
-        !/выписка|дата|проводки|наименование|назначение/i.test(text)
-      ) {
+      } else if (!result.holderName && index === 0 && isHolderName(text)) {
         result.holderName = text;
       }
     }
@@ -113,7 +130,7 @@ export function parseLitsevoy(rows: SheetRow[]): ParsedStatement {
   }
   const [colDate, colDoc, colOp, colParty, colDebit, colCredit] = columns;
 
-  const headerIndex = rows.findIndex((r) => String(r[colDate] ?? "").trim() === HEADER_MARKER);
+  const headerIndex = rows.findIndex((r) => isHeaderCell(r[colDate]));
   if (headerIndex === -1) {
     throw new BankStatementParseError(`Sarlavha qatori ("${HEADER_MARKER}") topilmadi`);
   }
@@ -140,7 +157,10 @@ export function parseLitsevoy(rows: SheetRow[]): ParsedStatement {
   };
 
   for (const row of rows.slice(headerIndex + 1)) {
-    const dateCell = row[colDate];
+    // "05.08.2026\n11:05:01" — sana va vaqt bitta katakda bo'lishi mumkin.
+    const rawDateCell = row[colDate];
+    const dateCell =
+      typeof rawDateCell === "string" ? rawDateCell.split("\n")[0].trim() : rawDateCell;
 
     if (looksLikeDate(dateCell)) {
       flush();
@@ -152,7 +172,15 @@ export function parseLitsevoy(rows: SheetRow[]): ParsedStatement {
       // Nol summali qator — yakuniy "Итого" kabi xizmat qatori; tashlanadi.
       if (debit === 0 && credit === 0) continue;
 
-      const partyCell = row[colParty];
+      // HTML eksportida kontragent, nomi va to'lov maqsadi BITTA katakda,
+      // satr tashlash bilan ajratilgan. Excel eksportida esa ular keyingi
+      // qatorlarda keladi. Ikkalasi ham qo'llab-quvvatlanadi.
+      const partyRaw = typeof row[colParty] === "string" ? (row[colParty] as string) : "";
+      const partyLines = partyRaw.split("\n").map((l) => l.trim()).filter(Boolean);
+      const partyCell = partyLines[0] ?? row[colParty];
+      const inlineName = partyLines.length > 1 ? partyLines[1] : null;
+      const inlinePurpose = partyLines.length > 2 ? partyLines.slice(2).join(" ") : null;
+
       current = {
         tx: {
           valueDate,
@@ -162,11 +190,11 @@ export function parseLitsevoy(rows: SheetRow[]): ParsedStatement {
           amount: credit > 0 ? credit : debit,
           counterpartyInn: extractInn(partyCell),
           counterpartyAccount: extractAccount(partyCell),
-          counterpartyName: null,
+          counterpartyName: inlineName,
           purpose: null,
         },
-        haveName: false,
-        purposeParts: [],
+        haveName: inlineName != null,
+        purposeParts: inlinePurpose ? [inlinePurpose] : [],
       };
       continue;
     }

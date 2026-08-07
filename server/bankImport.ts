@@ -22,6 +22,7 @@ import { recordAuditLog } from "@/lib/auditTrail";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { parseWorkbook, transactionHash } from "@/lib/bank/parseStatement";
 import { parsePlastik } from "@/lib/bank/parsePlastik";
+import { looksLikeHtml, readHtmlTables } from "@/lib/bank/readHtmlTables";
 import { extractContract } from "@/lib/bank/extractContract";
 import { EXPENSE_CATEGORY_LABELS, isPostableExpense, type ExpenseCategory } from "@/lib/bank/classifyExpense";
 import {
@@ -227,20 +228,21 @@ export type UploadOutcome<T> = { ok: true; data: T } | { ok: false; error: strin
 
 async function readWorkbook(file: File): Promise<Workbook> {
   const buffer = Buffer.from(await file.arrayBuffer());
-  const XLSX = await import("xlsx");
 
-  // KIRILL KODLASHI. Eski `.xls` (BIFF) fayllar matnni Unicode'da emas,
-  // kod sahifasida (cp1251) saqlaydi. Kod jadvali ulanmasa `xlsx` kirill
-  // harflarini "����" qilib beradi — natijada "Дата/время" kabi
-  // belgilar mos kelmay, format tanilmay qolardi. Aynan shu holat bo'ldi.
-  try {
-    const cptable = await import("xlsx/dist/cpexcel.full.mjs");
-    (XLSX as unknown as { set_cptable: (t: unknown) => void }).set_cptable(cptable);
-  } catch {
-    // Kod jadvali yo'q bo'lsa ham davom etamiz: .xlsx (Unicode) fayllar
-    // baribir to'g'ri o'qiladi.
+  // ".xls" HAR DOIM ham Excel emas. Bank Klient-Bank tizimlari vipiskani
+  // HTML jadval qilib berib, unga .xls kengaytmasini qo'yadi. Bunday faylni
+  // `xlsx` ga bersak, u sanani MM.DD deb o'qib kun bilan oyni almashtiradi
+  // (05.08.2026 → 8-may) va bu XATO JIM O'TADI. Shuning uchun HTML alohida,
+  // xom matn sifatida o'qiladi.
+  if (looksLikeHtml(buffer)) {
+    const workbook = readHtmlTables(buffer);
+    if (Object.keys(workbook).length === 0) {
+      throw new Error("HTML faylda jadval topilmadi");
+    }
+    return workbook;
   }
 
+  const XLSX = await import("xlsx");
   const wb = XLSX.read(buffer, { type: "buffer", cellDates: false, codepage: 1251 });
   const workbook: Workbook = {};
   for (const name of wb.SheetNames) {
@@ -250,12 +252,12 @@ async function readWorkbook(file: File): Promise<Workbook> {
 }
 
 /**
- * Tanilmagan fayl uchun TASHXIS matni.
+ * Tanilmagan fayl tarkibini xulosa qilib beradi.
  *
- * "Format tanilmadi" degan xabar o'zi yetarli emas: na foydalanuvchi, na
- * ishlab chiquvchi faylda nima borligini bilmaydi. Shuning uchun har bir
- * sahifaning nomi, qator soni va birinchi qatorlaridagi qiymatlar
- * ko'rsatiladi — shu matnni yuborsangiz format qo'shish uchun yetarli.
+ * Aynan shu tashxis tufayli haqiqiy sabab topildi: ekranda kirill "����"
+ * bo'lib chiqqani kodlash muammosini, sahifalar bo'linishi esa sarlavha
+ * boshqa varaqda ekanini ko'rsatdi. Shusiz "format tanilmadi" degan xabar
+ * hech narsa aytmasdi.
  */
 function describeWorkbook(workbook: Workbook): string {
   const lines: string[] = [];
@@ -263,13 +265,13 @@ function describeWorkbook(workbook: Workbook): string {
     lines.push(`• Sahifa "${name}" — ${rows.length} qator`);
     for (const row of rows.slice(0, 4)) {
       const cells = Object.values(row)
-        .filter((v) => v != null && String(v).trim() !== "")
-        .slice(0, 6)
-        .map((v) => String(v).slice(0, 34));
-      if (cells.length) lines.push(`    ${cells.join(" | ")}`);
+        .map((v) => String(v ?? "").replace(/\s+/g, " ").trim())
+        .filter((v) => v.length > 0)
+        .slice(0, 6);
+      if (cells.length > 0) lines.push(`  ${cells.join(" | ").slice(0, 160)}`);
     }
   }
-  return lines.join("\n");
+  return lines.join("\n") || "(fayl bo'sh)";
 }
 
 /** Fayl 1C "Реализация" reestrimi (plastik) — vipiska emasmi. */

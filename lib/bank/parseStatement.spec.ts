@@ -17,6 +17,7 @@ import {
 } from "@/lib/bank/classifyExpense";
 import { toAmount, toDate, extractInn, extractAccount, looksLikeDate } from "@/lib/bank/normalize";
 import { parsePlastikFile } from "@/lib/bank/parsePlastik";
+import { looksLikeHtml, decodeHtml, readHtmlTables } from "@/lib/bank/readHtmlTables";
 
 // ── FORMAT A: "Лицевой счет" — bitta tranzaksiya 3-4 qatorda ──────────────
 const D = "01 августа 2026 г. 12:10";
@@ -507,5 +508,91 @@ describe("ikki sahifali vipiska", () => {
     expect(looksLikeDate("02.07.2026")).toBe(true);
     expect(looksLikeDate(21)).toBe(false); // "Оп" kodi sana emas
     expect(looksLikeDate("salom")).toBe(false);
+  });
+});
+
+// ── HTML KO'RINISHIDAGI VIPISKA (".xls" deb nomlangan) ───────────────────
+describe("HTML vipiska (Klient-Bank eksporti)", () => {
+  // Bu fixture Ruslan yuklagan REAL faylning aynan tuzilishi.
+  // Uch nozik joyi bor va uchalasi ham parserni yiqitgan edi:
+  //   1) cp1251 kodlash (kirill "����" bo'lib ketardi);
+  //   2) sarlavha Sheet1 da, tranzaksiyalar Sheet2 da;
+  //   3) sana/nom/maqsad BITTA katakda <br> bilan ajratilgan.
+  const html = `<HTML><head><title>Выписка</title>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251"/></head><body>
+<table>
+<tr><td>07 августа 2026 г. 17:26</td><td>Выписка</td><td></td></tr>
+<tr><td>Лицевой счет No 20208000600767792001</td></tr>
+<tr><td>Клиент: 00767792 ИНН: 304868808</td></tr>
+<tr><td>ООО "BAROKAT TEAM"</td></tr>
+<tr><td>Период выписки с 01.08.2026 по 07.08.2026</td></tr>
+<tr><td>Входящий остаток за 01.08.2026</td><td>2,464,726.95</td></tr>
+</table>
+<table>
+<tr><td>Дата/время<br>проводки</td><td>Номер документа</td><td>Оп</td><td>Корреспондент<br>Наименование<br>Назначение платежа</td><td>Дебет</td><td>Кредит</td></tr>
+<tr><td>05.08.2026<br>11:05:01</td><td>0260804068</td><td>21</td><td>МФО:01121 Счет:20208000807186204001 ИНН:311824130<br>MCHJ AVVITAL NATURALS<br>00111оплата за Бухгалтерские услуги 07/2026 сог дог №16/26БК от 05.01.2026г</td><td>.00</td><td>2,000,000.00</td></tr>
+<tr><td>06.08.2026<br>20:32:16</td><td>ОК77</td><td>06</td><td>МФО:00901 Счет:45249000900000901101 ИНН:202579253<br>Комиссионные доходы<br>00667Комиссия за операционное обслуживание</td><td>50,000.00</td><td>.00</td></tr>
+</table></body></HTML>`;
+
+  const buffer = Buffer.from(
+    new Uint8Array(Array.from(html).map((ch) => {
+      const code = ch.charCodeAt(0);
+      // Kirill → cp1251 (А=0xC0). Fixture'ni haqiqiy fayl kabi kodlaymiz.
+      if (code >= 0x410 && code <= 0x44f) return code - 0x410 + 0xc0;
+      if (code === 0x401) return 0xa8;
+      if (code === 0x451) return 0xb8;
+      if (code === 0x2116) return 0xb9; // №
+      return code;
+    }))
+  );
+
+  it("kengaytmaga emas, MAZMUNGA qarab HTML deb tanidi", () => {
+    expect(looksLikeHtml(buffer)).toBe(true);
+  });
+
+  it("cp1251 dan kirillni to'g'ri o'qiydi", () => {
+    const decoded = decodeHtml(buffer);
+    expect(decoded).toContain("Выписка");
+    expect(decoded).toContain("Лицевой счет");
+    expect(decoded).not.toContain("�"); // buzuq belgi bo'lmasin
+  });
+
+  it("KUN va OY almashib ketmaydi — eng xavfli xato", () => {
+    // `xlsx` bu faylni o'qiganda "05.08.2026" ni 8-MAY qilib qo'ygan edi.
+    // Sana noto'g'ri bo'lsa to'lov boshqa oyga tushib, qarzdorlik buziladi.
+    const parsed = parseWorkbook(readHtmlTables(buffer));
+    expect(parsed.transactions[0].valueDate.toISOString().slice(0, 10)).toBe("2026-08-05");
+    expect(parsed.transactions[1].valueDate.toISOString().slice(0, 10)).toBe("2026-08-06");
+  });
+
+  it("sarlavhani Sheet1 dan, qatorlarni Sheet2 dan oladi", () => {
+    const parsed = parseWorkbook(readHtmlTables(buffer));
+    expect(parsed.accountNumber).toBe("20208000600767792001");
+    expect(parsed.accountInn).toBe("304868808");
+    expect(parsed.periodFrom?.toISOString().slice(0, 10)).toBe("2026-08-01");
+    expect(parsed.periodTo?.toISOString().slice(0, 10)).toBe("2026-08-07");
+    expect(parsed.openingBalance).toBe(2_464_726.95);
+  });
+
+  it("hisob egasi sifatida fayl yaratilgan vaqtni OLMAYDI", () => {
+    const parsed = parseWorkbook(readHtmlTables(buffer));
+    expect(parsed.holderName).toContain("BAROKAT TEAM");
+    expect(parsed.holderName).not.toContain("августа");
+  });
+
+  it("bitta katakdagi uch satrni ajratadi (hisob / nom / maqsad)", () => {
+    const [income] = parseWorkbook(readHtmlTables(buffer)).transactions;
+    expect(income.direction).toBe("income");
+    expect(income.amount).toBe(2_000_000);
+    expect(income.counterpartyInn).toBe("311824130");
+    expect(income.counterpartyName).toBe("MCHJ AVVITAL NATURALS");
+    expect(income.purpose).toContain("16/26БК");
+    expect(extractContract(income.purpose)?.number).toBe("16/26БК");
+  });
+
+  it("'.00' ko'rinishidagi nol summani tushunadi", () => {
+    const [, expense] = parseWorkbook(readHtmlTables(buffer)).transactions;
+    expect(expense.direction).toBe("expense");
+    expect(expense.amount).toBe(50_000);
   });
 });
