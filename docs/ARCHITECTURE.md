@@ -63,17 +63,23 @@ ko'rinadigan qilish**.
 
 | Katalog | Mavjud fayllar |
 |---|---|
-| `obligation/` | `deadlines.ts` · `applicability.ts` · `obligations.ts` · `obligationRun.ts` · `obligationDelay.ts` |
+| `obligation/` | `deadlines.ts` · `applicability.ts` · `obligations.ts` · `obligationRun.ts` · `obligationDelay.ts` · `horizon.ts` |
 | `workflow/` | `obligationWorkflow.ts` · `taskWorkflow.ts` · `taskSla.ts` |
-| `evidence/` | *(yangi: `claim.ts` · `store.ts` · `landing.ts` — A6)* |
-| `automation/` | `obligationSweep.ts` · `escalation.ts` · `dailyDigest.ts` · `bot/queues/*` |
-| `analytics/` | `margin.ts` · `timeCost.ts` *(yangi: `effortModel.ts` · `risk.ts` · `capacity.ts` — C bloki)* |
+| `evidence/` | `claim.ts` · `store.ts` · `landing.ts` |
+| `automation/` | `obligationSweep.ts` · `escalation.ts` · `dailyDigest.ts` · `twinAlerts.ts` · `bot/queues/*` |
+| `analytics/` | `margin.ts` · `timeCost.ts` · `twin.ts` (Risk · Capacity · Compliance) |
 
 ### `lib/domains/accounting/` — UZ buxgalteriya lug'ati
 
 `reportColumns.ts` · `reportGroups.ts` · `reportTypes.ts` · `operationTemplates.ts` ·
-`reportPermissions.ts` · `obligationBridge.ts` *(B blokda o'chadi)* · `ai/knowledge.ts` ·
+`reportPermissions.ts` · `matrixWrite.ts` · `matrixRead.ts` · `subjects.ts` ·
+`normativeEffort.ts` · `twinCompute.ts` · `twinAlertRun.ts` · `ai/knowledge.ts` ·
 `kpiEvidence.ts` · `kpiLabels.ts` · template seed'lari
+
+**Nega `twinCompute.ts` domen qatlamida, engine'da emas:** u Prisma jadvallarini
+(`Company`, `Obligation`, `Question`) so'raydi va `complexity` / `obligationType`
+kabi buxgalteriya atamalarini biladi. Engine'da faqat `twin.ts` — sof matematika:
+raqam kiradi, ball va sabab chiqadi.
 
 ### `lib/adapters/` — tashqi manbalar
 

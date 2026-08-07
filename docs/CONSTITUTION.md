@@ -128,8 +128,14 @@ Dashboard ham, AI ham. Ball ko'rsatilsa — sababi ham ko'rsatiladi
 
 Sababsiz raqam ishonchni oshirmaydi — kamaytiradi, chunki uni tekshirib bo'lmaydi.
 
+**O'lchanmagan raqam ham ko'rsatilmaydi.** Ma'lumot yo'q bo'lsa ball `null`
+bo'ladi va ekranda `—` chiqadi — 0 ham, 100 ham EMAS. Yo'q o'lchovni "a'lo" deb
+ko'rsatish e'tibor kerak bo'lgan mijozni ro'yxatning xavfsiz uchiga saralaydi.
+Qarang: [ADR-0013](./adr/0013-unmeasured-is-not-healthy.md)
+
 > **Test:** AI tool testlari (har raqam tool chaqiruvidan) +
-> `ObligationStatusEvent` / `AuditLog` izlari majburiy.
+> `ObligationStatusEvent` / `AuditLog` izlari majburiy +
+> `twin.spec.ts` — har ballning `reasons` yig'indisi `value` ga teng.
 
 ---
 
