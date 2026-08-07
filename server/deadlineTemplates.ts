@@ -33,6 +33,8 @@ export interface TemplateInput {
   adjustmentPolicy: WorkdayAdjustmentPolicy;
   effectiveFrom: string; // ISO / YYYY-MM-DD
   effectiveTo?: string | null;
+  /** Normativ mehnat, daqiqada. Bo'sh — turi bo'yicha standart ishlatiladi. */
+  normativeMinutes?: number | null;
 }
 
 export async function getDeadlineTemplates() {
@@ -57,7 +59,49 @@ function toData(input: TemplateInput) {
     adjustmentPolicy: input.adjustmentPolicy,
     effectiveFrom: new Date(input.effectiveFrom),
     effectiveTo: input.effectiveTo ? new Date(input.effectiveTo) : null,
+    normativeMinutes: normalizeMinutes(input.normativeMinutes),
   };
+}
+
+/** `0` va manfiy — "belgilanmagan" bilan bir xil, ya'ni `null`. */
+function normalizeMinutes(v: number | null | undefined): number | null {
+  if (v == null || !Number.isFinite(v) || v <= 0) return null;
+  if (v > 24 * 60) throw new Error("Normativ mehnat bir ish kunidan oshmasligi kerak");
+  return Math.round(v);
+}
+
+/**
+ * Normativ mehnatni o'zgartirish — LIFECYCLE'dan qat'i nazar.
+ *
+ * Qolgan hamma maydon uchun qoida qat'iy: `active` template tahrirlanmaydi,
+ * chunki uni o'zgartirish MAJBURIYATNI o'zgartiradi — muddat siljiydi, tarix
+ * buziladi. `normativeMinutes` esa majburiyatga umuman ta'sir qilmaydi: u
+ * faqat sig'im bahosining kirishi. Uni ham versiyalash orqasidan qulflab
+ * qo'yish amalda shuni anglatardi — bosh buxgalter normani hech qachon
+ * to'g'rilay olmaydi va sig'im balli abadiy "taxminiy" bo'lib qoladi.
+ */
+export async function setTemplateNormativeMinutes(id: string, minutes: number | null) {
+  const uid = await requireAdmin();
+  const cur = await prisma.deadlineTemplate.findUnique({
+    where: { id },
+    select: { normativeMinutes: true, code: true },
+  });
+  if (!cur) throw new Error("Shablon topilmadi");
+
+  const value = normalizeMinutes(minutes);
+  if (value === cur.normativeMinutes) return { ok: true, normativeMinutes: value };
+
+  await prisma.deadlineTemplate.update({ where: { id }, data: { normativeMinutes: value } });
+  await recordAuditLog({
+    userId: uid,
+    action: "update",
+    tableName: "DeadlineTemplate",
+    recordId: id,
+    oldData: { normativeMinutes: cur.normativeMinutes },
+    newData: { normativeMinutes: value },
+  });
+  revalidateTag("deadline-templates", "max");
+  return { ok: true, normativeMinutes: value };
 }
 
 export async function createDeadlineTemplate(input: TemplateInput) {

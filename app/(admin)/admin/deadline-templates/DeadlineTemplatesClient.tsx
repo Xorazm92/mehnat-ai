@@ -11,6 +11,7 @@ import {
   createNewVersion,
   addTemplateApplicability,
   removeTemplateApplicability,
+  setTemplateNormativeMinutes,
 } from "@/server/deadlineTemplates";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
@@ -37,6 +38,7 @@ interface Template {
   effectiveTo: string | null;
   version: number;
   lifecycle: string;
+  normativeMinutes: number | null;
   applicability: Applicability[];
   _count: { obligations: number };
 }
@@ -87,6 +89,8 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
   const [f, setF] = useState({ ...EMPTY });
   const [appl, setAppl] = useState<Record<string, { type: string; value: string }>>({});
   const [overridesFor, setOverridesFor] = useState<{ id: string; name: string } | null>(null);
+  /** Tahrirlanayotgan normativ — `null` bo'lsa hech biri ochiq emas. */
+  const [effortFor, setEffortFor] = useState<{ id: string; value: string } | null>(null);
 
   const run = (fn: () => Promise<unknown>, ok: string) =>
     start(async () => {
@@ -234,6 +238,62 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
                       </button>
                     )}
                   </div>
+                </div>
+
+                {/* Normativ mehnat — sig'im ballining yagona kirishi.
+                    Lifecycle'dan qat'i nazar tahrirlanadi: u majburiyatga
+                    ta'sir qilmaydi, faqat yuklama bahosiga. */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-meta" style={{ color: "var(--text-muted)" }}>Normativ mehnat:</span>
+                  {effortFor?.id === t.id ? (
+                    <span className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        type="number"
+                        min={0}
+                        max={1440}
+                        value={effortFor.value}
+                        onChange={(e) => setEffortFor({ id: t.id, value: e.target.value })}
+                        placeholder="daqiqa"
+                        aria-label="Normativ mehnat, daqiqada"
+                        className="text-meta px-1 py-0.5 rounded-lg border w-20"
+                        style={inputStyle}
+                      />
+                      <Button
+                        variant="primary"
+                        size="md"
+                        disabled={pending}
+                        onClick={() => {
+                          const raw = effortFor.value.trim();
+                          run(
+                            () => setTemplateNormativeMinutes(t.id, raw === "" ? null : Number(raw)),
+                            "Normativ saqlandi",
+                          );
+                          setEffortFor(null);
+                        }}
+                      >
+                        ✓
+                      </Button>
+                      <button onClick={() => setEffortFor(null)} className="text-meta px-1" style={{ color: "var(--text-muted)" }}>
+                        bekor
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      disabled={pending}
+                      onClick={() => setEffortFor({ id: t.id, value: t.normativeMinutes ? String(t.normativeMinutes) : "" })}
+                      className="text-meta px-1.5 py-0.5 rounded-lg"
+                      style={{
+                        background: "var(--bg-hover, var(--bg-sunken))",
+                        color: t.normativeMinutes ? "var(--text-primary)" : "var(--text-muted)",
+                      }}
+                    >
+                      {/* Bo'sh ustun "hali hal qilinmagan" degani va shundayligicha
+                          ko'rinadi — standart raqamni yozib qo'yish uni qaror
+                          bo'lib ko'rsatardi (ADR-0010). */}
+                      {t.normativeMinutes ? `${t.normativeMinutes} daqiqa` : "belgilanmagan — turi bo'yicha standart"}
+                    </button>
+                  )}
                 </div>
 
                 {/* Applicability */}
