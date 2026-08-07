@@ -128,6 +128,8 @@ const NOTIFICATION_TYPES = new Set([
   "kpi_alert",
   "system",
   "approval_request",
+  "onec_base_request",
+  "director_report",
 ]);
 
 export async function createNotification(data: {

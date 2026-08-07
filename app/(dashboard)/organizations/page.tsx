@@ -4,6 +4,7 @@ import {
   getCachedArchivedCompanies,
   getCachedUsers,
   getCachedOperations,
+  getCachedTariffPreset,
 } from "@/lib/cached-queries";
 import OrganizationsClient from "./OrganizationsClient";
 
@@ -48,11 +49,12 @@ export default async function OrganizationsPage() {
   // Arxiv alohida olinadi: ekrandagi "Faol / Arxiv / Barchasi" filtri mijoz
   // tomonida `isActive` bo'yicha ishlaydi, shuning uchun arxivdagi firmalar ham
   // ro'yxatda bo'lishi kerak — aks holda "Arxiv" doim bo'sh jadval qaytaradi.
-  const [companies, archivedCompanies, staff, operations] = await Promise.all([
+  const [companies, archivedCompanies, staff, operations, tariffPreset] = await Promise.all([
     getCachedCompanies(userId, userRole),
     getCachedArchivedCompanies(userId, userRole),
     getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
+    getCachedTariffPreset(),
   ]);
 
   const mappedStaff = staff.map(u => ({
@@ -70,6 +72,7 @@ export default async function OrganizationsPage() {
         staff={JSON.parse(JSON.stringify(mappedStaff))}
         operations={JSON.parse(JSON.stringify(operations))}
         userRole={userRole}
+        tariffPreset={tariffPreset}
       />
     </div>
   );

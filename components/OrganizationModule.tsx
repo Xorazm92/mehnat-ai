@@ -12,6 +12,7 @@ import RiskBadge from './RiskBadge';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
 import { useTableState } from '@/hooks/useTableState';
+import type { TariffPreset } from '@/lib/tariffPresets';
 
 interface Props {
   companies: Company[];
@@ -23,9 +24,11 @@ interface Props {
   onSave: (company: Partial<Company>, assignments?: any[]) => void;
   onDelete: (id: string) => void;
   onCompanySelect: (c: Company) => void;
+  /** "Standart taqsimot" tugmasi qo'yadigan foizlar (admin sozlamalaridan). */
+  tariffPreset?: TariffPreset;
 }
 
-const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect }) => {
+const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect, tariffPreset }) => {
   const confirm = useConfirm();
   const t = translations[lang];
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -289,8 +292,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           ? { role: 'accountant', userId: c.accountantId || '', salaryType: 'fixed', salaryValue: Number(c.accountantSum) }
           : { role: 'accountant', userId: c.accountantId || '', salaryType: 'percent', salaryValue: Number(c.accountantPerc ?? 0) },
         c.chiefAccountantSum
-          ? { role: 'chief', userId: c.chiefAccountantId || '', salaryType: 'fixed', salaryValue: Number(c.chiefAccountantSum) }
-          : { role: 'chief', userId: c.chiefAccountantId || '', salaryType: 'percent', salaryValue: Number(c.chiefAccountantPerc ?? 0) },
+          ? { role: 'chief_accountant', userId: c.chiefAccountantId || '', salaryType: 'fixed', salaryValue: Number(c.chiefAccountantSum) }
+          : { role: 'chief_accountant', userId: c.chiefAccountantId || '', salaryType: 'percent', salaryValue: Number(c.chiefAccountantPerc ?? 0) },
         c.supervisorSum
           ? { role: 'controller', userId: c.supervisorId || '', salaryType: 'fixed', salaryValue: Number(c.supervisorSum) }
           : { role: 'controller', userId: c.supervisorId || '', salaryType: 'percent', salaryValue: Number(c.supervisorPerc ?? 0) },
@@ -541,6 +544,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 staff={staff}
                 initialData={form}
                 initialAssignments={editingAssignments}
+                tariffPreset={tariffPreset}
                 onSave={handleSave}
                 onCancel={() => {
                   if (isSaving) return;

@@ -3,11 +3,14 @@ import { logJobFailure, logServerError } from "../../lib/logger";
 import { prisma } from "../../lib/prisma";
 import { sweepQuestionEscalations } from "../../lib/escalation";
 import { runDailyDigest } from "../../lib/dailyDigest";
+import { runDirectorReport } from "../../lib/directorReport";
 import { createRedisConnection } from "./connection";
 import { QUEUE, callbackSecret, hasTelegramToken } from "../config";
 import { makeEscalationSender } from "../contexts/escalation/interface/escalation-sender";
 import { makeDigestSender } from "../contexts/digest/interface/digest-sender";
+import { makeDirectorSender } from "../contexts/digest/interface/director-sender";
 import { deleteMessage } from "../telegram/bot";
+import { deliver } from "../telegram/deliver";
 import type { NotifyJob } from "./notify.queue";
 
 /**
@@ -40,6 +43,35 @@ export function startNotifyWorker(): Worker<NotifyJob> {
         const res = await runDailyDigest(prisma, { send, now });
         console.log(`[notify.worker] daily digest:`, res);
         return res;
+      }
+
+      if (job.data.kind === "director-report") {
+        const now = new Date();
+        const send = hasTelegramToken() ? makeDirectorSender() : undefined;
+        const res = await runDirectorReport(prisma, { send, now });
+        console.log(`[notify.worker] director report:`, res);
+        return res;
+      }
+
+      if (job.data.kind === "direct-message") {
+        // Sayt tomonidan yozilgan xabarning Telegram nusxasi. Bog'lanmagan
+        // (telegramUserId yo'q) xodim jimgina o'tkazib yuboriladi — uning
+        // uchun sayt ichidagi Notification allaqachon yozilgan.
+        const { userIds, text } = job.data;
+        if (!hasTelegramToken() || userIds.length === 0) return { sent: 0, skipped: true };
+
+        const users = await prisma.user.findMany({
+          where: { id: { in: userIds }, isActive: true, telegramUserId: { not: null } },
+          select: { telegramUserId: true },
+        });
+        const report = await deliver(
+          users.map((u) => ({
+            chatId: u.telegramUserId as bigint,
+            text,
+            bestEffort: true,
+          })),
+        );
+        return report;
       }
 
       if (job.data.kind === "delete-message") {

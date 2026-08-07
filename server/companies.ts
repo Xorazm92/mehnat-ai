@@ -2,7 +2,14 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole, isAdminRole } from "@/lib/permissions";
+import {
+  isSeniorRole,
+  isAdminRole,
+  normalizeAssignmentRole,
+  staffFitsAssignmentRole,
+  ASSIGNMENT_ROLE_LABELS,
+  type AssignmentRole,
+} from "@/lib/permissions";
 import { companyScopeWhere, assertCompanyPermission } from "@/lib/access";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { revalidateTag } from "next/cache";
@@ -10,6 +17,9 @@ import type { TaxRegime, StatsType } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
 import { decryptSecret } from "@/lib/crypto";
 import { PRIMARY_SERVICE } from "@/lib/credentials";
+import { notifyOneCBaseNeeded } from "@/lib/oneCBase";
+import { telegramQueueDispatcher } from "@/lib/notifyDispatch";
+import { logServerError } from "@/lib/logger";
 
 // Shartnoma/pul maydonlari — o'zgarishi auditga yoziladi va faqat senior tahrirlaydi.
 const MONEY_FIELDS = [
@@ -23,6 +33,110 @@ interface CompanyAssignment {
   role: string;
   salaryType: string;
   salaryValue: number;
+}
+
+/** Kanonik rol imlosi bilan, xodimi tekshirilgan biriktiruv. */
+interface NormalizedAssignment {
+  userId: string;
+  role: AssignmentRole;
+  salaryType: "percent" | "fixed";
+  salaryValue: number;
+}
+
+/**
+ * Bazadagi eski imlolar. `ContractAssignment.role` — oddiy String, va tarixan
+ * wizard 'chief'/'controller', drawer esa 'chief_accountant'/'supervisor'
+ * yozgan. Yangi qator yozishdan oldin barcha variantni yopish kerak.
+ */
+const ALIASES_FOR_ROLE: Record<AssignmentRole, string[]> = {
+  accountant: ["accountant"],
+  chief_accountant: ["chief_accountant", "chief"],
+  controller: ["controller", "supervisor"],
+  bank_manager: ["bank_manager", "bank_client"],
+};
+
+/** Har bir rol uchun `Company` dagi ustunlar — fan-out bitta joydan boshqariladi. */
+const ROLE_COLUMNS: Record<
+  AssignmentRole,
+  { id: string; perc: string; sum: string }
+> = {
+  accountant: { id: "accountantId", perc: "accountantPerc", sum: "accountantSum" },
+  chief_accountant: { id: "chiefAccountantId", perc: "chiefAccountantPerc", sum: "chiefAccountantSum" },
+  controller: { id: "supervisorId", perc: "supervisorPerc", sum: "supervisorSum" },
+  bank_manager: { id: "bankClientId", perc: "bankClientPerc", sum: "bankClientSum" },
+};
+
+/**
+ * Kirish biriktiruvlarini tozalaydi:
+ *  - rol imlosini kanonik qiymatga keltiradi ('chief' → 'chief_accountant');
+ *  - xodim bazada bor va faol ekanini tekshiradi;
+ *  - xodimning `User.role` i biriktirish roliga mos kelishini tekshiradi.
+ *
+ * Ilgari bu yerda hech qanday tekshiruv yo'q edi — bank menejerni bosh
+ * buxgalter qilib biriktirish mumkin edi va payroll uni jim hisoblab ketardi.
+ */
+async function normalizeAssignments(
+  assignments: CompanyAssignment[]
+): Promise<NormalizedAssignment[]> {
+  const filled = assignments.filter((a) => a.userId);
+  if (filled.length === 0) return [];
+
+  const users = await prisma.user.findMany({
+    where: { id: { in: filled.map((a) => a.userId as string) } },
+    select: { id: true, role: true, fullName: true, isActive: true },
+  });
+  const byId = new Map(users.map((u) => [u.id, u]));
+
+  const seen = new Set<AssignmentRole>();
+  const result: NormalizedAssignment[] = [];
+
+  for (const asgn of filled) {
+    const role = normalizeAssignmentRole(asgn.role);
+    if (!role) throw new Error(`Noma'lum biriktirish roli: ${asgn.role}`);
+    if (seen.has(role)) {
+      throw new Error(`"${ASSIGNMENT_ROLE_LABELS[role]}" roli ikki marta berilgan`);
+    }
+    seen.add(role);
+
+    const user = byId.get(asgn.userId as string);
+    if (!user) throw new Error("Tanlangan xodim topilmadi");
+    if (!user.isActive) throw new Error(`${user.fullName} faol emas`);
+    if (!staffFitsAssignmentRole(user.role, role)) {
+      throw new Error(
+        `${user.fullName} "${ASSIGNMENT_ROLE_LABELS[role]}" roliga biriktirilmaydi`
+      );
+    }
+
+    const salaryType = asgn.salaryType === "fixed" ? "fixed" : "percent";
+    const salaryValue = Number(asgn.salaryValue) || 0;
+    if (salaryValue < 0) throw new Error("Ish haqi qiymati manfiy bo'lmaydi");
+    // Company.*Perc — Decimal(5,2); 100 dan katta foiz DB darajasida yiqiladi.
+    if (salaryType === "percent" && salaryValue > 100) {
+      throw new Error("Foiz 100 dan oshmasligi kerak");
+    }
+
+    result.push({ userId: asgn.userId as string, role, salaryType, salaryValue });
+  }
+
+  return result;
+}
+
+/** Biriktiruvlarni `Company` ustunlariga yoyadi (qarama-qarshi ustun null qilinadi). */
+function applyAssignmentsToCompanyData(
+  data: Record<string, unknown>,
+  assignments: NormalizedAssignment[]
+): void {
+  for (const asgn of assignments) {
+    const col = ROLE_COLUMNS[asgn.role];
+    data[col.id] = asgn.userId;
+    if (asgn.salaryType === "percent") {
+      data[col.perc] = asgn.salaryValue;
+      data[col.sum] = null;
+    } else {
+      data[col.sum] = asgn.salaryValue;
+      data[col.perc] = null;
+    }
+  }
 }
 
 // =====================================================
@@ -263,74 +377,54 @@ export async function createCompany(companyData: Record<string, unknown>, assign
 
   const data = sanitizeCompanyData(companyData);
 
-  // Map assignments to company direct fields/percentages
-  if (assignments && assignments.length > 0) {
-    for (const asgn of assignments) {
-      if (!asgn.userId) continue;
-      // Qarama-qarshi maydonni null qilamiz — aks holda eski perc/sum qolib,
-      // Jamoa va Shartnoma tablari ikki xil qiymat ko'rsatadi.
-      if (asgn.role === "accountant") {
-        data.accountantId = asgn.userId;
-        if (asgn.salaryType === "percent") {
-          data.accountantPerc = asgn.salaryValue;
-          data.accountantSum = null;
-        } else {
-          data.accountantSum = asgn.salaryValue;
-          data.accountantPerc = null;
-        }
-      } else if (asgn.role === "chief" || asgn.role === "chief_accountant") {
-        data.chiefAccountantId = asgn.userId;
-        if (asgn.salaryType === "percent") {
-          data.chiefAccountantPerc = asgn.salaryValue;
-          data.chiefAccountantSum = null;
-        } else {
-          data.chiefAccountantSum = asgn.salaryValue;
-          data.chiefAccountantPerc = null;
-        }
-      } else if (asgn.role === "controller") {
-        data.supervisorId = asgn.userId;
-        if (asgn.salaryType === "percent") {
-          data.supervisorPerc = asgn.salaryValue;
-          data.supervisorSum = null;
-        } else {
-          data.supervisorSum = asgn.salaryValue;
-          data.supervisorPerc = null;
-        }
-      } else if (asgn.role === "bank_manager") {
-        data.bankClientId = asgn.userId;
-        if (asgn.salaryType === "percent") {
-          data.bankClientPerc = asgn.salaryValue;
-          data.bankClientSum = null;
-        } else {
-          data.bankClientSum = asgn.salaryValue;
-          data.bankClientPerc = null;
-        }
-      }
-    }
-  }
+  const normalized = assignments?.length ? await normalizeAssignments(assignments) : [];
+  applyAssignmentsToCompanyData(data, normalized);
 
   const result = await prisma.$transaction(async (tx) => {
     const newCompany = await tx.company.create({ data });
 
-    if (assignments && assignments.length > 0) {
-      for (const asgn of assignments) {
-        if (!asgn.userId) continue;
-        await tx.contractAssignment.create({
-          data: {
-            companyId: newCompany.id,
-            userId: asgn.userId,
-            role: asgn.role,
-            salaryType: asgn.salaryType,
-            salaryValue: asgn.salaryValue,
-            startDate: new Date(),
-            isActive: true,
-          },
-        });
-      }
+    for (const asgn of normalized) {
+      await tx.contractAssignment.create({
+        data: {
+          companyId: newCompany.id,
+          userId: asgn.userId,
+          role: asgn.role,
+          salaryType: asgn.salaryType,
+          salaryValue: asgn.salaryValue,
+          startDate: new Date(),
+          isActive: true,
+        },
+      });
     }
 
     return newCompany;
   });
+
+  await recordAuditLog({
+    userId: session.user.id,
+    action: "create",
+    tableName: "Company",
+    recordId: result.id,
+    newData: { name: result.name, inn: result.inn },
+  });
+
+  // 1C baza ochish xabarnomasi — sayt + Telegram. Yiqilsa firma yaratilgani
+  // bekor qilinmaydi: xabar yordamchi, firma esa asosiy natija.
+  try {
+    await notifyOneCBaseNeeded(
+      prisma,
+      {
+        companyId: result.id,
+        companyName: result.name,
+        inn: result.inn,
+        createdByName: session.user.name ?? null,
+      },
+      { dispatchTelegram: telegramQueueDispatcher }
+    );
+    revalidateTag("notifications", "max");
+  } catch (err) {
+    logServerError("companies.notifyOneCBase", err, { companyId: result.id });
+  }
 
   revalidateTag("companies", "max");
   return serialize(result);
@@ -368,97 +462,47 @@ export async function updateCompany(
     assignments = undefined;
   }
 
-  // Map assignments to company direct fields/percentages
-  if (assignments && assignments.length > 0) {
-    for (const asgn of assignments) {
-      if (!asgn.userId) continue;
-      // Qarama-qarshi maydonni null qilamiz — aks holda eski perc/sum qolib,
-      // Jamoa va Shartnoma tablari ikki xil qiymat ko'rsatadi.
-      if (asgn.role === "accountant") {
-        data.accountantId = asgn.userId;
-        if (asgn.salaryType === "percent") {
-          data.accountantPerc = asgn.salaryValue;
-          data.accountantSum = null;
-        } else {
-          data.accountantSum = asgn.salaryValue;
-          data.accountantPerc = null;
-        }
-      } else if (asgn.role === "chief" || asgn.role === "chief_accountant") {
-        data.chiefAccountantId = asgn.userId;
-        if (asgn.salaryType === "percent") {
-          data.chiefAccountantPerc = asgn.salaryValue;
-          data.chiefAccountantSum = null;
-        } else {
-          data.chiefAccountantSum = asgn.salaryValue;
-          data.chiefAccountantPerc = null;
-        }
-      } else if (asgn.role === "controller") {
-        data.supervisorId = asgn.userId;
-        if (asgn.salaryType === "percent") {
-          data.supervisorPerc = asgn.salaryValue;
-          data.supervisorSum = null;
-        } else {
-          data.supervisorSum = asgn.salaryValue;
-          data.supervisorPerc = null;
-        }
-      } else if (asgn.role === "bank_manager") {
-        data.bankClientId = asgn.userId;
-        if (asgn.salaryType === "percent") {
-          data.bankClientPerc = asgn.salaryValue;
-          data.bankClientSum = null;
-        } else {
-          data.bankClientSum = asgn.salaryValue;
-          data.bankClientPerc = null;
-        }
-      }
-    }
-  }
+  const normalized = assignments?.length ? await normalizeAssignments(assignments) : [];
+  applyAssignmentsToCompanyData(data, normalized);
 
   const result = await prisma.$transaction(async (tx) => {
     const updatedCompany = await tx.company.update({ where: { id }, data });
 
-    if (assignments && assignments.length > 0) {
-      for (const asgn of assignments) {
-        if (!asgn.userId) continue;
+    for (const asgn of normalized) {
+      // Eski imlodagi qatorlar ham yopilishi kerak, aks holda firmada ikkita
+      // faol bosh buxgalter qolib ketadi ('chief' va 'chief_accountant').
+      const roleAliases = ALIASES_FOR_ROLE[asgn.role];
 
-        const existing = await tx.contractAssignment.findFirst({
-          where: {
-            companyId: id,
-            role: asgn.role,
-            isActive: true,
-          },
-        });
+      const existing = await tx.contractAssignment.findFirst({
+        where: { companyId: id, role: { in: roleAliases }, isActive: true },
+      });
 
-        if (
-          existing &&
-          existing.userId === asgn.userId &&
-          existing.salaryType === asgn.salaryType &&
-          Number(existing.salaryValue) === Number(asgn.salaryValue)
-        ) {
-          continue;
-        }
-
-        await tx.contractAssignment.updateMany({
-          where: {
-            companyId: id,
-            role: asgn.role,
-            isActive: true,
-          },
-          data: { isActive: false, endDate: new Date() },
-        });
-
-        await tx.contractAssignment.create({
-          data: {
-            companyId: id,
-            userId: asgn.userId,
-            role: asgn.role,
-            salaryType: asgn.salaryType,
-            salaryValue: asgn.salaryValue,
-            startDate: new Date(),
-            isActive: true,
-          },
-        });
+      if (
+        existing &&
+        existing.role === asgn.role &&
+        existing.userId === asgn.userId &&
+        existing.salaryType === asgn.salaryType &&
+        Number(existing.salaryValue) === Number(asgn.salaryValue)
+      ) {
+        continue;
       }
+
+      await tx.contractAssignment.updateMany({
+        where: { companyId: id, role: { in: roleAliases }, isActive: true },
+        data: { isActive: false, endDate: new Date() },
+      });
+
+      await tx.contractAssignment.create({
+        data: {
+          companyId: id,
+          userId: asgn.userId,
+          role: asgn.role,
+          salaryType: asgn.salaryType,
+          salaryValue: asgn.salaryValue,
+          startDate: new Date(),
+          isActive: true,
+        },
+      });
     }
 
     return updatedCompany;

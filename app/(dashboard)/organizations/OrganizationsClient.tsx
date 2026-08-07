@@ -8,15 +8,17 @@ import CompanyDrawer from "@/components/CompanyDrawer";
 import { createCompany, updateCompany, deleteCompany } from "@/server/companies";
 import { getCurrentPeriodKey } from "@/lib/periods";
 import { Company, Staff, OperationEntry } from "@/types";
+import type { TariffPreset } from "@/lib/tariffPresets";
 
 interface Props {
   companies: Company[];
   staff: Staff[];
   operations: OperationEntry[];
   userRole: string;
+  tariffPreset: TariffPreset;
 }
 
-export default function OrganizationsClient({ companies, staff, operations }: Props) {
+export default function OrganizationsClient({ companies, staff, operations, tariffPreset }: Props) {
   const router = useRouter();
   useAutoRefresh();
   const [selectedPeriod, setSelectedPeriod] = useState<string>(getCurrentPeriodKey());
@@ -57,6 +59,7 @@ export default function OrganizationsClient({ companies, staff, operations }: Pr
         staff={staff}
         operations={operations}
         lang="uz"
+        tariffPreset={tariffPreset}
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
         onSave={handleSave}

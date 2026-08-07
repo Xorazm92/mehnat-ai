@@ -135,6 +135,48 @@ export async function getMonthMovement(
   });
 }
 
+/**
+ * Bitta KUN ichidagi kirim/chiqim (direktorning kunlik hisoboti uchun).
+ *
+ * DIQQAT: `Payment` da kunlik sana ishonchli emas — u oylik yig'ma qator
+ * (`@@unique([companyId, period])`) va `paymentDate` bo'sh bo'lishi mumkin.
+ * Shuning uchun bu yerda shartnoma to'lovlari `paymentDate` bo'yicha alohida
+ * sanaladi, `movementInRange` esa oylik `period` bilan ishlaydi.
+ */
+export async function getDayMovement(
+  day: Date,
+  db: MovementDb = prisma
+): Promise<{ income: number; outflow: number }> {
+  const from = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+  const to = new Date(from.getTime() + 86_400_000);
+  const dateWhere = { gte: from, lt: to };
+
+  const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
+    db.payment.aggregate({
+      where: { status: { in: ["paid", "partial"] }, deletedAt: null, paymentDate: dateWhere },
+      _sum: { amount: true },
+    }),
+    db.kassaEntry.aggregate({
+      where: { type: "income", deletedAt: null, date: dateWhere },
+      _sum: { amount: true },
+    }),
+    db.kassaEntry.aggregate({
+      where: { type: "expense", deletedAt: null, date: dateWhere },
+      _sum: { amount: true },
+    }),
+    db.expense.aggregate({
+      where: { status: "approved", deletedAt: null, date: dateWhere },
+      _sum: { amount: true },
+    }),
+    db.payout.aggregate({ where: { deletedAt: null, paidAt: dateWhere }, _sum: { amount: true } }),
+  ]);
+
+  return {
+    income: n(payments._sum.amount) + n(kassaIn._sum.amount),
+    outflow: n(expenses._sum.amount) + n(kassaOut._sum.amount) + n(payouts._sum.amount),
+  };
+}
+
 /** Oy boshigacha bo'lgan butun tarix harakati (birinchi oy yopilishida ochilish qoldig'i). */
 export async function getMovementBeforeMonth(
   year: number,

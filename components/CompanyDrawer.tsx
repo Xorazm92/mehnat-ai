@@ -38,6 +38,12 @@ import { useModalA11y } from '@/hooks/useModalA11y';
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import RecordTimeline from "@/components/RecordTimeline";
+import {
+  ASSIGNMENT_ROLE_LABELS,
+  normalizeAssignmentRole,
+  staffFitsAssignmentRole,
+  type AssignmentRole,
+} from '@/lib/permissions';
 
 interface DrawerProps {
   company: Company | null;
@@ -139,13 +145,15 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
       ? { type: 'fixed', value: Number(sum) }
       : { type: 'percent', value: Number(perc || 0) };
 
-  const ROLE_LABELS: Record<string, string> = {
-    accountant: 'Buxgalter',
-    controller: 'Nazoratchi',
-    bank_manager: 'Bank Menejer',
-    chief: 'Bosh Buxgalter',
-    chief_accountant: 'Bosh Buxgalter'
+  // Sarlavha va rol filtri yagona manbadan — lib/permissions.ts.
+  const roleLabelFor = (role: string): string => {
+    const canonical = normalizeAssignmentRole(role);
+    return canonical ? ASSIGNMENT_ROLE_LABELS[canonical] : role.replace(/_/g, ' ');
   };
+
+  /** Shu biriktirish roliga yaroqli xodimlar (bosh buxgalter katagida faqat bosh buxgalterlar). */
+  const staffForAssignmentRole = (role: string): Staff[] =>
+    (staff || []).filter(s => staffFitsAssignmentRole(s.role, role));
 
   const teamFallbackAssignments = () => {
     const res: any[] = [];
@@ -718,7 +726,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               </div>
                               <div className="flex flex-col gap-1">
                                 <p className="text-body font-bold text-[var(--text)] tracking-tight leading-none">{member?.name?.toUpperCase() || 'Mavjud emas'}</p>
-                                <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-wide leading-none">{ROLE_LABELS[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
+                                <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-wide leading-none">{roleLabelFor(asgn.role)}</p>
                               </div>
                             </div>
                             <div className="text-right flex flex-col gap-1 items-end">
@@ -740,19 +748,23 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 ) : (
                   <div className="p-3 bg-[var(--accent-blue-light)] space-y-3 transition-colors">
                     {editAssignments.map((asgn, idx) => {
+                      const roleOptions = staffForAssignmentRole(asgn.role);
                       return (
                         <div key={asgn.role} className="p-3 bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] space-y-2.5 shadow-sm transition-colors">
-                          <p className="text-micro font-bold text-[var(--accent-blue)] uppercase tracking-widest">{ROLE_LABELS[asgn.role] || asgn.role.replace(/_/g, ' ')}</p>
+                          <p className="text-micro font-bold text-[var(--accent-blue)] uppercase tracking-widest">{roleLabelFor(asgn.role)}</p>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="sm:col-span-2">
                               <label className="text-micro font-bold text-[var(--text-muted)] uppercase block mb-1 tracking-widest">Xodim</label>
                               <select
                                 value={asgn.userId || ''}
+                                disabled={roleOptions.length === 0}
                                 onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, userId: e.target.value } : a))}
                                 className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-lg px-2 py-1.5 text-micro font-bold uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
                               >
-                                <option value="">— Tanlanmagan —</option>
-                                {staff.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
+                                <option value="">
+                                  {roleOptions.length === 0 ? '— BU ROLDA FAOL XODIM YO\'Q —' : '— Tanlanmagan —'}
+                                </option>
+                                {roleOptions.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
                               </select>
                             </div>
                             <div className="flex flex-col">

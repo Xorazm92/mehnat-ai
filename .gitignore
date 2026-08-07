@@ -53,3 +53,16 @@ backup_*.sql
 *.dump
 backups/
 import_log.txt
+
+# Bank vipiskalari va 1C shartnoma reestrlari — HAQIQIY MOLIYAVIY MA'LUMOT.
+# Bularda mijozlarning STIR'i, hisob raqamlari, to'lov summalari va xodimlarning
+# karta raqamlari bor. Repozitoriyga ham, serverga ham CHIQMAYDI — ular faqat
+# import uchun mahalliy manba, ma'lumot esa bazada yashaydi:
+#   npx tsx scripts/mark-own-firms.ts
+#   npx tsx scripts/import-contracts.ts --apply
+#   npx tsx scripts/import-statements.ts
+cash_json_files/
+contract_json_files/
+# Vipiska/reestr asl fayllari (xlsx/xls) ham hech qachon commit qilinmasin.
+*.xlsx
+*.xls

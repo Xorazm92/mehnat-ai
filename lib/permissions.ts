@@ -23,6 +23,7 @@ export type AppView =
   | "fair_kpi"
   | "kpi"
   | "kassa"
+  | "kassa_income"
   | "expenses"
   | "cabinet"
   | "cabinet_bank"
@@ -141,6 +142,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "fair_kpi",
     "kpi",
     "kassa",
+    "kassa_income",
     "expenses",
     "cabinet",
     "payroll",
@@ -162,6 +164,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "fair_kpi",
     "kpi",
     "kassa",
+    "kassa_income",
     "expenses",
     "cabinet",
     "payroll",
@@ -194,11 +197,13 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "notifications",
     "settings",
   ],
+  // Bank-klient FAQAT kirim kassasini ko'radi. "kassa" (shartnoma to'lovlari
+  // jadvali) va "expenses" (chiqim) ATAYIN olib tashlangan: rasxodni faqat
+  // admin qiladi.
   [ROLES.BANK_MANAGER]: [
     "cabinet",
     "cabinet_bank",
-    "kassa",
-    "expenses",
+    "kassa_income",
     "notifications",
     "settings",
   ],
@@ -246,6 +251,7 @@ export const ALL_VIEWS: AppView[] = [
   "fair_kpi",
   "kpi",
   "kassa",
+  "kassa_income",
   "expenses",
   "cabinet",
   "cabinet_bank",
@@ -270,6 +276,7 @@ export const VIEW_LABELS: Record<AppView, string> = {
   fair_kpi: "Adolatli KPI",
   kpi: "KPI",
   kassa: "Kassa",
+  kassa_income: "Kirim kassa",
   expenses: "Xarajatlar",
   cabinet: "Kabinet",
   cabinet_bank: "Bank kabineti",
@@ -343,4 +350,80 @@ export const canSeeAllCompanies = (role: string): boolean => isAdminRole(role);
 
 export const getHomeRoute = (role: string): string => {
   return ROLE_HOME_ROUTES[role as UserRole] || "/dashboard";
+};
+
+// ─────────────────────────────────────────────
+// FIRMAGA BIRIKTIRISH ROLLARI
+// ─────────────────────────────────────────────
+//
+// `ContractAssignment.role` tarixan ikki xil imloda yozilgan:
+// wizard 'chief' / 'controller', drawer esa 'chief_accountant' / 'supervisor'.
+// Natijada bitta firmada ikkita faol bosh buxgalter qatori qolib ketardi
+// (server/companies.ts dedupe'i `role` satri bo'yicha qidiradi).
+// Shu sababli KANONIK qiymat bittaga keltirildi va hamma joyda
+// `normalizeAssignmentRole` orqali o'tkaziladi.
+
+/** Firmaga biriktiriladigan to'rt rol — kanonik imlo. */
+export const ASSIGNMENT_ROLES = [
+  "accountant",
+  "chief_accountant",
+  "controller",
+  "bank_manager",
+] as const;
+
+export type AssignmentRole = (typeof ASSIGNMENT_ROLES)[number];
+
+/** Eski imlolarni kanonik qiymatga keltiradi. */
+export const normalizeAssignmentRole = (role: string): AssignmentRole | null => {
+  switch (role) {
+    case "accountant":
+      return "accountant";
+    case "chief":
+    case "chief_accountant":
+      return "chief_accountant";
+    case "controller":
+    case "supervisor":
+      return "controller";
+    case "bank_manager":
+    case "bank_client":
+      return "bank_manager";
+    default:
+      return null;
+  }
+};
+
+/**
+ * Biriktirish roli → xodimning `User.role` i.
+ * Biriktirish oynasidagi dropdown SHU jadval bo'yicha filtrlanadi: bosh
+ * buxgalter kataklarida faqat `chief_accountant`, bank klientda faqat
+ * `bank_manager` chiqadi.
+ */
+export const ASSIGNMENT_ROLE_TO_USER_ROLE: Record<AssignmentRole, UserRole> = {
+  accountant: ROLES.ACCOUNTANT,
+  chief_accountant: ROLES.CHIEF_ACCOUNTANT,
+  controller: ROLES.SUPERVISOR,
+  bank_manager: ROLES.BANK_MANAGER,
+};
+
+/** Biriktirish roli uchun o'zbekcha sarlavha (UI'da bitta manba). */
+export const ASSIGNMENT_ROLE_LABELS: Record<AssignmentRole, string> = {
+  accountant: "Buxgalter",
+  chief_accountant: "Bosh buxgalter",
+  controller: "Nazoratchi",
+  bank_manager: "Bank klient",
+};
+
+/**
+ * Xodim shu biriktirish roliga yaroqlimi.
+ * Admin/superadmin har qanday rolga biriktirilishi mumkin — ular ko'pincha
+ * bo'sh o'rinni vaqtincha to'ldiradi.
+ */
+export const staffFitsAssignmentRole = (
+  userRole: string,
+  assignmentRole: string
+): boolean => {
+  const canonical = normalizeAssignmentRole(assignmentRole);
+  if (!canonical) return false;
+  if (isAdminRole(userRole)) return true;
+  return userRole === ASSIGNMENT_ROLE_TO_USER_ROLE[canonical];
 };

@@ -108,6 +108,8 @@ model User {
   payouts             Payout[]             @relation("EmployeePayouts")
   bankClientCompanies Company[]            @relation("BankClientCompanies")
   chiefDepartments    Department[]         @relation("DepartmentChief")
+  statementImports    BankStatementImport[]
+  payoutChannels      DisbursementChannel[] @relation("ChannelEmployee")
 
   @@index([email])
   @@index([role])
@@ -200,6 +202,12 @@ model Company {
   isInternalContractor Boolean  @default(false)
   notes                String?
   isActive             Boolean  @default(true)
+
+  // ASRO'ning O'Z yuridik shaxsi (mijoz emas). Mijozlar to'lovi aynan shu
+  // firmalarning bank hisobiga tushadi, shuning uchun ular Company jadvalida
+  // turadi — lekin mijozlar ro'yxatiga, qarzdorlikka va payrollga KIRMAYDI.
+  isOwnFirm            Boolean  @default(false)
+
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -222,6 +230,10 @@ model Company {
   invoices            Invoice[]
   clientUsers         ClientUser[]
   clientRequests      ClientRequest[]
+  contracts           Contract[]      @relation("ClientContracts")
+  ownFirmContracts    Contract[]      @relation("OwnFirmContracts")
+  ownFirmAccounts     BankAccount[]   @relation("OwnFirmAccounts")
+  bankTransactions    BankTransaction[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -232,6 +244,7 @@ model Company {
   @@index([inn])
   @@index([isActive])
   @@index([departmentId])
+  @@index([isOwnFirm])
 }
 
 // =====================================================
@@ -410,6 +423,12 @@ model Payment {
   deletedAt    DateTime?
   deletedBy    String?
   deleteReason String?
+
+  // Bank vipiskasidan kelgan tranzaksiyalarning shu oylik qatorga taqsimoti.
+  // Payment — OYLIK YIG'MA (bir firma / bir davr), allocations esa har bir
+  // to'lovni alohida shartnomaga bog'laydi: bitta mijoz oyda uch marta uch xil
+  // shartnoma bo'yicha to'lashi mumkin.
+  allocations PaymentAllocation[]
 
   @@unique([companyId, period])
   @@index([companyId])
@@ -755,6 +774,11 @@ model KassaEntry {
   createdBy   String?
   user        User?    @relation(fields: [createdBy], references: [id])
 
+  // Pul qaysi kanal orqali chiqdi/kirdi: o'z bank hisobi, naqd, plastik yoki
+  // o'zini-o'zi band qilgan xodimning kartasi. FK emas — mavjud `companyId`
+  // uslubiga mos (kanal o'chirilsa tarixiy yozuv yo'qolmasin).
+  channelId String?
+
   // Soft delete
   deletedAt    DateTime?
   deletedBy    String?
@@ -763,6 +787,8 @@ model KassaEntry {
   @@index([date])
   @@index([type])
   @@index([deletedAt])
+  @@index([companyId])
+  @@index([channelId])
 }
 
 // =====================================================
@@ -1770,4 +1796,196 @@ model ClientRequest {
 
   @@index([companyId])
   @@index([status])
+}
+
+// =====================================================
+// BANK VIPISKA IMPORTI VA SHARTNOMALAR
+// =====================================================
+//
+// BALANS IKKI MARTA SANALMASLIGI — asosiy qoida.
+// lib/balance.ts da kirim = Payment(paid|partial) + KassaEntry(income).
+// Shuning uchun:
+//   * BankTransaction — XOM, o'zgarmas yozuv; balansga UMUMAN kirmaydi.
+//   * Mijozga moslashtirilgan bank KIRIMI  → Payment (+ PaymentAllocation).
+//   * Mijozsiz kirim, naqd, plastik        → KassaEntry(income).
+//   * Bank CHIQIMI (soliq/ijara/aloqa/...) → KassaEntry(expense).
+//   * Oylik va xodim kartasiga o'tkazma    → avtomatik YOZILMAYDI; Payout
+//     bilan bog'lash taklif qilinadi (aks holda chiqim ikki marta sanaladi).
+
+/// O'z firmaning bank hisobi. Vipiska aynan shu hisob nomiga tortiladi.
+model BankAccount {
+  id             String  @id @default(uuid())
+  accountNumber  String  @unique // "20208000600767792001"
+  mfo            String?
+  bankName       String?
+  /// Hisob egasi — isOwnFirm = true bo'lgan Company.
+  ownerCompanyId String
+  ownerCompany   Company @relation("OwnFirmAccounts", fields: [ownerCompanyId], references: [id], onDelete: Cascade)
+  inn            String
+  /// Ekranda ko'rinadigan qisqa nom ("BAROKAT TEAM").
+  label     String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  imports      BankStatementImport[]
+  transactions BankTransaction[]
+
+  @@index([ownerCompanyId])
+  @@index([inn])
+}
+
+/// Bitta yuklangan vipiska fayli (audit izi: kim, qachon, nechta qator).
+model BankStatementImport {
+  id        String      @id @default(uuid())
+  accountId String
+  account   BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  fileName  String
+  /// Parser formati: 'litsevoy' (Лицевой счет) | 'svedeniya' (Сведения о работе счета)
+  format         String
+  periodFrom     DateTime
+  periodTo       DateTime
+  openingBalance Decimal? @db.Decimal(14, 2)
+  closingBalance Decimal? @db.Decimal(14, 2)
+  /// Faylda topilgan / bazaga yozilgan / dublikat bo'lgani uchun tashlangan.
+  rowsParsed    Int      @default(0)
+  rowsInserted  Int      @default(0)
+  rowsDuplicate Int      @default(0)
+  importedBy    String?
+  user          User?    @relation(fields: [importedBy], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+
+  transactions BankTransaction[]
+
+  @@index([accountId, periodFrom])
+  @@index([createdAt])
+}
+
+/// Vipiskadagi bitta qator. O'ZGARMAS: bank aytgani shu, uni tahrirlamaymiz —
+/// faqat moslashtiramiz va undan boshqa yozuvlar hosil qilamiz.
+model BankTransaction {
+  id       String              @id @default(uuid())
+  importId String
+  import   BankStatementImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  accountId String
+  account   BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  valueDate DateTime
+  docNumber String?
+  opCode    String?
+  /// 'income' (kredit — pul tushdi) | 'expense' (debet — pul chiqdi)
+  direction String
+  amount    Decimal @db.Decimal(14, 2)
+
+  counterpartyInn     String?
+  counterpartyName    String?
+  counterpartyAccount String?
+  purpose             String? @db.Text
+  /// To'lov maqsadidan ajratilgan shartnoma raqami ("02/26БК").
+  contractHint String?
+  /// Chiqim toifasi (soliq | bank_komissiya | xodim_kartasi | ijara | ...).
+  expenseCategory String?
+
+  /// Dublikat qalqoni: account+sana+hujjat+summa+yo'nalish+maqsad sha256.
+  /// Xuddi shu faylni qayta yuklash yangi qator hosil qilmaydi.
+  rawHash String @unique
+
+  /// unmatched | matched | posted | ignored
+  status String @default("unmatched")
+
+  matchedCompanyId String?
+  matchedCompany   Company?  @relation(fields: [matchedCompanyId], references: [id], onDelete: SetNull)
+  matchedContractId String?
+  matchedContract   Contract? @relation(fields: [matchedContractId], references: [id], onDelete: SetNull)
+  /// Chiqim yozilganda hosil bo'lgan KassaEntry (FK emas — soft-delete bilan yashaydi).
+  kassaEntryId String?
+
+  ignoredReason String?
+  postedAt      DateTime?
+  postedBy      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  allocations PaymentAllocation[]
+
+  @@index([accountId, valueDate])
+  @@index([status])
+  @@index([counterpartyInn])
+  @@index([direction, status])
+  @@index([matchedCompanyId])
+}
+
+/// Mijoz bilan tuzilgan shartnoma. Bitta mijozda bir nechta shartnoma
+/// bo'lishi mumkin (1C reestrida shunday holat bor), shuning uchun bu alohida
+/// jadval — Company.contractNumber bitta ustun bilan yetmaydi.
+model Contract {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation("ClientContracts", fields: [companyId], references: [id], onDelete: Cascade)
+  /// Shartnoma qaysi O'Z firmamiz nomidan tuzilgan.
+  ownFirmId String?
+  ownFirm   Company? @relation("OwnFirmContracts", fields: [ownFirmId], references: [id], onDelete: SetNull)
+
+  /// "02/26БК" — vipiskadagi to'lov maqsadi bilan solishtiriladi.
+  number   String
+  signedAt DateTime?
+  /// 1C reestridagi oylik summa.
+  amount   Decimal? @db.Decimal(14, 2)
+  currency String   @default("UZS")
+  isActive Boolean  @default(true)
+  /// manual | 1c_import
+  source    String   @default("manual")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  allocations      PaymentAllocation[]
+  bankTransactions BankTransaction[]
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@index([ownFirmId])
+  @@index([number])
+}
+
+/// Bank tranzaksiyasining oylik Payment qatoriga taqsimoti.
+/// Payment.amount = shu firmaning shu davrdagi allocation'lari yig'indisi.
+model PaymentAllocation {
+  id                String          @id @default(uuid())
+  bankTransactionId String
+  bankTransaction   BankTransaction @relation(fields: [bankTransactionId], references: [id], onDelete: Cascade)
+  paymentId         String
+  payment           Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  contractId        String?
+  contract          Contract?       @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  amount            Decimal         @db.Decimal(14, 2)
+  createdBy         String?
+  createdAt         DateTime        @default(now())
+
+  /// Bitta tranzaksiya bitta Payment qatoriga bir marta biriktiriladi.
+  @@unique([bankTransactionId, paymentId])
+  @@index([paymentId])
+  @@index([bankTransactionId])
+  @@index([contractId])
+}
+
+/// Pul chiqadigan kanal. O'z bank hisobi va naqddan tashqari, ba'zi to'lovlar
+/// o'zini-o'zi band qilgan xodimning kartasi orqali o'tadi — xodimlar ro'yxati
+/// o'zgarib turadi, shuning uchun kanal alohida jadvalda.
+model DisbursementChannel {
+  id String @id @default(uuid())
+  /// own_bank | employee_card | cash | plastik
+  type       String
+  label      String
+  employeeId String?
+  employee   User?   @relation("ChannelEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
+  /// "8600****4957" — to'liq karta raqami SAQLANMAYDI.
+  cardMask  String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([employeeId])
 }

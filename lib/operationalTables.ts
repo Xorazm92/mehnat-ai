@@ -64,6 +64,11 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "financialSnapshot", why: "oy yopish suratlari" },
   { model: "accountingPeriod", why: "hisob davrlari (qulflar)" },
 
+  // Moliya: bank vipiskasi (Payment'dan OLDIN — allocation unga bog'langan)
+  { model: "paymentAllocation", why: "bank tranzaksiyasining to'lovga taqsimoti" },
+  { model: "bankTransaction", why: "vipiskadagi xom tranzaksiyalar" },
+  { model: "bankStatementImport", why: "yuklangan vipiska fayllari" },
+
   // Moliya: hujjatlar
   { model: "payout", why: "real to'lovlar" },
   { model: "payrollAdjustment", why: "oylik: bonus/jarima/avans/hisoblangan" },
@@ -120,6 +125,12 @@ export const REFERENCE_TABLES: string[] = [
   "employeeCostRate",
   "oneCConnection",
   "oneCCompanyMapping",
+  // Bank hisobi va shartnoma — firma kartotekasining bir qismi, qo'lda
+  // yig'ilgan/1C dan import qilingan. Yangi hisob davri ular bilan boshlanadi:
+  // tozalashda o'chsa, keyingi vipiskani bog'laydigan joy qolmasdi.
+  "bankAccount",
+  "contract",
+  "disbursementChannel",
 ];
 
 /**

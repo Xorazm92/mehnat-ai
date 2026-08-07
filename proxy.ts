@@ -47,6 +47,9 @@ function pathToView(path: string): AppView | null {
   if (path.startsWith("/profitability")) return "profitability";
   if (path.startsWith("/fair-kpi")) return "fair_kpi";
   if (path.startsWith("/kpi")) return "kpi";
+  // Kirim kassasi ALOHIDA view: bank-klient faqat shuni ko'radi, chiqimni emas.
+  // /kassa dan OLDIN tekshiriladi — prefiks mos kelib qolmasin.
+  if (path.startsWith("/kassa/kirim")) return "kassa_income";
   if (path.startsWith("/kassa")) return "kassa";
   if (path.startsWith("/expenses")) return "expenses";
   if (path.startsWith("/payroll")) return "payroll";

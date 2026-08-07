@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Language } from '@/types';
-import { Bell, Check, CheckCheck, AlertTriangle, Info, TrendingUp, Clock, ExternalLink } from 'lucide-react';
+import { Bell, Check, CheckCheck, AlertTriangle, Info, TrendingUp, Clock, ExternalLink, Database, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -44,6 +44,8 @@ const TYPE_META: Record<string, { color: string; bg: string; icon: React.ReactNo
     status_change: { color: 'var(--accent-blue)', bg: 'var(--accent-blue-light)', icon: <Info size={16} /> },
     kpi_alert: { color: 'var(--success)', bg: 'var(--success-bg)', icon: <TrendingUp size={16} /> },
     approval_request: { color: 'var(--danger)', bg: 'var(--danger-bg)', icon: <AlertTriangle size={16} /> },
+    onec_base_request: { color: 'var(--accent-purple)', bg: 'var(--accent-blue-light)', icon: <Database size={16} /> },
+    director_report: { color: 'var(--accent-blue)', bg: 'var(--accent-blue-light)', icon: <BarChart3 size={16} /> },
     system: { color: 'var(--text-muted)', bg: 'var(--input-bg)', icon: <Bell size={16} /> },
 };
 

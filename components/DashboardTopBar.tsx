@@ -3,7 +3,7 @@
 import { signOut } from "next-auth/react";
 import {
   LogOut, User, Sun, Moon, ChevronDown,
-  Bell, Settings, PanelLeftClose, PanelLeftOpen
+  Bell, BellOff, Settings, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -15,6 +15,11 @@ import { useTheme } from "next-themes";
 import GlobalSearch from "@/components/GlobalSearch";
 import FinanceAssistant from "@/components/FinanceAssistant";
 import { getHomeRoute, type AppView } from "@/lib/permissions";
+import {
+  useNotificationSound,
+  isNotifySoundEnabled,
+  setNotifySoundEnabled,
+} from "@/hooks/useNotificationSound";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin:      "Super Admin",
@@ -63,9 +68,22 @@ export function DashboardTopBar({
   const { toggle, toggleCollapsed, collapsed } = useMobileNav();
   const [mounted, setMounted] = useState(false);
 
+  // localStorage faqat brauzerda mavjud — SSR va birinchi render mos kelishi
+  // uchun boshlang'ich qiymat `false`, keyin mount'da haqiqiy holat o'qiladi.
+  const [soundOn, setSoundOn] = useState(false);
+  useNotificationSound(unreadCount, soundOn);
+
   useEffect(() => {
     setMounted(true);
+    setSoundOn(isNotifySoundEnabled());
   }, []);
+
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    setNotifySoundEnabled(next);
+    toast.success(next ? "Bildirishnoma ovozi yoqildi" : "Bildirishnoma ovozi o'chirildi");
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -160,6 +178,20 @@ export function DashboardTopBar({
             />
           )}
         </Link>
+
+        {/* Bildirishnoma ovozi — yoq/o'chir. mounted'dan keyin, chunki holat
+            localStorage'da (SSR'da noma'lum). */}
+        {mounted && (
+          <button
+            onClick={toggleSound}
+            className="icon-btn"
+            aria-label={soundOn ? "Bildirishnoma ovozini o'chirish" : "Bildirishnoma ovozini yoqish"}
+            title={soundOn ? "Ovoz yoqilgan" : "Ovoz o'chirilgan"}
+            style={soundOn ? undefined : { opacity: 0.55 }}
+          >
+            {soundOn ? <Bell size={17} /> : <BellOff size={17} />}
+          </button>
+        )}
 
         {/* Settings */}
         <Link href="/settings" className="icon-btn" aria-label="Sozlamalar">

@@ -14,6 +14,28 @@ export type NotifyJob =
     }
   | {
       /**
+       * Morning roll-up for super_admin/admin ("director"): yesterday's cash
+       * movement, balance, debt, overdue obligations, pending approvals.
+       * Separate from the staff digest — different audience, different question.
+       */
+      kind: "director-report";
+    }
+  | {
+      /**
+       * Send one ready-made text to specific ASRO users, resolving each to a
+       * Telegram chat by `User.telegramUserId`.
+       *
+       * Enqueued from Next.js server actions (via lib/notify.ts): the grammY
+       * instance lives in the `asro-bot` process, so the web side cannot send
+       * directly. The in-app Notification row is already written by then —
+       * this job is the best-effort second channel.
+       */
+      kind: "direct-message";
+      userIds: string[];
+      text: string;
+    }
+  | {
+      /**
        * Erase a message we sent, after a delay. Parollar uchun: xabar chatda
        * qolsa, u ham "oylab saqlanadi" — aynan qochmoqchi bo'lgan xavf.
        *
@@ -65,6 +87,13 @@ export async function registerNotifySchedulers(): Promise<void> {
     "notify-daily-digest",
     { pattern: "50 8 * * *", tz: "Asia/Tashkent" },
     { name: "daily-digest", data: { kind: "daily-digest" } },
+  );
+  // 09:00 — xodimlar digest'idan keyin, direktor kunni to'liq manzara bilan
+  // boshlasin. Bir direktorga kuniga bitta: "director:<userId>:<YYYY-MM-DD>".
+  await q.upsertJobScheduler(
+    "notify-director-report",
+    { pattern: "0 9 * * *", tz: "Asia/Tashkent" },
+    { name: "director-report", data: { kind: "director-report" } },
   );
 }
 

@@ -17,6 +17,11 @@ import { prisma } from "@/lib/prisma";
 import { isSeniorRole } from "@/lib/permissions";
 import { companyScopeWhere, scopedStaffIds } from "@/lib/access";
 import { mapMonthlyReportToOperationEntry } from "@/lib/operationTemplates";
+import {
+  TARIFF_PRESET_SETTING_KEY,
+  resolveTariffPreset,
+  type TariffPreset,
+} from "@/lib/tariffPresets";
 
 // Firma ro'yxati BIRIKTIRUV bo'yicha cheklanadi (lib/access.ts). Ilgari bu yerda
 // rol bo'yicha uch tarmoq bor edi va "senior" tarmog'i argumentsiz cache'langani
@@ -235,4 +240,28 @@ const _getCachedUnreadCount = unstable_cache(
 /** O'qilmagan bildirishnomalar sonini cache'dan olish */
 export const getCachedUnreadCount = cache(async (userId: string) => {
   return _getCachedUnreadCount(userId);
+});
+
+// ─────────────────────────────────────────────
+// TARIF PRESETI
+// ─────────────────────────────────────────────
+
+const _getCachedTariffPreset = unstable_cache(
+  async () => {
+    const row = await prisma.systemSetting.findUnique({
+      where: { key: TARIFF_PRESET_SETTING_KEY },
+    });
+    return resolveTariffPreset(row?.value);
+  },
+  ["tariff-preset"],
+  { tags: ["system-settings"], revalidate: 300 }
+);
+
+/**
+ * Biriktirish oynasidagi "Standart taqsimot" qiymatlari.
+ * Sozlama yo'q/buzuq bo'lsa STANDARD_TARIFF ga qaytadi — sozlamadagi xato
+ * firma ochishni to'xtatmasligi kerak.
+ */
+export const getCachedTariffPreset = cache(async (): Promise<TariffPreset> => {
+  return _getCachedTariffPreset();
 });

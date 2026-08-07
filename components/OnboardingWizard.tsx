@@ -1,13 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Company, Staff, TaxType, ServerInfo } from '@/types';
 import { ChevronRight, ChevronLeft, Check, X, Building2, Server, Calculator, Users } from 'lucide-react';
 import { groupDigits, ungroupDigits } from '@/lib/format';
 import { Button } from "@/components/ui/Button";
+import {
+    ASSIGNMENT_ROLES,
+    ASSIGNMENT_ROLE_LABELS,
+    staffFitsAssignmentRole,
+    type AssignmentRole,
+} from '@/lib/permissions';
+import { STANDARD_TARIFF, type TariffPreset } from '@/lib/tariffPresets';
 
 interface Props {
     staff: Staff[];
     initialData?: Partial<Company>;
     initialAssignments?: any[];
+    /** Admin sozlamalaridan kelgan "Standart" taqsimot; berilmasa STANDARD_TARIFF. */
+    tariffPreset?: TariffPreset;
     onSave: (company: Partial<Company>, assignments: any[]) => void;
     onCancel: () => void;
 }
@@ -49,7 +58,7 @@ const SERVICE_GROUPS = [
 
 const fieldLabelStyle: React.CSSProperties = { color: 'var(--text-muted)' };
 
-const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignments, onSave, onCancel }) => {
+const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignments, tariffPreset, onSave, onCancel }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [formData, setFormData] = useState<Partial<Company>>(initialData || {
         taxType: TaxType.TURNOVER,
@@ -60,30 +69,25 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
         activeServices: []
     });
 
-    const [assignments, setAssignments] = useState<any[]>(initialAssignments || [
-        { role: 'accountant', userId: '', salaryType: 'percent', salaryValue: 0 },
-        { role: 'chief', userId: '', salaryType: 'percent', salaryValue: 0 },
-        { role: 'controller', userId: '', salaryType: 'percent', salaryValue: 0 },
-        { role: 'bank_manager', userId: '', salaryType: 'percent', salaryValue: 0 }
-    ]);
+    // Kanonik rol imlosi — ASSIGNMENT_ROLES (lib/permissions.ts). Ilgari bu yerda
+    // 'chief' yozilardi, CompanyDrawer esa 'chief_accountant' — natijada bitta
+    // firmada ikkita faol bosh buxgalter qatori qolib ketardi.
+    const [assignments, setAssignments] = useState<any[]>(
+        initialAssignments ||
+        ASSIGNMENT_ROLES.map(role => ({ role, userId: '', salaryType: 'percent', salaryValue: 0 }))
+    );
 
-    useEffect(() => {
-        if (initialAssignments) return;
-        if (!staff?.length) return;
+    const preset = tariffPreset ?? STANDARD_TARIFF;
 
-        setAssignments(prev => {
-            const chiefIdx = prev.findIndex(a => a.role === 'chief');
-            if (chiefIdx === -1) return prev;
-            if (prev[chiefIdx]?.userId) return prev;
-
-            const yorqinoy = staff.find(s => (s.name || '').trim().toLowerCase().includes('yorqinoy'));
-            if (!yorqinoy) return prev;
-
-            const next = [...prev];
-            next[chiefIdx] = { ...next[chiefIdx], userId: yorqinoy.id };
-            return next;
-        });
-    }, [staff, initialAssignments]);
+    // Rol bo'yicha yaroqli xodimlar. Bosh buxgalter katagida faqat bosh
+    // buxgalterlar, bank klientda faqat bank klientlar chiqadi.
+    const staffForRole = React.useMemo(() => {
+        const map = {} as Record<AssignmentRole, Staff[]>;
+        for (const role of ASSIGNMENT_ROLES) {
+            map[role] = (staff || []).filter(s => staffFitsAssignmentRole(s.role, role));
+        }
+        return map;
+    }, [staff]);
 
     const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
     const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
@@ -91,6 +95,22 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
     const updateAssignment = (role: string, field: string, value: any) => {
         setAssignments(prev => prev.map(a => a.role === role ? { ...a, [field]: value } : a));
     };
+
+    /** "Standart" — to'rtala qatorni foizga o'tkazib, kelishilgan taqsimotni qo'yadi. */
+    const applyStandardTariff = () => {
+        setAssignments(prev => prev.map(a => {
+            const percent = preset[a.role as AssignmentRole];
+            if (percent == null) return a;
+            return { ...a, salaryType: 'percent', salaryValue: percent };
+        }));
+    };
+
+    /** Joriy holat aynan standart taqsimotga tengmi (tugmani yoqib ko'rsatish uchun). */
+    const isStandardTariff = assignments.every(a => {
+        const percent = preset[a.role as AssignmentRole];
+        if (percent == null) return true;
+        return a.salaryType === 'percent' && Number(a.salaryValue) === percent;
+    });
 
     const handleFinish = () => {
         onSave(formData, assignments);
@@ -431,21 +451,40 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
 
                 {currentStep === 3 && (
                     <div className="space-y-6 animate-fade-in">
-                        <h3 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--text)' }}>Jamoa va Ish haqi</h3>
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                            <h3 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--text)' }}>Jamoa va Ish haqi</h3>
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={applyStandardTariff}
+                                style={isStandardTariff
+                                    ? { background: 'var(--success)', color: '#fff' }
+                                    : { background: 'var(--card-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
+                                title={ASSIGNMENT_ROLES.map(r => `${ASSIGNMENT_ROLE_LABELS[r]} ${preset[r]}%`).join(' • ')}
+                            >
+                                Standart taqsimot
+                            </Button>
+                        </div>
                         <div className="grid grid-cols-1 gap-3">
-                            {assignments.map((asgn) => (
+                            {assignments.map((asgn) => {
+                                const options = staffForRole[asgn.role as AssignmentRole] ?? [];
+                                const label = ASSIGNMENT_ROLE_LABELS[asgn.role as AssignmentRole] ?? asgn.role;
+                                return (
                                 <div key={asgn.role} className="p-4 rounded-xl grid grid-cols-12 gap-4 items-end" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                                     <div className="col-span-12 lg:col-span-4 space-y-1">
                                         <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>
-                                            {asgn.role === 'chief' ? 'BOSH BUXGALTER' : asgn.role === 'controller' ? 'NAZORATCHI' : asgn.role === 'bank_manager' ? 'BANK MENEJER' : 'BUXGALTER'}
+                                            {label}
                                         </label>
                                         <select
                                             className="erp-input font-bold"
                                             value={asgn.userId || ''}
+                                            disabled={options.length === 0}
                                             onChange={e => updateAssignment(asgn.role, 'userId', e.target.value)}
                                         >
-                                            <option value="">Tanlang...</option>
-                                            {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            <option value="">
+                                                {options.length === 0 ? 'Bu rolda faol xodim yo\'q' : 'Tanlang...'}
+                                            </option>
+                                            {options.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                         </select>
                                     </div>
                                     <div className="col-span-6 lg:col-span-3 space-y-1">
@@ -470,7 +509,8 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         <label
