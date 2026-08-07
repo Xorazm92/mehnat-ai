@@ -43,12 +43,14 @@ interface UnmatchedRow {
   account: { label: string };
 }
 
-interface ManualIncomeRow {
+interface NonBankRow {
   id: string;
+  /** plastik | naqd */
+  source: string;
   amount: string | number;
-  category: string;
-  description: string | null;
-  date: string;
+  receivedAt: string | null;
+  externalRef: string | null;
+  payment: { period: string; company: { name: string; inn: string } } | null;
 }
 
 interface CompanyOption {
@@ -61,7 +63,7 @@ interface CompanyOption {
 interface Props {
   accounts: AccountRow[];
   unmatched: UnmatchedRow[];
-  manualIncome: ManualIncomeRow[];
+  nonBank: NonBankRow[];
   companies: CompanyOption[];
 }
 
@@ -70,7 +72,7 @@ const card: React.CSSProperties = {
   border: "1px solid var(--card-border)",
 };
 
-export default function KirimKassaClient({ accounts, unmatched, manualIncome, companies }: Props) {
+export default function KirimKassaClient({ accounts, unmatched, nonBank, companies }: Props) {
   const router = useRouter();
   useAutoRefresh();
 
@@ -80,11 +82,12 @@ export default function KirimKassaClient({ accounts, unmatched, manualIncome, co
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
 
-  // Naqd va plastik alohida ko'rsatiladi — foydalanuvchi aynan shu uchtasini
-  // (bank / plastik / naqd) bir ekranda ko'rishni so'ragan.
-  const plastik = manualIncome.filter((m) => /plastik|karta/i.test(m.category));
-  const naqd = manualIncome.filter((m) => !/plastik|karta/i.test(m.category));
-  const sum = (rows: ManualIncomeRow[]) => rows.reduce((s, r) => s + Number(r.amount), 0);
+  // Bank / plastik / naqd — foydalanuvchi aynan shu uchtasini bir ekranda
+  // ko'rishni so'ragan. Uchalasi ham Payment orqali o'tadi, shuning uchun
+  // raqamlar qarzdorlik bilan bir manbadan.
+  const plastik = nonBank.filter((m) => m.source === "plastik");
+  const naqd = nonBank.filter((m) => m.source === "naqd");
+  const sum = (rows: NonBankRow[]) => rows.reduce((s, r) => s + Number(r.amount), 0);
 
   const totalBankIncome = accounts.reduce((s, a) => s + a.monthIncome, 0);
   const totalUnmatched = accounts.reduce((s, a) => s + a.unmatchedCount, 0);
@@ -190,6 +193,9 @@ export default function KirimKassaClient({ accounts, unmatched, manualIncome, co
           <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
             {formatNum(sum(plastik))} <span className="text-meta">so&apos;m</span>
           </div>
+          <div className="text-micro" style={{ color: "var(--text-muted)" }}>
+            {plastik.length} ta tushum
+          </div>
         </div>
         <div className="p-4 rounded-xl" style={card}>
           <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
@@ -197,6 +203,9 @@ export default function KirimKassaClient({ accounts, unmatched, manualIncome, co
           </div>
           <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
             {formatNum(sum(naqd))} <span className="text-meta">so&apos;m</span>
+          </div>
+          <div className="text-micro" style={{ color: "var(--text-muted)" }}>
+            {naqd.length} ta tushum
           </div>
         </div>
       </div>
@@ -369,6 +378,57 @@ export default function KirimKassaClient({ accounts, unmatched, manualIncome, co
           ))}
         </div>
       </div>
+
+      {/* Plastik va naqd tushumlari */}
+      {nonBank.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
+            Plastik va naqd tushumlari ({nonBank.length})
+          </h2>
+          <div className="overflow-x-auto rounded-xl" style={card}>
+            <table className="w-full text-meta">
+              <thead>
+                <tr style={{ background: "var(--input-bg)" }}>
+                  <th className="text-left p-2">Sana</th>
+                  <th className="text-left p-2">Manba</th>
+                  <th className="text-left p-2">Mijoz</th>
+                  <th className="text-left p-2">Davr</th>
+                  <th className="text-left p-2">Hujjat</th>
+                  <th className="text-right p-2">Summa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {nonBank.map((r) => (
+                  <tr key={r.id} style={{ borderTop: "1px solid var(--card-border)" }}>
+                    <td className="p-2 whitespace-nowrap">
+                      {r.receivedAt ? formatUzDate(r.receivedAt) : "—"}
+                    </td>
+                    <td className="p-2">
+                      <span
+                        className="text-micro font-semibold px-1.5 py-0.5 rounded"
+                        style={{
+                          background: r.source === "plastik" ? "var(--accent-blue-light)" : "var(--success-bg)",
+                          color: r.source === "plastik" ? "var(--accent-blue)" : "var(--success)",
+                        }}
+                      >
+                        {r.source === "plastik" ? "Plastik" : "Naqd"}
+                      </span>
+                    </td>
+                    <td className="p-2 max-w-[280px] truncate">
+                      {r.payment?.company.name ?? "—"}
+                    </td>
+                    <td className="p-2 whitespace-nowrap">{r.payment?.period ?? "—"}</td>
+                    <td className="p-2">{r.externalRef ?? "—"}</td>
+                    <td className="p-2 text-right tabular-nums font-semibold whitespace-nowrap" style={{ color: "var(--success)" }}>
+                      +{formatNum(Number(r.amount))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Moslashtirilmaganlar navbati */}
       <div className="space-y-2">

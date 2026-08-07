@@ -299,14 +299,15 @@ export async function postIncomeTransaction(
   });
 
   const allocation = await db.paymentAllocation.upsert({
-    where: {
-      bankTransactionId_paymentId: { bankTransactionId: tx.id, paymentId: payment.id },
-    },
+    where: { dedupKey: `bank:${tx.id}` },
     create: {
+      dedupKey: `bank:${tx.id}`,
+      source: "bank",
       bankTransactionId: tx.id,
       paymentId: payment.id,
       contractId: input.contractId ?? null,
       amount: tx.amount,
+      receivedAt: tx.valueDate,
       createdBy: input.createdBy ?? null,
     },
     update: { contractId: input.contractId ?? null, amount: tx.amount },
@@ -342,6 +343,104 @@ export async function postIncomeTransaction(
       postedAt: new Date(),
       postedBy: input.createdBy ?? null,
     },
+  });
+
+  return {
+    paymentId: payment.id,
+    allocationId: allocation.id,
+    paymentTotal,
+    status,
+    supersededManualAmount,
+  };
+}
+
+// ─────────────────────────────────────────────────────────
+// PLASTIK KARTA TUSHUMLARI
+// ─────────────────────────────────────────────────────────
+
+export interface PlastikAllocationInput {
+  /** 1C hujjat raqami — takrorlanmaslik kaliti. */
+  docNumber: string;
+  companyId: string;
+  amount: number;
+  receivedAt: Date;
+  counterpartyInn: string | null;
+  createdBy?: string | null;
+}
+
+/**
+ * Plastik karta tushumini mijozning oylik `Payment` qatoriga qo'shadi.
+ *
+ * Bank tushumi bilan AYNAN bir xil yo'l: `PaymentAllocation` yoziladi va
+ * `Payment.amount` taqsimotlar yig'indisidan qayta hisoblanadi. Shu sababli
+ * bitta mijoz oyda bankdan ham, plastikdan ham to'lasa — iyulda 4 ta firma
+ * shunday qilgan — ikkalasi qo'shiladi va qarz to'g'ri yopiladi.
+ *
+ * `KassaEntry` ATAYIN yozilmaydi: lib/balance.ts kirimni Payment'dan ham,
+ * KassaEntry'dan ham sanaydi, ikkalasi bo'lsa balans ikki barobar ko'rinardi.
+ */
+export async function allocatePlastikReceipt(
+  db: Db,
+  input: PlastikAllocationInput
+): Promise<PostResult> {
+  const period = periodOf(input.receivedAt);
+  const dedupKey = `plastik:${input.docNumber}:${input.counterpartyInn ?? input.companyId}`;
+
+  const existingPayment = await db.payment.findUnique({
+    where: { companyId_period: { companyId: input.companyId, period } },
+    select: { id: true, amount: true, _count: { select: { allocations: true } } },
+  });
+  const supersededManualAmount =
+    existingPayment && existingPayment._count.allocations === 0 && Number(existingPayment.amount) > 0
+      ? Number(existingPayment.amount)
+      : null;
+
+  const payment = await db.payment.upsert({
+    where: { companyId_period: { companyId: input.companyId, period } },
+    create: {
+      companyId: input.companyId,
+      period,
+      amount: 0,
+      status: "pending",
+      paymentMethod: "plastik",
+      paymentDate: input.receivedAt,
+      createdBy: input.createdBy ?? null,
+    },
+    update: { deletedAt: null, deletedBy: null, deleteReason: null },
+    select: { id: true },
+  });
+
+  const allocation = await db.paymentAllocation.upsert({
+    where: { dedupKey },
+    create: {
+      dedupKey,
+      source: "plastik",
+      externalRef: input.docNumber,
+      paymentId: payment.id,
+      amount: new Prisma.Decimal(input.amount.toFixed(2)),
+      receivedAt: input.receivedAt,
+      createdBy: input.createdBy ?? null,
+    },
+    update: { amount: new Prisma.Decimal(input.amount.toFixed(2)) },
+    select: { id: true },
+  });
+
+  const total = await db.paymentAllocation.aggregate({
+    where: { paymentId: payment.id },
+    _sum: { amount: true },
+  });
+  const paymentTotal = Number(total._sum.amount ?? 0);
+
+  const company = await db.company.findUnique({
+    where: { id: input.companyId },
+    select: { contractAmount: true },
+  });
+  const due = Number(company?.contractAmount ?? 0);
+  const status = due > 0 && paymentTotal >= due ? "paid" : paymentTotal > 0 ? "partial" : "pending";
+
+  await db.payment.update({
+    where: { id: payment.id },
+    data: { amount: paymentTotal, status, paymentDate: input.receivedAt },
   });
 
   return {

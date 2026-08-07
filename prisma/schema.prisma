@@ -1950,23 +1950,44 @@ model Contract {
 
 /// Bank tranzaksiyasining oylik Payment qatoriga taqsimoti.
 /// Payment.amount = shu firmaning shu davrdagi allocation'lari yig'indisi.
+/// Bitta TUSHUMNING oylik Payment qatoriga taqsimoti.
+///
+/// Manba uch xil bo'lishi mumkin — bank vipiskasi, plastik karta (1C
+/// reestridan) va naqd. Uchalasi ham mijozning o'sha oydagi to'lovi, ya'ni
+/// qarzini kamaytiradi. Shuning uchun `Payment.amount` HAR DOIM shu jadvaldagi
+/// yig'indidan hisoblanadi: bitta mijoz oyda bankdan ham, plastikdan ham
+/// to'lasa (real holat — iyulda 4 ta firma shunday qilgan), ikkalasi qo'shiladi.
 model PaymentAllocation {
-  id                String          @id @default(uuid())
-  bankTransactionId String
-  bankTransaction   BankTransaction @relation(fields: [bankTransactionId], references: [id], onDelete: Cascade)
+  id String @id @default(uuid())
+  /// Faqat `source = "bank"` uchun to'ldiriladi.
+  bankTransactionId String?
+  bankTransaction   BankTransaction? @relation(fields: [bankTransactionId], references: [id], onDelete: Cascade)
   paymentId         String
-  payment           Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment           Payment          @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   contractId        String?
-  contract          Contract?       @relation(fields: [contractId], references: [id], onDelete: SetNull)
-  amount            Decimal         @db.Decimal(14, 2)
-  createdBy         String?
-  createdAt         DateTime        @default(now())
+  contract          Contract?        @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  amount            Decimal          @db.Decimal(14, 2)
 
-  /// Bitta tranzaksiya bitta Payment qatoriga bir marta biriktiriladi.
-  @@unique([bankTransactionId, paymentId])
+  /// bank | plastik | naqd
+  source String @default("bank")
+  /// Manbadagi hujjat raqami (1C reestr nomeri) — takrorlanmaslik uchun.
+  externalRef String?
+  /// Pul qachon tushgan (bank uchun valyuta sanasi, plastik uchun reestr sanasi).
+  receivedAt DateTime?
+
+  /// Takrorlanmaslik kaliti: "bank:<txId>" yoki "plastik:<hujjat>:<STIR>".
+  /// Yagona unikal ustun — chunki `bankTransactionId` endi NULL bo'lishi
+  /// mumkin, Postgres'da esa NULL'lar bir-biridan farqli hisoblanadi va
+  /// juftlik bo'yicha unikal indeks plastik qatorlarni ushlab qololmasdi.
+  dedupKey String @unique
+
+  createdBy String?
+  createdAt DateTime @default(now())
+
   @@index([paymentId])
   @@index([bankTransactionId])
   @@index([contractId])
+  @@index([source])
 }
 
 /// Pul chiqadigan kanal. O'z bank hisobi va naqddan tashqari, ba'zi to'lovlar

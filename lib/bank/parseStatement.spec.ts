@@ -16,6 +16,7 @@ import {
   isPostableExpense,
 } from "@/lib/bank/classifyExpense";
 import { toAmount, toDate, extractInn, extractAccount } from "@/lib/bank/normalize";
+import { parsePlastikFile } from "@/lib/bank/parsePlastik";
 
 // ── FORMAT A: "Лицевой счет" — bitta tranzaksiya 3-4 qatorda ──────────────
 const D = "01 августа 2026 г. 12:10";
@@ -355,7 +356,13 @@ const hasRealFiles = fs.existsSync(REAL_DIR);
 
 describe.skipIf(!hasRealFiles)("haqiqiy 07.2026 vipiskalari", () => {
   it("10 ta faylning hammasi o'qiladi va hash'lar takrorlanmaydi", () => {
-    const files = fs.readdirSync(REAL_DIR).filter((f) => f.endsWith(".json") && !f.includes("conversion_log"));
+    // plastik.json — bank vipiskasi EMAS, 1C reestri (alohida parser bilan
+    // yuqorida tekshiriladi), shuning uchun bu ro'yxatdan chiqariladi.
+    const files = fs
+      .readdirSync(REAL_DIR)
+      .filter(
+        (f) => f.endsWith(".json") && !f.includes("conversion_log") && f !== "plastik.json"
+      );
     expect(files.length).toBe(10);
 
     const hashes = new Set<string>();
@@ -386,5 +393,54 @@ describe.skipIf(!hasRealFiles)("haqiqiy 07.2026 vipiskalari", () => {
     expect(total).toBe(494);
     expect(hashes.size).toBe(494); // hash to'qnashuvi yo'q
     expect(Math.round(income)).toBe(889_847_725);
+  });
+});
+
+// ── PLASTIK KARTA REESTRI (1C) ───────────────────────────────────────────
+describe("parsePlastik", () => {
+  // Fayl QOIDAGA TO'G'RI KELMAYDIGAN JSON: tashqi qavs yo'q, `null` aralashgan,
+  // ustun kalitlari "Column2" ko'rinishida.
+  const raw = `
+ { "Plastik": "Реестр документов \\"Реализация (акт, накладная)\\" за Июль 2026 г." },
+ null,
+ { "Plastik": "№ п/п", "Column2": "Дата", "Column5": "Номер", "Column6": "Сумма",
+   "Column11": "Информация", "Column14": "Контрагент.ИНН", "Column17": "Договор" },
+ { "Plastik": 1, "Column2": "31.07.2026", "Column5": "3563", "Column6": 700000,
+   "Column11": "\\"ASIA PRO GROUP\\" MCHJ", "Column14": "301502362", "Column17": "Без договора" },
+ { "Plastik": 2, "Column2": "31.07.2026", "Column5": "3999", "Column6": 300000,
+   "Column11": "SOBIROV I YATT", "Column17": "Без договора" },
+ { "Plastik": "Итого", "Column6": 1000000 },
+ null,
+ { "Plastik": "Ответственный:" }
+`;
+
+  it("qavssiz JSON va null qatorlarni o'qiydi", () => {
+    const { receipts, declaredTotal } = parsePlastikFile(raw);
+    expect(receipts).toHaveLength(2);
+    expect(declaredTotal).toBe(1_000_000);
+    expect(receipts.reduce((s, r) => s + r.amount, 0)).toBe(declaredTotal);
+  });
+
+  it("ustun kalitlarini sarlavhadan topadi (qattiq yozilmagan)", () => {
+    const [first] = parsePlastikFile(raw).receipts;
+    expect(first.docNumber).toBe("3563");
+    expect(first.amount).toBe(700_000);
+    expect(first.counterpartyInn).toBe("301502362");
+    expect(first.counterpartyName).toContain("ASIA PRO GROUP");
+    expect(first.date.toISOString().slice(0, 10)).toBe("2026-07-31");
+  });
+
+  it("STIRsiz mijozni ham oladi (YATT — real holat)", () => {
+    const yatt = parsePlastikFile(raw).receipts[1];
+    expect(yatt.counterpartyInn).toBeNull();
+    expect(yatt.counterpartyName).toBe("SOBIROV I YATT");
+  });
+
+  it("'Итого' va 'Ответственный' xizmat qatorlarini tushum deb sanamaydi", () => {
+    expect(parsePlastikFile(raw).receipts.every((r) => r.amount > 0)).toBe(true);
+  });
+
+  it("sarlavhasiz faylni JIM YUTMAYDI", () => {
+    expect(() => parsePlastikFile('{ "a": 1 }')).toThrow(BankStatementParseError);
   });
 });

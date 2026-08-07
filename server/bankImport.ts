@@ -159,6 +159,31 @@ export async function getUnmatchedIncome(limit = 100) {
   return serialize(rows);
 }
 
+/**
+ * Kirim kassasining "Plastik" va "Naqd" bo'limlari.
+ *
+ * Manba — `PaymentAllocation`, `KassaEntry` EMAS: plastik tushumi ham
+ * mijozning to'lovi, ya'ni `Payment` orqali qarzini kamaytiradi. Ikkala joyga
+ * yozilsa balans ikki barobar ko'rinardi.
+ */
+export async function getNonBankIncome(limit = 100) {
+  await requireStatementRole();
+  const rows = await prisma.paymentAllocation.findMany({
+    where: { source: { in: ["plastik", "naqd"] } },
+    select: {
+      id: true,
+      source: true,
+      amount: true,
+      receivedAt: true,
+      externalRef: true,
+      payment: { select: { period: true, company: { select: { name: true, inn: true } } } },
+    },
+    orderBy: [{ receivedAt: "desc" }, { amount: "desc" }],
+    take: limit,
+  });
+  return serialize(rows);
+}
+
 /** Chiqimlar — FAQAT admin. */
 export async function getBankExpenses(limit = 200) {
   await requireAdmin();

@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { canSeeViewWith } from "@/lib/permissions";
 import { getRoleViewOverrides } from "@/server/rbac";
-import { getBankAccountsOverview, getUnmatchedIncome } from "@/server/bankImport";
+import { getBankAccountsOverview, getUnmatchedIncome, getNonBankIncome } from "@/server/bankImport";
 import { prisma } from "@/lib/prisma";
 import KirimKassaClient from "./KirimKassaClient";
 
@@ -18,16 +18,11 @@ export default async function KirimKassaPage() {
   const overrides = await getRoleViewOverrides().catch(() => null);
   if (!canSeeViewWith(role as never, "kassa_income", overrides)) redirect("/cabinet");
 
-  const [accounts, unmatched, manualIncome] = await Promise.all([
+  const [accounts, unmatched, nonBank] = await Promise.all([
     getBankAccountsOverview(),
     getUnmatchedIncome(),
-    // Naqd va plastik kirimlari — bank vipiskasidan tashqari qo'lda kiritiladi.
-    prisma.kassaEntry.findMany({
-      where: { type: "income", deletedAt: null },
-      select: { id: true, amount: true, category: true, description: true, date: true },
-      orderBy: { date: "desc" },
-      take: 50,
-    }),
+    // Plastik va naqd — bank vipiskasidan tashqaridagi tushumlar.
+    getNonBankIncome(),
   ]);
 
   // Mijozlar ro'yxati — moslashtirilmagan tranzaksiyani qo'lda bog'lash uchun.
@@ -47,7 +42,7 @@ export default async function KirimKassaPage() {
       <KirimKassaClient
         accounts={JSON.parse(JSON.stringify(accounts))}
         unmatched={JSON.parse(JSON.stringify(unmatched))}
-        manualIncome={JSON.parse(JSON.stringify(manualIncome))}
+        nonBank={JSON.parse(JSON.stringify(nonBank))}
         companies={JSON.parse(JSON.stringify(companies))}
       />
     </div>
