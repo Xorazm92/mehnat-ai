@@ -72,6 +72,9 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "paymentAllocation", why: "bank tranzaksiyasining to'lovga taqsimoti" },
   { model: "bankTransaction", why: "vipiskadagi xom tranzaksiyalar" },
   { model: "bankStatementImport", why: "yuklangan vipiska fayllari" },
+  // 1C qarzdorlik kesimlari — hisob davriga bog'langan operatsion ma'lumot.
+  // Yangi hisob davri yangi kesimlar bilan boshlanadi.
+  { model: "debtSnapshot", why: "1C qarzdorlik kesimlari" },
 
   // Moliya: hujjatlar
   { model: "payout", why: "real to'lovlar" },

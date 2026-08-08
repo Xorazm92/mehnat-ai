@@ -66,6 +66,16 @@ export function renderDirectorReport(report: DirectorReport): string {
   if (report.unmatchedBank.expense > 0) {
     alerts.push(`🧮 Toifalanmagan chiqim: ${report.unmatchedBank.expense} ta (admin)`);
   }
+  // 1C bilan solishtirish: ASRO joriy oyni, 1C esa jamg'arilgan qarzni
+  // ko'rsatadi. Farq katta bo'lsa eski oylardan qarz qolgan degani.
+  if (report.debt1C) {
+    const d = report.debt1C;
+    const diff = d.total - report.debt.total;
+    alerts.push(
+      `📒 1C bo'yicha qarz: ${som(d.total)} so'm (${uzDate(d.asOf)} holatiga, ${d.contracts} shartnoma)` +
+        (Math.abs(diff) > 1000 ? `\n      ASRO hisobidan farqi: ${diff > 0 ? "+" : ""}${som(diff)} so'm` : "")
+    );
+  }
 
   if (alerts.length > 0) {
     lines.push("⚠️ E'tibor talab qiladi");

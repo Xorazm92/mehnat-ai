@@ -51,6 +51,15 @@ export interface DirectorReport {
    * borday ko'rardi, holbuki kirim navbatida atigi 49 tasi bor edi.
    */
   unmatchedBank: { income: number; expense: number };
+  /**
+   * 1C «Задолженность покупателей» ning oxirgi kesimi.
+   *
+   * ASRO o'zi hisoblagan qarz (`debt`) faqat JORIY oyni ko'radi, 1C esa
+   * jamg'arilgan qarzni beradi — shuning uchun ikkalasi yonma-yon
+   * ko'rsatiladi. Farq katta bo'lsa, demak eski oylardan qarz qolgan
+   * yoki to'lov tizimga kiritilmagan.
+   */
+  debt1C: { asOf: Date; total: number; contracts: number } | null;
 }
 
 export interface DirectorRecipient {
@@ -106,6 +115,7 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
     obligations: { overdue, dueToday },
     pending: { expenses: pendingExpenses, proofs: pendingProofs },
     unmatchedBank: await countUnmatchedBank(db),
+    debt1C: await latestDebtSnapshot(db),
   };
 }
 
@@ -177,6 +187,35 @@ async function countUnmatchedBank(db: Db): Promise<{ income: number; expense: nu
   } catch (err) {
     logServerError("directorReport.bankTx", err);
     return { income: 0, expense: 0 };
+  }
+}
+
+/**
+ * 1C dan olingan oxirgi qarzdorlik kesimi.
+ * Jadval hali migratsiya qilinmagan bo'lsa null — hisobot yiqilmasligi kerak.
+ */
+async function latestDebtSnapshot(
+  db: Db
+): Promise<{ asOf: Date; total: number; contracts: number } | null> {
+  const model = (db as Record<string, unknown>).debtSnapshot as
+    | {
+        findFirst(args: unknown): Promise<{ asOf: Date } | null>;
+        aggregate(args: unknown): Promise<{ _sum: { debt: unknown }; _count: { _all: number } }>;
+      }
+    | undefined;
+  if (!model) return null;
+  try {
+    const latest = await model.findFirst({ orderBy: { asOf: "desc" }, select: { asOf: true } });
+    if (!latest) return null;
+    const agg = await model.aggregate({
+      where: { asOf: latest.asOf },
+      _sum: { debt: true },
+      _count: { _all: true },
+    });
+    return { asOf: latest.asOf, total: Number(agg._sum.debt ?? 0), contracts: agg._count._all };
+  } catch (err) {
+    logServerError("directorReport.debt1C", err);
+    return null;
   }
 }
 
@@ -332,6 +371,9 @@ function summarizeForInApp(r: DirectorReport): string {
   }
   if (r.unmatchedBank.expense > 0) {
     parts.push(`Toifalanmagan chiqim: ${r.unmatchedBank.expense} ta`);
+  }
+  if (r.debt1C) {
+    parts.push(`1C bo'yicha qarz: ${formatNum(r.debt1C.total)} so'm`);
   }
   return parts.join(". ") + ".";
 }

@@ -230,6 +230,7 @@ model Company {
   invoices            Invoice[]
   clientUsers         ClientUser[]
   clientRequests      ClientRequest[]
+  debtSnapshots       DebtSnapshot[]
   contracts           Contract[]      @relation("ClientContracts")
   ownFirmContracts    Contract[]      @relation("OwnFirmContracts")
   ownFirmAccounts     BankAccount[]   @relation("OwnFirmAccounts")
@@ -1940,8 +1941,15 @@ model Contract {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// 1C dan olingan BOSHLANG'ICH qarz (shu sanaga). Undan keyingi qarz
+  /// ASRO o'zi hisoblaydi: boshlang'ich + yangi oylar − to'lovlar.
+  /// Shu sababdan 1C faylini har kuni yuklash SHART EMAS.
+  openingDebt   Decimal?  @db.Decimal(14, 2)
+  openingDebtAt DateTime?
+
   allocations      PaymentAllocation[]
   bankTransactions BankTransaction[]
+  debtSnapshots    DebtSnapshot[]
 
   @@unique([companyId, number])
   @@index([companyId])
@@ -1994,6 +2002,36 @@ model PaymentAllocation {
 /// Pul chiqadigan kanal. O'z bank hisobi va naqddan tashqari, ba'zi to'lovlar
 /// o'zini-o'zi band qilgan xodimning kartasi orqali o'tadi — xodimlar ro'yxati
 /// o'zgarib turadi, shuning uchun kanal alohida jadvalda.
+/// 1C «Задолженность покупателей» hisobotining kesimi.
+///
+/// Har yuklash yangi `asOf` beradi, eskisi O'CHIRILMAYDI — shunda ASRO
+/// hisobi bilan 1C ni istalgan sanada solishtirish mumkin.
+model DebtSnapshot {
+  id   String   @id @default(uuid())
+  asOf DateTime
+
+  companyId  String?
+  company    Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contractId String?
+  contract   Contract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
+
+  /// Faylda qanday yozilgan bo'lsa — moslashmagan qatorlarni ham saqlash uchun.
+  rawCustomer String
+  rawContract String?
+  /// Shartnoma qaysi o'z firmamiz nomidan tuzilgan (faylga ko'ra).
+  ownFirmName String?
+
+  debt    Decimal @db.Decimal(14, 2)
+  advance Decimal @default(0) @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now())
+
+  @@unique([asOf, rawCustomer, rawContract])
+  @@index([contractId])
+  @@index([companyId])
+  @@index([asOf])
+}
+
 model DisbursementChannel {
   id String @id @default(uuid())
   /// own_bank | employee_card | cash | plastik
