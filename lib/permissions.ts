@@ -397,10 +397,11 @@ export const normalizeAssignmentRole = (role: string): AssignmentRole | null => 
 };
 
 /**
- * Biriktirish roli → xodimning `User.role` i.
- * Biriktirish oynasidagi dropdown SHU jadval bo'yicha filtrlanadi: bosh
- * buxgalter kataklarida faqat `chief_accountant`, bank klientda faqat
- * `bank_manager` chiqadi.
+ * Biriktirish roli → shu ish uchun "odatdagi" lavozim.
+ *
+ * DIQQAT: bu jadval endi dropdown'ni FILTRLAMAYDI (qarang:
+ * `staffFitsAssignmentRole`) — u faqat standart tarif preseti va hisobotlarda
+ * "kim odatda bu ishni qiladi" ma'nosida qoladi.
  */
 export const ASSIGNMENT_ROLE_TO_USER_ROLE: Record<AssignmentRole, UserRole> = {
   accountant: ROLES.ACCOUNTANT,
@@ -418,16 +419,51 @@ export const ASSIGNMENT_ROLE_LABELS: Record<AssignmentRole, string> = {
 };
 
 /**
- * Xodim shu biriktirish roliga yaroqlimi.
- * Admin/superadmin har qanday rolga biriktirilishi mumkin — ular ko'pincha
- * bo'sh o'rinni vaqtincha to'ldiradi.
+ * Xodim shu biriktirish roliga yaroqlimi — HAR QANDAY xodim yaroqli.
+ *
+ * LAVOZIM ≠ FIRMADAGI ISH. Bitta odam bir firmada nazoratchi, boshqasida
+ * buxgalter, uchinchisida bank-klient bo'ladi. Bazadagi haqiqiy holat:
+ *   - Go'zaloy (nazoratchi) — 134 firmada nazorat, 10 tasida BUXGALTER
+ *   - Ruslan (bank-klient) — 65 firmada bank, 10 tasida BUXGALTER
+ *   - Zamira (buxgalter)   — 16 firmada buxgalter, 16 tasida NAZORATCHI, 2 tasida bank
+ *
+ * Ilgari bu funksiya har bir o'rinni bitta lavozimga qulflagan edi. Oqibati:
+ * (1) yangi firma ochilganda "Buxgalter" ro'yxatida faqat `accountant`
+ * lavozimidagilar chiqardi; (2) yuqoridagi mavjud firmalarni ochib SAQLAB ham
+ * bo'lmasdi — `normalizeAssignments` "biriktirilmaydi" xatosini tashlardi.
+ *
+ * Huquq baribir bu yerdan kelmaydi: kim tasdiqlay oladi, kim faqat topshiradi —
+ * `lib/reportPermissions.ts` shu firmadagi biriktiruv bo'yicha hal qiladi.
+ * Bu yerda faqat "bunday biriktiruv yozilishi mumkinmi" tekshiriladi, va
+ * `User` jadvalidagi hamma qator xodim (mijoz roli yo'q).
  */
 export const staffFitsAssignmentRole = (
   userRole: string,
   assignmentRole: string
 ): boolean => {
+  void userRole; // lavozim ahamiyatsiz — ataylab
+  return normalizeAssignmentRole(assignmentRole) !== null;
+};
+
+/**
+ * Biriktirish o'rni uchun xodimlar ro'yxati: HAMMASI chiqadi, lekin o'sha ishni
+ * odatda bajaradigan lavozim tepada turadi.
+ *
+ * Ro'yxatni qisqartirish o'rniga tartiblash tanlandi: filtr kerakli odamni
+ * butunlay yashirib qo'yardi (aynan shu sabab yangi firma ochganda "Buxgalter"
+ * ro'yxatida nazoratchi/bank-klient ko'rinmasdi), tartib esa odatdagi tanlovni
+ * bir qadamda qoldiradi.
+ */
+export const sortStaffForAssignmentRole = <T extends { role: string }>(
+  staff: readonly T[],
+  assignmentRole: string
+): T[] => {
   const canonical = normalizeAssignmentRole(assignmentRole);
-  if (!canonical) return false;
-  if (isAdminRole(userRole)) return true;
-  return userRole === ASSIGNMENT_ROLE_TO_USER_ROLE[canonical];
+  if (!canonical) return [];
+  const preferred = ASSIGNMENT_ROLE_TO_USER_ROLE[canonical];
+  // `sort` joyida o'zgartiradi — nusxa olamiz, aks holda `staff` prop'i buziladi.
+  return [...staff].sort((a, b) => {
+    const rank = (r: string) => (r === preferred ? 0 : isAdminRole(r) ? 2 : 1);
+    return rank(a.role) - rank(b.role);
+  });
 };

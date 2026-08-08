@@ -448,7 +448,7 @@ const OperationRow = React.memo<{
         </div>
       </td>
       {visibleColumns.map(col => {
-        const isReadOnly = !row.companyId || !canEditMatrix(userRole);
+        const isReadOnly = !row.companyId || !canEditMatrix(userRole, relations);
         const serviceDisabled = !isServiceEnabled(col.key);
         const st = getGroupStyle(col.group);
         const isEdge = groupEdges.has(col.key);

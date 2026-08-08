@@ -18,8 +18,15 @@ const relFor = (role: string): CompanyRelation[] =>
   role === "chief_accountant" ? ["chief_accountant"] : role === "supervisor" ? ["supervisor"] : [];
 
 describe("canEditMatrix", () => {
-  it("bank_manager matritsani tahrirlay olmaydi", () => {
+  it("bank_manager biriktirilmagan firmada tahrirlay olmaydi", () => {
     expect(canEditMatrix("bank_manager")).toBe(false);
+    expect(canEditMatrix("bank_manager", [])).toBe(false);
+  });
+
+  it("bank_manager O'ZI BUXGALTER bo'lgan firmada tahrirlay oladi", () => {
+    // Ruslan: 65 firmada bank-klient, 10 tasida buxgalter — o'sha 10 tasida
+    // matritsani u to'ldiradi.
+    expect(canEditMatrix("bank_manager", ["accountant"])).toBe(true);
   });
 
   it("buxgalter va senior rollar tahrirlay oladi", () => {
@@ -167,6 +174,39 @@ describe("o'z-o'zini nazorat bloki — bitta odam, ikki xil firma", () => {
 
   it("bosh buxgalter departament orqali biriktirilgan firmasida tasdiqlaydi", () => {
     expect(canApproveCell("chief_accountant", ["chief_accountant"])).toBe(true);
+  });
+});
+
+describe("huquq lavozimdan emas, biriktiruvdan keladi", () => {
+  // Zamira: lavozimi `accountant`, ammo 16 ta firmada aynan NAZORATCHI o'rnida.
+  it("buxgalter lavozimidagi odam nazoratchi bo'lgan firmasida tasdiqlaydi", () => {
+    expect(canApproveCell("accountant", ["supervisor"])).toBe(true);
+    expect(allowedCellActions("accountant", ["supervisor"])).toContain("+");
+    expect(
+      checkCellWrite({ role: "accountant", relations: ["supervisor"], nextValue: "+" })
+    ).toBeNull();
+  });
+
+  it("o'sha odam buxgalter bo'lgan firmasida tasdiqlay olmaydi", () => {
+    expect(canApproveCell("accountant", ["accountant"])).toBe(false);
+    expect(canApproveCell("accountant", ["accountant", "supervisor"])).toBe(false);
+  });
+
+  it("bank_manager buxgalter firmasida topshira oladi, tasdiqlay olmaydi", () => {
+    const actions = allowedCellActions("bank_manager", ["accountant"]);
+    expect(actions).toContain("topshirildi");
+    expect(actions).not.toContain("+");
+    expect(
+      checkCellWrite({ role: "bank_manager", relations: ["accountant"], nextValue: "-" })
+    ).toBeNull();
+  });
+
+  it("bank_manager nazoratchi bo'lgan firmasida tasdiqlaydi", () => {
+    expect(canApproveCell("bank_manager", ["supervisor"])).toBe(true);
+  });
+
+  it("biriktiruvsiz hech kim yozolmaydi (bank_manager)", () => {
+    expect(checkCellWrite({ role: "bank_manager", relations: [], nextValue: "-" })).not.toBeNull();
   });
 });
 

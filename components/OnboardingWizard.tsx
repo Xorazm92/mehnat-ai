@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import {
     ASSIGNMENT_ROLES,
     ASSIGNMENT_ROLE_LABELS,
-    staffFitsAssignmentRole,
+    sortStaffForAssignmentRole,
     type AssignmentRole,
 } from '@/lib/permissions';
 import { STANDARD_TARIFF, type TariffPreset } from '@/lib/tariffPresets';
@@ -79,12 +79,13 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
 
     const preset = tariffPreset ?? STANDARD_TARIFF;
 
-    // Rol bo'yicha yaroqli xodimlar. Bosh buxgalter katagida faqat bosh
-    // buxgalterlar, bank klientda faqat bank klientlar chiqadi.
+    // Har bir o'rinda HAMMA xodim chiqadi — odatdagi lavozim ro'yxat boshida.
+    // Bitta odam bir firmada nazoratchi, boshqasida buxgalter bo'ladi, shuning
+    // uchun "Buxgalter" o'rnini lavozim bo'yicha qisqartirish mumkin emas.
     const staffForRole = React.useMemo(() => {
         const map = {} as Record<AssignmentRole, Staff[]>;
         for (const role of ASSIGNMENT_ROLES) {
-            map[role] = (staff || []).filter(s => staffFitsAssignmentRole(s.role, role));
+            map[role] = sortStaffForAssignmentRole(staff || [], role);
         }
         return map;
     }, [staff]);

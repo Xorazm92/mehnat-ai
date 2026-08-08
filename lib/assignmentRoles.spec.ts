@@ -34,22 +34,42 @@ describe("normalizeAssignmentRole", () => {
 });
 
 describe("staffFitsAssignmentRole", () => {
-  it("faqat mos roldagi xodimni o'tkazadi", () => {
+  const ALL_ROLES = [
+    "super_admin",
+    "admin",
+    "chief_accountant",
+    "supervisor",
+    "accountant",
+    "bank_manager",
+  ];
+
+  it("mos roldagi xodimni o'tkazadi", () => {
     expect(staffFitsAssignmentRole("chief_accountant", "chief_accountant")).toBe(true);
     expect(staffFitsAssignmentRole("bank_manager", "bank_manager")).toBe(true);
     expect(staffFitsAssignmentRole("supervisor", "controller")).toBe(true);
     expect(staffFitsAssignmentRole("accountant", "accountant")).toBe(true);
   });
 
-  it("bank menejerni bosh buxgalter qilib biriktirishga yo'l qo'ymaydi", () => {
-    expect(staffFitsAssignmentRole("bank_manager", "chief_accountant")).toBe(false);
-    expect(staffFitsAssignmentRole("accountant", "controller")).toBe(false);
-    expect(staffFitsAssignmentRole("supervisor", "bank_manager")).toBe(false);
+  // LAVOZIM ≠ FIRMADAGI ISH. Bazadagi haqiqiy holat: nazoratchi Go'zaloy 10 ta
+  // firmada buxgalter, bank-klient Ruslan ham 10 tasida buxgalter, buxgalter
+  // Zamira esa 16 ta firmada nazoratchi. Ilgari bu qulf yangi firma ochishda
+  // ro'yxatni bo'shatib qo'yar va o'sha firmalarni saqlashga yo'l bermasdi.
+  it("BUXGALTER o'rniga har qanday lavozimdagi xodim tushadi", () => {
+    for (const role of ALL_ROLES) {
+      expect(staffFitsAssignmentRole(role, "accountant")).toBe(true);
+    }
+  });
+
+  it("qolgan uchta o'rin ham lavozim bo'yicha qulflanmaydi", () => {
+    expect(staffFitsAssignmentRole("bank_manager", "chief_accountant")).toBe(true);
+    expect(staffFitsAssignmentRole("accountant", "controller")).toBe(true);
+    expect(staffFitsAssignmentRole("supervisor", "bank_manager")).toBe(true);
   });
 
   it("eski imlodagi rol nomi bilan ham ishlaydi", () => {
     expect(staffFitsAssignmentRole("chief_accountant", "chief")).toBe(true);
     expect(staffFitsAssignmentRole("supervisor", "supervisor")).toBe(true);
+    expect(staffFitsAssignmentRole("accountant", "bank_client")).toBe(true);
   });
 
   it("admin va superadmin har qanday bo'sh o'rinni to'ldira oladi", () => {
@@ -57,11 +77,12 @@ describe("staffFitsAssignmentRole", () => {
     expect(staffFitsAssignmentRole("super_admin", "bank_manager")).toBe(true);
   });
 
-  it("noma'lum rolga hech kim to'g'ri kelmaydi", () => {
+  it("noma'lum biriktirish roli baribir rad etiladi", () => {
     expect(staffFitsAssignmentRole("accountant", "direktor")).toBe(false);
+    expect(staffFitsAssignmentRole("admin", "")).toBe(false);
   });
 
-  it("har bir biriktirish roli aynan bitta xodim roliga bog'langan", () => {
+  it("har bir biriktirish roli o'zining odatdagi lavozimini o'tkazadi", () => {
     for (const role of ASSIGNMENT_ROLES) {
       const userRole = ASSIGNMENT_ROLE_TO_USER_ROLE[role];
       expect(staffFitsAssignmentRole(userRole, role)).toBe(true);

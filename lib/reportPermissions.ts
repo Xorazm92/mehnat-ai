@@ -9,7 +9,7 @@
 // Bitta odam bir firmada nazoratchi, boshqasida buxgalter bo'lishi mumkin
 // (bazadagi haqiqiy holat) — shuning uchun har bir funksiya `relations` oladi.
 
-import { isAdminRole, isSeniorRole } from "@/lib/permissions";
+import { isAdminRole } from "@/lib/permissions";
 import type { CompanyRelation } from "@/lib/access";
 
 /** Katakning maxsus (matn bo'lmagan) qiymatlari. */
@@ -36,7 +36,14 @@ const has = (relations: Relations | undefined, rel: CompanyRelation): boolean =>
   return false;
 };
 
-/** Matritsani umuman tahrirlay oladigan rollar (bank_manager — faqat o'qish). */
+/** Shu firmada umuman biror mas'uliyati bormi. */
+const hasAny = (relations: Relations | undefined): boolean => {
+  if (!relations) return false;
+  for (const _ of relations) return true;
+  return false;
+};
+
+/** Lavozimi bo'yicha matritsa ochiq bo'lgan rollar (bank_manager bu ro'yxatda yo'q). */
 const MATRIX_EDITOR_ROLES = [
   "super_admin",
   "admin",
@@ -45,12 +52,25 @@ const MATRIX_EDITOR_ROLES = [
   "accountant",
 ];
 
-export function canEditMatrix(role: string): boolean {
-  return MATRIX_EDITOR_ROLES.includes(role);
+/**
+ * Matritsani tahrirlay oladimi?
+ *
+ * Lavozim bo'yicha, YOKI shu firmaga biriktirilgani bo'yicha. Ikkinchisi
+ * kerak, chunki bank-klient lavozimidagi odam ham ayrim firmalarda buxgalter
+ * bo'lib ishlaydi (Ruslan: 65 firmada bank, 10 tasida buxgalter) — o'sha 10 ta
+ * firmada matritsa unga ochiq bo'lishi shart.
+ */
+export function canEditMatrix(role: string, relations?: Relations): boolean {
+  return MATRIX_EDITOR_ROLES.includes(role) || hasAny(relations);
 }
 
 /**
  * Shu firmada nazorat huquqi bormi?
+ *
+ * Huquq LAVOZIMDAN emas, AYNAN SHU FIRMADAGI biriktiruvdan keladi: buxgalter
+ * lavozimidagi Zamira 16 ta firmada nazoratchi o'rnida turadi va o'sha yerda
+ * tasdiqlashi kerak. `relations` esa server tomonda `Company` qatoridan
+ * hisoblanadi (`companyRelations`), ya'ni uni klient soxtalashtira olmaydi.
  *
  * O'Z-O'ZINI NAZORAT BLOKI: nazoratchi/bosh buxgalter o'zi buxgalteriyasini
  * yuritadigan firmada oddiy buxgalter sifatida ishlaydi — u yerda tasdiqlay
@@ -58,7 +78,6 @@ export function canEditMatrix(role: string): boolean {
  */
 export function isCompanyReviewer(role: string, relations?: Relations): boolean {
   if (isAdminRole(role)) return true;
-  if (!isSeniorRole(role)) return false;
   if (has(relations, "accountant")) return false;
   return has(relations, "supervisor") || has(relations, "chief_accountant");
 }
@@ -85,7 +104,7 @@ export function canMarkSubmittedDirectly(role: string, relations?: Relations): b
  * Rol uchun katak menyusida ko'rinadigan amallar (tartib saqlanadi).
  */
 export function allowedCellActions(role: string, relations?: Relations): CellAction[] {
-  if (!canEditMatrix(role)) return [];
+  if (!canEditMatrix(role, relations)) return [];
   if (isCompanyReviewer(role, relations)) {
     return [CELL_APPROVED, CELL_SUBMITTED, CELL_FAILED, CELL_KARTOTEKA, "izoh", CELL_EMPTY];
   }
@@ -120,7 +139,7 @@ export function checkCellWrite({
   nextValue,
   currentValue,
 }: CellWriteCheck): string | null {
-  if (!canEditMatrix(role)) return "Bu amal uchun ruxsat yo'q";
+  if (!canEditMatrix(role, relations)) return "Bu amal uchun ruxsat yo'q";
   if (isCompanyReviewer(role, relations)) return null;
 
   const next = String(nextValue ?? "").trim().toLowerCase();

@@ -41,7 +41,7 @@ import RecordTimeline from "@/components/RecordTimeline";
 import {
   ASSIGNMENT_ROLE_LABELS,
   normalizeAssignmentRole,
-  staffFitsAssignmentRole,
+  sortStaffForAssignmentRole,
   type AssignmentRole,
 } from '@/lib/permissions';
 
@@ -157,9 +157,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
     return canonical ? ASSIGNMENT_ROLE_LABELS[canonical] : role.replace(/_/g, ' ');
   };
 
-  /** Shu biriktirish roliga yaroqli xodimlar (bosh buxgalter katagida faqat bosh buxgalterlar). */
+  /** Shu o'rin uchun xodimlar: HAMMASI, odatdagi lavozim tepada (lavozim ≠ firmadagi ish). */
   const staffForAssignmentRole = (role: string): Staff[] =>
-    (staff || []).filter(s => staffFitsAssignmentRole(s.role, role));
+    sortStaffForAssignmentRole(staff || [], role);
 
   const teamFallbackAssignments = () => {
     const res: any[] = [];
