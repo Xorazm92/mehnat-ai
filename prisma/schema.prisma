@@ -2028,11 +2028,36 @@ model DisbursementChannel {
   updatedAt DateTime @updatedAt
 
   entries TransitEntry[]
+  cards   ChannelCard[]
 
   @@unique([type, cardMask])
   @@index([isActive])
   @@index([employeeId])
   @@index([ownFirmId])
+}
+
+/// Kanalning kartalari.
+///
+/// BIR ODAMNING BIR NECHTA KARTASI BO'LADI — prod ma'lumotida bu aniq
+/// ko'rinadi: Mahmudaxonda 4916****8087 va 5614****9327, Go'zalda
+/// 4916****5734 va 9860****4601, Azizbek Isomiddinovda ikkita.
+///
+/// Ilgari karta kanalning o'zida (`cardMask`) saqlanardi, ya'ni kanal =
+/// KARTA edi. Natijada bitta odam bir nechta kanal bo'lib ko'rinar va
+/// qoldig'i bo'linib ketardi. Endi kanal = ODAM, kartalar esa uning
+/// atributi; bank o'tkazmasi istalgan kartasi orqali o'sha odamga tushadi.
+model ChannelCard {
+  id        String              @id @default(uuid())
+  channelId String
+  channel   DisbursementChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  /// "9860****4601" — to'liq raqam HECH QACHON saqlanmaydi.
+  cardMask  String   @unique
+  /// Asosiy karta (kanal kartochkasida ko'rsatiladi).
+  isPrimary Boolean  @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([channelId])
 }
 
 /// TRANZIT HARAKATI — xodim kartasidagi pul oqimi.
