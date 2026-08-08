@@ -66,3 +66,8 @@ contract_json_files/
 # Vipiska/reestr asl fayllari (xlsx/xls) ham hech qachon commit qilinmasin.
 *.xlsx
 *.xls
+
+# Korxona ichki hisob fayllari (tranzit daftari, qarzdorlik, kassa, reja/fakt).
+# Ichida xodimlarning karta raqami, JSHSHIR va mijozlar qarzdorligi bor —
+# repozitoriyga ham, serverga ham chiqmaydi. Ma'lumot bazada yashaydi.
+others_json_files/

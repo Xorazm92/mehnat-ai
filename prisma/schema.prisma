@@ -233,6 +233,7 @@ model Company {
   contracts           Contract[]      @relation("ClientContracts")
   ownFirmContracts    Contract[]      @relation("OwnFirmContracts")
   ownFirmAccounts     BankAccount[]   @relation("OwnFirmAccounts")
+  ownFirmChannels     DisbursementChannel[] @relation("ChannelOwnFirm")
   bankTransactions    BankTransaction[]
 
   @@index([accountantId])
@@ -2001,7 +2002,26 @@ model DisbursementChannel {
   employeeId String?
   employee   User?   @relation("ChannelEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
   /// "8600****4957" — to'liq karta raqami SAQLANMAYDI.
-  cardMask  String?
+  cardMask String?
+
+  // ── O'zini-o'zi band qilgan shaxsning rasmiy ma'lumotlari ──────────────
+  // Bular soliq hisoboti uchun kerak: kimga, qaysi ma'lumotnoma asosida va
+  // qaysi tranzit hisob orqali pul o'tkazilgani.
+  /// Firma(mehnat) — qaysi o'z firmada rasmiylashtirilgan.
+  ownFirmId String?
+  ownFirm   Company? @relation("ChannelOwnFirm", fields: [ownFirmId], references: [id], onDelete: SetNull)
+  mfo            String?
+  /// Bank tranzit hisobi (23120000100001190005).
+  transitAccount String?
+  /// Soliq organidan olingan ma'lumotnoma raqami.
+  certificateNo String?
+  /// JSHSHIR — 14 raqamli shaxsiy identifikator.
+  pinfl String?
+  /// Band qilingan sana.
+  engagedAt DateTime?
+  /// Faoliyat turi ("Онлайн консультация бериш").
+  activityType String?
+
   notes     String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -2012,6 +2032,7 @@ model DisbursementChannel {
   @@unique([type, cardMask])
   @@index([isActive])
   @@index([employeeId])
+  @@index([ownFirmId])
 }
 
 /// TRANZIT HARAKATI — xodim kartasidagi pul oqimi.
