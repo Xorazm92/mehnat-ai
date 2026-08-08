@@ -13,10 +13,16 @@
  *   npx tsx scripts/import-mohira-team.ts            # nima bo'lishini ko'rsatadi
  *   npx tsx scripts/import-mohira-team.ts --apply    # yozadi
  *
- * Idempotent: STIR bo'yicha mavjud firma qayta yaratilmaydi.
+ * Idempotent va MOSLASHTIRUVCHI: STIR bo'yicha firma topilsa qayta
+ * yaratilmaydi, lekin biriktiruvlari quyidagi holatga keltiriladi. Shu sabab
+ * skriptni lokalda ham, prodda ham xuddi shu buyruq bilan ishlatish mumkin.
  *
- * TARIF (varaqdagi foizlar bilan aynan mos, STANDARD_TARIFF ga teng):
- *   buxgalter 20% (bitta firmada 25%) · Yorqinoy 7% · Mohira 5% · bank 5%
+ * TUZILMA: 55 firma — Mohiraning "FinCo 2" bo'limi.
+ *   buxgalter 20% (bitta firmada 25%) · Mohira (bosh buxgalter) 7% · bank 5%
+ *
+ * Nazoratchi o'rni ATAYLAB bo'sh: jamoani Mohira bosh buxgalter sifatida
+ * boshqaradi. Varaqda 7% "Ёркиной" ustunida turgan, lekin bu firmalar
+ * Yorqinoyning bo'limiga kirmaydi — 7% bo'lim boshlig'iga tegishli.
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
@@ -53,13 +59,14 @@ const TEAM: Record<string, string> = {
   Muxriddin: "muxriddin_c6b4@mehnat.uz",
 };
 
-/** Har bir firmada bir xil: nazoratchi Mohira, bosh buxgalter Yorqinoy. */
-const SUPERVISOR_EMAIL = "mohirayuldashe_eebe@mehnat.uz";
-const CHIEF_EMAIL = "yorqinoy@mehnat.uz";
+/** Jamoaning bosh buxgalteri — har 55 firmada bir xil. */
+const CHIEF_EMAIL = "mohirayuldashe_eebe@mehnat.uz";
 
-/** Varaqdagi ulushlar. */
+/** Firmalar shu bo'limga tegishli (boshlig'i — CHIEF_EMAIL). */
+const DEPARTMENT_NAME = "FinCo 2";
+
+/** Ulushlar. Nazoratchi o'rni bo'sh, shuning uchun 5% taqsimlanmaydi. */
 const PCT_CHIEF = 7;
-const PCT_SUPERVISOR = 5;
 const PCT_BANK = 5;
 
 /** Hasan bazada nofaol; ro'yxatda 9 ta firmaning buxgalteri — qayta yoqiladi. */
@@ -131,11 +138,20 @@ const FIRMS: SourceRow[] = [
 
 const som = (n: number) => n.toLocaleString("en-US");
 
+/** Firmaning kutilgan holati — manba qatoridan hisoblanadi. */
+interface Desired {
+  accountantId: string;
+  accountantPerc: number;
+  chiefAccountantId: string;
+  bankClientId: string | null;
+  departmentId: string;
+}
+
 async function main() {
   const apply = process.argv.includes("--apply");
 
   // ── 1. Jamoa a'zolarini yechish ───────────────────────────────────────
-  const emails = [...new Set([...Object.values(TEAM), SUPERVISOR_EMAIL, CHIEF_EMAIL])];
+  const emails = [...new Set([...Object.values(TEAM), CHIEF_EMAIL])];
   const users = await prisma.user.findMany({
     where: { email: { in: emails } },
     select: { id: true, email: true, fullName: true, role: true, isActive: true },
@@ -145,6 +161,22 @@ async function main() {
   const missing = emails.filter((e) => !byEmail.has(e));
   if (missing.length) {
     console.error("Bu foydalanuvchilar topilmadi:\n  " + missing.join("\n  "));
+    process.exit(1);
+  }
+
+  const chief = byEmail.get(CHIEF_EMAIL)!;
+  const department = await prisma.department.findFirst({
+    where: { name: DEPARTMENT_NAME },
+    select: { id: true, name: true, chiefAccountantId: true },
+  });
+  if (!department) {
+    console.error(`"${DEPARTMENT_NAME}" bo'limi topilmadi.`);
+    process.exit(1);
+  }
+  if (department.chiefAccountantId !== chief.id) {
+    console.error(
+      `"${DEPARTMENT_NAME}" bo'limining boshlig'i ${chief.fullName} emas — avval bo'lim sozlansin.`
+    );
     process.exit(1);
   }
 
@@ -163,32 +195,61 @@ async function main() {
       `  ${sheetName.padEnd(18)} → ${u.fullName.padEnd(22)} ${u.isActive ? "faol " : "NOFAOL"}  ${what}`
     );
   }
-  console.log(`  ${"(nazoratchi)".padEnd(18)} → ${byEmail.get(SUPERVISOR_EMAIL)!.fullName}`);
-  console.log(`  ${"(bosh buxgalter)".padEnd(18)} → ${byEmail.get(CHIEF_EMAIL)!.fullName}`);
+  console.log(`  ${"(bosh buxgalter)".padEnd(18)} → ${chief.fullName}  ·  bo'lim: ${department.name}`);
+  console.log(`  ${"(nazoratchi)".padEnd(18)} → yo'q (ataylab bo'sh)`);
 
-  // ── 2. Qaysi firma allaqachon bor ─────────────────────────────────────
+  const desiredFor = (f: SourceRow): Desired => ({
+    accountantId: byEmail.get(TEAM[f.accountant])!.id,
+    accountantPerc: f.pct,
+    chiefAccountantId: chief.id,
+    bankClientId: f.bank ? byEmail.get(TEAM[f.bank])!.id : null,
+    departmentId: department.id,
+  });
+
+  // ── 2. Mavjud holat bilan solishtirish ────────────────────────────────
   const existing = await prisma.company.findMany({
     where: { inn: { in: FIRMS.map((f) => f.inn) } },
-    select: { inn: true, name: true },
+    select: {
+      id: true, inn: true, name: true, departmentId: true,
+      accountantId: true, accountantPerc: true,
+      chiefAccountantId: true, supervisorId: true, bankClientId: true,
+    },
   });
-  const existingInn = new Set(existing.map((c) => c.inn));
-  const toCreate = FIRMS.filter((f) => !existingInn.has(f.inn));
+  const byInn = new Map(existing.map((c) => [c.inn, c]));
 
-  console.log(`\nFIRMALAR: ${FIRMS.length} ta manbada, ${existingInn.size} ta allaqachon bazada, ${toCreate.length} ta yaratiladi.`);
-  for (const c of existing) console.log(`  = ${c.inn}  ${c.name}`);
+  const toCreate = FIRMS.filter((f) => !byInn.has(f.inn));
+  const toFix: { row: SourceRow; company: (typeof existing)[number]; diffs: string[] }[] = [];
 
-  const noBankButPaid = toCreate.filter((f) => !f.bank);
-  const noAmount = toCreate.filter((f) => !f.amount);
+  for (const f of FIRMS) {
+    const c = byInn.get(f.inn);
+    if (!c) continue;
+    const d = desiredFor(f);
+    const diffs: string[] = [];
+    if (c.accountantId !== d.accountantId) diffs.push("buxgalter");
+    if (Number(c.accountantPerc ?? 0) !== d.accountantPerc) diffs.push("buxgalter %");
+    if (c.chiefAccountantId !== d.chiefAccountantId) diffs.push("bosh buxgalter");
+    if (c.supervisorId !== null) diffs.push("nazoratchi bo'shatiladi");
+    if (c.bankClientId !== d.bankClientId) diffs.push("bank-klient");
+    if (c.departmentId !== d.departmentId) diffs.push("bo'lim");
+    if (diffs.length) toFix.push({ row: f, company: c, diffs });
+  }
+
+  console.log(
+    `\nFIRMALAR: ${FIRMS.length} ta manbada · ${toCreate.length} ta yaratiladi · ` +
+      `${toFix.length} ta moslashtiriladi · ${existing.length - toFix.length} ta allaqachon to'g'ri.`
+  );
+  for (const { company, diffs } of toFix.slice(0, 60)) {
+    console.log(`  ~ ${company.inn.padEnd(15)} ${company.name.slice(0, 38).padEnd(40)} ${diffs.join(", ")}`);
+  }
+
+  const noAmount = FIRMS.filter((f) => !f.amount);
   if (noAmount.length) {
-    console.log(`\n⚠️  Shartnoma summasi ko'rsatilmagan (${noAmount.length}) — contractAmount bo'sh qoladi, KPI ulushi hisoblanmaydi:`);
+    console.log(`\n⚠️  Shartnoma summasi ko'rsatilmagan (${noAmount.length}) — KPI ulushi hisoblanmaydi:`);
     for (const f of noAmount) console.log(`     ${f.name}`);
   }
-  if (noBankButPaid.length) {
-    console.log(`\nℹ️  Bank-klient biriktirilmagan (${noBankButPaid.length}) — bankClientId bo'sh.`);
-  }
-
-  const total = toCreate.reduce((s, f) => s + (f.amount ?? 0), 0);
-  console.log(`\nJami shartnoma summasi: ${som(total)} so'm`);
+  const noBank = FIRMS.filter((f) => !f.bank).length;
+  console.log(`\nℹ️  Bank-klient biriktirilmagan: ${noBank} ta firma.`);
+  console.log(`Jami shartnoma summasi: ${som(FIRMS.reduce((s, f) => s + (f.amount ?? 0), 0))} so'm`);
 
   if (!apply) {
     console.log(`\n${"─".repeat(64)}`);
@@ -206,25 +267,47 @@ async function main() {
     }
   }
 
-  // ── 4. Firmalarni yaratish ────────────────────────────────────────────
-  const supervisorId = byEmail.get(SUPERVISOR_EMAIL)!.id;
-  const chiefId = byEmail.get(CHIEF_EMAIL)!.id;
+  /**
+   * Biriktiruv qatorlarini kutilgan holatga keltiradi.
+   *
+   * Mavjud qatorlar O'CHIRILIB qayta yoziladi: `ContractAssignment` da
+   * (companyId, userId, role) bo'yicha unikal cheklov yo'q, shuning uchun
+   * "yangilash" o'rniga to'liq almashtirish yagona ishonchli yo'l. Bu faqat
+   * shu ro'yxatdagi firmalarga tegadi.
+   */
+  const syncAssignments = async (
+    tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+    companyId: string,
+    f: SourceRow,
+    d: Desired
+  ) => {
+    const rows: { role: AssignmentRole; userId: string; pct: number }[] = [
+      { role: "accountant", userId: d.accountantId, pct: d.accountantPerc },
+      { role: "chief_accountant", userId: d.chiefAccountantId, pct: PCT_CHIEF },
+    ];
+    if (d.bankClientId) rows.push({ role: "bank_manager", userId: d.bankClientId, pct: PCT_BANK });
 
+    await tx.contractAssignment.deleteMany({ where: { companyId } });
+    for (const a of rows) {
+      await tx.contractAssignment.create({
+        data: {
+          companyId,
+          userId: a.userId,
+          role: a.role,
+          salaryType: "percent",
+          salaryValue: a.pct,
+          startDate: new Date(),
+          isActive: true,
+        },
+      });
+    }
+    return rows.length;
+  };
+
+  // ── 4. Yaratish ───────────────────────────────────────────────────────
   let created = 0;
   for (const f of toCreate) {
-    const accountantId = byEmail.get(TEAM[f.accountant])!.id;
-    const bankClientId = f.bank ? byEmail.get(TEAM[f.bank])!.id : null;
-
-    // Firma ustunlari va ContractAssignment qatorlari BIRGA yoziladi —
-    // kartochka ustunlarni, "Jamoa" tabi esa biriktiruvlarni o'qiydi
-    // (server/companies.ts createCompany bilan bir xil tartib).
-    const assignments: { role: AssignmentRole; userId: string; pct: number }[] = [
-      { role: "accountant", userId: accountantId, pct: f.pct },
-      { role: "chief_accountant", userId: chiefId, pct: PCT_CHIEF },
-      { role: "controller", userId: supervisorId, pct: PCT_SUPERVISOR },
-    ];
-    if (bankClientId) assignments.push({ role: "bank_manager", userId: bankClientId, pct: PCT_BANK });
-
+    const d = desiredFor(f);
     await prisma.$transaction(async (tx) => {
       const company = await tx.company.create({
         data: {
@@ -235,39 +318,50 @@ async function main() {
           riskNotes: f.notes ?? null,
           isActive: true,
           isOwnFirm: false,
-          accountantId,
-          accountantPerc: f.pct,
-          chiefAccountantId: chiefId,
+          departmentId: d.departmentId,
+          accountantId: d.accountantId,
+          accountantPerc: d.accountantPerc,
+          chiefAccountantId: d.chiefAccountantId,
           chiefAccountantPerc: PCT_CHIEF,
-          supervisorId,
-          supervisorPerc: PCT_SUPERVISOR,
-          bankClientId,
-          bankClientPerc: bankClientId ? PCT_BANK : null,
+          supervisorId: null,
+          supervisorPerc: null,
+          bankClientId: d.bankClientId,
+          bankClientPerc: d.bankClientId ? PCT_BANK : null,
         },
         select: { id: true },
       });
-
-      for (const a of assignments) {
-        await tx.contractAssignment.create({
-          data: {
-            companyId: company.id,
-            userId: a.userId,
-            role: a.role,
-            salaryType: "percent",
-            salaryValue: a.pct,
-            startDate: new Date(),
-            isActive: true,
-          },
-        });
-      }
+      await syncAssignments(tx, company.id, f, d);
     });
-
     created++;
-    const roles = assignments.map((a) => ASSIGNMENT_ROLE_LABELS[a.role][0]).join("");
-    console.log(`  + ${f.inn.padEnd(11)} ${f.name.slice(0, 40).padEnd(42)} [${roles}] ${som(f.amount ?? 0).padStart(10)}`);
+    console.log(`  + ${f.inn.padEnd(15)} ${f.name.slice(0, 40).padEnd(42)} ${som(f.amount ?? 0).padStart(10)}`);
   }
 
-  console.log(`\n✓ ${created} ta firma yaratildi, har birida ${3}–4 ta biriktiruv.`);
+  // ── 5. Moslashtirish ──────────────────────────────────────────────────
+  let fixed = 0;
+  for (const { row: f, company } of toFix) {
+    const d = desiredFor(f);
+    await prisma.$transaction(async (tx) => {
+      await tx.company.update({
+        where: { id: company.id },
+        data: {
+          departmentId: d.departmentId,
+          accountantId: d.accountantId,
+          accountantPerc: d.accountantPerc,
+          chiefAccountantId: d.chiefAccountantId,
+          chiefAccountantPerc: PCT_CHIEF,
+          supervisorId: null,
+          supervisorPerc: null,
+          bankClientId: d.bankClientId,
+          bankClientPerc: d.bankClientId ? PCT_BANK : null,
+        },
+      });
+      await syncAssignments(tx, company.id, f, d);
+    });
+    fixed++;
+    console.log(`  ~ ${f.inn.padEnd(15)} ${f.name.slice(0, 40).padEnd(42)} moslashtirildi`);
+  }
+
+  console.log(`\n✓ ${created} ta yaratildi, ${fixed} ta moslashtirildi.`);
   console.log("\nTekshirish uchun: npx tsx scripts/verify-scoping.ts");
 }
 
