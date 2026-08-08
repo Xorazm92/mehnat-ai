@@ -20,24 +20,23 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
+import { nameKey } from "@/lib/transitImport";
 
 /**
- * Ismni solishtirish uchun normallashtiradi.
+ * Bank o'tkazmasidagi ism reyestrdagidan butunlay boshqacha bo'lishi mumkin.
+ * Bunday holatlar ATAYIN qo'lda yozilgan — avtomatik taxmin qilinmaydi,
+ * chunki noto'g'ri birlashtirish bir odamning pulini boshqasiga o'tkazadi.
  *
- * O'zbek ismlari ikki xil transliteratsiyada yoziladi (rus/lotin):
- *   KHIKMATULLAEVA MAHMUDAKHON  ↔  XIKMATULLAYEVA MAHMUDAXON
- * `kh→x`, `ye→e`, apostroflar olib tashlanadi, so'zlar SARALANADI —
- * shunda "ABROR BOBOJONOV" va "BOBOJONOV ABROR" bir xil kalit beradi.
+ * Har biri tekshirilgan: tizimda shu ism bilan boshqa odam yo'q.
  */
-export function nameKey(raw: string): string {
-  const folded = raw
-    .toLowerCase()
-    .replace(/[`'‘’"]/g, "")
-    .replace(/kh/g, "x")
-    .replace(/ye/g, "e")
-    .replace(/\s+/g, " ")
-    .trim();
-  return folded.split(" ").filter(Boolean).sort().join(" ");
+const MANUAL_ALIASES: Record<string, string> = {
+  // Reyestrda "YORQINOY OPA" (hurmat shakli), bankda to'liq F.I.O.
+  "opa yorqinoy": "bekchanova yorqinoy",
+};
+
+function canonicalKey(label: string): string {
+  const key = nameKey(label);
+  return MANUAL_ALIASES[key] ?? key;
 }
 
 interface ChannelRow {
@@ -78,8 +77,28 @@ async function main() {
 
   const groups = new Map<string, ChannelRow[]>();
   for (const c of channels) {
-    const key = nameKey(c.label);
+    const key = canonicalKey(c.label);
     groups.set(key, [...(groups.get(key) ?? []), c]);
+  }
+
+  // ── To'liq ism qisqasini o'z ichiga olsa — bitta odam ─────────────────
+  // "RUSLONBEK ATAXONOV" ⊂ "ATAXONOV RUSLONBEK G'AYRAT O'G'LI" (otasining
+  // ismi qo'shilgan). Ikkala BELGI ham to'liq ismda bor, ya'ni bu aniq.
+  // "ISOMIDDINOV AZIZBEK" va "XASANOV AZIZBEK" da esa faqat bittasi
+  // umumiy — ular birlashtirilmaydi.
+  const keys = [...groups.keys()];
+  for (const shortKey of keys) {
+    const shortTokens = shortKey.split(" ");
+    if (shortTokens.length < 2) continue;
+    for (const longKey of keys) {
+      if (shortKey === longKey || !groups.has(shortKey) || !groups.has(longKey)) continue;
+      const longTokens = longKey.split(" ");
+      if (longTokens.length <= shortTokens.length) continue;
+      if (!shortTokens.every((t) => longTokens.includes(t))) continue;
+      groups.set(longKey, [...(groups.get(longKey) ?? []), ...(groups.get(shortKey) ?? [])]);
+      groups.delete(shortKey);
+      break;
+    }
   }
 
   const duplicates = [...groups.entries()].filter(([, g]) => g.length > 1);
@@ -151,8 +170,13 @@ async function main() {
   const suspicious: string[] = [];
   for (let i = 0; i < remaining.length; i++) {
     for (let j = i + 1; j < remaining.length; j++) {
-      const a = nameKey(remaining[i].label).split(" ");
-      const b = nameKey(remaining[j].label).split(" ");
+      const keyA = nameKey(remaining[i].label);
+      const keyB = nameKey(remaining[j].label);
+      // Kaliti bir xil juftlik allaqachon birlashtirilgan (yoki --dry-run da
+      // birlashtiriladi) — uni "ko'rib chiqilsin" deb ko'rsatish chalkashtiradi.
+      if (keyA === keyB) continue;
+      const a = keyA.split(" ");
+      const b = keyB.split(" ");
       const shared = a.filter((t) => t.length > 3 && b.includes(t));
       if (shared.length > 0) {
         suspicious.push(`${remaining[i].label}  ↔  ${remaining[j].label}   (umumiy: ${shared.join(", ")})`);

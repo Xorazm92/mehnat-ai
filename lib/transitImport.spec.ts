@@ -9,6 +9,7 @@ import {
   parseTransitSheet,
   parseTransitTotals,
   maskCard,
+  nameKey,
   TransitParseError,
 } from "@/lib/transitImport";
 
@@ -141,5 +142,30 @@ describe("parseTransitTotals", () => {
     expect(totals).toHaveLength(2);
     expect(totals[0]).toEqual({ person: "Muslimbek", monthIn: 50_204_740, cardBalance: 35_088 });
     expect(totals[1].cardBalance).toBeCloseTo(2_682_766.58, 2);
+  });
+});
+
+describe("nameKey", () => {
+  it("so'z tartibi farqini yo'q qiladi", () => {
+    // Vipiskada "ABRORBEK BOBOJONOV", reyestrda "BOBOJONOV ABRORBEK" —
+    // ikkalasi bitta odam. Buni sezmaganimiz uchun prodda bir odam ikki
+    // kanal bo'lib, iyul puli ikki marta sanalgan edi.
+    expect(nameKey("ABRORBEK BOBOJONOV")).toBe(nameKey("BOBOJONOV ABRORBEK"));
+    expect(nameKey("MUSOBEK TODJIBAYEV")).toBe(nameKey("TODJIBAYEV MUSOBEK"));
+  });
+
+  it("rus/lotin transliteratsiyasini birlashtiradi", () => {
+    expect(nameKey("KHIKMATULLAEVA MAHMUDAKHON")).toBe(nameKey("XIKMATULLAYEVA MAHMUDAXON"));
+  });
+
+  it("apostrof turini farqlamaydi", () => {
+    expect(nameKey("RADJABOVA GO'ZAL")).toBe(nameKey("RADJABOVA GO‘ZAL"));
+  });
+
+  it("BOSHQA odamlarni birlashtirmaydi — eng muhimi", () => {
+    // Noto'g'ri birlashtirish bir odamning pulini boshqasiga o'tkazadi.
+    expect(nameKey("ISOMIDDINOV AZIZBEK")).not.toBe(nameKey("XASANOV AZIZBEK"));
+    expect(nameKey("TODJIBAYEV MUSOBEK")).not.toBe(nameKey("TODJIBAYEV MUXRIDDIN"));
+    expect(nameKey("BEKCHANOV OLLOSHUKUR")).not.toBe(nameKey("BEKCHANOVA YORQINOY"));
   });
 });

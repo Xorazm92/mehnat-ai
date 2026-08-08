@@ -135,6 +135,10 @@ export const REFERENCE_TABLES: string[] = [
   "bankAccount",
   "contract",
   "disbursementChannel",
+  // Kartalar kanalning (odamning) atributi — kim qaysi karta bilan ishlashi
+  // qo'lda yig'ilgan ma'lumot. Tozalashda o'chsa, keyingi vipiskadagi karta
+  // o'tkazmasini kimga bog'lashni tizim bilmay qolardi.
+  "channelCard",
 ];
 
 /**

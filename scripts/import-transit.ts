@@ -26,6 +26,7 @@ import {
   parseTransitSheet,
   parseTransitTotals,
   maskCard,
+  nameKey,
   type ParsedChannelPerson,
 } from "@/lib/transitImport";
 
@@ -172,15 +173,45 @@ async function main() {
       continue;
     }
 
-    // Karta niqobi unikal (`@@unique([type, cardMask])`); kartasizlar uchun
-    // nom bo'yicha qidiramiz, aks holda har ishga tushirishda dublikat bo'lardi.
-    const existing = mask
-      ? await prisma.disbursementChannel.findFirst({ where: { type: "employee_card", cardMask: mask } })
-      : await prisma.disbursementChannel.findFirst({ where: { type: "employee_card", label: p.fullName } });
+    // Kanalni topish tartibi MUHIM — aks holda vipiskadan yaratilgan
+    // kanalning yoniga reyestrdan ikkinchisi qo'shilib, bir odam ikki
+    // kanal bo'lib ketadi (avval aynan shunday bo'lgan):
+    //   1) KARTA bo'yicha (ChannelCard — bir odamda bir necha karta bo'ladi)
+    //   2) ISM bo'yicha (so'z tartibi va transliteratsiya farqi hisobga olinadi)
+    //   3) shundan keyingina yangi kanal
+    let existing: { id: string } | null = null;
+
+    if (mask) {
+      const card = await prisma.channelCard.findUnique({
+        where: { cardMask: mask },
+        select: { channelId: true },
+      });
+      if (card) existing = { id: card.channelId };
+    }
+
+    if (!existing) {
+      const key = nameKey(p.fullName);
+      const all = await prisma.disbursementChannel.findMany({
+        where: { type: "employee_card" },
+        select: { id: true, label: true },
+      });
+      const hits = all.filter((c) => nameKey(c.label) === key);
+      // Bir nechta mos kelsa TANLAMAYMIZ — merge-channels.ts hal qiladi.
+      if (hits.length === 1) existing = { id: hits[0].id };
+    }
 
     const row = existing
       ? await prisma.disbursementChannel.update({ where: { id: existing.id }, data, select: { id: true } })
       : await prisma.disbursementChannel.create({ data, select: { id: true } });
+
+    // Kartani ro'yxatga qo'shamiz (kanalda bir nechtasi bo'lishi mumkin).
+    if (mask) {
+      await prisma.channelCard.upsert({
+        where: { cardMask: mask },
+        create: { channelId: row.id, cardMask: mask, isPrimary: true },
+        update: { channelId: row.id },
+      });
+    }
 
     existing ? updated++ : created++;
     channelIdByPerson.set(norm(p.fullName), row.id);
@@ -202,6 +233,8 @@ async function main() {
 
   const sheets = Object.keys(ledger).filter((s) => s !== "Total");
   let entriesWritten = 0;
+  let skippedAsBankDuplicate = 0;
+  let skippedAmount = 0;
   let totalIn = 0;
   let totalOut = 0;
   let totalBalance = 0;
@@ -233,11 +266,45 @@ async function main() {
 
     if (dryRun || !channelId) continue;
 
+    // ── BANK KIRIMI BILAN TAKRORLANMASLIK ──────────────────────────────
+    // Vipiskadan kelgan karta o'tkazmalari allaqachon `bank:` kaliti bilan
+    // yozilgan. Excel daftari ham AYNAN O'SHA pulni ko'rsatadi — ikkalasi
+    // yozilsa kanal qoldig'i ikki barobar shishadi (avval shunday bo'lgan:
+    // 515 mln + 444 mln).
+    //
+    // Bank — ishonchli manba (pul haqiqatan o'tgani), shuning uchun mos
+    // kelgan Excel kirimi TASHLANADI. Mos kelmagani qoladi: u vipiskasi
+    // bizda yo'q firmadan kelgan pul bo'lishi mumkin.
+    const bankIn = await prisma.transitEntry.findMany({
+      where: { channelId, direction: "in", dedupKey: { startsWith: "bank:" } },
+      select: { id: true, amount: true, date: true },
+    });
+    const bankPool = bankIn.map((b) => ({ amount: Number(b.amount), time: b.date.getTime(), used: false }));
+
     for (const m of parsed.movements) {
       const when = m.date ?? new Date(2026, 6, 1);
       const sourceFirm = firmByName(m.sourceFirm);
 
+      // DIQQAT: bu yerda `continue` ISHLATILMAYDI. Bitta qatorda ham kirim,
+      // ham chiqim bo'lishi mumkin (masalan "oldim va darhol oylikka berdim").
+      // Kirim bank dublikati bo'lgani uchun tashlansa ham, o'sha qatordagi
+      // CHIQIM baribir yozilishi kerak — aks holda 441 mln chiqimning
+      // yarmi yo'qoladi.
+      let skipThisInflow = false;
       if (m.amountIn > 0) {
+        // Summa bir xil va sana ±3 kun ichida bo'lsa — bu o'sha bank o'tkazmasi.
+        const twin = bankPool.find(
+          (b) => !b.used && Math.abs(b.amount - m.amountIn) < 1 && Math.abs(b.time - when.getTime()) <= 3 * 86_400_000
+        );
+        if (twin) {
+          twin.used = true;
+          skippedAsBankDuplicate++;
+          skippedAmount += m.amountIn;
+          skipThisInflow = true;
+        }
+      }
+
+      if (m.amountIn > 0 && !skipThisInflow) {
         await prisma.transitEntry.upsert({
           where: { dedupKey: `xls:${sheet}:${m.rowNo}:in` },
           create: {
@@ -323,6 +390,11 @@ async function main() {
   }
 
   console.log(`\nTransitEntry yozildi: ${entriesWritten}`);
+  if (skippedAsBankDuplicate > 0) {
+    console.log(
+      `Bank o'tkazmasi bilan bir xil bo'lgani uchun tashlandi: ${skippedAsBankDuplicate} ta kirim · ${som(skippedAmount)} so'm`
+    );
+  }
 
   const check = await prisma.transitEntry.groupBy({ by: ["direction"], _sum: { amount: true } });
   for (const c of check) {

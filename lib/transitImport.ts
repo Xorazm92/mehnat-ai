@@ -53,6 +53,28 @@ export interface ParsedChannelPerson {
   pinfl: string | null;
 }
 
+/**
+ * Ismni SOLISHTIRISH uchun normallashtiradi.
+ *
+ * Bir odam uch xil yozilishi mumkin:
+ *   vipiskada  "ABRORBEK BOBOJONOV"        (o'tkazma matnidan)
+ *   reyestrda  "BOBOJONOV ABRORBEK"        (familiya oldin)
+ *   rus/lotin  "KHIKMATULLAEVA MAHMUDAKHON" ↔ "XIKMATULLAYEVA MAHMUDAXON"
+ *
+ * Shuning uchun: apostroflar olib tashlanadi, `kh→x`, `ye→e`, so'zlar
+ * SARALANADI. Natijada uchala variant bir xil kalit beradi.
+ */
+export function nameKey(raw: string): string {
+  const folded = raw
+    .toLowerCase()
+    .replace(/[`'‘’"]/g, "")
+    .replace(/kh/g, "x")
+    .replace(/ye/g, "e")
+    .replace(/\s+/g, " ")
+    .trim();
+  return folded.split(" ").filter(Boolean).sort().join(" ");
+}
+
 /** "5614681263379541" → "5614****9541". To'liq raqam SAQLANMAYDI. */
 export function maskCard(card: string | null | undefined): string | null {
   const digits = String(card ?? "").replace(/\D/g, "");
