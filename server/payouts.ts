@@ -22,6 +22,7 @@ import { auth } from "@/lib/auth";
 import { isAdminRole, isSeniorRole } from "@/lib/permissions";
 import { staffScopeFilter } from "@/lib/access";
 import { assertSufficientFunds } from "@/lib/balance";
+import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { recordAuditLog } from "@/lib/auditTrail";
@@ -121,13 +122,14 @@ export async function createPayout(data: {
 
   const userId = session.user.id as string;
 
-  // Kassadan pul chiqadi — balans yetarliligi (admin override audit bilan).
-  await assertSufficientFunds({ amount: data.amount, role, userId, context: "payroll" });
-
-  // Majburiyat tekshiruvi + yozuv + ledger bitta Serializable tranzaksiyada:
-  // parallel ikki "To'lash" bosishi jami summani majburiyatdan oshira olmaydi.
-  const payout = await prisma.$transaction(
+  // Balans + majburiyat tekshiruvi + yozuv + ledger — hammasi bitta
+  // Serializable tranzaksiyada: parallel ikki "To'lash" bosishi na majburiyatdan,
+  // na kassa balansidan oshib keta oladi.
+  const payout = await serializable(
     async (tx) => {
+      // Kassadan pul chiqadi — balans yetarliligi (admin override audit bilan).
+      await assertSufficientFunds({ amount: data.amount, role, userId, context: "payroll", db: tx });
+
       const { obligation, paid } = await obligationAndPaid(tx, data.employeeId, month);
       if (obligation <= 0) {
         throw new Error(
@@ -180,9 +182,7 @@ export async function createPayout(data: {
       });
 
       return created;
-    },
-    { isolationLevel: "Serializable" }
-  );
+  });
 
   await recordAuditLog({
     userId,

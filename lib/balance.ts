@@ -8,7 +8,16 @@
 // Bu server-only modul (prisma ishlatadi) — faqat server komponent/actionlardan chaqiriladi.
 import { prisma } from "@/lib/prisma";
 import { isAdminRole, ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import type { Prisma } from "@prisma/client";
 import type { BalanceBreakdown } from "@/types";
+
+/**
+ * Balansni tranzaksiya ICHIDA o'qish uchun. Chaqiruvchi `tx` bersa, o'qish
+ * ham yozish ham bitta Serializable tranzaksiyada bo'ladi — aks holda
+ * "tekshirdim, keyin yozdim" oralig'ida boshqa amal balansni o'zgartirib
+ * ulgurishi mumkin (lib/tx.ts dagi izohga qarang).
+ */
+export type Db = Prisma.TransactionClient | typeof prisma;
 
 export type { BalanceBreakdown };
 
@@ -24,22 +33,25 @@ const n = (v: unknown) => {
  */
 export async function getAvailableBalance(opts?: {
   excludeExpenseId?: string;
+  /** Tranzaksiya klienti — berilsa balans o'sha tranzaksiya ichida o'qiladi. */
+  db?: Db;
 }): Promise<BalanceBreakdown> {
+  const db = opts?.db ?? prisma;
   const [paidPayments, kassaIncome, kassaExpense, approvedExpenses, payouts] =
     await Promise.all([
-      prisma.payment.aggregate({
+      db.payment.aggregate({
         where: { status: { in: ["paid", "partial"] }, deletedAt: null },
         _sum: { amount: true },
       }),
-      prisma.kassaEntry.aggregate({
+      db.kassaEntry.aggregate({
         where: { type: "income", deletedAt: null },
         _sum: { amount: true },
       }),
-      prisma.kassaEntry.aggregate({
+      db.kassaEntry.aggregate({
         where: { type: "expense", deletedAt: null },
         _sum: { amount: true },
       }),
-      prisma.expense.aggregate({
+      db.expense.aggregate({
         where: {
           status: "approved",
           deletedAt: null,
@@ -48,7 +60,7 @@ export async function getAvailableBalance(opts?: {
         _sum: { amount: true },
       }),
       // Payout.amount har doim musbat (server yozuvda kafolatlaydi) — SUM xavfsiz.
-      prisma.payout.aggregate({
+      db.payout.aggregate({
         where: { deletedAt: null },
         _sum: { amount: true },
       }),
@@ -269,9 +281,15 @@ export async function assertSufficientFunds(params: {
   userId?: string;
   excludeExpenseId?: string;
   context: "expense" | "payroll";
+  /**
+   * Tranzaksiya klienti. HAR DOIM berilishi kerak: usiz tekshiruv va yozuv
+   * atomar bo'lmaydi va ikki parallel chiqim bir xil balansni ko'rib ikkalasi
+   * ham o'tib ketadi. `lib/tx.ts` `serializable()` bilan ishlating.
+   */
+  db?: Db;
 }): Promise<void> {
-  const { amount, role, userId, excludeExpenseId, context } = params;
-  const { balance } = await getAvailableBalance({ excludeExpenseId });
+  const { amount, role, userId, excludeExpenseId, context, db = prisma } = params;
+  const { balance } = await getAvailableBalance({ excludeExpenseId, db });
 
   if (amount <= balance) return; // mablag' yetarli — ruxsat
 
@@ -284,7 +302,9 @@ export async function assertSufficientFunds(params: {
   }
 
   // Admin override — minus balansga ruxsat berildi, izi audit logga yoziladi
-  await prisma.auditLog
+  // Audit izi tranzaksiya klienti bilan yoziladi: amal bekor bo'lsa
+  // "override qilindi" degan yolg'on iz qolmaydi.
+  await db.auditLog
     .create({
       data: {
         userId: userId ?? null,

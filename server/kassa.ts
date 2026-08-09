@@ -16,6 +16,7 @@ const isFinanceRole = (role: string) => FINANCE_ROLES.includes(role);
 
 import { canApproveExpense } from "@/lib/expenseApproval";
 import { assertSufficientFunds } from "@/lib/balance";
+import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { recordAuditLog } from "@/lib/auditTrail";
@@ -91,12 +92,15 @@ export async function createKassaEntry(data: {
   assertPositiveAmount(data.amount);
   await assertPeriodOpen(prisma, data.date, "kassa yozuvi");
 
-  // Kassa chiqimi ham mavjud balansdan oshmasligi kerak (kirim shart emas — bloklanadi)
-  if (data.type === "expense") {
-    await assertSufficientFunds({ amount: data.amount, role, userId: session.user.id, context: "expense" });
-  }
-
-  const created = await prisma.$transaction(async (tx) => {
+  const created = await serializable(async (tx) => {
+    // Kassa chiqimi mavjud balansdan oshmasligi kerak (kirim shart emas).
+    // Tekshiruv YOZUV BILAN BIR TRANZAKSIYADA — aks holda ikki parallel chiqim
+    // bir xil balansni ko'rib ikkalasi ham o'tib ketardi.
+    if (data.type === "expense") {
+      await assertSufficientFunds({
+        amount: data.amount, role, userId: session.user.id, context: "expense", db: tx,
+      });
+    }
     const row = await tx.kassaEntry.create({
       data: {
         ...data,
@@ -281,11 +285,12 @@ export async function createExpense(data: {
   const autoApprove = data.amount < 1_000_000; // kichik xarajatlar avtomatik tasdiqlanadi
   // Avto-tasdiqda pul darhol chiqadi → mavjud balansdan oshmasligini tekshir.
   // Katta (pending) xarajatlar tasdiq paytida (approveExpense) tekshiriladi.
-  if (autoApprove) {
-    await assertSufficientFunds({ amount: data.amount, role, userId: session.user.id, context: "expense" });
-  }
-
-  const created = await prisma.$transaction(async (tx) => {
+  const created = await serializable(async (tx) => {
+    if (autoApprove) {
+      await assertSufficientFunds({
+        amount: data.amount, role, userId: session.user.id, context: "expense", db: tx,
+      });
+    }
     const row = await tx.expense.create({
       data: {
         ...data,
@@ -327,10 +332,19 @@ export async function approveExpense(id: string) {
 
   await assertPeriodOpen(prisma, exp.date, "xarajat");
 
-  // Tasdiqdan keyin pul chiqadi → mavjud balans yetarli bo'lishi kerak.
-  await assertSufficientFunds({ amount: Number(exp.amount), role, userId: session.user.id, excludeExpenseId: id, context: "expense" });
+  const approved = await serializable(async (tx) => {
+    // Holatni tranzaksiya ICHIDA qayta o'qiymiz: yuqoridagi tekshiruvdan beri
+    // boshqa seans tasdiqlab ulgurgan bo'lishi mumkin, va ikki marta tasdiq =
+    // ikki marta ledger yozuvi.
+    const fresh = await tx.expense.findUnique({ where: { id }, select: { status: true } });
+    if (!fresh || fresh.status === "approved") throw new Error("Xarajat allaqachon tasdiqlangan");
 
-  const approved = await prisma.$transaction(async (tx) => {
+    // Tasdiqdan keyin pul chiqadi → mavjud balans yetarli bo'lishi kerak.
+    await assertSufficientFunds({
+      amount: Number(exp.amount), role, userId: session.user.id,
+      excludeExpenseId: id, context: "expense", db: tx,
+    });
+
     const row = await tx.expense.update({
       where: { id },
       data: { status: "approved", approvedBy: session.user.id, approvedAt: new Date(), rejectedReason: null },
@@ -411,11 +425,12 @@ export async function updateExpense(id: string, data: {
   const autoApprove = data.amount < 1_000_000;
   // Avto-tasdiqlanadigan bo'lsa balansni tekshir — o'zining eski summasini
   // ikki marta sanamaslik uchun joriy xarajat chiqim yig'indisidan chiqariladi.
-  if (autoApprove) {
-    await assertSufficientFunds({ amount: data.amount, role, userId, excludeExpenseId: id, context: "expense" });
-  }
-
-  const updated = await prisma.$transaction(async (tx) => {
+  const updated = await serializable(async (tx) => {
+    if (autoApprove) {
+      await assertSufficientFunds({
+        amount: data.amount, role, userId, excludeExpenseId: id, context: "expense", db: tx,
+      });
+    }
     // Eski tasdiqlangan holatning ledger izi netto nolga tushadi, keyin
     // (agar yana avto-tasdiq bo'lsa) yangi summa bilan qayta yoziladi.
     await reverseLedger(tx, { sourceTable: "Expense", sourceId: id, createdBy: userId, reason: "xarajat tahrirlandi" });

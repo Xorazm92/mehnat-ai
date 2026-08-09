@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
 import { staffScopeFilter } from "@/lib/access";
 import { assertSufficientFunds } from "@/lib/balance";
+import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger } from "@/lib/ledger";
 import { recordAuditLog } from "@/lib/auditTrail";
@@ -125,16 +126,21 @@ export async function approvePayrollAdjustment(id: string) {
 
   // Avans tasdig'i = REAL pul berish. Balans tekshiriladi (admin o'tkaza oladi,
   // minus balans holati audit logga tushadi).
-  if (existing.adjustmentType === "avans") {
-    await assertSufficientFunds({
-      amount: amountAbs,
-      role,
-      userId: session.user.id,
-      context: "payroll",
+  const updated = await serializable(async (tx) => {
+    // Holatni ichkarida qayta o'qiymiz — parallel ikki tasdiq bo'lmasin.
+    const fresh = await tx.payrollAdjustment.findUnique({
+      where: { id },
+      select: { isApproved: true },
     });
-  }
+    if (!fresh || fresh.isApproved) throw new Error("Tuzatma allaqachon tasdiqlangan");
 
-  const updated = await prisma.$transaction(async (tx) => {
+    // Avans tasdig'i = REAL pul berish → balans shu tranzaksiya ichida.
+    if (existing.adjustmentType === "avans") {
+      await assertSufficientFunds({
+        amount: amountAbs, role, userId: session.user.id, context: "payroll", db: tx,
+      });
+    }
+
     const row = await tx.payrollAdjustment.update({
       where: { id },
       data: {
@@ -348,13 +354,15 @@ export async function approveEmployeeSalary(data: { employeeId: string; month: s
 
   // Oylik ham chiqim — mavjud balansdan oshsa oddiy foydalanuvchi bloklanadi,
   // Admin/Superadmin o'tkaza oladi (audit logga yozilib).
-  await assertSufficientFunds({ amount: draft.totalSalary, role, userId, context: "payroll" });
-
-  // Takror-tekshiruv + yozuv bitta Serializable tranzaksiyada: ikki parallel
-  // tasdiqlash (double-click / ikki brauzer) bir oy uchun ikkita 'payment'
-  // yozib qo'ymasin — dublikat to'g'ridan-to'g'ri oylikni ikkilantiradi.
-  const adjustment = await prisma.$transaction(
+  // Balans + takror-tekshiruv + yozuv bitta Serializable tranzaksiyada: ikki
+  // parallel tasdiqlash (double-click / ikki brauzer) bir oy uchun ikkita
+  // 'payment' yozib qo'ymasin — dublikat to'g'ridan-to'g'ri oylikni ikkilantiradi.
+  const adjustment = await serializable(
     async (tx) => {
+      // Oylik ham chiqim — mavjud balansdan oshsa oddiy foydalanuvchi bloklanadi,
+      // Admin/Superadmin o'tkaza oladi (audit logga yozilib).
+      await assertSufficientFunds({ amount: draft.totalSalary, role, userId, context: "payroll", db: tx });
+
       const dupe = await tx.payrollAdjustment.findFirst({
         where: {
           employeeId: data.employeeId,
@@ -379,9 +387,7 @@ export async function approveEmployeeSalary(data: { employeeId: string; month: s
           approvedAt: new Date(),
         },
       });
-    },
-    { isolationLevel: "Serializable" }
-  );
+  });
 
   await recordAuditLog({
     userId,
