@@ -17,6 +17,7 @@ import { isSeniorRole, isAdminRole } from "@/lib/permissions";
 import { companyScopeWhere } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
 import { computeContractDebt, periodKeyOf } from "@/lib/debt";
+import { runReconciliation } from "@/lib/reconciliation";
 
 async function requireSenior() {
   const session = await auth();
@@ -143,4 +144,16 @@ export async function getPlanFact(limit = 12) {
     select: { period: true, metric: true, plan: true, fact: true },
   });
   return serialize(rows.reverse());
+}
+
+/**
+ * Sverka — moliyaviy invariantlar holati.
+ *
+ * ATAYIN admin-only: bu butun tizim bo'yicha ko'rsatkich (firma kesimi yo'q),
+ * va aralashuv talab qiladigan harakatlar ham adminniki.
+ */
+export async function getReconciliation() {
+  const actor = await requireSenior();
+  if (!isAdminRole(actor.role)) return serialize([]);
+  return serialize(await runReconciliation(prisma));
 }

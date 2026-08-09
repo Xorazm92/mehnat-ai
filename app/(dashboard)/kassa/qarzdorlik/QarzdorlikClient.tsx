@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, Search, TrendingUp } from "lucide-react";
+import { AlertTriangle, Search, TrendingUp, CheckCircle2, XCircle } from "lucide-react";
 import { formatNum, formatUzDate } from "@/lib/format";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
@@ -23,6 +23,15 @@ interface PlanFactRow {
   fact: string | number | null;
 }
 
+interface ReconCheck {
+  key: string;
+  title: string;
+  status: "ok" | "warn" | "error";
+  value: number;
+  detail: string;
+  action?: string;
+}
+
 interface Props {
   debt: {
     asOf: string | null;
@@ -31,11 +40,13 @@ interface Props {
     unlinked: number;
   };
   planFact: PlanFactRow[];
+  /** Sverka — moliyaviy invariantlar. Faqat adminda to'ladi. */
+  recon?: ReconCheck[];
 }
 
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
 
-export default function QarzdorlikClient({ debt, planFact }: Props) {
+export default function QarzdorlikClient({ debt, planFact, recon = [] }: Props) {
   useAutoRefresh();
   const [query, setQuery] = useState("");
   // Farqi bor qatorlar tepada — aynan ular e'tibor talab qiladi.
@@ -65,6 +76,40 @@ export default function QarzdorlikClient({ debt, planFact }: Props) {
           </p>
         </div>
       </div>
+
+      {/* SVERKA — import nomuvofiqliklari ilgari faqat terminalda ko'rinardi
+          va terminal yopilgach yo'qolardi. Endi doimiy ekranda. */}
+      {recon.length > 0 && (
+        <div className="rounded-xl overflow-hidden" style={card}>
+          <div className="px-3 py-2" style={{ background: "var(--input-bg)", borderBottom: "1px solid var(--card-border)" }}>
+            <h2 className="text-meta font-semibold" style={{ color: "var(--text)" }}>Sverka — moliyaviy tekshiruvlar</h2>
+          </div>
+          <div className="divide-y" style={{ borderColor: "var(--card-border)" }}>
+            {recon.map((c) => {
+              const color =
+                c.status === "ok" ? "var(--success)" : c.status === "warn" ? "var(--warning)" : "var(--danger)";
+              const Icon = c.status === "ok" ? CheckCircle2 : c.status === "warn" ? AlertTriangle : XCircle;
+              return (
+                <div key={c.key} className="flex items-start gap-3 px-3 py-2">
+                  <Icon size={16} style={{ color }} className="mt-0.5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-meta font-semibold" style={{ color: "var(--text)" }}>{c.title}</div>
+                    <div className="text-micro" style={{ color: "var(--text-muted)" }}>{c.detail}</div>
+                    {c.action && (
+                      <div className="text-micro mt-0.5" style={{ color }}>→ {c.action}</div>
+                    )}
+                  </div>
+                  {c.value !== 0 && (
+                    <div className="text-meta tabular-nums font-semibold whitespace-nowrap" style={{ color }}>
+                      {formatNum(c.value)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Uchta raqam */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

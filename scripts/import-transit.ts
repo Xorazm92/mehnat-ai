@@ -19,6 +19,7 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
+import { formatNum as som } from "@/lib/format";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -34,7 +35,6 @@ const DIR = path.join(process.cwd(), "others_json_files");
 const REGISTRY = path.join(DIR, "Band qilganlar.json");
 const LEDGER = path.join(DIR, "O'zini-o'zi band Iyul.json");
 
-const som = (n: number) => Math.round(n).toLocaleString("en-US");
 const norm = (s: string) =>
   s.toLowerCase().replace(/[‘’'`]/g, "").replace(/\s+/g, " ").trim();
 

@@ -16,13 +16,13 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
+import { formatNum as som } from "@/lib/format";
 import fs from "node:fs";
 import path from "node:path";
 import { parsePlastikFile } from "@/lib/bank/parsePlastik";
 import { allocatePlastikReceipt } from "@/lib/bank/importStatement";
 
 const SOURCE = path.join(process.cwd(), "cash_json_files", "plastik.json");
-const som = (n: number) => Math.round(n).toLocaleString("en-US");
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");

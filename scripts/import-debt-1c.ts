@@ -16,13 +16,13 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
+import { formatNum as som } from "@/lib/format";
 import fs from "node:fs";
 import path from "node:path";
 import { parseDebtReport, type DebtLine } from "@/lib/debtReport";
 import { readLooseJsonArray } from "@/lib/bank/parsePlastik";
 
 const SOURCE = path.join(process.cwd(), "others_json_files", "qarzdorlik2.json");
-const som = (n: number) => Math.round(n).toLocaleString("en-US");
 
 /** Shartnoma raqamini solishtirish uchun: kirill/lotin va ajratgichlar. */
 export function contractKey(raw: string): string {

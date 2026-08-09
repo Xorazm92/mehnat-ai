@@ -23,6 +23,7 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
+import { formatNum as som } from "@/lib/format";
 import fs from "node:fs";
 import path from "node:path";
 import { parseContractCell } from "@/lib/bank/extractContract";
@@ -101,7 +102,6 @@ function readRegistry(file: string): RegistryRow[] {
   return out;
 }
 
-const som = (n: number) => n.toLocaleString("en-US");
 
 async function main() {
   const apply = process.argv.includes("--apply");

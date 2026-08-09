@@ -20,6 +20,7 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
+import { formatNum as som } from "@/lib/format";
 
 interface Fix {
   /** Hozirgi (noto'g'ri) STIR. */
@@ -45,7 +46,6 @@ const FIXES: Fix[] = [
   // (308543061) ham shu nomga o'xshaydi. Qo'lda aniqlangach qo'shilsin.
 ];
 
-const som = (n: number) => n.toLocaleString("en-US");
 
 async function main() {
   const apply = process.argv.includes("--apply");

@@ -16,13 +16,13 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
+import { formatNum as som } from "@/lib/format";
 import fs from "node:fs";
 import path from "node:path";
 import { parseMealWorkbook } from "@/lib/mealExpenses";
 import { KASSA_CATEGORIES_KEY } from "@/lib/kassaCategories";
 
 const DIR = path.join(process.cwd(), "others_json_files");
-const som = (n: number) => Math.round(n).toLocaleString("en-US");
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");

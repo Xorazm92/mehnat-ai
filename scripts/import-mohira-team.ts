@@ -26,6 +26,7 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
+import { formatNum as som } from "@/lib/format";
 import { ASSIGNMENT_ROLE_LABELS, type AssignmentRole } from "@/lib/permissions";
 
 interface SourceRow {
@@ -136,7 +137,6 @@ const FIRMS: SourceRow[] = [
     notes: "Yana 3 ta STIR: 52111065730069, 51908065730051, 51603025730024 — alohida firmalarga ajratilsin" },
 ];
 
-const som = (n: number) => n.toLocaleString("en-US");
 
 /** Firmaning kutilgan holati — manba qatoridan hisoblanadi. */
 interface Desired {
