@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Upload, Link2, EyeOff, Banknote, CreditCard, Wallet, Search, AlertTriangle } from "lucide-react";
+import { Upload, Link2, EyeOff, Banknote, CreditCard, Wallet, Search, AlertTriangle, Plus } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { formatNum, formatUzDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
@@ -14,6 +14,7 @@ import {
   ignoreTransaction,
 } from "@/server/bankImport";
 import type { StatementPreview } from "@/lib/bank/types";
+import { createKassaEntry } from "@/server/kassa";
 
 interface AccountRow {
   id: string;
@@ -51,6 +52,8 @@ interface NonBankRow {
   receivedAt: string | null;
   externalRef: string | null;
   payment: { period: string; company: { name: string; inn: string } } | null;
+  /** true ⇒ qo'lda kiritilgan (mijozga bog'lanmagan). */
+  manual?: boolean;
 }
 
 interface CompanyOption {
@@ -81,6 +84,43 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   /** Serverdan kelgan tushunarli xato — prod'da toast matni umumiy bo'lib qoladi. */
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+
+  // Qo'lda kirim: naqd va plastik pul vipiskada ko'rinmaydi, uni odam
+  // kiritadi. Backend (createKassaEntry) bor edi, ekran yo'q edi.
+  const [manualType, setManualType] = useState<"naqd" | "plastik" | null>(null);
+  const [manualAmount, setManualAmount] = useState("");
+  const [manualNote, setManualNote] = useState("");
+  const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [manualBusy, setManualBusy] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
+
+  const submitManual = async () => {
+    if (!manualType) return;
+    const amount = Number(manualAmount.replace(/[^\d.]/g, ""));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setManualError("Summa musbat son bo'lishi kerak");
+      return;
+    }
+    setManualBusy(true);
+    setManualError(null);
+    try {
+      await createKassaEntry({
+        type: "income",
+        category: manualType === "naqd" ? "Naqd tushum" : "Plastik tushum",
+        amount,
+        description: manualNote.trim() || undefined,
+        date: new Date(manualDate),
+      });
+      setManualType(null);
+      setManualAmount("");
+      setManualNote("");
+      router.refresh();
+    } catch (e) {
+      setManualError((e as Error).message || "Yozib bo'lmadi");
+    } finally {
+      setManualBusy(false);
+    }
+  };
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -208,6 +248,13 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
         <div className="p-4 rounded-xl" style={card}>
           <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
             <CreditCard size={14} /> Plastik karta
+            <button
+              className="ml-auto icon-btn"
+              title="Plastik tushum qo'shish"
+              onClick={() => { setManualType("plastik"); setManualError(null); }}
+            >
+              <Plus size={14} />
+            </button>
           </div>
           <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
             {formatNum(sum(plastik))} <span className="text-meta">so&apos;m</span>
@@ -219,6 +266,13 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
         <div className="p-4 rounded-xl" style={card}>
           <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
             <Wallet size={14} /> Naqd pul
+            <button
+              className="ml-auto icon-btn"
+              title="Naqd tushum qo'shish"
+              onClick={() => { setManualType("naqd"); setManualError(null); }}
+            >
+              <Plus size={14} />
+            </button>
           </div>
           <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
             {formatNum(sum(naqd))} <span className="text-meta">so&apos;m</span>
@@ -228,6 +282,57 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           </div>
         </div>
       </div>
+
+      {/* Qo'lda kirim formasi */}
+      {manualType && (
+        <div className="p-4 rounded-xl space-y-3" style={card}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
+              {manualType === "naqd" ? "Naqd tushum" : "Plastik tushum"} qo&apos;shish
+            </h2>
+            <Button variant="secondary" size="sm" onClick={() => setManualType(null)}>Yopish</Button>
+          </div>
+          {manualError && (
+            <p className="text-meta" style={{ color: "var(--danger)" }}>{manualError}</p>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label className="block">
+              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Sana</span>
+              <input
+                type="date"
+                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
+                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                value={manualDate}
+                onChange={(e) => setManualDate(e.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Summa (so&apos;m)</span>
+              <input
+                inputMode="numeric"
+                className="w-full mt-1 px-3 py-2 rounded-lg text-meta text-right tabular-nums outline-none"
+                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                value={manualAmount}
+                onChange={(e) => setManualAmount(e.target.value)}
+                placeholder="1000000"
+              />
+            </label>
+            <label className="block">
+              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Izoh</span>
+              <input
+                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
+                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                value={manualNote}
+                onChange={(e) => setManualNote(e.target.value)}
+                placeholder="kimdan / nima uchun"
+              />
+            </label>
+          </div>
+          <Button variant="primary" size="md" disabled={manualBusy} onClick={submitManual}>
+            {manualBusy ? "Yozilmoqda…" : "Saqlash"}
+          </Button>
+        </div>
+      )}
 
       {/* Xato paneli — toast emas, chunki matn uzun va o'qilishi kerak */}
       {uploadError && (
@@ -460,7 +565,11 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
                       </span>
                     </td>
                     <td className="p-2 max-w-[280px] truncate">
-                      {r.payment?.company.name ?? "—"}
+                      {r.payment?.company.name ?? (
+                        <span style={{ color: "var(--text-muted)" }}>
+                          {r.manual ? "qo'lda kiritilgan" : "—"}
+                        </span>
+                      )}
                     </td>
                     <td className="p-2 whitespace-nowrap">{r.payment?.period ?? "—"}</td>
                     <td className="p-2">{r.externalRef ?? "—"}</td>

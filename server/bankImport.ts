@@ -171,19 +171,61 @@ export async function getUnmatchedIncome(limit = 100) {
  */
 export async function getNonBankIncome(limit = 100) {
   await requireStatementRole();
-  const rows = await prisma.paymentAllocation.findMany({
-    where: { source: { in: ["plastik", "naqd"] } },
-    select: {
-      id: true,
-      source: true,
-      amount: true,
-      receivedAt: true,
-      externalRef: true,
-      payment: { select: { period: true, company: { select: { name: true, inn: true } } } },
-    },
-    orderBy: [{ receivedAt: "desc" }, { amount: "desc" }],
-    take: limit,
-  });
+
+  // IKKI MANBA, chunki ular ikki xil pul:
+  //   PaymentAllocation(plastik|naqd) — MIJOZ to'lovi, qarzini kamaytiradi
+  //                                     (1C reestridan import qilinadi);
+  //   KassaEntry(income)              — qo'lda kiritilgan naqd/plastik tushum,
+  //                                     mijozga bog'lanmagan.
+  // Ikkalasi ham balansda BIR MARTA sanaladi (biri Payment, ikkinchisi
+  // KassaEntry orqali), shuning uchun ekranda qo'shib ko'rsatish to'g'ri.
+  const [allocations, manual] = await Promise.all([
+    prisma.paymentAllocation.findMany({
+      where: { source: { in: ["plastik", "naqd"] } },
+      select: {
+        id: true,
+        source: true,
+        amount: true,
+        receivedAt: true,
+        externalRef: true,
+        payment: { select: { period: true, company: { select: { name: true, inn: true } } } },
+      },
+      orderBy: [{ receivedAt: "desc" }, { amount: "desc" }],
+      take: limit,
+    }),
+    prisma.kassaEntry.findMany({
+      where: {
+        type: "income",
+        deletedAt: null,
+        category: { in: ["Naqd tushum", "Plastik tushum"] },
+      },
+      select: { id: true, category: true, amount: true, date: true, description: true },
+      orderBy: { date: "desc" },
+      take: limit,
+    }),
+  ]);
+
+  const rows = [
+    ...allocations.map((a) => ({
+      id: a.id,
+      source: a.source,
+      amount: a.amount,
+      receivedAt: a.receivedAt,
+      externalRef: a.externalRef,
+      payment: a.payment,
+      manual: false,
+    })),
+    ...manual.map((k) => ({
+      id: k.id,
+      source: k.category === "Naqd tushum" ? "naqd" : "plastik",
+      amount: k.amount,
+      receivedAt: k.date,
+      externalRef: k.description,
+      payment: null,
+      manual: true,
+    })),
+  ].sort((a, b) => (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0));
+
   return serialize(rows);
 }
 

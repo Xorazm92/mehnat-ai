@@ -9,7 +9,8 @@ import {
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { formatNum, formatUzDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
-import { EXPENSE_CATEGORY_LABELS } from "@/lib/bank/classifyExpense";
+import { EXPENSE_CATEGORY_LABELS, isPostableExpense, type ExpenseCategory } from "@/lib/bank/classifyExpense";
+import { postExpenseTransaction } from "@/server/bankImport";
 import { CHANNEL_TYPE_LABELS, type ChannelType } from "@/lib/transit";
 import {
   upsertChannel,
@@ -53,10 +54,23 @@ interface LedgerRow {
   description: string | null;
 }
 
+interface BankExpenseRow {
+  id: string;
+  valueDate: string;
+  amount: string | number;
+  counterpartyName: string | null;
+  expenseCategory: string | null;
+  purpose: string | null;
+  kassaEntryId: string | null;
+  account: { label: string };
+}
+
 interface Props {
   overview: { channels: Channel[]; totalBalance: number; unlinkedCount: number };
   unlinked: UnlinkedTransfer[];
   employees: { id: string; fullName: string; role: string }[];
+  /** Vipiskadagi chiqimlar — toifalanib kassaga yoziladi. */
+  bankExpenses?: BankExpenseRow[];
   /** Kundalik xo'jalik xarajatlari (ovqat, taksi, non…) — oy bo'yicha. */
   household?: {
     periods: { period: string; total: number; count: number }[];
@@ -73,8 +87,14 @@ const card: React.CSSProperties = {
 /** Kartadan qilinadigan odatiy xarajatlar. */
 const SPEND_CATEGORIES = ["ijara", "aloqa", "ovqat", "soliq", "bank_komissiya", "boshqa"] as const;
 
-export default function ChiqimKassaClient({ overview, unlinked, employees, household }: Props) {
+export default function ChiqimKassaClient({ overview, unlinked, employees, household, bankExpenses = [] }: Props) {
   const router = useRouter();
+  // Toifalash navbati: qaysi qator ustida ish ketyapti va xato matni.
+  const [postingId, setPostingId] = useState<string | null>(null);
+  const [postError, setPostError] = useState<string | null>(null);
+
+  // Kassaga hali yozilmaganlar — yozilgani ro'yxatdan chiqadi.
+  const pendingExpenses = bankExpenses.filter((e) => !e.kassaEntryId);
   useAutoRefresh();
 
   const [busy, setBusy] = useState(false);
@@ -317,6 +337,99 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
             if (res !== null) setSpendFor(null);
           }}
         />
+      )}
+
+      {/* Vipiskadagi chiqimlarni toifalash.
+          Backend allaqachon bor edi (postExpenseTransaction), lekin ekran
+          yo'q edi — 301 ta chiqim shu sababdan hisobga olinmay turgan. */}
+      {pendingExpenses.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
+              Toifalanmagan bank chiqimlari ({pendingExpenses.length})
+            </h2>
+            <span className="text-meta" style={{ color: "var(--text-muted)" }}>
+              jami {formatNum(pendingExpenses.reduce((s2, e) => s2 + Number(e.amount), 0))} so&apos;m
+            </span>
+          </div>
+
+          {postError && (
+            <div className="p-3 rounded-lg text-meta" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger)", color: "var(--text-secondary)" }}>
+              {postError}
+            </div>
+          )}
+
+          <div className="overflow-x-auto rounded-xl" style={card}>
+            <table className="w-full text-meta">
+              <thead>
+                <tr style={{ background: "var(--input-bg)" }}>
+                  <th className="text-left p-2">Sana</th>
+                  <th className="text-left p-2">Hisob</th>
+                  <th className="text-left p-2">Kontragent</th>
+                  <th className="text-left p-2">Toifa</th>
+                  <th className="text-right p-2">Summa</th>
+                  <th className="text-right p-2">Amal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingExpenses.slice(0, 60).map((e) => {
+                  const cat = (e.expenseCategory ?? "boshqa") as ExpenseCategory;
+                  const postable = isPostableExpense(cat);
+                  return (
+                    <tr key={e.id} style={{ borderTop: "1px solid var(--card-border)" }}>
+                      <td className="p-2 whitespace-nowrap">{formatUzDate(e.valueDate)}</td>
+                      <td className="p-2 whitespace-nowrap">{e.account.label}</td>
+                      <td className="p-2 max-w-[240px] truncate" title={e.purpose ?? ""}>
+                        {e.counterpartyName ?? "—"}
+                      </td>
+                      <td className="p-2 whitespace-nowrap">
+                        {EXPENSE_CATEGORY_LABELS[cat] ?? cat}
+                      </td>
+                      <td className="p-2 text-right tabular-nums font-semibold whitespace-nowrap">
+                        {formatNum(Number(e.amount))}
+                      </td>
+                      <td className="p-2 text-right whitespace-nowrap">
+                        {postable ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={postingId === e.id}
+                            onClick={async () => {
+                              setPostingId(e.id);
+                              setPostError(null);
+                              try {
+                                await postExpenseTransaction({ transactionId: e.id, category: cat });
+                                router.refresh();
+                              } catch (err) {
+                                setPostError((err as Error).message || "Yozib bo'lmadi");
+                              } finally {
+                                setPostingId(null);
+                              }
+                            }}
+                          >
+                            {postingId === e.id ? "..." : "Kassaga yozish"}
+                          </Button>
+                        ) : (
+                          // Oylik, karta o'tkazmasi va firmalararo harakat kassaga
+                          // YOZILMAYDI — ular Payout yoki tranzit orqali hisobga
+                          // olinadi. Aks holda bitta pul ikki marta chiqim bo'lardi.
+                          <span className="text-micro" style={{ color: "var(--text-muted)" }}>
+                            boshqa joyda hisobga olinadi
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {pendingExpenses.length > 60 && (
+            <p className="text-micro" style={{ color: "var(--text-muted)" }}>
+              Birinchi 60 tasi ko&apos;rsatildi — yozilgani ro&apos;yxatdan chiqadi.
+            </p>
+          )}
+        </div>
       )}
 
       {/* Kundalik xo'jalik xarajatlari — 15 oylik tarix Excel'dan import qilingan.

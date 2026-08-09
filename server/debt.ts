@@ -13,8 +13,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
+import { isSeniorRole, isAdminRole } from "@/lib/permissions";
+import { companyScopeWhere } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
+import { computeContractDebt, periodKeyOf } from "@/lib/debt";
 
 async function requireSenior() {
   const session = await auth();
@@ -23,9 +25,6 @@ async function requireSenior() {
   if (!isSeniorRole(role)) throw new Error("Forbidden");
   return { userId: session.user.id, role };
 }
-
-const periodKeyOf = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
 export interface DebtRow {
   key: string;
@@ -43,7 +42,17 @@ export interface DebtRow {
 }
 
 export async function getDebtComparison() {
-  await requireSenior();
+  const actor = await requireSenior();
+
+  // FIRMA SCOPE. `isSeniorRole` yetarli EMAS: bosh buxgalter va nazoratchi
+  // ataylab o'z portfeliga cheklangan (lib/permissions.ts `ROLE_PERMISSIONS`
+  // da ularga "view_all_companies" berilmagan). Scope'siz ular 197 ta
+  // firmaning hammasining qarzini ko'rardi.
+  const scope = companyScopeWhere({ id: actor.userId, role: actor.role });
+  const isAdmin = isAdminRole(actor.role);
+  const scopedIds = isAdmin
+    ? null
+    : (await prisma.company.findMany({ where: scope, select: { id: true } })).map((c) => c.id);
 
   const latest = await prisma.debtSnapshot.findFirst({
     orderBy: { asOf: "desc" },
@@ -55,9 +64,14 @@ export async function getDebtComparison() {
 
   const period = periodKeyOf(new Date());
 
-  const [snapshots, companies] = await Promise.all([
+  const [snapshots, asro] = await Promise.all([
     prisma.debtSnapshot.findMany({
-      where: { asOf: latest.asOf },
+      // Bog'lanmagan qatorlar (companyId = null) faqat adminga ko'rinadi —
+      // ular hech kimning portfeliga tegishli emas.
+      where: {
+        asOf: latest.asOf,
+        ...(scopedIds ? { companyId: { in: scopedIds } } : {}),
+      },
       select: {
         id: true,
         rawCustomer: true,
@@ -70,24 +84,12 @@ export async function getDebtComparison() {
       },
       orderBy: { debt: "desc" },
     }),
-    prisma.company.findMany({
-      where: { isActive: true, isOwnFirm: false, contractAmount: { not: null } },
-      select: {
-        id: true,
-        contractAmount: true,
-        payments: { where: { period, deletedAt: null }, select: { amount: true, status: true } },
-      },
-    }),
+    // ASRO hisobi YAGONA MANBADAN (lib/debt.ts) — direktor hisoboti ham
+    // shuni ishlatadi, shuning uchun ikki ekranda bir xil raqam chiqadi.
+    computeContractDebt(prisma, period, { companyIds: scopedIds }),
   ]);
 
-  // ASRO hisobi — direktor hisobotidagi bilan AYNAN bir xil formula, aks
-  // holda ikki ekranda ikki xil raqam chiqardi.
-  const asroByCompany = new Map<string, number>();
-  for (const c of companies) {
-    const p = c.payments[0];
-    const paid = p && (p.status === "paid" || p.status === "partial") ? Number(p.amount) : 0;
-    asroByCompany.set(c.id, Math.max(0, Number(c.contractAmount) - paid));
-  }
+  const asroByCompany = asro.byCompany;
 
   // Bir firmada bir necha shartnoma bo'lsa, ASRO raqami FIRMA darajasida —
   // uni birinchi qatorga qo'yamiz, qolganida bo'sh (ikki marta sanalmasin).
@@ -127,9 +129,13 @@ export async function getDebtComparison() {
   });
 }
 
-/** Oylik reja/fakt — direktor paneli uchun. */
+/**
+ * Oylik reja/fakt — BUTUN korxona bo'yicha ko'rsatkich, firma kesimi yo'q.
+ * Shuning uchun uni faqat direktor (admin) ko'radi.
+ */
 export async function getPlanFact(limit = 12) {
-  await requireSenior();
+  const actor = await requireSenior();
+  if (!isAdminRole(actor.role)) return serialize([]);
   const rows = await prisma.monthlyTarget.findMany({
     where: { metric: { contains: "tushum", mode: "insensitive" } },
     orderBy: { period: "desc" },

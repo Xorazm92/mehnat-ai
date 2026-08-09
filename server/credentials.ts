@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { assertCompanyPermission } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { PRIMARY_SERVICE } from "@/lib/credentials";
@@ -14,21 +14,28 @@ import { PRIMARY_SERVICE } from "@/lib/credentials";
 
 // Firma parollariga kirish huquqi: ADMIN, yoki aynan shu firmaning
 // buxgalteri/bank-klienti. Nazoratchi va bosh buxgalter parol bilan ishlamaydi.
+/**
+ * Firma kirish ma'lumotlariga (soliq.uz paroli va h.k.) ruxsat.
+ *
+ * Ilgari bu yerda ALOHIDA scope qoidasi bor edi va u faqat `accountantId`
+ * bilan `bankClientId` ni tekshirardi. Natijada:
+ *   - nazoratchi va bosh buxgalter O'Z firmasining parolini ko'ra olmasdi;
+ *   - "Jamoa" tabidan (`ContractAssignment`) biriktirilgan xodim ham;
+ *   - va tizimda ikkita bir-biridan ajralib ketadigan scope qoidasi qolgandi.
+ *
+ * Endi yagona manba — `lib/access.ts` `assertCompanyPermission`, u oltita
+ * biriktiruv yo'lini ham qamraydi.
+ */
 async function assertCompanyAccess(companyId: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const userId = session.user.id;
-  const role = session.user.role as string;
-  if (isAdminRole(role)) return session;
-
-  const company = await prisma.company.findUnique({
-    where: { id: companyId },
-    select: { accountantId: true, bankClientId: true },
-  });
-  if (!company || (company.accountantId !== userId && company.bankClientId !== userId)) {
-    throw new Error("Forbidden");
-  }
+  await assertCompanyPermission(
+    prisma,
+    { id: session.user.id, role: session.user.role as string },
+    companyId,
+    "company:credentials"
+  );
   return session;
 }
 

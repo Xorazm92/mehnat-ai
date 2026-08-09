@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { isAdminRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getTransitOverview, getUnlinkedCardTransfers, getHouseholdExpenses } from "@/server/transit";
+import { getBankExpenses } from "@/server/bankImport";
 import ChiqimKassaClient from "./ChiqimKassaClient";
 
 export const metadata = { title: "Chiqim kassa" };
@@ -15,10 +16,11 @@ export default async function ChiqimKassaPage() {
   // proxy.ts ham to'sadi, lekin sahifa o'zini o'zi qo'riqlashi kerak.
   if (!isAdminRole(session.user.role as string)) redirect("/cabinet");
 
-  const [overview, unlinked, household, employees] = await Promise.all([
+  const [overview, unlinked, household, bankExpenses, employees] = await Promise.all([
     getTransitOverview(),
     getUnlinkedCardTransfers(),
     getHouseholdExpenses(),
+    getBankExpenses(),
     prisma.user.findMany({
       where: { isActive: true },
       select: { id: true, fullName: true, role: true },
@@ -32,6 +34,7 @@ export default async function ChiqimKassaPage() {
         overview={JSON.parse(JSON.stringify(overview))}
         unlinked={JSON.parse(JSON.stringify(unlinked))}
         household={JSON.parse(JSON.stringify(household))}
+        bankExpenses={JSON.parse(JSON.stringify(bankExpenses))}
         employees={JSON.parse(JSON.stringify(employees))}
       />
     </div>

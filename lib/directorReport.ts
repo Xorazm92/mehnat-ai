@@ -18,6 +18,7 @@ import { getAvailableBalance, getDayMovement } from "@/lib/balance";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
 import { logServerError } from "@/lib/logger";
 import { formatNum } from "@/lib/format";
+import { computeContractDebt, periodKeyOf } from "@/lib/debt";
 
 type Db = Prisma.TransactionClient;
 
@@ -30,9 +31,6 @@ export const directorReportDedupKey = (userId: string, now: Date): string => {
   const d = String(now.getDate()).padStart(2, "0");
   return `director:${userId}:${y}-${m}-${d}`;
 };
-
-const periodKeyOf = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
 export interface DirectorReport {
   /** Hisobot qaysi kun uchun (kecha). */
@@ -95,7 +93,7 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
     await Promise.all([
       getDayMovement(yesterdayDate, db),
       getAvailableBalance(),
-      collectDebts(db, period),
+      computeContractDebt(db, period),
       db.obligation.count({
         where: { status: { in: OPEN_OBLIGATION_STATUSES }, dueAt: { lt: todayStart } },
       }),
@@ -120,41 +118,6 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
     debt1C: await latestDebtSnapshot(db),
     plan: await revenuePlan(db, period),
   };
-}
-
-/**
- * Qarzdorlik — `Company.contractAmount` va shu davrdagi `Payment` orqali,
- * bot/contexts/billing bilan bir xil ta'rif ("paid"/"partial" pul kamaytiradi,
- * "pending" reja summasi qarzni yashirmaydi).
- */
-async function collectDebts(
-  db: Db,
-  period: string
-): Promise<{ companies: number; total: number; red: number }> {
-  const companies = await db.company.findMany({
-    where: { isActive: true, contractAmount: { not: null } },
-    select: {
-      contractAmount: true,
-      payments: { where: { period, deletedAt: null }, select: { amount: true, status: true } },
-    },
-  });
-
-  let count = 0;
-  let total = 0;
-  let red = 0;
-  for (const c of companies) {
-    const payment = c.payments[0];
-    const paid =
-      payment && (payment.status === "paid" || payment.status === "partial")
-        ? Number(payment.amount)
-        : 0;
-    const due = Math.max(0, Number(c.contractAmount) - paid);
-    if (due <= 0) continue;
-    count++;
-    total += due;
-    if (paid === 0) red++; // umuman to'lamaganlar
-  }
-  return { companies: count, total, red };
 }
 
 /** Ko'rib chiqish kutayotgan hisobot dalillari. Model bo'lmasa 0. */

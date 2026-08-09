@@ -56,6 +56,12 @@ export async function createPayrollAdjustment(data: {
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
+  // XODIM SCOPE. `isSeniorRole` yetarli emas: nazoratchi va bosh buxgalter
+  // ataylab o'z portfeliga cheklangan. Busiz ular PORTFELIDAN TASHQARIDAGI
+  // istalgan xodimga jarima yoki avans yozib qo'yishi mumkin edi.
+  // `staffScopeFilter` ruxsat bo'lmasa o'zi xato tashlaydi.
+  await staffScopeFilter(prisma, { id: session.user.id, role }, data.employeeId);
+
   // Ishora UI konventsiyasiga ko'ra erkin (jarima/avans manfiy yuboriladi),
   // lekin nol/NaN summa va noma'lum tur bazaga kirmasligi kerak.
   if (!["bonus", "avans", "jarima", "manual", "other"].includes(data.adjustmentType)) {
