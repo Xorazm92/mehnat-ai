@@ -6,6 +6,7 @@ import {
   getCachedOperations,
   getCachedTariffPreset,
 } from "@/lib/cached-queries";
+import { getRoleContext } from "@/server/roleContext";
 import OrganizationsClient from "./OrganizationsClient";
 
 export const metadata = { title: "Firmalar" };
@@ -57,8 +58,12 @@ export default async function OrganizationsPage() {
   // Arxiv alohida olinadi: ekrandagi "Faol / Arxiv / Barchasi" filtri mijoz
   // tomonida `isActive` bo'yicha ishlaydi, shuning uchun arxivdagi firmalar ham
   // ro'yxatda bo'lishi kerak — aks holda "Arxiv" doim bo'sh jadval qaytaradi.
+  // Kontekst tanlangan bo'lsa ro'yxat faqat o'sha vazifadagi firmalarga
+  // torayadi (lib/roleContext.ts). Bu HUQUQ emas, ko'rinish filtri.
+  const roleContext = await getRoleContext().catch(() => "all" as const);
+
   const [companies, archivedCompanies, staff, operations, tariffPreset] = await Promise.all([
-    getCachedCompanies(userId, userRole),
+    getCachedCompanies(userId, userRole, roleContext),
     getCachedArchivedCompanies(userId, userRole),
     getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),

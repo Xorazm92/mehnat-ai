@@ -15,6 +15,8 @@ import { useTheme } from "next-themes";
 import GlobalSearch from "@/components/GlobalSearch";
 import FinanceAssistant from "@/components/FinanceAssistant";
 import { getHomeRoute, type AppView } from "@/lib/permissions";
+import RoleContextSwitcher from "@/components/RoleContextSwitcher";
+import type { ContextOption, RoleContext } from "@/lib/roleContext";
 import {
   useNotificationSound,
   isNotifySoundEnabled,
@@ -47,6 +49,9 @@ interface DashboardTopBarProps {
   userRole: string;
   avatarColor?: string;
   unreadCount?: number;
+  /** Ko'p vazifali odam uchun kontekst tanlash (bo'sh bo'lsa chizilmaydi). */
+  roleContexts?: ContextOption[];
+  roleContext?: RoleContext;
   /** Admin RBAC override'lari — qidiruv ham yon panel bilan bir xil ko'rsin. */
   allowedViews?: AppView[];
 }
@@ -58,6 +63,8 @@ export function DashboardTopBar({
   avatarColor,
   unreadCount = 0,
   allowedViews,
+  roleContexts = [],
+  roleContext = "all",
 }: DashboardTopBarProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -163,6 +170,9 @@ export function DashboardTopBar({
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </button>
         )}
+
+        {/* Rol konteksti — qaysi sifatda ishlayotgani */}
+        <RoleContextSwitcher options={roleContexts} current={roleContext} />
 
         {/* Notifications */}
         <Link

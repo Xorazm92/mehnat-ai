@@ -199,3 +199,73 @@ describe("P0-3 · credential scope yagona manbadan", () => {
     await expect(credentials.getClientCredentials(ids.theirs)).resolves.toBeDefined();
   });
 });
+
+describe("P1-2 · rol konteksti", () => {
+  // Prodda real holat: Go'zaloy 8 firmada buxgalter, 132 tasida nazoratchi;
+  // Ruslan 65 tasida bank klient, 10 tasida buxgalter. Bungacha ular
+  // hammasini ARALASH ko'rardi va qaysi sifatda javob berishini
+  // ajratolmasdi.
+  it("kontekstsiz — barcha biriktiruvlar birga (eski xatti-harakat)", async () => {
+    const { companyScopeWhere } = await import("@/lib/access");
+    const where = companyScopeWhere({ id: ids.supervisor, role: "supervisor" });
+    const found = await prisma.company.findMany({
+      where: { ...where, name: { startsWith: TAG } },
+      select: { name: true },
+    });
+    expect(found.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("kontekst tanlanganda faqat SHU vazifadagi firma qoladi", async () => {
+    const { companyScopeWhere } = await import("@/lib/access");
+
+    const asSupervisor = await prisma.company.findMany({
+      where: {
+        ...companyScopeWhere({ id: ids.supervisor, role: "supervisor", context: "supervisor" }),
+        name: { startsWith: TAG },
+      },
+      select: { name: true },
+    });
+    // "MINE" da u nazoratchi — ko'rinadi.
+    expect(asSupervisor.map((c) => c.name)).toContain(`${TAG} MINE`);
+
+    const asAccountant = await prisma.company.findMany({
+      where: {
+        ...companyScopeWhere({ id: ids.supervisor, role: "supervisor", context: "accountant" }),
+        name: { startsWith: TAG },
+      },
+      select: { name: true },
+    });
+    // Buxgalter sifatida hech qayerda biriktirilmagan — bo'sh.
+    expect(asAccountant).toHaveLength(0);
+  });
+
+  it("kontekst ko'rinishni KENGAYTIRMAYDI — begona firma baribir yopiq", async () => {
+    const { companyScopeWhere } = await import("@/lib/access");
+    for (const ctx of ["all", "accountant", "supervisor", "chief_accountant", "bank_manager"] as const) {
+      const found = await prisma.company.findMany({
+        where: {
+          ...companyScopeWhere({ id: ids.supervisor, role: "supervisor", context: ctx }),
+          name: { startsWith: TAG },
+        },
+        select: { name: true },
+      });
+      expect(found.map((c) => c.name)).not.toContain(`${TAG} THEIRS`);
+    }
+  });
+
+  it("buzuq cookie qiymati 'all' ga tushadi", async () => {
+    const { parseRoleContext } = await import("@/lib/roleContext");
+    expect(parseRoleContext("supervisor")).toBe("supervisor");
+    expect(parseRoleContext("admin")).toBe("all");
+    expect(parseRoleContext("'; DROP TABLE")).toBe("all");
+    expect(parseRoleContext(undefined)).toBe("all");
+  });
+
+  it("bitta vazifali odamga almashtirgich ko'rsatilmaydi", async () => {
+    const { resolveContexts } = await import("@/lib/roleContext");
+    // staffInside faqat bitta firmada buxgalter.
+    expect(await resolveContexts(prisma, ids.staffInside, false)).toHaveLength(0);
+    // admin uchun kontekst tushunchasi yo'q.
+    expect(await resolveContexts(prisma, ids.admin, true)).toHaveLength(0);
+  });
+});

@@ -9,6 +9,7 @@ import { ConfirmProvider } from "@/components/ui/ConfirmDialog";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { getCachedUnreadCount } from "@/lib/cached-queries";
 import { getRoleViewOverrides } from "@/server/rbac";
+import { getMyContexts, getRoleContext } from "@/server/roleContext";
 import { effectiveViewsForRole, type UserRole } from "@/lib/permissions";
 
 export default async function DashboardLayout({
@@ -20,9 +21,13 @@ export default async function DashboardLayout({
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role ?? "";
   const avatarColor = session?.user?.avatarColor ?? undefined;
-  const [unreadCount, roleViewOverrides] = await Promise.all([
+  const [unreadCount, roleViewOverrides, contexts, roleContext] = await Promise.all([
     userId ? getCachedUnreadCount(userId) : Promise.resolve(0),
     userId ? getRoleViewOverrides().catch(() => ({})) : Promise.resolve({}),
+    // Ko'p vazifali odam uchun kontekst tanlash. Bitta vazifasi bo'lsa
+    // bo'sh massiv qaytadi va almashtirgich chizilmaydi.
+    userId ? getMyContexts().catch(() => []) : Promise.resolve([]),
+    userId ? getRoleContext().catch(() => "all" as const) : Promise.resolve("all" as const),
   ]);
   // Admin tomonidan sozlangan menyu ko'rinishi (override) — bo'lmasa kod default'i
   const allowedViews = effectiveViewsForRole(userRole as UserRole, roleViewOverrides);
@@ -63,6 +68,8 @@ export default async function DashboardLayout({
             avatarColor={avatarColor}
             unreadCount={unreadCount}
             allowedViews={allowedViews}
+            roleContexts={contexts}
+            roleContext={roleContext}
           />
 
           {/* Main content */}

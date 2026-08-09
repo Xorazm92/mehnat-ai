@@ -17,6 +17,17 @@ import { isAdminRole, isSeniorRole } from "@/lib/permissions";
 export interface Actor {
   id: string;
   role: string;
+  /**
+   * Rol konteksti — KO'RINISH filtri (lib/roleContext.ts).
+   *
+   * Bitta odam bir firmada buxgalter, boshqasida nazoratchi bo'lishi mumkin.
+   * Kontekst tanlansa ro'yxat faqat o'sha vazifadagi firmalarga TORAYADI.
+   * Berilmasa — barcha biriktiruvlar (eski xatti-harakat).
+   *
+   * Bu HUQUQ emas: kontekst hech qachon ko'rinishni KENGAYTIRMAYDI, shuning
+   * uchun uni cookie'dan olish xavfsiz.
+   */
+  context?: CompanyRelation | "all";
 }
 
 /** Firmada odam egallashi mumkin bo'lgan mas'uliyat turlari. */
@@ -38,8 +49,24 @@ export interface CompanySlots {
  * Rolga qaramaydi (admindan tashqari): nazoratchining buxgalteriyasini yuritadigan
  * firmalari ham, bank-klientning buxgalteriya firmalari ham shu birlashmaga tushadi.
  */
+/** Kontekst tanlanganda faqat SHU mas'uliyat bo'yicha filtrlanadi. */
+const RELATION_FILTER: Record<CompanyRelation, (id: string) => Prisma.CompanyWhereInput> = {
+  accountant: (id) => ({ accountantId: id }),
+  supervisor: (id) => ({ supervisorId: id }),
+  chief_accountant: (id) => ({
+    OR: [{ chiefAccountantId: id }, { departmentRef: { chiefAccountantId: id } }],
+  }),
+  bank_manager: (id) => ({ bankClientId: id }),
+};
+
 export function companyScopeWhere(actor: Actor): Prisma.CompanyWhereInput {
   if (isAdminRole(actor.role)) return {}; // super_admin, admin — hammasi
+
+  // Kontekst tanlangan bo'lsa — faqat o'sha vazifadagi firmalar.
+  // TORAYTIRADI, kengaytirmaydi: har qanday holatda ham asos biriktiruv.
+  if (actor.context && actor.context !== "all") {
+    return RELATION_FILTER[actor.context](actor.id);
+  }
 
   return {
     OR: [

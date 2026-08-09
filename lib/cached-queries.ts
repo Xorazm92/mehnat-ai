@@ -29,7 +29,10 @@ import {
 //
 // Endi har bir funksiya (userId, role) qabul qiladi — `unstable_cache` kalitni
 // argumentlar bo'yicha quradi, ya'ni har bir foydalanuvchining o'z yozuvi bo'ladi.
-const scopeFor = (userId: string, role: string) => companyScopeWhere({ id: userId, role });
+// Kontekst kesh KALITIGA kiradi — aks holda buxgalter sifatida ochilgan
+// ro'yxat nazoratchi kontekstiga o'tganda ham eskicha qaytardi.
+const scopeFor = (userId: string, role: string, context?: string) =>
+  companyScopeWhere({ id: userId, role, context: context as never });
 
 // Firma kartochkasi/jadvali barcha mas'ul shaxslarni ko'rsatadi va klient
 // tomonda `companyRelations` hisoblanadi — shuning uchun include hamma uchun bir xil.
@@ -64,9 +67,9 @@ const COMPANY_INCLUDE = {
 // ─────────────────────────────────────────────
 
 const _getCachedCompanies = unstable_cache(
-  async (userId: string, role: string) => {
+  async (userId: string, role: string, context?: string) => {
     return prisma.company.findMany({
-      where: { isActive: true, ...scopeFor(userId, role) },
+      where: { isActive: true, isOwnFirm: false, ...scopeFor(userId, role, context) },
       include: COMPANY_INCLUDE,
       orderBy: { name: "asc" },
     });
@@ -77,7 +80,8 @@ const _getCachedCompanies = unstable_cache(
 
 /** Firmalarni cache'dan olish (render ichida deduplicate) */
 export const getCachedCompanies = cache(
-  async (userId: string, role: string) => _getCachedCompanies(userId, role)
+  async (userId: string, role: string, context?: string) =>
+    _getCachedCompanies(userId, role, context)
 );
 
 const _getCachedArchivedCompanies = unstable_cache(
