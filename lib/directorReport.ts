@@ -60,6 +60,8 @@ export interface DirectorReport {
    * yoki to'lov tizimga kiritilmagan.
    */
   debt1C: { asOf: Date; total: number; contracts: number } | null;
+  /** Joriy oyning tushum rejasi va bajarilishi. */
+  plan: { period: string; plan: number; fact: number; percent: number } | null;
 }
 
 export interface DirectorRecipient {
@@ -116,6 +118,7 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
     pending: { expenses: pendingExpenses, proofs: pendingProofs },
     unmatchedBank: await countUnmatchedBank(db),
     debt1C: await latestDebtSnapshot(db),
+    plan: await revenuePlan(db, period),
   };
 }
 
@@ -215,6 +218,32 @@ async function latestDebtSnapshot(
     return { asOf: latest.asOf, total: Number(agg._sum.debt ?? 0), contracts: agg._count._all };
   } catch (err) {
     logServerError("directorReport.debt1C", err);
+    return null;
+  }
+}
+
+/**
+ * Joriy oy tushum rejasi. Jadval bo'lmasa yoki reja qo'yilmagan bo'lsa null.
+ */
+async function revenuePlan(
+  db: Db,
+  period: string
+): Promise<{ period: string; plan: number; fact: number; percent: number } | null> {
+  const model = (db as Record<string, unknown>).monthlyTarget as
+    | { findFirst(args: unknown): Promise<{ plan: unknown; fact: unknown } | null> }
+    | undefined;
+  if (!model) return null;
+  try {
+    const row = await model.findFirst({
+      where: { period, metric: { contains: "tushum", mode: "insensitive" } },
+      select: { plan: true, fact: true },
+    });
+    const plan = Number(row?.plan ?? 0);
+    const fact = Number(row?.fact ?? 0);
+    if (!row || plan <= 0) return null;
+    return { period, plan, fact, percent: Math.round((fact / plan) * 100) };
+  } catch (err) {
+    logServerError("directorReport.plan", err);
     return null;
   }
 }
@@ -374,6 +403,9 @@ function summarizeForInApp(r: DirectorReport): string {
   }
   if (r.debt1C) {
     parts.push(`1C bo'yicha qarz: ${formatNum(r.debt1C.total)} so'm`);
+  }
+  if (r.plan) {
+    parts.push(`${r.plan.period} rejasi: ${r.plan.percent}% bajarildi`);
   }
   return parts.join(". ") + ".";
 }

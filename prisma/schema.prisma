@@ -2032,6 +2032,22 @@ model DebtSnapshot {
   @@index([asOf])
 }
 
+/// Oylik reja va fakt (P&L ko'rsatkichlari).
+/// Manba — korxonaning "Plan fact" jadvali; direktor panelida
+/// reja bajarilishi shundan hisoblanadi.
+model MonthlyTarget {
+  id        String   @id @default(uuid())
+  period    String // "2026-07"
+  metric    String // "Umumiy tushum" | "Себестоимость" | ...
+  plan      Decimal? @db.Decimal(16, 2)
+  fact      Decimal? @db.Decimal(16, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([period, metric])
+  @@index([period])
+}
+
 model DisbursementChannel {
   id String @id @default(uuid())
   /// own_bank | employee_card | cash | plastik

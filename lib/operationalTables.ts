@@ -75,6 +75,8 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   // 1C qarzdorlik kesimlari — hisob davriga bog'langan operatsion ma'lumot.
   // Yangi hisob davri yangi kesimlar bilan boshlanadi.
   { model: "debtSnapshot", why: "1C qarzdorlik kesimlari" },
+  // Oylik reja/fakt — hisob davriga bog'langan; yangi yil yangi reja bilan.
+  { model: "monthlyTarget", why: "oylik reja va fakt ko'rsatkichlari" },
 
   // Moliya: hujjatlar
   { model: "payout", why: "real to'lovlar" },

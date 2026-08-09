@@ -37,6 +37,13 @@ export function renderDirectorReport(report: DirectorReport): string {
   lines.push("");
 
   lines.push(`🏦 Kassa balansi: ${som(report.balance.balance)} so'm`);
+  if (report.plan) {
+    const mark = report.plan.percent >= 100 ? "✅" : report.plan.percent >= 90 ? "🟡" : "🔴";
+    lines.push(
+      `${mark} ${report.plan.period} rejasi: ${report.plan.percent}% ` +
+        `(${som(report.plan.fact)} / ${som(report.plan.plan)})`
+    );
+  }
   lines.push("");
 
   const alerts: string[] = [];
