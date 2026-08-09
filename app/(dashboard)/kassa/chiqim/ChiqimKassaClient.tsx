@@ -57,6 +57,12 @@ interface Props {
   overview: { channels: Channel[]; totalBalance: number; unlinkedCount: number };
   unlinked: UnlinkedTransfer[];
   employees: { id: string; fullName: string; role: string }[];
+  /** Kundalik xo'jalik xarajatlari (ovqat, taksi, non…) — oy bo'yicha. */
+  household?: {
+    periods: { period: string; total: number; count: number }[];
+    total: number;
+    count: number;
+  };
 }
 
 const card: React.CSSProperties = {
@@ -67,7 +73,7 @@ const card: React.CSSProperties = {
 /** Kartadan qilinadigan odatiy xarajatlar. */
 const SPEND_CATEGORIES = ["ijara", "aloqa", "ovqat", "soliq", "bank_komissiya", "boshqa"] as const;
 
-export default function ChiqimKassaClient({ overview, unlinked, employees }: Props) {
+export default function ChiqimKassaClient({ overview, unlinked, employees, household }: Props) {
   const router = useRouter();
   useAutoRefresh();
 
@@ -311,6 +317,45 @@ export default function ChiqimKassaClient({ overview, unlinked, employees }: Pro
             if (res !== null) setSpendFor(null);
           }}
         />
+      )}
+
+      {/* Kundalik xo'jalik xarajatlari — 15 oylik tarix Excel'dan import qilingan.
+          Tranzit kartalaridan alohida: bular naqd/kassadan to'langan. */}
+      {household && household.count > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
+              Xo&apos;jalik xarajatlari (ovqat, taksi, non)
+            </h2>
+            <span className="text-meta" style={{ color: "var(--text-muted)" }}>
+              {household.count} yozuv · jami {formatNum(household.total)} so&apos;m
+            </span>
+          </div>
+          <div className="overflow-x-auto rounded-xl" style={card}>
+            <table className="w-full text-meta">
+              <thead>
+                <tr style={{ background: "var(--input-bg)" }}>
+                  <th className="text-left p-2">Oy</th>
+                  <th className="text-right p-2">Yozuv</th>
+                  <th className="text-right p-2">Summa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {household.periods.map((p) => (
+                  <tr key={p.period} style={{ borderTop: "1px solid var(--card-border)" }}>
+                    <td className="p-2 whitespace-nowrap">{p.period}</td>
+                    <td className="p-2 text-right tabular-nums" style={{ color: "var(--text-muted)" }}>
+                      {p.count}
+                    </td>
+                    <td className="p-2 text-right tabular-nums font-semibold">
+                      {formatNum(p.total)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* Bog'lanmagan karta o'tkazmalari */}

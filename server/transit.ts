@@ -101,6 +101,42 @@ export async function getUnlinkedCardTransfers(limit = 100) {
 // KANALLARNI BOSHQARISH
 // ─────────────────────────────────────────────────────────
 
+/**
+ * Kundalik xo'jalik xarajatlari (ovqat, taksi, non…) — oy bo'yicha yig'ma.
+ *
+ * Bular `KassaEntry(category='ovqat_xojalik')` da; 15 oylik tarix Excel'dan
+ * import qilingan. Chiqim kassasida ko'rinishi kerak, aks holda 32 mln
+ * xarajat faqat bazada qolib ketardi.
+ */
+export async function getHouseholdExpenses(months = 12) {
+  await requireAdmin();
+  const rows = await prisma.kassaEntry.findMany({
+    where: { type: "expense", category: "ovqat_xojalik", deletedAt: null },
+    select: { amount: true, date: true },
+    orderBy: { date: "desc" },
+  });
+
+  const byMonth = new Map<string, { total: number; count: number }>();
+  for (const r of rows) {
+    const key = `${r.date.getFullYear()}-${String(r.date.getMonth() + 1).padStart(2, "0")}`;
+    const cur = byMonth.get(key) ?? { total: 0, count: 0 };
+    cur.total += Number(r.amount);
+    cur.count += 1;
+    byMonth.set(key, cur);
+  }
+
+  const periods = [...byMonth.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .slice(0, months)
+    .map(([period, v]) => ({ period, ...v }));
+
+  return serialize({
+    periods,
+    total: rows.reduce((sum, r) => sum + Number(r.amount), 0),
+    count: rows.length,
+  });
+}
+
 export async function upsertChannel(input: {
   id?: string;
   type: ChannelType;

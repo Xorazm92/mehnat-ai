@@ -51,6 +51,7 @@ function pathToView(path: string): AppView | null {
   // /kassa dan OLDIN tekshiriladi — prefiks mos kelib qolmasin.
   if (path.startsWith("/kassa/kirim")) return "kassa_income";
   if (path.startsWith("/kassa/chiqim")) return "kassa_expense";
+  if (path.startsWith("/kassa/qarzdorlik")) return "kassa_debt";
   if (path.startsWith("/kassa")) return "kassa";
   if (path.startsWith("/expenses")) return "expenses";
   if (path.startsWith("/payroll")) return "payroll";

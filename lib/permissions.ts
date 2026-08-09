@@ -25,6 +25,7 @@ export type AppView =
   | "kassa"
   | "kassa_income"
   | "kassa_expense"
+  | "kassa_debt"
   | "expenses"
   | "cabinet"
   | "cabinet_bank"
@@ -145,6 +146,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "kassa",
     "kassa_income",
     "kassa_expense",
+    "kassa_debt",
     "expenses",
     "cabinet",
     "payroll",
@@ -167,6 +169,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "kpi",
     "kassa",
     "kassa_income",
+    "kassa_debt",
     "expenses",
     "cabinet",
     "payroll",
@@ -185,6 +188,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "profitability",
     "fair_kpi",
     "kpi",
+    "kassa_debt",
     "expenses",
     "cabinet",
     "attendance",
@@ -255,6 +259,7 @@ export const ALL_VIEWS: AppView[] = [
   "kassa",
   "kassa_income",
   "kassa_expense",
+  "kassa_debt",
   "expenses",
   "cabinet",
   "cabinet_bank",
@@ -281,6 +286,7 @@ export const VIEW_LABELS: Record<AppView, string> = {
   kassa: "Kassa",
   kassa_income: "Kirim kassa",
   kassa_expense: "Chiqim kassa",
+  kassa_debt: "Qarzdorlik",
   expenses: "Xarajatlar",
   cabinet: "Kabinet",
   cabinet_bank: "Bank kabineti",
