@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
+import { staffScopeFilter } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
 import { toYearMonthKey } from "@/lib/periods";
 import { assertPeriodOpen } from "@/lib/periodLock";
@@ -58,6 +59,15 @@ export async function assignShiftCover(input: {
   if (users.length !== 2) {
     throw new Error("Xodim topilmadi yoki faol emas");
   }
+
+  // XODIM SCOPE. `isSeniorRole` yetarli emas: nazoratchi va bosh buxgalter
+  // o'z portfeliga cheklangan. Almashinuv keyinchalik `applyCoverTransfers`
+  // orqali OYLIK O'TKAZMASIGA aylanadi, ya'ni bu pulga tegadi — portfeldan
+  // tashqaridagi xodimlar o'rtasida almashinuv yozib bo'lmasligi kerak.
+  await Promise.all([
+    staffScopeFilter(prisma, { id: userId, role }, input.absentUserId),
+    staffScopeFilter(prisma, { id: userId, role }, input.coverUserId),
+  ]);
 
   // Prisma QISMIY unique indekslarni (companyId IS NULL / IS NOT NULL) compound
   // unique sifatida ifodalay olmaydi, shuning uchun upsert emas — topib-yozamiz.
