@@ -216,6 +216,72 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
     });
   }
 
+  // ── 8. Har bir pul qatorining jurnalda izi bormi ─────────────────────
+  //
+  // Oy yopishdagi yaxlitlik tekshiruvi (lib/monthClose.ts
+  // `checkLedgerSourceIntegrity`) id ro'yxatini LEDGER qatorlaridan yig'adi,
+  // ya'ni JURNAL → MANBA yo'nalishida yuradi. Natijada jurnalda UMUMAN qatori
+  // bo'lmagan manba unga hech qachon tushmaydi va tekshiruv yashil qoladi.
+  //
+  // Aynan shu ko'r nuqta ~1.4 mlrd so'mlik tafovutni yashirib turgan edi:
+  // UI orqali kirgan yozuvlar postLedger chaqiradi, import va skript yo'llari
+  // (server/bankImport.ts, scripts/import-kassa-data.ts, lib/transit.ts) esa
+  // to'g'ridan-to'g'ri `create` qiladi va jurnalga hech narsa yozmaydi.
+  //
+  // Bu yerda TESKARI yo'nalish tekshiriladi: MANBA → JURNAL. Hech narsa
+  // tuzatilmaydi — faqat ko'rsatiladi.
+  const journalGap = await db.$queryRaw<{ table_name: string; cnt: bigint; total: number }[]>`
+    SELECT 'KassaEntry' AS table_name, count(*)::bigint AS cnt, coalesce(sum(k.amount), 0)::float8 AS total
+      FROM "KassaEntry" k
+     WHERE k."deletedAt" IS NULL
+       AND NOT EXISTS (SELECT 1 FROM "LedgerEntry" l
+                        WHERE l."sourceId" = k.id AND l."sourceTable" = 'KassaEntry')
+    UNION ALL
+    SELECT 'Payment', count(*)::bigint, coalesce(sum(p.amount), 0)::float8
+      FROM "Payment" p
+     WHERE p."deletedAt" IS NULL AND p.status IN ('paid', 'partial')
+       AND NOT EXISTS (SELECT 1 FROM "LedgerEntry" l
+                        WHERE l."sourceId" = p.id AND l."sourceTable" = 'Payment')
+    UNION ALL
+    SELECT 'Expense', count(*)::bigint, coalesce(sum(e.amount), 0)::float8
+      FROM "Expense" e
+     WHERE e."deletedAt" IS NULL AND e.status = 'approved'
+       AND NOT EXISTS (SELECT 1 FROM "LedgerEntry" l
+                        WHERE l."sourceId" = e.id AND l."sourceTable" = 'Expense')
+    UNION ALL
+    SELECT 'Payout', count(*)::bigint, coalesce(sum(o.amount), 0)::float8
+      FROM "Payout" o
+     WHERE o."deletedAt" IS NULL
+       AND NOT EXISTS (SELECT 1 FROM "LedgerEntry" l
+                        WHERE l."sourceId" = o.id AND l."sourceTable" = 'Payout')`;
+
+  const gapRows = journalGap.filter((r) => Number(r.cnt) > 0);
+  const gapCount = gapRows.reduce((s, r) => s + Number(r.cnt), 0);
+  const gapTotal = gapRows.reduce((s, r) => s + n(r.total), 0);
+  const gapLabels: Record<string, string> = {
+    KassaEntry: "kassa yozuvi",
+    Payment: "shartnoma to'lovi",
+    Expense: "xarajat",
+    Payout: "oylik to'lovi",
+  };
+
+  checks.push({
+    key: "journal-coverage",
+    title: "Har bir pul qatori jurnalga tushgan",
+    status: gapCount === 0 ? "ok" : "error",
+    value: gapTotal,
+    detail:
+      gapCount === 0
+        ? "Barcha kirim/chiqim qatorlarining ikki tomonlama yozuvda izi bor"
+        : `${gapCount} ta qatorning jurnalda izi yo'q (${Math.round(gapTotal).toLocaleString("ru-RU")} so'm): ` +
+          gapRows.map((r) => `${gapLabels[r.table_name] ?? r.table_name} ${Number(r.cnt)} ta`).join(", "),
+    action:
+      gapCount > 0
+        ? "Bular import/skript orqali kirgan — UI yo'li jurnalga yozadi, import yo'li yo'q. " +
+          "Yil yopishdan OLDIN hal qiling: jurnal qiymati snapshotga muhrlanadi."
+        : undefined,
+  });
+
   return checks;
 }
 

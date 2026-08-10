@@ -30,7 +30,13 @@
     "migrate:data": "npx tsx scripts/migrate-data.ts",
     "postinstall": "prisma generate",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:db:setup": "bash scripts/setup-test-db.sh",
+    "recovery:status": "tsx scripts/recovery-status.ts",
+    "recovery:b4:preview": "tsx scripts/recovery-b4-preview.ts --save .recovery/b4-baseline.json",
+    "recovery:b4:cancel": "tsx scripts/recovery-b4-cancel.ts --baseline .recovery/b4-baseline.json",
+    "recovery:b4:postcheck": "tsx scripts/recovery-b4-postcheck.ts --baseline .recovery/b4-baseline.json",
+    "recovery:b3:precheck": "tsx scripts/recovery-b3-precheck.ts"
   },
   "dependencies": {
     "@google/genai": "^2.12.0",

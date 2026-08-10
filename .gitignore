@@ -71,3 +71,6 @@ contract_json_files/
 # Ichida xodimlarning karta raqami, JSHSHIR va mijozlar qarzdorligi bor —
 # repozitoriyga ham, serverga ham chiqmaydi. Ma'lumot bazada yashaydi.
 others_json_files/
+
+# Recovery sprint ish fayllari (majburiyat ID ro'yxatlari, baseline snapshotlar)
+.recovery/

@@ -10,16 +10,26 @@
  *   3. the schema is applied (the User table exists)
  *   4. the User table is NON-EMPTY and an active admin account exists
  *   5. the live database MATCHES schema.prisma (no drift)
+ *   6. Redis is reachable — BullMQ schedulers live there
+ *   7. the Telegram ingress is actually open (webhook mode needs a secret)
+ *
+ * Checks 6-7 come from the production recovery audit: the bot silently did
+ * nothing for weeks. Neither failure produced an error anywhere — a missing
+ * TELEGRAM_WEBHOOK_SECRET makes the webhook answer 503 to every update, and an
+ * unreachable Redis means no obligation generation, no deadline sweep, no KPI
+ * roll-up and no digest ever gets scheduled. Both are now deploy-blocking in
+ * production, because "silently off" is the exact failure mode being fixed.
  *
  * Exits non-zero with a clear message when any hard check fails, so the deploy
  * pipeline aborts instead of shipping a login-broken system.
  *
  * Modes:
  *   npx tsx scripts/preflight.ts env   → env-only (fast, no DB) — run early in deploy
- *   npx tsx scripts/preflight.ts       → full check (env + DB + schema + admin) — run at the end
+ *   npx tsx scripts/preflight.ts       → full check (env + DB + schema + admin + Redis) — run at the end
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { Redis } from "ioredis";
 import { loadEnv, makePrisma, countAdmins } from "./_bootstrap";
 
 const run = promisify(execFile);
@@ -61,6 +71,89 @@ function checkEnv(): void {
     if (url && url.startsWith("http://")) {
       warn("AUTH_URL uses http:// in production — it should be https:// (secure session cookies require it).");
     }
+  }
+
+  checkTelegramIngress();
+}
+
+/**
+ * The Telegram ingress fails CLOSED: without TELEGRAM_WEBHOOK_SECRET the
+ * webhook route returns 503 to every single update rather than run
+ * unauthenticated (app/api/telegram/webhook/route.ts). That is the right
+ * behaviour, but it is invisible — Telegram just retries and gives up, and the
+ * symptom shows up weeks later as "0 groups bound, 0 KPI events".
+ */
+function checkTelegramIngress(): void {
+  const mode = process.env.BOT_MODE ?? "webhook";
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
+
+  if (!token) {
+    (isProd ? err : warn)(
+      "TELEGRAM_BOT_TOKEN is missing — the bot cannot send anything and polling is disabled.",
+    );
+    return;
+  }
+
+  if (mode === "webhook" && !secret) {
+    (isProd ? err : warn)(
+      'BOT_MODE is "webhook" but TELEGRAM_WEBHOOK_SECRET is missing — /api/telegram/webhook\n' +
+        "    answers 503 to EVERY update (fail-closed). No group can be bound, no KPI event\n" +
+        "    is ever recorded. Set the secret, then run: npm run bot:webhook",
+    );
+  }
+
+  if (mode !== "webhook" && mode !== "polling") {
+    warn(`BOT_MODE="${mode}" is not recognised — expected "webhook" or "polling".`);
+  }
+  if (isProd && mode === "polling") {
+    warn('BOT_MODE="polling" in production — webhook is the intended production ingress.');
+  }
+}
+
+/**
+ * 6. Redis reachability.
+ *
+ * Every repeatable job (obligation generation 06:00, hourly deadline sweep,
+ * monthly KPI roll-up, daily digest, 5-minute escalation) is a BullMQ Job
+ * Scheduler PERSISTED IN REDIS. No Redis ⇒ none of them exist, and nothing
+ * anywhere logs an error about it. Deploy-blocking in production.
+ *
+ * An explicitly EMPTY REDIS_URL is a deliberate "run without Redis" choice
+ * (see .env.example) and downgrades to a warning.
+ */
+async function checkRedis(): Promise<void> {
+  const raw = process.env.REDIS_URL;
+
+  if (raw !== undefined && raw.trim() === "") {
+    warn(
+      "REDIS_URL is explicitly empty — BullMQ cannot run, so the bot does nothing:\n" +
+        "    no obligation generation, no deadline sweep, no KPI, no digest.",
+    );
+    return;
+  }
+
+  const url = raw ?? "redis://127.0.0.1:6379";
+  const redis = new Redis(url, {
+    lazyConnect: true,
+    connectTimeout: 3_000,
+    maxRetriesPerRequest: 1,
+    enableOfflineQueue: false,
+    retryStrategy: () => null, // one shot: this is a probe, not a client
+  });
+  // ioredis brings the whole process down if 'error' has no listener.
+  redis.on("error", () => {});
+
+  try {
+    await redis.connect();
+    await redis.ping();
+  } catch (e) {
+    (isProd ? err : warn)(
+      `Redis is unreachable at ${url}: ${(e as Error)?.message ?? e}\n` +
+        "    BullMQ schedulers live in Redis — without it the bot silently runs NOTHING.",
+    );
+  } finally {
+    redis.disconnect();
   }
 }
 
@@ -156,6 +249,7 @@ async function main(): Promise<void> {
   if (mode !== "env") {
     await checkDatabase();
     await checkSchemaDrift();
+    await checkRedis();
   }
 
   const errors = problems.filter((p) => p.level === "error");
@@ -172,7 +266,7 @@ async function main(): Promise<void> {
   console.log(
     mode === "env"
       ? "✓ Env preflight passed."
-      : "✓ Preflight passed — DB reachable, schema applied, admin present."
+      : "✓ Preflight passed — DB reachable, schema applied, admin present, Redis up."
   );
 }
 
