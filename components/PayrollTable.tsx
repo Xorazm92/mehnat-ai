@@ -2,10 +2,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Staff, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance, KPIRule, CompanyKPIRule } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
-import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2, SlidersHorizontal, Users, Briefcase, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2, SlidersHorizontal, Users, Briefcase, TrendingUp, AlertTriangle, Clock, Trash2 } from 'lucide-react';
 import { periodsEqual } from '@/lib/periods';
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
-import { getPayrollAdjustments, createPayrollAdjustment } from '@/server/payroll';
+import {
+    getPayrollAdjustments,
+    createPayrollAdjustment,
+    approvePayrollAdjustment,
+    deletePayrollAdjustment,
+} from '@/server/payroll';
 import { getPayouts, createPayout } from '@/server/payouts';
 import { groupDigits, ungroupDigits, submitOnCtrlEnter, formatNum } from '@/lib/format';
 import { adjustmentMagnitude } from '@/lib/adjustments';
@@ -23,7 +28,7 @@ interface Props {
     currentUserRole?: string;
 }
 
-const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
+const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUserRole }) => {
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
 
     // Saralash/zichlik URL'da. Moliyaviy jadvalda saralash ayniqsa muhim:
@@ -40,6 +45,8 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
     const [companyOverrides, setCompanyOverrides] = useState<CompanyKPIRule[]>([]);
     // Per-user column show/hide for the salary table, saved in this browser.
     const [isLoading, setIsLoading] = useState(true);
+    // Tasdiqlash/o'chirish jarayonidagi tuzatma — ikki marta bosishning oldini oladi.
+    const [busyAdj, setBusyAdj] = useState<string | null>(null);
     const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
     const [colPanelOpen, setColPanelOpen] = useState(false);
     useEffect(() => {
@@ -351,6 +358,46 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
     ], [hiddenCols]);
 
 
+    // TASDIQLANMAGAN TUZATMALAR.
+    //
+    // `createPayrollAdjustment` yozuvni `isApproved: false` bilan yaratadi va
+    // AVANS uchun pul aynan TASDIQDA kassadan chiqadi (Payout + ledger).
+    // Tasdiqlash tugmasi hech qayerda yo'q edi — ya'ni kiritilgan avans
+    // jadvalda "berilgan" bo'lib ko'rinardi, lekin kassadan bir tiyin ham
+    // chiqmasdi. Shu bo'shliqni yopadi.
+    const pendingAdjustments = useMemo(
+        () => adjustmentsList.filter(a => !(a as any).isApproved && (a as any).adjustmentType !== 'payment'),
+        [adjustmentsList]
+    );
+
+    const staffNameOf = (id: string) => staff.find(x => x.id === id)?.name ?? '—';
+
+    const handleApproveAdj = async (id: string) => {
+        setBusyAdj(id);
+        try {
+            await approvePayrollAdjustment(id);
+            toast.success("Tuzatma tasdiqlandi");
+            await loadMonthlyData();
+        } catch (e) {
+            toast.error((e as Error).message || "Tasdiqlab bo'lmadi");
+        } finally {
+            setBusyAdj(null);
+        }
+    };
+
+    const handleDeleteAdj = async (id: string) => {
+        setBusyAdj(id);
+        try {
+            await deletePayrollAdjustment(id, "Oylik jadvalidan bekor qilindi");
+            toast.success("Tuzatma o'chirildi");
+            await loadMonthlyData();
+        } catch (e) {
+            toast.error((e as Error).message || "O'chirib bo'lmadi");
+        } finally {
+            setBusyAdj(null);
+        }
+    };
+
     const handleAddAdjustment = async () => {
         if (!editingAdj) return;
 
@@ -386,6 +433,10 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
         chief_accountant: "Bosh Buxgalter", supervisor: "Nazoratchi",
         accountant: "Buxgalter", bank_manager: "Bank Menejer",
     };
+
+    // Tasdiqlash faqat admin/superadminga — server ham shuni talab qiladi
+    // (approvePayrollAdjustment), bu yerda faqat tugmani yashiramiz.
+    const isApprover = currentUserRole === "super_admin" || currentUserRole === "admin";
 
     return (
         <div className="space-y-5 animate-fade-in pb-10">
@@ -539,6 +590,67 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations }) => {
                     />
                 </div>
             </div>
+
+
+            {/* TASDIQLANMAGAN TUZATMALAR — avans tasdiqlanmaguncha kassadan
+                pul CHIQMAYDI, lekin jadvalda "olingan" bo'lib ko'rinadi.
+                Shuning uchun panel jadvaldan yuqorida turadi. */}
+            {pendingAdjustments.length > 0 && (
+                <div className="rounded-xl overflow-hidden"
+                    style={{ background: "var(--card-bg)", border: "1px solid var(--warning-border)" }}>
+                    <div className="px-4 py-2.5 flex items-center gap-2"
+                        style={{ background: "var(--warning-bg)", borderBottom: "1px solid var(--warning-border)" }}>
+                        <Clock size={15} style={{ color: "var(--warning)" }} />
+                        <span className="text-meta font-semibold" style={{ color: "var(--text)" }}>
+                            {pendingAdjustments.length} ta tasdiqlanmagan tuzatma
+                        </span>
+                        <span className="text-micro" style={{ color: "var(--text-muted)" }}>
+                            — avans tasdiqlanmaguncha kassadan pul chiqmaydi
+                        </span>
+                    </div>
+                    <div className="divide-y" style={{ borderColor: "var(--card-border)" }}>
+                        {pendingAdjustments.map(a => {
+                            const type = (a as any).adjustmentType as string;
+                            const label = type === 'avans' ? 'Avans' : type === 'jarima' ? 'Jarima' : type === 'bonus' ? 'Bonus' : type;
+                            const color = type === 'jarima' ? 'var(--danger)' : type === 'avans' ? 'var(--warning)' : 'var(--success)';
+                            const busy = busyAdj === a.id;
+                            return (
+                                <div key={a.id} className="px-4 py-2.5 flex items-center gap-3 flex-wrap">
+                                    <span className="text-body font-semibold min-w-[9rem]" style={{ color: "var(--text)" }}>
+                                        {staffNameOf(a.employeeId)}
+                                    </span>
+                                    <span className="text-micro font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                                        style={{ color, border: `1px solid ${color}` }}>{label}</span>
+                                    <span className="text-body font-mono tabular-nums" style={{ color }}>
+                                        {formatNum(adjustmentMagnitude(a.amount))}
+                                    </span>
+                                    <span className="text-meta flex-1 min-w-[8rem] truncate" style={{ color: "var(--text-muted)" }}>
+                                        {(a as any).reason || '—'}
+                                    </span>
+                                    {isApprover ? (
+                                        <div className="flex gap-1.5">
+                                            <button disabled={busy} onClick={() => handleApproveAdj(a.id)}
+                                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-meta font-semibold disabled:opacity-50"
+                                                style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
+                                                <CheckCircle2 size={12} /> Tasdiqlash
+                                            </button>
+                                            <button disabled={busy} onClick={() => handleDeleteAdj(a.id)}
+                                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-meta font-semibold disabled:opacity-50"
+                                                style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger-border)" }}>
+                                                <Trash2 size={12} /> O&apos;chirish
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <span className="text-micro" style={{ color: "var(--text-muted)" }}>
+                                            Admin tasdig'i kutilmoqda
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Adjustment Modal */}
             {editingAdj && (
