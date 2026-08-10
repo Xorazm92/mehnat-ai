@@ -1,21 +1,32 @@
 /**
- * B4b · 1-BOSQICH — KUYGAN DEDUP KALITLARI: PREVIEW (qat'iy READ-ONLY)
- * ====================================================================
- * `test/obligation-sweep.test.ts` sweepDeadlines'ni `now = 2097-07-15` bilan
- * chaqiradi, sweep esa BUTUN `Obligation` jadvali ustidan yuradi. Testlar
- * ishchi bazaga qarshi yugurgani uchun har bir ochiq majburiyat uchun barcha
- * eslatma bosqichlari va ikkala eskalatsiya darajasi "band qilingan".
+ * B4b · 1-BOSQICH — TEST BUZGAN DEDUP KALITLARI: PREVIEW (qat'iy READ-ONLY)
+ * =========================================================================
+ * Qamrov: BARCHA ochiq majburiyatlar — muddati o'tganlar ham, hali kelmaganlar
+ * ham. Faqat 852 kechikkanni tozalash bugungi muammoni yopardi, lekin keyingi
+ * D-5/D-3/D-1 eslatmalari baribir jim qolardi.
  *
- * dedupKey da SANA YO'Q (`obligation:<id>:reminder:<bosqich>`,
- * `obligation:<id>:esc:L<n>`) → band qilish DOIMIY. Bot yoqilganda sweep bu
- * kalitlarni ko'radi va bosqichni o'tkazib yuboradi, ya'ni haqiqiy kechikkan
- * majburiyatlar bo'yicha HECH QANDAY eslatma/eskalatsiya yubormaydi.
+ * ── TEST-ORIGIN ISBOTI (o'chirishning yagona asosi) ──────────────────────
+ * `sweepDeadlines` va `escalate` yetkazish qatoriga `sentAt: now` yozadi, bu
+ * yerda `now` — CHAQIRUVCHI BERADIGAN parametr. `createdAt` esa
+ * `@default(now())`, ya'ni BAZA SOATI — uni in'ektsiya qilib bo'lmaydi.
  *
- * Bu skript nomzodlarni ANIQLAYDI. Hech narsa o'chirmaydi/yozmaydi.
+ * Qonuniy sweep faqat bitta joydan keladi — `bot/queues/obligation.worker.ts:38`
+ * — va u `now: new Date()` uzatadi. Ya'ni qonuniy qatorda `sentAt ≈ createdAt`.
+ *
+ * `sentAt` = 2097-yil, `createdAt` = 2026-yil bo'lgan qator FAQAT in'ektsiya
+ * qilingan `now` bilan hosil bo'ladi → ya'ni testdan. Bu deterministik
+ * ajratgich, taxmin emas.
+ *
+ * Qo'shimcha tasdiq:
+ *   · `sweepDeadlines` ning bor-yo'g'i ikkita chaqiruvchisi bor: obligation
+ *     worker (HECH QACHON ishlamagan — Redis'da 0 scheduler, 0 bajarilgan job)
+ *     va test to'plami.
+ *   · Barcha 2 982 majburiyatda `firstOverdueAt = 2097-07-15`.
+ *
+ * Hech narsa o'chirmaydi/yozmaydi.
  *
  * ISHLATISH:
- *   npx tsx scripts/recovery-b4b-preview.ts
- *   npx tsx scripts/recovery-b4b-preview.ts --save .recovery/b4b-baseline.json
+ *   npm run recovery:b4b:preview
  */
 import "./load-env";
 import { writeFileSync, mkdirSync } from "node:fs";
@@ -24,7 +35,7 @@ import { prisma } from "@/lib/prisma";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
 import { ESCALATION_CHANNEL, escalationDedupKey } from "@/lib/escalation";
 
-/** B4 da bekor qilinadigan soxta PAYROLL shablonlari — bu yerda hisobga olinmaydi. */
+/** B4 da bekor qilinadigan soxta PAYROLL shablonlari — qamrovdan tashqarida. */
 const PAYROLL_CODES = ["PAYROLL_CALC", "PAYROLL_POSTED"] as const;
 
 /** Sweep yaratadigan eslatma bosqichlari (lib/obligationSweep.ts milestonesFor). */
@@ -33,21 +44,23 @@ const MILESTONES = ["D-5", "D-3", "D-1", "due", "overdue:L1"] as const;
 /**
  * Tegishi MUMKIN bo'lgan kanallar. `verdict` ATAYIN YO'Q: u
  * bot/contexts/escalation/application/alert-actions.ts da nazoratchining
- * hukmini (jarima/ogohlantirish/sababli) bir martaga qulflaydi va KPI
- * daftariga yozadi — ya'ni biznes holati, dedup emas.
+ * hukmini bir martaga qulflaydi va KPI daftariga yozadi — biznes holati, dedup emas.
  */
 const DELETABLE_CHANNELS = ["inapp", "telegram", ESCALATION_CHANNEL] as const;
+
+/**
+ * TEST-ORIGIN CHEGARASI. `sentAt` shu sanadan keyin bo'lsa — qiymat
+ * in'ektsiya qilingan (real soat hech qachon bunday yozmaydi).
+ * Bu chegaradan o'tmagan qator NOMZOD BO'LMAYDI, hatto dedupKey mos kelsa ham.
+ */
+const TEST_ORIGIN_AFTER = new Date(Date.UTC(2030, 0, 1));
 
 const reminderKey = (obligationId: string, milestone: string) =>
   `obligation:${obligationId}:reminder:${milestone}`;
 
-/**
- * Nomzod qatorining TO'LIQ nusxasi. Har bir ustun saqlanadi, chunki rollback
- * qatorni AYNAN o'sha `id` va `createdAt` bilan qayta tiklaydi — ya'ni o'chirish
- * qaytariladigan amal bo'lib qoladi.
- */
 export interface B4bCandidate {
   obligationId: string;
+  group: "overdue" | "future";
   deliveryId: string;
   channel: string;
   dedupKey: string;
@@ -60,36 +73,39 @@ export interface B4bCandidate {
   notificationId: string | null;
 }
 
-/** Berilgan majburiyatlar uchun kuygan dedup qatorlarini topadi. */
-export async function findBurnedDeliveries(obligationIds: string[]): Promise<B4bCandidate[]> {
-  const reminderKeys = obligationIds.flatMap((id) => MILESTONES.map((m) => reminderKey(id, m)));
-  const escKeys = obligationIds.flatMap((id) => [
-    escalationDedupKey("obligation", id, 1),
-    escalationDedupKey("obligation", id, 2),
-  ]);
+/**
+ * Berilgan majburiyatlar uchun TEST KELIB CHIQISHLI kuygan dedup qatorlari.
+ * Uch shart birgalikda: kanal oq ro'yxatda + dedupKey oq ro'yxatda +
+ * sentAt in'ektsiya qilingan.
+ */
+export async function findBurnedDeliveries(
+  obligationIds: string[],
+  group: "overdue" | "future",
+): Promise<B4bCandidate[]> {
+  if (obligationIds.length === 0) return [];
+  const keys = [
+    ...obligationIds.flatMap((id) => MILESTONES.map((m) => reminderKey(id, m))),
+    ...obligationIds.flatMap((id) => [
+      escalationDedupKey("obligation", id, 1),
+      escalationDedupKey("obligation", id, 2),
+    ]),
+  ];
 
   const rows = await prisma.notificationDelivery.findMany({
     where: {
       channel: { in: [...DELETABLE_CHANNELS] },
-      dedupKey: { in: [...reminderKeys, ...escKeys] },
+      dedupKey: { in: keys },
+      sentAt: { gt: TEST_ORIGIN_AFTER }, // ← test-origin sharti
     },
     select: {
-      id: true,
-      channel: true,
-      dedupKey: true,
-      level: true,
-      status: true,
-      createdAt: true,
-      sentAt: true,
-      recipientId: true,
-      targetChatId: true,
-      notificationId: true,
+      id: true, channel: true, dedupKey: true, level: true, status: true,
+      createdAt: true, sentAt: true, recipientId: true, targetChatId: true, notificationId: true,
     },
   });
 
   return rows.map((r) => ({
-    // dedupKey formati: obligation:<uuid>:reminder:<bosqich> | obligation:<uuid>:esc:L<n>
     obligationId: (r.dedupKey ?? "").split(":")[1] ?? "",
+    group,
     deliveryId: r.id,
     channel: r.channel,
     dedupKey: r.dedupKey ?? "",
@@ -98,13 +114,21 @@ export async function findBurnedDeliveries(obligationIds: string[]): Promise<B4b
     createdAt: r.createdAt.toISOString(),
     sentAt: r.sentAt?.toISOString() ?? null,
     recipientId: r.recipientId,
-    // BigInt JSON'ga to'g'ridan-to'g'ri tushmaydi — string sifatida saqlanadi.
     targetChatId: r.targetChatId?.toString() ?? null,
     notificationId: r.notificationId,
   }));
 }
 
 const pad = (n: number | string, w: number) => String(n).padStart(w);
+
+/** Bosqich bo'yicha sanoq (kanallar yig'indisi). */
+function tally(cands: B4bCandidate[]) {
+  const out: Record<string, number> = {};
+  for (const m of MILESTONES) out[m] = cands.filter((c) => c.dedupKey.endsWith(`:reminder:${m}`)).length;
+  out["escalation:L1"] = cands.filter((c) => c.dedupKey.endsWith(":esc:L1")).length;
+  out["escalation:L2"] = cands.filter((c) => c.dedupKey.endsWith(":esc:L2")).length;
+  return out;
+}
 
 async function main(): Promise<void> {
   const now = new Date();
@@ -113,113 +137,119 @@ async function main(): Promise<void> {
 
   console.log();
   console.log("╔════════════════════════════════════════════════════════════════════════╗");
-  console.log("║  B4b · 1-BOSQICH — KUYGAN DEDUP PREVIEW            (READ-ONLY)         ║");
+  console.log("║  B4b · TEST BUZGAN DEDUP — PREVIEW                 (READ-ONLY)         ║");
   console.log("╚════════════════════════════════════════════════════════════════════════╝");
   console.log();
 
-  // ── Qamrov: haqiqiy kechikkan majburiyatlar ───────────────────────────
-  const realOverdue = await prisma.obligation.findMany({
+  // ── Qamrov: ikki guruh ────────────────────────────────────────────────
+  const open = await prisma.obligation.findMany({
     where: {
-      dueAt: { lt: now },
       status: { in: OPEN_OBLIGATION_STATUSES },
       template: { code: { notIn: [...PAYROLL_CODES] } },
     },
-    select: { id: true, periodKey: true, dueAt: true, template: { select: { code: true } } },
+    select: { id: true, dueAt: true },
   });
-  const realIds = realOverdue.map((o) => o.id);
-  console.log(`  real_overdue = ${realOverdue.length}`);
+  const overdueIds = open.filter((o) => o.dueAt < now).map((o) => o.id);
+  const futureIds = open.filter((o) => o.dueAt >= now).map((o) => o.id);
+
+  console.log(`  overdue obligations = ${overdueIds.length}`);
+  console.log(`  future  obligations = ${futureIds.length}`);
+  console.log(`  JAMI qamrov         = ${open.length}`);
   console.log();
 
-  const candidates = await findBurnedDeliveries(realIds);
+  const overdueCands = await findBurnedDeliveries(overdueIds, "overdue");
+  const futureCands = await findBurnedDeliveries(futureIds, "future");
+  const candidates = [...overdueCands, ...futureCands];
 
-  // ── Bosqich kesimi ────────────────────────────────────────────────────
-  console.log("  ── KUYGAN KALITLAR (bosqich × kanal) ───────────────────────────────");
-  console.log("     bosqich          inapp  telegram  escalation    jami");
-  console.log("     ───────────────  ─────  ────────  ──────────  ──────");
-  const rowsOut: [string, number][] = [];
-  for (const m of MILESTONES) {
-    const suffix = `:reminder:${m}`;
-    const inapp = candidates.filter((c) => c.dedupKey.endsWith(suffix) && c.channel === "inapp").length;
-    const tg = candidates.filter((c) => c.dedupKey.endsWith(suffix) && c.channel === "telegram").length;
-    const esc = candidates.filter((c) => c.dedupKey.endsWith(suffix) && c.channel === ESCALATION_CHANNEL).length;
-    const total = inapp + tg + esc;
-    rowsOut.push([m, total]);
-    console.log(`     ${m.padEnd(15)}  ${pad(inapp, 5)}  ${pad(tg, 8)}  ${pad(esc, 10)}  ${pad(total, 6)}`);
-  }
-  for (const lvl of [1, 2] as const) {
-    const suffix = `:esc:L${lvl}`;
-    const inapp = candidates.filter((c) => c.dedupKey.endsWith(suffix) && c.channel === "inapp").length;
-    const tg = candidates.filter((c) => c.dedupKey.endsWith(suffix) && c.channel === "telegram").length;
-    const esc = candidates.filter((c) => c.dedupKey.endsWith(suffix) && c.channel === ESCALATION_CHANNEL).length;
-    const total = inapp + tg + esc;
-    rowsOut.push([`escalation:L${lvl}`, total]);
-    console.log(`     ${`escalation:L${lvl}`.padEnd(15)}  ${pad(inapp, 5)}  ${pad(tg, 8)}  ${pad(esc, 10)}  ${pad(total, 6)}`);
-  }
-  console.log("     ───────────────  ─────  ────────  ──────────  ──────");
-  console.log(`     ${"total_candidates".padEnd(15)}  ${" ".repeat(27)}${pad(candidates.length, 6)}`);
-  console.log();
+  const oT = tally(overdueCands);
+  const fT = tally(futureCands);
 
   console.log("  ── SO'RALGAN KO'RINISHDA ───────────────────────────────────────────");
-  console.log(`     real_overdue    = ${realOverdue.length}`);
-  for (const [name, n] of rowsOut) console.log(`     ${name.padEnd(15)} = ${n}`);
-  console.log(`     total_candidates = ${candidates.length}`);
+  console.log("  overdue candidates:");
+  for (const k of [...MILESTONES, "escalation:L1", "escalation:L2"]) {
+    console.log(`    ${k.padEnd(15)} = ${oT[k]}`);
+  }
+  console.log(`    ${"JAMI".padEnd(15)} = ${overdueCands.length}`);
+  console.log();
+  console.log("  future candidates:");
+  for (const k of [...MILESTONES, "escalation:L1", "escalation:L2"]) {
+    console.log(`    ${k.padEnd(15)} = ${fT[k]}`);
+  }
+  console.log(`    ${"JAMI".padEnd(15)} = ${futureCands.length}`);
+  console.log();
+  console.log(`  TOTAL TEST-CORRUPTED DEDUP CANDIDATES = ${candidates.length}`);
   console.log();
 
-  // ── QAT'IY CHEGARA TEKSHIRUVLARI ──────────────────────────────────────
-  console.log("  ── CHEGARA TEKSHIRUVLARI ───────────────────────────────────────────");
+  // ── TEST-ORIGIN ISBOTI (ma'lumot bilan) ───────────────────────────────
+  console.log("  ── TEST-ORIGIN ISBOTI ──────────────────────────────────────────────");
+  const originProof = await prisma.$queryRaw<
+    { bucket: string; cnt: bigint; min_sent: Date | null; max_sent: Date | null; min_created: Date; max_created: Date }[]
+  >`
+    SELECT CASE WHEN "sentAt" > ${TEST_ORIGIN_AFTER} THEN 'INJECTED (test)'
+                WHEN "sentAt" IS NULL              THEN 'sentAt NULL'
+                ELSE 'real soat' END AS bucket,
+           count(*)::bigint AS cnt,
+           min("sentAt") AS min_sent, max("sentAt") AS max_sent,
+           min("createdAt") AS min_created, max("createdAt") AS max_created
+      FROM "NotificationDelivery"
+     WHERE "dedupKey" LIKE 'obligation:%'
+     GROUP BY 1 ORDER BY 2 DESC`;
+  console.log("     guruh              soni     sentAt oralig'i          createdAt oralig'i");
+  for (const r of originProof) {
+    const s = r.min_sent ? `${r.min_sent.toISOString().slice(0, 10)}…${r.max_sent!.toISOString().slice(0, 10)}` : "—";
+    const c = `${r.min_created.toISOString().slice(0, 10)}…${r.max_created.toISOString().slice(0, 10)}`;
+    console.log(`     ${r.bucket.padEnd(17)} ${pad(Number(r.cnt), 6)}   ${s.padEnd(23)} ${c}`);
+  }
+  console.log();
+  const realClock = originProof.find((r) => r.bucket === "real soat");
+  console.log(
+    `     ${realClock ? "✗" : "✓"} Qonuniy sweep izi (sentAt ≈ createdAt): ${realClock ? Number(realClock.cnt) : 0} qator`,
+  );
+  console.log("       → 0 bo'lishi kutiladi: obligation worker hech qachon ishlamagan");
+  console.log("         (Redis'da 0 scheduler, obligation navbatida 0 bajarilgan job).");
+  console.log();
+
+  // ── INVARIANTLAR ──────────────────────────────────────────────────────
+  console.log("  ── INVARIANTLAR ────────────────────────────────────────────────────");
   let violations = 0;
   const guard = (ok: boolean, label: string, detail: string) => {
     if (!ok) violations++;
-    console.log(`     ${ok ? "✓" : "✗"} ${label.padEnd(38)} ${detail}`);
+    console.log(`     ${ok ? "✓" : "✗"} ${label.padEnd(36)} ${detail}`);
   };
 
+  const verdictTotal = await prisma.notificationDelivery.count({ where: { channel: "verdict" } });
+  const verdictInCands = candidates.filter((c) => c.channel === "verdict").length;
+  guard(verdictInCands === 0, "verdict candidates", `${verdictInCands}  (jadvalda jami ${verdictTotal})`);
+
   const badChannel = candidates.filter((c) => !(DELETABLE_CHANNELS as readonly string[]).includes(c.channel));
-  guard(badChannel.length === 0, "faqat inapp/telegram/escalation", `${badChannel.length} ta begona kanal`);
+  guard(badChannel.length === 0, "kanal oq ro'yxatdan tashqari", `${badChannel.length}`);
 
-  // `verdict` kanali — biznes qulfi, hech qachon tegilmasin.
-  const verdictOverlap = await prisma.notificationDelivery.count({
-    where: { channel: "verdict", dedupKey: { in: candidates.map((c) => c.dedupKey) } },
-  });
-  guard(verdictOverlap === 0, "verdict kanali tegilmaydi", `${verdictOverlap} ta kesishuv`);
+  const badKey = candidates.filter((c) => !c.dedupKey.startsWith("obligation:"));
+  guard(badKey.length === 0, "dedupKey oq ro'yxatdan tashqari", `${badKey.length}`);
 
-  const unknownObl = candidates.filter((c) => !realIds.includes(c.obligationId));
-  guard(unknownObl.length === 0, "hammasi 852 ro'yxatidan", `${unknownObl.length} ta begona majburiyat`);
+  const notInjected = candidates.filter((c) => !c.sentAt || new Date(c.sentAt) <= TEST_ORIGIN_AFTER);
+  guard(notInjected.length === 0, "test-origin isbotisiz nomzod", `${notInjected.length}`);
 
-  // `notificationId` hech qachon yozilmaydi (kodda bitta ham yozuvchi yo'q) →
-  // delivery qatorini o'chirish Notification'ga struktura darajasida ta'sir qilmaydi.
-  const withNotifLink = await prisma.notificationDelivery.count({
-    where: { id: { in: candidates.map((c) => c.deliveryId) }, notificationId: { not: null } },
-  });
-  guard(withNotifLink === 0, "Notification'ga bog'lanish yo'q", `${withNotifLink} ta bog'langan`);
+  const inScope = new Set([...overdueIds, ...futureIds]);
+  const foreign = candidates.filter((c) => !inScope.has(c.obligationId));
+  guard(foreign.length === 0, "qamrovdan tashqari majburiyat", `${foreign.length}`);
+
+  const withNotifLink = candidates.filter((c) => c.notificationId !== null);
+  guard(withNotifLink.length === 0, "Notification'ga bog'lanish", `${withNotifLink.length}`);
   console.log();
 
-  // ── QAMROVDAN TASHQARI, LEKIN ZARARLANGAN ─────────────────────────────
-  // 2097-sweep BARCHA ochiq majburiyatlarni kechikkan deb ko'rgan, shuning
-  // uchun hali muddati kelmaganlarining D-5/D-3 kalitlari ham kuygan.
-  const allOpen = await prisma.obligation.findMany({
-    where: { status: { in: OPEN_OBLIGATION_STATUSES } },
-    select: { id: true },
+  // ── QAMROVDAN TASHQARIDA QOLADIGANLAR (shaffoflik uchun) ──────────────
+  const allObligationRows = await prisma.notificationDelivery.count({
+    where: { dedupKey: { startsWith: "obligation:" } },
   });
-  const notYetDue = allOpen.map((o) => o.id).filter((id) => !realIds.includes(id));
-  const notYetDueBurned = await findBurnedDeliveries(notYetDue);
-  console.log("  ── QAMROVDAN TASHQARI (ma'lumot uchun) ─────────────────────────────");
-  console.log(`     Hali muddati kelmagan ochiq majburiyat : ${notYetDue.length}`);
-  console.log(`     ularning kuygan kaliti                 : ${notYetDueBurned.length}`);
-  if (notYetDueBurned.length > 0) {
-    console.log("     ⚠️  Bular ham kuygan — muddati yaqinlashganda D-5/D-3/D-1");
-    console.log("        eslatmalari JIMGINA o'tkazib yuboriladi. B4b qamrovida EMAS.");
-  }
-  console.log();
-
-  // ── Namuna ────────────────────────────────────────────────────────────
-  console.log("  ── NAMUNA (birinchi 8 nomzod) ──────────────────────────────────────");
-  console.log("     obligationId                          kanal       dedupKey                                       yaratilgan");
-  for (const c of candidates.slice(0, 8)) {
-    console.log(
-      `     ${c.obligationId}  ${c.channel.padEnd(10)}  ${c.dedupKey.padEnd(44)}  ${c.createdAt.slice(0, 10)}`,
-    );
-  }
-  console.log(`     … jami ${candidates.length} ta (to'liq ro'yxat --save fayliga yoziladi)`);
+  const leftover = allObligationRows - candidates.length;
+  console.log("  ── QAMROVDAN TASHQARIDA QOLADI ─────────────────────────────────────");
+  console.log(`     obligation: prefiksli jami qator : ${allObligationRows}`);
+  console.log(`     nomzod                            : ${candidates.length}`);
+  console.log(`     tegilmaydi                        : ${leftover}`);
+  console.log("     → bular: B4 da bekor qilinadigan PAYROLL majburiyatlari,");
+  console.log("       yakunlangan (accepted/cancelled) majburiyatlar va o'chirilgan");
+  console.log("       fikstura'lardan qolgan yetim qatorlar. Ularga eslatma kerak emas.");
   console.log();
 
   if (savePath) {
@@ -229,20 +259,24 @@ async function main(): Promise<void> {
       JSON.stringify(
         {
           generatedAt: now.toISOString(),
-          scope: "real overdue obligations (PAYROLL tashqarida)",
-          realOverdueCount: realOverdue.length,
-          realOverdueIds: realIds,
-          milestones: MILESTONES,
-          deletableChannels: DELETABLE_CHANNELS,
+          scope: "barcha ochiq majburiyatlar (PAYROLL tashqarida): overdue + future",
+          testOriginRule: `sentAt > ${TEST_ORIGIN_AFTER.toISOString()} (in'ektsiya qilingan now)`,
+          overdueObligations: overdueIds.length,
+          futureObligations: futureIds.length,
+          overdueCandidates: overdueCands.length,
+          futureCandidates: futureCands.length,
+          overdueTally: oT,
+          futureTally: fT,
           totalCandidates: candidates.length,
           candidateDeliveryIds: candidates.map((c) => c.deliveryId),
           candidates,
           guardViolations: violations,
-          outOfScopeBurned: notYetDueBurned.length,
+          deletableChannels: DELETABLE_CHANNELS,
           baseline: {
             notificationCount: await prisma.notification.count(),
             obligationCount: await prisma.obligation.count(),
             notificationDeliveryCount: await prisma.notificationDelivery.count(),
+            verdictCount: verdictTotal,
             kassaCount: await prisma.kassaEntry.count(),
             paymentCount: await prisma.payment.count(),
             ledgerCount: await prisma.ledgerEntry.count(),
@@ -259,11 +293,11 @@ async function main(): Promise<void> {
   }
 
   if (violations > 0) {
-    console.error(`  ✗ ${violations} ta chegara buzildi — TO'XTATILDI.`);
+    console.error(`  ✗ ${violations} ta invariant buzildi — TO'XTATILDI. O'chirish mumkin emas.`);
     await prisma.$disconnect();
     process.exit(1);
   }
-  console.log("  ✓ Chegara tekshiruvlari o'tdi.");
+  console.log("  ✓ Barcha invariantlar joyida.");
   console.log();
   await prisma.$disconnect();
 }

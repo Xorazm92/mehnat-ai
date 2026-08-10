@@ -208,6 +208,62 @@ describe("B4b · sweep dedup", () => {
     expect(await deliveries("inapp")).toBe(before);
   });
 
+  it("B4b · KELAJAKDAGI majburiyat: dedup reset → D-5 kuni eslatma yaratiladi", async () => {
+    // Bu B4b qamrovini kengaytirishning sababi. Test-sweep 2097-yil bilan
+    // yurganda HAMMA ochiq majburiyat "kechikkan" ko'ringan, shuning uchun hali
+    // muddati kelmaganlarining D-5/D-3/D-1 kalitlari ham band bo'lib qolgan.
+    // Tozalanmasa, muddat yaqinlashganda eslatma JIMGINA o'tkazib yuboriladi.
+    const futureDue = new Date(Date.UTC(2032, 8, 10)); // 2032-09-10
+    const future = await prisma.obligation.create({
+      data: {
+        companyId,
+        templateId,
+        templateVersion: 1,
+        periodStart: new Date(Date.UTC(2032, 7, 1)),
+        periodEnd: new Date(Date.UTC(2032, 8, 1)),
+        periodKey: "2032-M08",
+        dueAt: futureDue,
+        status: "planned",
+        responsibleUserId: accountantId,
+      },
+      select: { id: true },
+    });
+    const key = (m: string) => `obligation:${future.id}:reminder:${m}`;
+    const countKey = (m: string) =>
+      prisma.notificationDelivery.count({ where: { channel: "inapp", dedupKey: key(m) } });
+
+    try {
+      // 1) "Test buzilishi" — kelajakdagi sana bilan sweep hamma bosqichni band qiladi.
+      await sweepAt(new Date(Date.UTC(2097, 6, 15)));
+      expect(await countKey("D-5")).toBe(1);
+
+      // 2) Muddatdan 5 kun oldin — qonuniy eslatma vaqti. Kalit band bo'lgani
+      //    uchun HECH NARSA yaratilmaydi: aynan jimlik nosozligi.
+      const before = await countKey("D-5");
+      await sweepAt(new Date(futureDue.getTime() - 5 * 86_400_000));
+      expect(await countKey("D-5")).toBe(before); // yangi eslatma YO'Q
+
+      // 3) B4b tozalashi — faqat shu majburiyatning dedup daftari.
+      await prisma.notificationDelivery.deleteMany({
+        where: { dedupKey: { startsWith: `obligation:${future.id}:` } },
+      });
+      expect(await countKey("D-5")).toBe(0);
+
+      // 4) D-5 kuni yana kelganda eslatma QAYTA yaratiladi.
+      await sweepAt(new Date(futureDue.getTime() - 5 * 86_400_000));
+      expect(await countKey("D-5")).toBe(1);
+      // Hali yetib kelmagan bosqichlar yaratilmagan.
+      expect(await countKey("D-3")).toBe(0);
+      expect(await countKey("due")).toBe(0);
+    } finally {
+      await prisma.notificationDelivery.deleteMany({
+        where: { dedupKey: { startsWith: `obligation:${future.id}:` } },
+      });
+      await prisma.obligationStatusEvent.deleteMany({ where: { obligationId: future.id } });
+      await prisma.obligation.deleteMany({ where: { id: future.id } });
+    }
+  });
+
   it("B4b · dedup qatorlari tozalangach bosqichlar QAYTA yaratiladi", async () => {
     // Aynan B4b tozalashi qiladigan ish: shu majburiyatning dedup daftarini
     // o'chiramiz (Notification va Obligation tegilmaydi).

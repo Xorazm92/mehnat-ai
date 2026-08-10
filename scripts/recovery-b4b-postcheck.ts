@@ -16,15 +16,24 @@ import { escalationDedupKey } from "@/lib/escalation";
 const PAYROLL_CODES = ["PAYROLL_CALC", "PAYROLL_POSTED"] as const;
 const MILESTONES = ["D-5", "D-3", "D-1", "due", "overdue:L1"] as const;
 
+interface B4bCandidateLite {
+  obligationId: string;
+  group: "overdue" | "future";
+}
+
 interface Baseline {
-  realOverdueCount: number;
-  realOverdueIds: string[];
+  overdueObligations: number;
+  futureObligations: number;
+  overdueCandidates: number;
+  futureCandidates: number;
   totalCandidates: number;
   candidateDeliveryIds: string[];
+  candidates: B4bCandidateLite[];
   baseline: {
     notificationCount: number;
     obligationCount: number;
     notificationDeliveryCount: number;
+    verdictCount: number;
     kassaCount: number;
     paymentCount: number;
     ledgerCount: number;
@@ -58,35 +67,44 @@ async function main(): Promise<void> {
   console.log();
 
   // ── Qamrov o'zgarmagani ───────────────────────────────────────────────
-  const realOverdue = await prisma.obligation.count({
+  const open = await prisma.obligation.findMany({
     where: {
-      dueAt: { lt: now },
       status: { in: OPEN_OBLIGATION_STATUSES },
       template: { code: { notIn: [...PAYROLL_CODES] } },
     },
+    select: { id: true, dueAt: true },
   });
+  const overdueIds = open.filter((o) => o.dueAt < now).map((o) => o.id);
+  const futureIds = open.filter((o) => o.dueAt >= now).map((o) => o.id);
+
   console.log("  ── QAMROV ──────────────────────────────────────────────────────────");
-  check("real overdue", realOverdue, b.realOverdueCount);
+  check("overdue obligations", overdueIds.length, b.overdueObligations);
+  check("future obligations", futureIds.length, b.futureObligations);
   console.log();
 
-  // ── Kuygan kalitlar ketdimi ───────────────────────────────────────────
-  console.log("  ── KUYGAN KALITLAR (hammasi 0 bo'lishi shart) ──────────────────────");
-  const ids = b.realOverdueIds;
-  for (const m of MILESTONES) {
-    const keys = ids.map((id) => `obligation:${id}:reminder:${m}`);
-    const n = await prisma.notificationDelivery.count({
-      where: { dedupKey: { in: keys }, channel: { in: ["inapp", "telegram"] } },
-    });
-    check(`burned ${m}`, n, 0);
+  // ── Kuygan kalitlar ketdimi — IKKALA GURUH ────────────────────────────
+  const groups: [string, string[]][] = [
+    ["overdue", overdueIds],
+    ["future", futureIds],
+  ];
+  for (const [label, ids] of groups) {
+    console.log(`  ── KUYGAN KALITLAR · ${label} (hammasi 0 bo'lishi shart) ─────────────`);
+    for (const m of MILESTONES) {
+      const keys = ids.map((id) => `obligation:${id}:reminder:${m}`);
+      const n = await prisma.notificationDelivery.count({
+        where: { dedupKey: { in: keys }, channel: { in: ["inapp", "telegram"] } },
+      });
+      check(`burned ${m}`, n, 0);
+    }
+    for (const lvl of [1, 2] as const) {
+      const keys = ids.map((id) => escalationDedupKey("obligation", id, lvl));
+      const n = await prisma.notificationDelivery.count({
+        where: { dedupKey: { in: keys }, channel: "escalation" },
+      });
+      check(`burned escalation:L${lvl}`, n, 0);
+    }
+    console.log();
   }
-  for (const lvl of [1, 2] as const) {
-    const keys = ids.map((id) => escalationDedupKey("obligation", id, lvl));
-    const n = await prisma.notificationDelivery.count({
-      where: { dedupKey: { in: keys }, channel: "escalation" },
-    });
-    check(`burned escalation:L${lvl}`, n, 0);
-  }
-  console.log();
 
   // ── TEGILMASLIGI kerak bo'lganlar ─────────────────────────────────────
   console.log("  ── TEGILMAGANI ISBOTI ──────────────────────────────────────────────");
@@ -138,7 +156,20 @@ async function main(): Promise<void> {
   check("bazada dublikat", Number(dupRows[0]?.cnt ?? 0), 0);
 
   const verdicts = await prisma.notificationDelivery.count({ where: { channel: "verdict" } });
-  console.log(`     ℹ verdict kanali (tegilmagan)          ${String(verdicts).padStart(10)}`);
+  check("verdict kanali (tegilmagan)", verdicts, b.baseline.verdictCount);
+  console.log();
+
+  // ── Siz so'ragan yakuniy ko'rinish ────────────────────────────────────
+  console.log("  ── YAKUNIY ─────────────────────────────────────────────────────────");
+  console.log(`     Notification rows touched  = ${notif - b.baseline.notificationCount}`);
+  console.log(`     Obligation rows touched    = ${obl - b.baseline.obligationCount}`);
+  console.log(
+    `     Financial rows touched     = ${
+      kassa - b.baseline.kassaCount + (payment - b.baseline.paymentCount) + (ledger - b.baseline.ledgerCount)
+    }`,
+  );
+  console.log(`     AuditLog rows touched      = ${audit - b.baseline.auditCount}`);
+  console.log(`     StatusEvent rows touched   = ${statusEvents - b.baseline.statusEventCount}`);
   console.log();
 
   if (failed > 0) {

@@ -42,13 +42,23 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { prisma } from "@/lib/prisma";
 import type { B4bCandidate } from "./recovery-b4b-preview";
 
+/**
+ * TEST-ORIGIN CHEGARASI — `recovery-b4b-preview.ts` dagi bilan bir xil.
+ * `sentAt` shundan keyin bo'lsa, qiymat in'ektsiya qilingan `now` dan kelgan
+ * (baza soati hech qachon bunday yozmaydi) → ya'ni testdan.
+ */
+const TEST_ORIGIN_AFTER = new Date(Date.UTC(2030, 0, 1));
+
 interface Baseline {
   generatedAt: string;
   totalCandidates: number;
+  overdueCandidates: number;
+  futureCandidates: number;
   candidateDeliveryIds: string[];
   candidates: B4bCandidate[];
   guardViolations: number;
   deletableChannels: string[];
+  testOriginRule: string;
 }
 
 function arg(name: string): string | undefined {
@@ -87,7 +97,7 @@ async function runClear(baseline: Baseline): Promise<void> {
       // MUZLATILGAN ID ro'yxati — so'rov qayta yurgizilmaydi.
       const live = await tx.notificationDelivery.findMany({
         where: { id: { in: ids } },
-        select: { id: true, channel: true, dedupKey: true },
+        select: { id: true, channel: true, dedupKey: true, sentAt: true },
       });
 
       // Idempotentlik: allaqachon o'chirilganlar yo'qligi xato emas.
@@ -98,8 +108,19 @@ async function runClear(baseline: Baseline): Promise<void> {
         if (!baseline.deletableChannels.includes(r.channel)) {
           throw new Error(`${r.id}: kanal "${r.channel}" ruxsat etilganlar ro'yxatida yo'q. ROLLBACK.`);
         }
+        if (r.channel === "verdict") {
+          throw new Error(`${r.id}: verdict kanali — biznes qulfi, hech qachon o'chirilmaydi. ROLLBACK.`);
+        }
         if (!r.dedupKey?.startsWith("obligation:")) {
           throw new Error(`${r.id}: dedupKey "${r.dedupKey}" majburiyatga tegishli emas. ROLLBACK.`);
+        }
+        // TEST-ORIGIN QAYTA ISBOTI — baseline'ga ishonib qolmaymiz. `sentAt`
+        // in'ektsiya qilingan `now` dan kelgan bo'lishi SHART; real soatdan
+        // kelgan qator qonuniy sweep izi bo'lishi mumkin va o'chirilmaydi.
+        if (!r.sentAt || r.sentAt <= TEST_ORIGIN_AFTER) {
+          throw new Error(
+            `${r.id}: sentAt=${r.sentAt?.toISOString() ?? "NULL"} — test-origin isboti yo'q. ROLLBACK.`,
+          );
         }
       }
 
@@ -210,8 +231,12 @@ async function main(): Promise<void> {
 
   const baseline = loadBaseline();
   console.log(`  Baseline : ${arg("--baseline")}  (${baseline.generatedAt})`);
-  console.log(`  Nomzod   : ${baseline.totalCandidates} ta NotificationDelivery qatori`);
+  console.log(
+    `  Nomzod   : ${baseline.totalCandidates} ta qator ` +
+      `(overdue ${baseline.overdueCandidates} + future ${baseline.futureCandidates})`,
+  );
   console.log(`  Kanallar : ${baseline.deletableChannels.join(", ")}   (verdict TEGILMAYDI)`);
+  console.log(`  Test-origin: ${baseline.testOriginRule}`);
   console.log(`  Tegilmaydi: Obligation · KassaEntry · Payment · LedgerEntry · AuditLog ·`);
   console.log(`              ObligationStatusEvent · Notification`);
 
