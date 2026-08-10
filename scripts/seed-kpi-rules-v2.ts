@@ -359,9 +359,24 @@ async function main() {
   console.log(byRole.map((x) => `  ${x.role}: ${x._count}`).join("\n"));
 }
 
-main()
-  .catch((e) => {
-    console.error("ERROR:", e.message);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+/**
+ * `main()` FAQAT fayl to'g'ridan-to'g'ri ishga tushirilganda yuguradi.
+ *
+ * Ilgari u modul darajasida chaqirilardi, ya'ni bu fayldan BIRON NARSA import
+ * qilishning o'zi butun seed'ni ishga tushirardi — jumladan "non-canonical"
+ * qoidalarni O'CHIRISHNI. `test/kpi-rule-envelope.test.ts` shu fayldan faqat
+ * `RULES` konstantasini oladi (u DB'siz test), lekin import paytida seed ishchi
+ * bazada yurib, bitta KpiRule qatorini o'chirib yuborgan.
+ *
+ * Import — yon ta'sirsiz bo'lishi kerak. Bu qo'riqchi shuni kafolatlaydi.
+ */
+const isEntrypoint = process.argv[1]?.endsWith("seed-kpi-rules-v2.ts") ?? false;
+
+if (isEntrypoint) {
+  main()
+    .catch((e) => {
+      console.error("ERROR:", e.message);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}

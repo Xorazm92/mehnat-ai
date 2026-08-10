@@ -115,12 +115,36 @@ else
   fi
 fi
 
-# ── 4) Sxemani qo'yamiz ─────────────────────────────────────────────────────
-# `--url` ATAYIN ishlatiladi: prisma.config.ts `process.env.DATABASE_URL` ni
-# o'qiydi va u yerda ISHCHI baza turadi. Aniq bayroq bilan uzatish nishonni
-# bir joyda, ko'rinadigan qilib belgilaydi — muhit o'zgaruvchisiga tayanmaydi.
-echo "▶ Sxema qo'yilmoqda (prisma db push)…"
+# ── 4) Toza start: test bazasining sxemasini bo'shatamiz ────────────────────
+# Faqat TEST bazasida — yuqoridagi tekshiruvlar nishon ishchi baza emasligini
+# allaqachon kafolatlagan. Toza start `migrate deploy` ning birinchi
+# migratsiyadan boshlab yurishiga imkon beradi.
+echo "▶ Test bazasi sxemasi bo'shatilmoqda…"
+# psql `?schema=` parametrini tushunmaydi (u Prisma'ga xos) — u holda
+# "invalid URI query parameter" beradi. Shuning uchun parametrsiz URL.
+psql "${PREFIX}/${TEST_DB_NAME}" -q -c 'DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;'
+
+# ── 5) MIGRATSIYALAR — `db push` emas ───────────────────────────────────────
+# `db push` faqat schema.prisma ifodalay oladigan narsani yaratadi. Trigger va
+# qisman (partial) unikal indeks kabi MAXSUS SQL migratsiya fayllarida yashaydi
+# va `db push` ularni butunlay o'tkazib yuboradi. Natijada test bazasi
+# ishlab chiqarishdan farq qilardi va aynan shu himoyalarni tekshiradigan
+# testlar yiqilardi (financial_snapshot_immutable triggeri — o'lchangan).
+echo "▶ Migratsiyalar qo'llanmoqda (prisma migrate deploy)…"
+DATABASE_URL="$TEST_URL" npx prisma migrate deploy
+
+# ── 6) Drift yopilishi ──────────────────────────────────────────────────────
+# schema.prisma da migratsiyasi hali yozilmagan modellar bor (repo holati).
+# `db push` o'shalarni qo'shadi; migratsiyalardan kelgan trigger/indekslar
+# joyida qoladi, chunki `db push` mavjud obyektlarni o'chirmaydi.
+echo "▶ Migratsiyasiz qolgan model farqi yopilmoqda (prisma db push)…"
 npx prisma db push --url "$TEST_URL" --accept-data-loss
+
+# ── 7) Spravochnik ma'lumot ─────────────────────────────────────────────────
+# KPI qoidalari — test emas, SPRAVOCHNIK. Ularsiz KPI proyeksiyasi va scope
+# testlari "qoida topilmadi" deb yiqiladi.
+echo "▶ KPI qoidalari ekilmoqda…"
+DATABASE_URL="$TEST_URL" npx tsx scripts/seed-kpi-rules-v2.ts
 
 echo
 echo "✅ Test bazasi tayyor."
