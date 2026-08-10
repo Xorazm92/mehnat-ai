@@ -59,21 +59,33 @@ function parseTarget(url: string): DbTarget | null {
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0"]);
 
+/** URL bo'yicha tasdiqlangan nishon — haqiqiy sxema tekshiruvi uchun. */
+let verifiedTarget: DbTarget | null = null;
+/** Haqiqiy sxema tekshiruvi jarayonda bir marta bajarilsin. */
+let runtimeChecked = false;
+
 /** Nomida `test` bo'lgan baza/sxemani test nishoni deb hisoblaymiz (asro_test, test_asro, asro-test). */
 function looksLikeTest(name: string): boolean {
   return /(^|[_-])test([_-]|$)/i.test(name);
 }
 
 /**
- * Nishon izolyatsiyalanganmi? Ikki yo'l qabul qilinadi:
- *   • alohida BAZA   — nomida "test" (tavsiya etiladi)
- *   • alohida SXEMA  — `?schema=` nomida "test" va "public" EMAS
- * Ikkinchisi CREATEDB huquqi yo'q mashinalar uchun: Postgres sxemasi alohida
- * nomlar fazosi, ya'ni jadvallar ishchi ma'lumot bilan kesishmaydi.
+ * Nishon izolyatsiyalanganmi? FAQAT alohida BAZA hisobga olinadi.
+ *
+ * Alohida SXEMA yo'li sinab ko'rildi va ISHLAMAYDI: Prisma Client jadval
+ * nomlarini generatsiya vaqtidagi sxema bilan qattiq bog'laydi
+ * (`"public"."Obligation"`), shuning uchun `?schema=` yoki `search_path`
+ * o'zgartirilsa ham tipli so'rovlar baribir `public` ga tushadi. O'lchangan:
+ *
+ *     current_schema()            → asro_test
+ *     raw  FROM "Obligation"      → 0      (search_path bo'yicha)
+ *     prisma.obligation.count()   → 2982   (public'dan!)
+ *
+ * Ya'ni sxema izolyatsiyasi YOLG'ON xotirjamlik berardi — xom va tipli
+ * so'rovlar turli joyga tushardi. Shuning uchun u qabul qilinmaydi.
  */
 function isIsolatedTarget(t: DbTarget): boolean {
-  if (looksLikeTest(t.database)) return true;
-  return t.schema !== "public" && looksLikeTest(t.schema);
+  return looksLikeTest(t.database);
 }
 
 function fail(reason: string, target: DbTarget | null, url: string): never {
@@ -93,16 +105,14 @@ function fail(reason: string, target: DbTarget | null, url: string): never {
       "  Integratsiya testlari real yozuv qiladi (KassaEntry, User, Payment,",
       "  LedgerEntry…). Ularni ishchi yoki prod bazasiga yo'naltirib bo'lmaydi.",
       "",
-      "  TUZATISH — test nishonini bir marta tayyorlang:",
+      "  TUZATISH — alohida test BAZASINI bir marta tayyorlang:",
       "",
-      "      npm run test:db:setup                          # alohida baza",
-      "      TEST_DB_SCHEMA=asro_test npm run test:db:setup  # yoki alohida sxema",
+      "      sudo -u postgres createdb -O \"$(whoami)\" asro_test   # CREATEDB huquqi kerak",
+      "      npm run test:db:setup",
       "",
       "  so'ng .env.local ga qo'shing (DATABASE_URL ni O'ZGARTIRMANG):",
       "",
       '      TEST_DATABASE_URL="postgresql://<user>:<parol>@localhost:5432/asro_test?schema=public"',
-      "  yoki",
-      '      TEST_DATABASE_URL="postgresql://<user>:<parol>@localhost:5432/inbola?schema=asro_test"',
       "",
     ].join("\n"),
   );
@@ -144,7 +154,10 @@ function enforceTestDatabase(): void {
     );
   }
 
-  if (isIsolatedTarget(target)) return; // ✅ hammasi joyida
+  if (isIsolatedTarget(target)) {
+    verifiedTarget = target;
+    return; // ✅ URL bo'yicha joyida — haqiqiy sxema quyida tekshiriladi
+  }
 
   // ── Lokal, lekin izolyatsiyalanmagan: ataylab ruxsat berish mumkin ────
   if (process.env.ASRO_ALLOW_UNSAFE_TEST_DB === "1") {
@@ -156,8 +169,10 @@ function enforceTestDatabase(): void {
   }
 
   fail(
-    `"${target.database}" (schema=${target.schema}) test nishoni emas — ` +
-      'baza yoki sxema nomida "test" bo\'lishi shart. Bu ishchi ma\'lumot.',
+    `"${target.database}" test BAZASI emas (nomida "test" yo'q) — bu ishchi ma'lumot.\n` +
+      "           Alohida sxema (?schema=…) yordam bermaydi: Prisma Client jadval\n" +
+      '           nomlarini "public" bilan qattiq bog\'laydi, so\'rovlar baribir\n' +
+      "           ishchi jadvallarga tushadi. Alohida BAZA kerak.",
     target,
     url,
   );
@@ -173,9 +188,39 @@ function enforceTestDatabase(): void {
 //
 // Yo'l aniqlanmasa qo'riqchi ISHLAYDI (fail-safe) — jimgina o'tkazib
 // yuborilmaydi.
-beforeAll(() => {
+/**
+ * IKKINCHI QAVAT — haqiqiy ulanishni tekshiradi.
+ *
+ * URL'ni o'qish yetarli emas: `?schema=` ni driver adapter o'zi qo'llamaydi,
+ * shuning uchun "izolyatsiyalangan sxemaga ulandim" degan xulosa yolg'on
+ * bo'lishi mumkin edi (aynan shu tutildi — `lib/prisma.ts` `poolOptionsFor`
+ * shuning uchun yozildi). Bu yerda bazaning O'ZIDAN so'raymiz.
+ */
+async function verifyRuntimeSchema(): Promise<void> {
+  if (runtimeChecked || !verifiedTarget) return;
+  runtimeChecked = true;
+
+  const { prisma } = await import("@/lib/prisma");
+  const rows = await prisma.$queryRaw<{ db: string; schema: string }[]>`
+    SELECT current_database() AS db, current_schema() AS schema`;
+  const actual = rows[0];
+
+  if (!looksLikeTest(actual.db) && process.env.ASRO_ALLOW_UNSAFE_TEST_DB !== "1") {
+    throw new Error(
+      `\n  TEST TO'XTATILDI — HAQIQIY ulanish izolyatsiyalanmagan.\n\n` +
+        `  URL va'da qilgani : ${verifiedTarget.database}\n` +
+        `  Baza aytayotgani  : ${actual.db} · schema=${actual.schema}\n\n` +
+        `  So'rovlar ISHCHI bazaga tushmoqda.\n`,
+    );
+  }
+
+  console.log(`\n  🔒 test nishoni (bazadan tasdiqlangan): ${actual.db} · schema=${actual.schema}\n`);
+}
+
+beforeAll(async () => {
   const filepath = expect.getState().testPath;
   const isDomainSpec = filepath !== undefined && !filepath.includes(INTEGRATION_DIR);
   if (isDomainSpec) return;
   enforceTestDatabase();
+  await verifyRuntimeSchema();
 });

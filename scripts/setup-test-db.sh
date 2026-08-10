@@ -25,10 +25,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 TEST_DB_NAME="${TEST_DB_NAME:-asro_test}"
-# Berilsa — alohida BAZA o'rniga alohida SXEMA ishlatiladi (CREATEDB huquqi
-# bo'lmagan mashinalar uchun). Jadvallar boshqa nomlar fazosida yaratiladi,
-# shuning uchun `public` dagi ishchi ma'lumot bilan kesishmaydi.
-TEST_DB_SCHEMA="${TEST_DB_SCHEMA:-}"
+
+# ⚠️ ALOHIDA SXEMA YO'LI YO'Q — ATAYIN.
+# Sinab ko'rilgan va ISHLAMAYDI: Prisma Client jadval nomlarini generatsiya
+# vaqtidagi sxema bilan qattiq bog'laydi ("public"."Obligation"), shuning uchun
+# `?schema=` yoki `search_path` o'zgartirilsa ham tipli so'rovlar `public` ga
+# tushaveradi. O'lchangan: current_schema()=asro_test, raw FROM "Obligation"=0,
+# prisma.obligation.count()=2982. Ya'ni sxema izolyatsiyasi YOLG'ON xotirjamlik
+# beradi. Yagona ishonchli yo'l — alohida BAZA.
 
 # ── 1) Ulanish ma'lumotlarini mavjud DATABASE_URL dan olamiz ────────────────
 # Faqat host/port/foydalanuvchi qismi ko'chiriladi; baza nomi ALMASHTIRILADI,
@@ -60,41 +64,22 @@ PARAMS="$(printf '%s' "$SOURCE_URL" | sed -nE 's#^.*/[^?]*(\?.*)$#\1#p')"
 SOURCE_DB="$(printf '%s' "$SOURCE_URL" | sed -E 's#^.*://[^/]+/([^?]*).*$#\1#')"
 HOST="$(printf '%s' "$PREFIX" | sed -E 's#^.*://([^:@]+(:[^@]*)?@)?([^:/]+).*$#\3#')"
 
-# ── 2) Qat'iy tekshiruv: nishon ishchi ma'lumot bilan kesishmasin ──────────
-if [ -n "$TEST_DB_SCHEMA" ]; then
-  case "$TEST_DB_SCHEMA" in
-    *test*) ;;
-    *) echo "✗ Sxema nomida 'test' bo'lishi shart — qo'riqchi (test/setup.ts) shunga qaraydi." >&2; exit 1 ;;
-  esac
-  if [ "$TEST_DB_SCHEMA" = "public" ]; then
-    echo "✗ 'public' sxemasi ishchi ma'lumotni saqlaydi. To'xtatildi." >&2
-    exit 1
-  fi
-  TEST_URL="${PREFIX}/${SOURCE_DB}?schema=${TEST_DB_SCHEMA}"
-  echo "▶ Manba ulanishi : ${HOST}/${SOURCE_DB}   (public sxemasi TEGILMAYDI)"
-  echo "▶ Test sxemasi   : ${HOST}/${SOURCE_DB} · schema=${TEST_DB_SCHEMA}"
-  echo
-else
-  if [ "$TEST_DB_NAME" = "$SOURCE_DB" ]; then
-    echo "✗ Test bazasi nomi ishchi baza bilan bir xil ('${SOURCE_DB}'). To'xtatildi." >&2
-    exit 1
-  fi
-  case "$TEST_DB_NAME" in
-    *test*) ;;
-    *) echo "✗ Test bazasi nomida 'test' bo'lishi shart — qo'riqchi (test/setup.ts) shunga qaraydi." >&2; exit 1 ;;
-  esac
-  TEST_URL="${PREFIX}/${TEST_DB_NAME}${PARAMS}"
-  echo "▶ Manba ulanishi : ${HOST}/${SOURCE_DB}   (faqat host/user ko'chiriladi, TEGILMAYDI)"
-  echo "▶ Test bazasi    : ${HOST}/${TEST_DB_NAME}"
-  echo
+# ── 2) Qat'iy tekshiruv: nishon ishchi baza bilan bir xil bo'lmasin ─────────
+if [ "$TEST_DB_NAME" = "$SOURCE_DB" ]; then
+  echo "✗ Test bazasi nomi ishchi baza bilan bir xil ('${SOURCE_DB}'). To'xtatildi." >&2
+  exit 1
 fi
+case "$TEST_DB_NAME" in
+  *test*) ;;
+  *) echo "✗ Test bazasi nomida 'test' bo'lishi shart — qo'riqchi (test/setup.ts) shunga qaraydi." >&2; exit 1 ;;
+esac
+TEST_URL="${PREFIX}/${TEST_DB_NAME}${PARAMS}"
+echo "▶ Manba ulanishi : ${HOST}/${SOURCE_DB}   (faqat host/user ko'chiriladi, TEGILMAYDI)"
+echo "▶ Test bazasi    : ${HOST}/${TEST_DB_NAME}"
+echo
 
 # ── 3) Nishonni tayyorlaymiz ────────────────────────────────────────────────
-if [ -n "$TEST_DB_SCHEMA" ]; then
-  # Sxema yo'li: CREATE DATABASE kerak emas — `prisma db push` sxemani o'zi
-  # yaratadi. `public` ga bitta ham DDL yubormaydi.
-  echo "▶ Sxema yo'li — CREATE DATABASE o'tkazib yuborildi."
-elif ! command -v psql >/dev/null 2>&1; then
+if ! command -v psql >/dev/null 2>&1; then
   echo "⚠️  psql topilmadi — bazani qo'lda yarating:"
   echo "      createdb ${TEST_DB_NAME}"
   echo "    so'ng bu skriptni qayta ishga tushiring."
@@ -120,10 +105,9 @@ else
       echo
       echo "     so'ng: npm run test:db:setup"
       echo
-      echo "  B) ALOHIDA SXEMA — administrator huquqi kerak emas. Testlar o'sha"
-      echo "     bazada, lekin BOSHQA nomlar fazosida yashaydi (jadvallar kesishmaydi):"
+      echo "  B) yoki menga huquq bering, keyin skript o'zi yaratadi:"
       echo
-      echo "       TEST_DB_SCHEMA=asro_test npm run test:db:setup"
+      echo "       sudo -u postgres psql -c 'ALTER ROLE \"$(whoami)\" CREATEDB'"
       echo
       exit 1
     fi
@@ -132,8 +116,11 @@ else
 fi
 
 # ── 4) Sxemani qo'yamiz ─────────────────────────────────────────────────────
+# `--url` ATAYIN ishlatiladi: prisma.config.ts `process.env.DATABASE_URL` ni
+# o'qiydi va u yerda ISHCHI baza turadi. Aniq bayroq bilan uzatish nishonni
+# bir joyda, ko'rinadigan qilib belgilaydi — muhit o'zgaruvchisiga tayanmaydi.
 echo "▶ Sxema qo'yilmoqda (prisma db push)…"
-DATABASE_URL="$TEST_URL" npx prisma db push --skip-generate --accept-data-loss
+npx prisma db push --url "$TEST_URL" --accept-data-loss
 
 echo
 echo "✅ Test bazasi tayyor."
