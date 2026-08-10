@@ -51,27 +51,43 @@ interface SourceRow {
  * yozuv bor ("Elbek" nofaol / "Elbek Ismatillayev" faol, xuddi shunday
  * "Mohirbek"). Faol yozuv ataylab tanlangan.
  */
-const TEAM: Record<string, string> = {
-  "Azizbek shogird": "azizbekbuxgalt_3d7a@mehnat.uz",
-  Mohirbek: "mohirbekyoldos_91f4@mehnat.uz",
-  Hasan: "hasan_95ce@mehnat.uz",
-  Elbek: "elbekismatilla_2597@mehnat.uz",
-  Umid: "umid_def3@mehnat.uz",
-  Muxriddin: "muxriddin_c6b4@mehnat.uz",
+interface TeamMember {
+  /**
+   * ASOSIY KALIT — telefon (oxirgi 9 raqam, `User.phoneNormalized`).
+   *
+   * Email ATAYLAB asosiy kalit EMAS: u import paytida tasodifiy suffiks bilan
+   * generatsiya qilingan (`umid_def3@`, `umid_88a4@`) va HAR BAZADA BOSHQACHA.
+   * Shu sabab skript lokalda ishlab, prodda "foydalanuvchi topilmadi" deb
+   * to'xtardi. Telefon esa odamning haqiqiy identifikatori — ikkala bazada
+   * bir xil (tekshirilgan).
+   */
+  phone?: string;
+  /** Telefoni yo'q a'zo uchun zaxira kalit. */
+  email?: string;
+  /** Nofaol bo'lsa qayta yoqiladi. */
+  reactivate?: true;
+}
+
+/** Varaqdagi ism → jamoa a'zosi. */
+const TEAM: Record<string, TeamMember> = {
+  "Azizbek shogird": { phone: "943904166" },
+  Mohirbek: { phone: "508774166" },
+  // Hasan'da telefon yo'q; uning emaili ikkala bazada mos keladi.
+  Hasan: { email: "hasan_95ce@mehnat.uz", reactivate: true },
+  Elbek: { phone: "509994166" },
+  Umid: { phone: "948184166" },
+  Muxriddin: { phone: "930774166" },
 };
 
 /** Jamoaning bosh buxgalteri — har 55 firmada bir xil. */
-const CHIEF_EMAIL = "mohirayuldashe_eebe@mehnat.uz";
+const CHIEF: TeamMember = { phone: "946234166" };
 
-/** Firmalar shu bo'limga tegishli (boshlig'i — CHIEF_EMAIL). */
+/** Firmalar shu bo'limga tegishli (boshlig'i — CHIEF). */
 const DEPARTMENT_NAME = "FinCo 2";
 
 /** Ulushlar. Nazoratchi o'rni bo'sh, shuning uchun 5% taqsimlanmaydi. */
 const PCT_CHIEF = 7;
 const PCT_BANK = 5;
-
-/** Hasan bazada nofaol; ro'yxatda 9 ta firmaning buxgalteri — qayta yoqiladi. */
-const REACTIVATE = ["hasan_95ce@mehnat.uz"];
 
 const FIRMS: SourceRow[] = [
   { name: "MONTAJ TEPLO ENERGO MCHJ", inn: "306033555", vat: true, accountant: "Azizbek shogird", bank: "Muxriddin", amount: 500000, pct: 20 },
@@ -151,20 +167,64 @@ async function main() {
   const apply = process.argv.includes("--apply");
 
   // ── 1. Jamoa a'zolarini yechish ───────────────────────────────────────
-  const emails = [...new Set([...Object.values(TEAM), CHIEF_EMAIL])];
-  const users = await prisma.user.findMany({
-    where: { email: { in: emails } },
-    select: { id: true, email: true, fullName: true, role: true, isActive: true },
-  });
-  const byEmail = new Map(users.map((u) => [u.email, u]));
+  // Telefon bo'yicha, email — zaxira. Sabab: TeamMember izohiga qarang.
+  const entries: [string, TeamMember][] = [
+    ...Object.entries(TEAM),
+    ["(bosh buxgalter)", CHIEF],
+  ];
+  const phones = [...new Set(entries.map(([, m]) => m.phone).filter((p): p is string => !!p))];
+  const emails = [...new Set(entries.map(([, m]) => m.email).filter((e): e is string => !!e))];
 
-  const missing = emails.filter((e) => !byEmail.has(e));
-  if (missing.length) {
-    console.error("Bu foydalanuvchilar topilmadi:\n  " + missing.join("\n  "));
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        ...(phones.length ? [{ phoneNormalized: { in: phones } }] : []),
+        ...(emails.length ? [{ email: { in: emails } }] : []),
+      ],
+    },
+    select: { id: true, email: true, fullName: true, role: true, isActive: true, phoneNormalized: true },
+  });
+
+  type TeamUser = (typeof users)[number];
+  const resolved = new Map<string, TeamUser>();
+  const problems: string[] = [];
+
+  for (const [label, m] of entries) {
+    let found: TeamUser[] = [];
+    let via = "";
+
+    if (m.phone) {
+      found = users.filter((u) => u.phoneNormalized === m.phone);
+      via = `telefon ${m.phone}`;
+    }
+    // Telefon natija bermasa — email bilan urinamiz (Hasan shu yo'l bilan topiladi).
+    if (found.length === 0 && m.email) {
+      found = users.filter((u) => u.email === m.email);
+      via = `email ${m.email}`;
+    }
+
+    if (found.length === 0) {
+      problems.push(`${label}: topilmadi (${via || "kalit yo'q"})`);
+      continue;
+    }
+    // NOANIQLIK — taxmin qilmaymiz. Bitta telefonda ikkita yozuv bo'lsa,
+    // qaysi biri to'g'ri ekanini faqat odam hal qila oladi.
+    if (found.length > 1) {
+      problems.push(
+        `${label}: ${found.length} ta mos yozuv (${via}) — ` +
+          found.map((u) => `${u.fullName} <${u.email}>`).join(", "),
+      );
+      continue;
+    }
+    resolved.set(label, found[0]);
+  }
+
+  if (problems.length) {
+    console.error("Jamoa a'zolarini aniqlab bo'lmadi:\n  " + problems.join("\n  "));
     process.exit(1);
   }
 
-  const chief = byEmail.get(CHIEF_EMAIL)!;
+  const chief = resolved.get("(bosh buxgalter)")!;
   const department = await prisma.department.findFirst({
     where: { name: DEPARTMENT_NAME },
     select: { id: true, name: true, chiefAccountantId: true },
@@ -181,8 +241,8 @@ async function main() {
   }
 
   console.log("JAMOA");
-  for (const [sheetName, email] of Object.entries(TEAM)) {
-    const u = byEmail.get(email)!;
+  for (const sheetName of Object.keys(TEAM)) {
+    const u = resolved.get(sheetName)!;
     const asAccountant = FIRMS.filter((f) => f.accountant === sheetName).length;
     const asBank = FIRMS.filter((f) => f.bank === sheetName).length;
     const what = [
@@ -199,10 +259,10 @@ async function main() {
   console.log(`  ${"(nazoratchi)".padEnd(18)} → yo'q (ataylab bo'sh)`);
 
   const desiredFor = (f: SourceRow): Desired => ({
-    accountantId: byEmail.get(TEAM[f.accountant])!.id,
+    accountantId: resolved.get(f.accountant)!.id,
     accountantPerc: f.pct,
     chiefAccountantId: chief.id,
-    bankClientId: f.bank ? byEmail.get(TEAM[f.bank])!.id : null,
+    bankClientId: f.bank ? resolved.get(f.bank)!.id : null,
     departmentId: department.id,
   });
 
@@ -259,8 +319,9 @@ async function main() {
   }
 
   // ── 3. Nofaol jamoa a'zosini qayta yoqish ─────────────────────────────
-  for (const email of REACTIVATE) {
-    const u = byEmail.get(email);
+  for (const [sheetName, m] of Object.entries(TEAM)) {
+    if (!m.reactivate) continue;
+    const u = resolved.get(sheetName);
     if (u && !u.isActive) {
       await prisma.user.update({ where: { id: u.id }, data: { isActive: true } });
       console.log(`\n✓ ${u.fullName} qayta faollashtirildi.`);
