@@ -158,6 +158,64 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
     action: dupCardCount > 0 ? "scripts/merge-channels.ts ishga tushiring" : undefined,
   });
 
+  // ── 7. Kirim va chiqim importi bir sanadan boshlanganmi ──────────────
+  //
+  // Oy yopish auditida topildi: 2026-iyulning ochilish qoldig'i −28 828 100
+  // chiqdi. Sababi kod emas, MA'LUMOT ASSIMETRIYASI — ovqat/xo'jalik
+  // xarajatlari 2025-fevraldan import qilingan, kirim esa faqat 2026-iyuldan.
+  // Ya'ni tizim o'sha davr uchun chiqimni ko'radi, uni qoplagan kirimni emas.
+  //
+  // Bu yopishni bloklamaydi (ledger balansda va butunligi joyida), lekin
+  // ko'rinmasa yil yopilganda soxta manfiy qoldiq snapshotga muhrlanadi.
+  const [firstOut, firstIn] = await Promise.all([
+    db.$queryRaw<{ d: Date | null }[]>`
+      SELECT min(d) AS d FROM (
+        SELECT min(date)   AS d FROM "KassaEntry" WHERE type = 'expense' AND "deletedAt" IS NULL
+        UNION ALL SELECT min(date)   FROM "Expense" WHERE status = 'approved' AND "deletedAt" IS NULL
+        UNION ALL SELECT min("paidAt") FROM "Payout" WHERE "deletedAt" IS NULL
+      ) x`,
+    db.$queryRaw<{ d: Date | null }[]>`
+      SELECT min(d) AS d FROM (
+        SELECT min(date) AS d FROM "KassaEntry" WHERE type = 'income' AND "deletedAt" IS NULL
+        UNION ALL SELECT min(to_date(period || '-01', 'YYYY-MM-DD'))
+                    FROM "Payment"
+                   WHERE status IN ('paid','partial') AND "deletedAt" IS NULL
+                     AND period ~ '^[0-9]{4}-[0-9]{2}$'
+      ) x`,
+  ]);
+  const outFrom = firstOut[0]?.d ? new Date(firstOut[0].d) : null;
+  const inFrom = firstIn[0]?.d ? new Date(firstIn[0].d) : null;
+
+  if (outFrom && inFrom) {
+    // Chiqim kirimdan qancha oldin boshlangan (kun).
+    const gapDays = Math.round((inFrom.getTime() - outFrom.getTime()) / 86_400_000);
+    const orphanAgg = await db.kassaEntry.aggregate({
+      where: { type: "expense", deletedAt: null, date: { lt: inFrom } },
+      _sum: { amount: true },
+      _count: true,
+    });
+    const orphan = n(orphanAgg._sum.amount);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    // 31 kungacha farq normal (oy chegarasi); undan ortig'i import bo'shlig'i.
+    const bad = gapDays > 31 && orphan > 0;
+    checks.push({
+      key: "import-window",
+      title: "Kirim va chiqim bir davrdan import qilingan",
+      status: bad ? "warn" : "ok",
+      value: orphan,
+      detail: bad
+        ? `Chiqim ${iso(outFrom)} dan, kirim esa ${iso(inFrom)} dan boshlanadi. ` +
+          `Oradagi ${orphanAgg._count} ta chiqim (${Math.round(orphan).toLocaleString("ru-RU")} so'm) ` +
+          `qoplovchi kirimsiz turibdi — shu sababli davr boshidagi qoldiq manfiy.`
+        : `Ikkalasi ham ${iso(outFrom)} atrofidan boshlanadi`,
+      action: bad
+        ? "Yo o'sha davrning kirimini import qiling, yo eski chiqimlarni " +
+          "tizim boshlangan sanadan oldingi deb arxivlang. Yil yopishdan " +
+          "OLDIN hal qiling — aks holda manfiy qoldiq snapshotga muhrlanadi."
+        : undefined,
+    });
+  }
+
   return checks;
 }
 
