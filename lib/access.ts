@@ -114,6 +114,11 @@ export function isReviewerOn(company: CompanySlots, actor: Actor): boolean {
 
 /** Senior-darajali (manager/reviewer) amallar — oddiy buxgalter bajara olmaydi. */
 export const SENIOR_PERMISSIONS = new Set<string>([
+  // KPI qoidalarini O'ZGARTIRISH = mukofot/jarima foizini o'zgartirish, ya'ni
+  // pul qarori — senior rol + portfel. O'QISH esa senior emas: buxgalterga
+  // o'z firmasidagi qoidalarni ko'rish kerak, chunki bu uning maoshi
+  // ("company:kpi-rules:view" — faqat portfel scope'i).
+  "company:kpi-rules",
   "obligation:accept",
   "obligation:reject",
   "obligation:cancel",

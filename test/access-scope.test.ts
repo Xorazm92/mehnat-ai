@@ -24,6 +24,7 @@ const { prisma } = await import("@/lib/prisma");
 const debt = await import("@/server/debt");
 const payroll = await import("@/server/payroll");
 const credentials = await import("@/server/credentials");
+const kpi = await import("@/server/kpi");
 
 const TAG = `vitest-scope-${Date.now()}`;
 const ids = {
@@ -100,6 +101,8 @@ beforeAll(async () => {
 afterAll(async () => {
   const userIds = [ids.admin, ids.supervisor, ids.outsider, ids.staffInside, ids.staffOutside];
   const companyIds = [ids.mine, ids.theirs];
+  await prisma.monthlyPerformance.deleteMany({ where: { employeeId: { in: userIds } } });
+  await prisma.companyKpiRule.deleteMany({ where: { companyId: { in: companyIds } } });
   await prisma.debtSnapshot.deleteMany({ where: { rawCustomer: { startsWith: TAG } } });
   await prisma.payrollAdjustment.deleteMany({ where: { employeeId: { in: userIds } } });
   await prisma.clientCredential.deleteMany({ where: { companyId: { in: companyIds } } });
@@ -267,5 +270,97 @@ describe("P1-2 · rol konteksti", () => {
     expect(await resolveContexts(prisma, ids.staffInside, false)).toHaveLength(0);
     // admin uchun kontekst tushunchasi yo'q.
     expect(await resolveContexts(prisma, ids.admin, true)).toHaveLength(0);
+  });
+});
+
+describe("P0-4 · KPI tasdiqlash xodim/firma scope", () => {
+  // Auditning oxirgi supurgisida topilgan: kpi.ts dagi beshta amal ROL
+  // tekshirar, lekin SCOPE tekshirmasdi. Ruxsat berilgan rollar esa aynan
+  // portfelga cheklangan bosh buxgalter va nazoratchi edi. Tasdiqlangan KPI
+  // to'g'ridan-to'g'ri maoshga kiradi — ya'ni bu pulga tegadigan teshik.
+  // MonthlyPerformance companyId va ruleId ni majburiy talab qiladi, va
+  // (month, companyId, employeeId, ruleId) unikal — shuning uchun har bir
+  // test o'z oyida ishlaydi, aks holda ikkinchi test birinchisining qatoriga
+  // urilib qolardi.
+  // DIQQAT: MonthlyPerformance.month "YYYY-MM-01" ko'rinishida saqlanadi
+  // (lib/periods.ts toPerformanceMonth). "2099-04" deb yozilsa amal uni
+  // topolmaydi va test jimgina noto'g'ri narsani tasdiqlaydi.
+  const perf = async (employeeId: string, companyId: string, month: string) => {
+    const rule = await prisma.kpiRule.findFirst({ select: { id: true } });
+    if (!rule) throw new Error("kpiRule seed qilinmagan");
+    return prisma.monthlyPerformance.create({
+      data: {
+        month,
+        employeeId,
+        companyId,
+        ruleId: rule.id,
+        value: 1,
+        status: "submitted",
+        source: "system",
+        calculatedScore: 90,
+        penaltyAmount: 0,
+      },
+      select: { id: true },
+    });
+  };
+
+  it("bosh buxgalter BEGONA xodimning KPI'sini tasdiqlay olmaydi", async () => {
+    const row = await perf(ids.staffOutside, ids.theirs, "2099-01-01");
+    asUser(ids.supervisor, "chief_accountant");
+    await expect(kpi.approvePerformance(row.id)).rejects.toThrow(/ruxsatingiz yo'q/i);
+  });
+
+  it("o'z portfelidagi xodimni tasdiqlay oladi", async () => {
+    const row = await perf(ids.staffInside, ids.mine, "2099-02-01");
+    asUser(ids.supervisor, "chief_accountant");
+    await expect(kpi.approvePerformance(row.id)).resolves.toBeTruthy();
+  });
+
+  it("rad etish ham begona xodimga ishlamaydi", async () => {
+    const row = await perf(ids.staffOutside, ids.theirs, "2099-03-01");
+    asUser(ids.supervisor, "supervisor");
+    await expect(kpi.rejectPerformance(row.id, "sabab")).rejects.toThrow(/ruxsatingiz yo'q/i);
+  });
+
+  it("ommaviy tasdiq FAQAT portfeldagi xodimlarni oladi", async () => {
+    const [mineRow, theirsRow] = await Promise.all([
+      perf(ids.staffInside, ids.mine, "2099-04-01"),
+      perf(ids.staffOutside, ids.theirs, "2099-04-01"),
+    ]);
+    asUser(ids.supervisor, "chief_accountant");
+    await kpi.approveAutoPerformance("2099-04");
+
+    const [m, t] = await Promise.all([
+      prisma.monthlyPerformance.findUnique({ where: { id: mineRow.id }, select: { status: true } }),
+      prisma.monthlyPerformance.findUnique({ where: { id: theirsRow.id }, select: { status: true } }),
+    ]);
+    expect(m?.status).toBe("approved");
+    // Eng muhimi — begona xodim TEGILMAGAN qoldi.
+    expect(t?.status).toBe("submitted");
+  });
+
+  it("begona firmaning KPI qoidalari o'qilmaydi", async () => {
+    asUser(ids.supervisor, "supervisor");
+    await expect(kpi.getCompanyKpiRules(ids.theirs)).rejects.toThrow(/ruxsat/i);
+    await expect(kpi.getCompanyKpiRules(ids.mine)).resolves.toBeDefined();
+  });
+
+  it("KPI qoidasini O'QISH senior bo'lishni talab qilmaydi (buxgalter o'z firmasini ko'radi)", async () => {
+    // Bu qoida muhim: mukofot/jarima foizi — buxgalterning O'Z maoshi.
+    asUser(ids.staffInside, "accountant");
+    await expect(kpi.getCompanyKpiRules(ids.mine)).resolves.toBeDefined();
+    await expect(kpi.getCompanyKpiRules(ids.theirs)).rejects.toThrow(/ruxsat/i);
+  });
+
+  it("lekin YOZISH senior talab qiladi va portfelga cheklanadi", async () => {
+    const rule = await prisma.kpiRule.findFirst({ select: { id: true } });
+    if (!rule) return; // qoidalar seed qilinmagan muhitda o'tkazib yuboriladi
+    asUser(ids.supervisor, "supervisor");
+    await expect(
+      kpi.upsertCompanyKpiRule({ companyId: ids.theirs, ruleId: rule.id, isActive: true })
+    ).rejects.toThrow(/ruxsat/i);
+    await expect(
+      kpi.upsertCompanyKpiRule({ companyId: ids.mine, ruleId: rule.id, isActive: true })
+    ).resolves.toBeTruthy();
   });
 });

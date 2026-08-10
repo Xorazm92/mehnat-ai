@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole, isAdminRole } from "@/lib/permissions";
-import { companyScopeWhere, staffScopeFilter } from "@/lib/access";
+import { companyScopeWhere, staffScopeFilter, assertCompanyPermission } from "@/lib/access";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { serialize } from "@/lib/serialize";
 import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
@@ -403,6 +403,17 @@ export async function approvePerformance(id: string) {
     throw new Error("Forbidden");
   }
 
+  // ROL YETARLI EMAS — XODIM SCOPE'i HAM KERAK. Bosh buxgalter ataylab o'z
+  // portfeliga cheklangan, lekin bu yerda faqat rol tekshirilgani uchun u
+  // BEGONA xodimning KPI'sini tasdiqlay olardi. Tasdiqlangan KPI to'g'ridan-
+  // to'g'ri maoshga kiradi, ya'ni bu pulga tegadigan teshik edi.
+  const target = await prisma.monthlyPerformance.findUnique({
+    where: { id },
+    select: { employeeId: true },
+  });
+  if (!target) throw new Error("KPI yozuvi topilmadi");
+  await staffScopeFilter(prisma, { id: session.user.id, role }, target.employeeId);
+
   const approved = await prisma.monthlyPerformance.update({
     where: { id },
     data: {
@@ -438,6 +449,14 @@ export async function rejectPerformance(id: string, reason: string) {
   if (!["super_admin", "admin", "chief_accountant", "supervisor"].includes(role)) {
     throw new Error("Forbidden");
   }
+
+  // Rad etish ham portfelga cheklanadi — approvePerformance bilan bir xil sabab.
+  const target = await prisma.monthlyPerformance.findUnique({
+    where: { id },
+    select: { employeeId: true },
+  });
+  if (!target) throw new Error("KPI yozuvi topilmadi");
+  await staffScopeFilter(prisma, { id: session.user.id, role }, target.employeeId);
 
   const rejected = await prisma.monthlyPerformance.update({
     where: { id },
@@ -511,6 +530,16 @@ export async function getCompanyKpiRules(companyId: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
+  // Bungacha bu yerda ATIGI `auth()` bor edi: istalgan tizimga kirgan xodim
+  // istalgan firmaning KPI qoidalarini (mukofot/jarima foizlari) o'qiy olardi.
+  // O'qish uchun senior bo'lish shart emas — biriktirilgan bo'lish kifoya.
+  await assertCompanyPermission(
+    prisma,
+    { id: session.user.id, role: session.user.role as string },
+    companyId,
+    "company:kpi-rules:view"
+  );
+
   return serialize(
     await prisma.companyKpiRule.findMany({
       where: { companyId, isActive: true },
@@ -534,6 +563,15 @@ export async function upsertCompanyKpiRule(data: {
   if (!["super_admin", "admin", "supervisor"].includes(role)) {
     throw new Error("Forbidden");
   }
+
+  // Nazoratchi ham portfelga cheklangan — begona firmaga jarima foizi
+  // yozib qo'ya olmaydi.
+  await assertCompanyPermission(
+    prisma,
+    { id: session.user.id, role },
+    data.companyId,
+    "company:kpi-rules"
+  );
 
   return serialize(
     await prisma.companyKpiRule.upsert({
@@ -730,12 +768,22 @@ export async function approveAutoPerformance(month: string, opts: { employeeId?:
   const monthKey = toPerformanceMonth(month);
   if (!monthKey) throw new Error("Oy formati noto'g'ri (YYYY-MM kutiladi)");
 
+  // Ommaviy tasdiq eng xavflisi: bitta bosishda yuzlab qator tasdiqlanadi.
+  // Shuning uchun u ham portfelga cheklanadi — `staffScopeFilter` admin uchun
+  // undefined (cheklovsiz), senior uchun ruxsat etilgan xodimlar ro'yxatini,
+  // begona xodim so'ralganda esa xatolik qaytaradi.
+  const employeeScope = await staffScopeFilter(
+    prisma,
+    { id: session.user.id, role },
+    opts.employeeId
+  );
+
   const targets = await prisma.monthlyPerformance.findMany({
     where: {
       month: monthKey,
       status: "submitted",
       source: { in: ["system", "bot"] },
-      ...(opts.employeeId ? { employeeId: opts.employeeId } : {}),
+      ...(employeeScope ? { employeeId: employeeScope } : {}),
       ...(opts.companyId ? { companyId: opts.companyId } : {}),
     },
     select: { id: true },
