@@ -36,16 +36,22 @@ const INTEGRATION_DIR = "/test/";
 interface DbTarget {
   host: string;
   database: string;
+  /** `?schema=` — Postgres nomlar fazosi. Berilmasa "public". */
+  schema: string;
 }
 
 /**
- * Postgres URL'dan host va baza nomini ajratadi. Parol ataylab olinmaydi — bu
- * qiymat xato matniga tushadi va terminal tarixida qoladi.
+ * Postgres URL'dan host, baza nomi va sxemani ajratadi. Parol ataylab
+ * olinmaydi — bu qiymat xato matniga tushadi va terminal tarixida qoladi.
  */
 function parseTarget(url: string): DbTarget | null {
   try {
     const u = new URL(url);
-    return { host: u.hostname, database: u.pathname.replace(/^\//, "") };
+    return {
+      host: u.hostname,
+      database: u.pathname.replace(/^\//, ""),
+      schema: u.searchParams.get("schema") ?? "public",
+    };
   } catch {
     return null;
   }
@@ -53,13 +59,27 @@ function parseTarget(url: string): DbTarget | null {
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0"]);
 
-/** Nomida `test` bo'lgan bazani test bazasi deb hisoblaymiz (asro_test, test_asro, asro-test). */
-function looksLikeTestDb(database: string): boolean {
-  return /(^|[_-])test([_-]|$)/i.test(database);
+/** Nomida `test` bo'lgan baza/sxemani test nishoni deb hisoblaymiz (asro_test, test_asro, asro-test). */
+function looksLikeTest(name: string): boolean {
+  return /(^|[_-])test([_-]|$)/i.test(name);
+}
+
+/**
+ * Nishon izolyatsiyalanganmi? Ikki yo'l qabul qilinadi:
+ *   • alohida BAZA   — nomida "test" (tavsiya etiladi)
+ *   • alohida SXEMA  — `?schema=` nomida "test" va "public" EMAS
+ * Ikkinchisi CREATEDB huquqi yo'q mashinalar uchun: Postgres sxemasi alohida
+ * nomlar fazosi, ya'ni jadvallar ishchi ma'lumot bilan kesishmaydi.
+ */
+function isIsolatedTarget(t: DbTarget): boolean {
+  if (looksLikeTest(t.database)) return true;
+  return t.schema !== "public" && looksLikeTest(t.schema);
 }
 
 function fail(reason: string, target: DbTarget | null, url: string): never {
-  const where = target ? `${target.host}/${target.database}` : url.slice(0, 40);
+  const where = target
+    ? `${target.host}/${target.database}${target.schema !== "public" ? ` · schema=${target.schema}` : ""}`
+    : url.slice(0, 40);
   throw new Error(
     [
       "",
@@ -73,13 +93,16 @@ function fail(reason: string, target: DbTarget | null, url: string): never {
       "  Integratsiya testlari real yozuv qiladi (KassaEntry, User, Payment,",
       "  LedgerEntry…). Ularni ishchi yoki prod bazasiga yo'naltirib bo'lmaydi.",
       "",
-      "  TUZATISH — test bazasini bir marta tayyorlang:",
+      "  TUZATISH — test nishonini bir marta tayyorlang:",
       "",
-      "      npm run test:db:setup",
+      "      npm run test:db:setup                          # alohida baza",
+      "      TEST_DB_SCHEMA=asro_test npm run test:db:setup  # yoki alohida sxema",
       "",
-      "  so'ng .env.local ga qo'shing:",
+      "  so'ng .env.local ga qo'shing (DATABASE_URL ni O'ZGARTIRMANG):",
       "",
       '      TEST_DATABASE_URL="postgresql://<user>:<parol>@localhost:5432/asro_test?schema=public"',
+      "  yoki",
+      '      TEST_DATABASE_URL="postgresql://<user>:<parol>@localhost:5432/inbola?schema=asro_test"',
       "",
     ].join("\n"),
   );
@@ -121,19 +144,20 @@ function enforceTestDatabase(): void {
     );
   }
 
-  if (looksLikeTestDb(target.database)) return; // ✅ hammasi joyida
+  if (isIsolatedTarget(target)) return; // ✅ hammasi joyida
 
-  // ── Lokal, lekin test bazasi emas: ataylab ruxsat berish mumkin ───────
+  // ── Lokal, lekin izolyatsiyalanmagan: ataylab ruxsat berish mumkin ────
   if (process.env.ASRO_ALLOW_UNSAFE_TEST_DB === "1") {
     console.warn(
-      "\n⚠️  ASRO_ALLOW_UNSAFE_TEST_DB=1 — testlar ISHCHI bazaga " +
-        `(${target.database}) yozmoqda. Qoldiq qatorlar shu yerda qoladi.\n`,
+      "\n⚠️  ASRO_ALLOW_UNSAFE_TEST_DB=1 — testlar ISHCHI ma'lumot ustiga " +
+        `(${target.database}, schema=${target.schema}) yozmoqda. Qoldiq qatorlar shu yerda qoladi.\n`,
     );
     return;
   }
 
   fail(
-    `"${target.database}" test bazasi emas (nomida "test" yo'q) — bu ishchi baza.`,
+    `"${target.database}" (schema=${target.schema}) test nishoni emas — ` +
+      'baza yoki sxema nomida "test" bo\'lishi shart. Bu ishchi ma\'lumot.',
     target,
     url,
   );
