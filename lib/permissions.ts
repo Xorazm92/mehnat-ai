@@ -19,8 +19,6 @@ export type AppView =
   | "reports"
   | "deadlines"
   | "tasks"
-  | "profitability"
-  | "fair_kpi"
   | "kpi"
   | "kassa"
   | "kassa_income"
@@ -32,8 +30,6 @@ export type AppView =
   | "payroll"
   | "audit_logs"
   | "attendance"
-  | "documents"
-  | "inventory"
   | "notifications"
   | "settings"
   | "admin";
@@ -118,8 +114,6 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "reports",
     "deadlines",
     "tasks",
-    "profitability",
-    "fair_kpi",
     "kpi",
     "kassa",
     "expenses",
@@ -127,8 +121,6 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "payroll",
     "audit_logs",
     "attendance",
-    "documents",
-    "inventory",
     "notifications",
     "settings",
     "admin",
@@ -140,8 +132,6 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "reports",
     "deadlines",
     "tasks",
-    "profitability",
-    "fair_kpi",
     "kpi",
     "kassa",
     "kassa_income",
@@ -152,7 +142,6 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "payroll",
     "audit_logs",
     "attendance",
-    "documents",
     "notifications",
     "settings",
     "admin",
@@ -164,8 +153,6 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "reports",
     "deadlines",
     "tasks",
-    "profitability",
-    "fair_kpi",
     "kpi",
     "kassa",
     "kassa_income",
@@ -174,7 +161,6 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "cabinet",
     "payroll",
     "attendance",
-    "documents",
     "notifications",
     "settings",
   ],
@@ -185,8 +171,6 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "reports",
     "deadlines",
     "tasks",
-    "profitability",
-    "fair_kpi",
     "kpi",
     "kassa_debt",
     "expenses",
@@ -253,8 +237,6 @@ export const ALL_VIEWS: AppView[] = [
   "reports",
   "deadlines",
   "tasks",
-  "profitability",
-  "fair_kpi",
   "kpi",
   "kassa",
   "kassa_income",
@@ -266,8 +248,6 @@ export const ALL_VIEWS: AppView[] = [
   "payroll",
   "audit_logs",
   "attendance",
-  "documents",
-  "inventory",
   "notifications",
   "settings",
   "admin",
@@ -280,8 +260,6 @@ export const VIEW_LABELS: Record<AppView, string> = {
   reports: "Hisobotlar",
   deadlines: "Muddatlar",
   tasks: "Vazifalar",
-  profitability: "Rentabellik",
-  fair_kpi: "Adolatli KPI",
   kpi: "KPI",
   kassa: "Kassa",
   kassa_income: "Kirim kassa",
@@ -293,8 +271,6 @@ export const VIEW_LABELS: Record<AppView, string> = {
   payroll: "Oylik",
   audit_logs: "Audit jurnali",
   attendance: "Davomat",
-  documents: "Hujjatlar",
-  inventory: "Inventar",
   notifications: "Xabarlar",
   settings: "Sozlamalar",
   admin: "Admin panel",

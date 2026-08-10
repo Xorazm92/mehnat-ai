@@ -3,7 +3,7 @@
 // =====================================================
 // Generator uchun gate: (1) kompaniya umuman yaroqlimi, (2) template shu
 // kompaniyaga tegishlimi (TemplateApplicability qoidalari), (3) kompaniya
-// override bilan o'chirilganmi. Sof funksiyalar — DB-siz unit-testlanadi.
+// Sof funksiyalar — DB-siz unit-testlanadi.
 //
 // Reviewer #15: faqat `isActive` yetarli emas — companyStatus + xizmat
 // boshlanishi (contractDate) ham tekshiriladi. #5: applicability faqat
@@ -24,12 +24,6 @@ export interface ApplicabilityCriterion {
   criteriaValue: string;
 }
 
-export interface OverrideFacts {
-  action: string; // disable | custom_due | reassign
-  customDueDay: number | null;
-  customOffsetDays: number | null;
-  responsibleUserId: string | null;
-}
 
 /** Kompaniya generatsiyaga umuman yaroqlimi (template'dan qat'i nazar). */
 export function isCompanyEligible(c: CompanyFacts, ref: Date): boolean {
@@ -83,7 +77,3 @@ function matchesCriterion(type: string, value: string, c: CompanyFacts): boolean
   }
 }
 
-/** Override majburiyatni butunlay o'chiradimi. */
-export function isDisabledByOverride(o: OverrideFacts | undefined | null): boolean {
-  return o?.action === "disable";
-}

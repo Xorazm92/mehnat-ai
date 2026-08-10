@@ -1,8 +1,5 @@
 import {
-  LayoutDashboard, Building2, Users, FileText, Wallet, Receipt, CreditCard,
-  Calendar, TrendingUp, Settings, Bell, Package, ScrollText, UserCircle,
-  Banknote, HandCoins, CalendarClock, CheckSquare, Scale, ShieldCheck,
-  type LucideIcon,
+  LayoutDashboard, Building2, Users, FileText, Wallet, Receipt, CreditCard, Calendar, TrendingUp, Settings, Bell, ScrollText, UserCircle, Banknote, HandCoins, CalendarClock, ShieldCheck, type LucideIcon,
 } from "lucide-react";
 import type { AppView } from "@/lib/permissions";
 
@@ -34,11 +31,12 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/organizations", view: "organizations", label: "Firmalar",         icon: Building2,       group: "asosiy",  keywords: "korxona kompaniya mijoz tashkilot" },
   { href: "/staff",         view: "staff",         label: "Xodimlar",         icon: Users,           group: "asosiy",  keywords: "hodim kadr jamoa xizmatchi" },
   { href: "/kpi",           view: "kpi",           label: "KPI",              icon: TrendingUp,      group: "asosiy",  keywords: "reyting ball ko'rsatkich" },
-  { href: "/fair-kpi",      view: "fair_kpi",      label: "Adolatli KPI",     icon: Scale,           group: "asosiy",  keywords: "fair kpi adolat" },
-  { href: "/deadlines",     view: "deadlines",     label: "Muddatlar",        icon: CalendarClock,   group: "asosiy",  keywords: "muddat deadline kechikish" },
-  { href: "/tasks",         view: "tasks",         label: "Vazifalar",        icon: CheckSquare,     group: "asosiy",  keywords: "vazifa topshiriq task" },
+  // Muddatlar va Vazifalar BIR ekran: ikkovi ham "bajarilishi kerak bo'lgan ish".
+  // Alohida turganda buxgalter bitta ishni ikki joyda belgilardi. Yo'llar
+  // saqlanadi (/tasks — o'sha ekranning vazifalar yorlig'i), menyuda esa bitta
+  // kirish nuqtasi.
+  { href: "/deadlines",     view: "deadlines",     label: "Ishlar",           icon: CalendarClock,   group: "asosiy",  keywords: "muddat deadline kechikish vazifa topshiriq task majburiyat ish" },
   { href: "/reports",       view: "reports",       label: "Hisobotlar",       icon: FileText,        group: "moliya",  keywords: "hisobot matritsa report" },
-  { href: "/profitability", view: "profitability", label: "Rentabellik",      icon: HandCoins,       group: "moliya",  keywords: "foyda rentabellik marja" },
   { href: "/kassa",         view: "kassa",         label: "Kassa",            icon: Wallet,          group: "moliya",  keywords: "kirim to'lov naqd" },
   { href: "/kassa/kirim",   view: "kassa_income",  label: "Kirim kassa",      icon: Banknote,        group: "moliya",  keywords: "vipiska bank kirim tushum vypiska plastik" },
   { href: "/kassa/chiqim",  view: "kassa_expense", label: "Chiqim kassa",     icon: CreditCard,      group: "moliya",  keywords: "rasxod chiqim tranzit karta xodim kanal" },
@@ -46,8 +44,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/expenses",      view: "expenses",      label: "Xarajatlar",       icon: Receipt,         group: "moliya",  keywords: "chiqim xarajat rasxod" },
   { href: "/payroll",       view: "payroll",       label: "Oylik",            icon: CreditCard,      group: "moliya",  keywords: "maosh zarplata avans" },
   { href: "/attendance",    view: "attendance",    label: "Davomat",          icon: Calendar,        group: "boshqa",  keywords: "kelish ketish tabel" },
-  { href: "/documents",     view: "documents",     label: "Hujjatlar",        icon: FileText,        group: "boshqa",  keywords: "hujjat fayl arxiv" },
-  { href: "/inventory",     view: "inventory",     label: "Inventar",         icon: Package,         group: "boshqa",  keywords: "jihoz inventar texnika" },
   { href: "/notifications", view: "notifications", label: "Xabarlar",         icon: Bell,            group: "boshqa",  keywords: "bildirishnoma xabar" },
   { href: "/cabinet",       view: "cabinet",       label: "Mening kabinetim", icon: UserCircle,      group: "kabinet", keywords: "profil shaxsiy kabinet" },
   { href: "/cabinet/bank",  view: "cabinet_bank",  label: "Bank kabineti",    icon: Banknote,        group: "kabinet", keywords: "bank klient" },

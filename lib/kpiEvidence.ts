@@ -35,7 +35,7 @@ export const TEMPLATE_CODE_TO_RULE_NAME: Record<string, string> = {
 /**
  * Buxgalterning aybi BO'LMAGAN kechikish sabablari. Ikki bosqichli:
  * belgilangan + menejer tasdiqlagan bo'lsa (`delayApprovedById`), obligation
- * KPI dan CHIQARILADI. server/fairKpi.ts dagi ro'yxat bilan bir xil.
+ * KPI dan CHIQARILADI.
  */
 export const EXCUSED_DELAY_REASONS = new Set([
   "client_delay",

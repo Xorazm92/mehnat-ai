@@ -62,7 +62,7 @@ export async function saveReportProof(input: {
   const deepLink = `/reports?company=${input.companyId}&col=${input.colKey}&period=${encodeURIComponent(input.period)}`;
 
   // 1) Dalilni saqlash (yangi topshiriq — holat "pending", eski tekshiruv tozalanadi)
-  await prisma.reportProof.upsert({
+  const proof = await prisma.reportProof.upsert({
     where: {
       companyId_period_colKey: {
         companyId: input.companyId,
@@ -101,12 +101,15 @@ export async function saveReportProof(input: {
     update: { [dbCol]: "topshirildi" },
   });
 
-  // 2b) Majburiyat statusini "sent" ga o'tkazish (Obligation bridge)
+  // 2b) Majburiyat statusini "sent" ga o'tkazish + yuborish urinishini dalil
+  // bilan yozish (Obligation bridge — manba shu yerda yangilanadi)
   await syncProofToObligation({
     companyId: input.companyId,
     period: input.period,
     colKey: input.colKey,
     targetStatus: "sent",
+    proofId: proof.id,
+    actorId: userId,
   });
 
   // 3) Nazoratchilarga xabar (firma nazoratchisi + barcha tekshiruvchi rollar)
@@ -259,12 +262,15 @@ export async function reviewReportProof(input: {
     update: { [dbCol]: cellValue },
   });
 
-  // Majburiyat statusini "accepted" yoki "rejected" ga o'tkazish (Obligation bridge)
+  // Majburiyat statusini "accepted" yoki "rejected" ga o'tkazish + oxirgi
+  // yuborish urinishining natijasini yopish (Obligation bridge)
   await syncProofToObligation({
     companyId: input.companyId,
     period: input.period,
     colKey: input.colKey,
     targetStatus: input.decision === "approved" ? "accepted" : "rejected",
+    proofId: proof.id,
+    actorId: userId,
   });
 
   // Buxgalterga natijani xabar qilish

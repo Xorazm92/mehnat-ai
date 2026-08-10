@@ -243,7 +243,6 @@ export async function getCompanyById(id: string) {
       // `credentials: true` ATAYLAB olib tashlandi: u butun vault qatorini
       // (shifrmatn bilan) klientga yuborardi va hech qayerda ishlatilmasdi.
       // UI ularni gated `getClientCredentials()` orqali oladi.
-      documents: { orderBy: { uploadedAt: "desc" } },
     },
   });
 

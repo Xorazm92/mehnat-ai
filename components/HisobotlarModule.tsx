@@ -91,7 +91,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff, userRole }) => {
   const submitCreate = async () => {
     if (!form.companyId) { toast.error("Firmani tanlang"); return; }
     try {
-      await createFinancialReport({ companyId: form.companyId, type: form.type, period: form.period, deadline: form.deadline || null, assignedTo: form.assignedTo || null });
+      await createFinancialReport({ companyId: form.companyId, type: form.type, period: form.period });
       setCreating(false); setForm({ companyId: "", type: "profit_loss", period: "2026-H1", deadline: "", assignedTo: "" });
       await load();
     } catch (e) { toast.error(errMsg(e)); }

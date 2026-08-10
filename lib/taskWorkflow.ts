@@ -1,9 +1,9 @@
 // =====================================================
-// TASK WORKFLOW — transitions + timing + SLA due (Faza C1)
+// VAZIFA WORKFLOW — o'tishlar va timing
 // =====================================================
-// Sof funksiyalar: qonuniy o'tishlar, o'tishda yoziladigan timing, va SLA
-// muddatlarini (response/resolution) siyosatdan hisoblash. server/tasks.ts
-// shularni qo'llaydi.
+// Sof funksiyalar: qonuniy o'tishlar va o'tishda yoziladigan vaqt belgilari.
+// SLA hisoblagichi olib tashlandi — kechikish yagona joyda, majburiyat
+// muddati bo'yicha yuritiladi (lib/obligationWorkflow.ts).
 import type { TaskStatus } from "@prisma/client";
 
 const TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
@@ -18,7 +18,7 @@ export function canTransitionTask(from: TaskStatus, to: TaskStatus): boolean {
   return TRANSITIONS[from]?.includes(to) ?? false;
 }
 
-/** O'tishda yoziladigan timing maydonlari (firstResponseAt alohida — service qo'shadi). */
+/** O'tishda yoziladigan timing maydonlari. */
 export function taskTimingPatch(to: TaskStatus, now: Date): Record<string, Date> {
   switch (to) {
     case "in_progress":
@@ -30,19 +30,4 @@ export function taskTimingPatch(to: TaskStatus, now: Date): Record<string, Date>
     default:
       return {};
   }
-}
-
-export interface SlaPolicyLite {
-  responseMinutes?: number | null;
-  resolutionMinutes?: number | null;
-}
-
-/** Siyosat + boshlanish vaqtidan SLA muddatlari (wall-clock). businessHoursOnly — TODO. */
-export function computeSlaDue(
-  policy: SlaPolicyLite | null | undefined,
-  from: Date,
-): { responseDueAt: Date | null; resolutionDueAt: Date | null } {
-  if (!policy) return { responseDueAt: null, resolutionDueAt: null };
-  const min = (m?: number | null) => (m != null && m > 0 ? new Date(from.getTime() + m * 60_000) : null);
-  return { responseDueAt: min(policy.responseMinutes), resolutionDueAt: min(policy.resolutionMinutes) };
 }

@@ -3,11 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
-import { companyScopeWhere, companyRelations, assertCompanyPermission } from "@/lib/access";
+import { companyRelations, assertCompanyPermission } from "@/lib/access";
 import { checkCellWrite, CELL_EMPTY } from "@/lib/reportPermissions";
-import { clearCellEvidence } from "@/lib/obligationBridge";
+import { clearCellEvidence, syncCellToObligation } from "@/lib/obligationBridge";
 import { revalidateTag } from "next/cache";
-import { Prisma, type ReportStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
 import type { OperationFieldKey } from "@/types";
@@ -122,11 +122,16 @@ export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
     update: fields as Prisma.MonthlyReportUncheckedUpdateInput,
   });
 
-  // Katak tozalangan bo'lsa, uning izini ham tozalaymiz — biriktirilgan
-  // skrinshot va u ko'targan majburiyat holati aks holda qolib ketardi.
+  // MANBA — majburiyat. Katak yozuvi shu yerda `Obligation` ga o'tadi, aks
+  // holda matritsada "topshirildi" turgan ish `/deadlines` da "kechikdi" bo'lib
+  // qolaverardi (buxgalter bir ishni ikki joyda belgilashga majbur edi).
+  // Tozalash alohida yo'l: u dalilni ham olib tashlaydi.
   for (const [rawKey, value] of Object.entries(rawFields)) {
-    if (!isClearedValue(value)) continue;
-    await clearCellEvidence({ companyId, period, colKey: rawKey });
+    if (isClearedValue(value)) {
+      await clearCellEvidence({ companyId, period, colKey: rawKey, actorId: userId });
+    } else {
+      await syncCellToObligation({ companyId, period, colKey: rawKey, value, actorId: userId });
+    }
   }
 
   revalidateTag("operations", "max");
@@ -156,6 +161,20 @@ export async function clearColumnForPeriod(period: string, colKey: string) {
   // nolga tenglash imkonini berardi.
   if (!dbCol) throw new Error("Noto'g'ri ustun kaliti");
 
+  // Qaysi firmalarning majburiyati ortga qaytishi kerakligini TOZALASHDAN OLDIN
+  // aniqlaymiz: qiymat o'chgandan keyin bu ma'lumot yo'qoladi. Dalilsiz yozilgan
+  // kataklar ham majburiyatni harakatga keltirgani uchun (syncCellToObligation)
+  // faqat `ReportProof` bo'yicha yurish ularni ortda qoldirardi.
+  const withValue = await prisma.monthlyReport.findMany({
+    where: { period, NOT: { [dbCol]: null } } as Prisma.MonthlyReportWhereInput,
+    select: { companyId: true },
+  });
+  const withProof = await prisma.reportProof.findMany({
+    where: { period, colKey },
+    select: { companyId: true },
+    distinct: ["companyId"],
+  });
+
   const res = await prisma.monthlyReport.updateMany({
     where: { period },
     data: { [dbCol]: null } as Prisma.MonthlyReportUncheckedUpdateManyInput,
@@ -164,174 +183,11 @@ export async function clearColumnForPeriod(period: string, colKey: string) {
   // Katak tozalash bilan bir xil qoida: ustun bo'shatilsa, o'sha ustunga
   // biriktirilgan dalillar ham ketadi va majburiyatlar `planned` ga qaytadi.
   // Aks holda bo'sh ustun ustida dalil nuqtalari qolib ketardi.
-  const affected = await prisma.reportProof.findMany({
-    where: { period, colKey },
-    select: { companyId: true },
-    distinct: ["companyId"],
-  });
-  for (const { companyId } of affected) {
-    await clearCellEvidence({ companyId, period, colKey });
+  const affected = new Set([...withValue, ...withProof].map((r) => r.companyId));
+  for (const companyId of affected) {
+    await clearCellEvidence({ companyId, period, colKey, actorId: session.user.id });
   }
 
   revalidateTag("operations", "max");
-  return { success: true, cleared: res.count, proofsRemoved: affected.length };
-}
-
-// =====================================================
-// OPERATIONS (Annual / Quarterly)
-// =====================================================
-
-export async function getOperations(filters?: {
-  companyId?: string;
-  period?: string;
-}) {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-
-  const userId = session.user.id;
-  const role = session.user.role as string;
-
-  const companyFilter = { company: companyScopeWhere({ id: userId, role }) };
-
-  return serialize(
-    await prisma.operation.findMany({
-      where: {
-        ...companyFilter,
-        ...(filters?.companyId ? { companyId: filters.companyId } : {}),
-        ...(filters?.period ? { period: filters.period } : {}),
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            name: true,
-            inn: true,
-            taxRegime: true,
-            accountantId: true,
-            accountant: { select: { id: true, fullName: true } },
-          },
-        },
-      },
-      orderBy: [{ period: "desc" }, { company: { name: "asc" } }],
-    })
-  );
-}
-
-export async function upsertOperation(data: {
-  companyId: string;
-  period: string;
-  profitTaxStatus?: ReportStatus;
-  form1Status?: ReportStatus;
-  form2Status?: ReportStatus;
-  statsStatus?: ReportStatus;
-  comment?: string;
-  deadlineProfitTax?: Date;
-  deadlineStats?: Date;
-}) {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-
-  const userId = session.user.id;
-  const role = session.user.role as string;
-
-  await assertCompanyPermission(prisma, { id: userId, role }, data.companyId, "operation:write");
-
-  const { companyId, period, ...fields } = data;
-
-  const result = await prisma.operation.upsert({
-    where: { companyId_period: { companyId, period } },
-    create: { companyId, period, ...fields },
-    update: fields,
-  });
-  revalidateTag("operations", "max");
-  return serialize(result);
-}
-
-export async function getOperationSummary(period?: string) {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-
-  const userId = session.user.id;
-  const role = session.user.role as string;
-
-  const companyFilter = { company: companyScopeWhere({ id: userId, role }) };
-
-  const periodFilter = period ? { period } : {};
-
-  const [total, accepted, rejected, blocked, inProgress] = await Promise.all([
-    prisma.operation.count({ where: { ...companyFilter, ...periodFilter } }),
-    prisma.operation.count({
-      where: {
-        ...companyFilter,
-        ...periodFilter,
-        profitTaxStatus: "accepted",
-      },
-    }),
-    prisma.operation.count({
-      where: {
-        ...companyFilter,
-        ...periodFilter,
-        profitTaxStatus: "rejected",
-      },
-    }),
-    prisma.operation.count({
-      where: {
-        ...companyFilter,
-        ...periodFilter,
-        profitTaxStatus: "blocked",
-      },
-    }),
-    prisma.operation.count({
-      where: {
-        ...companyFilter,
-        ...periodFilter,
-        profitTaxStatus: "in_progress",
-      },
-    }),
-  ]);
-
-  return {
-    total,
-    accepted,
-    rejected,
-    blocked,
-    inProgress,
-    pending: total - accepted - rejected - blocked - inProgress,
-  };
-}
-
-export async function getDeadlines() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-
-  const userId = session.user.id;
-  const role = session.user.role as string;
-
-  const today = new Date();
-  const soon = new Date();
-  soon.setDate(today.getDate() + 7);
-
-  const companyFilter = { company: companyScopeWhere({ id: userId, role }) };
-
-  return serialize(
-    await prisma.operation.findMany({
-      where: {
-        ...companyFilter,
-        OR: [
-          {
-            deadlineProfitTax: { gte: today, lte: soon },
-            profitTaxStatus: { notIn: ["accepted", "not_required"] },
-          },
-          {
-            deadlineStats: { gte: today, lte: soon },
-            statsStatus: { notIn: ["accepted", "not_required"] },
-          },
-        ],
-      },
-      include: {
-        company: { select: { id: true, name: true, accountantId: true } },
-      },
-      orderBy: { deadlineProfitTax: "asc" },
-    })
-  );
+  return { success: true, cleared: res.count, proofsRemoved: withProof.length };
 }

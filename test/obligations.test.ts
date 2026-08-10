@@ -90,7 +90,6 @@ afterAll(async () => {
   // 17 MB ga shishirgan). Shuning uchun test DAVRLARINI butunlay tozalaymiz.
   await prisma.obligation.deleteMany({ where: { periodKey: { startsWith: "2097-" } } });
   await prisma.obligation.deleteMany({ where: { templateId: { in: [ids.t1, ids.t2] } } });
-  await prisma.companyObligationOverride.deleteMany({ where: { companyId: ids.company } });
   await prisma.deadlineTemplate.deleteMany({ where: { id: { in: [ids.t1, ids.t2] } } });
   await prisma.company.deleteMany({ where: { id: ids.company } });
   await prisma.user.deleteMany({ where: { id: ids.user } });
@@ -128,16 +127,4 @@ describe("generateObligations", () => {
     expect(count).toBe(1); // dublikat yo'q
   });
 
-  it("disable override suppresses generation for a fresh period", async () => {
-    await prisma.companyObligationOverride.create({
-      data: { companyId: ids.company, templateId: ids.t1, action: "disable", reason: "test disable" },
-    });
-    const nextRef = new Date(Date.UTC(2097, 7, 15)); // 2097-08 → yangi davr
-    await generateObligations(prisma, { ref: nextRef, createdBy: ids.user });
-
-    const obl = await prisma.obligation.findFirst({
-      where: { companyId: ids.company, templateId: ids.t1, periodKey: "2097-M08" },
-    });
-    expect(obl).toBeNull(); // disable bilan yaratilmadi
-  });
 });

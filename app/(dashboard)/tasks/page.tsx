@@ -1,37 +1,29 @@
 import { auth } from "@/lib/auth";
-import { getTasks, getTaskFormData } from "@/server/tasks";
-import TasksClient from "./TasksClient";
+import { loadWorkInbox } from "../deadlines/loadWorkInbox";
+import WorkInboxClient from "../deadlines/WorkInboxClient";
 
 export const metadata = { title: "Vazifalar" };
 
+/**
+ * `/tasks` endi ALOHIDA modul emas — birlashgan "Ishlar" ekranining vazifalar
+ * yorlig'i. Yo'l saqlanadi (eski havolalar, bildirishnomalar va RBAC `tasks`
+ * view'i ishlashda davom etadi), lekin ma'lumot va amallar bitta manbadan
+ * keladi: majburiyat + unga biriktirilgan vazifalar.
+ */
 export default async function TasksPage() {
   const session = await auth();
-  const userId = session?.user?.id || "";
   const role = (session?.user?.role as string) || "";
+  const userId = session?.user?.id || "";
 
-  const [tasks, formData] = await Promise.all([getTasks(), getTaskFormData()]);
-  const rows = tasks.map((t) => ({
-    id: t.id,
-    title: t.title,
-    companyId: t.companyId,
-    companyName: t.company?.name ?? null,
-    taskType: t.taskType,
-    priority: t.priority as string,
-    status: t.status as string,
-    assigneeUserId: t.assigneeUserId,
-    dueAt: t.dueAt ? t.dueAt.toISOString() : null,
-    responseBreached: t.responseBreached,
-    resolutionBreached: t.resolutionBreached,
-  }));
+  const data = await loadWorkInbox();
 
   return (
     <div className="h-full">
-      <TasksClient
-        rows={JSON.parse(JSON.stringify(rows))}
-        users={JSON.parse(JSON.stringify(formData.users))}
-        companies={JSON.parse(JSON.stringify(formData.companies))}
-        userId={userId}
+      <WorkInboxClient
+        {...JSON.parse(JSON.stringify(data))}
         role={role}
+        userId={userId}
+        initialTab="tasks"
       />
     </div>
   );

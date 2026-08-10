@@ -67,6 +67,10 @@ export async function getObligations(filter: ObligationFilter = {}) {
       delayApprovedById: true,
       company: { select: { id: true, name: true } },
       template: { select: { id: true, name: true, obligationType: true } },
+      // Birlashgan "Ishlar" ro'yxati majburiyat ustida nechta vazifa ochilganini
+      // ko'rsatadi — shu bog'lam bo'lmasa foydalanuvchi ikkalasini alohida ish
+      // deb o'qiydi.
+      _count: { select: { tasks: true } },
     },
     orderBy: [{ dueAt: "asc" }],
     take: OBLIGATION_PAGE_SIZE,

@@ -3,7 +3,6 @@ import { logJobFailure, logServerError } from "../../lib/logger";
 import { prisma } from "../../lib/prisma";
 import { runGenerationLocked } from "../../lib/obligationRun";
 import { sweepDeadlines } from "../../lib/obligationSweep";
-import { sweepTaskSla } from "../../lib/taskSla";
 import { createRedisConnection } from "./connection";
 import { QUEUE, callbackSecret, hasTelegramToken } from "../config";
 import { sendMessage } from "../telegram/bot";
@@ -37,10 +36,8 @@ export function startObligationWorker(): Worker<ObligationJob> {
         ? makeEscalationSender(callbackSecret())
         : undefined;
       const res = await sweepDeadlines(prisma, { now: new Date(), notifyTelegram, sendEscalation });
-      // Bir jadvalda task SLA breach'larini ham tekshiramiz.
-      const sla = await sweepTaskSla(prisma, { now: new Date() });
-      console.log(`[obligation.worker] sweep:`, res, "| task-sla:", sla);
-      return { ...res, taskSla: sla };
+      console.log(`[obligation.worker] sweep:`, res);
+      return res;
     },
     { connection: createRedisConnection(), concurrency: 1 },
   );

@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   isCompanyEligible,
   templateApplies,
-  isDisabledByOverride,
   type CompanyFacts,
 } from "@/lib/applicability";
 
@@ -66,16 +65,5 @@ describe("templateApplies", () => {
   });
   it("noma'lum kriteriya → mos emas", () => {
     expect(templateApplies([{ criteriaType: "unknown_x", criteriaValue: "y" }], base)).toBe(false);
-  });
-});
-
-describe("isDisabledByOverride", () => {
-  it("action=disable → true", () => {
-    expect(isDisabledByOverride({ action: "disable", customDueDay: null, customOffsetDays: null, responsibleUserId: null })).toBe(true);
-  });
-  it("reassign/custom_due/undefined → false", () => {
-    expect(isDisabledByOverride({ action: "reassign", customDueDay: null, customOffsetDays: null, responsibleUserId: "u2" })).toBe(false);
-    expect(isDisabledByOverride(undefined)).toBe(false);
-    expect(isDisabledByOverride(null)).toBe(false);
   });
 });

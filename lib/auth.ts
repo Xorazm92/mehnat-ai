@@ -81,31 +81,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
-        // 2) Staff topilmadi → client portal identity (alohida jadval).
-        const client = await prisma.clientUser.findUnique({ where: { email } });
-        if (client) {
-          if (!client.isActive) {
-            await recordLoginFailure(rules);
-            logLoginFailure({ reason: "inactive_account", login, ip, kind: "client" });
-            return null;
-          }
-          if (await bcrypt.compare(password, client.passwordHash)) {
-            await resetLoginRateLimit(rules);
-            logLoginSuccess({ userId: client.id, kind: "client", ip });
-            return {
-              id: client.id,
-              email: client.email,
-              name: client.fullName,
-              role: "client",
-              kind: "client",
-              companyId: client.companyId,
-            };
-          }
-          await recordLoginFailure(rules);
-          logLoginFailure({ reason: "bad_password", login, ip, kind: "client" });
-          return null;
-        }
-
         await recordLoginFailure(rules);
         logLoginFailure({ reason: "unknown_account", login, ip, kind: "unknown" });
         return null;

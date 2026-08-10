@@ -204,45 +204,42 @@ export const getCachedCompanyStats = cache(
 );
 
 // ─────────────────────────────────────────────
-// OPERATION SUMMARY
+// MAJBURIYAT XULOSASI
 // ─────────────────────────────────────────────
+// Ilgari bu `Operation` jadvalini sanardi — u yillik/choraklik hisobotlarning
+// alohida nusxasi edi va jadval bazada umuman yaratilmagan. Endi manba bitta:
+// `Obligation`. Shu bilan taxtadagi progress bilan `/deadlines` dagi holat
+// bir xil raqamdan kelib chiqadi.
 
-const _getCachedOperationSummary = unstable_cache(
+const _getCachedObligationSummary = unstable_cache(
   async (userId: string, role: string) => {
-    const companyFilter = { company: scopeFor(userId, role) };
-    const [total, accepted, rejected, blocked, inProgress] = await Promise.all([
-      prisma.operation.count({ where: { ...companyFilter } }),
-      prisma.operation.count({
-        where: { ...companyFilter, profitTaxStatus: "accepted" },
-      }),
-      prisma.operation.count({
-        where: { ...companyFilter, profitTaxStatus: "rejected" },
-      }),
-      prisma.operation.count({
-        where: { ...companyFilter, profitTaxStatus: "blocked" },
-      }),
-      prisma.operation.count({
-        where: { ...companyFilter, profitTaxStatus: "in_progress" },
+    const scope = { company: scopeFor(userId, role) };
+    const now = new Date();
+    const [total, accepted, rejected, inProgress, overdue] = await Promise.all([
+      prisma.obligation.count({ where: scope }),
+      prisma.obligation.count({ where: { ...scope, status: "accepted" } }),
+      prisma.obligation.count({ where: { ...scope, status: "rejected" } }),
+      prisma.obligation.count({ where: { ...scope, status: { in: ["in_progress", "ready", "sent"] } } }),
+      prisma.obligation.count({
+        where: { ...scope, dueAt: { lt: now }, status: { in: ["planned", "in_progress", "ready", "sent", "rejected"] } },
       }),
     ]);
     return {
       total,
       accepted,
       rejected,
-      blocked,
       inProgress,
-      pending: total - accepted - rejected - blocked - inProgress,
+      overdue,
+      pending: total - accepted - rejected - inProgress,
     };
   },
-  ["operation-summary-scoped"],
-  { tags: ["operations", "companies"], revalidate: 300 }
+  ["obligation-summary"],
+  { revalidate: 60, tags: ["obligations"] }
 );
 
-/** Operatsiya summarini cache'dan olish */
-export const getCachedOperationSummary = cache(
-  async (userId: string, role: string) => _getCachedOperationSummary(userId, role)
+export const getCachedObligationSummary = cache(
+  async (userId: string, role: string) => _getCachedObligationSummary(userId, role)
 );
-
 // ─────────────────────────────────────────────
 // UNREAD COUNT
 // ─────────────────────────────────────────────

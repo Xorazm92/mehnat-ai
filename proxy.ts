@@ -19,8 +19,6 @@ const PROTECTED_ROUTES = [
   "/reports",
   "/deadlines",
   "/tasks",
-  "/profitability",
-  "/fair-kpi",
   "/kpi",
   "/payroll",
   "/staff",
@@ -29,8 +27,6 @@ const PROTECTED_ROUTES = [
   "/expenses",
   "/kassa",
   "/attendance",
-  "/documents",
-  "/inventory",
   "/notifications",
   "/settings",
 ];
@@ -44,8 +40,6 @@ function pathToView(path: string): AppView | null {
   if (path.startsWith("/reports")) return "reports";
   if (path.startsWith("/deadlines")) return "deadlines";
   if (path.startsWith("/tasks")) return "tasks";
-  if (path.startsWith("/profitability")) return "profitability";
-  if (path.startsWith("/fair-kpi")) return "fair_kpi";
   if (path.startsWith("/kpi")) return "kpi";
   // Kirim kassasi ALOHIDA view: bank-klient faqat shuni ko'radi, chiqimni emas.
   // /kassa dan OLDIN tekshiriladi — prefiks mos kelib qolmasin.
@@ -56,8 +50,6 @@ function pathToView(path: string): AppView | null {
   if (path.startsWith("/expenses")) return "expenses";
   if (path.startsWith("/payroll")) return "payroll";
   if (path.startsWith("/attendance")) return "attendance";
-  if (path.startsWith("/documents")) return "documents";
-  if (path.startsWith("/inventory")) return "inventory";
   if (path.startsWith("/notifications")) return "notifications";
   if (path.startsWith("/settings")) return "settings";
   if (path.startsWith("/cabinet/bank")) return "cabinet_bank";
@@ -108,14 +100,12 @@ async function isAllowed(path: string, role: string): Promise<boolean> {
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
-  const isPortal = path.startsWith("/portal");
   // `/telegram-app` — Mini App handshake sahifasi: u ATAYIN ochiq, chunki
   // sessiya aynan o'sha yerda `initData` orqali yaratiladi. Uning ostidagi
   // ekranlar esa oddiy himoyalangan sahifalar.
   const isTelegramApp = path.startsWith("/telegram-app");
   const isTelegramHandshake = path === "/telegram-app";
   const isProtected =
-    isPortal ||
     (isTelegramApp && !isTelegramHandshake) ||
     PROTECTED_ROUTES.some((r) => path.startsWith(r));
 
@@ -128,8 +118,6 @@ export async function proxy(req: NextRequest) {
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
     secureCookie: USE_SECURE_COOKIES,
   });
-  const isClient = token?.kind === "client";
-
   // Login bo'lmagan foydalanuvchi himoyalangan sahifaga kirmoqchi
   if (!token && isProtected) {
     // Telegram ichida /login sahifasini ko'rsatish ma'nosiz — u yerda email
@@ -147,21 +135,7 @@ export async function proxy(req: NextRequest) {
 
   // Login bo'lgan → login/root sahifasidan mos boshlang'ich sahifaga
   if (token && (path === "/login" || path === "/" || path === "")) {
-    const home = isClient ? "/portal" : getHomeRoute(token.role as string);
-    return NextResponse.redirect(new URL(home, req.url));
-  }
-
-  // Portal izolyatsiyasi: FAQAT client kira oladi; staff → o'z hududiga.
-  if (isPortal) {
-    if (token && !isClient) {
-      return NextResponse.redirect(new URL(getHomeRoute(token.role as string), req.url));
-    }
-    return NextResponse.next();
-  }
-
-  // Staff hududi: client kira olmaydi → portalga qaytariladi.
-  if (token && isClient && isProtected) {
-    return NextResponse.redirect(new URL("/portal", req.url));
+    return NextResponse.redirect(new URL(getHomeRoute(token.role as string), req.url));
   }
 
   // RBAC: ruxsatsiz sahifadan himoya (staff)

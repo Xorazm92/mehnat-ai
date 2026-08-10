@@ -1,5 +1,14 @@
 # Fair KPI ranks, it does not pay
 
+> **Superseded 2026-08-10 — Fair KPI was removed.** The decision below held that a ranking layer
+> could earn its place alongside the reglament by never paying anyone. In practice it never earned
+> anything: `FairKpiScore` finished with zero rows, no firm ever had its `complexity` set away from
+> the default, and shadow mode meant nothing it computed reached a decision. What it did produce was
+> a second KPI screen for staff to interpret. The model, the page, `lib/fairKpi.ts` and
+> `server/fairKpi.ts` are gone; `KpiRule`/`MonthlyPerformance` and `KpiEvent` are untouched and
+> remain the KPI. The reasoning below stands as the record of why it was built and why it never
+> paid — read it before proposing a composite score again.
+
 Three KPI mechanisms coexist: `KpiRule`/`MonthlyPerformance` (the reglament, wired to payroll),
 `FairKpiScore` (a 0–100 weighted composite, built in "shadow mode"), and `KpiEvent` (the bot's signal
 ledger). `ASRO_CPO_AUDIT.md` reads this as sprawl and recommends retiring the first and taking Fair

@@ -1,7 +1,7 @@
 "use server";
 
 // =====================================================
-// TASK server actions (Faza C1 / work management + SLA)
+// TASK server actions — majburiyat ustidagi ad-hoc ish
 // =====================================================
 // Scoped: senior hammani; boshqalar o'ziga tayinlangan / yaratgan / o'z
 // firmalari vazifalarini ko'radi. Har mutatsiya event + audit yozadi.
@@ -9,8 +9,9 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole, isSeniorRole } from "@/lib/permissions";
 import { recordAuditLog } from "@/lib/auditTrail";
-import { companyScopeWhere, type Actor } from "@/lib/access";
-import { canTransitionTask, taskTimingPatch, computeSlaDue } from "@/lib/taskWorkflow";
+import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/access";
+import { canTransitionTask, taskTimingPatch } from "@/lib/taskWorkflow";
+import { syncTaskDoneToObligation } from "@/lib/obligationBridge";
 import { revalidateTag } from "next/cache";
 import type { Prisma, TaskStatus, TaskPriority } from "@prisma/client";
 
@@ -21,10 +22,10 @@ async function requireActor(): Promise<Actor> {
 }
 
 /** Aktor shu vazifada amal bajara oladimi (senior / assignee / creator / firma-scope). */
-async function assertCanAct(actor: Actor, taskId: string): Promise<{ companyId: string | null; status: TaskStatus; assigneeUserId: string | null; firstResponseAt: Date | null }> {
+async function assertCanAct(actor: Actor, taskId: string): Promise<{ companyId: string | null; status: TaskStatus; assigneeUserId: string | null; obligationId: string | null }> {
   const t = await prisma.task.findUnique({
     where: { id: taskId },
-    select: { companyId: true, status: true, assigneeUserId: true, createdBy: true, firstResponseAt: true },
+    select: { companyId: true, status: true, assigneeUserId: true, createdBy: true, obligationId: true },
   });
   if (!t) throw new Error("Vazifa topilmadi");
   if (isAdminRole(actor.role) || t.assigneeUserId === actor.id || t.createdBy === actor.id) return t;
@@ -49,7 +50,6 @@ export async function getTasks(filter: TaskFilter = {}) {
     ? {}
     : { OR: [{ assigneeUserId: actor.id }, { createdBy: actor.id }, { company: companyScopeWhere(actor) }] };
 
-  const now = Date.now();
   const rows = await prisma.task.findMany({
     where: {
       ...scope,
@@ -57,14 +57,17 @@ export async function getTasks(filter: TaskFilter = {}) {
       ...(filter.mine ? { assigneeUserId: actor.id } : {}),
       ...(filter.companyId ? { companyId: filter.companyId } : {}),
     },
-    include: { company: { select: { id: true, name: true } }, slaPolicy: { select: { name: true } } },
+    include: {
+      company: { select: { id: true, name: true } },
+      // Bog'langan majburiyat — "Ishlar" ro'yxatida vazifa qaysi muddat ustida
+      // ochilganini ko'rsatish uchun.
+      obligation: {
+        select: { id: true, status: true, periodKey: true, dueAt: true, template: { select: { name: true } } },
+      },
+    },
     orderBy: [{ status: "asc" }, { dueAt: "asc" }],
   });
-  return rows.map((t) => ({
-    ...t,
-    responseBreached: !!t.responseDueAt && !t.firstResponseAt && t.responseDueAt.getTime() < now && ["open", "in_progress", "blocked"].includes(t.status),
-    resolutionBreached: !!t.resolutionDueAt && t.resolutionDueAt.getTime() < now && ["open", "in_progress", "blocked"].includes(t.status),
-  }));
+  return rows;
 }
 
 export interface CreateTaskInput {
@@ -75,7 +78,8 @@ export interface CreateTaskInput {
   priority?: TaskPriority;
   assigneeUserId?: string;
   dueAt?: string;
-  slaPolicyId?: string;
+  /** Majburiyat ustidagi qadam bo'lsa — uning id'si. */
+  obligationId?: string;
 }
 
 export async function createTask(input: CreateTaskInput) {
@@ -85,38 +89,35 @@ export async function createTask(input: CreateTaskInput) {
   }
   if (!input.title?.trim()) throw new Error("Sarlavha majburiy");
 
-  // SLA siyosati — berilgan yoki taskType bo'yicha avto-moslash (aniq > default).
-  let policyId = input.slaPolicyId ?? null;
-  let policy: { responseMinutes: number | null; resolutionMinutes: number | null } | null = null;
-  if (policyId) {
-    policy = await prisma.slaPolicy.findUnique({ where: { id: policyId }, select: { responseMinutes: true, resolutionMinutes: true } });
-  } else {
-    const matched = await prisma.slaPolicy.findFirst({
-      where: { active: true, OR: [{ taskType: input.taskType ?? null }, { taskType: null }] },
-      orderBy: { taskType: "desc" }, // aniq taskType null'dan oldin
-      select: { id: true, responseMinutes: true, resolutionMinutes: true },
+  // Majburiyatga biriktirilsa — firmasi va muddati MANBADAN olinadi. Aks holda
+  // vazifa "15-avgust", majburiyat "10-avgust" deb turib, bitta ish ikki xil
+  // muddat bilan hisoblanardi.
+  let obligationId: string | null = null;
+  let inheritedCompanyId: string | null = null;
+  let inheritedDueAt: Date | null = null;
+  if (input.obligationId) {
+    const o = await prisma.obligation.findUnique({
+      where: { id: input.obligationId },
+      select: { id: true, companyId: true, dueAt: true },
     });
-    if (matched) {
-      policyId = matched.id;
-      policy = { responseMinutes: matched.responseMinutes, resolutionMinutes: matched.resolutionMinutes };
-    }
+    if (!o) throw new Error("Majburiyat topilmadi");
+    await assertCompanyPermission(prisma, actor, o.companyId, "task:create");
+    obligationId = o.id;
+    inheritedCompanyId = o.companyId;
+    inheritedDueAt = o.dueAt;
   }
-  const now = new Date();
-  const { responseDueAt, resolutionDueAt } = computeSlaDue(policy, now);
 
   const task = await prisma.task.create({
     data: {
-      companyId: input.companyId ?? null,
+      companyId: inheritedCompanyId ?? input.companyId ?? null,
+      obligationId,
       title: input.title.trim(),
       description: input.description?.trim() || null,
       taskType: input.taskType?.trim() || null,
       priority: input.priority ?? "normal",
       assigneeUserId: input.assigneeUserId ?? null,
       createdBy: actor.id,
-      dueAt: input.dueAt ? new Date(input.dueAt) : null,
-      slaPolicyId: policyId,
-      responseDueAt,
-      resolutionDueAt,
+      dueAt: input.dueAt ? new Date(input.dueAt) : inheritedDueAt,
     },
     select: { id: true },
   });
@@ -132,13 +133,19 @@ export async function updateTaskStatus(id: string, toStatus: TaskStatus, note?: 
 
   const now = new Date();
   const patch: Prisma.TaskUpdateInput = { status: toStatus, ...taskTimingPatch(toStatus, now) };
-  // Birinchi javob — open'dan chiqishda (agar hali yo'q bo'lsa).
-  if (t.firstResponseAt == null && toStatus === "in_progress") patch.firstResponseAt = now;
 
   await prisma.$transaction([
     prisma.task.update({ where: { id }, data: patch }),
     prisma.taskEvent.create({ data: { taskId: id, type: "status", fromStatus: t.status, toStatus, byUserId: actor.id, note: note ?? null } }),
   ]);
+  // Vazifa majburiyat ustidagi qadam bo'lsa, yopilishi MANBAGA ham tushadi:
+  // ilgari xodim vazifani `done` qilib, majburiyatni "kechikkan" holda
+  // qoldirardi va bir ishni ikkinchi joyda qaytadan belgilashi kerak edi.
+  if (toStatus === "done" && t.obligationId) {
+    await syncTaskDoneToObligation(t.obligationId, actor.id);
+    revalidateTag("obligations", "max");
+  }
+
   await recordAuditLog({ userId: actor.id, action: "update", tableName: "Task", recordId: id, oldData: { status: t.status }, newData: { status: toStatus } });
   revalidateTag("tasks", "max");
   return { ok: true };
@@ -147,9 +154,7 @@ export async function updateTaskStatus(id: string, toStatus: TaskStatus, note?: 
 export async function assignTask(id: string, toUserId: string | null) {
   const actor = await requireActor();
   const t = await assertCanAct(actor, id);
-  const now = new Date();
   const patch: Prisma.TaskUpdateInput = { assigneeUserId: toUserId };
-  if (t.firstResponseAt == null && toUserId) patch.firstResponseAt = now;
 
   await prisma.$transaction([
     prisma.task.update({ where: { id }, data: patch }),

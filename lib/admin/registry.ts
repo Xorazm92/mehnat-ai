@@ -63,7 +63,6 @@ export const ADMIN_MODULES: AdminModule[] = [
   { id: "settings", labelUz: "Tizim sozlamalari", icon: Settings, href: "/admin/settings", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Global konfiguratsiya va modullar" },
   { id: "audit", labelUz: "Audit jurnali", icon: ScrollText, href: "/admin/audit", group: "tizim", status: "ready", requiredCapability: "view_audit_logs", descUz: "Tizimdagi o'zgarishlar tarixi" },
   { id: "operation_matrix", labelUz: "Amallar matritsasi", icon: FileText, href: "/admin/operation-matrix", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Hisobot ustunlarini yoqish/o'chirish, tartiblash, nomlash" },
-  { id: "client_portal", labelUz: "Mijoz kabineti", icon: UserPlus, href: "/admin/client-users", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Mijoz hisoblari (portal login) va murojaatlar" },
   { id: "deadline_templates", labelUz: "Muddat shablonlari", icon: CalendarClock, href: "/admin/deadline-templates", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Soliq muddat shablonlari — versiyalash, lifecycle, applicability" },
   { id: "business_calendar", labelUz: "Biznes kalendar", icon: CalendarDays, href: "/admin/business-calendar", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Ish/dam olish/bayram kunlari — muddat surish uchun" },
 
@@ -72,16 +71,13 @@ export const ADMIN_MODULES: AdminModule[] = [
   // Oy yopilishi — istisno: bu buxgalteriya BOSHQARUVI (davr qulfi, snapshot),
   // kunlik moliya sahifasi emas.
   { id: "month_closing", labelUz: "Oy yopilishi", icon: CalendarCheck2, href: "/admin/month-closing", group: "moliya", status: "ready", requiredCapability: "manage_system", descUz: "Month-end closing: checklist, snapshot, davr qulfi" },
-  { id: "cost_rates", labelUz: "Xodim tannarxi", icon: Coins, href: "/admin/cost-rates", group: "moliya", status: "ready", requiredCapability: "manage_system", descUz: "Xodim soatlik qiymati (effective-dated) — rentabellik uchun" },
 
   // --- Integratsiyalar & kelajakdagi modullar (placeholder, drop-in) ---
   { id: "eimzo", labelUz: "E-imzo", icon: KeyRound, href: "/admin/m/eimzo", group: "integratsiya", status: "soon", featureFlag: "eimzo", descUz: "Elektron imzo integratsiyasi" },
-  { id: "integration_1c", labelUz: "1C integratsiya", icon: Boxes, href: "/admin/integration-1c", group: "integratsiya", status: "ready", requiredCapability: "manage_system", descUz: "Agent ulanishlari, firma mapping, sync holati (DLQ)" },
   { id: "integration_didox", labelUz: "Didox", icon: FileSignature, href: "/admin/m/integration_didox", group: "integratsiya", status: "soon", featureFlag: "integration_didox", descUz: "Didox EHF integratsiyasi" },
   { id: "integration_soliq", labelUz: "Soliq.uz", icon: Landmark, href: "/admin/m/integration_soliq", group: "integratsiya", status: "soon", featureFlag: "integration_soliq", descUz: "Soliq.uz integratsiyasi" },
   { id: "integration_mysoliq", labelUz: "My.soliq", icon: Landmark, href: "/admin/m/integration_mysoliq", group: "integratsiya", status: "soon", featureFlag: "integration_mysoliq", descUz: "My.soliq integratsiyasi" },
   { id: "invoices", labelUz: "Hisob-fakturalar", icon: Receipt, href: "/admin/m/invoices", group: "integratsiya", status: "soon", featureFlag: "invoices", descUz: "Hisob-faktura moduli" },
-  { id: "sla_policies", labelUz: "SLA siyosatlari", icon: CheckSquare, href: "/admin/sla-policies", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Vazifa SLA siyosatlari (javob/yechim muddati)" },
   { id: "contracts", labelUz: "Shartnomalar", icon: FileSignature, href: "/admin/m/contracts", group: "integratsiya", status: "soon", descUz: "Shartnoma shabloni va imzolash" },
 ];
 

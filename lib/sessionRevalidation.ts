@@ -66,25 +66,14 @@ export async function revalidateSessionToken<T extends RevalidatableToken>(
   if (now - checkedAt <= SESSION_REVALIDATE_MS) return token;
 
   try {
-    if (token.kind === "client") {
-      // Client identity — ClientUser jadvaliga qarab qayta tekshiramiz.
-      const c = await prisma.clientUser.findUnique({
-        where: { id },
-        select: { isActive: true, companyId: true },
-      });
-      if (!c || !c.isActive) return null;
-      token.companyId = c.companyId;
-      token.checkedAt = now;
-    } else {
-      const dbUser = await prisma.user.findUnique({
-        where: { id },
-        select: { isActive: true, role: true, avatarColor: true },
-      });
-      if (!dbUser || !dbUser.isActive) return null;
-      token.role = dbUser.role;
-      token.avatarColor = dbUser.avatarColor;
-      token.checkedAt = now;
-    }
+    const dbUser = await prisma.user.findUnique({
+      where: { id },
+      select: { isActive: true, role: true, avatarColor: true },
+    });
+    if (!dbUser || !dbUser.isActive) return null;
+    token.role = dbUser.role;
+    token.avatarColor = dbUser.avatarColor;
+    token.checkedAt = now;
   } catch (e) {
     logServerError("auth.jwt.revalidate", e, { note: "sessiya saqlanadi" });
   }

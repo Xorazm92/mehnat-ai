@@ -11,16 +11,12 @@ import { Prisma } from "@prisma/client";
 import {
   periodWindowFor,
   computeDueAt,
-  rawDueDate,
-  adjustForWorkday,
   makeWorkdayPredicate,
 } from "@/lib/deadlines";
 import {
   isCompanyEligible,
   templateApplies,
-  isDisabledByOverride,
   type CompanyFacts,
-  type OverrideFacts,
 } from "@/lib/applicability";
 
 type Db = Prisma.TransactionClient;
@@ -41,7 +37,6 @@ export interface GenerateResult {
   skippedNotApplicable: number;
 }
 
-const ovKey = (companyId: string, templateId: string) => `${companyId}::${templateId}`;
 
 function isUniqueViolation(e: unknown): boolean {
   return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
@@ -98,13 +93,7 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
     return isCompanyEligible(f, ref);
   });
 
-  // 3) Override'lar (company+template kaliti bo'yicha).
-  const overrides = await db.companyObligationOverride.findMany();
-  const ovMap = new Map<string, OverrideFacts>(
-    overrides.map((o) => [ovKey(o.companyId, o.templateId), o as unknown as OverrideFacts]),
-  );
-
-  // 4) Biznes kalendar (kichik jadval → to'liq yuklaymiz).
+  // 3) Biznes kalendar (kichik jadval → to'liq yuklaymiz).
   const calDays = await db.businessCalendarDay.findMany();
   const isWorkday = makeWorkdayPredicate(
     calDays.map((d) => ({ date: d.date, isWorkday: d.isWorkday, isHoliday: d.isHoliday })),
@@ -127,28 +116,16 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
         res.skippedNotApplicable++;
         continue;
       }
-      const ov = ovMap.get(ovKey(c.id, t.id));
-      if (isDisabledByOverride(ov)) {
-        res.skippedNotApplicable++;
-        continue;
-      }
+      // Muddat — shablon qoidasi + biznes kalendar. Firma-darajali istisno
+      // (`CompanyObligationOverride`) olib tashlandi: u UI'ga hech qachon
+      // ulanmagan, bitta ham yozuvi bo'lmagan va "qoida qayerda?" degan
+      // savolga ikkinchi javob berardi. Istisno kerak bo'lsa — shablonning
+      // applicability mezoni orqali, ya'ni ko'rinadigan qoida bilan.
+      const dueAt = computeDueAt(t, window, isWorkday);
 
-      // Muddat — custom_due override bo'lsa qoidani almashtiradi.
-      let dueAt = computeDueAt(t, window, isWorkday);
-      if (ov?.action === "custom_due" && (ov.customDueDay != null || ov.customOffsetDays != null)) {
-        const customRule = {
-          anchorType: ov.customDueDay != null ? ("fixed_day_of_month" as const) : ("period_end_offset" as const),
-          dueDay: ov.customDueDay,
-          dueMonth: null,
-          offsetDays: ov.customOffsetDays,
-        };
-        dueAt = adjustForWorkday(rawDueDate(customRule, window), t.adjustmentPolicy, isWorkday);
-      }
-
-      // Mas'ul snapshot — reassign override > kompaniya buxgalteri.
+      // Mas'ul snapshot — firma buxgalteri.
       const snap = roleSnap.get(c.id)!;
-      const responsibleUserId =
-        ov?.action === "reassign" && ov.responsibleUserId ? ov.responsibleUserId : snap.accountantId;
+      const responsibleUserId = snap.accountantId;
 
       const existing = await db.obligation.findUnique({
         where: {

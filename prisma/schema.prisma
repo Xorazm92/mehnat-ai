@@ -28,18 +28,6 @@ enum TaxRegime {
   income
 }
 
-enum ReportStatus {
-  accepted
-  not_submitted
-  not_required
-  in_progress
-  blocked
-  error
-  unknown
-  rejected
-  submitted
-}
-
 enum StatsType {
   kb1
   micro
@@ -103,7 +91,6 @@ model User {
   kassaEntries        KassaEntry[]
   expenses            Expense[]
   attendances         Attendance[]         @relation("UserAttendance")
-  assignedInventory   InventoryItem[]      @relation("UserAssignedInventory")
   payments            Payment[]
   payouts             Payout[]             @relation("EmployeePayouts")
   bankClientCompanies Company[]            @relation("BankClientCompanies")
@@ -159,7 +146,6 @@ model Company {
   bankClient     User?             @relation("BankClientCompanies", fields: [bankClientId], references: [id], onDelete: SetNull)
   bankClientName String?
   statsType      StatsType?
-  complexity     CompanyComplexity @default(standard)
   kpiEnabled     Boolean           @default(false)
   serverInfo     String?
   serverName     String?
@@ -214,22 +200,14 @@ model Company {
   // Relations
   monthlyReports      MonthlyReport[]
   financialReports    FinancialReport[]
-  operations          Operation[]
   contractAssignments ContractAssignment[]
-  documents           Document[]
   credentials         ClientCredential[]
   payments            Payment[]
   reportProofs        ReportProof[]
   telegramGroups      TelegramGroup[]
   paymentReminders    PaymentReminder[]
   obligations         Obligation[]
-  obligationOverrides CompanyObligationOverride[]
-  oneCMappings        OneCCompanyMapping[]
   tasks               Task[]
-  timeEntries         TimeEntry[]
-  invoices            Invoice[]
-  clientUsers         ClientUser[]
-  clientRequests      ClientRequest[]
   debtSnapshots       DebtSnapshot[]
   contracts           Contract[]      @relation("ClientContracts")
   ownFirmContracts    Contract[]      @relation("OwnFirmContracts")
@@ -389,9 +367,14 @@ model FinancialReport {
   company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   type           String // 'profit_loss' | 'balance' | 'qqs' | 'cashflow'
   period         String // "2026-H1" | "2026-07"
+  // HUJJAT holati (tayyorlanmoqda → imzolandi → topshirildi). ISH holati emas:
+  // "qachon topshirilishi kerak" va "kim mas'ul" bu yerda EMAS, majburiyatda —
+  // aks holda bitta hisobot ikki xil muddat va ikki xil mas'ul bilan yurardi.
   status         String    @default("preparing") // preparing | ready | signing | submitted | rejected
-  deadline       DateTime?
-  assignedTo     String? // employeeId (mas'ul)
+  // Qaysi majburiyatning hujjati. NULL — reglamentdan tashqari tayyorlangan
+  // hujjat (mijoz so'rovi, ichki tahlil).
+  obligationId   String?
+  obligation     Obligation? @relation(fields: [obligationId], references: [id], onDelete: SetNull)
   data           Json      @default("{}") // hisobot satrlari (viewer uchun)
   fileFormat     String? // 'PDF' | 'XLS'
   signedBy       String?
@@ -404,6 +387,7 @@ model FinancialReport {
   @@index([companyId])
   @@index([period])
   @@index([status])
+  @@index([obligationId])
 }
 
 model Payment {
@@ -437,30 +421,6 @@ model Payment {
   @@index([period])
   @@index([status])
   @@index([deletedAt])
-}
-
-// =====================================================
-// OPERATION (annual/quarterly reports)
-// =====================================================
-
-model Operation {
-  id                String       @id @default(uuid())
-  companyId         String
-  company           Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  period            String // "2024 Yillik"
-  profitTaxStatus   ReportStatus @default(not_submitted)
-  form1Status       ReportStatus @default(not_submitted)
-  form2Status       ReportStatus @default(not_submitted)
-  statsStatus       ReportStatus @default(not_submitted)
-  comment           String?
-  deadlineProfitTax DateTime?
-  deadlineStats     DateTime?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-
-  @@unique([companyId, period])
-  @@index([companyId])
-  @@index([period])
 }
 
 // =====================================================
@@ -867,24 +827,6 @@ model Notification {
 }
 
 // =====================================================
-// DOCUMENT
-// =====================================================
-
-model Document {
-  id         String   @id @default(uuid())
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name       String
-  filePath   String
-  fileSize   Int?
-  mimeType   String?
-  uploadedBy String?
-  uploadedAt DateTime @default(now())
-
-  @@index([companyId])
-}
-
-// =====================================================
 // ATTENDANCE & INVENTORY
 // =====================================================
 
@@ -929,20 +871,6 @@ model ShiftCover {
   // companyId IS NOT NULL, one for IS NULL. Prisma cannot express those.
   @@index([coverUserId])
   @@index([date, absentUserId])
-}
-
-model InventoryItem {
-  id           String   @id @default(uuid())
-  name         String
-  serialNumber String?  @unique
-  status       String   @default("available") // available, assigned, maintenance, retired
-  condition    String   @default("good")
-  assignedToId String?
-  assignedTo   User?    @relation("UserAssignedInventory", fields: [assignedToId], references: [id], onDelete: SetNull)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([assignedToId])
 }
 
 // =====================================================
@@ -1204,7 +1132,6 @@ model DeadlineTemplate {
   updatedAt DateTime @updatedAt
 
   applicability TemplateApplicability[]
-  overrides     CompanyObligationOverride[]
   obligations   Obligation[]
 
   @@unique([code, version])
@@ -1225,29 +1152,6 @@ model TemplateApplicability {
 
   @@unique([templateId, criteriaType, criteriaValue])
   @@index([templateId])
-}
-
-// Kompaniya darajasidagi istisno: majburiyatni o'chirish / individual deadline /
-// boshqa mas'ul. Generator shu overridega bo'ysunadi.
-model CompanyObligationOverride {
-  id         String           @id @default(uuid())
-  companyId  String
-  company    Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  templateId String
-  template   DeadlineTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  action            String // disable | custom_due | reassign
-  customDueDay      Int?
-  customOffsetDays  Int?
-  responsibleUserId String?
-  reason            String
-
-  createdBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([companyId, templateId])
-  @@index([companyId])
 }
 
 // Ish/dam olish/bayram kalendari — dueAt ni ish kuniga surish uchun.
@@ -1309,8 +1213,13 @@ model Obligation {
   updatedAt DateTime @updatedAt
 
   submissions      ObligationSubmission[]
+  financialReports FinancialReport[]
   statusEvents     ObligationStatusEvent[]
   assignmentEvents ObligationAssignmentEvent[]
+  // Shu majburiyat ustida ochilgan ad-hoc vazifalar (rahbar topshirig'i,
+  // rad etilgandan keyingi tuzatish). Vazifa majburiyatni ALMASHTIRMAYDI —
+  // unga biriktiriladi, shuning uchun ish ikki joyda hisoblanmaydi.
+  tasks            Task[]
 
   @@unique([companyId, templateId, periodStart, periodEnd])
   @@index([companyId])
@@ -1394,129 +1303,12 @@ model SubmissionEvidence {
 }
 
 // =====================================================
-// 1C INTEGRATION LAYER (Faza B — pilot, 1C→ASRO one-way)
+// VAZIFALAR — majburiyat ustidagi ad-hoc ish
 // =====================================================
-// USULDAN MUSTAQIL ASRO-tomon ingest: outbound sync-agent 1C'ni ichki tarmoqda
-// o'qiydi (OData/HTTP-service/export — auditda tanlanadi) va ASRO'ga POST qiladi.
-// IntegrationEvent — xom payload ledgeri (idempotencyKey bilan dublikatsiz);
-// SyncRun — bir batch; SyncError — dead-letter. Domain mapping (payload → ASRO)
-// discovery'dan keyin `applyIntegrationEvent` seam'ida to'ldiriladi.
-
-enum IntegrationEventStatus {
-  received
-  processing
-  processed
-  failed
-  dead // DLQ — attemptlar tugadi
-}
-
-enum SyncRunStatus {
-  running
-  completed
-  failed
-}
-
-// Agent ro'yxati — har firma/baza uchun bitta ulanish + token (hash saqlanadi).
-model OneCConnection {
-  id         String    @id @default(uuid())
-  name       String
-  tokenHash  String    @unique // sha256(token) — plaintext saqlanmaydi
-  active     Boolean   @default(true)
-  lastSeenAt DateTime?
-  createdBy  String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  mappings OneCCompanyMapping[]
-  events   IntegrationEvent[]
-  syncRuns SyncRun[]
-
-  @@index([active])
-}
-
-// 1C tashkilot (externalOrgId: INN yoki 1C GUID) → ASRO Company.
-model OneCCompanyMapping {
-  id            String         @id @default(uuid())
-  connectionId  String
-  connection    OneCConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  externalOrgId String // 1C tomonidagi tashkilot identifikatori
-  companyId     String
-  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  active        Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-
-  @@unique([connectionId, externalOrgId])
-  @@index([companyId])
-}
-
-// Xom kirish hodisasi — idempotent ledger. status DLQ oqimini boshqaradi.
-model IntegrationEvent {
-  id             String                 @id @default(uuid())
-  connectionId   String
-  connection     OneCConnection         @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  syncRunId      String?
-  syncRun        SyncRun?               @relation(fields: [syncRunId], references: [id], onDelete: SetNull)
-  sourceSystem   String                 @default("1c")
-  eventType      String // masalan "report_status" | "doc_count" | "org"
-  externalId     String? // 1C hujjat/obyekt ID
-  schemaVersion  Int                    @default(1)
-  idempotencyKey String                 @unique // agent bergan barqaror kalit
-  occurredAt     DateTime // 1C'da sodir bo'lgan vaqt
-  receivedAt     DateTime               @default(now())
-  payload        Json
-  payloadHash    String // sha256(payload) — reconciliation uchun
-  status         IntegrationEventStatus @default(received)
-  attempts       Int                    @default(0)
-  lastError      String?
-  createdAt      DateTime               @default(now())
-
-  @@index([status])
-  @@index([connectionId])
-  @@index([externalId])
-  @@index([eventType])
-}
-
-// Bir agent batch'i — qamrov va reconciliation.
-model SyncRun {
-  id              String         @id @default(uuid())
-  connectionId    String
-  connection      OneCConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  status          SyncRunStatus  @default(running)
-  startedAt       DateTime       @default(now())
-  finishedAt      DateTime?
-  eventsReceived  Int            @default(0)
-  eventsProcessed Int            @default(0)
-  eventsFailed    Int            @default(0)
-  cursor          String? // keyingi sync uchun kursor (agent beradi)
-  createdAt       DateTime       @default(now())
-
-  events IntegrationEvent[]
-
-  @@index([connectionId])
-  @@index([status])
-}
-
-// Dead-letter / qayta-ishlash xatolari.
-model SyncError {
-  id                 String   @id @default(uuid())
-  integrationEventId String?
-  syncRunId          String?
-  connectionId       String?
-  message            String
-  detail             Json?
-  createdAt          DateTime @default(now())
-
-  @@index([integrationEventId])
-  @@index([connectionId])
-}
-
-// =====================================================
-// WORK MANAGEMENT + SLA (Faza C1)
-// =====================================================
-// In-app vazifalar (bot Question SLA patternidan ilhomlangan): javob (response)
-// va yechim (resolution) SLA'lari. SLA faqat yakuniy muddat emas — masalan
-// "mijoz hujjat yuborgach 8 soatda ko'rilishi kerak" (reviewer). Breach sweep
-// SlaBreach yozadi (dedup: @@unique([taskId, breachType])).
+// Vazifa MUSTAQIL ish emas: u yo ichki topshiriq, yo `Obligation` ustidagi
+// qadam. Alohida SLA qatlami (SlaPolicy/SlaBreach) olib tashlandi — u
+// hech qachon sozlanmagan va majburiyat muddati bilan ikkinchi, raqobatdosh
+// kechikish haqiqatini yaratardi. Kechikish endi bitta joyda hisoblanadi.
 
 enum TaskStatus {
   open
@@ -1533,36 +1325,17 @@ enum TaskPriority {
   urgent
 }
 
-enum SlaBreachType {
-  response // birinchi javob kechikdi
-  resolution // yakunlash kechikdi
-}
-
-// Nomlangan SLA siyosati — taskType bo'yicha (null = default).
-model SlaPolicy {
-  id                String   @id @default(uuid())
-  name              String
-  taskType          String? // qaysi vazifa turiga (null = default)
-  responseMinutes   Int? // birinchi javobgacha ruxsat etilgan vaqt
-  resolutionMinutes Int? // yakunlashgacha
-  businessHoursOnly Boolean  @default(false) // TODO: biznes-soat hisobi (kalendar)
-  active            Boolean  @default(true)
-  createdBy         String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  tasks    Task[]
-  breaches SlaBreach[]
-
-  @@index([taskType])
-  @@index([active])
-}
-
 // Ish/vazifa. companyId ixtiyoriy (ichki vazifa ham bo'ladi).
 model Task {
   id             String       @id @default(uuid())
   companyId      String?
   company        Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  // Majburiyatga bog'langan vazifa: "QQS'ni topshir" kabi topshiriq endi
+  // mustaqil ish emas, MANBA majburiyatning ustidagi qadam. Vazifa `done`
+  // bo'lganda majburiyat `ready` ga ko'tariladi (server/tasks.ts) — ilgari
+  // xodim vazifani yopib, majburiyatni "kechikkan" holda qoldirardi.
+  obligationId   String?
+  obligation     Obligation?  @relation(fields: [obligationId], references: [id], onDelete: SetNull)
   title          String
   description    String?
   taskType       String?
@@ -1570,14 +1343,11 @@ model Task {
   status         TaskStatus   @default(open)
   assigneeUserId String?
   createdBy      String?
+  // Muddat. Majburiyatga biriktirilgan vazifada u MANBADAN meros bo'ladi —
+  // bir ish uchun ikkita turli muddat bo'lishi mumkin emas. Alohida SLA
+  // soati yo'q: kechikish yagona joyda, `Obligation.delayReason` da yuritiladi
+  // (2 bosqichli, tasdiqlanadigan) — ikkita kechikish tizimi ikkita haqiqat edi.
   dueAt          DateTime?
-
-  // SLA — yaratishda siyosatdan hisoblanadi.
-  slaPolicyId     String?
-  slaPolicy       SlaPolicy? @relation(fields: [slaPolicyId], references: [id], onDelete: SetNull)
-  responseDueAt   DateTime?
-  resolutionDueAt DateTime?
-  firstResponseAt DateTime? // birinchi harakat (assign yoki in_progress)
 
   startedAt     DateTime?
   completedAt   DateTime?
@@ -1588,12 +1358,12 @@ model Task {
   updatedAt DateTime @updatedAt
 
   events   TaskEvent[]
-  breaches SlaBreach[]
 
   @@index([companyId])
   @@index([assigneeUserId])
   @@index([status])
   @@index([dueAt])
+  @@index([obligationId])
 }
 
 // Status/assignment/comment tarixi.
@@ -1611,193 +1381,6 @@ model TaskEvent {
   at         DateTime    @default(now())
 
   @@index([taskId])
-}
-
-// SLA buzilishi — dedup: har task+breachType bir marta.
-model SlaBreach {
-  id          String        @id @default(uuid())
-  taskId      String
-  task        Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  slaPolicyId String?
-  slaPolicy   SlaPolicy?    @relation(fields: [slaPolicyId], references: [id], onDelete: SetNull)
-  breachType  SlaBreachType
-  dueAt       DateTime
-  breachedAt  DateTime      @default(now())
-
-  @@unique([taskId, breachType])
-  @@index([taskId])
-}
-
-// =====================================================
-// TIME TRACKING + EMPLOYEE COST (Faza C2 — rentabellik kirish sharti)
-// =====================================================
-// Mehnat vaqti (TimeEntry) + xodim to'liq soatlik qiymati (EmployeeCostRate,
-// effective-dated). Mehnat tannarxi = daqiqa/60 × sanadagi amaldagi stavka —
-// Faza D contribution margin uchun. Reviewer #18 (task modulga qattiq bog'lanmaydi).
-
-enum TimeSource {
-  manual // qo'lda kiritilgan
-  timer // sekundomer
-  estimate // task asosida taxmin
-  normative // standart normativ vaqt
-}
-
-model TimeEntry {
-  id           String     @id @default(uuid())
-  userId       String // xodim (aktor-id konvensiyasi — relationsiz)
-  companyId    String?
-  company      Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  taskId       String? // ixtiyoriy — Task/Obligation'ga bog'lash (relationsiz)
-  obligationId String?
-  date         DateTime   @db.Date
-  minutes      Int
-  activityType String?
-  note         String?
-  source       TimeSource @default(manual)
-  createdBy    String?
-  createdAt    DateTime   @default(now())
-
-  @@index([userId])
-  @@index([companyId])
-  @@index([date])
-  @@index([taskId])
-}
-
-// Xodimning to'liq soatlik qiymati — versionlangan (effective-dated). Tarixiy
-// TimeEntry o'z sanasidagi stavka bilan hisoblanadi.
-model EmployeeCostRate {
-  id            String    @id @default(uuid())
-  userId        String
-  hourlyRate    Decimal   @db.Decimal(12, 2) // to'liq: oylik + soliq + overhead ulushi
-  effectiveFrom DateTime  @db.Date
-  effectiveTo   DateTime? @db.Date
-  note          String?
-  createdBy     String?
-  createdAt     DateTime  @default(now())
-
-  @@index([userId, effectiveFrom])
-}
-
-// =====================================================
-// BILLING (Faza D — invoice + qarzdorlik)
-// =====================================================
-// Invoice = mijozga chiqarilgan hisob; Payment (mavjud) = kelgan to'lov.
-// Qarzdorlik = chiqarilgan (sent/overdue) − to'langan. Rentabellik hisob-kitobi
-// server/profitability.ts'da (Payment tushum − mehnat tannarxi).
-
-enum InvoiceStatus {
-  draft
-  sent
-  partial
-  paid
-  overdue
-  void
-}
-
-model Invoice {
-  id         String        @id @default(uuid())
-  companyId  String
-  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  period     String // "2026-07"
-  amount     Decimal       @db.Decimal(12, 2)
-  paidAmount Decimal       @default(0) @db.Decimal(12, 2)
-  status     InvoiceStatus @default(draft)
-  issuedAt   DateTime?
-  dueAt      DateTime?
-  notes      String?
-  createdBy  String?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-
-  // Soft delete — moliyaviy yozuv jismonan o'chirilmaydi.
-  deletedAt    DateTime?
-  deletedBy    String?
-  deleteReason String?
-
-  @@index([companyId])
-  @@index([period])
-  @@index([status])
-  @@index([deletedAt])
-}
-
-// =====================================================
-// FAIR KPI v2 (Faza E — shadow mode)
-// =====================================================
-// Mavjud KpiEvent/MonthlyPerformance'ga TEGMAYDI — parallel adolatli qatlam.
-// Weighted composite (SLA 35 / Quality 25 / Client 15 / Volume 15 / Discipline
-// 10), complexity-normalized volume, delay-reason exclusion (Faza A tasdiqlangan
-// sabab). shadowMode=true → oylikka ta'sir qilmaydi (2-3 oy kuzatuv). Reviewer.
-
-enum CompanyComplexity {
-  simple
-  standard
-  complex
-  enterprise
-}
-
-// Xodim × davr uchun hisoblangan shadow ball (komponentlar bilan — shaffoflik).
-model FairKpiScore {
-  id         String @id @default(uuid())
-  period     String // "2026-07"
-  employeeId String
-
-  sla        Decimal @db.Decimal(5, 2) // 0-100
-  quality    Decimal @db.Decimal(5, 2)
-  client     Decimal @db.Decimal(5, 2)
-  volume     Decimal @db.Decimal(5, 2)
-  discipline Decimal @db.Decimal(5, 2)
-  composite  Decimal @db.Decimal(5, 2)
-
-  volumePoints Decimal @default(0) @db.Decimal(8, 2) // complexity-weighted hajm
-  shadowMode   Boolean @default(true)
-  note         String?
-
-  computedAt DateTime @default(now())
-  createdAt  DateTime @default(now())
-
-  @@unique([period, employeeId])
-  @@index([period])
-  @@index([employeeId])
-}
-
-// =====================================================
-// CLIENT PORTAL (Faza F — mijoz kabineti)
-// =====================================================
-// Alohida auth identity (staff User'dan ajratilgan). Mijoz FAQAT o'z firmasini
-// ko'radi (companyId izolyatsiya). Reviewer: ichki jarayonlar ishonchli bo'lgach.
-
-model ClientUser {
-  id           String   @id @default(uuid())
-  companyId    String
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  email        String   @unique
-  passwordHash String
-  fullName     String
-  isActive     Boolean  @default(true)
-  createdBy    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([companyId])
-}
-
-// Mijoz murojaati (ticket).
-model ClientRequest {
-  id           String    @id @default(uuid())
-  companyId    String
-  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  clientUserId String?
-  subject      String
-  message      String
-  status       String    @default("open") // open | answered | closed
-  responseText String?
-  respondedBy  String? // staff user id
-  respondedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  @@index([companyId])
-  @@index([status])
 }
 
 // =====================================================

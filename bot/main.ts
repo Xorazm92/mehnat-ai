@@ -8,8 +8,6 @@ import { startMessageWorker } from "./contexts/monitoring/interface/message.work
 import { startQuestionWorker } from "./contexts/monitoring/interface/question.worker";
 import { startObligationWorker } from "./queues/obligation.worker";
 import { registerObligationSchedulers } from "./queues/obligation.queue";
-import { startIntegrationWorker } from "./queues/integration.worker";
-import { registerIntegrationSchedulers } from "./queues/integration.queue";
 import { startKpiWorker } from "./queues/kpi.worker";
 import { registerKpiSchedulers } from "./queues/kpi.queue";
 import { startNotifyWorker } from "./queues/notify.worker";
@@ -25,14 +23,12 @@ async function main(): Promise<void> {
     startMessageWorker(),
     startQuestionWorker(),
     startObligationWorker(),
-    startIntegrationWorker(),
     startKpiWorker(),
     startNotifyWorker(),
   ];
   const stopCron = startCron();
-  // Compliance + integration schedulers live in Redis (repeatable), not setInterval.
+  // Compliance schedulers live in Redis (repeatable), not setInterval.
   await registerObligationSchedulers();
-  await registerIntegrationSchedulers();
   await registerKpiSchedulers();
   await registerNotifySchedulers();
   console.log(`[bot] ${workers.length} worker(s) + cron + schedulers up · Redis ${config.redisUrl}`);

@@ -4,7 +4,7 @@ import { Building2, CheckCircle2, Clock, Ban, type LucideIcon } from "lucide-rea
 import { formatUzDateFull, formatNum } from "@/lib/format";
 import {
   getCachedCompanyStats,
-  getCachedOperationSummary,
+  getCachedObligationSummary,
   getCachedUnreadCount,
 } from "@/lib/cached-queries";
 import {
@@ -124,15 +124,15 @@ export default async function DashboardPage() {
   }
 
   // ─── Fallback: umumiy dashboard — CACHED ──────────────────
-  const [companyStats, operationStats] = await Promise.all([
+  const [companyStats, obligationStats] = await Promise.all([
     getCachedCompanyStats(userId, userRole),
-    getCachedOperationSummary(userId, userRole),
+    getCachedObligationSummary(userId, userRole),
     getCachedUnreadCount(userId),
   ]);
 
   const progressPercent =
-    operationStats.total > 0
-      ? Math.round((operationStats.accepted / operationStats.total) * 100)
+    obligationStats.total > 0
+      ? Math.round((obligationStats.accepted / obligationStats.total) * 100)
       : 0;
 
   return (
@@ -151,9 +151,9 @@ export default async function DashboardPage() {
           ko'rinishda chiziladi va temaga bo'yalmaydi. */}
       <div className="stat-strip">
         <Stat label="Jami firmalar" value={companyStats.total} Icon={Building2} />
-        <Stat label="Bajarilgan" value={operationStats.accepted} Icon={CheckCircle2} tone="var(--success)" />
-        <Stat label="Kutilayotgan" value={operationStats.pending} Icon={Clock} tone="var(--warning)" />
-        <Stat label="Bloklangan" value={operationStats.blocked} Icon={Ban} tone="var(--danger)" />
+        <Stat label="Bajarilgan" value={obligationStats.accepted} Icon={CheckCircle2} tone="var(--success)" />
+        <Stat label="Kutilayotgan" value={obligationStats.pending} Icon={Clock} tone="var(--warning)" />
+        <Stat label="Muddati o&apos;tgan" value={obligationStats.overdue} Icon={Ban} tone="var(--danger)" />
       </div>
 
       <div className="dashboard-card p-5">
@@ -185,8 +185,8 @@ export default async function DashboardPage() {
           className="flex items-center justify-between mt-3 font-mono text-micro uppercase"
           style={{ color: "var(--text-muted)", letterSpacing: "0.08em" }}
         >
-          <span>{formatNum(operationStats.accepted)} ta qabul qilindi</span>
-          <span>{formatNum(operationStats.total)} ta jami</span>
+          <span>{formatNum(obligationStats.accepted)} ta qabul qilindi</span>
+          <span>{formatNum(obligationStats.total)} ta jami</span>
         </div>
       </div>
     </div>

@@ -31,6 +31,50 @@ The set of Companies one Supervisor is accountable for. This is what "guruh" mea
 rule and what a rule's `per_group` scope is scoped to — never a Telegram Group.
 _Avoid_: group, guruh, supervisor group
 
+### Work
+
+**Obligation**:
+One thing a Company owes for one period — a declaration, a report, an internal regulation step —
+generated from a Deadline Template against the business calendar. It is the record of the work;
+everything else that mentions the work is a way to move it or a way to look at it.
+_Avoid_: deadline, requirement, duty
+
+**Matrix Cell**:
+One firm × month × column square in the operation matrix. A way to move an Obligation, not a second
+place to store its state. Its text carries a claim: `+` accepted, `topshirildi` submitted, `-`
+rejected, `kartoteka` a payment stuck at the bank (which says nothing about the report), free text
+work in progress.
+_Avoid_: matrix field, report column value
+
+**Submission**:
+One attempt at handing an Obligation in, numbered, with its own Evidence and its own outcome. A
+rejection followed by a fix is a second Submission, never an edit of the first.
+_Avoid_: filing, send, delivery — Delivery is the Telegram sense above
+
+**Evidence**:
+What backs a Submission: a screenshot, a receipt, an external reference. It is a reference to
+stored material, never the material itself. Evidence shows we submitted; it is not the state's word
+that we did.
+_Avoid_: proof, attachment
+
+**Task**:
+Ad-hoc work someone was asked to do. A Task attached to an Obligation is a step on it and inherits
+its firm and due date; closing that Task makes the Obligation `ready`, never `sent` — internal work
+finishing is not a filing.
+_Avoid_: ticket, todo, assignment
+
+**Late**:
+Past the Obligation's due date without an approved reason. There is one definition and one clock —
+the task SLA layer that kept a second one was removed. A reason excuses lateness only once a manager
+approves it, which is also what keeps it out of KPI.
+_Avoid_: overdue, breach, SLA breach
+
+**Financial Report**:
+The document — its lines, its format, who signed it. Not the work: the deadline and the responsible
+person live on the Obligation it is attached to. A report with no Obligation is something prepared
+outside the regulation.
+_Avoid_: report — that is the Matrix Cell sense; statement
+
 ### KPI
 
 **KPI Rule**:

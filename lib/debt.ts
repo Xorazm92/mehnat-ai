@@ -10,13 +10,15 @@
 //   bot/.../domain/debt.ts  contractAmount − paidAmount        → eskalatsiya
 //   DebtSnapshot (1C)      jamg'arilgan qarz                   → 902 mln
 //
+// Keyinchalik `Invoice` va u bilan birga `/profitability` butunlay olib
+// tashlandi: hisob-faktura jadvali bitta ham qatorsiz turgan, sahifa esa
+// qarzning zaifroq nusxasini ko'rsatardi. Endi shartnoma qarzi shu fayldan,
+// 1C qarzi esa `DebtSnapshot` dan keladi — boshqa manba yo'q.
+//
 // Uchtasi mustaqil implementatsiya edi, ya'ni bittasini tuzatsang qolgani
 // eskicha qolardi. Bu fayl SHARTNOMA asosidagi qarzni yagona joyga yig'adi.
 //
 // ATAYIN BIRLASHTIRILMAGANLAR:
-//   * `Invoice` asosidagi qarz (server/profitability.ts) — u BOSHQA tushuncha:
-//     chiqarilgan hisob-faktura, shartnoma majburiyati emas. UI'da ham
-//     alohida nomlanishi kerak.
 //   * `bot/contexts/billing/domain/debt.ts` `assessDebt` — u eskalatsiya
 //     DARAJASINI (yellow/orange/red) hisoblaydi; summa qismi shu yerdagi
 //     bilan bir xil, lekin domen sof (DB'siz) bo'lib qolishi kerak.

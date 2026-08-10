@@ -19,7 +19,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
-import { isAdminRole, isSeniorRole } from "@/lib/permissions";
+import { isAdminRole } from "@/lib/permissions";
 import { staffScopeFilter } from "@/lib/access";
 import { assertSufficientFunds } from "@/lib/balance";
 import { serializable } from "@/lib/tx";

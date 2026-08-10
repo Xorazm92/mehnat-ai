@@ -68,12 +68,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
     setMounted(true);
   }, []);
 
-  const [documents, setDocuments] = useState<any[]>([]);
   const [credentials, setCredentials] = useState<ClientCredential[]>([]);
   const [clientHistory, setClientHistory] = useState<ClientHistory[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
-  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabId>('pasport');
   const [isEditingMainLogin, setIsEditingMainLogin] = useState(false);
@@ -94,11 +92,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
     if (company) {
       setTempLogin(company.login || '');
       setTempPassword(company.password || '');
-      setIsLoadingDocs(true);
       setAssignmentsError(null);
       (async () => {
         try {
-          setDocuments([]);
           setClientHistory([]);
           // Kirish ma'lumotlari (credentials) — serverdan
           try {
@@ -110,8 +106,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
           }
           // Assignments derived from company props (server action on page saves to DB)
           setAssignments(teamFallbackAssignments());
-        } finally {
-          setIsLoadingDocs(false);
+        } catch (e) {
+          console.warn('[CompanyDrawer] yuklashda xato:', e);
         }
       })();
 
@@ -301,42 +297,6 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 <div className="pl-14">
                   <p className="text-body font-bold tracking-tight leading-relaxed" style={{ color: 'var(--text)' }}>{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
                 </div>
-              </div>
-
-              <div className="dashboard-card overflow-hidden">
-                <div className="px-5 py-4 flex items-center justify-between" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                  <div className="flex items-center gap-3">
-                    <FileText size={18} style={{ color: 'var(--text-muted)' }} />
-                    <h4 className="text-meta font-bold uppercase tracking-widest leading-none" style={{ color: 'var(--text)' }}>Arxiv Hujjatlari</h4>
-                  </div>
-                  <span className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{documents.length} FAYL</span>
-                </div>
-                {isLoadingDocs ? (
-                  <div className="p-10 flex flex-col items-center justify-center">
-                    <div className="animate-spin w-8 h-8 border-3 border-t-transparent rounded-full mb-4" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
-                    <p className="text-meta font-bold uppercase tracking-widest leading-none" style={{ color: 'var(--text-muted)' }}>Yuklanmoqda...</p>
-                  </div>
-                ) : documents.length > 0 ? (
-                  <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
-                    {documents.slice(0, 5).map((doc, i) => (
-                      <div key={i} className="flex items-center justify-between p-5 transition-colors group hover:bg-[var(--accent-blue-light)]">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)' }}>
-                                <FileText size={16} />
-                            </div>
-                            <span className="text-body font-bold truncate pr-4 tracking-tight transition-colors" style={{ color: 'var(--text)' }}>{doc.file_name}</span>
-                        </div>
-                        <a href={doc.file_url} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center rounded-lg shrink-0 transition-all shadow-sm icon-btn-accent" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>
-                          <Download size={18} />
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-16 text-center text-xs font-bold" style={{ color: 'var(--text-muted)' }}>
-                    Hujjatlar topilmadi
-                  </div>
-                )}
               </div>
 
               {/* Service Scope in Passport */}

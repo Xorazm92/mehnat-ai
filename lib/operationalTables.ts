@@ -45,12 +45,10 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   // Bot: savol/javob va xabar tarixi
   { model: "answer", why: "javoblar" },
   { model: "question", why: "mijoz savollari (SLA)" },
-  { model: "clientRequest", why: "mijoz portali murojaatlari" },
   { model: "telegramMessage", why: "guruh xabarlari tarixi", refillsWhenLive: true },
   { model: "processedUpdate", why: "Telegram dedup jurnali", refillsWhenLive: true },
 
   // Vazifa / SLA
-  { model: "slaBreach", why: "SLA buzilishlari" },
   { model: "taskEvent", why: "vazifa hodisalari" },
   { model: "task", why: "vazifalar" },
 
@@ -81,7 +79,6 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   // Moliya: hujjatlar
   { model: "payout", why: "real to'lovlar" },
   { model: "payrollAdjustment", why: "oylik: bonus/jarima/avans/hisoblangan" },
-  { model: "invoice", why: "chiqarilgan hisob-fakturalar" },
   { model: "payment", why: "mijoz to'lovlari" },
   { model: "expense", why: "xarajatlar" },
   { model: "kassaEntry", why: "kassa kirim/chiqim" },
@@ -89,23 +86,17 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   // KPI
   { model: "monthlyPerformance", why: "KPI baholari (oylikka ta'sir qiladi)" },
   { model: "kpiEvent", why: "KPI ledgeri (bot signallari)" },
-  { model: "fairKpiScore", why: "adolatli KPI (shadow)" },
 
   // Davomat / vaqt
   { model: "attendance", why: "davomat" },
   { model: "shiftCover", why: "almashinuv (davomat bilan juft ketadi)" },
-  { model: "timeEntry", why: "vaqt hisobi" },
 
   // Hisobot matritsasi
   { model: "reportProof", why: "hisobot dalillari (skrinshotlar)" },
   { model: "monthlyReport", why: "amallar matritsasi kataklari" },
   { model: "financialReport", why: "moliyaviy hisobotlar" },
-  { model: "operation", why: "yillik hisobot statuslari (foyda/forma/statistika)" },
 
   // Integratsiya (IntegrationEvent.syncRunId = SetNull → tartib erkin)
-  { model: "integrationEvent", why: "1C hodisalari navbati", refillsWhenLive: true },
-  { model: "syncError", why: "1C sinxron xatolari (DLQ)" },
-  { model: "syncRun", why: "1C sinxron yugurishlari tarixi" },
 ];
 
 /**
@@ -120,20 +111,12 @@ export const REFERENCE_TABLES: string[] = [
   "contractAssignment",
   "kpiRule",
   "companyKpiRule",
-  "slaPolicy",
   "deadlineTemplate",
   "templateApplicability",
-  "companyObligationOverride",
   "businessCalendarDay",
   "systemSetting",
   "clientCredential",
-  "clientUser",
   "telegramGroup",
-  "inventoryItem",
-  "document",
-  "employeeCostRate",
-  "oneCConnection",
-  "oneCCompanyMapping",
   // Bank hisobi va shartnoma — firma kartotekasining bir qismi, qo'lda
   // yig'ilgan/1C dan import qilingan. Yangi hisob davri ular bilan boshlanadi:
   // tozalashda o'chsa, keyingi vipiskani bog'laydigan joy qolmasdi.

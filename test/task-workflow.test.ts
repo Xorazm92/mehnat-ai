@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canTransitionTask, taskTimingPatch, computeSlaDue } from "@/lib/taskWorkflow";
+import { canTransitionTask, taskTimingPatch } from "@/lib/taskWorkflow";
 
 describe("canTransitionTask", () => {
   it("legal transitions", () => {
@@ -30,15 +30,3 @@ describe("taskTimingPatch", () => {
   });
 });
 
-describe("computeSlaDue", () => {
-  const from = new Date(Date.UTC(2026, 6, 1, 10, 0, 0));
-  it("computes response + resolution due from minutes", () => {
-    const r = computeSlaDue({ responseMinutes: 60, resolutionMinutes: 480 }, from);
-    expect(r.responseDueAt!.toISOString()).toBe("2026-07-01T11:00:00.000Z"); // +60m
-    expect(r.resolutionDueAt!.toISOString()).toBe("2026-07-01T18:00:00.000Z"); // +8h
-  });
-  it("null policy / null minutes → null", () => {
-    expect(computeSlaDue(null, from)).toEqual({ responseDueAt: null, resolutionDueAt: null });
-    expect(computeSlaDue({ responseMinutes: null, resolutionMinutes: 0 }, from)).toEqual({ responseDueAt: null, resolutionDueAt: null });
-  });
-});
