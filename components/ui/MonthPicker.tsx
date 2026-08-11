@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { MONTHS_UZ } from '../../lib/periods';
+import { MONTHS_UZ, toYearMonthKey, formatPeriodLabel } from '../../lib/periods';
 
 interface MonthPickerProps {
     selectedPeriod: string;
@@ -15,12 +15,17 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
     const triggerRef = useRef<HTMLDivElement>(null);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
-    // Parse initial year/month safely
-    const [viewYear, setViewYear] = useState(() => {
-        const parts = selectedPeriod.split(' ');
-        const y = parseInt(parts[0]);
-        return isNaN(y) ? new Date().getFullYear() : y;
-    });
+    /** Yilni ikkala formatdan ham ishonchli ajratadi ("2026-08" va "2026 Avgust"). */
+    const yearOf = (period: string): number | null => {
+        const ym = toYearMonthKey(period);
+        if (ym) return Number(ym.slice(0, 4));
+        const y = parseInt(String(period ?? '').trim().slice(0, 4), 10);
+        return Number.isNaN(y) ? null : y;
+    };
+
+    const [viewYear, setViewYear] = useState(
+        () => yearOf(selectedPeriod) ?? new Date().getFullYear(),
+    );
 
     // Tashqaridan davr o'zgarsa ko'rinadigan yilni moslash. Effekt EMAS:
     // React 19 effekt ichidagi sinxron `setState` ni kaskadli render sababi
@@ -29,8 +34,8 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
     const [prevPeriod, setPrevPeriod] = useState(selectedPeriod);
     if (selectedPeriod !== prevPeriod) {
         setPrevPeriod(selectedPeriod);
-        const y = parseInt(selectedPeriod.split(' ')[0]);
-        if (!isNaN(y)) setViewYear(y);
+        const y = yearOf(selectedPeriod);
+        if (y !== null) setViewYear(y);
     }
 
     const updatePosition = () => {
@@ -57,8 +62,19 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
         };
     }, [isOpen]);
 
-    const handleMonthSelect = (month: string) => {
-        onChange(`${viewYear} ${month}`);
+    /**
+     * KANONIK "YYYY-MM" chiqaradi.
+     *
+     * Ilgari bu yer `"2026 Sentyabr"` matnini chiqarardi, holbuki komponent
+     * ISO ("2026-08") QABUL QILADI va ekranda ham shuni ko'rsatardi — ya'ni
+     * kirish va chiqish formati bir xil emas edi. Oqibati jimgina: oy
+     * tanlangach `getReportProofsMeta("2026 Sentyabr")` qat'iy tenglik bilan
+     * qidirib 0 ta natija qaytarardi va barcha skrinshot belgilari yo'qolardi;
+     * o'sha holatda topshirilgan dalil matnli davr bilan saqlanib, keyin
+     * hech qachon ko'rinmasdi.
+     */
+    const handleMonthSelect = (monthIdx: number) => {
+        onChange(`${viewYear}-${String(monthIdx + 1).padStart(2, '0')}`);
         setIsOpen(false);
     };
 
@@ -69,7 +85,8 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
                 className="flex items-center gap-2 px-3 py-1.5 c1-input text-body font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-sunken)] dark:hover:bg-[var(--surface-2)] transition-colors"
             >
                 <CalendarIcon size={14} className="text-[var(--brand)]" />
-                <span>{selectedPeriod}</span>
+                {/* Qiymat ISO, ko'rinishi odam o'qiydigan: "2026-08" → "2026 Avgust". */}
+                <span>{formatPeriodLabel(selectedPeriod)}</span>
             </button>
 
             {isOpen && createPortal(
@@ -108,12 +125,16 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
                             </div>
 
                             <div className="grid grid-cols-3 gap-2">
-                                {MONTHS_UZ.map((month) => {
-                                    const isSelected = selectedPeriod === `${viewYear} ${month}`;
+                                {MONTHS_UZ.map((month, monthIdx) => {
+                                    // Ikkala tomon ham kanonik kalitga keltiriladi — tanlangan oy
+                                    // davr ISO bo'lsa ham, matnli bo'lsa ham to'g'ri belgilanadi.
+                                    const isSelected =
+                                        toYearMonthKey(selectedPeriod) ===
+                                        `${viewYear}-${String(monthIdx + 1).padStart(2, '0')}`;
                                     return (
                                         <button
                                             key={month}
-                                            onClick={(e) => { e.stopPropagation(); handleMonthSelect(month); }}
+                                            onClick={(e) => { e.stopPropagation(); handleMonthSelect(monthIdx); }}
                                             className={`py-2 px-1 rounded-lg text-micro font-bold uppercase tracking-wider transition-all border ${isSelected
                                                 ? 'bg-[var(--brand)] text-white border-[var(--brand-deep)] shadow-sm'
                                                 : 'text-[var(--text-secondary)] bg-[var(--card-bg)] dark:bg-[var(--surface-2)] border-[var(--rule)] dark:border-[var(--rule-strong)] hover:border-[var(--brand)] hover:text-[var(--brand)]'

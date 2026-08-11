@@ -52,6 +52,32 @@ export const toObligationMonthKey = (period: string): string => {
     return `${year}-M${month}`;
 };
 
+/**
+ * SAQLASH VA QIDIRISH UCHUN KANONIK DAVR KALITI — har doim "YYYY-MM".
+ *
+ * Tizimda ikki format yonma-yon yuradi: ISO ("2026-08", `getCurrentPeriodKey`)
+ * va matnli ("2026 Avgust", `getCurrentPeriod` / MonthPicker). Bazada esa
+ * qat'iy tenglik bilan qidiriladi (`where: { period }`), shuning uchun
+ * formatlar chalkashsa so'rov JIMGINA bo'sh qaytadi — xato ham chiqmaydi.
+ *
+ * Aynan shu sabab bitta dalil "2026 Sentyabr" bo'lib saqlanib, nazoratchining
+ * ekranida (u ISO davr bilan ochiladi) umuman ko'rinmay qolgan edi.
+ *
+ * O'qib bo'lmaydigan qiymat asl holida qaytariladi: bo'sh satr bilan qidirish
+ * hamma narsani yashirib qo'yardi, asl qiymat esa hech bo'lmasa eski
+ * yozuvlarga mos keladi.
+ */
+export const normalizePeriodKey = (period: string): string =>
+    toYearMonthKey(period) || String(period ?? '').trim();
+
+/** Ko'rsatish uchun: "2026-08" → "2026 Avgust". Mos kelmasa — asl qiymat. */
+export const formatPeriodLabel = (period: string): string => {
+    const ym = toYearMonthKey(period);
+    if (!ym) return String(period ?? '').trim();
+    const [year, month] = ym.split('-');
+    return `${year} ${MONTHS_UZ[Number(month) - 1]}`;
+};
+
 export const periodsEqual = (a: string, b: string) => {
     const ak = toYearMonthKey(a);
     const bk = toYearMonthKey(b);

@@ -10,13 +10,15 @@ import { revalidateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
+import { normalizePeriodKey } from "@/lib/periods";
 import type { OperationFieldKey } from "@/types";
 
 // =====================================================
 // MONTHLY REPORTS
 // =====================================================
 
-export async function getMonthlyReports(companyId: string, period?: string) {
+export async function getMonthlyReports(companyId: string, rawPeriod?: string) {
+  const period = rawPeriod ? normalizePeriodKey(rawPeriod) : undefined;
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
@@ -80,7 +82,10 @@ export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
   // buxgalter huquqi bilan ishlaydi (o'z-o'zini nazorat bloki).
   const relations = companyRelations(company, userId);
 
-  const { companyId, period, ...rawFields } = data;
+  const { companyId, period: rawPeriod, ...rawFields } = data;
+  // Kanonik davr kaliti — MonthPicker matnli format yuborsa ham (eski
+  // mijoz/deep-link) yozuv ISO bo'lib saqlanadi va matritsa uni topadi.
+  const period = normalizePeriodKey(rawPeriod);
 
   // Matritsa ustun kalitlari snake_case (masalan "my_mehnat", "one_c") keladi,
   // Prisma MonthlyReport ustunlari esa camelCase ("myMehnat", "oneC"). Prisma
@@ -144,7 +149,8 @@ function isClearedValue(value: unknown): boolean {
   return v === "" || v === CELL_EMPTY;
 }
 
-export async function clearColumnForPeriod(period: string, colKey: string) {
+export async function clearColumnForPeriod(rawPeriod: string, colKey: string) {
+  const period = normalizePeriodKey(rawPeriod);
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   const role = session.user.role as string;

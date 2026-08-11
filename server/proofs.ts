@@ -6,6 +6,7 @@ import { companyScopeWhere, companyRelations, assertCompanyPermission } from "@/
 import { isCompanyReviewer } from "@/lib/reportPermissions";
 import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
+import { normalizePeriodKey } from "@/lib/periods";
 import type { OperationFieldKey } from "@/types";
 import { revalidateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
@@ -43,6 +44,11 @@ export async function saveReportProof(input: {
 
   const dbCol = dbColumnFor(input.colKey);
 
+  // Davr KANONIK kalitga keltiriladi ("2026 Sentyabr" → "2026-09"). Busiz
+  // matnli davr bilan saqlangan dalil ISO davr bilan ochilgan ekranda
+  // qat'iy tenglik tufayli JIMGINA ko'rinmay qolardi.
+  const period = normalizePeriodKey(input.period);
+
   if (!input.imageData || !input.imageData.startsWith("data:image/")) {
     throw new Error("Skrinshot (rasm) talab qilinadi");
   }
@@ -59,20 +65,20 @@ export async function saveReportProof(input: {
   const me = await prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } });
   const myName = me?.fullName || session.user.name || "Buxgalter";
   const colLabel = input.colLabel || input.colKey;
-  const deepLink = `/reports?company=${input.companyId}&col=${input.colKey}&period=${encodeURIComponent(input.period)}`;
+  const deepLink = `/reports?company=${input.companyId}&col=${input.colKey}&period=${encodeURIComponent(period)}`;
 
   // 1) Dalilni saqlash (yangi topshiriq — holat "pending", eski tekshiruv tozalanadi)
   const proof = await prisma.reportProof.upsert({
     where: {
       companyId_period_colKey: {
         companyId: input.companyId,
-        period: input.period,
+        period: period,
         colKey: input.colKey,
       },
     },
     create: {
       companyId: input.companyId,
-      period: input.period,
+      period: period,
       colKey: input.colKey,
       imageData: input.imageData,
       note: input.note ?? null,
@@ -96,8 +102,8 @@ export async function saveReportProof(input: {
 
   // 2) Matritsa katagini "topshirildi" holatiga o'tkazish
   await prisma.monthlyReport.upsert({
-    where: { companyId_period: { companyId: input.companyId, period: input.period } },
-    create: { companyId: input.companyId, period: input.period, [dbCol]: "topshirildi" } as Prisma.MonthlyReportUncheckedCreateInput,
+    where: { companyId_period: { companyId: input.companyId, period: period } },
+    create: { companyId: input.companyId, period: period, [dbCol]: "topshirildi" } as Prisma.MonthlyReportUncheckedCreateInput,
     update: { [dbCol]: "topshirildi" },
   });
 
@@ -105,7 +111,7 @@ export async function saveReportProof(input: {
   // bilan yozish (Obligation bridge — manba shu yerda yangilanadi)
   await syncProofToObligation({
     companyId: input.companyId,
-    period: input.period,
+    period: period,
     colKey: input.colKey,
     targetStatus: "sent",
     proofId: proof.id,
@@ -153,7 +159,7 @@ export async function getReportProofsMeta(period: string) {
   const role = session.user.role as string;
 
   const where: Prisma.ReportProofWhereInput = {
-    period,
+    period: normalizePeriodKey(period),
     company: companyScopeWhere({ id: userId, role }),
   };
 
@@ -187,7 +193,7 @@ export async function getReportProof(companyId: string, period: string, colKey: 
   await assertCompanyPermission(prisma, { id: userId, role }, companyId, "proof:read");
 
   const proof = await prisma.reportProof.findUnique({
-    where: { companyId_period_colKey: { companyId, period, colKey } },
+    where: { companyId_period_colKey: { companyId, period: normalizePeriodKey(period), colKey } },
   });
 
   return proof ? serialize(proof) : null;
@@ -229,12 +235,13 @@ export async function reviewReportProof(input: {
   }
 
   const dbCol = dbColumnFor(input.colKey);
+  const period = normalizePeriodKey(input.period);
 
   const proof = await prisma.reportProof.findUnique({
     where: {
       companyId_period_colKey: {
         companyId: input.companyId,
-        period: input.period,
+        period: period,
         colKey: input.colKey,
       },
     },
@@ -257,8 +264,8 @@ export async function reviewReportProof(input: {
   });
 
   await prisma.monthlyReport.upsert({
-    where: { companyId_period: { companyId: input.companyId, period: input.period } },
-    create: { companyId: input.companyId, period: input.period, [dbCol]: cellValue } as Prisma.MonthlyReportUncheckedCreateInput,
+    where: { companyId_period: { companyId: input.companyId, period: period } },
+    create: { companyId: input.companyId, period: period, [dbCol]: cellValue } as Prisma.MonthlyReportUncheckedCreateInput,
     update: { [dbCol]: cellValue },
   });
 
@@ -266,7 +273,7 @@ export async function reviewReportProof(input: {
   // yuborish urinishining natijasini yopish (Obligation bridge)
   await syncProofToObligation({
     companyId: input.companyId,
-    period: input.period,
+    period: period,
     colKey: input.colKey,
     targetStatus: input.decision === "approved" ? "accepted" : "rejected",
     proofId: proof.id,
@@ -287,7 +294,7 @@ export async function reviewReportProof(input: {
         ? `${myName} "${company?.name}" — "${colLabel}" hisobotingizni tasdiqladi.`
         : `${myName} "${company?.name}" — "${colLabel}" hisobotingizni rad etdi.${input.rejectReason ? ` Sabab: ${input.rejectReason}` : ""}`;
 
-    const deepLink = `/reports?company=${input.companyId}&col=${input.colKey}&period=${encodeURIComponent(input.period)}`;
+    const deepLink = `/reports?company=${input.companyId}&col=${input.colKey}&period=${encodeURIComponent(period)}`;
     await prisma.notification.create({
       data: { userId: proof.submittedById, type: "status_change", title, message, link: deepLink },
     });
