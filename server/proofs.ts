@@ -6,7 +6,7 @@ import { companyScopeWhere, companyRelations, assertCompanyPermission } from "@/
 import { isCompanyReviewer } from "@/lib/reportPermissions";
 import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
-import { normalizePeriodKey } from "@/lib/periods";
+import { normalizePeriodKey, isFuturePeriod, formatPeriodLabel } from "@/lib/periods";
 import type { OperationFieldKey } from "@/types";
 import { revalidateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
@@ -88,6 +88,13 @@ export async function saveReportProof(input: {
     throw new Error("Skrinshot (rasm) talab qilinadi");
   }
   assertProofFile(input.fileData, input.fileType);
+  // KELAJAK DAVR — hisobot oldindan "topshirilishi" mumkin emas. Chegara
+  // SERVERDA: kalendarni to'sish faqat qulaylik, haqiqiy to'siq shu yerda.
+  if (isFuturePeriod(period)) {
+    throw new Error(
+      `${formatPeriodLabel(period)} — kelajak davr. Hisobotni oldindan topshirib bo'lmaydi.`,
+    );
+  }
 
   const company = await prisma.company.findUnique({
     where: { id: input.companyId },

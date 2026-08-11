@@ -70,6 +70,29 @@ export const toObligationMonthKey = (period: string): string => {
 export const normalizePeriodKey = (period: string): string =>
     toYearMonthKey(period) || String(period ?? '').trim();
 
+/**
+ * KELAJAK DAVRMI? — hisobotni oldindan "topshirib" qo'yishni to'sish uchun.
+ *
+ * Hisobot davri — u NIMA HAQIDA ekani. Sentyabr hali kelmagan bo'lsa,
+ * sentyabr hisoboti mavjud bo'lishi mumkin emas. Buni to'smaganda xodim
+ * kalendardan kelajak oyni tanlab "bajarildi" qo'yib qo'yardi va matritsa
+ * yolg'on gapirardi.
+ *
+ * O'TMISH DAVRLAR OCHIQ QOLADI: kechikkan ishni keyin topshirish qonuniy.
+ *
+ * VAQT MINTAQASI: chegara LOKAL (server TZ=Asia/Tashkent) oy bo'yicha
+ * hisoblanadi, `toISOString()` (UTC) bo'yicha emas. Toshkent UTC dan oldinda,
+ * shuning uchun lokal oy har doim UTC oyidan katta yoki teng — ya'ni bu
+ * tanlov KENGROQ va oy boshidagi 5 soatlik oynada UI taklif qilgan davrni
+ * server rad etib qo'ymaydi.
+ */
+export const isFuturePeriod = (period: string, now: Date = new Date()): boolean => {
+    const key = toYearMonthKey(period);
+    if (!key) return false; // o'qib bo'lmadi — bu yerda hukm chiqarmaymiz
+    const current = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return key > current; // "YYYY-MM" da leksikografik tartib = xronologik
+};
+
 /** Ko'rsatish uchun: "2026-08" → "2026 Avgust". Mos kelmasa — asl qiymat. */
 export const formatPeriodLabel = (period: string): string => {
     const ym = toYearMonthKey(period);

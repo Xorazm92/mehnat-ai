@@ -10,7 +10,7 @@ import { revalidateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
-import { normalizePeriodKey } from "@/lib/periods";
+import { normalizePeriodKey, isFuturePeriod, formatPeriodLabel } from "@/lib/periods";
 import type { OperationFieldKey } from "@/types";
 
 // =====================================================
@@ -86,6 +86,14 @@ export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
   // Kanonik davr kaliti — MonthPicker matnli format yuborsa ham (eski
   // mijoz/deep-link) yozuv ISO bo'lib saqlanadi va matritsa uni topadi.
   const period = normalizePeriodKey(rawPeriod);
+  // Kelajak davrga katak yozib bo'lmaydi — dalil yo'liga qo'yilgan chegara
+  // bilan bir xil. Ikkalasi ham yopilmasa, xodim matritsadan to'g'ridan-to'g'ri
+  // "bajarildi" qo'yib, dalil talabini ham, vaqtni ham chetlab o'tardi.
+  if (isFuturePeriod(period)) {
+    throw new Error(
+      `${formatPeriodLabel(period)} — kelajak davr. Bu oy uchun hisobot yozib bo'lmaydi.`,
+    );
+  }
 
   // Matritsa ustun kalitlari snake_case (masalan "my_mehnat", "one_c") keladi,
   // Prisma MonthlyReport ustunlari esa camelCase ("myMehnat", "oneC"). Prisma

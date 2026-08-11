@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { MONTHS_UZ, toYearMonthKey, formatPeriodLabel } from '../../lib/periods';
+import { MONTHS_UZ, toYearMonthKey, formatPeriodLabel, isFuturePeriod } from '../../lib/periods';
 
 interface MonthPickerProps {
     selectedPeriod: string;
@@ -126,17 +126,24 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
 
                             <div className="grid grid-cols-3 gap-2">
                                 {MONTHS_UZ.map((month, monthIdx) => {
+                                    const key = `${viewYear}-${String(monthIdx + 1).padStart(2, '0')}`;
                                     // Ikkala tomon ham kanonik kalitga keltiriladi — tanlangan oy
                                     // davr ISO bo'lsa ham, matnli bo'lsa ham to'g'ri belgilanadi.
-                                    const isSelected =
-                                        toYearMonthKey(selectedPeriod) ===
-                                        `${viewYear}-${String(monthIdx + 1).padStart(2, '0')}`;
+                                    const isSelected = toYearMonthKey(selectedPeriod) === key;
+                                    // KELAJAK OY TANLANMAYDI. Server ham rad etadi (yagona
+                                    // haqiqiy to'siq), bu esa foydalanuvchini devorga urilishdan
+                                    // saqlaydi: nima uchun bo'lmasligini darhol ko'rsatadi.
+                                    const future = isFuturePeriod(key);
                                     return (
                                         <button
                                             key={month}
-                                            onClick={(e) => { e.stopPropagation(); handleMonthSelect(monthIdx); }}
+                                            disabled={future}
+                                            title={future ? 'Kelajak oy — hisobot topshirib bo\'lmaydi' : undefined}
+                                            onClick={(e) => { e.stopPropagation(); if (!future) handleMonthSelect(monthIdx); }}
                                             className={`py-2 px-1 rounded-lg text-micro font-bold uppercase tracking-wider transition-all border ${isSelected
                                                 ? 'bg-[var(--brand)] text-white border-[var(--brand-deep)] shadow-sm'
+                                                : future
+                                                ? 'text-[var(--text-3)] bg-transparent border-transparent opacity-40 cursor-not-allowed line-through'
                                                 : 'text-[var(--text-secondary)] bg-[var(--card-bg)] dark:bg-[var(--surface-2)] border-[var(--rule)] dark:border-[var(--rule-strong)] hover:border-[var(--brand)] hover:text-[var(--brand)]'
                                                 }`}
                                         >

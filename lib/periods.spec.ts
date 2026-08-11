@@ -16,6 +16,7 @@ import {
   formatPeriodLabel,
   toYearMonthKey,
   periodsEqual,
+  isFuturePeriod,
 } from "@/lib/periods";
 
 describe("normalizePeriodKey — kanonik davr kaliti", () => {
@@ -87,5 +88,43 @@ describe("MonthPicker chiqaradigan format", () => {
   it("chiqarilgan qiymat saqlangan ISO davr bilan mos keladi", () => {
     expect(periodsEqual(emitted(2026, 7), "2026-08")).toBe(true);
     expect(periodsEqual(emitted(2026, 8), "2026 Sentyabr")).toBe(true);
+  });
+});
+
+describe("isFuturePeriod — kelajakka hisobot topshirishni to'sish", () => {
+  // Xodimlar kalendardan sentyabr/oktyabrni tanlab hisobotni oldindan
+  // "topshirib" qo'yishgan edi. Hisobot davri — u NIMA HAQIDA ekani;
+  // kelmagan oy haqida hisobot bo'lishi mumkin emas.
+  const NOW = new Date(2026, 7, 12); // 2026-08-12 (lokal)
+
+  it("kelajak oy — to'siladi", () => {
+    expect(isFuturePeriod("2026-09", NOW)).toBe(true);
+    expect(isFuturePeriod("2026-12", NOW)).toBe(true);
+    expect(isFuturePeriod("2027-01", NOW)).toBe(true);
+    expect(isFuturePeriod("2026 Sentyabr", NOW)).toBe(true);
+  });
+
+  it("JORIY oy — ruxsat", () => {
+    // Oy ichida bajariladigan ishlar bor (raschot zarplata 25-31),
+    // shuning uchun joriy oy ochiq bo'lishi SHART.
+    expect(isFuturePeriod("2026-08", NOW)).toBe(false);
+    expect(isFuturePeriod("2026 Avgust", NOW)).toBe(false);
+  });
+
+  it("O'TMISH oylar — ruxsat (kechikkan ishni topshirish qonuniy)", () => {
+    expect(isFuturePeriod("2026-07", NOW)).toBe(false);
+    expect(isFuturePeriod("2025-12", NOW)).toBe(false);
+  });
+
+  it("oy chegarasi: 31-avgust va 1-sentyabr", () => {
+    expect(isFuturePeriod("2026-09", new Date(2026, 7, 31))).toBe(true);
+    expect(isFuturePeriod("2026-09", new Date(2026, 8, 1))).toBe(false);
+  });
+
+  it("o'qib bo'lmaydigan davr bo'yicha hukm chiqarmaydi", () => {
+    // Bu yerda `true` qaytarsa, noma'lum formatli eski yozuv jimgina
+    // bloklanardi. Qaror boshqa qatlamning ishi.
+    expect(isFuturePeriod("2026 Yillik", NOW)).toBe(false);
+    expect(isFuturePeriod("", NOW)).toBe(false);
   });
 });
