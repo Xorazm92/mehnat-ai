@@ -27,7 +27,16 @@ export default function ExpensesClient({ expenses, userRole, balance }: Props) {
       category: expense.category as string,
       description: expense.description,
       paymentMethod: expense.paymentMethod || "naqd",
+      // Pul manbai — server ham tekshiradi (assertFundingSource).
+      channelId: expense.channelId || undefined,
     };
+    // Manbani formada MAJBURIY qilamiz: ustun NULL ga ruxsat beradi (691 ta
+    // eski yozuv buzilmasin), lekin yangi xarajat manbasiz kirmasligi kerak —
+    // aks holda "pul qayerdan chiqdi" savoli yana javobsiz qolardi.
+    if (!data.channelId) {
+      toast.error("Pul manbaini tanlang — qaysi schyot yoki plastikdan chiqdi");
+      throw new Error("channelId required");
+    }
     try {
       if (expense.id) {
         await updateExpense(expense.id, data);

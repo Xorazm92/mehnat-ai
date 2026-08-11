@@ -18,6 +18,7 @@ import { useTableState } from '@/hooks/useTableState';
 import { exportRowsToCsv } from '@/lib/exportTable';
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
+import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 
 interface ExpenseModuleProps {
     expenses: Expense[];
@@ -506,6 +507,18 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     >
                                         {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label.toUpperCase()}</option>)}
                                     </select>
+                                </div>
+                                {/* Pul MANBAI — "to'lov usuli" dan farqli: usul naqd/plastik/schyot
+                                    ekanini aytadi, manba esa KIMNING hisobidan chiqqanini. */}
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                                        Pul manbai <span style={{ color: 'var(--danger)' }}>*</span>
+                                    </label>
+                                    <FundingSourceSelect
+                                        value={editingExpense?.channelId || ''}
+                                        onChange={(channelId) => setEditingExpense(prev => ({ ...prev, channelId }))}
+                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
+                                    />
                                 </div>
                                 <div className="space-y-2 md:col-span-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>

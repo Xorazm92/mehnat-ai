@@ -773,6 +773,13 @@ model Expense {
   createdBy      String?
   user           User?     @relation(fields: [createdBy], references: [id])
 
+  // Pul QAYSI MANBADAN chiqdi: o'z firmaning bank hisobi (schyot) yoki plastik
+  // karta. `DisbursementChannel.id` — o'sha jadval ikkala turni ham saqlaydi
+  // (`own_firm_account` / `employee_card`), shuning uchun bitta maydon yetadi.
+  // FK emas — `KassaEntry.channelId` uslubiga mos (kanal o'chirilsa tarixiy
+  // xarajat yo'qolmasin). Eski yozuvlarda NULL: manba tushunchasi keyin qo'shildi.
+  channelId String?
+
   // Soft delete
   deletedAt    DateTime?
   deletedBy    String?
@@ -782,6 +789,7 @@ model Expense {
   @@index([category])
   @@index([status])
   @@index([deletedAt])
+  @@index([channelId])
 }
 
 // =====================================================

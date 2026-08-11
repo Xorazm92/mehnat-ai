@@ -11,14 +11,14 @@ import { companyScopeWhere, assertCompanyPermission } from "@/lib/access";
 // ma'noga ega emas va chegara ROL ro'yxati bo'lib qoladi. Nazoratchi bu
 // ro'yxatda YO'Q: u moliya roli emas, lekin ilgari `isSeniorRole` orqali butun
 // ofis xarajatlarini ko'rardi.
-const FINANCE_ROLES = ["super_admin", "admin", "chief_accountant", "bank_manager"];
-const isFinanceRole = (role: string) => FINANCE_ROLES.includes(role);
 
 import { canApproveExpense } from "@/lib/expenseApproval";
 import { assertSufficientFunds } from "@/lib/balance";
 import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
+import { assertFundingSource } from "@/server/fundingSources";
+import { isFinanceRole } from "@/lib/permissions";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { serialize } from "@/lib/serialize";
 
@@ -79,6 +79,8 @@ export async function createKassaEntry(data: {
   description?: string;
   date: Date;
   companyId?: string;
+  /** Pul qaysi manbaga kirdi / qaysi manbadan chiqdi. */
+  channelId?: string;
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -271,6 +273,8 @@ export async function createExpense(data: {
   category: string;
   description?: string;
   paymentMethod?: string;
+  /** Pul qaysi manbadan chiqdi — DisbursementChannel.id (schyot yoki plastik). */
+  channelId?: string;
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -280,6 +284,9 @@ export async function createExpense(data: {
   // (getExpenses); aks holda buxgalter <1 mln xarajatni avto-tasdiq bilan o'tkaza olardi.
   if (!isFinanceRole(role)) throw new Error("Forbidden");
   assertPositiveAmount(data.amount, "Xarajat summasi");
+  // Manba serverda tekshiriladi: formaning majburiyligi yetarli emas, aks holda
+  // bitta so'rov bilan "pul qayerdan chiqdi" savoli javobsiz qolardi.
+  if (data.channelId) await assertFundingSource(data.channelId);
   await assertPeriodOpen(prisma, data.date, "xarajat");
 
   const autoApprove = data.amount < 1_000_000; // kichik xarajatlar avtomatik tasdiqlanadi
@@ -401,12 +408,15 @@ export async function updateExpense(id: string, data: {
   category: string;
   description?: string;
   paymentMethod?: string;
+  /** Pul manbai — DisbursementChannel.id (schyot yoki plastik). */
+  channelId?: string;
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
   const role = session.user.role as string;
   const userId = session.user.id;
+  if (data.channelId) await assertFundingSource(data.channelId);
 
   const existing = await prisma.expense.findUnique({ where: { id } });
   if (!existing || existing.deletedAt) throw new Error("Xarajat topilmadi");

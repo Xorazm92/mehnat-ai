@@ -15,6 +15,7 @@ import {
 } from "@/server/bankImport";
 import type { StatementPreview } from "@/lib/bank/types";
 import { createKassaEntry } from "@/server/kassa";
+import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 
 interface AccountRow {
   id: string;
@@ -91,6 +92,8 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   const [manualAmount, setManualAmount] = useState("");
   const [manualNote, setManualNote] = useState("");
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10));
+  // Plastik tushum QAYSI kartaga kirgani — naqd uchun kerak emas (kassa).
+  const [manualChannelId, setManualChannelId] = useState("");
   const [manualBusy, setManualBusy] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
 
@@ -99,6 +102,13 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
     const amount = Number(manualAmount.replace(/[^\d.]/g, ""));
     if (!Number.isFinite(amount) || amount <= 0) {
       setManualError("Summa musbat son bo'lishi kerak");
+      return;
+    }
+    // Plastik tushumda manba MAJBURIY: "plastikka tushdi" degani qaysi
+    // kartaga tushganini bilmasa, kartadagi qoldiq hech qachon to'g'ri
+    // chiqmaydi. Naqd — kassa, manba talab qilinmaydi.
+    if (manualType === "plastik" && !manualChannelId) {
+      setManualError("Qaysi plastikka tushganini tanlang");
       return;
     }
     setManualBusy(true);
@@ -110,10 +120,12 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
         amount,
         description: manualNote.trim() || undefined,
         date: new Date(manualDate),
+        channelId: manualChannelId || undefined,
       });
       setManualType(null);
       setManualAmount("");
       setManualNote("");
+      setManualChannelId("");
       router.refresh();
     } catch (e) {
       setManualError((e as Error).message || "Yozib bo'lmadi");
@@ -328,6 +340,18 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
               />
             </label>
           </div>
+          {manualType === "plastik" && (
+            <label className="block">
+              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>
+                Qaysi plastikka tushdi <span style={{ color: "var(--danger)" }}>*</span>
+              </span>
+              <FundingSourceSelect
+                value={manualChannelId}
+                onChange={setManualChannelId}
+                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
+              />
+            </label>
+          )}
           <Button variant="primary" size="md" disabled={manualBusy} onClick={submitManual}>
             {manualBusy ? "Yozilmoqda…" : "Saqlash"}
           </Button>

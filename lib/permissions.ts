@@ -327,6 +327,17 @@ export const isAdminRole = (role: string): boolean => {
  * `companyScopeWhere`. Ilgari shu ikkisi chalkashtirilgani uchun nazoratchi
  * tizimdagi barcha firmalarni ko'rardi.
  */
+/**
+ * MOLIYA ROLLARI — kassa, xarajat va pul manbalariga kirish chegarasi.
+ *
+ * Nazoratchi bu ro'yxatda ATAYLAB yo'q: u moliya roli emas. Buxgalter ham
+ * yo'q — u xarajatni o'zi kiritib, o'zi avto-tasdiqlay olmasligi kerak.
+ * Ilgari bu ro'yxat `server/kassa.ts` ichida yashiringan edi; manba tanlash
+ * qatlami ham xuddi shu chegarani talab qilgani uchun bu yerga ko'chirildi.
+ */
+export const FINANCE_ROLES: string[] = ["super_admin", "admin", "chief_accountant", "bank_manager"];
+export const isFinanceRole = (role: string): boolean => FINANCE_ROLES.includes(role);
+
 export const isSeniorRole = (role: string): boolean => {
   return (["super_admin", "admin", "chief_accountant", "supervisor"] as string[]).includes(role);
 };

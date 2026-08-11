@@ -39,7 +39,8 @@
     "recovery:b3:precheck": "tsx scripts/recovery-b3-precheck.ts",
     "recovery:b4b:preview": "tsx scripts/recovery-b4b-preview.ts --save .recovery/b4b-baseline.json",
     "recovery:b4b:clear": "tsx scripts/recovery-b4b-clear.ts --baseline .recovery/b4b-baseline.json",
-    "recovery:b4b:postcheck": "tsx scripts/recovery-b4b-postcheck.ts --baseline .recovery/b4b-baseline.json"
+    "recovery:b4b:postcheck": "tsx scripts/recovery-b4b-postcheck.ts --baseline .recovery/b4b-baseline.json",
+    "seed:own-accounts": "tsx scripts/seed-own-firm-accounts.ts"
   },
   "dependencies": {
     "@google/genai": "^2.12.0",

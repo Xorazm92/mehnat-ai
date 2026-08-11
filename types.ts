@@ -27,6 +27,12 @@ export interface Expense {
   date: string;
   category: string;
   paymentMethod?: string; // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
+  /**
+   * Pul MANBAI — `DisbursementChannel.id`. `paymentMethod` dan farq qiladi:
+   * usul "schyot orqali" deydi, manba esa KIMNING schyoti ekanini
+   * (o'z firma hisobi yoki xodim plastigi). Eski yozuvlarda bo'sh.
+   */
+  channelId?: string | null;
   description: string;
   createdAt: string;
   status?: string; // pending | approved | rejected
