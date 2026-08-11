@@ -318,15 +318,9 @@ async function main() {
     return;
   }
 
-  // ── 3. Nofaol jamoa a'zosini qayta yoqish ─────────────────────────────
-  for (const [sheetName, m] of Object.entries(TEAM)) {
-    if (!m.reactivate) continue;
-    const u = resolved.get(sheetName);
-    if (u && !u.isActive) {
-      await prisma.user.update({ where: { id: u.id }, data: { isActive: true } });
-      console.log(`\n✓ ${u.fullName} qayta faollashtirildi.`);
-    }
-  }
+  // Yozuvdan OLDINGI holat — tranzaksiya ichidagi tasdiq shunga tayanadi.
+  const companiesBefore = await prisma.company.count();
+  const assignmentsBefore = await prisma.contractAssignment.count();
 
   /**
    * Biriktiruv qatorlarini kutilgan holatga keltiradi.
@@ -365,63 +359,122 @@ async function main() {
     return rows.length;
   };
 
-  // ── 4. Yaratish ───────────────────────────────────────────────────────
+  // ── 4. YOZUV — HAMMASI BITTA TRANZAKSIYADA ────────────────────────────
+  //
+  // Ilgari har firma o'z tranzaksiyasida yozilardi. Firma va biriktiruvlari
+  // birga bo'lgani uchun bu "biriktiruvsiz firma" holatidan himoya qilardi,
+  // LEKIN 30-firmada xato chiqsa birinchi 29 tasi allaqachon commit bo'lgan
+  // bo'lardi va prod chala qolardi.
+  //
+  // Endi butun amal — xodimni qayta yoqish, yaratish, moslashtirish —
+  // YAGONA tranzaksiya. Oxirida kutilgan sonlar tekshiriladi; birortasi
+  // to'g'ri kelmasa `throw` ishlaydi va Postgres HAMMASINI qaytaradi.
+  // Natija ikki holatdan biri: to'liq qo'llangan yoki umuman tegilmagan.
   let created = 0;
-  for (const f of toCreate) {
-    const d = desiredFor(f);
-    await prisma.$transaction(async (tx) => {
-      const company = await tx.company.create({
-        data: {
-          name: f.name,
-          inn: f.inn,
-          taxRegime: f.vat ? "vat" : "turnover",
-          contractAmount: f.amount ?? null,
-          riskNotes: f.notes ?? null,
-          isActive: true,
-          isOwnFirm: false,
-          departmentId: d.departmentId,
-          accountantId: d.accountantId,
-          accountantPerc: d.accountantPerc,
-          chiefAccountantId: d.chiefAccountantId,
-          chiefAccountantPerc: PCT_CHIEF,
-          supervisorId: null,
-          supervisorPerc: null,
-          bankClientId: d.bankClientId,
-          bankClientPerc: d.bankClientId ? PCT_BANK : null,
-        },
-        select: { id: true },
-      });
-      await syncAssignments(tx, company.id, f, d);
-    });
-    created++;
-    console.log(`  + ${f.inn.padEnd(15)} ${f.name.slice(0, 40).padEnd(42)} ${som(f.amount ?? 0).padStart(10)}`);
-  }
-
-  // ── 5. Moslashtirish ──────────────────────────────────────────────────
   let fixed = 0;
-  for (const { row: f, company } of toFix) {
-    const d = desiredFor(f);
-    await prisma.$transaction(async (tx) => {
-      await tx.company.update({
-        where: { id: company.id },
-        data: {
-          departmentId: d.departmentId,
-          accountantId: d.accountantId,
-          accountantPerc: d.accountantPerc,
-          chiefAccountantId: d.chiefAccountantId,
-          chiefAccountantPerc: PCT_CHIEF,
-          supervisorId: null,
-          supervisorPerc: null,
-          bankClientId: d.bankClientId,
-          bankClientPerc: d.bankClientId ? PCT_BANK : null,
-        },
-      });
-      await syncAssignments(tx, company.id, f, d);
-    });
-    fixed++;
-    console.log(`  ~ ${f.inn.padEnd(15)} ${f.name.slice(0, 40).padEnd(42)} moslashtirildi`);
-  }
+  let reactivated = 0;
+  let assignmentsWritten = 0;
 
+  await prisma.$transaction(
+    async (tx) => {
+      // 4a. Nofaol jamoa a'zosini qayta yoqish.
+      for (const [sheetName, m] of Object.entries(TEAM)) {
+        if (!m.reactivate) continue;
+        const u = resolved.get(sheetName);
+        if (u && !u.isActive) {
+          await tx.user.update({ where: { id: u.id }, data: { isActive: true } });
+          reactivated++;
+          console.log(`\n✓ ${u.fullName} qayta faollashtirildi.`);
+        }
+      }
+
+      // 4b. Yaratish.
+      for (const f of toCreate) {
+        const d = desiredFor(f);
+        const company = await tx.company.create({
+          data: {
+            name: f.name,
+            inn: f.inn,
+            taxRegime: f.vat ? "vat" : "turnover",
+            contractAmount: f.amount ?? null,
+            riskNotes: f.notes ?? null,
+            isActive: true,
+            isOwnFirm: false,
+            departmentId: d.departmentId,
+            accountantId: d.accountantId,
+            accountantPerc: d.accountantPerc,
+            chiefAccountantId: d.chiefAccountantId,
+            chiefAccountantPerc: PCT_CHIEF,
+            supervisorId: null,
+            supervisorPerc: null,
+            bankClientId: d.bankClientId,
+            bankClientPerc: d.bankClientId ? PCT_BANK : null,
+          },
+          select: { id: true },
+        });
+        assignmentsWritten += await syncAssignments(tx, company.id, f, d);
+        created++;
+        console.log(`  + ${f.inn.padEnd(15)} ${f.name.slice(0, 40).padEnd(42)} ${som(f.amount ?? 0).padStart(10)}`);
+      }
+
+      // 4c. Moslashtirish.
+      for (const { row: f, company } of toFix) {
+        const d = desiredFor(f);
+        await tx.company.update({
+          where: { id: company.id },
+          data: {
+            departmentId: d.departmentId,
+            accountantId: d.accountantId,
+            accountantPerc: d.accountantPerc,
+            chiefAccountantId: d.chiefAccountantId,
+            chiefAccountantPerc: PCT_CHIEF,
+            supervisorId: null,
+            supervisorPerc: null,
+            bankClientId: d.bankClientId,
+            bankClientPerc: d.bankClientId ? PCT_BANK : null,
+          },
+        });
+        assignmentsWritten += await syncAssignments(tx, company.id, f, d);
+        fixed++;
+        console.log(`  ~ ${f.inn.padEnd(15)} ${f.name.slice(0, 40).padEnd(42)} moslashtirildi`);
+      }
+
+      // ── SON TASDIQLARI — birortasi buzilsa HAMMASI qaytariladi ─────────
+      if (created !== toCreate.length) {
+        throw new Error(`yaratilgan ${created} ≠ kutilgan ${toCreate.length} — ROLLBACK`);
+      }
+      if (fixed !== toFix.length) {
+        throw new Error(`moslashtirilgan ${fixed} ≠ kutilgan ${toFix.length} — ROLLBACK`);
+      }
+
+      const companiesNow = await tx.company.count();
+      const expectedCompanies = companiesBefore + toCreate.length;
+      if (companiesNow !== expectedCompanies) {
+        throw new Error(`firma soni ${companiesNow} ≠ kutilgan ${expectedCompanies} — ROLLBACK`);
+      }
+
+      // Har tegilgan firmada aynan kutilgan biriktiruv bo'lishi shart:
+      // bank-klienti bor firmada 3 ta, yo'g'ida 2 ta.
+      const touched = [...toCreate, ...toFix.map((t) => t.row)];
+      const expectedAssignments = touched.reduce((s, f) => s + (f.bank ? 3 : 2), 0);
+      if (assignmentsWritten !== expectedAssignments) {
+        throw new Error(
+          `biriktiruv ${assignmentsWritten} ≠ kutilgan ${expectedAssignments} — ROLLBACK`,
+        );
+      }
+    },
+    // ~55 firma × 5 operator ≈ 275 ta — Postgres uchun oddiy, lekin
+    // Prisma'ning standart 5 soniyasi kamlik qiladi.
+    { timeout: 180_000 },
+  );
+
+  // ── 5. Natija ─────────────────────────────────────────────────────────
+  const companiesAfter = await prisma.company.count();
+  const assignmentsAfter = await prisma.contractAssignment.count();
+  console.log(`\n${"─".repeat(64)}`);
+  console.log(`  firma          : ${companiesBefore} → ${companiesAfter}   (+${companiesAfter - companiesBefore})`);
+  console.log(`  biriktiruv     : ${assignmentsBefore} → ${assignmentsAfter}   (+${assignmentsAfter - assignmentsBefore})`);
+  console.log(`  qayta yoqilgan : ${reactivated} ta xodim`);
   console.log(`\n✓ ${created} ta yaratildi, ${fixed} ta moslashtirildi.`);
   console.log("\nTekshirish uchun: npx tsx scripts/verify-scoping.ts");
 }
