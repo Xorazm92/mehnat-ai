@@ -19,9 +19,16 @@ export default async function ProofViewPage({
   const userId = session.user.id as string;
   const role = session.user.role as string;
 
+  // `fileData` bu yerda ham tanlanmaydi — sahifa uni ko'rsatmaydi, faqat
+  // havola beradi (`/api/proofs/[id]/file`). Aks holda har ochilishda 2 MB
+  // serverdan klientga uzatilardi.
   const proof = await prisma.reportProof.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true, companyId: true, period: true, colKey: true,
+      imageData: true, fileName: true, fileType: true, note: true, status: true,
+      submittedById: true, submittedByName: true, submittedAt: true,
+      reviewedById: true, reviewedByName: true, reviewedAt: true, rejectReason: true,
       company: {
         select: {
           id: true,

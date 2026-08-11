@@ -50,14 +50,29 @@ describe("allowedCellActions — menyu tarkibi", () => {
     expect(allowedCellActions("accountant")).not.toContain("+");
   });
 
-  it("buxgalterda topshirish/bajarilmadi/kartoteka/izoh/tozalash bor", () => {
+  it("buxgalterda topshirish/nol/bajarilmadi/kartoteka/izoh/tozalash bor", () => {
     expect(allowedCellActions("accountant")).toEqual([
       "topshirildi",
+      "nol",
       "-",
       "kartoteka",
       "izoh",
       "0",
     ]);
+  });
+
+  // "nol" (nol hisobot topshirildi) va "0" (shart emas) — IKKI BOSHQA narsa.
+  // Ular bir qiymatga tushib qolsa matritsa yolg'on gapiradi: "bu firmada
+  // bunday hisobot talab qilinmaydi" ham "bajarildi" deb sanalardi.
+  it("'nol' va '0' alohida amallar bo'lib qoladi", () => {
+    const menu = allowedCellActions("accountant");
+    expect(menu).toContain("nol");
+    expect(menu).toContain("0");
+    expect(menu.filter((v) => v === "nol" || v === "0")).toHaveLength(2);
+  });
+
+  it("nazoratchida ham 'nol' bor", () => {
+    for (const role of SENIOR) expect(allowedCellActions(role, relFor(role))).toContain("nol");
   });
 
   it("nazoratchida '+' bor", () => {

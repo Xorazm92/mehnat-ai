@@ -138,8 +138,15 @@ const getStatusStyle = (value: string) => {
   if (v === 'topshirildi' || v === 'submitted') return { bg: tint('var(--info)', 13), text: 'var(--info)', icon: '·', tooltip: 'Topshirildi (Kutilmoqda)' };
   if (v === 'kartoteka' || v === 'blocked') return { bg: tint('var(--warning)', 15), text: 'var(--warning)', icon: '!', tooltip: 'Kartoteka' };
   if (v === 'error' || v === 'oshibka') return { bg: tint('var(--danger)', 13), text: 'var(--danger)', icon: '!', tooltip: 'Xatolik' };
+  // NOL HISOBOT — topshirilgan, ichida raqam nol. "0" (shart emas) dan farqli:
+  // u ish BAJARILGANINI bildiradi, shuning uchun belgisi ham boshqa.
+  if (v === 'nol') return { bg: tint('var(--brand)', 13), text: 'var(--brand)', icon: 'Ø', tooltip: 'Nol hisobot topshirildi' };
 
-  return { bg: tint('var(--info)', 13), text: 'var(--info)', icon: value, tooltip: value };
+  // ERKIN MATN (izoh). Matnning O'ZI katakka chizilmaydi — ilgari shunday
+  // qilingani uchun uzun izoh ustunni cho'zib, butun jadval qatorini
+  // kengaytirib yuborardi. Endi faqat belgi turadi, to'liq matn bosilganda
+  // ochiladi (va tooltipda ko'rinadi).
+  return { bg: tint('var(--info)', 13), text: 'var(--info)', icon: '✎', tooltip: value, isNote: true };
 };
 
 // Katak amallarining ko'rinishi. Qaysi biri KIMGA ko'rinishi
@@ -149,6 +156,7 @@ const STATUS_META: Record<CellAction, { label: string; icon: string; color: stri
   'topshirildi': { label: 'Topshirildi', icon: '·', color: 'text-[var(--brand)]' },
   '-': { label: 'Bajarilmadi (-)', icon: '✗', color: 'text-[var(--danger)]' },
   'kartoteka': { label: 'Kartoteka', icon: '!', color: 'text-[var(--warning)]' },
+  'nol': { label: 'Nol hisobot (Ø)', icon: 'Ø', color: 'text-[var(--brand)]' },
   'izoh': { label: 'Matn yozish...', icon: '✎', color: 'text-[var(--brand)]' },
   '0': { label: 'Tozalash', icon: '—', color: 'text-[var(--text-muted)]' },
 };
@@ -209,6 +217,8 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
   const lockedForAccountant = isAccountant && isReviewerOwnedValue(value);
   const effectiveReadOnly = readOnly || lockedForAccountant;
   const [isOpen, setIsOpen] = useState(false);
+  // Izohni ko'rsatish oynasi — matn katakka sig'maydi, shuning uchun alohida.
+  const [noteOpen, setNoteOpen] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
@@ -216,7 +226,10 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
   const popoverRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    // Izoh oynasi ham shu koordinatalarga tayanadi, shuning uchun ikkalasidan
+    // biri ochilsa hisoblanadi. Aks holda izoh (0,0) da — ekran burchagida —
+    // paydo bo'lardi.
+    if (!isOpen && !noteOpen) return;
 
     const updateCoords = () => {
       if (buttonRef.current) {
@@ -249,6 +262,7 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
       event.stopPropagation();
       setShowInput(false);
       setIsOpen(false);
+      setNoteOpen(false);
       buttonRef.current?.focus();
     };
 
@@ -260,7 +274,7 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape, true);
     };
-  }, [isOpen]);
+  }, [isOpen, noteOpen]);
 
   const handleSelect = (statusValue: string) => {
     if (statusValue === 'izoh') {
@@ -312,9 +326,12 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
         onClick={() => {
           if (!effectiveReadOnly) setIsOpen(!isOpen);
           else if (proofStatus) handleViewProof();
+          // Faqat o'qiy oladigan foydalanuvchi ham izohni ko'ra olishi kerak:
+          // matn endi katakka chizilmaydi, shuning uchun yagona yo'l — ochish.
+          else if (style.isNote) setNoteOpen(true);
         }}
-        disabled={effectiveReadOnly && !proofStatus}
-        className={`w-full h-6 min-w-[24px] px-1 rounded-lg flex items-center justify-center text-micro font-bold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+        disabled={effectiveReadOnly && !proofStatus && !style.isNote}
+        className={`w-full h-6 min-w-[24px] max-w-[52px] mx-auto px-1 rounded-lg flex items-center justify-center text-micro font-bold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
           style.bg === 'transparent'
             ? 'border border-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--rule)]'
             : 'border border-black/5 dark:border-white/5 hover:opacity-80'
@@ -334,6 +351,32 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
           style={{ background: PROOF_DOT[proofStatus] || 'var(--info)' }}
           title="Skrinshot biriktirilgan"
         />
+      )}
+
+      {/* IZOH OYNASI — matn katakka chizilmaydi, shuning uchun bosilganda
+          shu yerda to'liq ko'rinadi. Qator balandligi o'zgarmaydi. */}
+      {noteOpen && createPortal(
+        <div className="fixed inset-0 z-[120]" onClick={() => setNoteOpen(false)}>
+          <div className="absolute inset-0" style={{ background: 'color-mix(in srgb, var(--surface-2) 45%, transparent)' }} />
+          <div
+            className="absolute p-4 rounded-xl shadow-2xl max-w-[420px]"
+            style={{
+              top: Math.min(coords.top + 4, window.innerHeight - 200),
+              left: Math.max(10, Math.min(coords.left, window.innerWidth - 430)),
+              background: 'var(--card-bg)',
+              border: '1px solid var(--rule)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-micro font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>
+              Izoh
+            </div>
+            <p className="text-body whitespace-pre-wrap break-words" style={{ color: 'var(--text)' }}>
+              {value}
+            </p>
+          </div>
+        </div>,
+        document.body
       )}
 
       {isOpen && createPortal(
@@ -1430,6 +1473,7 @@ const OperationModule: React.FC<Props> = ({
             { icon: '—', label: `${t.not_required} (0)`, color: 'var(--text-3)', bg: 'var(--surface-2)' },
             { icon: '·', label: t.pending, color: 'var(--info)', bg: tint('var(--info)', 12) },
             { icon: '!', label: t.kartoteka, color: 'var(--warning)', bg: tint('var(--warning)', 12) },
+            { icon: 'Ø', label: 'Nol hisobot', color: 'var(--brand)', bg: tint('var(--brand)', 12) },
             { icon: '✎', label: t.comment, color: 'var(--primary)', bg: 'var(--primary-ghost)' },
           ].map(l => (
             <div key={l.label} className="flex items-center gap-2 shrink-0">

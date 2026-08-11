@@ -16,6 +16,9 @@ interface ProofFull {
   period: string;
   colKey: string;
   imageData: string;
+  /** Hisobotning o'zi — ixtiyoriy, skrinshotga qo'shimcha. */
+  fileName: string | null;
+  fileType: string | null;
   note: string | null;
   status: string;
   submittedById: string;
@@ -97,6 +100,40 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
     return () => window.removeEventListener("keydown", onKey);
   }, [lightbox]);
 
+  // HISOBOT FAYLI — ixtiyoriy, skrinshotga qo'shimcha. Nazoratchi skrinshotdan
+  // o'qiy olmasa asl hujjatni ochadi.
+  const [docFile, setDocFile] = useState<{ data: string; name: string; type: string } | null>(null);
+
+  const FILE_MAX = 2 * 1024 * 1024;
+  const FILE_TYPES = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+  ];
+
+  const handleDoc = useCallback(async (file: File | null | undefined) => {
+    if (!file) { setDocFile(null); return; }
+    if (!FILE_TYPES.includes(file.type)) {
+      toast.error("Faqat PDF, Excel yoki rasm biriktirish mumkin");
+      return;
+    }
+    const data = await new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result));
+      r.onerror = () => rej(new Error("o'qib bo'lmadi"));
+      r.readAsDataURL(file);
+    }).catch(() => null);
+    if (!data) { toast.error("Faylni o'qib bo'lmadi"); return; }
+    // Chegara base64 UZUNLIGI bo'yicha — bazada aynan shuncha joy egallaydi.
+    if (data.length > FILE_MAX) {
+      toast.error(`Fayl juda katta (${(data.length / 1024 / 1024).toFixed(1)} MB). Chegara — 2 MB.`);
+      return;
+    }
+    setDocFile({ data, name: file.name, type: file.type });
+  }, []);
+
   const handleFile = useCallback(async (file: File | null | undefined) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -146,6 +183,9 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
         colKey: state.colKey,
         colLabel: state.colLabel,
         imageData: imgPreview,
+        fileData: docFile?.data,
+        fileName: docFile?.name,
+        fileType: docFile?.type,
         note: note.trim() || undefined,
       });
       toast.success("Hisobot topshirildi — nazoratchiga xabar yuborildi");
@@ -266,6 +306,37 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                 </button>
               )}
 
+              {/* HISOBOT FAYLI — ixtiyoriy. Skrinshot tez ko'z yugurtirish
+                  uchun, fayl esa nazoratchi hujjatning o'zini ochishi uchun. */}
+              <label className="block text-meta font-bold uppercase tracking-widest mt-4 mb-1.5" style={{ color: "var(--text-3)" }}>
+                Hisobot fayli (ixtiyoriy) · PDF, Excel yoki rasm · maks 2 MB
+              </label>
+              {docFile ? (
+                <div
+                  className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg"
+                  style={{ background: "var(--surface)", border: "1px solid var(--card-border)" }}
+                >
+                  <span className="text-xs truncate" style={{ color: "var(--text)" }}>
+                    {docFile.name} · {(docFile.data.length / 1024).toFixed(0)} kB
+                  </span>
+                  <button
+                    onClick={() => setDocFile(null)}
+                    className="text-xs font-bold shrink-0"
+                    style={{ color: "var(--danger)" }}
+                  >
+                    O&apos;chirish
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="file"
+                  accept=".pdf,.xlsx,.xls,image/jpeg,image/png"
+                  onChange={(e) => handleDoc(e.target.files?.[0])}
+                  className="w-full text-xs rounded-lg px-3 py-2 outline-none"
+                  style={{ background: "var(--surface)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                />
+              )}
+
               <label className="block text-meta font-bold uppercase tracking-widest mt-4 mb-1.5" style={{ color: "var(--text-3)" }}>
                 Izoh (ixtiyoriy)
               </label>
@@ -308,6 +379,22 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                     </div>
                     {statusBadge(proof.status)}
                   </div>
+
+                  {/* HISOBOT FAYLI — skrinshotdan o'qib bo'lmaganda asl hujjat. */}
+                  {proof.fileName && (
+                    <a
+                      href={`/api/proofs/${proof.id}/file`}
+                      className="flex items-center justify-between gap-2 px-3 py-2 mb-3 rounded-lg hover:opacity-80 transition-opacity"
+                      style={{ background: "var(--surface)", border: "1px solid var(--card-border)" }}
+                    >
+                      <span className="text-xs font-bold truncate" style={{ color: "var(--text)" }}>
+                        📎 {proof.fileName}
+                      </span>
+                      <span className="text-micro font-bold uppercase tracking-widest shrink-0" style={{ color: "var(--primary)" }}>
+                        Yuklab olish
+                      </span>
+                    </a>
+                  )}
 
                   {/* Skrinshot preview: ustiga bosilsa to'liq zoom rejimida ochiladi */}
                   <div className="relative group rounded-lg overflow-hidden border cursor-zoom-in" style={{ borderColor: "var(--card-border)", background: "var(--surface-2)" }}>

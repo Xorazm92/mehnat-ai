@@ -18,6 +18,16 @@ export const CELL_SUBMITTED = "topshirildi";
 export const CELL_FAILED = "-";
 export const CELL_KARTOTEKA = "kartoteka";
 export const CELL_EMPTY = "0";
+/**
+ * NOL HISOBOT — hisobot topshirilgan, lekin qiymatlari nol (nil deklaratsiya).
+ *
+ * `CELL_EMPTY` ("0") BILAN ARALASHTIRMANG: u "shart emas" degani, ya'ni bu
+ * firmada bunday hisobot umuman talab qilinmaydi. `nol` esa BAJARILGAN ish —
+ * buxgalter hisobotni topshirgan, ichida raqam nol. Ikkisi bir belgiga
+ * tushib qolsa matritsa yolg'on gapiradi: "shart emas" ham "bajarildi" deb
+ * sanalardi. Shu sabab belgisi ham boshqa: "—" emas, "Ø".
+ */
+export const CELL_ZERO_REPORT = "nol";
 
 export type CellAction =
   | typeof CELL_APPROVED
@@ -25,6 +35,7 @@ export type CellAction =
   | typeof CELL_FAILED
   | typeof CELL_KARTOTEKA
   | typeof CELL_EMPTY
+  | typeof CELL_ZERO_REPORT
   | "izoh";
 
 /** Shu firmadagi mas'uliyatlar. Iterable — Set ham, massiv ham bo'ladi. */
@@ -106,11 +117,11 @@ export function canMarkSubmittedDirectly(role: string, relations?: Relations): b
 export function allowedCellActions(role: string, relations?: Relations): CellAction[] {
   if (!canEditMatrix(role, relations)) return [];
   if (isCompanyReviewer(role, relations)) {
-    return [CELL_APPROVED, CELL_SUBMITTED, CELL_FAILED, CELL_KARTOTEKA, "izoh", CELL_EMPTY];
+    return [CELL_APPROVED, CELL_SUBMITTED, CELL_ZERO_REPORT, CELL_FAILED, CELL_KARTOTEKA, "izoh", CELL_EMPTY];
   }
   // Buxgalter: tasdiqlash yo'q. "Topshirish" menyuda bor, lekin u qiymat
   // yozmaydi — skrinshot oynasini ochadi (UI da onRequestSubmit).
-  return [CELL_SUBMITTED, CELL_FAILED, CELL_KARTOTEKA, "izoh", CELL_EMPTY];
+  return [CELL_SUBMITTED, CELL_ZERO_REPORT, CELL_FAILED, CELL_KARTOTEKA, "izoh", CELL_EMPTY];
 }
 
 /** Qiymat "nazoratchi qo'ygan" holatmi — buxgalter uni buza olmaydi. */

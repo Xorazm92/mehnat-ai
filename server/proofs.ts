@@ -18,6 +18,37 @@ import { syncProofToObligation } from "@/lib/obligationBridge";
 
 const REVIEWER_ROLES = ["supervisor", "chief_accountant", "admin", "super_admin"];
 
+/**
+ * HISOBOT FAYLI CHEGARALARI.
+ *
+ * Fayl `imageData` kabi base64 bo'lib BAZADA yotadi, shuning uchun chegara
+ * kod tomonda majburlanishi shart — busiz bitta 50 MB'lik skan bazani ham,
+ * har kunlik `pg_dump` ni ham cho'ktirardi.
+ *
+ * base64 xom hajmdan ~33% katta bo'ladi, shu sabab tekshiruv SATR uzunligi
+ * bo'yicha, ya'ni haqiqiy saqlanadigan hajm bo'yicha.
+ */
+const FILE_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+const FILE_ALLOWED = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // xlsx
+  "application/vnd.ms-excel", // xls
+];
+
+function assertProofFile(fileData?: string, fileType?: string): void {
+  if (!fileData) return; // fayl ixtiyoriy
+  if (!fileData.startsWith("data:")) throw new Error("Fayl formati noto'g'ri");
+  if (!fileType || !FILE_ALLOWED.includes(fileType)) {
+    throw new Error("Faqat PDF, Excel yoki rasm biriktirish mumkin");
+  }
+  if (fileData.length > FILE_MAX_BYTES) {
+    const mb = (fileData.length / 1024 / 1024).toFixed(1);
+    throw new Error(`Fayl juda katta (${mb} MB). Chegara — 2 MB.`);
+  }
+}
+
 function dbColumnFor(colKey: string): string {
   const dbCol = FIELD_TO_DB_COLUMN[colKey as OperationFieldKey];
   if (!dbCol) throw new Error("Noto'g'ri ustun kaliti");
@@ -34,6 +65,10 @@ export async function saveReportProof(input: {
   colKey: string;
   colLabel?: string;
   imageData: string;
+  /** Hisobotning o'zi — ixtiyoriy, skrinshotga qo'shimcha. */
+  fileData?: string;
+  fileName?: string;
+  fileType?: string;
   note?: string;
 }) {
   const session = await auth();
@@ -52,6 +87,7 @@ export async function saveReportProof(input: {
   if (!input.imageData || !input.imageData.startsWith("data:image/")) {
     throw new Error("Skrinshot (rasm) talab qilinadi");
   }
+  assertProofFile(input.fileData, input.fileType);
 
   const company = await prisma.company.findUnique({
     where: { id: input.companyId },
@@ -81,6 +117,9 @@ export async function saveReportProof(input: {
       period: period,
       colKey: input.colKey,
       imageData: input.imageData,
+      fileData: input.fileData ?? null,
+      fileName: input.fileName ?? null,
+      fileType: input.fileType ?? null,
       note: input.note ?? null,
       status: "pending",
       submittedById: userId,
@@ -88,6 +127,12 @@ export async function saveReportProof(input: {
     },
     update: {
       imageData: input.imageData,
+      // Qayta topshirishda fayl berilmasa ESKISI O'CHADI: aks holda yangi
+      // skrinshot eski faylga yopishib qolib, nazoratchi mos kelmagan
+      // hujjatni ko'rardi.
+      fileData: input.fileData ?? null,
+      fileName: input.fileName ?? null,
+      fileType: input.fileType ?? null,
       note: input.note ?? null,
       status: "pending",
       submittedById: userId,
@@ -192,8 +237,18 @@ export async function getReportProof(companyId: string, period: string, colKey: 
 
   await assertCompanyPermission(prisma, { id: userId, role }, companyId, "proof:read");
 
+  // `fileData` ATAYLAB tanlanmaydi: u 2 MB gacha base64 va oyna har ochilganda
+  // tarmoqdan o'tardi. Faylning O'ZI alohida yo'ldan olinadi
+  // (`/api/proofs/[id]/file`), bu yerda faqat nomi va turi kerak — havolani
+  // ko'rsatish uchun shuning o'zi yetadi.
   const proof = await prisma.reportProof.findUnique({
     where: { companyId_period_colKey: { companyId, period: normalizePeriodKey(period), colKey } },
+    select: {
+      id: true, companyId: true, period: true, colKey: true,
+      imageData: true, fileName: true, fileType: true, note: true, status: true,
+      submittedById: true, submittedByName: true, submittedAt: true,
+      reviewedById: true, reviewedByName: true, reviewedAt: true, rejectReason: true,
+    },
   });
 
   return proof ? serialize(proof) : null;

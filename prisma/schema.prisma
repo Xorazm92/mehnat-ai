@@ -335,6 +335,17 @@ model ReportProof {
   colKey    String // OperationModule REPORT_COLUMNS kaliti, masalan "didox"
 
   imageData String  @db.Text // skrinshot (base64 data URL, klient tomonda siqilgan)
+
+  // HISOBOTNING O'ZI — skrinshotga qo'shimcha, IXTIYORIY.
+  // Skrinshot majburiy bo'lib qoladi (tez ko'z yugurtirish uchun), fayl esa
+  // nazoratchi skrinshotdan o'qiy olmaganda asl hujjatni ochish imkonini
+  // beradi. Base64 — `imageData` bilan bir xil uslub: qo'shimcha saqlash
+  // qatlami yo'q va `pg_dump` zaxirasi ikkalasini ham qamrab oladi.
+  // Server 2 MB chegara qo'yadi (server/proofs.ts) — busiz baza tez shishardi.
+  fileData String? @db.Text
+  fileName String?
+  fileType String?
+
   note      String? // buxgalterning izohi
 
   status String @default("pending") // pending | approved | rejected
