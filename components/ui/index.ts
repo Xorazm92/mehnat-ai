@@ -17,4 +17,5 @@ export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { Skeleton, SkeletonTable, type SkeletonProps } from "./Skeleton";
 export { DataTable, type DataTableProps, type DataColumn } from "./DataTable";
 export { TableToolbar, type ViewMode } from "./TableToolbar";
+export { Tabs, TabPanel, type TabItem, type TabsProps, type TabPanelProps } from "./Tabs";
 export { MonthPicker } from "./MonthPicker";

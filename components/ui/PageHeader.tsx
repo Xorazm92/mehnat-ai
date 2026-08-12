@@ -36,8 +36,17 @@ export function PageHeader({
   children,
   className = "",
 }: PageHeaderProps) {
+  // Ostki chiziq: sarlavhani kontentdan ajratadi. Lekin `children` (yorliqlar
+  // qatori) berilganda uning O'ZI chiziq chizadi — ikkalasi qolsa ikkita
+  // parallel hairline hosil bo'lib, yorliqlar "qayerga ulanishi" noaniq
+  // ko'rinardi.
+  const hasChildren = React.Children.count(children) > 0;
+
   return (
-    <header className={`flex flex-col gap-4 pb-4 mb-5 ${className}`} style={{ borderBottom: "1px solid var(--rule-strong)" }}>
+    <header
+      className={`flex flex-col gap-4 ${hasChildren ? "mb-5" : "pb-4 mb-5"} ${className}`}
+      style={hasChildren ? undefined : { borderBottom: "1px solid var(--rule-strong)" }}
+    >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
           {icon && (
