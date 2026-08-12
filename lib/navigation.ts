@@ -1,7 +1,9 @@
 import {
-  LayoutDashboard, Building2, Users, FileText, Wallet, Receipt, CreditCard, Calendar, TrendingUp, Settings, Bell, ScrollText, UserCircle, Banknote, HandCoins, CalendarClock, ShieldCheck, type LucideIcon,
+  LayoutDashboard, Building2, Users, FileText, Wallet, Receipt, CreditCard, Calendar, TrendingUp, Bell, ScrollText, UserCircle, Banknote, HandCoins, CalendarClock, ShieldCheck,
+  Grid3x3, Trophy, CheckSquare, Settings, User, AlarmClock, Calculator, History, Lock, type LucideIcon,
 } from "lucide-react";
 import type { AppView } from "@/lib/permissions";
+import { KPI_CONFIG_ROLES, KPI_REVIEW_ROLES } from "@/lib/kpiTabs";
 
 /**
  * NAVIGATSIYA REYESTRI — YAGONA manba.
@@ -24,6 +26,20 @@ export interface NavItem {
   group: NavGroup;
   /** Qidiruv uchun qo'shimcha kalit so'zlar (sinonim, ruscha, xato yozilishi) */
   keywords?: string;
+  /**
+   * Ota bo'limning `href` i — menyuda ichkariga surib chiziladi.
+   *
+   * Bungacha MOLIYA guruhida "Kassa", "Kirim kassa", "Chiqim kassa" va
+   * "Qarzdorlik" to'rtta TENG element bo'lib turardi, garchi oxirgi uchtasi
+   * birinchisining ichida bo'lsa ham. Yon paneldagi tekis ro'yxat "kirim
+   * kassa" ning "kassa" ga aloqasini ko'rsatmasdi va foydalanuvchi qaysi
+   * birini ochishni har safar taxmin qilardi.
+   *
+   * Ota element ko'rinmasa (masalan nazoratchida faqat "Qarzdorlik" bor),
+   * bola element o'z guruhida oddiy element sifatida chiziladi — hech narsa
+   * yashirilmaydi.
+   */
+  parent?: string;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -38,18 +54,71 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/deadlines",     view: "deadlines",     label: "Ishlar",           icon: CalendarClock,   group: "asosiy",  keywords: "muddat deadline kechikish vazifa topshiriq task majburiyat ish" },
   { href: "/reports",       view: "reports",       label: "Hisobotlar",       icon: FileText,        group: "moliya",  keywords: "hisobot matritsa report" },
   { href: "/kassa",         view: "kassa",         label: "Kassa",            icon: Wallet,          group: "moliya",  keywords: "kirim to'lov naqd" },
-  { href: "/kassa/kirim",   view: "kassa_income",  label: "Kirim kassa",      icon: Banknote,        group: "moliya",  keywords: "vipiska bank kirim tushum vypiska plastik" },
-  { href: "/kassa/chiqim",  view: "kassa_expense", label: "Chiqim kassa",     icon: CreditCard,      group: "moliya",  keywords: "rasxod chiqim tranzit karta xodim kanal" },
-  { href: "/kassa/qarzdorlik", view: "kassa_debt",  label: "Qarzdorlik",       icon: HandCoins,       group: "moliya",  keywords: "qarz debitor 1c zadolzhennost" },
+  { href: "/kassa/kirim",   view: "kassa_income",  label: "Kirim kassa",      icon: Banknote,        group: "moliya",  parent: "/kassa", keywords: "vipiska bank kirim tushum vypiska plastik" },
+  { href: "/kassa/chiqim",  view: "kassa_expense", label: "Chiqim kassa",     icon: CreditCard,      group: "moliya",  parent: "/kassa", keywords: "rasxod chiqim tranzit karta xodim kanal" },
+  { href: "/kassa/qarzdorlik", view: "kassa_debt",  label: "Qarzdorlik",       icon: HandCoins,       group: "moliya",  parent: "/kassa", keywords: "qarz debitor 1c zadolzhennost" },
   { href: "/expenses",      view: "expenses",      label: "Xarajatlar",       icon: Receipt,         group: "moliya",  keywords: "chiqim xarajat rasxod" },
   { href: "/payroll",       view: "payroll",       label: "Oylik",            icon: CreditCard,      group: "moliya",  keywords: "maosh zarplata avans" },
   { href: "/attendance",    view: "attendance",    label: "Davomat",          icon: Calendar,        group: "boshqa",  keywords: "kelish ketish tabel" },
   { href: "/notifications", view: "notifications", label: "Xabarlar",         icon: Bell,            group: "boshqa",  keywords: "bildirishnoma xabar" },
   { href: "/cabinet",       view: "cabinet",       label: "Mening kabinetim", icon: UserCircle,      group: "kabinet", keywords: "profil shaxsiy kabinet" },
-  { href: "/cabinet/bank",  view: "cabinet_bank",  label: "Bank kabineti",    icon: Banknote,        group: "kabinet", keywords: "bank klient" },
+  { href: "/cabinet/bank",  view: "cabinet_bank",  label: "Bank kabineti",    icon: Banknote,        group: "kabinet", parent: "/cabinet", keywords: "bank klient" },
   { href: "/admin",         view: "admin",         label: "Admin panel",      icon: ShieldCheck,     group: "admin",   keywords: "admin sozlash boshqaruv" },
   { href: "/audit-logs",    view: "audit_logs",    label: "Audit jurnali",    icon: ScrollText,      group: "admin",   keywords: "audit jurnal log tarix" },
-  { href: "/settings",      view: "settings",      label: "Sozlamalar",       icon: Settings,        group: "admin",   keywords: "sozlama parametr settings" },
+  // `/settings` menyudan olib tashlandi — u `/cabinet` ning KUCHSIZROQ
+  // nusxasi edi: bir xil profil formasi va bir xil parol o'zgartirish, faqat
+  // JSHSHIR/jinsi/tug'ilgan sana/ma'lumot maydonlarisiz. Ikkita joyda bitta
+  // profilni tahrirlash — xodim qaysi biri "haqiqiy" ekanini bilmasdi.
+  // Manzil o'z kuchida qoladi va `/cabinet?tab=profile` ga yo'naltiradi
+  // (eski havolalar, `settings` RBAC view'i va bildirishnomalar ishlaydi).
+  // Tizim parametrlari admin uchun `/admin/settings` da.
+];
+
+/**
+ * SAHIFA ICHIDAGI BO'LIMLAR — qidiruv uchun.
+ *
+ * Yorliqlar endi manzilga ega (`?tab=`), ya'ni ularga to'g'ridan-to'g'ri
+ * o'tish mumkin. Bungacha "matritsa" deb qidirgan odam "Hisobotlar"
+ * sahifasini topardi va u yerdan yorliqni QO'LDA topishi kerak edi —
+ * holbuki u aynan matritsani so'ragan edi.
+ *
+ * `roles` berilgan bo'lsa — bo'lim faqat o'sha rollarda ko'rinadi (yorliqning
+ * o'zi ham shu chegara bilan chiziladi). Ruxsatning asosiy chegarasi esa
+ * `view`: uni ko'rmaydigan rol bo'limni ham ko'rmaydi.
+ */
+export interface NavSection {
+  href: string;
+  view: AppView;
+  /** Qaysi ekran ichida — natijada "Hisobotlar · Amallar matritsasi" deb chiqadi. */
+  parentLabel: string;
+  label: string;
+  icon: LucideIcon;
+  keywords?: string;
+  roles?: readonly string[];
+}
+
+export const NAV_SECTIONS: NavSection[] = [
+  { href: "/reports?tab=matrix",     view: "reports",   parentLabel: "Hisobotlar", label: "Amallar matritsasi",   icon: Grid3x3,      keywords: "matritsa amallar jadval topshirish holat" },
+  { href: "/reports?tab=reports",    view: "reports",   parentLabel: "Hisobotlar", label: "Moliyaviy hisobotlar", icon: FileText,     keywords: "foyda zarar hujjat balans" },
+
+  { href: "/kpi?tab=mine",           view: "kpi",       parentLabel: "KPI",        label: "Mening KPI'm",         icon: User,         keywords: "shaxsiy ball topshirish ko'rsatkich" },
+  { href: "/kpi?tab=nazoratchi",     view: "kpi",       parentLabel: "KPI",        label: "Baholash",             icon: CheckSquare,  keywords: "nazoratchi baho tasdiqlash checklist", roles: KPI_REVIEW_ROLES },
+  { href: "/kpi?tab=reyting",        view: "kpi",       parentLabel: "KPI",        label: "Reyting",              icon: Trophy,       keywords: "reyting leaderboard o'rin" },
+  { href: "/kpi?tab=rules",          view: "kpi",       parentLabel: "KPI",        label: "KPI qoidalari",        icon: Settings,     keywords: "qoida koeffitsient sozlash rule", roles: KPI_CONFIG_ROLES },
+
+  { href: "/payroll?tab=drafts",     view: "payroll",   parentLabel: "Oylik",      label: "Oylik hisoblash",      icon: Calculator,   keywords: "qoralama hisoblash maosh draft" },
+  { href: "/payroll?tab=history",    view: "payroll",   parentLabel: "Oylik",      label: "To'lovlar tarixi",     icon: History,      keywords: "tarix to'lov to'langan" },
+
+  { href: "/deadlines?tab=overdue",  view: "deadlines", parentLabel: "Ishlar",     label: "Muddati o'tgan",       icon: AlarmClock,   keywords: "kechikkan muddat overdue prosrochka" },
+  { href: "/deadlines?tab=mine",     view: "deadlines", parentLabel: "Ishlar",     label: "Mening ishlarim",      icon: UserCircle,   keywords: "mening menga biriktirilgan" },
+  // `view: "deadlines"` — manzil o'sha ekran, ruxsat ham o'shanikidan.
+  { href: "/deadlines?tab=tasks",    view: "deadlines", parentLabel: "Ishlar",     label: "Vazifalar",            icon: CheckSquare,  keywords: "vazifa topshiriq task" },
+
+  { href: "/cabinet?tab=kpi",        view: "cabinet",   parentLabel: "Kabinet",    label: "KPI va oyligim",       icon: TrendingUp,   keywords: "mening oyligim maosh ball" },
+  { href: "/cabinet?tab=companies",  view: "cabinet",   parentLabel: "Kabinet",    label: "Firmalarim",           icon: Building2,    keywords: "biriktirilgan firma mening" },
+  { href: "/cabinet?tab=attendance", view: "cabinet",   parentLabel: "Kabinet",    label: "Davomatim",            icon: Calendar,     keywords: "kelish ketish tabel mening" },
+  { href: "/cabinet?tab=profile",    view: "cabinet",   parentLabel: "Kabinet",    label: "Profil",               icon: User,         keywords: "profil sozlama settings shaxsiy ma'lumot" },
+  { href: "/cabinet?tab=security",   view: "cabinet",   parentLabel: "Kabinet",    label: "Parolni o'zgartirish", icon: Lock,         keywords: "parol xavfsizlik password parol almashtirish" },
 ];
 
 export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
@@ -58,4 +127,38 @@ export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
   boshqa: "BOSHQA",
   kabinet: "KABINET",
   admin: "ADMIN",
+};
+
+/**
+ * MOBIL PASTKI PANEL — muhimlik tartibi. Rol ko'ra oladigan birinchi TO'RTTASI
+ * chiziladi, beshinchi joyni "Yana" (to'liq menyu) egallaydi.
+ *
+ * Bu ro'yxat faqat TARTIBNI belgilaydi; manzil, ikonka va ruxsat `NAV_ITEMS`
+ * dan olinadi. Ilgari `MobileBottomNav` bularning hammasini o'zida qaytadan
+ * yozgan edi.
+ */
+export const MOBILE_NAV_ORDER: AppView[] = [
+  "dashboard",
+  "cabinet",
+  "cabinet_bank",
+  "deadlines",
+  "reports",
+  "organizations",
+  "kpi",
+  "kassa",
+  "expenses",
+  "notifications",
+];
+
+/** 60px balandlikdagi panelga sig'maydigan yorliqlarning qisqa shakli. */
+export const MOBILE_NAV_SHORT_LABELS: Partial<Record<AppView, string>> = {
+  dashboard: "Bosh",
+  cabinet: "Kabinet",
+  cabinet_bank: "Bank",
+  reports: "Hisobot",
+  organizations: "Firma",
+  expenses: "Xarajat",
+  notifications: "Xabar",
+  kassa_income: "Kirim",
+  kassa_expense: "Chiqim",
 };

@@ -1,10 +1,17 @@
 import { auth } from "@/lib/auth";
 import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
+import { readTabParam } from "@/lib/tabs";
+import { PAYROLL_TAB_IDS, type PayrollTabId } from "@/lib/payrollTabs";
 import PayrollClient from "./PayrollClient";
 
 export const metadata = { title: "Oylik" };
 
-export default async function PayrollPage() {
+export default async function PayrollPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const sp = await searchParams;
   const session = await auth();
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role || "employee";
@@ -28,6 +35,7 @@ export default async function PayrollPage() {
         staff={JSON.parse(JSON.stringify(mappedStaff))}
         operations={JSON.parse(JSON.stringify(operations))}
         userRole={userRole}
+        initialTab={readTabParam<PayrollTabId>(sp.tab, PAYROLL_TAB_IDS, "drafts")}
       />
     </div>
   );

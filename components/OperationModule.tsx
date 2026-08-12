@@ -1260,7 +1260,10 @@ const OperationModule: React.FC<Props> = ({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-5">
             <div>
-              <h1 className="text-xl font-semibold leading-tight" style={{ color: 'var(--text)' }}>{t.matrixTitle}</h1>
+              {/* `h1` emas, `h2`: sahifaning yagona `h1` i endi `PageHeader`
+                  da — ekran o'quvchi uchun ikkita birinchi darajali sarlavha
+                  hujjat tuzilmasini buzardi. */}
+              <h2 className="text-base font-semibold leading-tight" style={{ color: 'var(--text)' }}>{t.matrixTitle}</h2>
               <p className="text-micro font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>
                 {filteredRows.length} / {rows.length} {t.taKorxona} · <span style={{ color: 'var(--primary)' }}>{selectedPeriod}</span>
               </p>

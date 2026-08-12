@@ -17,6 +17,11 @@ import { formatUzDate } from "@/lib/format";
 import { updateObligationStatus, setDelayReason, approveDelayReason } from "@/server/obligations";
 import { createTask, updateTaskStatus, assignTask } from "@/server/tasks";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Tabs, type TabItem } from "@/components/ui/Tabs";
+import { useTabParam } from "@/hooks/useTabParam";
+import { WORK_TAB_IDS, type WorkTab } from "@/lib/workTabs";
+import { CalendarClock, Inbox, UserCheck, AlarmClock, CheckSquare } from "lucide-react";
 
 export interface ObligationRow {
   kind: "obligation";
@@ -125,7 +130,7 @@ function taskActions(status: string): TaskAction[] {
 }
 
 const TERMINAL = new Set(["accepted", "cancelled"]);
-export type WorkTab = "all" | "mine" | "overdue" | "tasks";
+export type { WorkTab };
 
 /** Bir marta chiziladigan qatorlar soni. */
 const RENDER_STEP = 50;
@@ -170,7 +175,9 @@ export default function WorkInboxClient({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [tab, setTab] = useState<WorkTab>(initialTab);
+  // Yorliq URL'da: bildirishnoma yoki hamkasb "muddati o'tganlarni ko'r" deb
+  // `/deadlines?tab=overdue` yuborishi mumkin.
+  const [tab, setTab] = useTabParam<WorkTab>("tab", WORK_TAB_IDS, initialTab);
   const [visible, setVisible] = useState(RENDER_STEP);
   const [showForm, setShowForm] = useState(false);
   const [f, setF] = useState({ ...EMPTY_FORM });
@@ -246,45 +253,39 @@ export default function WorkInboxClient({
 
   const input = "px-2.5 py-1.5 rounded-lg border text-sm w-full";
   const inputStyle = { borderColor: "var(--border, var(--rule))", background: "transparent", color: "var(--text-primary)" };
-  const TABS: { key: WorkTab; label: string; n: number }[] = [
-    { key: "all", label: "Hammasi", n: tabCounts.all },
-    { key: "mine", label: "Mening", n: tabCounts.mine },
-    { key: "overdue", label: "Muddati o'tgan", n: tabCounts.overdue },
-    { key: "tasks", label: "Vazifalar", n: tabCounts.tasks },
+  const TABS: TabItem<WorkTab>[] = [
+    { id: "all", label: "Hammasi", icon: Inbox, count: tabCounts.all },
+    { id: "mine", label: "Mening", icon: UserCheck, count: tabCounts.mine, hint: "Menga biriktirilgan ishlar" },
+    { id: "overdue", label: "Muddati o'tgan", icon: AlarmClock, count: tabCounts.overdue },
+    { id: "tasks", label: "Vazifalar", icon: CheckSquare, count: tabCounts.tasks, hint: "Faqat qo'lda yaratilgan vazifalar" },
   ];
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
-            Ishlar
-          </h1>
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Majburiyatlar va vazifalar — bitta ro&apos;yxatda, muddati bo&apos;yicha
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => { setTab(t.key); setVisible(RENDER_STEP); }}
-              className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
-              style={{
-                background: tab === t.key ? "var(--sidebar-item-active-bg, var(--brand))" : "var(--bg-hover, var(--bg-sunken))",
-                color: tab === t.key ? "#fff" : "var(--text-primary)",
-              }}
-            >
-              {t.label} <span className="opacity-70">({t.n})</span>
-            </button>
-          ))}
-          {isSenior && (
+    <div className="space-y-4">
+      <PageHeader
+        icon={<CalendarClock size={20} />}
+        title="Ishlar"
+        description="Majburiyatlar va vazifalar — bitta ro'yxatda, muddati bo'yicha"
+        actions={
+          isSenior ? (
             <Button variant="success" size="sm" onClick={() => setShowForm((s) => !s)}>
               {showForm ? "Bekor" : "+ Yangi vazifa"}
             </Button>
-          )}
-        </div>
-      </div>
+          ) : null
+        }
+      >
+        {/* Filtrlar sarlavha ostidagi yorliqlar sifatida: ilgari ular
+            sarlavhaning O'NG tomonida "Yangi vazifa" tugmasi bilan bir
+            qatorda turardi — ya'ni ko'rinishni almashtiruvchi va ma'lumot
+            yaratuvchi boshqaruvlar bir xil og'irlikda ko'rinardi. */}
+        <Tabs
+          items={TABS}
+          value={tab}
+          onChange={(next) => { setTab(next); setVisible(RENDER_STEP); }}
+          idBase="work"
+          ariaLabel="Ishlar filtri"
+        />
+      </PageHeader>
 
       {showForm && (
         <div className="rounded-xl border p-4 grid grid-cols-2 md:grid-cols-3 gap-3" style={{ borderColor: "var(--border, var(--rule))" }}>

@@ -190,7 +190,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     };
 
     return (
-        <div className="flex flex-col xl:flex-row gap-6 h-[calc(100dvh-160px)] animate-fade-in pb-6 p-4">
+        <div className="flex flex-col xl:flex-row gap-6 h-[calc(100dvh-240px)] min-h-[520px] animate-fade-in">
             {/* LEFT: Company sidebar */}
             <div className="w-full xl:w-[340px] flex flex-col overflow-hidden rounded-xl"
                 style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>

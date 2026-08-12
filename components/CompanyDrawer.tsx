@@ -37,6 +37,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
+import { Tabs, TabPanel, type TabItem } from "@/components/ui/Tabs";
 import RecordTimeline from "@/components/RecordTimeline";
 import {
   ASSIGNMENT_ROLE_LABELS,
@@ -217,15 +218,17 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
     setShowPasswords(prev => ({ ...prev, [credId]: !prev[credId] }));
   };
 
-  const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: 'pasport', label: 'Pasport', icon: <FileText size={14} /> },
-    { id: 'soliq', label: 'Soliq', icon: <Briefcase size={14} /> },
-    { id: 'loginlar', label: 'Loginlar', icon: <Lock size={14} /> },
-    { id: 'jamoa', label: 'Jamoa', icon: <Users size={14} /> },
-    { id: 'shartnoma', label: 'Shartnoma', icon: <DollarSign size={14} /> },
-    { id: 'xizmatlar', label: 'Xizmatlar', icon: <Check size={14} /> },
-    { id: 'kpi', label: 'KPI', icon: <Calculator size={14} /> },
-    { id: 'tarix', label: 'Tarix', icon: <History size={14} /> },
+  // Ikonka komponent sifatida (element emas) — `Tabs` uni o'zi kerakli
+  // o'lchamda chizadi; ilgari har biri `cloneElement` bilan qayta o'lchanardi.
+  const tabs: TabItem<TabId>[] = [
+    { id: 'pasport', label: 'Pasport', icon: FileText },
+    { id: 'soliq', label: 'Soliq', icon: Briefcase },
+    { id: 'loginlar', label: 'Loginlar', icon: Lock },
+    { id: 'jamoa', label: 'Jamoa', icon: Users },
+    { id: 'shartnoma', label: 'Shartnoma', icon: DollarSign },
+    { id: 'xizmatlar', label: 'Xizmatlar', icon: Check },
+    { id: 'kpi', label: 'KPI', icon: Calculator },
+    { id: 'tarix', label: 'Tarix', icon: History },
   ];
 
   return createPortal(
@@ -259,17 +262,22 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               <X size={20} />
             </button>
           </div>
-          <div className="flex px-6 overflow-x-auto gap-2 pb-5">
-            {tabs.map(tab => (
-              <Button variant="primary" size="md" key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2.5 transition-all font-bold text-meta uppercase tracking-widest whitespace-nowrap rounded-lg border`} style={activeTab === tab.id ? { background: 'var(--accent-blue)', color: '#fff', borderColor: 'var(--accent-blue)' } : { background: 'var(--input-bg)', color: 'var(--text-secondary)', borderColor: 'var(--card-border)' }}>
-                <div className="shrink-0">{React.cloneElement(tab.icon as React.ReactElement<any>, { size: 14 })}</div>
-                {tab.label}
-              </Button>
-            ))}
+          {/* SAKKIZTA yorliq — ilgari hammasi "asosiy amal" tugmasi
+              ko'rinishida edi va panel sarlavhasi ostida ko'k tugmalar
+              devorini hosil qilardi. */}
+          <div className="px-6 pb-1">
+            <Tabs
+              items={tabs}
+              value={activeTab}
+              onChange={setActiveTab}
+              idBase="company-drawer"
+              size="sm"
+              ariaLabel="Firma ma'lumoti bo'limlari"
+            />
           </div>
         </div>
 
-        <div className="p-6 flex-1 space-y-6">
+        <TabPanel tabId={activeTab} idBase="company-drawer" className="p-6 flex-1 space-y-6">
           {activeTab === 'pasport' && (
             <div className="space-y-6 animate-fade-in pb-10">
               <div className="dashboard-card p-5 border-l-4" style={{ borderLeftColor: 'var(--accent-blue)' }}>
@@ -1158,7 +1166,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               </div>
             </div>
           )}
-        </div>
+        </TabPanel>
       </div>
     </>,
     document.body

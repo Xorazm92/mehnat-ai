@@ -101,8 +101,11 @@ export function AdminCabinet({
     { href: "/organizations", label: "Firmalar", icon: Building2, color: "purple" },
     { href: "/audit-logs", label: "Audit Log", icon: ScrollText, color: "orange" },
     { href: "/kpi", label: "KPI Qoidalar", icon: TrendingUp, color: "cyan" },
+    // Admin kabinetidagi "Sozlamalar" — TIZIM parametrlari (`/admin/settings`),
+    // shaxsiy profil emas. Ilgari u `/settings` ga, ya'ni oddiy profil
+    // formasiga olib borardi.
     ...(isSuperAdmin
-      ? [{ href: "/settings", label: "Sozlamalar", icon: Settings, color: "red" }]
+      ? [{ href: "/admin/settings", label: "Tizim sozlamalari", icon: Settings, color: "red" }]
       : []),
   ];
 

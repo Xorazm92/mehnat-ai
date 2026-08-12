@@ -148,8 +148,11 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
     // Assume a base goal of 50 positive actions per month for gamification scaling
     const efficiency = Math.min(100, Math.round((positiveperf / 20) * 100));
 
+    // Panel o'z sahifa fonini bo'yamaydi va `min-h-dvh` bilan cho'zilmaydi:
+    // ilgari bu yorliq ichida turgani uchun kartaning ustiga ikkinchi kulrang
+    // qatlam chizilar, ostida esa bo'sh ekran balandligi qolardi.
     return (
-        <div className="space-y-6 animate-fade-in p-6 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] min-h-dvh">
+        <div className="space-y-6 animate-fade-in">
             {/* Header Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Estimated Salary */}

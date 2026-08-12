@@ -1,9 +1,10 @@
+import { cookies } from "next/headers";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { DashboardTopBar } from "@/components/DashboardTopBar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { MobileNavProvider } from "@/components/MobileNavContext";
+import { MobileNavProvider, SIDEBAR_COOKIE } from "@/components/MobileNavContext";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { ConfirmProvider } from "@/components/ui/ConfirmDialog";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -32,9 +33,13 @@ export default async function DashboardLayout({
   // Admin tomonidan sozlangan menyu ko'rinishi (override) — bo'lmasa kod default'i
   const allowedViews = effectiveViewsForRole(userRole as UserRole, roleViewOverrides);
 
+  // Yon panel yig'ilganmi — cookie'dan. Serverda o'qilgani uchun sahifa
+  // birinchi chizilishidayoq to'g'ri kenglikda keladi (sakrash yo'q).
+  const sidebarCollapsed = (await cookies()).get(SIDEBAR_COOKIE)?.value === "1";
+
   return (
     <SessionProvider session={session}>
-      <MobileNavProvider>
+      <MobileNavProvider initialCollapsed={sidebarCollapsed}>
       <ConfirmProvider>
       <div
         style={{

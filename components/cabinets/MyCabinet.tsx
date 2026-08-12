@@ -24,6 +24,9 @@ import {
   Trophy,
 } from "lucide-react";
 import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { Tabs, TabPanel, type TabItem } from "@/components/ui/Tabs";
+import { useTabParam } from "@/hooks/useTabParam";
+import { CABINET_TAB_IDS, type CabinetTabId as TabId } from "@/lib/cabinetTabs";
 import KpiLeaderboard from "@/components/KpiLeaderboard";
 import { updateUser, changePassword } from "@/server/users";
 import { ROLE_LABELS, ROLE_COLORS, isSeniorRole, type UserRole } from "@/lib/permissions";
@@ -107,16 +110,26 @@ export interface MyCabinetProps {
   currentMonth: string;
 }
 
-const TABS = [
+/**
+ * MENING KABINETIM — shaxsiy ma'lumotning YAGONA manzili.
+ *
+ * Nega aynan shu yerda: buxgalter va bank-klient rollarida `/kpi` bo'limi
+ * UMUMAN yo'q (lib/permissions.ts → ALLOWED_VIEWS). Ya'ni "mening KPI'm" ni
+ * har bir rol ko'ra oladigan birdan-bir joy — shu kabinet. Shuning uchun
+ * `/kpi` dagi "Xodim kabineti" yorlig'i olib tashlandi va u yerdan bu yerga
+ * havola qo'yildi: bitta ish — bitta joy.
+ *
+ * "Xavfsizlik" — sozlash yorlig'i, kundalik ma'lumot emas: o'ng chetga,
+ * ajratuvchi chiziq ortiga suriladi.
+ */
+const TABS: TabItem<TabId>[] = [
   { id: "profile", label: "Profil", icon: UserIcon },
   { id: "companies", label: "Firmalarim", icon: Building2 },
-  { id: "kpi", label: "KPI & Oylik", icon: TrendingUp },
+  { id: "kpi", label: "KPI va oylik", icon: TrendingUp, hint: "Shaxsiy ko'rsatkich, tuzatmalar va oylik hisobi" },
   { id: "leaderboard", label: "Jamoa reytingi", icon: Trophy },
   { id: "attendance", label: "Davomat", icon: CalendarCheck },
-  { id: "security", label: "Xavfsizlik", icon: ShieldCheck },
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
+  { id: "security", label: "Xavfsizlik", icon: ShieldCheck, trailing: true },
+];
 
 const EDUCATION_LABELS: Record<string, string> = {
   oliy: "Oliy",
@@ -156,10 +169,10 @@ function formatTenure(hiredAt: string | null): string {
 }
 const fmtTime = (s: string | null) => (s ? formatUzTime(s) : "—");
 
-export default function MyCabinet(props: MyCabinetProps) {
-  const { profile, companies, kpi, adjustments, payrollSummary, attendance, attendanceSummary, currentMonth } = props;
+export default function MyCabinet(props: MyCabinetProps & { initialTab?: TabId }) {
+  const { profile, companies, kpi, adjustments, payrollSummary, attendance, attendanceSummary, currentMonth, initialTab = "profile" } = props;
   const router = useRouter();
-  const [tab, setTab] = useState<TabId>("profile");
+  const [tab, setTab] = useTabParam<TabId>("tab", CABINET_TAB_IDS, initialTab);
 
   const roleLabel = ROLE_LABELS[profile.role as UserRole] || profile.role;
   const roleColor = ROLE_COLORS[profile.role as UserRole] || "var(--text-muted)";
@@ -204,27 +217,22 @@ export default function MyCabinet(props: MyCabinetProps) {
       </div>
 
       {/* ─── TABS ───────────────────────────────── */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          const active = tab === t.id;
-          return (
-            <Button variant="primary" size="md" key={t.id} onClick={() => setTab(t.id)} className="whitespace-nowrap shrink-0" style={ active ? { background: "var(--accent-blue)", color: "#fff", boxShadow: "0 4px 12px color-mix(in srgb, var(--brand) 25%, transparent)" } : { background: "var(--card-bg)", color: "var(--text-secondary)", border: "1px solid var(--card-border)" } }>
-              <Icon size={15} /> {t.label}
-            </Button>
-          );
-        })}
-      </div>
+      {/* Ilgari bular `Button variant="primary"` edi: OLTITA yorliqning
+          hammasi asosiy amal ko'rinishida turardi va tanlangani faqat rang
+          bilan farq qilardi. Yorliq — amal emas, ko'rinish almashtirgichi. */}
+      <Tabs items={TABS} value={tab} onChange={setTab} idBase="cabinet" ariaLabel="Kabinet bo'limlari" />
 
       {/* ─── CONTENT ────────────────────────────── */}
-      {tab === "profile" && <ProfileTab profile={profile} onSaved={() => router.refresh()} />}
-      {tab === "companies" && <CompaniesTab companies={companies} />}
-      {tab === "kpi" && (
-        <KpiTab kpi={kpi} adjustments={adjustments} payrollSummary={payrollSummary} monthLabel={monthLabel} />
-      )}
-      {tab === "leaderboard" && <KpiLeaderboard lang="uz" hideBonus={true} />}
-      {tab === "attendance" && <AttendanceTab attendance={attendance} summary={attendanceSummary} />}
-      {tab === "security" && <SecurityTab userId={profile.id} />}
+      <TabPanel tabId={tab} idBase="cabinet">
+        {tab === "profile" && <ProfileTab profile={profile} onSaved={() => router.refresh()} />}
+        {tab === "companies" && <CompaniesTab companies={companies} />}
+        {tab === "kpi" && (
+          <KpiTab kpi={kpi} adjustments={adjustments} payrollSummary={payrollSummary} monthLabel={monthLabel} />
+        )}
+        {tab === "leaderboard" && <KpiLeaderboard lang="uz" hideBonus={true} />}
+        {tab === "attendance" && <AttendanceTab attendance={attendance} summary={attendanceSummary} />}
+        {tab === "security" && <SecurityTab userId={profile.id} />}
+      </TabPanel>
     </div>
   );
 }
@@ -258,6 +266,21 @@ function HeaderStat({
 }
 
 // ─── PROFIL TAB ────────────────────────────────────────────
+
+/** Rang tanlagich uchun zaxira qiymat (brend ko'ki, qat'iy hex). */
+const DEFAULT_AVATAR_COLOR = "#0F66AE";
+
+/** `#rgb`/`#rrggbb` bo'lsa `#rrggbb` qaytaradi, aks holda `null`. */
+function normalizeHex(v: string | null | undefined): string | null {
+  if (!v) return null;
+  const s = v.trim();
+  if (/^#[0-9a-f]{6}$/i.test(s)) return s.toLowerCase();
+  if (/^#[0-9a-f]{3}$/i.test(s)) {
+    return ("#" + s.slice(1).split("").map((c) => c + c).join("")).toLowerCase();
+  }
+  return null;
+}
+
 function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
   const [form, setForm] = useState({
     fullName: profile.fullName || "",
@@ -268,7 +291,11 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
     birthDate: profile.birthDate ? new Date(profile.birthDate).toISOString().slice(0, 10) : "",
     education: profile.education || "",
     skillLevel: profile.skillLevel || "",
-    avatarColor: profile.avatarColor || "var(--brand)",
+    // `<input type="color">` FAQAT `#rrggbb` ni tushunadi. Ilgari bu yerda
+    // `"var(--brand)"` turardi va rang tanlagich uni o'qiy olmay jimgina
+    // qora (#000000) ko'rsatardi — ya'ni rangi hali tanlanmagan xodim
+    // saqlaganda avatari qorayib qolardi.
+    avatarColor: normalizeHex(profile.avatarColor) ?? DEFAULT_AVATAR_COLOR,
   });
   // Malaka darajasini faqat rahbar rollar tahrirlaydi (server ham shuni tekshiradi).
   const canEditSkill = isSeniorRole(profile.role);

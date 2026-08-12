@@ -6,28 +6,8 @@ import { usePathname } from "next/navigation";
 import { ALLOWED_VIEWS, getHomeRoute, ROLE_LABELS, type UserRole } from "@/lib/permissions";
 import { NAV_ITEMS, NAV_GROUP_LABELS, type NavGroup } from "@/lib/navigation";
 import { useMobileNav } from "@/components/MobileNavContext";
-import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  FileText,
-  TrendingUp,
-  Wallet,
-  Receipt,
-  CalendarClock,
-  CheckSquare,
-  HandCoins,
-  Scale,
-  CreditCard,
-  UserCircle,
-  ScrollText,
-  Calendar,
-  Settings,
-  Package,
-  Bell,
-  Banknote,
-  ShieldCheck,
-} from "lucide-react";
+// Ikonkalar `NAV_ITEMS` bilan birga keladi (lib/navigation.ts) — bu yerda
+// yigirmata ikonka nomi import qilinib, birontasi ishlatilmasdan turardi.
 
 const ALL_NAV_ITEMS = NAV_ITEMS;
 const GROUP_LABELS = NAV_GROUP_LABELS;
@@ -47,9 +27,19 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
   const visibleItems = ALL_NAV_ITEMS.filter((item) =>
     allowedViews.includes(item.view as string)
   );
+  const visibleHrefs = new Set(visibleItems.map((i) => i.href));
 
   // Group items
   const groups: NavGroup[] = ["asosiy", "moliya", "boshqa", "kabinet", "admin"];
+
+  /**
+   * Element menyuda MUSTAQIL satr sifatida chiziladimi. Ota bo'limi ham
+   * ko'rinadigan bola element mustaqil emas — u otasining ostiga suriladi.
+   * Ota ko'rinmasa (rolga berilmagan) bola o'z o'rnida qoladi, aks holda u
+   * umuman yo'qolib ketardi.
+   */
+  const isNested = (item: (typeof visibleItems)[number]) =>
+    !!item.parent && visibleHrefs.has(item.parent);
 
   return (
     <>
@@ -121,11 +111,14 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
               <div className={`sidebar-label ${collapsed ? "md:hidden" : ""}`}>{GROUP_LABELS[group]}</div>
               {groupItems.map((item) => {
                 const Icon = item.icon;
-                const isActive =
-                  pathname === item.href ||
-                  (item.href !== "/cabinet" && pathname.startsWith(item.href + "/")) ||
-                  (item.href === "/cabinet" && pathname === "/cabinet") ||
-                  (item.href === "/cabinet/bank" && pathname.startsWith("/cabinet/bank"));
+                const nested = isNested(item);
+                const hasChildren = groupItems.some((i) => i.parent === item.href);
+                // Ota bo'lim bolasi ochilganda "faol" bo'lmaydi: aks holda
+                // /kassa/kirim da IKKITA satr yonib turardi va qaysi biri
+                // ochiq ekani noaniq bo'lardi.
+                const isActive = hasChildren
+                  ? pathname === item.href
+                  : pathname === item.href || pathname.startsWith(item.href + "/");
 
                 return (
                   <Link
@@ -134,11 +127,15 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
                     onClick={() => setOpen(false)}
                     title={collapsed ? item.label : undefined}
                     aria-current={isActive ? "page" : undefined}
-                    className={`sidebar-nav-item ${isActive ? "active" : ""} ${collapsed ? "md:justify-center" : ""}`}
+                    className={`sidebar-nav-item ${isActive ? "active" : ""} ${collapsed ? "md:justify-center" : ""} ${
+                      // Yig'ilgan panelda faqat ikonka ko'rinadi — u yerda
+                      // surish o'rniga ikonka biroz kichrayadi.
+                      nested && !collapsed ? "sidebar-nav-item--child" : ""
+                    }`}
                   >
                     {/* Faol holat jonli chiziq (.sidebar-nav-item.active::before)
                         bilan belgilanadi — chevron shuning uchun olib tashlandi. */}
-                    <Icon size={16} className="flex-shrink-0" />
+                    <Icon size={nested ? 14 : 16} className="flex-shrink-0" />
                     <span className={`flex-1 ${collapsed ? "md:hidden" : ""}`}>{item.label}</span>
                   </Link>
                 );

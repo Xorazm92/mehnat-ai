@@ -1,14 +1,39 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import OperationModule from "@/components/OperationModule";
 import HisobotlarModule from "@/components/HisobotlarModule";
-import { getCurrentPeriodKey } from "@/lib/periods";
 import { upsertMonthlyReport } from "@/server/operations";
 import { Company, Staff, OperationEntry } from "@/types";
 import type { ReportColumn } from "@/lib/reportColumns";
 import { FileText, Grid3x3 } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { useTabParam, useUrlParam } from "@/hooks/useTabParam";
+import { REPORTS_TAB_IDS, type ReportsTabId } from "@/lib/reportsTabs";
+
+/**
+ * HISOBOTLAR EKRANI — ikki xil narsani ushlab turadi va endi buni ochiq aytadi:
+ *
+ *   · Amallar matritsasi — kundalik ish yuzasi (firma × oy × ustun).
+ *   · Moliyaviy hisobotlar — hujjatlar (foyda-zarar va h.k.).
+ *
+ * Uchta nuqson tuzatildi:
+ *
+ *   1. Sahifada `h1` UMUMAN yo'q edi — ekran yorliqlar qatoridan boshlanardi.
+ *      Yon paneldan tashqari foydalanuvchiga qayerdaligini hech narsa
+ *      aytmasdi (`OperationModule` ichidagi `h1` esa faqat matritsa
+ *      yorlig'ida ko'rinardi va sahifa sarlavhasi vazifasini o'tay olmasdi).
+ *
+ *   2. Yorliq nomi sahifa nomi bilan bir xil edi: "Hisobotlar > Hisobotlar".
+ *      Endi hujjatlar yorlig'i o'z nomi bilan — "Moliyaviy hisobotlar"
+ *      (modulning o'zi ham shu sarlavhani chizadi).
+ *
+ *   3. Sukut bo'yicha kamdan-kam ochiladigan hujjatlar ro'yxati chiqardi,
+ *      kundalik ish yuzasi esa ikkinchi yorliqda yashiringandi. Tartib
+ *      almashtirildi.
+ */
 
 interface Props {
   companies: Company[];
@@ -19,15 +44,38 @@ interface Props {
   userName?: string;
   focusCompany?: string | null;
   focusCol?: string | null;
-  focusPeriod?: string | null;
+  /** Serverda hisoblangan/tekshirilgan davr ("YYYY-MM") — mijozda `new Date()` yo'q. */
+  initialPeriod: string;
   reportColumns?: ReportColumn[];
+  initialTab?: ReportsTabId;
 }
 
-export default function ReportsClient({ companies, operations, staff, userRole, currentUserId, userName, focusCompany, focusCol, focusPeriod, reportColumns }: Props) {
+export default function ReportsClient({
+  companies,
+  operations,
+  staff,
+  userRole,
+  currentUserId,
+  userName,
+  focusCompany,
+  focusCol,
+  initialPeriod,
+  reportColumns,
+  initialTab = "matrix",
+}: Props) {
   useAutoRefresh();
   const hasFocus = !!(focusCompany && focusCol);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(focusPeriod || getCurrentPeriodKey());
-  const [tab, setTab] = useState<"reports" | "matrix">(hasFocus ? "matrix" : "reports");
+  // Davr ham URL'da: "2026-07 matritsasiga qara" degan havolani yuborish
+  // mumkin. Ilgari oy faqat komponent ichida yashardi va havola har doim
+  // JORIY oyni ochardi.
+  const [selectedPeriod, setSelectedPeriod] = useUrlParam("period", initialPeriod);
+  // Skrinshot havolasi (`?company=&col=`) har doim matritsani ochadi — u
+  // havolaning butun maqsadi.
+  const [tab, setTab] = useTabParam<ReportsTabId>(
+    "tab",
+    REPORTS_TAB_IDS,
+    hasFocus ? "matrix" : initialTab
+  );
 
   const handleUpdate = async (data: unknown) => {
     const payload = data as { companyId?: string; period?: string };
@@ -37,26 +85,26 @@ export default function ReportsClient({ companies, operations, staff, userRole, 
   };
 
   const tabs = [
-    { id: "reports" as const, label: "Hisobotlar", icon: FileText },
-    { id: "matrix" as const, label: "Amallar matritsasi", icon: Grid3x3 },
+    { id: "matrix" as const, label: "Amallar matritsasi", icon: Grid3x3, hint: "Firma × oy × amal — kundalik topshirish holati" },
+    { id: "reports" as const, label: "Moliyaviy hisobotlar", icon: FileText, hint: "Foyda-zarar va boshqa hujjatlar" },
   ];
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="flex gap-1 overflow-x-auto border-b bg-[var(--card-bg)] dark:bg-[var(--surface)] pt-2 px-2 shadow-sm rounded-t flex-shrink-0"
-        style={{ borderColor: "var(--card-border)" }}>
-        {tabs.map((t) => {
-          const active = tab === t.id;
-          return (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 py-2.5 px-6 font-bold text-xs uppercase transition-colors whitespace-nowrap border-t-[3px] rounded-t ${active ? "border-[var(--accent-indigo)] text-[var(--text-primary)] dark:text-white" : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-white"}`}
-              style={active ? { background: "var(--card-bg)" } : {}}>
-              <t.icon size={16} /> <span>{t.label}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className={`flex-1 min-h-0 ${tab === "matrix" ? "flex flex-col" : "overflow-auto"}`}>
+      <PageHeader
+        icon={<FileText size={20} />}
+        title="Hisobotlar"
+        description="Amallar matritsasi va moliyaviy hujjatlar"
+        className="flex-shrink-0"
+      >
+        <Tabs items={tabs} value={tab} onChange={setTab} idBase="reports" ariaLabel="Hisobot bo'limlari" />
+      </PageHeader>
+
+      <TabPanel
+        tabId={tab}
+        idBase="reports"
+        className={`flex-1 min-h-0 ${tab === "matrix" ? "flex flex-col" : "overflow-auto"}`}
+      >
         {tab === "reports" ? (
           <HisobotlarModule companies={companies} staff={staff} lang="uz" userRole={userRole} />
         ) : (
@@ -76,7 +124,7 @@ export default function ReportsClient({ companies, operations, staff, userRole, 
             onUpdate={handleUpdate}
           />
         )}
-      </div>
+      </TabPanel>
     </div>
   );
 }

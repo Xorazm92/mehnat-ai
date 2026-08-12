@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useModalA11y } from "@/hooks/useModalA11y";
 import { Button } from "@/components/ui/Button";
+import { Tabs, TabPanel, type TabItem } from "@/components/ui/Tabs";
 
 interface Props {
   person: Staff;
@@ -76,7 +77,7 @@ export default function StaffDrawer({ person, companies, onClose, onEdit, onRese
   const assigned = companies
     .flatMap((c) => companyRolesFor(c, person.id).map((meta) => ({ company: c, meta })));
 
-  const tabs: { id: TabId; label: string; icon: React.ElementType; count?: number }[] = [
+  const tabs: TabItem<TabId>[] = [
     { id: "login", label: "Login", icon: KeyRound },
     { id: "shaxsiy", label: "Shaxsiy", icon: IdCard },
     { id: "ish", label: "Ish & hisob", icon: Briefcase },
@@ -140,28 +141,23 @@ export default function StaffDrawer({ person, companies, onClose, onEdit, onRese
             </div>
           </div>
 
-          {/* Tablar */}
-          <div className="flex px-6 overflow-x-auto gap-2 pb-5">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
-                <Button variant="primary" size="md" key={tab.id} onClick={() => setActiveTab(tab.id)} className="whitespace-nowrap border" style={active ? { background: "var(--accent-blue)", color: "#fff", borderColor: "var(--accent-blue)" } : { background: "var(--input-bg)", color: "var(--text-secondary)", borderColor: "var(--card-border)" }}>
-                  <Icon size={14} className="shrink-0" />
-                  {tab.label}
-                  {tab.count != null && (
-                    <span className="text-micro font-semibold tabular-nums px-1.5 py-0.5 rounded-lg" style={active ? { background: "rgba(255,255,255,.25)", color: "#fff" } : { background: "var(--accent-blue-light)", color: "var(--accent-blue)" }}>
-                      {tab.count}
-                    </span>
-                  )}
-                </Button>
-              );
-            })}
+          {/* Tablar — sahifalardagi bilan bir xil naqsh va klaviatura.
+              Ilgari bular `Button variant="primary"` edi: to'rttasi ham
+              "asosiy amal" ko'rinishida turardi. */}
+          <div className="px-6 pb-1">
+            <Tabs
+              items={tabs}
+              value={activeTab}
+              onChange={setActiveTab}
+              idBase="staff-drawer"
+              size="sm"
+              ariaLabel="Xodim ma'lumoti bo'limlari"
+            />
           </div>
         </div>
 
         {/* Body — faol tab */}
-        <div className="p-6 flex-1 overflow-y-auto">
+        <TabPanel tabId={activeTab} idBase="staff-drawer" className="p-6 flex-1 overflow-y-auto">
           {activeTab === "login" && (
             <div className="animate-fade-in">
               {/* Login va parol — xodim tizimga shu bilan kiradi */}
@@ -238,7 +234,7 @@ export default function StaffDrawer({ person, companies, onClose, onEdit, onRese
               )}
             </div>
           )}
-        </div>
+        </TabPanel>
       </div>
     </>,
     document.body

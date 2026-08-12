@@ -23,12 +23,18 @@ const LABELS: Record<string, string> = {
   proof: "Skrinshot",
   expenses: "Xarajatlar",
   kassa: "Kassa",
+  // Kassa ichki bo'limlari — bularsiz `/kassa/kirim` da breadcrumb xom
+  // "kirim" satrini ko'rsatardi.
+  kirim: "Kirim kassa",
+  chiqim: "Chiqim kassa",
+  qarzdorlik: "Qarzdorlik",
   payroll: "Oylik",
   attendance: "Davomat",
   notifications: "Xabarlar",
   settings: "Sozlamalar",
   kpi: "KPI",
-  deadlines: "Muddatlar",
+  // Yon paneldagi nom bilan bir xil: `/deadlines` endi "Ishlar" ekrani.
+  deadlines: "Ishlar",
   tasks: "Vazifalar",
   "audit-logs": "Audit jurnali",
   cabinet: "Kabinet",

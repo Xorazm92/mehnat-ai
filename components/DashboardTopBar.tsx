@@ -203,8 +203,10 @@ export function DashboardTopBar({
           </button>
         )}
 
-        {/* Settings */}
-        <Link href="/settings" className="icon-btn" aria-label="Sozlamalar">
+        {/* Profil sozlamalari — `/settings` endi kabinetning shu yorlig'iga
+            yo'naltiradi, shuning uchun to'g'ridan-to'g'ri manzil beriladi
+            (ortiqcha redirect qadamisiz). */}
+        <Link href="/cabinet?tab=profile" className="icon-btn" aria-label="Profil sozlamalari" title="Profil sozlamalari">
           <Settings size={17} />
         </Link>
 

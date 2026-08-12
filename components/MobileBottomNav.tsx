@@ -3,36 +3,38 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard, Building2, FileText, TrendingUp, Wallet, Receipt,
-  UserCircle, Bell, Menu, Banknote,
-} from "lucide-react";
+import { Menu } from "lucide-react";
 import { canSeeView, type UserRole, type AppView } from "@/lib/permissions";
+import { NAV_ITEMS, MOBILE_NAV_ORDER, MOBILE_NAV_SHORT_LABELS } from "@/lib/navigation";
 import { useMobileNav } from "@/components/MobileNavContext";
 
-// Pastki panel uchun nomzod tugmalar (muhimlik tartibida). Rol ko'ra oladiganlari olinadi.
-const CANDIDATES: { view: AppView; href: string; label: string; icon: React.ElementType }[] = [
-  { view: "dashboard", href: "/dashboard", label: "Bosh", icon: LayoutDashboard },
-  { view: "cabinet", href: "/cabinet", label: "Kabinet", icon: UserCircle },
-  { view: "cabinet_bank", href: "/cabinet/bank", label: "Bank", icon: Banknote },
-  { view: "organizations", href: "/organizations", label: "Firmalar", icon: Building2 },
-  { view: "reports", href: "/reports", label: "Hisobot", icon: FileText },
-  { view: "kpi", href: "/kpi", label: "KPI", icon: TrendingUp },
-  { view: "kassa", href: "/kassa", label: "Kassa", icon: Wallet },
-  { view: "expenses", href: "/expenses", label: "Xarajat", icon: Receipt },
-  { view: "notifications", href: "/notifications", label: "Xabar", icon: Bell },
-];
-
+/**
+ * MOBIL PASTKI PANEL.
+ *
+ * Ilgari bu fayl navigatsiyaning UCHINCHI reyestri edi: o'z qotirilgan
+ * ro'yxati, o'z ikonkalari va o'z yorliqlari ("Hisobot" — yon panelda
+ * "Hisobotlar", qidiruvda yana boshqacha). Yangi bo'lim qo'shilganda uchta
+ * joyni yangilash kerak edi va amalda hech kim uchalasini ham yangilamasdi.
+ *
+ * Endi manba bitta — `lib/navigation.ts`. Bu yerda faqat MOBILGA XOS ikkita
+ * narsa qoladi: qaysi bo'limlar muhimligi (tartib) va tor ekran uchun
+ * qisqartirilgan yorliq.
+ */
 export function MobileBottomNav({ userRole, allowedViews }: { userRole: string; allowedViews?: string[] }) {
   const pathname = usePathname();
   const { toggle } = useMobileNav();
   const role = userRole as UserRole;
 
   const canSee = (v: AppView) => (allowedViews ? allowedViews.includes(v) : canSeeView(role, v));
-  const items = CANDIDATES.filter((c) => canSee(c.view)).slice(0, 4);
+
+  // Muhimlik tartibida saralab, rol ko'ra oladigan birinchi to'rttasi.
+  const items = MOBILE_NAV_ORDER.map((view) => NAV_ITEMS.find((n) => n.view === view))
+    .filter((n): n is (typeof NAV_ITEMS)[number] => !!n && canSee(n.view))
+    .slice(0, 4);
 
   const isActive = (href: string) =>
-    pathname === href || (href !== "/cabinet" && pathname.startsWith(href + "/")) ||
+    pathname === href ||
+    (href !== "/cabinet" && pathname.startsWith(href + "/")) ||
     (href === "/cabinet" && pathname === "/cabinet");
 
   return (
@@ -59,7 +61,9 @@ export function MobileBottomNav({ userRole, allowedViews }: { userRole: string; 
             style={{ color: active ? "var(--brand)" : "var(--text-muted)" }}
           >
             <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
-            <span className="font-mono text-micro font-semibold">{item.label}</span>
+            <span className="font-mono text-micro font-semibold">
+              {MOBILE_NAV_SHORT_LABELS[item.view] ?? item.label}
+            </span>
           </Link>
         );
       })}

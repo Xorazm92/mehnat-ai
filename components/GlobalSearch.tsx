@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { Search, Command, Building2, Users, Loader2, CornerDownLeft, X } from "lucide-react";
 import { globalSearch, type SearchResults } from "@/server/search";
 import { ROLE_LABELS, canSeeView, type UserRole, type AppView } from "@/lib/permissions";
-import { NAV_ITEMS } from "@/lib/navigation";
+import { NAV_ITEMS, NAV_SECTIONS } from "@/lib/navigation";
 import { useModalA11y } from "@/hooks/useModalA11y";
 
 /**
@@ -74,6 +74,7 @@ export default function GlobalSearch({
   );
 
   const pages = useMemo(() => NAV_ITEMS.filter((n) => canSee(n.view)), [canSee]);
+  const normalizedRole = (userRole || "").toLowerCase();
 
   // ⌘K / Ctrl+K — istalgan joydan.
   useEffect(() => {
@@ -129,6 +130,34 @@ export default function GlobalSearch({
       out.push({ id: `page:${p.href}`, label: p.label, href: p.href, icon: p.icon, group: "Sahifalar" });
     }
 
+    /**
+     * SAHIFA ICHIDAGI BO'LIMLAR. Yorliqlar endi manzilga ega (`?tab=`), ya'ni
+     * "matritsa" deb qidirgan odam to'g'ridan-to'g'ri matritsaga tushadi —
+     * ilgari u "Hisobotlar" sahifasini topib, yorliqni qo'lda izlardi.
+     *
+     * Faqat qidiruv bilan chiqadi: bo'sh palitrada asosiy sahifalar ro'yxati
+     * ko'rinishi kerak, yigirmata yorliq emas.
+     */
+    if (q) {
+      const sections = NAV_SECTIONS.filter(
+        (s) =>
+          canSee(s.view) &&
+          (!s.roles || s.roles.includes(normalizedRole)) &&
+          (s.label.toLowerCase().includes(q) ||
+            (s.keywords ?? "").toLowerCase().includes(q))
+      );
+      for (const s of sections.slice(0, 6)) {
+        out.push({
+          id: `section:${s.href}`,
+          label: s.label,
+          hint: s.parentLabel,
+          href: s.href,
+          icon: s.icon,
+          group: "Bo'limlar",
+        });
+      }
+    }
+
     // Yozuvga CHUQUR havola — ro'yxat sahifasiga emas. `?org_q=` va `?userId=`
     // ni mos ekranlar allaqachon o'qiydi.
     for (const c of remote.companies) {
@@ -154,7 +183,7 @@ export default function GlobalSearch({
     }
 
     return out;
-  }, [pages, remote, debounced, canSee]);
+  }, [pages, remote, debounced, canSee, normalizedRole]);
 
   useEffect(() => { setActive(0); }, [items.length]);
 

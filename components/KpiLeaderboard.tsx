@@ -63,8 +63,11 @@ const KpiLeaderboard: React.FC<Props> = ({ lang, hideBonus = false }) => {
     statCards.push({ icon: Wallet, label: "Bonus fondi", value: `${fmt(s?.bonusFund ?? 0)} so'm`, color: "var(--warning)", bg: "var(--warning-bg)" });
   }
 
+  // Ichki `p-4` olib tashlandi — `main` allaqachon gutter beradi, ikkitasi
+  // qo'shilganda panel kontenti sahifadagi boshqa ekranlarga nisbatan
+  // ichkariroqdan boshlanardi.
   return (
-    <div className="p-4 space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 rounded-xl"
         style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--card-shadow)" }}>

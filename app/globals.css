@@ -787,6 +787,27 @@ input[type="radio"] {
   border-radius: 1px;
 }
 
+/* IChKI BO'LIM (masalan Kassa > Kirim kassa).
+   Ilgari "Kassa", "Kirim kassa", "Chiqim kassa" va "Qarzdorlik" bir xil
+   og'irlikdagi to'rtta satr edi — ichma-ich munosabat menyuda umuman
+   ko'rinmasdi. Surish + yo'naltiruvchi chiziq shu munosabatni ko'rsatadi,
+   ammo bosiladigan maydonni kichraytirmaydi. */
+.sidebar-nav-item--child {
+  margin-left: 0.8rem;
+  padding-left: 0.9rem;
+  font-size: var(--text-meta, 0.8125rem);
+  border-left: 1px solid var(--rule);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.sidebar-nav-item--child.active {
+  border-left-color: var(--brand);
+}
+/* Bola satrda chap chiziq allaqachon bor — faol belgisi uni takrorlamaydi. */
+.sidebar-nav-item--child.active::before {
+  content: none;
+}
+
 /* Tugmalar */
 .btn-primary {
   display: inline-flex;

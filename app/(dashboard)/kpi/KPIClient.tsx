@@ -3,6 +3,7 @@
 import React from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import SalaryKPIModule from "@/components/SalaryKPIModule";
+import type { KpiTabId } from "@/lib/kpiTabs";
 import { Company, Staff, OperationEntry } from "@/types";
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
   userId: string;
   canProjectBotKpi?: boolean;
   currentMonth?: string;
+  initialTab?: KpiTabId;
+  canSeePayroll?: boolean;
 }
 
 export default function KPIClient({
@@ -23,6 +26,8 @@ export default function KPIClient({
   userId,
   canProjectBotKpi,
   currentMonth,
+  initialTab,
+  canSeePayroll,
 }: Props) {
   useAutoRefresh();
   return (
@@ -37,6 +42,8 @@ export default function KPIClient({
           currentUserId={userId}
           canProjectBotKpi={canProjectBotKpi}
           currentMonth={currentMonth}
+          initialTab={initialTab}
+          canSeePayroll={canSeePayroll}
         />
       </div>
     </div>

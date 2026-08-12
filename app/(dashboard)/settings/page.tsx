@@ -1,31 +1,17 @@
-import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getUserById } from "@/server/users";
-import SettingsClient from "./SettingsClient";
 
-export const metadata = { title: "Sozlamalar" };
-
-export default async function SettingsPage() {
-  const session = await auth();
-  const userId = session?.user?.id ?? "";
-  if (!userId) redirect("/login");
-
-  const user = await getUserById(userId);
-  if (!user) redirect("/login");
-
-  const profile = {
-    id: user.id,
-    fullName: user.fullName,
-    email: user.email,
-    phone: user.phone || undefined,
-    department: user.department || undefined,
-    avatarColor: user.avatarColor || undefined,
-    role: user.role,
-  };
-
-  return (
-    <div className="h-full">
-      <SettingsClient profile={JSON.parse(JSON.stringify(profile))} />
-    </div>
-  );
+/**
+ * `/settings` — endi mustaqil ekran EMAS.
+ *
+ * U `/cabinet` ning kuchsizroq nusxasi edi: bir xil profil formasi (faqat
+ * JSHSHIR, jinsi, tug'ilgan sana, ma'lumot va malaka maydonlarisiz) va bir
+ * xil parol o'zgartirish. Ikkalasi ham AYNAN bitta server amaliga yozardi
+ * (`updateUser` / `changePassword`), ya'ni xodim profilini ikki joyda
+ * tahrirlar, lekin bir joyda maydonlarning yarmini ko'rmasdi.
+ *
+ * Yo'l saqlanadi — eski havolalar, bildirishnomalar va `settings` RBAC
+ * view'i sinmasin. Tizim parametrlari admin uchun `/admin/settings` da.
+ */
+export default function SettingsPage() {
+  redirect("/cabinet?tab=profile");
 }
