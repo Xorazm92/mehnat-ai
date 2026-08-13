@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { canSeeViewWith } from "@/lib/permissions";
-import { getRoleViewOverrides } from "@/server/rbac";
+import { currentUserViews } from "@/server/rbac";
 import { getDebtComparison, getPlanFact, getReconciliation } from "@/server/debt";
 import QarzdorlikClient from "./QarzdorlikClient";
 
@@ -11,9 +10,9 @@ export default async function QarzdorlikPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const role = session.user.role as string;
-  const overrides = await getRoleViewOverrides().catch(() => null);
-  if (!canSeeViewWith(role as never, "kassa_debt", overrides)) redirect("/cabinet");
+  // proxy bilan AYNAN bir manba — qarang: server/rbac.ts → currentUserViews.
+  const views = await currentUserViews();
+  if (!views.includes("kassa_debt")) redirect("/cabinet");
 
   const [debt, planFact, recon] = await Promise.all([
     getDebtComparison(),

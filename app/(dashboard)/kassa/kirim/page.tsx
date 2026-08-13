@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { canSeeViewWith } from "@/lib/permissions";
-import { getRoleViewOverrides } from "@/server/rbac";
+import { currentUserViews } from "@/server/rbac";
 import { getBankAccountsOverview, getUnmatchedIncome, getNonBankIncome } from "@/server/bankImport";
 import { prisma } from "@/lib/prisma";
 import KirimKassaClient from "./KirimKassaClient";
@@ -12,11 +11,16 @@ export default async function KirimKassaPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const role = session.user.role as string;
   // proxy.ts ham to'sadi, lekin sahifa o'zini o'zi qo'riqlashi kerak —
   // to'g'ridan-to'g'ri chaqiruvda (RSC) proxy oralig'i bo'lmasligi mumkin.
-  const overrides = await getRoleViewOverrides().catch(() => null);
-  if (!canSeeViewWith(role as never, "kassa_income", overrides)) redirect("/cabinet");
+  //
+  // `currentUserViews()` — proxy bilan AYNAN bir manba (rol + override +
+  // biriktiruv). Ilgari bu yerda `canSeeViewWith(role, view, overrides)`
+  // turardi, ya'ni biriktiruvni BILMASDI: proxy bank-biriktiruvi bor
+  // buxgalterni kiritar, sahifa esa `/cabinet` ga qaytarar, yon panel o'sha
+  // havolani qayta prefetch qilar — natijada cheksiz sikl.
+  const views = await currentUserViews();
+  if (!views.includes("kassa_income")) redirect("/cabinet");
 
   const [accounts, unmatched, nonBank] = await Promise.all([
     getBankAccountsOverview(),

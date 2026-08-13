@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getBankCabinetData, getDashboardDeadlines } from "@/server/cabinet";
+import { currentUserViews } from "@/server/rbac";
 import { BankCabinet } from "@/components/cabinets/BankCabinet";
 
 export const metadata = { title: "Bank kabineti" };
@@ -9,12 +10,22 @@ export default async function BankCabinetPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const userRole = session.user?.role as string;
   const userName = session.user?.name || "";
 
-  // Faqat bank_manager kirishi mumkin
-  if (userRole !== "bank_manager") {
-    redirect("/dashboard");
+  // Darvoza LAVOZIMGA emas, amaldagi ekranlarga qaraydi — proxy bilan aynan
+  // bir manba (rol + override + biriktiruv).
+  //
+  // Ilgari bu yerda `userRole !== "bank_manager"` turardi va `/dashboard` ga
+  // yuborardi. Bank slotida turgan buxgalter (Zamira, Humora) menyuda "Bank
+  // kabineti" ni ko'rardi, bosgach `/dashboard` ga tushardi, u yerga esa
+  // ruxsati yo'q — proxy uni `/403` ga otardi. Yon panel o'sha havolani
+  // prefetch qilgani uchun bu sekundiga o'nlab marta takrorlanardi.
+  //
+  // Qaytish manzili ham `/dashboard` emas, `/cabinet`: uni HAR BIR rol
+  // ko'radi, ya'ni bu redirect hech qachon 403 ga aylanmaydi.
+  const views = await currentUserViews();
+  if (!views.includes("cabinet_bank")) {
+    redirect("/cabinet");
   }
 
   const [data, deadlines] = await Promise.all([

@@ -47,6 +47,30 @@ export async function getEffectiveViewsForRole(role: string): Promise<AppView[]>
   return effectiveViewsForRole(role as UserRole, overrides, relations);
 }
 
+/**
+ * JORIY foydalanuvchining amaldagi ekranlari — sahifa darvozasi uchun.
+ *
+ * DIQQAT: sahifa ichidagi tekshiruv `proxy.ts` bilan AYNAN bir xil uchta
+ * manbadan hisoblanishi SHART: rol + admin override'i + biriktiruvlar. Aks
+ * holda proxy kiritadi, sahifa esa qaytarib yuboradi — va yon panel o'sha
+ * havolani prefetch qilgani uchun bu cheksiz sikl bo'lib qoladi (prod'da
+ * aynan shunday bo'ldi: `/kassa/kirim` prefetch → `/cabinet` ga redirect →
+ * yon panel qayta prefetch → sekundiga o'nlab so'rov).
+ *
+ * Shuning uchun sahifalar `canSeeViewWith(role, view, overrides)` ni QO'LDA
+ * chaqirmasin — shu funksiyani ishlatsin.
+ */
+export async function currentUserViews(): Promise<AppView[]> {
+  const session = await auth();
+  if (!session) return [];
+  const overrides = await readOverrides();
+  return effectiveViewsForRole(
+    session.user.role as UserRole,
+    overrides,
+    (session.user.relations ?? []) as CompanyRelation[]
+  );
+}
+
 export interface RoleViewMatrix {
   roles: UserRole[];
   views: AppView[];
