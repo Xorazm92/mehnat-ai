@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
 import { getEffectiveReportColumns } from "@/server/report-columns";
@@ -15,6 +16,12 @@ export default async function ReportsPage({
 }) {
   const sp = await searchParams;
   const session = await auth();
+  // Sessiyasiz davom etilsa `getEffectiveReportColumns()` "Unauthorized"
+  // tashlaydi va foydalanuvchi login o'rniga 500 ko'radi. Sessiya proxy
+  // o'tkazgandan KEYIN ham tugashi mumkin (mutlaq 24 soatlik muddat yoki
+  // xodim bloklanishi), shuning uchun sahifa o'zini o'zi tekshiradi —
+  // loyihadagi boshqa ekranlar kabi.
+  if (!session) redirect("/login");
 
   /**
    * Davr SERVERDA hal qilinadi: `new Date()` ni mijozda chaqirish SSR bilan

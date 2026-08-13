@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
 import { isSeniorRole } from "@/lib/permissions";
@@ -15,6 +16,9 @@ export default async function KpiPage({
 }) {
   const sp = await searchParams;
   const session = await auth();
+  // Sessiyasiz davom etilsa server amallari "Unauthorized" tashlaydi va
+  // foydalanuvchi login o'rniga 500 ko'radi.
+  if (!session) redirect("/login");
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role || "employee";
   // Current accounting month (UTC "YYYY-MM"), computed server-side — safe to pass

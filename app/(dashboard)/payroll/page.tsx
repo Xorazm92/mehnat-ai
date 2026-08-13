@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
 import { readTabParam } from "@/lib/tabs";
@@ -13,6 +14,9 @@ export default async function PayrollPage({
 }) {
   const sp = await searchParams;
   const session = await auth();
+  // Sessiyasiz davom etilsa server amallari "Unauthorized" tashlaydi va
+  // foydalanuvchi login o'rniga 500 ko'radi.
+  if (!session) redirect("/login");
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role || "employee";
 
