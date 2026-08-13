@@ -787,6 +787,27 @@ input[type="radio"] {
   border-radius: 1px;
 }
 
+/* AMALLAR MATRITSASI — Excel'dagidek to'r.
+ *
+ * Vertikal chiziqlar katakchalarda inline `borderRight` bilan bor edi,
+ * gorizontallari esa `<tr>` ga qo'yilgan va HECH QACHON chizilmagan: jadval
+ * `border-separate` rejimida (yopishqoq sarlavha va muzlatilgan ustunlar
+ * uchun zarur), o'sha rejimda esa `<tr>` ramkasi brauzer tomonidan
+ * e'tiborsiz qoldiriladi. Natijada nazoratchi 50 ta ustunli jadvalda ko'zi
+ * bilan qatorni ushlab tura olmasdi.
+ *
+ * Chiziq ATAYLAB juda past kontrastda (`--border` — vertikallar bilan aynan
+ * bir xil token): u yo'l ko'rsatadi, o'zi esa ko'rinmaydi. Katakcha fonlari
+ * (guruh ranglari, o'chirilgan xizmat) ustidan chiziladi.
+ */
+.matrix-grid td {
+  border-bottom: 1px solid var(--border);
+}
+/* Oxirgi qator ostidagi chiziq ortiqcha — jadvalning o'z chegarasi bor. */
+.matrix-grid tbody tr:last-child td {
+  border-bottom: none;
+}
+
 /* IChKI BO'LIM (masalan Kassa > Kirim kassa).
    Ilgari "Kassa", "Kirim kassa", "Chiqim kassa" va "Qarzdorlik" bir xil
    og'irlikdagi to'rtta satr edi — ichma-ich munosabat menyuda umuman

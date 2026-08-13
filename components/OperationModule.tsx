@@ -469,7 +469,12 @@ const OperationRow = React.memo<{
   const groupEdges = useMemo(() => buildGroupEdges(visibleColumns), [visibleColumns]);
 
   return (
-    <tr className="group transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
+    // Gorizontal chiziq `<tr>` da EMAS, `.matrix-grid td` da (globals.css).
+    // Jadval `border-separate` rejimida — bu yopishqoq (sticky) sarlavha va
+    // muzlatilgan ustunlar uchun zarur — lekin o'sha rejimda `<tr>` ga
+    // qo'yilgan ramka brauzer tomonidan UMUMAN chizilmaydi. Shuning uchun
+    // matritsada vertikal chiziqlar bor edi, gorizontallari esa yo'q.
+    <tr className="group transition-colors">
       <td className="sticky left-0 z-20 px-2 py-1.5 text-center text-micro font-bold w-10 min-w-[40px] transition-colors" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
         {idx + 1}
       </td>
@@ -1517,7 +1522,7 @@ const OperationModule: React.FC<Props> = ({
             </div>
           </div>
         ) : (
-          <table className="w-full border-separate border-spacing-0 text-xs">
+          <table className="w-full border-separate border-spacing-0 text-xs matrix-grid">
             <thead className="sticky top-0 z-50">
               {/* Group row */}
               <tr className="h-7">
