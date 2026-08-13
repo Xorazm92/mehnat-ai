@@ -12,7 +12,12 @@
 // boshqasida buxgalter, uchinchisida bank-klient bo'lishi mumkin (bazadagi
 // haqiqiy holat), va uchalasi ham uning portfeliga kiradi.
 import type { Prisma } from "@prisma/client";
-import { isAdminRole, isSeniorRole } from "@/lib/permissions";
+import { isAdminRole, isSeniorRole, type CompanyRelation } from "@/lib/permissions";
+
+// `CompanyRelation` endi `lib/permissions.ts` da yashaydi: sahifa darvozasi
+// (`effectiveViewsForRole`) ham shu turga tayanadi, permissions esa access'dan
+// import qila olmaydi (aylanma bog'liqlik). Bu yerda faqat qayta eksport.
+export type { CompanyRelation };
 
 export interface Actor {
   id: string;
@@ -29,9 +34,6 @@ export interface Actor {
    */
   context?: CompanyRelation | "all";
 }
-
-/** Firmada odam egallashi mumkin bo'lgan mas'uliyat turlari. */
-export type CompanyRelation = "accountant" | "supervisor" | "chief_accountant" | "bank_manager";
 
 /** Firma qatoridan scope uchun kerak bo'ladigan minimal maydonlar. */
 export interface CompanySlots {

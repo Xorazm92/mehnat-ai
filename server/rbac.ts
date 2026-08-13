@@ -7,6 +7,7 @@ import {
   ALL_VIEWS,
   ROLES,
   effectiveViewsForRole,
+  type CompanyRelation,
   type RoleViewOverrides,
   type UserRole,
   type AppView,
@@ -31,12 +32,19 @@ export async function getRoleViewOverrides(): Promise<RoleViewOverrides> {
   return serialize((await readOverrides()) ?? {});
 }
 
-/** Bir rol uchun amaldagi view'lar (override qo'llangan). */
+/**
+ * JORIY foydalanuvchi uchun amaldagi view'lar: kod default'i + admin
+ * override'i + uning haqiqiy biriktiruvlari (sessiyadan).
+ *
+ * `role` argumenti chaqiruvchining qulayligi uchun qoladi, lekin biriktiruvlar
+ * har doim SESSIYADAN olinadi — boshqa rol uchun "faraz" hisoblab bo'lmaydi.
+ */
 export async function getEffectiveViewsForRole(role: string): Promise<AppView[]> {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   const overrides = await readOverrides();
-  return effectiveViewsForRole(role as UserRole, overrides);
+  const relations = (session.user?.relations ?? []) as CompanyRelation[];
+  return effectiveViewsForRole(role as UserRole, overrides, relations);
 }
 
 export interface RoleViewMatrix {

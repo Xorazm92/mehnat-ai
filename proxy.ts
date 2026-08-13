@@ -6,9 +6,11 @@ import {
   canSeeViewWith,
   getHomeRoute,
   type AppView,
+  type CompanyRelation,
   type RoleViewOverrides,
   type UserRole,
 } from "@/lib/permissions";
+import { parseRelations } from "@/lib/userRelations";
 import { getPrisma } from "@/lib/prisma";
 
 // Himoyalangan yo'llar
@@ -90,11 +92,20 @@ async function getRoleViewOverridesCached(): Promise<RoleViewOverrides> {
 }
 
 // Ruxsat — sidebar bilan bir xil manba: koddagi default + admin override'lari
-async function isAllowed(path: string, role: string): Promise<boolean> {
+// + foydalanuvchining HAQIQIY biriktiruvlari.
+//
+// Biriktiruvlar tokendan o'qiladi (lib/userRelations.ts ularni kirish paytida
+// va har 5 daqiqada yozadi), shuning uchun bu yerda qo'shimcha baza so'rovi
+// yo'q — darvoza har bir so'rovda ishlaydi.
+async function isAllowed(
+  path: string,
+  role: string,
+  relations: readonly CompanyRelation[]
+): Promise<boolean> {
   const view = pathToView(path);
   if (!view) return true; // moslik topilmasa to'sib qo'ymaymiz
   const overrides = await getRoleViewOverridesCached();
-  return canSeeViewWith(role as UserRole, view, overrides);
+  return canSeeViewWith(role as UserRole, view, overrides, relations);
 }
 
 export async function proxy(req: NextRequest) {
@@ -141,7 +152,7 @@ export async function proxy(req: NextRequest) {
   // RBAC: ruxsatsiz sahifadan himoya (staff)
   if (token && isProtected) {
     const role = token.role as string;
-    if (role && !(await isAllowed(path, role))) {
+    if (role && !(await isAllowed(path, role, parseRelations(token.relations)))) {
       return NextResponse.redirect(new URL("/403", req.url));
     }
   }

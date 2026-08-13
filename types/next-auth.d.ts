@@ -13,6 +13,13 @@ declare module "next-auth" {
       kind?: string;
       /** Client portal: the company the client belongs to. */
       companyId?: string | null;
+      /**
+       * Foydalanuvchi FAOL firmalarda egallagan mas'uliyatlar — lavozimdan
+       * qat'i nazar (lib/userRelations.ts). Sahifa darvozasi shularga ham
+       * tayanadi: bank-klient roli bilan buxgalter biriktiruvi bo'lgan odam
+       * buxgalterlik ekranlarini ochadi.
+       */
+      relations?: string[];
     } & DefaultSession["user"];
   }
 
@@ -31,5 +38,7 @@ declare module "next-auth/jwt" {
     avatarColor?: string | null;
     kind?: string;
     companyId?: string | null;
+    /** Firmadagi mas'uliyatlar — `proxy.ts` darvozasi baza so'rovisiz o'qiydi. */
+    relations?: string[];
   }
 }

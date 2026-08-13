@@ -11,7 +11,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { getCachedUnreadCount } from "@/lib/cached-queries";
 import { getRoleViewOverrides } from "@/server/rbac";
 import { getMyContexts, getRoleContext } from "@/server/roleContext";
-import { effectiveViewsForRole, type UserRole } from "@/lib/permissions";
+import { effectiveViewsForRole, type CompanyRelation, type UserRole } from "@/lib/permissions";
 
 export default async function DashboardLayout({
   children,
@@ -30,8 +30,16 @@ export default async function DashboardLayout({
     userId ? getMyContexts().catch(() => []) : Promise.resolve([]),
     userId ? getRoleContext().catch(() => "all" as const) : Promise.resolve("all" as const),
   ]);
-  // Admin tomonidan sozlangan menyu ko'rinishi (override) — bo'lmasa kod default'i
-  const allowedViews = effectiveViewsForRole(userRole as UserRole, roleViewOverrides);
+  // Menyu = proxy darvozasi bilan AYNAN bir manba: kod default'i + admin
+  // override'i + foydalanuvchining haqiqiy biriktiruvlari. Uchinchisisiz
+  // bank-klient roli bilan buxgalter biriktiruvi bo'lgan xodim (masalan
+  // 10 firmada buxgalter Ruslan) ochilishi mumkin bo'lgan ekranni menyuda
+  // ko'rmasdi.
+  const allowedViews = effectiveViewsForRole(
+    userRole as UserRole,
+    roleViewOverrides,
+    (session?.user?.relations ?? []) as CompanyRelation[]
+  );
 
   // Yon panel yig'ilganmi — cookie'dan. Serverda o'qilgani uchun sahifa
   // birinchi chizilishidayoq to'g'ri kenglikda keladi (sakrash yo'q).

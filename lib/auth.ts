@@ -13,6 +13,7 @@ import {
 } from "@/lib/rateLimit";
 import { logLoginFailure, logLoginSuccess, logRateLimitBlock } from "@/lib/logger";
 import { revalidateSessionToken } from "@/lib/sessionRevalidation";
+import { getUserCompanyRelations, parseRelations } from "@/lib/userRelations";
 import { verifyInitData } from "@/lib/telegramInitData";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -138,6 +139,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.avatarColor = user.avatarColor;
         token.kind = user.kind ?? "staff";
         token.companyId = user.companyId ?? null;
+        // Haqiqiy biriktiruvlar — sahifa darvozasi shularga ham tayanadi
+        // (lib/permissions.ts → VIEWS_BY_RELATION). Kirish paytida bir marta;
+        // keyin `revalidateSessionToken` har 5 daqiqada yangilaydi.
+        token.relations = user.id ? await getUserCompanyRelations(user.id) : [];
         token.checkedAt = Date.now();
         // Mutlaq sessiya muddatining boshlanishi. FAQAT shu yerda —
         // `user` mavjud bo'lgan, ya'ni haqiqiy kirish bo'lgan paytda —
@@ -160,6 +165,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.avatarColor = token.avatarColor;
         session.user.kind = token.kind;
         session.user.companyId = token.companyId;
+        // Server komponentlari menyuni AYNAN proxy darvozasi bilan bir xil
+        // manbadan chizishi uchun — aks holda ekran menyuda ko'rinib,
+        // ochilganda 403 bo'lardi (yoki teskarisi).
+        session.user.relations = parseRelations(token.relations);
       }
       return session;
     },

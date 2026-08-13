@@ -284,15 +284,63 @@ export type RoleViewOverrides = Partial<Record<UserRole, AppView[]>>;
  * Bu faqat KO'RINISHNI (menyu/nav) boshqaradi — server xavfsizlik tekshiruvlari
  * (isSeniorRole/isAdminRole/rol massivlari) o'z kuchida qoladi.
  */
+/** Firmada odam egallashi mumkin bo'lgan mas'uliyat turlari. */
+export type CompanyRelation = "accountant" | "supervisor" | "chief_accountant" | "bank_manager";
+
+/**
+ * BIRIKTIRUV BERADIGAN EKRANLAR.
+ *
+ * `lib/access.ts` da yozilgan qoida: "ROL = nima qila olasan, BIRIKTIRUV =
+ * qaysi firmada". Firma RO'YXATI shu qoidaga amal qilardi, sahifa DARVOZASI
+ * esa faqat lavozim yorlig'iga qarardi. Natijada bazadagi haqiqiy holat
+ * ishlamay qolardi:
+ *
+ *   · Ruslan — roli `bank_manager` (65 firmada bank-klient), lekin 10 ta
+ *     firmada BUXGALTER. O'sha 10 firmada 140 ta majburiyat bor edi, u esa
+ *     na "Hisobotlar", na "Ishlar" ekranini ocholmasdi.
+ *   · Zamira va Humora — roli `accountant`, lekin 2 tadan firmada bank-klient
+ *     slotida turishardi va bank kabinetiga kira olmasdilar.
+ *
+ * Bu jadval ATAYLAB tor: faqat firma bo'yicha CHEKLANADIGAN ish yuzalari.
+ * `staff`, `payroll`, `expenses`, `kassa`, `organizations`, `audit_logs`,
+ * `admin` bu yerda YO'Q — ular butun tizim bo'yicha ma'lumot ko'rsatadi yoki
+ * boshqaruv funksiyasi, ya'ni ularni bitta firmadagi biriktiruv ochib
+ * yubormasligi kerak. Ular faqat lavozim orqali beriladi.
+ *
+ * Ma'lumot xavfsizligi bu yerda buzilmaydi: ochilgan ekranlarning o'zi
+ * `companyScopeWhere` bilan cheklangan, ya'ni Ruslan matritsada faqat o'z
+ * portfelini ko'radi.
+ */
+export const VIEWS_BY_RELATION: Record<CompanyRelation, AppView[]> = {
+  accountant: ["reports", "deadlines", "tasks"],
+  supervisor: ["reports", "deadlines", "tasks", "kpi"],
+  chief_accountant: ["reports", "deadlines", "tasks", "kpi"],
+  bank_manager: ["cabinet_bank", "kassa_income"],
+};
+
 export const effectiveViewsForRole = (
   role: UserRole,
-  overrides?: RoleViewOverrides | null
+  overrides?: RoleViewOverrides | null,
+  /**
+   * Foydalanuvchining HAQIQIY biriktiruvlari (sessiya tokenidan). Berilmasa
+   * eski xatti-harakat — faqat lavozim.
+   */
+  relations?: readonly CompanyRelation[] | null
 ): AppView[] => {
   // Superadmin hamma narsani ko'radi — hech qachon cheklanmaydi (o'zini bloklamaslik)
   if (role === "super_admin") return ALL_VIEWS;
   const ov = overrides?.[role];
-  if (ov && Array.isArray(ov)) return ov;
-  return ALLOWED_VIEWS[role] || [];
+  const base = ov && Array.isArray(ov) ? ov : ALLOWED_VIEWS[role] || [];
+
+  if (!relations?.length) return base;
+
+  // Birlashma: lavozim bergani + biriktiruv bergani. Biriktiruv hech qachon
+  // TORAYTIRMAYDI — admin override'i bilan berilgan ekran o'z kuchida qoladi.
+  const out = new Set<AppView>(base);
+  for (const rel of relations) {
+    for (const v of VIEWS_BY_RELATION[rel] ?? []) out.add(v);
+  }
+  return ALL_VIEWS.filter((v) => out.has(v));
 };
 
 export const canSeeView = (role: UserRole, viewId: string): boolean => {
@@ -303,9 +351,10 @@ export const canSeeView = (role: UserRole, viewId: string): boolean => {
 export const canSeeViewWith = (
   role: UserRole,
   viewId: string,
-  overrides?: RoleViewOverrides | null
+  overrides?: RoleViewOverrides | null,
+  relations?: readonly CompanyRelation[] | null
 ): boolean => {
-  return effectiveViewsForRole(role, overrides).includes(viewId as AppView);
+  return effectiveViewsForRole(role, overrides, relations).includes(viewId as AppView);
 };
 
 export const hasPermission = (

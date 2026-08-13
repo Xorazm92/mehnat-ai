@@ -14,6 +14,7 @@
 import { prisma } from "@/lib/prisma";
 import { logServerError } from "@/lib/logger";
 import { SESSION_MAX_AGE } from "@/lib/auth.config";
+import { getUserCompanyRelations } from "@/lib/userRelations";
 
 /** Qayta tekshiruv oralig'i. Har so'rovda baza so'rovi qilmaslik uchun. */
 export const SESSION_REVALIDATE_MS = 5 * 60_000;
@@ -36,6 +37,8 @@ export interface RevalidatableToken {
   checkedAt?: unknown;
   /** Kirish vaqti (ms). Faollikda YANGILANMAYDI. */
   loginAt?: unknown;
+  /** Firmadagi mas'uliyatlar — sahifa darvozasi shu yerdan o'qiydi. */
+  relations?: unknown;
   [key: string]: unknown;
 }
 
@@ -66,13 +69,21 @@ export async function revalidateSessionToken<T extends RevalidatableToken>(
   if (now - checkedAt <= SESSION_REVALIDATE_MS) return token;
 
   try {
-    const dbUser = await prisma.user.findUnique({
-      where: { id },
-      select: { isActive: true, role: true, avatarColor: true },
-    });
+    // Biriktiruvlar ham shu yerda yangilanadi: sahifa darvozasi ularga
+    // tayanadi (lib/permissions.ts → VIEWS_BY_RELATION), `proxy.ts` esa har
+    // so'rovda baza so'rovi qila olmaydi. Ya'ni firmaga biriktirilgan xodim
+    // yangi ekranlarni ko'pi bilan 5 daqiqada oladi.
+    const [dbUser, relations] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id },
+        select: { isActive: true, role: true, avatarColor: true },
+      }),
+      getUserCompanyRelations(id),
+    ]);
     if (!dbUser || !dbUser.isActive) return null;
     token.role = dbUser.role;
     token.avatarColor = dbUser.avatarColor;
+    token.relations = relations;
     token.checkedAt = now;
   } catch (e) {
     logServerError("auth.jwt.revalidate", e, { note: "sessiya saqlanadi" });
