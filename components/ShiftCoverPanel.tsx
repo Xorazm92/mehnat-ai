@@ -14,6 +14,7 @@ import { Staff } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { formatNum } from "@/lib/format";
 import { assignShiftCover, getShiftCovers, applyCoverTransfers } from "@/server/shiftCover";
+import { friendlyError } from "@/lib/actionError";
 
 interface CoverRow {
   id: string;
@@ -56,7 +57,7 @@ const ShiftCoverPanel: React.FC<Props> = ({ staff, canEdit }) => {
       const data = await getShiftCovers(start, end);
       setRows(data as unknown as CoverRow[]);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     }
   };
 
@@ -79,7 +80,7 @@ const ShiftCoverPanel: React.FC<Props> = ({ staff, canEdit }) => {
       toast.success("O'rinbosarlik saqlandi");
       await load();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     } finally {
       setBusy(false);
     }
@@ -95,7 +96,7 @@ const ShiftCoverPanel: React.FC<Props> = ({ staff, canEdit }) => {
           : "Yangi o'tkazma yo'q (avval yozilganlari yangilandi)"
       );
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     } finally {
       setBusy(false);
     }

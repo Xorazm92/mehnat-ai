@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { formatUzDate } from "@/lib/format";
 import { getCalendarDays, upsertCalendarDay, deleteCalendarDay } from "@/server/businessCalendar";
 import { Button } from "@/components/ui/Button";
+import { friendlyError } from "@/lib/actionError";
 
 interface Day {
   id: string;
@@ -40,7 +41,7 @@ export default function BusinessCalendarClient({ initial, initialYear }: { initi
         setDays(JSON.parse(JSON.stringify(rows)));
         setYear(y);
       } catch (e) {
-        toast.error((e as Error).message || "Xatolik");
+        toast.error(friendlyError(e) || "Xatolik");
       }
     });
 
@@ -55,7 +56,7 @@ export default function BusinessCalendarClient({ initial, initialYear }: { initi
         setDays(JSON.parse(JSON.stringify(rows)));
         setForm({ date: "", kind: form.kind, name: "" });
       } catch (e) {
-        toast.error((e as Error).message || "Xatolik");
+        toast.error(friendlyError(e) || "Xatolik");
       }
     });
   };
@@ -67,7 +68,7 @@ export default function BusinessCalendarClient({ initial, initialYear }: { initi
         setDays((ds) => ds.filter((d) => d.id !== id));
         toast.success("O'chirildi");
       } catch (e) {
-        toast.error((e as Error).message || "Xatolik");
+        toast.error(friendlyError(e) || "Xatolik");
       }
     });
 

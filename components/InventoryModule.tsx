@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { useTableState } from "@/hooks/useTableState";
+import { friendlyError } from "@/lib/actionError";
 
 export interface InventoryRecord {
     id: string;
@@ -103,7 +104,7 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
             toast.success(lang === 'uz' ? 'Saqlandi' : 'Сохранено');
             setIsModalOpen(false);
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = friendlyError(err);
             toast.error((lang === 'uz' ? 'Xatolik: ' : 'Ошибка: ') + message);
         } finally {
             setIsSaving(false);
@@ -163,7 +164,7 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
             await onDelete(id);
             toast.success(lang === 'uz' ? "O'chirildi" : 'Удалено');
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = friendlyError(err);
             toast.error((lang === 'uz' ? 'Xatolik: ' : 'Ошибка: ') + message);
         }
     };

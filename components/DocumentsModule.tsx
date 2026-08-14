@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { useTableState } from "@/hooks/useTableState";
+import { friendlyError } from "@/lib/actionError";
 
 export interface DocumentRecord {
     id: string;
@@ -62,7 +63,7 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
             toast.success(lang === 'uz' ? 'Hujjat qo\'shildi' : 'Документ добавлен');
             setIsModalOpen(false);
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = friendlyError(err);
             toast.error((lang === 'uz' ? 'Xatolik: ' : 'Ошибка: ') + message);
         } finally {
             setIsSaving(false);
@@ -117,7 +118,7 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
             await onDelete(id);
             toast.success(lang === 'uz' ? "O'chirildi" : 'Удалено');
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = friendlyError(err);
             toast.error((lang === 'uz' ? 'Xatolik: ' : 'Ошибка: ') + message);
         }
     };

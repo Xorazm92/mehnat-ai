@@ -10,6 +10,7 @@ import { useConfirm, usePrompt } from '@/components/ui/ConfirmDialog';
 import { toast } from "sonner";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
+import { friendlyError } from "@/lib/actionError";
 
 interface Props { companies: Company[]; staff: Staff[]; lang: Language; userRole?: string; }
 
@@ -59,7 +60,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff, userRole }) => {
   const errMsg = (e: unknown) =>
     e instanceof Error && /forbidden/i.test(e.message)
       ? "Ruxsat yo'q — bu amal faqat rahbar rollar uchun."
-      : e instanceof Error ? e.message : "Amal bajarilmadi.";
+      : friendlyError(e, "Amal bajarilmadi.");
 
   const advance = async (r: Report) => {
     const next = r.status === "preparing" ? "ready" : r.status === "ready" ? "signing" : r.status === "signing" ? "submitted" : null;

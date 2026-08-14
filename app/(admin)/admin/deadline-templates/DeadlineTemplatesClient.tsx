@@ -13,6 +13,7 @@ import {
   removeTemplateApplicability,
 } from "@/server/deadlineTemplates";
 import { Button } from "@/components/ui/Button";
+import { friendlyError } from "@/lib/actionError";
 
 interface Applicability {
   id: string;
@@ -91,7 +92,7 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
         toast.success(ok);
         router.refresh();
       } catch (e) {
-        toast.error((e as Error).message || "Xatolik");
+        toast.error(friendlyError(e) || "Xatolik");
       }
     });
 

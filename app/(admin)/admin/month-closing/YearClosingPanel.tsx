@@ -15,6 +15,7 @@ import { Lock, Unlock, Archive, AlertTriangle } from "lucide-react";
 import { formatNum } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { lockPeriod, unlockPeriod, closeYear } from "@/server/accounting";
+import { friendlyError } from "@/lib/actionError";
 
 interface Period {
   id: string;
@@ -61,7 +62,7 @@ export default function YearClosingPanel({
         await fn();
         router.refresh();
       } catch (e) {
-        setError((e as Error).message || "Amal bajarilmadi");
+        setError(friendlyError(e) || "Amal bajarilmadi");
       } finally {
         setBusyMonth(null);
       }

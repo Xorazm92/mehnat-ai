@@ -17,6 +17,7 @@ import { DataTable, type DataColumn } from '@/components/ui/DataTable';
 import { useTableState } from '@/hooks/useTableState';
 import { exportRowsToCsv, exportRowsToExcel } from '@/lib/exportTable';
 import { Button } from "@/components/ui/Button";
+import { friendlyError } from "@/lib/actionError";
 
 interface Props {
   staff: Staff[];
@@ -277,7 +278,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       });
       closeForm();
     } catch (e) {
-      import('sonner').then(({ toast }) => toast.error(e instanceof Error ? e.message : "Xatolik yuz berdi"));
+      import('sonner').then(({ toast }) => toast.error(friendlyError(e, "Xatolik yuz berdi")));
     } finally {
       setIsSaving(false);
     }

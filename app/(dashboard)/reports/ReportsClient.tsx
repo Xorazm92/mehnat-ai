@@ -77,12 +77,16 @@ export default function ReportsClient({
     hasFocus ? "matrix" : initialTab
   );
 
-  const handleUpdate = async (data: unknown) => {
-    const payload = data as { companyId?: string; period?: string };
-    if (payload?.companyId && payload?.period) {
-      await upsertMonthlyReport(payload as Parameters<typeof upsertMonthlyReport>[0]);
-    }
-  };
+  /**
+   * `OperationModule` katakni O'ZI saqlaydi (`upsertMonthlyReport`) va faqat
+   * shundan keyin bu callback'ni chaqiradi. Ilgari bu yerda AYNAN o'sha yozuv
+   * ikkinchi marta takrorlanardi: har bir katak uchun ikkita baza yozuvi va
+   * ikkita majburiyat sinxronizatsiyasi ketardi, ikkinchisi esa `await`
+   * qilinmagani uchun xatosi hech qayerda ushlanmasdi.
+   *
+   * Callback saqlanadi (modul shartnomasi), lekin endi u qayta yozmaydi.
+   */
+  const handleUpdate = async () => {};
 
   const tabs = [
     { id: "matrix" as const, label: "Amallar matritsasi", icon: Grid3x3, hint: "Firma × oy × amal — kundalik topshirish holati" },

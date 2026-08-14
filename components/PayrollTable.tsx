@@ -18,6 +18,7 @@ import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { useTableState } from "@/hooks/useTableState";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
+import { friendlyError } from "@/lib/actionError";
 
 interface Props {
     staff: Staff[];
@@ -379,7 +380,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
             toast.success("Tuzatma tasdiqlandi");
             await loadMonthlyData();
         } catch (e) {
-            toast.error((e as Error).message || "Tasdiqlab bo'lmadi");
+            toast.error(friendlyError(e) || "Tasdiqlab bo'lmadi");
         } finally {
             setBusyAdj(null);
         }
@@ -392,7 +393,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
             toast.success("Tuzatma o'chirildi");
             await loadMonthlyData();
         } catch (e) {
-            toast.error((e as Error).message || "O'chirib bo'lmadi");
+            toast.error(friendlyError(e) || "O'chirib bo'lmadi");
         } finally {
             setBusyAdj(null);
         }

@@ -22,6 +22,7 @@ import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { useTabParam } from "@/hooks/useTabParam";
 import { WORK_TAB_IDS, type WorkTab } from "@/lib/workTabs";
 import { CalendarClock, Inbox, UserCheck, AlarmClock, CheckSquare } from "lucide-react";
+import { friendlyError } from "@/lib/actionError";
 
 export interface ObligationRow {
   kind: "obligation";
@@ -226,7 +227,7 @@ export default function WorkInboxClient({
         toast.success(ok);
         router.refresh();
       } catch (e) {
-        toast.error((e as Error).message || "Xatolik");
+        toast.error(friendlyError(e) || "Xatolik");
       }
     });
 

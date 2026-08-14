@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
+import { friendlyError } from "@/lib/actionError";
 
 export interface NotificationRecord {
     id: string;
@@ -63,7 +64,7 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
             await onMarkRead();
             toast.success(lang === 'uz' ? "Barchasi o'qildi deb belgilandi" : 'Все отмечены прочитанными');
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = friendlyError(err);
             toast.error((lang === 'uz' ? 'Xatolik: ' : 'Ошибка: ') + message);
         } finally {
             setBusy(false);
@@ -74,7 +75,7 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
         try {
             await onMarkRead([id]);
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = friendlyError(err);
             toast.error((lang === 'uz' ? 'Xatolik: ' : 'Ошибка: ') + message);
         }
     };

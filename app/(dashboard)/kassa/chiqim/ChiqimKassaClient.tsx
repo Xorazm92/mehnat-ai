@@ -20,6 +20,7 @@ import {
   spendFromChannel,
   getTransitLedger,
 } from "@/server/transit";
+import { friendlyError } from "@/lib/actionError";
 
 interface Channel {
   id: string;
@@ -121,7 +122,7 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
       router.refresh();
       return res.data ?? null;
     } catch (e) {
-      setError((e as Error).message || "Xatolik");
+      setError(friendlyError(e) || "Xatolik");
       return null;
     } finally {
       setBusy(false);
@@ -401,7 +402,7 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
                                 await postExpenseTransaction({ transactionId: e.id, category: cat });
                                 router.refresh();
                               } catch (err) {
-                                setPostError((err as Error).message || "Yozib bo'lmadi");
+                                setPostError(friendlyError(err, "Yozib bo'lmadi"));
                               } finally {
                                 setPostingId(null);
                               }

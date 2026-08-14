@@ -52,7 +52,27 @@ export type MonthlyReportWriteInput = {
   period: string;
 } & Partial<Record<OperationFieldKey, string | null>>;
 
-export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
+/**
+ * Yozuv natijasi. KUTILGAN qoida rad etishlari (kelajak davr, tasdiqlangan
+ * katak, huquq chegarasi) `throw` QILINMAYDI — ular shu yerda qaytariladi.
+ *
+ * Sababi: Next production'da server amali tashlagan xatoning MATNINI mijozga
+ * bermaydi ("The specific message is omitted in production builds…"), ya'ni
+ * o'zbekcha tushuntirish yo'qolib, foydalanuvchi inglizcha texnik matnni
+ * ko'rardi. Qaytarilgan ma'lumot esa yashirilmaydi.
+ *
+ * `throw` faqat KUTILMAGAN holatlar uchun qoladi (ruxsat yo'q, baza xatosi) —
+ * ular xato jurnaliga tushishi kerak.
+ */
+export type MonthlyReportWriteResult =
+  | { ok: true; data: unknown }
+  | { ok: false; error: string };
+
+const rejected = (error: string): MonthlyReportWriteResult => ({ ok: false, error });
+
+export async function upsertMonthlyReport(
+  data: MonthlyReportWriteInput
+): Promise<MonthlyReportWriteResult> {
   if (!data || !data.companyId || !data.period) {
     throw new Error("companyId va period berilishi shart (upsertMonthlyReport)");
   }
@@ -90,7 +110,7 @@ export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
   // bilan bir xil. Ikkalasi ham yopilmasa, xodim matritsadan to'g'ridan-to'g'ri
   // "bajarildi" qo'yib, dalil talabini ham, vaqtni ham chetlab o'tardi.
   if (isFuturePeriod(period)) {
-    throw new Error(
+    return rejected(
       `${formatPeriodLabel(period)} — kelajak davr. Bu oy uchun hisobot yozib bo'lmaydi.`,
     );
   }
@@ -125,7 +145,7 @@ export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
         nextValue,
         currentValue: currentRow ? currentRow[dbCol] : undefined,
       });
-      if (reason) throw new Error(reason);
+      if (reason) return rejected(reason);
     }
   }
 
@@ -165,7 +185,7 @@ export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
    * muddati o'tgan deb belgilaydi va keyingi so'rov yangi ma'lumotni kutadi.
    */
   updateTag("operations");
-  return serialize(result);
+  return { ok: true, data: serialize(result) };
 }
 
 /** Katak "bo'shatildi" deb hisoblanadigan qiymatlar. */

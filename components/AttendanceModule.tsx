@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { useTableState } from "@/hooks/useTableState";
+import { friendlyError } from "@/lib/actionError";
 
 export interface AttendanceRecord {
     id: string;
@@ -71,7 +72,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                 toast.success(`${res.imported} ta davomat e-jurnaldan import qilindi`);
             }
         } catch (e) {
-            toast.error((e as Error).message);
+            toast.error(friendlyError(e));
         } finally {
             setIsSyncing(false);
         }
@@ -134,7 +135,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
             toast.success(lang === 'uz' ? 'Davomat saqlandi' : 'Посещаемость сохранена');
             setIsModalOpen(false);
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = friendlyError(err);
             toast.error((lang === 'uz' ? 'Xatolik: ' : 'Ошибка: ') + message);
         } finally {
             setIsSaving(false);
@@ -194,7 +195,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
             await onDelete(id);
             toast.success(lang === 'uz' ? "O'chirildi" : 'Удалено');
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = friendlyError(err);
             toast.error((lang === 'uz' ? 'Xatolik: ' : 'Ошибка: ') + message);
         }
     };

@@ -8,6 +8,7 @@ import { Expense, BalanceBreakdown } from "@/types";
 import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
 import { toast } from "sonner";
 import { usePrompt } from "@/components/ui/ConfirmDialog";
+import { friendlyError } from "@/lib/actionError";
 
 interface Props {
   expenses: Expense[];
@@ -46,7 +47,7 @@ export default function ExpensesClient({ expenses, userRole, balance }: Props) {
       router.refresh();
     } catch (e) {
       // Balans yetarli emas / huquq yo'q — xabarni foydalanuvchiga ko'rsat
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
       throw e; // modal ochiq qolishi uchun xatoni yuqoriga qaytaramiz
     }
   };
@@ -58,7 +59,7 @@ export default function ExpensesClient({ expenses, userRole, balance }: Props) {
 
   const handleApprove = async (id: string) => {
     try { await approveExpense(id); router.refresh(); }
-    catch (e) { toast.error((e as Error).message); }
+    catch (e) { toast.error(friendlyError(e)); }
   };
   const handleReject = async (id: string) => {
     const reason = await prompt({
@@ -70,7 +71,7 @@ export default function ExpensesClient({ expenses, userRole, balance }: Props) {
     });
     if (!reason) return;
     try { await rejectExpense(id, reason); router.refresh(); }
-    catch (e) { toast.error((e as Error).message); }
+    catch (e) { toast.error(friendlyError(e)); }
   };
 
   return (

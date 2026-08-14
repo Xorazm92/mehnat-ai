@@ -14,6 +14,7 @@
 
 import React, { useEffect, useState } from "react";
 import { getFundingSources, type FundingSourceGroups } from "@/server/fundingSources";
+import { friendlyError } from "@/lib/actionError";
 
 interface Props {
   value: string;
@@ -38,7 +39,7 @@ export const FundingSourceSelect: React.FC<Props> = ({
     let alive = true;
     getFundingSources()
       .then((g) => alive && setGroups(g))
-      .catch((e) => alive && setError((e as Error).message));
+      .catch((e) => alive && setError(friendlyError(e)));
     return () => {
       alive = false;
     };

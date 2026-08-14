@@ -11,6 +11,7 @@ import { getMonthClosingBoard, validateMonth, closeMonth, reopenMonth } from "@/
 import { formatNum } from "@/lib/format";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/actionError";
 
 interface ChecklistItem {
   key: string;
@@ -95,7 +96,7 @@ export default function MonthClosingClient({
       setChecklist({ period: m.period, items: res.checklist.items, ready: res.checklist.ready });
       await reload(year);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     }
     setBusy(null);
   };
@@ -118,7 +119,7 @@ export default function MonthClosingClient({
       setChecklist(null);
       await reload(year);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
       await reload(year);
     }
     setBusy(null);
@@ -133,7 +134,7 @@ export default function MonthClosingClient({
       setReopenReason("");
       await reload(year);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     }
     setBusy(null);
   };

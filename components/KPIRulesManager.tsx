@@ -9,6 +9,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { toast } from "sonner";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
+import { friendlyError } from "@/lib/actionError";
 
 // inputTypeV2 → legacy inputType (yangi qoida yaratishda talab qilinadi)
 const LEGACY_INPUT: Record<string, string> = {
@@ -69,7 +70,7 @@ const KPIRulesManager: React.FC<Props> = () => {
     const toggleActive = async (rule: KPIRule) => { await updateKpiRule(rule.id, { isActive: !rule.isActive }); loadRules(); };
     const handleDelete = async (id: string, name: string) => {
         if (!await confirm({ title: `"${name}" qoidasi o'chirilsinmi?`, description: "KPI qoidasi olib tashlanadi.", confirmLabel: "O'chirish", tone: 'danger' })) return;
-        try { await deleteKpiRule(id); loadRules(); } catch (e) { toast.error((e as Error).message); }
+        try { await deleteKpiRule(id); loadRules(); } catch (e) { toast.error(friendlyError(e)); }
     };
 
     const openCreate = () => setEditingRule({
@@ -115,7 +116,7 @@ const KPIRulesManager: React.FC<Props> = () => {
             }
             setEditingRule(null);
             loadRules();
-        } catch (e) { toast.error((e as Error).message); }
+        } catch (e) { toast.error(friendlyError(e)); }
     };
 
     const OptionPills: React.FC<{ rule: KPIRule }> = ({ rule }) => {

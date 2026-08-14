@@ -12,6 +12,7 @@ import {
 import { useModalA11y } from "@/hooks/useModalA11y";
 import { Button } from "@/components/ui/Button";
 import { Tabs, TabPanel, type TabItem } from "@/components/ui/Tabs";
+import { friendlyError } from "@/lib/actionError";
 
 interface Props {
   person: Staff;
@@ -269,7 +270,7 @@ function CredentialsSection({ person, onResetPassword }: { person: Staff; onRese
       setMode("saved");
       toast.success("Parol o'rnatildi — xodimga bering");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik yuz berdi");
+      toast.error(friendlyError(e, "Xatolik yuz berdi"));
     } finally {
       setSaving(false);
     }

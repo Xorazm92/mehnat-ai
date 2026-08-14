@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { compressImageFile } from "@/lib/imageCompress";
 import { saveReportProof } from "@/server/proofs";
+import { friendlyError } from "@/lib/actionError";
 
 interface Props {
   companies: Array<{ id: string; name: string }>;
@@ -47,7 +48,7 @@ export default function ProofUploader({ companies, columns, period }: Props) {
       setImage(null);
       setNote("");
     } catch (e) {
-      setResult({ ok: false, text: (e as Error).message || "Yuborib bo'lmadi." });
+      setResult({ ok: false, text: friendlyError(e) || "Yuborib bo'lmadi." });
     } finally {
       setBusy(false);
     }

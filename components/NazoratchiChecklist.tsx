@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { usePrompt } from "@/components/ui/ConfirmDialog";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
+import { friendlyError } from "@/lib/actionError";
 
 interface Props {
     companies: Company[];
@@ -126,7 +127,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                 return existing ? prev.map(p => (p.id === existing.id ? rec : p)) : [...prev, rec];
             });
         } catch (e) {
-            toast.error((e as Error).message);
+            toast.error(friendlyError(e));
             loadData();
         }
     };
@@ -148,7 +149,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                     : `Подготовлено предложений: ${res.totalWritten}`
             );
             await loadData();
-        } catch (e) { toast.error((e as Error).message); }
+        } catch (e) { toast.error(friendlyError(e)); }
         finally { setBusy(false); }
     };
 
@@ -167,7 +168,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
             const res = await approveAutoPerformance(`${month}-01`);
             toast.success(lang === 'uz' ? `${res.approved} ta baho tasdiqlandi` : `Подтверждено: ${res.approved}`);
             await loadData();
-        } catch (e) { toast.error((e as Error).message); }
+        } catch (e) { toast.error(friendlyError(e)); }
         finally { setBusy(false); }
     };
 
@@ -186,7 +187,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                 await rejectPerformance(perf.id, reason);
             }
             await loadData();
-        } catch (e) { toast.error((e as Error).message); }
+        } catch (e) { toast.error(friendlyError(e)); }
     };
 
     return (

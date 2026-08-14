@@ -34,6 +34,7 @@ import { formatUzMonthYear, formatUzDateNumeric, formatUzTime, formatNum } from 
 import { kpiCategoryLabel, adjustmentTypeLabel } from "@/lib/kpiLabels";
 import RiskBadge from "@/components/RiskBadge";
 import { Button } from "@/components/ui/Button";
+import { friendlyError } from "@/lib/actionError";
 
 // ─── Tiplar ────────────────────────────────────────────────
 interface Profile {
@@ -316,7 +317,7 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
       toast.success("Profil saqlandi");
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik yuz berdi");
+      toast.error(friendlyError(e, "Xatolik yuz berdi"));
     } finally {
       setSaving(false);
     }
@@ -748,7 +749,7 @@ function SecurityTab({ userId }: { userId: string }) {
       setNext("");
       setConfirm("");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik yuz berdi");
+      toast.error(friendlyError(e, "Xatolik yuz berdi"));
     } finally {
       setSaving(false);
     }

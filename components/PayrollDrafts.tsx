@@ -11,6 +11,7 @@ import { formatNum } from "@/lib/format";
 import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 import { exportToExcel } from "@/lib/exportExcel";
 import { Button } from "@/components/ui/Button";
+import { friendlyError } from "@/lib/actionError";
 
 interface Props {
     staff: Staff[];
@@ -182,7 +183,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
             toast.success(lang === 'uz' ? 'Oylik tasdiqlandi' : 'Зарплата подтверждена');
         } catch (e) {
             console.error('Failed to approve', e);
-            const message = e instanceof Error ? e.message : String(e);
+            const message = friendlyError(e);
             toast.error((lang === 'uz' ? 'Xatolik: ' : 'Ошибка: ') + message);
         }
         setSavingId(null);

@@ -17,6 +17,7 @@ import ReportProofModal, { ProofModalState } from './ReportProofModal';
 import { BASE_REPORT_COLUMNS, type ReportColumn } from '@/lib/reportColumns';
 import { tryGetColumnCategory, CATEGORY_LABEL_UZ, type ReportCategory } from '@/lib/reportGroups';
 import { allowedCellActions, canApproveCell, canEditMatrix, isCompanyReviewer, isReviewerOwnedValue, type CellAction } from '@/lib/reportPermissions';
+import { friendlyError } from '@/lib/actionError';
 import { companyRelations, type CompanyRelation } from '@/lib/access';
 import { useDismissable } from '@/hooks/useDismissable';
 import { Button } from "@/components/ui/Button";
@@ -851,11 +852,27 @@ const OperationModule: React.FC<Props> = ({
     try {
       skipNextSyncRef.current = true;
       const company = companiesRef.current.find(c => c.id === companyId);
-      await upsertMonthlyReport({
+      const res = await upsertMonthlyReport({
         companyId,
         period: selectedPeriod,
         [colKey]: newValue
       });
+
+      /**
+       * KUTILGAN qoida rad etishi — `throw` emas, natija (server/operations.ts).
+       *
+       * Ilgari server bu holatda `throw` qilardi va Next PRODUCTION'da xato
+       * MATNINI yashirardi. Natijada buxgalter "Bu katakni o'zgartirib
+       * bo'lmaydi" o'rniga "An error occurred in the Server Components
+       * render…" degan to'rt qatorlik inglizcha matnni ko'rardi.
+       */
+      if (res && res.ok === false) {
+        setRows(prevRows => prevRows.map(row =>
+          row.companyId === companyId ? { ...row, [colKey]: prevValue } : row
+        ));
+        toast.error(res.error);
+        return;
+      }
 
       onUpdate({ companyId, period: selectedPeriod, [colKey]: newValue });
 
@@ -881,9 +898,11 @@ const OperationModule: React.FC<Props> = ({
       setRows(prevRows => prevRows.map(row =>
         row.companyId === companyId ? { ...row, [colKey]: prevValue } : row
       ));
-      // Server sababni o'zbekcha qaytaradi (masalan "Tasdiqlash faqat
-      // nazoratchi huquqida") — uni yashirmasdan ko'rsatamiz.
-      toast.error(e?.message || 'Saqlashda xatolik!');
+      // Bu yerga faqat KUTILMAGAN xato tushadi (ruxsat yo'q, tarmoq, baza).
+      // Qoida rad etishlari yuqorida `res.ok === false` bilan hal qilinadi.
+      // `friendlyError` — Next prod'da matnni yashirganda inglizcha texnik
+      // matn o'rniga o'zbekcha xabar chiqishi uchun.
+      toast.error(friendlyError(e, 'Saqlashda xatolik. Qaytadan urinib ko\'ring.'));
     }
   }, [selectedPeriod, onUpdate, REPORT_COLUMNS]); // Minimal dependencies
 

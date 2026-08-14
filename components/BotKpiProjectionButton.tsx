@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Bot, Loader2 } from "lucide-react";
 import { projectResponseKpiToPerformance } from "@/server/botKpiProjection";
+import { friendlyError } from "@/lib/actionError";
 
 /**
  * Senior-only trigger that projects the bot's response KPI ledger for `month`
@@ -27,7 +28,7 @@ export default function BotKpiProjectionButton({ month }: { month: string }) {
         );
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Xatolik yuz berdi");
+        toast.error(friendlyError(e, "Xatolik yuz berdi"));
       }
     });
   }

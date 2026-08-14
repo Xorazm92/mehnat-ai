@@ -16,6 +16,7 @@ import {
 import type { StatementPreview } from "@/lib/bank/types";
 import { createKassaEntry } from "@/server/kassa";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
+import { friendlyError } from "@/lib/actionError";
 
 interface AccountRow {
   id: string;
@@ -128,7 +129,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
       setManualChannelId("");
       router.refresh();
     } catch (e) {
-      setManualError((e as Error).message || "Yozib bo'lmadi");
+      setManualError(friendlyError(e) || "Yozib bo'lmadi");
     } finally {
       setManualBusy(false);
     }
@@ -184,7 +185,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
     } catch (e) {
       setPreview(null);
       setUploadError(
-        (e as Error).message || "Faylni o'qib bo'lmadi. Fayl turini tekshiring (.xlsx / .xls)."
+        friendlyError(e) || "Faylni o'qib bo'lmadi. Fayl turini tekshiring (.xlsx / .xls)."
       );
     } finally {
       setBusy(false);
@@ -213,7 +214,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
       reset();
       router.refresh();
     } catch (e) {
-      setUploadError((e as Error).message || "Yuklashda xatolik");
+      setUploadError(friendlyError(e) || "Yuklashda xatolik");
     } finally {
       setBusy(false);
     }
@@ -688,7 +689,7 @@ function UnmatchedCard({
       toast.success("Kirim hisobga olindi");
       onDone();
     } catch (e) {
-      toast.error((e as Error).message || "Xatolik");
+      toast.error(friendlyError(e) || "Xatolik");
     } finally {
       setBusy(false);
     }
@@ -701,7 +702,7 @@ function UnmatchedCard({
       toast.success("E'tiborsiz qoldirildi");
       onDone();
     } catch (e) {
-      toast.error((e as Error).message || "Xatolik");
+      toast.error(friendlyError(e) || "Xatolik");
     } finally {
       setBusy(false);
     }

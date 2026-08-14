@@ -45,6 +45,7 @@ import {
   sortStaffForAssignmentRole,
   type AssignmentRole,
 } from '@/lib/permissions';
+import { friendlyError } from "@/lib/actionError";
 
 interface DrawerProps {
   company: Company | null;
@@ -566,7 +567,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             setIsAddingCredential(false);
                             setNewCred({ serviceName: '', loginId: '', password: '', notes: '' });
                           } catch (e) {
-                            toast.error((e as Error).message || "Saqlashda xatolik");
+                            toast.error(friendlyError(e) || "Saqlashda xatolik");
                           }
                         }}
                         className="px-2.5 py-1 bg-[var(--accent-blue)] text-white rounded-lg border border-[var(--accent-blue)] disabled:opacity-50 shadow-sm transition-all"
@@ -592,7 +593,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                                 await deleteClientCredential(cred.id);
                                 setCredentials(prev => prev.filter(c => c.id !== cred.id));
                               } catch (e) {
-                                toast.error((e as Error).message || "O'chirishda xatolik");
+                                toast.error(friendlyError(e) || "O'chirishda xatolik");
                               }
                             }
                           }}
