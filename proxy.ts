@@ -11,6 +11,9 @@ import {
   type UserRole,
 } from "@/lib/permissions";
 import { parseRelations } from "@/lib/userRelations";
+// Manzil → ekran xaritasi YAGONA manbada: `Breadcrumbs` ham shu javobga
+// tayanadi, aks holda UI ocholmaydigan havolani taklif qilardi.
+import { pathToView } from "@/lib/routeViews";
 import { getPrisma } from "@/lib/prisma";
 
 // Himoyalangan yo'llar
@@ -33,36 +36,6 @@ const PROTECTED_ROUTES = [
   "/settings",
 ];
 
-// URL yo'lini AppView'ga moslashtirish (aniqrog'i birinchi — /cabinet/bank /cabinet dan oldin)
-function pathToView(path: string): AppView | null {
-  if (path.startsWith("/admin")) return "admin";
-  if (path.startsWith("/audit-logs")) return "audit_logs";
-  if (path.startsWith("/organizations")) return "organizations";
-  if (path.startsWith("/staff")) return "staff";
-  if (path.startsWith("/reports")) return "reports";
-  if (path.startsWith("/deadlines")) return "deadlines";
-  if (path.startsWith("/tasks")) return "tasks";
-  if (path.startsWith("/kpi")) return "kpi";
-  // Kirim kassasi ALOHIDA view: bank-klient faqat shuni ko'radi, chiqimni emas.
-  // /kassa dan OLDIN tekshiriladi — prefiks mos kelib qolmasin.
-  if (path.startsWith("/kassa/kirim")) return "kassa_income";
-  if (path.startsWith("/kassa/chiqim")) return "kassa_expense";
-  if (path.startsWith("/kassa/qarzdorlik")) return "kassa_debt";
-  if (path.startsWith("/kassa")) return "kassa";
-  if (path.startsWith("/expenses")) return "expenses";
-  if (path.startsWith("/payroll")) return "payroll";
-  if (path.startsWith("/attendance")) return "attendance";
-  if (path.startsWith("/notifications")) return "notifications";
-  if (path.startsWith("/settings")) return "settings";
-  if (path.startsWith("/cabinet/bank")) return "cabinet_bank";
-  if (path.startsWith("/cabinet")) return "cabinet";
-  if (path.startsWith("/dashboard")) return "dashboard";
-  // Telegram Mini App ekranlari — mavjud view ruxsatlaridan foydalanadi, ya'ni
-  // botdagi ekran ham, veb sahifa ham bir xil RBAC bilan qo'riqlanadi.
-  if (path.startsWith("/telegram-app/proof")) return "reports";
-  if (path.startsWith("/telegram-app/dashboard")) return "dashboard";
-  return null;
-}
 
 // Admin tahrirlagan rol→view override'lari (SystemSetting: "roleViews").
 // Sidebar shu override bilan chizadi — proxy ham AYNAN shu manbani ishlatmasa,

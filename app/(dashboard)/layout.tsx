@@ -94,7 +94,10 @@ export default async function DashboardLayout({
             className="flex-1 overflow-y-auto p-3 md:p-6 pb-[calc(76px_+_env(safe-area-inset-bottom,0px))] md:pb-6"
             style={{ minWidth: 0, background: "var(--bg-primary)" }}
           >
-            <Breadcrumbs className="mb-4" />
+            {/* Ruxsat berilmagan bo'lak havola bo'lmaydi — aks holda yo'l
+                chizig'i ocholmaydigan sahifaga taklif qilardi va uning
+                prefetch'i `/403` ga otilardi. */}
+            <Breadcrumbs className="mb-4" allowedViews={allowedViews} />
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </div>

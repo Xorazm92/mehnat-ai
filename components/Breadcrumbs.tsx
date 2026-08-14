@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
+import { pathToView } from "@/lib/routeViews";
 
 /**
  * BREADCRUMB — loyihada NOL ta edi (`grep -rni "breadcrumb"` hech narsa
@@ -55,12 +56,40 @@ function isIdSegment(seg: string) {
   return /^[0-9]+$/.test(seg) || /^c[a-z0-9]{20,}$/i.test(seg) || /^[0-9a-f-]{20,}$/i.test(seg);
 }
 
-export function Breadcrumbs({ className = "" }: { className?: string }) {
+export function Breadcrumbs({
+  className = "",
+  allowedViews,
+}: {
+  className?: string;
+  /**
+   * Foydalanuvchi ocha oladigan ekranlar. Berilmasa hamma bo'lak havola
+   * bo'ladi (eski xatti-harakat) — `(admin)` qobig'i shunday ishlatadi.
+   */
+  allowedViews?: string[];
+}) {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
 
   // Bitta segment — bu allaqachon ildiz sahifa, breadcrumb ortiqcha shovqin.
   if (segments.length <= 1) return null;
+
+  /**
+   * OCHIB BO'LMAYDIGAN BO'LAK HAVOLA BO'LMAYDI.
+   *
+   * Bu yo'l chizig'i manzilni faqat URL dan quradi va ruxsatni tekshirmasdi.
+   * Natijada bank-klient `/kassa/kirim` da turganda "Kassa" havolasini
+   * ko'rardi — holbuki uning `kassa` ekrani YO'Q. Next `<Link>` larni oldindan
+   * yuklagani uchun bu jimgina emas edi: har prefetch proxy tomonidan `/403`
+   * ga otilardi va har 15 soniyalik yangilanishda takrorlanardi.
+   *
+   * Endi ruxsat bo'lmasa bo'lak oddiy matn bo'lib qoladi — joyni ko'rsatadi,
+   * lekin ololmaydigan joyga taklif qilmaydi.
+   */
+  const canOpen = (href: string) => {
+    if (!allowedViews) return true;
+    const view = pathToView(href);
+    return view === null || allowedViews.includes(view);
+  };
 
   const crumbs = segments.map((seg, i) => ({
     seg,
@@ -69,25 +98,33 @@ export function Breadcrumbs({ className = "" }: { className?: string }) {
     isLast: i === segments.length - 1,
   }));
 
+  const rootHref = `/${segments[0]}`;
+
   return (
     <nav aria-label="Yo'nalish" className={`flex items-center gap-1 flex-wrap ${className}`}>
-      <Link
-        href={`/${segments[0]}`}
-        className="flex items-center hover:underline"
-        style={{ color: "var(--text-muted)" }}
-        aria-label="Bo'lim boshiga"
-      >
-        <Home size={12} />
-      </Link>
+      {canOpen(rootHref) ? (
+        <Link
+          href={rootHref}
+          className="flex items-center hover:underline"
+          style={{ color: "var(--text-muted)" }}
+          aria-label="Bo'lim boshiga"
+        >
+          <Home size={12} />
+        </Link>
+      ) : (
+        <span className="flex items-center" style={{ color: "var(--text-muted)" }} aria-hidden="true">
+          <Home size={12} />
+        </span>
+      )}
 
       {crumbs.map((c) => (
         <span key={c.href} className="flex items-center gap-1">
           <ChevronRight size={12} style={{ color: "var(--text-muted)", opacity: 0.5 }} aria-hidden="true" />
-          {c.isLast ? (
+          {c.isLast || !canOpen(c.href) ? (
             <span
-              aria-current="page"
+              aria-current={c.isLast ? "page" : undefined}
               className="text-micro font-bold uppercase tracking-widest"
-              style={{ color: "var(--text-secondary)" }}
+              style={{ color: c.isLast ? "var(--text-secondary)" : "var(--text-muted)" }}
             >
               {c.label}
             </span>
