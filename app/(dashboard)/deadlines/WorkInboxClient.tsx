@@ -21,7 +21,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { useTabParam } from "@/hooks/useTabParam";
 import { WORK_TAB_IDS, type WorkTab } from "@/lib/workTabs";
-import { CalendarClock, Inbox, UserCheck, AlarmClock, CheckSquare } from "lucide-react";
+import { CalendarClock, Inbox, UserCheck, AlarmClock, CheckSquare, Users } from "lucide-react";
+import BulkAssignModal from "@/components/BulkAssignModal";
 import { friendlyError } from "@/lib/actionError";
 
 export interface ObligationRow {
@@ -181,6 +182,7 @@ export default function WorkInboxClient({
   const [tab, setTab] = useTabParam<WorkTab>("tab", WORK_TAB_IDS, initialTab);
   const [visible, setVisible] = useState(RENDER_STEP);
   const [showForm, setShowForm] = useState(false);
+  const [showBulk, setShowBulk] = useState(false);
   const [f, setF] = useState({ ...EMPTY_FORM });
   const isSenior = SENIOR.has(role);
   const nameOf = useMemo(() => new Map(users.map((u) => [u.id, u.fullName])), [users]);
@@ -269,9 +271,15 @@ export default function WorkInboxClient({
         description="Majburiyatlar va vazifalar — bitta ro'yxatda, muddati bo'yicha"
         actions={
           isSenior ? (
-            <Button variant="success" size="sm" onClick={() => setShowForm((s) => !s)}>
-              {showForm ? "Bekor" : "+ Yangi vazifa"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Bir xil ishni o'nlab odamga bittalab yozib chiqmaslik uchun. */}
+              <Button variant="secondary" size="sm" onClick={() => setShowBulk(true)}>
+                <Users size={14} /> Ommaviy topshiriq
+              </Button>
+              <Button variant="success" size="sm" onClick={() => setShowForm((s) => !s)}>
+                {showForm ? "Bekor" : "+ Yangi vazifa"}
+              </Button>
+            </div>
           ) : null
         }
       >
@@ -407,6 +415,7 @@ export default function WorkInboxClient({
           )}
         </div>
       )}
+      <BulkAssignModal open={showBulk} onClose={() => setShowBulk(false)} onSent={() => router.refresh()} />
     </div>
   );
 }
