@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useViewMode } from '@/hooks/useViewMode';
 import { Staff, Company, Language, EmployeeSalarySummary, OperationEntry, MonthlyPerformance, KPIRule, CompanyKPIRule, EmployeeSalary } from '@/types';
 import { calculateEmployeeSalary } from '@/lib/kpiLogic';
 import { DollarSign, CheckCircle2, AlertCircle, FileText, X, TrendingUp, TrendingDown } from 'lucide-react';
@@ -8,7 +9,7 @@ import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
 import { getPayrollAdjustments, approveEmployeeSalary } from '@/server/payroll';
 import { toast } from 'sonner';
 import { formatNum } from "@/lib/format";
-import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { TableToolbar } from "@/components/ui/TableToolbar";
 import { exportToExcel } from "@/lib/exportExcel";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
@@ -54,7 +55,8 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
     const [loading, setLoading] = useState(false);
     const [savingId, setSavingId] = useState<string | null>(null);
     const [detailModal, setDetailModal] = useState<DetailModal | null>(null);
-    const [viewMode, setViewMode] = useState<ViewMode>('grid');
+    // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
+    const [viewMode, setViewMode] = useViewMode('oylik-qoralama');
     const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'approved'>('all');
 
     const superAdminCommission = useMemo(() => {

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useViewMode } from '@/hooks/useViewMode';
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -23,7 +24,7 @@ import {
   X,
   Trophy,
 } from "lucide-react";
-import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { TableToolbar } from "@/components/ui/TableToolbar";
 import { Tabs, TabPanel, type TabItem } from "@/components/ui/Tabs";
 import { useTabParam } from "@/hooks/useTabParam";
 import { CABINET_TAB_IDS, type CabinetTabId as TabId } from "@/lib/cabinetTabs";
@@ -414,7 +415,8 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
 
 // ─── FIRMALARIM TAB ────────────────────────────────────────
 function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
+  const [viewMode, setViewMode] = useViewMode('kabinet');
   const [selectedCompany, setSelectedCompany] = useState<CabinetCompany | null>(null);
 
   if (companies.length === 0) {

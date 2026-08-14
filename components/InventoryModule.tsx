@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import { useViewMode } from '@/hooks/useViewMode';
 import { Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
 import { Package, Plus, Search, Edit3, Trash2, User, CheckCircle2, Wrench, Archive } from 'lucide-react';
-import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { TableToolbar } from "@/components/ui/TableToolbar";
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -59,7 +60,8 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
   const confirm = useConfirm();
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<ViewMode>('list');
+    // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
+    const [viewMode, setViewMode] = useViewMode('inventar');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [form, setForm] = useState<InventoryForm>({ id: undefined, name: '', serialNumber: '', status: 'available', condition: 'good', assignedToId: '' });

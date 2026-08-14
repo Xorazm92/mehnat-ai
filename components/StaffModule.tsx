@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useViewMode } from '@/hooks/useViewMode';
 import { Staff, Company, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
 import { ROLE_LABELS, ROLE_COLORS, type UserRole } from '@/lib/permissions';
@@ -11,7 +12,7 @@ import {
   ShieldCheck, Mail, IdCard, GraduationCap, CalendarDays, Building, KeyRound, Loader2,
   Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
-import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { TableToolbar } from "@/components/ui/TableToolbar";
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
 import { useTableState } from '@/hooks/useTableState';
@@ -49,7 +50,8 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
   const [selected, setSelected] = useState<Staff | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
+  const [viewMode, setViewMode] = useViewMode('xodimlar');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Qidiruv/saralash/filtr/sahifa — URL'da. Endi filtrlangan ko'rinishni

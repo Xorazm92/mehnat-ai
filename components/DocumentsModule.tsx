@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import { useViewMode } from '@/hooks/useViewMode';
 import { Language, Company } from '@/types';
 import { translations } from '@/lib/translations';
 import { FileText, Plus, Search, Trash2, ExternalLink, Building2 } from 'lucide-react';
-import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { TableToolbar } from "@/components/ui/TableToolbar";
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -37,7 +38,8 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
   const confirm = useConfirm();
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<ViewMode>('list');
+    // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
+    const [viewMode, setViewMode] = useViewMode('hujjatlar');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [form, setForm] = useState<{ companyId: string; name: string; filePath: string }>({ companyId: '', name: '', filePath: '' });

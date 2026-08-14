@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import { useViewMode } from '@/hooks/useViewMode';
 import { Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
 import { Calendar, Plus, Search, Edit3, Trash2, CheckCircle2, XCircle, Clock, UserCheck, DownloadCloud } from 'lucide-react';
-import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { TableToolbar } from "@/components/ui/TableToolbar";
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -78,7 +79,8 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
         }
     };
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<ViewMode>('list');
+    // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
+    const [viewMode, setViewMode] = useViewMode('davomat');
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);

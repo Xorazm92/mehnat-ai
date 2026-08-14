@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from 'react';
+import { useViewMode } from '@/hooks/useViewMode';
 import { Company, Staff, TaxType, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
 import { Plus, Search, Edit3, Trash2, LayoutGrid, List, Eye, EyeOff, Download, Filter, Building2, Calculator, Users } from 'lucide-react';
@@ -50,7 +51,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<Partial<Company>>({});
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
+  // Ilgari 'table' deb atalardi — endi qolgan ekranlar bilan bir xil nom.
+  const [viewMode, setViewMode] = useViewMode('firmalar');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
   const filterActive: boolean | null =
@@ -414,9 +417,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               <LayoutGrid size={15} />
             </button>
             <button
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg transition-all ${viewMode === 'table' ? 'shadow-sm' : ''}`}
-              style={viewMode === 'table' ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--card-border)' } : { color: 'var(--text-secondary)', border: '1px solid transparent' }}
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'shadow-sm' : ''}`}
+              style={viewMode === 'list' ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--card-border)' } : { color: 'var(--text-secondary)', border: '1px solid transparent' }}
               title={t.tableView}
             >
               <List size={15} />
@@ -564,7 +567,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         )}
 
         {/* Kartochkalar — mobilda doim, desktopda faqat 'grid' rejimida */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${viewMode === 'table' ? 'md:hidden' : ''}`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${viewMode === 'list' ? 'md:hidden' : ''}`}>
             {paginated.map(c => {
               const risk = getRiskIndicator(c);
               const avatarColor = `hsl(${(c.name.charCodeAt(0) * 15) % 360}, 70%, 60%)`;
@@ -654,7 +657,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             })}
           </div>
         {/* Jadval — DataTable platformasi (faqat desktop 'table' rejimida) */}
-        {viewMode === 'table' && (
+        {viewMode === 'list' && (
           <div className="hidden md:block">
             <DataTable<Company>
               caption="Firmalar ro'yxati"

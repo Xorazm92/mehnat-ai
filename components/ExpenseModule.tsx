@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import { useViewMode } from '@/hooks/useViewMode';
 import { Expense, Language } from '@/types';
 import { translations } from '@/lib/translations';
 import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
@@ -8,7 +9,7 @@ import { exportToExcel } from '@/lib/exportExcel';
 import { canApproveExpense } from '@/lib/expenseApproval';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_COLORS } from '@/lib/constants';
 import BalanceOverview from '@/components/BalanceOverview';
-import { TableToolbar, type ViewMode } from '@/components/ui/TableToolbar';
+import { TableToolbar } from '@/components/ui/TableToolbar';
 import { formatUzDateNumeric, formatNum } from '@/lib/format';
 import { groupDigits, ungroupDigits } from '@/lib/format';
 import type { BalanceBreakdown } from '@/types';
@@ -53,7 +54,8 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
     });
     const searchTerm = table.debouncedSearch;
     const statusFilter = table.filters.status;
-    const [viewMode, setViewMode] = useState<ViewMode>('list');
+    // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
+    const [viewMode, setViewMode] = useViewMode('xarajatlar');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Partial<Expense> | null>(null);
 

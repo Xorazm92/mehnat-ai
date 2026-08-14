@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
+import { useViewMode } from '@/hooks/useViewMode';
 import { Company, KPIRule, MonthlyPerformance, Staff, Language, OperationEntry } from '@/types';
 import { Search, Shield, CheckCircle2, XCircle } from 'lucide-react';
 import { translations } from '@/lib/translations';
@@ -9,7 +10,7 @@ import { projectAllKpiForMonth } from '@/server/kpiProjection';
 import { deriveAttendanceKpi } from '@/server/attendance';
 import KpiEntryCard from './kpi/KpiEntryCard';
 import { formatNum } from "@/lib/format";
-import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { TableToolbar } from "@/components/ui/TableToolbar";
 import { toast } from "sonner";
 import { usePrompt } from "@/components/ui/ConfirmDialog";
 import { SkeletonTable } from "@/components/ui/Skeleton";
@@ -37,7 +38,8 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     const [performances, setPerformances] = useState<MonthlyPerformance[]>([]);
     const [search, setSearch] = useState('');
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-    const [viewMode, setViewMode] = useState<ViewMode>('grid');
+    // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
+    const [viewMode, setViewMode] = useViewMode('nazorat');
     const [loading, setLoading] = useState(false);
     const [busy, setBusy] = useState(false);
 
