@@ -9,6 +9,7 @@ import {
   regimeLabel,
   type MatrixFilters,
 } from "@/lib/matrixFilters";
+import { MATRIX_STATUS_FILTERS, type MatrixStatusFilter } from "@/lib/reportStatus";
 
 /**
  * MATRITSA FILTRLARI PANELI.
@@ -42,6 +43,18 @@ interface Props {
    */
   onClearColumn: () => void;
   onReset: () => void;
+  /**
+   * Bajarilish holati — avval ALOHIDA tugma edi. Ikkita qo'shni tugma ham
+   * qatorni filtrlab, foydalanuvchini "qaysi biri nima qiladi?" degan savolga
+   * qo'yardi. Endi bitta panel, birinchi bo'lim.
+   */
+  status: MatrixStatusFilter;
+  statusCounts: Record<MatrixStatusFilter, number>;
+  onStatusChange: (v: MatrixStatusFilter) => void;
+  /** Bajarilish foizi bo'yicha saralash — mavzu bo'yicha shu yerga tegishli. */
+  sortActive: boolean;
+  sortDir: "asc" | "desc";
+  onToggleSort: () => void;
   /** Filtrdan keyin qolgan / jami qator — panel ichida darhol ko'rinadi. */
   shown: number;
   total: number;
@@ -141,10 +154,18 @@ export default function MatrixFilterPanel({
   onReset,
   shown,
   total,
+  status,
+  statusCounts,
+  onStatusChange,
+  sortActive,
+  sortDir,
+  onToggleSort,
 }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useDismissable<HTMLDivElement>(open, () => setOpen(false));
-  const count = activeFilterCount(filters);
+  // Bajarilish holati ham hisobga olinadi — tugmadagi raqam YOQILGAN
+  // filtrlarning to'liq sonini ko'rsatishi kerak.
+  const count = activeFilterCount(filters) + (status !== "all" ? 1 : 0);
 
   const people: Array<{ key: keyof MatrixFilters; label: string; list: string[] }> = [
     { key: "accountant", label: "Buxgalter", list: options.accountants },
@@ -199,8 +220,59 @@ export default function MatrixFilterPanel({
           </div>
 
           <div className="max-h-[65vh] overflow-y-auto scrollbar-styled p-3 space-y-3">
+            {/* ── Bajarilish holati ────────────────────────────── */}
+            {/* Birinchi bo'lim: kundalik savol shu — "kimda ish qolgan?" */}
+            <div>
+              <span className="block text-micro font-bold uppercase tracking-widest mb-1.5" style={{ color: "var(--text-3)" }}>
+                Bajarilish
+              </span>
+              <div className="grid grid-cols-2 gap-1">
+                {MATRIX_STATUS_FILTERS.map((o) => {
+                  const on = status === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      onClick={() => onStatusChange(o.value)}
+                      aria-pressed={on}
+                      title={o.hint}
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-left transition-colors"
+                      style={
+                        on
+                          ? { background: "var(--primary-ghost)", border: "1px solid var(--primary)", color: "var(--primary)" }
+                          : { background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-2)" }
+                      }
+                    >
+                      <span className="text-micro font-bold w-3 flex-shrink-0" aria-hidden>{o.icon}</span>
+                      <span className="flex-1 min-w-0 text-micro font-bold uppercase tracking-widest truncate">
+                        {o.label}
+                      </span>
+                      <span className="text-micro tabular-nums flex-shrink-0" style={{ opacity: 0.7 }}>
+                        {statusCounts[o.value]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={onToggleSort}
+                aria-pressed={sortActive}
+                className="w-full mt-1.5 flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg transition-colors"
+                style={
+                  sortActive
+                    ? { background: "var(--primary-ghost)", border: "1px solid var(--primary)", color: "var(--primary)" }
+                    : { background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-3)" }
+                }
+              >
+                <span className="text-micro font-bold uppercase tracking-widest">Foiz bo&apos;yicha saralash</span>
+                <span className="text-micro font-bold">
+                  {sortActive ? (sortDir === "asc" ? "kamdan ↑" : "ko'pdan ↓") : "—"}
+                </span>
+              </button>
+            </div>
+
             {/* ── Mas'ullar ────────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="pt-3 grid grid-cols-2 gap-2.5" style={{ borderTop: "1px solid var(--border)" }}>
               {people.map((p) => (
                 <Field
                   key={p.key}

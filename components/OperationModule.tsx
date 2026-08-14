@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Company, OperationEntry, Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
-import { ChevronDown, Download, Search, RefreshCw, Info, SlidersHorizontal, BarChart2, PieChart, TrendingUp, Sparkles, X } from 'lucide-react';
+import { ChevronDown, Download, Search, RefreshCw, Info, SlidersHorizontal, BarChart2, Sparkles, X } from 'lucide-react';
 import { MonthPicker } from './ui/MonthPicker';
 import { useConfirm } from './ui/ConfirmDialog';
 import { useTableState } from '@/hooks/useTableState';
@@ -15,7 +15,6 @@ import { createNotification } from '@/server/audit';
 import { getReportProofsMeta } from '@/server/proofs';
 import ReportProofModal, { ProofModalState } from './ReportProofModal';
 import { BASE_REPORT_COLUMNS, type ReportColumn } from '@/lib/reportColumns';
-import { tryGetColumnCategory, CATEGORY_LABEL_UZ, type ReportCategory } from '@/lib/reportGroups';
 import { allowedCellActions, canApproveCell, canEditMatrix, isCompanyReviewer, isReviewerOwnedValue, type CellAction } from '@/lib/reportPermissions';
 import MatrixFilterPanel, { type MatrixFilterOptions } from './MatrixFilterPanel';
 import ReportInsightModal, { type InsightRowInput } from './ReportInsightModal';
@@ -138,15 +137,6 @@ const getGroupStyle = (groupName: string): GroupStyle => {
     border: "var(--border)",
   };
 };
-
-const CATEGORY_COLOR: Record<ReportCategory, string> = {
-  OPERATSION: 'var(--brand)',
-  SOLIQ: 'var(--warning)',
-  STATISTIKA: 'var(--info)',
-  MAXSUS: 'var(--accent-purple)',
-};
-
-const categoryOf = (key: string): ReportCategory | null => tryGetColumnCategory(key);
 
 const buildGroupEdges = (cols: readonly ReportColumn[]): Set<string> => {
   const edges = new Set<string>();
@@ -735,17 +725,6 @@ const OperationModule: React.FC<Props> = ({
   const matrixScrollRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const filterGroup = table.filters.grp;
-  const setFilterGroup = (v: string) => table.setFilter('grp', v);
-  /**
-   * M6: statistika oynasidagi kategoriya plitkalari uchun ALOHIDA filtr.
-   *
-   * Avval plitka `setFilterGroup(cat.category)` chaqirardi, ya'ni "SOLIQ"
-   * (ReportCategory enum) qiymatini `c.group` bilan solishtirardi — u yerda esa
-   * "Soliqlar", "Oylik", "Statistika" kabi BOSHQA taksonomiya bor. Ular hech
-   * qachon mos kelmasdi, natijada `visibleColumns` BO'SH qolib, foydalanuvchi
-   * plitkani bosgach butun matritsa yo'qolardi.
-   */
-  const [filterCategory, setFilterCategory] = useState<ReportCategory | 'all'>('all');
   /**
    * "Aqlli filtrlar" — mas'ul, firma xossasi va USTUN KESIMI.
    * Mantiqi `lib/matrixFilters.ts` da (sof, sinovdan o'tgan), bu yerda faqat
@@ -779,6 +758,19 @@ const OperationModule: React.FC<Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [table.setFilters]);
 
+  /**
+   * "Hammasini tozalash" — aqlli filtrlar VA bajarilish holati birga.
+   * `st` ham bitta yozuvga qo'shiladi, aks holda u chetda qolib ketardi.
+   */
+  const resetAllFilters = useCallback(() => {
+    const patch: Record<string, string> = { st: 'all' };
+    for (const k of Object.keys(EMPTY_FILTERS) as (keyof MatrixFilters)[]) {
+      patch[FILTER_URL_KEYS[k]] = EMPTY_FILTERS[k];
+    }
+    table.setFilters(patch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table.setFilters]);
+
   /** Ustun kesimi — ustun va holat birga tozalanadi (bitta yozuvda). */
   const clearColumnFilter = useCallback(() => {
     table.setFilters({
@@ -787,16 +779,12 @@ const OperationModule: React.FC<Props> = ({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [table.setFilters]);
-  /** Statistika oynasidagi buxgalter qatori shu orqali filtr qo'yadi. */
-  const setFilterAccountant = (v: string) => setFilter('accountant', v);
   /**
    * Bajarilish holati filtri. `parseStatusFilter` — URL'dan kelgan xom matn
    * uchun qo'riqchi: noto'g'ri qiymat butun matritsani bo'sh qoldirmaydi.
    */
   const filterStatus = parseStatusFilter(table.filters.st);
   const setFilterStatus = (v: MatrixStatusFilter) => table.setFilter('st', v);
-  const [statusPanelOpen, setStatusPanelOpen] = useState(false);
-  const statusPanelRef = useDismissable<HTMLDivElement>(statusPanelOpen, () => setStatusPanelOpen(false));
   // Per-user column show/hide, persisted per browser (no DB needed).
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
   const [colPanelOpen, setColPanelOpen] = useState(false);
@@ -1172,12 +1160,11 @@ const OperationModule: React.FC<Props> = ({
   );
 
   const visibleColumns = useMemo(() => {
-    let base = filterGroup === 'all' ? REPORT_COLUMNS : REPORT_COLUMNS.filter(c => c.group === filterGroup);
-    if (filterCategory !== 'all') {
-      base = base.filter(c => (tryGetColumnCategory(c.key as never) || 'OPERATSION') === filterCategory);
-    }
+    // Guruh tanlovi endi "Ustunlar" paneli ichida (alohida tanlagich olib
+    // tashlandi — u shu panel bilan bir vazifani bajarardi).
+    const base = filterGroup === 'all' ? REPORT_COLUMNS : REPORT_COLUMNS.filter(c => c.group === filterGroup);
     return base.filter(c => !hiddenCols.has(c.key));
-  }, [filterGroup, filterCategory, REPORT_COLUMNS, hiddenCols]);
+  }, [filterGroup, REPORT_COLUMNS, hiddenCols]);
 
   /**
    * Har bir qatorning katak hisobi — BIR MARTA hisoblanadi.
@@ -1274,6 +1261,15 @@ const OperationModule: React.FC<Props> = ({
 
   // ── Hisobot tahlili oynasi ───────────────────────────────────
   const [insightOpen, setInsightOpen] = useState(false);
+
+  /** Afsona yopiq/ochiq — tanlov shu brauzerda saqlanadi. */
+  const [legendOpen, setLegendOpen] = useState(false);
+  useEffect(() => {
+    try { setLegendOpen(localStorage.getItem('opmatrix-legend') === '1'); } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem('opmatrix-legend', legendOpen ? '1' : '0'); } catch { /* ignore */ }
+  }, [legendOpen]);
 
   /**
    * Tahlil oynasi uchun manba. ATAYLAB `searchedRows` — ya'ni qidiruv va
@@ -1434,20 +1430,19 @@ const OperationModule: React.FC<Props> = ({
   // colSpan'i pastdagi ustunlardan siljib ketardi. Endi band doim o'z ustunlari
   // ustida turadi.
   const headerBands = useMemo(() => {
-    const bands: { name: string; category: ReportCategory | null; span: number }[] = [];
+    // `category` maydoni OLIB TASHLANDI: u faqat hisoblanardi, hech qayerda
+    // o'qilmasdi (kategoriya taksonomiyasi bilan birga ketdi).
+    const bands: { name: string; span: number }[] = [];
     visibleColumns.forEach(c => {
       const visualCols = (c as any).isSplit ? 2 : 1;
       const last = bands[bands.length - 1];
       if (last && last.name === c.group) last.span += visualCols;
-      else bands.push({ name: c.group, category: categoryOf(c.key), span: visualCols });
+      else bands.push({ name: c.group, span: visualCols });
     });
     return bands;
   }, [visibleColumns]);
 
-  // Guruh chegarasi: shu ustundan KEYIN yangi guruh boshlanadi.
-  const groupEdges = useMemo(() => buildGroupEdges(visibleColumns), [visibleColumns]);
 
-  const [showStatsModal, setShowStatsModal] = useState(false);
 
   /**
    * Umumiy statistika — endi qator hisoblarining yig'indisi.
@@ -1484,70 +1479,6 @@ const OperationModule: React.FC<Props> = ({
       exactPercent: Number((ratio * 100).toFixed(1)),
     };
   }, [filteredRows, tallyOf]);
-
-  // Per-accountant real-time progress
-  const accountantProgress = useMemo(() => {
-    const map = new Map<string, StatusTally>();
-    rows.forEach(row => {
-      const acc = row.accountant && row.accountant !== '—' ? row.accountant : 'Biriktirilmagan';
-      const entry = map.get(acc) ?? emptyTally();
-      if (!map.has(acc)) map.set(acc, entry);
-      const t = tallyOf(row);
-      entry.approved += t.approved;
-      entry.submitted += t.submitted;
-      entry.zero += t.zero;
-      entry.blocked += t.blocked;
-      entry.failed += t.failed;
-      entry.error += t.error;
-      entry.note += t.note;
-      entry.required += t.required;
-      entry.settled += t.settled;
-      entry.outstanding += t.outstanding;
-    });
-
-    return Array.from(map.entries()).map(([name, t]) => ({
-      name,
-      total: t.required,
-      done: t.settled,
-      notDone: t.failed,
-      warning: t.blocked,
-      percent: Math.round(settledRatio(t) * 100),
-    })).sort((a, b) => b.percent - a.percent);
-  }, [rows, tallyOf]);
-
-  // Per-category real-time progress
-  const categoryProgress = useMemo(() => {
-    const map = new Map<ReportCategory, { total: number; done: number }>();
-    visibleColumns.forEach(col => {
-      const cat = tryGetColumnCategory(col.key as any) || 'OPERATSION';
-      if (!map.has(cat)) map.set(cat, { total: 0, done: 0 });
-      const entry = map.get(cat)!;
-
-      // `classifyCell` bilan — bu yerda ham 'nol' bajarilgan deb sanaladi.
-      const count = (raw: unknown) => {
-        const t = emptyTally();
-        addToTally(t, raw);
-        entry.total += t.required;
-        entry.done += t.settled;
-      };
-
-      filteredRows.forEach(row => {
-        count(row[col.key]);
-        if ((col as any).isSplit) count(row[(col as any).payKey]);
-      });
-    });
-
-    return (['OPERATSION', 'SOLIQ', 'STATISTIKA', 'MAXSUS'] as ReportCategory[]).map(cat => {
-      const data = map.get(cat) || { total: 0, done: 0 };
-      return {
-        category: cat,
-        label: CATEGORY_LABEL_UZ[cat],
-        total: data.total,
-        done: data.done,
-        percent: data.total > 0 ? Math.round((data.done / data.total) * 100) : 0
-      };
-    });
-  }, [filteredRows, visibleColumns]);
 
   const uniqueGroups = [...new Set(REPORT_COLUMNS.map(c => c.group))];
 
@@ -1610,21 +1541,23 @@ const OperationModule: React.FC<Props> = ({
       <div className="flex-shrink-0 z-10 border-b transition-all duration-300 py-3 px-6 dashboard-card !rounded-none !border-x-0 !border-t-0 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-5">
-            <div>
-              {/* `h1` emas, `h2`: sahifaning yagona `h1` i endi `PageHeader`
-                  da — ekran o'quvchi uchun ikkita birinchi darajali sarlavha
-                  hujjat tuzilmasini buzardi. */}
-              <h2 className="text-base font-semibold leading-tight" style={{ color: 'var(--text)' }}>{t.matrixTitle}</h2>
-              <p className="text-micro font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-3)' }}>
-                {filteredRows.length} / {rows.length} {t.taKorxona} · <span style={{ color: 'var(--primary)' }}>{selectedPeriod}</span>
-              </p>
-            </div>
+            {/* Sarlavha OLIB TASHLANDI: ustidagi yorliq allaqachon "Amallar
+                matritsasi" deb turibdi, davr esa o'ngdagi davr tugmasida.
+                Qoladigani — filtr natijasi, ya'ni YAGONA takrorlanmaydigan
+                ma'lumot. */}
+            <p className="text-meta font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: 'var(--text-3)' }}>
+              <span className="tabular-nums" style={{ color: 'var(--text)' }}>{filteredRows.length}</span>
+              {filteredRows.length !== rows.length && (
+                <span className="tabular-nums"> / {rows.length}</span>
+              )}
+              {' '}{t.taKorxona}
+            </p>
             {/* Real-Time Percentage Progress Widget */}
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowStatsModal(true)}
+                onClick={() => setInsightOpen(true)}
                 className="flex items-center gap-3.5 px-3.5 py-1.5 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface)] border border-[var(--border)] transition-all cursor-pointer group shadow-sm"
-                title="Batafsil topshirish % statistikasini ko'rish"
+                title="Hisobot tahlilini ochish — foiz va topshirmaganlar"
               >
                 <div className="flex flex-col items-start">
                   <div className="flex items-center gap-2">
@@ -1640,14 +1573,13 @@ const OperationModule: React.FC<Props> = ({
                         har 15 soniyada yangilanadi. Endi yorliq nimani anglatsa,
                         shuni yozadi. `py-0.2` ham olib tashlandi — Tailwind'da
                         bunday qadam yo'q, u jim ravishda hech narsa bermasdi. */}
+                    {/* Matn o'rniga nuqta: "AVTO-YANGILANISH" har doim bir xil
+                        edi va ~120px joyni olardi. Ma'nosi tooltipda qoldi. */}
                     <span
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-micro font-bold"
-                      style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }}
-                      title="Sahifa har 15 soniyada yangilanadi"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--success)' }} />
-                      AVTO-YANGILANISH
-                    </span>
+                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{ background: 'var(--success)' }}
+                      title="Avto-yangilanish yoqilgan — sahifa har 15 soniyada yangilanadi"
+                    />
                   </div>
                   {/* Progress bar */}
                   <div className="w-32 sm:w-44 h-2 bg-[var(--border)] rounded-full overflow-hidden mt-1">
@@ -1684,139 +1616,6 @@ const OperationModule: React.FC<Props> = ({
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-3)' }} />
             </div>
 
-            {/* BAJARILISH — filtr + saralash.
-                Avval bu tugma FAQAT saralardi: bosilganda ro'yxat joyidan
-                qimirlardi, lekin kerakmas qatorlar ekranda qolaverardi va
-                foydalanuvchi ularni faqat aylantirib o'ta olardi. Endi ochilgan
-                menyudan holat tanlanadi (sanoqlari bilan), saralash esa o'sha
-                menyuning oxirgi qatorida qoldi. */}
-            <div className="relative" ref={statusPanelRef}>
-              <button
-                onClick={() => setStatusPanelOpen(o => !o)}
-                aria-expanded={statusPanelOpen}
-                aria-haspopup="menu"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-meta font-bold uppercase tracking-widest shadow-sm"
-                style={
-                  filterStatus !== 'all' || table.sortKey === 'completion'
-                    ? { background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }
-                    : { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }
-                }
-                title="Bajarilish holati bo'yicha filtrlash va saralash"
-              >
-                Bajarilish
-                {table.sortKey === 'completion' && (table.sortDir === 'asc' ? ' ↑' : ' ↓')}
-                <ChevronDown size={13} />
-              </button>
-
-              {statusPanelOpen && (
-                <div
-                  role="menu"
-                  className="absolute right-0 mt-2 z-[200] w-72 rounded-xl layer-overlay overflow-hidden"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--rule-strong)' }}
-                >
-                  <div className="px-3 pt-3 pb-2" style={{ borderBottom: '1px solid var(--border)' }}>
-                    <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-2)' }}>
-                      Bajarilish holati
-                    </span>
-                  </div>
-
-                  <div className="p-1.5">
-                    {MATRIX_STATUS_FILTERS.map(opt => {
-                      const active = filterStatus === opt.value;
-                      const count = statusCounts[opt.value];
-                      return (
-                        <button
-                          key={opt.value}
-                          role="menuitemradio"
-                          aria-checked={active}
-                          onClick={() => { setFilterStatus(opt.value); setStatusPanelOpen(false); }}
-                          className="w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors hover:bg-[var(--surface-2)]"
-                          style={active ? { background: 'var(--primary-ghost)' } : undefined}
-                        >
-                          <span
-                            className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-md text-micro font-bold mt-0.5"
-                            style={{ background: 'var(--surface-2)', color: active ? 'var(--primary)' : 'var(--text-3)' }}
-                            aria-hidden
-                          >
-                            {opt.icon}
-                          </span>
-                          <span className="flex-1 min-w-0">
-                            <span className="flex items-center justify-between gap-2">
-                              <span
-                                className="text-meta font-bold uppercase tracking-widest"
-                                style={{ color: active ? 'var(--primary)' : 'var(--text)' }}
-                              >
-                                {opt.label}
-                              </span>
-                              <span
-                                className="text-micro font-bold tabular-nums"
-                                style={{ color: count > 0 ? 'var(--text-2)' : 'var(--text-3)' }}
-                              >
-                                {count}
-                              </span>
-                            </span>
-                            <span className="block text-micro mt-0.5" style={{ color: 'var(--text-3)' }}>
-                              {opt.hint}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Saralash — eski tugmaning vazifasi yo'qolmasin. */}
-                  <div className="p-1.5" style={{ borderTop: '1px solid var(--border)' }}>
-                    <button
-                      onClick={() => table.toggleSort('completion')}
-                      aria-pressed={table.sortKey === 'completion'}
-                      className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg transition-colors hover:bg-[var(--surface-2)]"
-                      style={table.sortKey === 'completion' ? { background: 'var(--primary-ghost)' } : undefined}
-                    >
-                      <span
-                        className="text-meta font-bold uppercase tracking-widest"
-                        style={{ color: table.sortKey === 'completion' ? 'var(--primary)' : 'var(--text-2)' }}
-                      >
-                        Foiz bo'yicha saralash
-                      </span>
-                      <span className="text-micro font-bold" style={{ color: 'var(--text-3)' }}>
-                        {table.sortKey === 'completion' ? (table.sortDir === 'asc' ? 'kamdan ↑' : 'ko’pdan ↓') : '—'}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Faol holat chipi — menyu yopilgach filtr ko'rinmas bo'lib
-                qolmasligi uchun (kategoriya chipi bilan bir xil naqsh). */}
-            {filterStatus !== 'all' && (
-              <button
-                onClick={() => setFilterStatus('all')}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-meta font-bold uppercase tracking-widest shadow-sm"
-                style={{ background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
-                title="Holat filtrini olib tashlash"
-              >
-                {activeStatusOption.label}
-                <span className="tabular-nums" style={{ opacity: 0.75 }}>{statusCounts[filterStatus]}</span>
-                <X size={13} />
-              </button>
-            )}
-
-            {/* Faol kategoriya chipi — statistika oynasidan qo'yilgan filtr
-                ko'rinmas bo'lib qolmasligi uchun. Busiz foydalanuvchi ustunlar
-                nega kamayganini bilmasdi va uni tozalay olmasdi. */}
-            {filterCategory !== 'all' && (
-              <button
-                onClick={() => setFilterCategory('all')}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-meta font-bold uppercase tracking-widest shadow-sm"
-                style={{ background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
-                title="Kategoriya filtrini olib tashlash"
-              >
-                {CATEGORY_LABEL_UZ[filterCategory]}
-                <X size={13} />
-              </button>
-            )}
-
             {/* HISOBOT TAHLILI — filtrdan farqli, u JAVOB beradi:
                 "INPS bo'yicha Go'zaloyning foizi qancha va kim topshirmagan?" */}
             <button
@@ -1840,18 +1639,13 @@ const OperationModule: React.FC<Props> = ({
               onReset={resetFilters}
               shown={filteredRows.length}
               total={rows.length}
+              status={filterStatus}
+              statusCounts={statusCounts}
+              onStatusChange={setFilterStatus}
+              sortActive={table.sortKey === 'completion'}
+              sortDir={table.sortDir}
+              onToggleSort={() => table.toggleSort('completion')}
             />
-
-            {/* Group Filter */}
-            <div className="relative">
-              <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
-                className="pl-4 pr-9 py-2 rounded-xl text-meta font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none min-w-[120px] cursor-pointer"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}>
-                <option value="all">{t.allColumns}</option>
-                {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-3)' }} />
-            </div>
 
             {/* Period Selector */}
             <MonthPicker
@@ -1896,20 +1690,34 @@ const OperationModule: React.FC<Props> = ({
                       const allShown = groupCols.every(c => !hiddenCols.has(c.key));
                       return (
                       <div key={g} className="mb-2">
-                        <button
-                          onClick={() => setHiddenCols(prev => {
-                            const next = new Set(prev);
-                            // Guruh to'liq ochiq bo'lsa — hammasini yashir, aks holda — hammasini ko'rsat
-                            groupCols.forEach(c => { if (allShown) next.add(c.key); else next.delete(c.key); });
-                            return next;
-                          })}
-                          className="w-full flex items-center justify-between text-micro font-semibold uppercase tracking-widest mb-1 hover:opacity-80"
-                          style={{ color: 'var(--text-3)' }}
-                          title={allShown ? "Guruhni yashirish" : "Guruhni ko'rsatish"}
-                        >
-                          <span>{g}</span>
-                          <span style={{ color: allShown ? 'var(--primary)' : 'var(--text-3)' }}>{allShown ? '✓' : '○'}</span>
-                        </button>
+                        <div className="flex items-center gap-1 mb-1">
+                          <button
+                            onClick={() => setHiddenCols(prev => {
+                              const next = new Set(prev);
+                              // Guruh to'liq ochiq bo'lsa — hammasini yashir, aks holda — hammasini ko'rsat
+                              groupCols.forEach(c => { if (allShown) next.add(c.key); else next.delete(c.key); });
+                              return next;
+                            })}
+                            className="flex-1 flex items-center justify-between text-micro font-semibold uppercase tracking-widest hover:opacity-80"
+                            style={{ color: 'var(--text-3)' }}
+                            title={allShown ? "Guruhni yashirish" : "Guruhni ko'rsatish"}
+                          >
+                            <span>{g}</span>
+                            <span style={{ color: allShown ? 'var(--primary)' : 'var(--text-3)' }}>{allShown ? '✓' : '○'}</span>
+                          </button>
+                          {/* "FAQAT" — olib tashlangan guruh tanlagichining o'rni:
+                              bitta bosishda shu guruhdan boshqasi yashiriladi. */}
+                          <button
+                            onClick={() => setHiddenCols(new Set(
+                              REPORT_COLUMNS.filter(c => c.group !== g).map(c => c.key)
+                            ))}
+                            className="text-micro font-bold uppercase px-1.5 py-0.5 rounded"
+                            style={{ color: 'var(--primary)', background: 'var(--primary-ghost)' }}
+                            title={`Faqat "${g}" guruhini ko'rsatish`}
+                          >
+                            faqat
+                          </button>
+                        </div>
                         {groupCols.map(c => (
                           <label key={c.key} className="flex items-center gap-2 py-1 px-1 rounded-lg cursor-pointer text-meta" style={{ color: 'var(--text)' }}>
                             <input type="checkbox" checked={!hiddenCols.has(c.key)} onChange={() => toggleCol(c.key)} />
@@ -1936,11 +1744,27 @@ const OperationModule: React.FC<Props> = ({
         {/* YOQILGAN FILTRLAR — panel yopilgach ular ko'rinmas bo'lib qolmasin.
             Foydalanuvchi "nega faqat 12 ta firma chiqdi?" degan savolga
             javobni ekranning o'zidan topsin va bitta bosishda olib tashlasin. */}
-        {chips.length > 0 && (
+        {(chips.length > 0 || filterStatus !== 'all') && (
           <div className="flex items-center gap-2 flex-wrap mt-3">
             <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
               Filtr:
             </span>
+            {/* Bajarilish holati chipi — u `activeChips` da yo'q, chunki
+                `lib/matrixFilters` bajarilish holatini bilmaydi (u
+                `lib/reportStatus` ning mas'uliyati). */}
+            {filterStatus !== 'all' && (
+              <button
+                onClick={() => setFilterStatus('all')}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro font-bold shadow-sm"
+                style={{ background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                title="Bajarilish filtrini olib tashlash"
+              >
+                <span style={{ opacity: 0.75 }}>Bajarilish:</span>
+                {activeStatusOption.label}
+                <span className="tabular-nums" style={{ opacity: 0.75 }}>{statusCounts[filterStatus]}</span>
+                <X size={12} />
+              </button>
+            )}
             {chips.map(chip => (
               <button
                 key={chip.key}
@@ -1967,7 +1791,7 @@ const OperationModule: React.FC<Props> = ({
               </button>
             ))}
             <button
-              onClick={resetFilters}
+              onClick={resetAllFilters}
               className="px-2.5 py-1 rounded-lg text-micro font-bold uppercase tracking-widest transition-colors"
               style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}
             >
@@ -1976,8 +1800,27 @@ const OperationModule: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Legend */}
-        <div className="flex items-center gap-5 mt-4 pt-3 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid var(--border)' }}>
+        {/* AFSONA — endi YIG'ILADIGAN va sukut bo'yicha yopiq.
+            To'qqizta element butun bir qatorni egallaydi, lekin uni kunda
+            o'nlab marta ochadigan xodim yodlab bo'lgan. Yangi xodim uchun esa
+            bitta bosishda ochiladi va tanlovi brauzerda saqlanadi. */}
+        <button
+          onClick={() => setLegendOpen(o => !o)}
+          aria-expanded={legendOpen}
+          className="flex items-center gap-1.5 mt-3 pt-2.5 text-micro font-bold uppercase tracking-widest w-full"
+          style={{ borderTop: '1px solid var(--border)', color: 'var(--text-3)' }}
+        >
+          <ChevronDown
+            size={12}
+            className="transition-transform"
+            style={{ transform: legendOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          />
+          Belgilar izohi
+        </button>
+        <div
+          className="flex items-center gap-5 mt-2 overflow-x-auto scrollbar-hide"
+          style={{ display: legendOpen ? undefined : 'none' }}
+        >
           {[
             { icon: '✓', label: `${t.approved} (+)`, color: 'var(--success)', bg: tint('var(--success)', 12) },
             { icon: '✗', label: `${t.rejected} (-)`, color: 'var(--danger)', bg: tint('var(--danger)', 12) },
@@ -2200,197 +2043,6 @@ const OperationModule: React.FC<Props> = ({
       </div>
 
       {/* ── Real-Time Progress Details Modal ── */}
-      {showStatsModal && createPortal(
-        <div
-          className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setShowStatsModal(false)}
-        >
-          <div
-            className="w-full max-w-3xl max-h-[85vh] flex flex-col dashboard-card !p-0 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="px-6 py-4 flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-2)]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }}>
-                  <TrendingUp size={20} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold tracking-wider text-[var(--text)] flex items-center gap-2">
-                    <span>Hisobotlar Topshirish Statistikasi</span>
-                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-micro font-bold"
-                      style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-border)' }}>
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--success)' }} />
-                      AVTO-YANGILANISH
-                    </span>
-                  </h3>
-                  <p className="text-micro font-bold text-[var(--text-3)] mt-0.5">
-                    {selectedPeriod} davri bo'yicha topshirilish holati
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowStatsModal(false)}
-                className="p-2 rounded-xl text-[var(--text-3)] hover:bg-[var(--surface)] transition-all"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Overall Progress Large Banner */}
-              <div className="p-5 rounded-2xl bg-gradient-to-r from-[var(--surface-2)] to-[var(--surface)] border border-[var(--border)] space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold tracking-wider text-[var(--text-2)]">
-                    Umumiy Bajarilish Ko'rsatkichi
-                  </span>
-                  <span className="text-2xl font-semibold tabular-nums text-[var(--primary)]">
-                    {stats.exactPercent}%
-                  </span>
-                </div>
-                <div className="w-full h-3 bg-[var(--border)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${stats.percent}%`,
-                      background:
-                        stats.percent >= 80
-                          ? 'var(--success)'
-                          : stats.percent >= 50
-                          ? 'var(--warning)'
-                          : 'var(--danger)',
-                    }}
-                  />
-                </div>
-                {/* Plitkalar endi FILTR tugmasi ham: raqamni ko'rgan odam
-                    darhol "qaysi firmalar?" deb so'raydi. Kategoriya va
-                    buxgalter plitkalari allaqachon shunday ishlardi. */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
-                  {([
-                    { filter: 'done' as const, label: 'Topshirildi', value: stats.settled, style: { background: 'var(--success-bg)', border: '1px solid var(--success-border)', color: 'var(--success)' } },
-                    { filter: 'pending' as const, label: 'Qolib ketgan (-)', value: stats.failed, className: 'bg-rose-500/10 border border-rose-500/20 text-rose-500' },
-                    { filter: 'kartoteka' as const, label: 'Kartoteka', value: stats.blocked, className: 'bg-amber-500/10 border border-amber-500/20 text-amber-500' },
-                    { filter: 'nol' as const, label: 'Nol hisobot', value: stats.zero, style: { background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' } },
-                    { filter: 'izoh' as const, label: 'Izohli', value: stats.note, className: 'bg-blue-500/10 border border-blue-500/20 text-blue-500' },
-                    { filter: 'all' as const, label: 'Topshirilishi kutilgan', value: stats.required, className: 'bg-slate-500/10 border border-slate-500/20 text-[var(--text-2)]' },
-                  ]).map(tile => (
-                    <button
-                      key={tile.label}
-                      onClick={() => { setFilterStatus(tile.filter); setShowStatsModal(false); }}
-                      className={`p-3 rounded-xl text-left transition-all hover:brightness-125 ${tile.className ?? ''}`}
-                      style={tile.style}
-                      title={
-                        tile.filter === 'all'
-                          ? 'Filtrni tozalash'
-                          : `"${MATRIX_STATUS_FILTERS.find(o => o.value === tile.filter)?.label}" bo'yicha filtrlash`
-                      }
-                    >
-                      <span className="text-micro font-bold uppercase tracking-wider block">{tile.label}</span>
-                      <span className="text-base font-semibold tabular-nums">{tile.value} ta</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Category Breakdown */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold tracking-wider text-[var(--text-2)] flex items-center gap-2">
-                  <PieChart size={16} className="text-[var(--primary)]" />
-                  <span>Kategoriyalar bo'yicha % topshirilishi</span>
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {categoryProgress.map((cat) => (
-                    <div
-                      key={cat.category}
-                      onClick={() => {
-                        setFilterCategory(cat.category);
-                        setShowStatsModal(false);
-                      }}
-                      className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)] transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-[var(--text)] group-hover:text-[var(--primary)]">
-                          {cat.label}
-                        </span>
-                        <span className="text-xs font-semibold tabular-nums text-[var(--primary)]">
-                          {cat.percent}% ({cat.done}/{cat.total})
-                        </span>
-                      </div>
-                      <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${cat.percent}%`,
-                            background:
-                              cat.percent >= 80 ? 'var(--success)' : cat.percent >= 50 ? 'var(--warning)' : 'var(--danger)',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Accountant Leaderboard Progress */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold tracking-wider text-[var(--text-2)] flex items-center gap-2">
-                  <BarChart2 size={16} className="text-[var(--primary)]" />
-                  <span>Buxgalterlar bo'yicha topshirish foizi (%)</span>
-                </h4>
-                <div className="space-y-2">
-                  {accountantProgress.map((acc) => (
-                    <div
-                      key={acc.name}
-                      onClick={() => {
-                        setFilterAccountant(acc.name);
-                        setShowStatsModal(false);
-                      }}
-                      className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)] transition-all cursor-pointer flex items-center justify-between gap-4 group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span className="text-xs font-bold truncate text-[var(--text)] group-hover:text-[var(--primary)]">
-                          {acc.name}
-                        </span>
-                        <div className="flex-1 max-w-[200px] h-2 bg-[var(--border)] rounded-full overflow-hidden hidden sm:block">
-                          <div
-                            className="h-full rounded-full transition-all"
-                            style={{
-                              width: `${acc.percent}%`,
-                              background:
-                                acc.percent >= 80 ? 'var(--success)' : acc.percent >= 50 ? 'var(--warning)' : 'var(--danger)',
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-micro font-mono text-[var(--text-3)]">
-                          {acc.done}/{acc.total} bajarildi
-                        </span>
-                        <span className="text-xs font-semibold tabular-nums px-2.5 py-0.5 rounded-lg bg-[var(--surface)] text-[var(--primary)] border border-[var(--border)]">
-                          {acc.percent}%
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-[var(--border)] bg-[var(--surface-2)] flex justify-end">
-              <button
-                onClick={() => setShowStatsModal(false)}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-[var(--surface)] text-[var(--text-2)] border border-[var(--border)] hover:bg-[var(--surface-2)] transition-all"
-              >
-                Yopish
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
       <ReportProofModal
         state={proofModal}
         period={selectedPeriod}
