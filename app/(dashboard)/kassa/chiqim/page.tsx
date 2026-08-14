@@ -10,7 +10,7 @@ export const metadata = { title: "Chiqim kassa" };
 
 export default async function ChiqimKassaPage() {
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?expired=1");
 
   // "Rasxodni faqat man qilaman" — bu sahifa faqat admin uchun.
   // proxy.ts ham to'sadi, lekin sahifa o'zini o'zi qo'riqlashi kerak.

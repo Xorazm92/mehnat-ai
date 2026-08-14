@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { USE_SECURE_COOKIES } from "@/lib/auth.config";
+import { USE_SECURE_COOKIES, SESSION_MAX_AGE } from "@/lib/auth.config";
 import {
   canSeeViewWith,
   getHomeRoute,
@@ -97,11 +97,26 @@ export async function proxy(req: NextRequest) {
   // in lib/auth.config.ts). It drives both the cookie name (`__Secure-` prefix)
   // AND the JWT decryption salt — omitting it made getToken look for the wrong
   // cookie in prod HTTPS and always return null, bouncing logged-in users to /login.
-  const token = await getToken({
+  const rawToken = await getToken({
     req,
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
     secureCookie: USE_SECURE_COOKIES,
   });
+
+  /**
+   * MUTLAQ MUDDAT — `lib/sessionRevalidation.ts` bilan bir xil qoida, lekin
+   * bazasiz (proxy har so'rovda ishlaydi).
+   *
+   * Busiz proxy muddati o'tgan cookie'ni ham "kirgan" deb hisoblardi, `auth()`
+   * esa sessiyani bekor qilardi — va ikkalasining kelishmovchiligi cheksiz
+   * qayta yuklanishga olib kelardi. `loginAt` faollikda YANGILANMAYDI, ya'ni
+   * muddat cho'zilmaydi. Eski (loginAt'siz) tokenlar ham muddati o'tgan
+   * hisoblanadi — bir marta qayta kirish talab qilinadi.
+   */
+  const loginAt = typeof rawToken?.loginAt === "number" ? rawToken.loginAt : 0;
+  const expired = !!rawToken && Date.now() - loginAt > SESSION_MAX_AGE * 1000;
+  const token = expired ? null : rawToken;
+
   // Login bo'lmagan foydalanuvchi himoyalangan sahifaga kirmoqchi
   if (!token && isProtected) {
     // Telegram ichida /login sahifasini ko'rsatish ma'nosiz — u yerda email
@@ -117,8 +132,24 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Login bo'lgan → login/root sahifasidan mos boshlang'ich sahifaga
-  if (token && (path === "/login" || path === "/" || path === "")) {
+  /**
+   * Login bo'lgan → login/root sahifasidan mos boshlang'ich sahifaga.
+   *
+   * `sessionUsable` SHART: bu yerda `getToken()` cookie'ni shunchaki
+   * ochadi, `auth()` esa qo'shimcha `jwt` callback'ini yurgizadi va sessiya
+   * haqiqiy emasligini aniqlashi mumkin (mutlaq muddat tugagan, xodim
+   * bloklangan). Ikkalasi kelishmaganda CHEKSIZ SIKL hosil bo'lardi:
+   *
+   *   /dashboard → sessiya yo'q → /login → proxy cookie'ni ko'radi →
+   *   /dashboard → …  (sekundiga bir necha marta, prod'da kuzatildi)
+   *
+   * Shuning uchun ikkita to'siq:
+   *   1. mutlaq muddat SHU YERDA ham tekshiriladi (sof hisob, bazasiz);
+   *   2. sahifa "sessiya tugadi" deb yuborgan bo'lsa (`?expired=1`), bu
+   *      qoida umuman qo'llanmaydi — sikl yopiladi, sababidan qat'i nazar.
+   */
+  const cameFromExpiredSession = req.nextUrl.searchParams.get("expired") === "1";
+  if (token && !cameFromExpiredSession && (path === "/login" || path === "/" || path === "")) {
     return NextResponse.redirect(new URL(getHomeRoute(token.role as string), req.url));
   }
 

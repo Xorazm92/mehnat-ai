@@ -16,10 +16,10 @@ export default async function CabinetPage({
 }) {
   const sp = await searchParams;
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?expired=1");
 
   const data = await getMyCabinet();
-  if (!data.profile) redirect("/login");
+  if (!data.profile) redirect("/login?expired=1");
 
   // serialize() bo'sh (loose) tip qaytaradi — komponent shakliga bir marta cast qilamiz
   const cabinet = data as unknown as MyCabinetProps;

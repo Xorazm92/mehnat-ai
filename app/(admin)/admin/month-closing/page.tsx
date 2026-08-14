@@ -7,7 +7,7 @@ import YearClosingPanel from "./YearClosingPanel";
 
 export default async function MonthClosingPage() {
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?expired=1");
   const role = (session.user.role ?? "") as string;
 
   const year = new Date().getFullYear();

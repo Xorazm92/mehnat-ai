@@ -21,7 +21,7 @@ export default async function ReportsPage({
   // o'tkazgandan KEYIN ham tugashi mumkin (mutlaq 24 soatlik muddat yoki
   // xodim bloklanishi), shuning uchun sahifa o'zini o'zi tekshiradi —
   // loyihadagi boshqa ekranlar kabi.
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?expired=1");
 
   /**
    * Davr SERVERDA hal qilinadi: `new Date()` ni mijozda chaqirish SSR bilan

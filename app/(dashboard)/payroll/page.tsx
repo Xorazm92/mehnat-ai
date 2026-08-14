@@ -16,7 +16,7 @@ export default async function PayrollPage({
   const session = await auth();
   // Sessiyasiz davom etilsa server amallari "Unauthorized" tashlaydi va
   // foydalanuvchi login o'rniga 500 ko'radi.
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?expired=1");
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role || "employee";
 

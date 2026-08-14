@@ -8,7 +8,7 @@ export const metadata = { title: "Audit jurnali" };
 
 export default async function AuditLogsPage() {
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?expired=1");
 
   const role = (session.user.role ?? "") as UserRole;
   // Audit log is admin-only; send others to their home instead of letting the

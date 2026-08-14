@@ -8,7 +8,7 @@ export const metadata = { title: "Bank kabineti" };
 
 export default async function BankCabinetPage() {
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?expired=1");
 
   const userName = session.user?.name || "";
 

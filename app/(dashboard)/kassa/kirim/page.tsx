@@ -9,7 +9,7 @@ export const metadata = { title: "Kirim kassa" };
 
 export default async function KirimKassaPage() {
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?expired=1");
 
   // proxy.ts ham to'sadi, lekin sahifa o'zini o'zi qo'riqlashi kerak —
   // to'g'ridan-to'g'ri chaqiruvda (RSC) proxy oralig'i bo'lmasligi mumkin.

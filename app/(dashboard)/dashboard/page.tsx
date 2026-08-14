@@ -29,7 +29,7 @@ export const metadata = { title: "Boshqaruv paneli" };
 
 export default async function DashboardPage() {
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?expired=1");
 
   const userId = session.user?.id;
   const userRole = session.user?.role as string;

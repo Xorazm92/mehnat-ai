@@ -13,7 +13,7 @@ export default async function ProofViewPage({
   const { id } = await params;
   const session = await auth();
   if (!session) {
-    redirect("/login");
+    redirect("/login?expired=1");
   }
 
   const userId = session.user.id as string;
