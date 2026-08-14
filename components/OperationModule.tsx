@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Company, OperationEntry, Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
-import { ChevronDown, Download, Search, RefreshCw, Info, SlidersHorizontal, BarChart2, PieChart, TrendingUp, CheckCircle2, AlertTriangle, XCircle, X } from 'lucide-react';
+import { ChevronDown, Download, Search, RefreshCw, Info, SlidersHorizontal, BarChart2, PieChart, TrendingUp, Sparkles, X } from 'lucide-react';
 import { MonthPicker } from './ui/MonthPicker';
 import { useConfirm } from './ui/ConfirmDialog';
 import { useTableState } from '@/hooks/useTableState';
@@ -18,6 +18,8 @@ import { BASE_REPORT_COLUMNS, type ReportColumn } from '@/lib/reportColumns';
 import { tryGetColumnCategory, CATEGORY_LABEL_UZ, type ReportCategory } from '@/lib/reportGroups';
 import { allowedCellActions, canApproveCell, canEditMatrix, isCompanyReviewer, isReviewerOwnedValue, type CellAction } from '@/lib/reportPermissions';
 import MatrixFilterPanel, { type MatrixFilterOptions } from './MatrixFilterPanel';
+import ReportInsightModal, { type InsightRowInput } from './ReportInsightModal';
+import type { InsightDimension } from '@/lib/reportInsight';
 import {
   activeChips,
   filtersSignature,
@@ -1254,6 +1256,53 @@ const OperationModule: React.FC<Props> = ({
     });
   }, [searchedRows, filterStatus, tallyOf, table.sortKey, table.sortDir]);
 
+  // ── Hisobot tahlili oynasi ───────────────────────────────────
+  const [insightOpen, setInsightOpen] = useState(false);
+
+  /**
+   * Tahlil oynasi uchun manba. ATAYLAB `searchedRows` — ya'ni qidiruv va
+   * yoqilgan filtrlar hisobga olinadi, "bajarilish holati" esa YO'Q: aks holda
+   * "Bajarilmaganlar" filtri yoqilgan bo'lsa foiz doim 0% chiqardi.
+   */
+  const insightRows = useMemo<InsightRowInput[]>(
+    () => searchedRows.map(r => {
+      const values: Record<string, unknown> = {};
+      for (const c of visibleColumns) {
+        values[c.key] = r[c.key];
+        const split = c as { isSplit?: boolean; payKey?: string };
+        if (split.isSplit && split.payKey) values[split.payKey] = r[split.payKey];
+      }
+      return {
+        companyId: r.companyId, name: r.name, inn: r.inn,
+        accountant: r.accountant, supervisor: r.supervisor, chief: r.chief,
+        bank: r.bank, department: r.department, values,
+      };
+    }),
+    [searchedRows, visibleColumns]
+  );
+
+  const insightColumns = useMemo(
+    () => filterOptions.columns.map(c => ({
+      ...c,
+      group: REPORT_COLUMNS.find(rc => rc.key === c.key || (rc as { payKey?: string }).payKey === c.key)?.group ?? 'Boshqa',
+    })),
+    [filterOptions.columns, REPORT_COLUMNS]
+  );
+
+  /** Tahlildagi "Matritsada ochish" — kesimni matritsa filtriga o'tkazadi. */
+  const applyInsight = useCallback(
+    ({ colKey, dimension, groupKey }: { colKey: string; dimension: InsightDimension; groupKey: string | null }) => {
+      setFilter('colKey', colKey);
+      // Ustun tanlangan bo'lsa, savol doim "kim topshirmagan" — shuni ko'rsatamiz.
+      setFilter('colStatus', colKey === 'all' ? 'any' : 'outstanding');
+      if (groupKey && dimension !== 'company') {
+        setFilter(dimension as keyof MatrixFilters, groupKey);
+      }
+      if (dimension === 'company' && groupKey) setSearch(groupKey);
+    },
+    [setFilter, setSearch]
+  );
+
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
     return filteredRows.slice(start, start + rowsPerPage);
@@ -1747,6 +1796,17 @@ const OperationModule: React.FC<Props> = ({
                 <X size={13} />
               </button>
             )}
+
+            {/* HISOBOT TAHLILI — filtrdan farqli, u JAVOB beradi:
+                "INPS bo'yicha Go'zaloyning foizi qancha va kim topshirmagan?" */}
+            <button
+              onClick={() => setInsightOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-meta font-bold uppercase tracking-widest shadow-sm"
+              style={{ background: 'var(--primary)', border: '1px solid var(--primary)', color: 'var(--surface)' }}
+              title="Bitta hisobot bo'yicha foiz va topshirmaganlar ro'yxati"
+            >
+              <Sparkles size={14} /> Tahlil
+            </button>
 
             {/* AQLLI FILTRLAR. Bitta buxgalter tanlagichi o'rniga: to'rtala
                 mas'ul + soliq rejimi + bo'lim + USTUN KESIMI. Oxirgisi eng
@@ -2314,6 +2374,15 @@ const OperationModule: React.FC<Props> = ({
         onClose={() => setProofModal(null)}
         onSubmitted={handleProofSubmitted}
         onReviewed={handleProofReviewed}
+      />
+
+      <ReportInsightModal
+        open={insightOpen}
+        onClose={() => setInsightOpen(false)}
+        period={selectedPeriod}
+        columns={insightColumns}
+        rows={insightRows}
+        onApply={applyInsight}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Filter, X } from "lucide-react";
+import { ChevronDown, Filter, X } from "lucide-react";
 import { useDismissable } from "@/hooks/useDismissable";
 import {
   COL_STATUS_OPTIONS,
@@ -50,37 +50,72 @@ const selectStyle: React.CSSProperties = {
   color: "var(--text)",
 };
 
-/** Bitta "yorliq + tanlagich" juftligi. */
+/**
+ * Bitta "yorliq + tanlagich" juftligi.
+ *
+ * Yoqilgan maydonda yorliq yonida nuqta yonadi va tanlagich ramkasi ajralib
+ * turadi — panelni ochgan odam qaysi maydon ishlayotganini bir qarashda ko'radi
+ * (avval hammasi bir xil kulrang edi).
+ */
 function Field({
   label,
   value,
+  active,
   onChange,
+  onClear,
   children,
   hint,
 }: {
   label: string;
   value: string;
+  active: boolean;
   onChange: (v: string) => void;
+  onClear?: () => void;
   children: React.ReactNode;
   hint?: string;
 }) {
   return (
     <label className="block">
-      <span
-        className="block text-micro font-bold uppercase tracking-widest mb-1"
-        style={{ color: "var(--text-3)" }}
-      >
-        {label}
+      <span className="flex items-center justify-between gap-2 mb-1">
+        <span
+          className="flex items-center gap-1.5 text-micro font-bold uppercase tracking-widest"
+          style={{ color: active ? "var(--primary)" : "var(--text-3)" }}
+        >
+          {active && (
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--primary)" }} aria-hidden />
+          )}
+          {label}
+        </span>
+        {active && onClear && (
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); onClear(); }}
+            className="text-micro font-bold uppercase"
+            style={{ color: "var(--text-3)" }}
+            title={`${label} filtrini olib tashlash`}
+          >
+            tozalash
+          </button>
+        )}
       </span>
       <div className="relative">
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={selectClass}
-          style={selectStyle}
+          style={{
+            ...selectStyle,
+            borderColor: active ? "var(--primary)" : "var(--border)",
+            color: active ? "var(--primary)" : "var(--text)",
+          }}
         >
           {children}
         </select>
+        <ChevronDown
+          size={13}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ color: "var(--text-3)" }}
+        />
       </div>
       {hint && (
         <span className="block text-micro mt-1" style={{ color: "var(--text-3)" }}>
@@ -157,13 +192,15 @@ export default function MatrixFilterPanel({
 
           <div className="max-h-[65vh] overflow-y-auto scrollbar-styled p-3 space-y-3">
             {/* ── Mas'ullar ────────────────────────────────────── */}
-            <div className="space-y-2.5">
+            <div className="grid grid-cols-2 gap-2.5">
               {people.map((p) => (
                 <Field
                   key={p.key}
                   label={p.label}
                   value={String(filters[p.key])}
+                  active={filters[p.key] !== "all"}
                   onChange={(v) => onChange(p.key, v)}
+                  onClear={() => onChange(p.key, "all")}
                 >
                   <option value="all">Barchasi</option>
                   {p.list.map((n) => (
@@ -176,11 +213,13 @@ export default function MatrixFilterPanel({
             </div>
 
             {/* ── Firma xossalari ──────────────────────────────── */}
-            <div className="pt-2 space-y-2.5" style={{ borderTop: "1px solid var(--border)" }}>
+            <div className="pt-3 grid grid-cols-2 gap-2.5" style={{ borderTop: "1px solid var(--border)" }}>
               <Field
                 label="Soliq rejimi"
                 value={filters.regime}
+                active={filters.regime !== "all"}
                 onChange={(v) => onChange("regime", v)}
+                onClear={() => onChange("regime", "all")}
               >
                 <option value="all">Barchasi</option>
                 {options.regimes.map((r) => (
@@ -194,7 +233,9 @@ export default function MatrixFilterPanel({
                 <Field
                   label="Bo'lim"
                   value={filters.department}
+                  active={filters.department !== "all"}
                   onChange={(v) => onChange("department", v)}
+                  onClear={() => onChange("department", "all")}
                 >
                   <option value="all">Barchasi</option>
                   {options.departments.map((d) => (
@@ -209,9 +250,11 @@ export default function MatrixFilterPanel({
             {/* ── Ustun kesimi ─────────────────────────────────── */}
             {/* Eng kerakli savol: "AQh ni kim topshirmagan?" — bungacha
                 matritsada bunga javob beradigan vosita umuman yo'q edi. */}
-            <div className="pt-2 space-y-2.5" style={{ borderTop: "1px solid var(--border)" }}>
+            <div className="pt-3 space-y-2.5" style={{ borderTop: "1px solid var(--border)" }}>
               <Field
                 label="Ustun kesimi"
+                active={filters.colKey !== "all"}
+                onClear={() => { onChange("colKey", "all"); onChange("colStatus", "any"); }}
                 value={filters.colKey}
                 onChange={(v) => onChange("colKey", v)}
                 hint={
@@ -232,6 +275,7 @@ export default function MatrixFilterPanel({
                 <Field
                   label="Shu ustundagi holat"
                   value={filters.colStatus}
+                  active={filters.colStatus !== "any"}
                   onChange={(v) => onChange("colStatus", v)}
                 >
                   {COL_STATUS_OPTIONS.map((o) => (
