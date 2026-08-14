@@ -44,7 +44,9 @@ import {
   type StatusTally,
 } from '@/lib/reportStatus';
 import { friendlyError } from '@/lib/actionError';
-import { COL_KEY_TO_TEMPLATE_CODES } from '@/lib/obligationBridge';
+// DIQQAT: `@/lib/obligationBridge` dan EMAS — u `@/lib/prisma` ni tortadi va
+// klient to'plamida prod build'ni yiqitadi ("Module not found: dns/fs/net/tls").
+import { COL_KEY_TO_TEMPLATE_CODES } from '@/lib/reportTemplateMap';
 import { companyRelations, type CompanyRelation } from '@/lib/access';
 import { useDismissable } from '@/hooks/useDismissable';
 import { Button } from "@/components/ui/Button";
