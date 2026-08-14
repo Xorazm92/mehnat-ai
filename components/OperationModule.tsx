@@ -17,6 +17,18 @@ import ReportProofModal, { ProofModalState } from './ReportProofModal';
 import { BASE_REPORT_COLUMNS, type ReportColumn } from '@/lib/reportColumns';
 import { tryGetColumnCategory, CATEGORY_LABEL_UZ, type ReportCategory } from '@/lib/reportGroups';
 import { allowedCellActions, canApproveCell, canEditMatrix, isCompanyReviewer, isReviewerOwnedValue, type CellAction } from '@/lib/reportPermissions';
+import {
+  addToTally,
+  classifyCell,
+  emptyTally,
+  matchesStatusFilter,
+  parseStatusFilter,
+  settledRatio,
+  MATRIX_STATUS_FILTERS,
+  type CellStatus,
+  type MatrixStatusFilter,
+  type StatusTally,
+} from '@/lib/reportStatus';
 import { friendlyError } from '@/lib/actionError';
 import { companyRelations, type CompanyRelation } from '@/lib/access';
 import { useDismissable } from '@/hooks/useDismissable';
@@ -130,24 +142,44 @@ const buildGroupEdges = (cols: readonly ReportColumn[]): Set<string> => {
   });
   return edges;
 };
-const getStatusStyle = (value: string) => {
-  const v = String(value || '').trim().toLowerCase();
-
-  if (!v || v === '0' || v === 'not_required') return { bg: 'transparent', text: 'var(--text-muted)', icon: '—', tooltip: "Bo'sh" };
-  if (v === '+' || v === 'accepted') return { bg: tint('var(--success)', 13), text: 'var(--success)', icon: '✓', tooltip: 'Bajarildi (+)' };
-  if (v === '-' || v === 'not_submitted') return { bg: tint('var(--danger)', 13), text: 'var(--danger)', icon: '✗', tooltip: 'Bajarilmadi (-)' };
-  if (v === 'topshirildi' || v === 'submitted') return { bg: tint('var(--info)', 13), text: 'var(--info)', icon: '·', tooltip: 'Topshirildi (Kutilmoqda)' };
-  if (v === 'kartoteka' || v === 'blocked') return { bg: tint('var(--warning)', 15), text: 'var(--warning)', icon: '!', tooltip: 'Kartoteka' };
-  if (v === 'error' || v === 'oshibka') return { bg: tint('var(--danger)', 13), text: 'var(--danger)', icon: '!', tooltip: 'Xatolik' };
+/**
+ * Katak ko'rinishi. Qaysi qiymat qaysi holat ekanini bu yer HAL QILMAYDI —
+ * `lib/reportStatus.classifyCell` hal qiladi, bu yerda faqat rang va belgi.
+ * Ilgari tasnif shu funksiyada VA yana uch joyda alohida yozilgani uchun ular
+ * bir-biridan farq qilardi (masalan 'topshirmaydi' bu yerda izoh, statistikada
+ * esa "shart emas" edi).
+ */
+const STATUS_STYLE: Record<CellStatus, { bg: string; text: string; icon: string; tooltip: string }> = {
+  none: { bg: 'transparent', text: 'var(--text-muted)', icon: '—', tooltip: "Bo'sh" },
+  approved: { bg: tint('var(--success)', 13), text: 'var(--success)', icon: '✓', tooltip: 'Bajarildi (+)' },
+  failed: { bg: tint('var(--danger)', 13), text: 'var(--danger)', icon: '✗', tooltip: 'Bajarilmadi (-)' },
+  submitted: { bg: tint('var(--info)', 13), text: 'var(--info)', icon: '·', tooltip: 'Topshirildi (Kutilmoqda)' },
+  blocked: { bg: tint('var(--warning)', 15), text: 'var(--warning)', icon: '!', tooltip: 'Kartoteka' },
+  error: { bg: tint('var(--danger)', 13), text: 'var(--danger)', icon: '!', tooltip: 'Xatolik' },
   // NOL HISOBOT — topshirilgan, ichida raqam nol. "0" (shart emas) dan farqli:
   // u ish BAJARILGANINI bildiradi, shuning uchun belgisi ham boshqa.
-  if (v === 'nol') return { bg: tint('var(--brand)', 13), text: 'var(--brand)', icon: 'Ø', tooltip: 'Nol hisobot topshirildi' };
-
+  zero: { bg: tint('var(--brand)', 13), text: 'var(--brand)', icon: 'Ø', tooltip: 'Nol hisobot topshirildi' },
   // ERKIN MATN (izoh). Matnning O'ZI katakka chizilmaydi — ilgari shunday
   // qilingani uchun uzun izoh ustunni cho'zib, butun jadval qatorini
   // kengaytirib yuborardi. Endi faqat belgi turadi, to'liq matn bosilganda
   // ochiladi (va tooltipda ko'rinadi).
-  return { bg: tint('var(--info)', 13), text: 'var(--info)', icon: '✎', tooltip: value, isNote: true };
+  note: { bg: tint('var(--info)', 13), text: 'var(--info)', icon: '✎', tooltip: '', },
+};
+
+interface StatusStyle {
+  bg: string;
+  text: string;
+  icon: string;
+  tooltip: string;
+  /** Erkin matnli katak — bosilganda to'liq matn oynasi ochiladi. */
+  isNote?: boolean;
+}
+
+const getStatusStyle = (value: string): StatusStyle => {
+  const status = classifyCell(value);
+  const base = STATUS_STYLE[status];
+  if (status === 'note') return { ...base, tooltip: value, isNote: true };
+  return base;
 };
 
 // Katak amallarining ko'rinishi. Qaysi biri KIMGA ko'rinishi
@@ -645,7 +677,9 @@ const OperationModule: React.FC<Props> = ({
    */
   const table = useTableState({
     ns: 'mx',
-    defaultFilters: { acc: 'all', grp: 'all' },
+    // `st` — bajarilish holati filtri. U ham URL'da: nazoratchi "mana bu
+    // firmalar kartotekada" ko'rinishini havola qilib yubora oladi.
+    defaultFilters: { acc: 'all', grp: 'all', st: 'all' },
     debounceMs: 300,
   });
   const search = table.search;
@@ -673,6 +707,14 @@ const OperationModule: React.FC<Props> = ({
   const [filterCategory, setFilterCategory] = useState<ReportCategory | 'all'>('all');
   const filterAccountant = table.filters.acc;
   const setFilterAccountant = (v: string) => table.setFilter('acc', v);
+  /**
+   * Bajarilish holati filtri. `parseStatusFilter` — URL'dan kelgan xom matn
+   * uchun qo'riqchi: noto'g'ri qiymat butun matritsani bo'sh qoldirmaydi.
+   */
+  const filterStatus = parseStatusFilter(table.filters.st);
+  const setFilterStatus = (v: MatrixStatusFilter) => table.setFilter('st', v);
+  const [statusPanelOpen, setStatusPanelOpen] = useState(false);
+  const statusPanelRef = useDismissable<HTMLDivElement>(statusPanelOpen, () => setStatusPanelOpen(false));
   // Per-user column show/hide, persisted per browser (no DB needed).
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
   const [colPanelOpen, setColPanelOpen] = useState(false);
@@ -991,31 +1033,68 @@ const OperationModule: React.FC<Props> = ({
     return base.filter(c => !hiddenCols.has(c.key));
   }, [filterGroup, filterCategory, REPORT_COLUMNS, hiddenCols]);
 
-  /** Qator bo'yicha bajarilish: talab qilingan kataklardan nechtasi yopilgan. */
-  const rowCompletion = useCallback((row: ReportRow) => {
-    let total = 0, done = 0;
-    for (const col of visibleColumns) {
-      const check = (v: unknown) => {
-        const val = String(v ?? '').trim().toLowerCase();
-        if (!val || val === '0' || val === 'topshirmaydi') return;
-        total++;
-        if (val === '+' || val === 'topshirildi') done++;
-      };
-      check(row[col.key]);
-      if ((col as { isSplit?: boolean }).isSplit) check(row[(col as unknown as { payKey: string }).payKey]);
+  /**
+   * Har bir qatorning katak hisobi — BIR MARTA hisoblanadi.
+   *
+   * Avval `rowCompletion` saralash komparatorining ichidan chaqirilardi, ya'ni
+   * 265 qator × ~47 ustun O(n log n) marta qayta o'qilardi. Endi hisob bitta
+   * o'tishda tayyorlanadi va filtr, saralash hamda menyudagi sanoqlar shu
+   * bitta manbadan oziqlanadi.
+   */
+  const tallyByRow = useMemo(() => {
+    const map = new Map<ReportRow, StatusTally>();
+    for (const row of rows) {
+      const t = emptyTally();
+      for (const col of visibleColumns) {
+        addToTally(t, row[col.key]);
+        if ((col as { isSplit?: boolean }).isSplit) {
+          addToTally(t, row[(col as unknown as { payKey: string }).payKey]);
+        }
+      }
+      map.set(row, t);
     }
-    return total > 0 ? done / total : 0;
-  }, [visibleColumns]);
+    return map;
+  }, [rows, visibleColumns]);
+
+  const tallyOf = useCallback(
+    (row: ReportRow): StatusTally => tallyByRow.get(row) ?? emptyTally(),
+    [tallyByRow]
+  );
+
+  /** Qidiruv + buxgalter filtri (holat filtridan OLDINGI ro'yxat). */
+  const searchedRows = useMemo(() => rows.filter(r => {
+    if (debouncedSearch) {
+      const s = debouncedSearch.toLowerCase();
+      if (!r.name.toLowerCase().includes(s) && !r.inn.includes(s) && !r.accountant.toLowerCase().includes(s)) return false;
+    }
+    if (filterAccountant !== 'all' && r.accountant !== filterAccountant) return false;
+    return true;
+  }), [rows, debouncedSearch, filterAccountant]);
+
+  /**
+   * Menyudagi sanoqlar. ATAYLAB holat filtri QO'LLANMAGAN ro'yxatdan
+   * hisoblanadi — aks holda "Kartoteka (13)" ni tanlagach sanoq o'zgarib,
+   * qolgan variantlar nolga tushib qolardi va menyu boshqarib bo'lmas edi.
+   */
+  const statusCounts = useMemo(() => {
+    const out = {} as Record<MatrixStatusFilter, number>;
+    for (const opt of MATRIX_STATUS_FILTERS) {
+      out[opt.value] = opt.value === 'all'
+        ? searchedRows.length
+        : searchedRows.reduce((n, r) => n + (matchesStatusFilter(tallyOf(r), opt.value) ? 1 : 0), 0);
+    }
+    return out;
+  }, [searchedRows, tallyOf]);
+
+  const activeStatusOption = useMemo(
+    () => MATRIX_STATUS_FILTERS.find(o => o.value === filterStatus) ?? MATRIX_STATUS_FILTERS[0],
+    [filterStatus]
+  );
 
   const filteredRows = useMemo(() => {
-    const out = rows.filter(r => {
-      if (debouncedSearch) {
-        const s = debouncedSearch.toLowerCase();
-        if (!r.name.toLowerCase().includes(s) && !r.inn.includes(s) && !r.accountant.toLowerCase().includes(s)) return false;
-      }
-      if (filterAccountant !== 'all' && r.accountant !== filterAccountant) return false;
-      return true;
-    });
+    const out = filterStatus === 'all'
+      ? searchedRows
+      : searchedRows.filter(r => matchesStatusFilter(tallyOf(r), filterStatus));
 
     // M3: matritsada saralash umuman yo'q edi — nazoratchi "eng ko'p qolgan
     // firmalar" yoki "eng orqada qolgan buxgalter" bo'yicha tartiblay olmasdi.
@@ -1023,12 +1102,12 @@ const OperationModule: React.FC<Props> = ({
     if (!key) return out;
     const dir = table.sortDir === 'asc' ? 1 : -1;
     return [...out].sort((a, b) => {
-      if (key === 'completion') return (rowCompletion(a) - rowCompletion(b)) * dir;
+      if (key === 'completion') return (settledRatio(tallyOf(a)) - settledRatio(tallyOf(b))) * dir;
       const av = String(a[key] ?? ''), bv = String(b[key] ?? '');
       if (key === 'inn') return av.localeCompare(bv, undefined, { numeric: true }) * dir;
       return av.localeCompare(bv, 'uz') * dir;
     });
-  }, [rows, debouncedSearch, filterAccountant, table.sortKey, table.sortDir, rowCompletion]);
+  }, [searchedRows, filterStatus, tallyOf, table.sortKey, table.sortDir]);
 
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
@@ -1156,71 +1235,71 @@ const OperationModule: React.FC<Props> = ({
 
   const [showStatsModal, setShowStatsModal] = useState(false);
 
-  // Real-time % stats calculation
+  /**
+   * Umumiy statistika — endi qator hisoblarining yig'indisi.
+   *
+   * TUZATILDI: maxraj avval `done + notDone + warning + text` edi va 'nol'
+   * `text` ga tushardi, ya'ni nol hisobot BAJARILMAGAN deb sanalardi. Endi
+   * maxraj `required`, surat esa `settled` (+, topshirildi, nol).
+   */
   const stats = useMemo(() => {
-    let done = 0, notDone = 0, na = 0, warning = 0, text = 0;
-    const countValue = (v: string) => {
-      const val = v.trim().toLowerCase();
-      if (val === '+') done++;
-      else if (val === '-') notDone++;
-      else if (!val || val === '0' || val === 'topshirmaydi') na++;
-      else if (val === 'kartoteka') warning++;
-      else if (val === 'topshirildi') done++; // count pending as done for stats
-      else if (val.length > 1) text++;
+    const total = emptyTally();
+    for (const row of filteredRows) {
+      const t = tallyOf(row);
+      total.approved += t.approved;
+      total.submitted += t.submitted;
+      total.zero += t.zero;
+      total.blocked += t.blocked;
+      total.failed += t.failed;
+      total.error += t.error;
+      total.note += t.note;
+      total.required += t.required;
+      total.settled += t.settled;
+      total.outstanding += t.outstanding;
+    }
+    const ratio = settledRatio(total);
+    return {
+      ...total,
+      // Eski nomlar — shablonlarda ishlatiladi.
+      done: total.settled,
+      notDone: total.failed,
+      warning: total.blocked,
+      text: total.note,
+      totalRequired: total.required,
+      percent: Math.round(ratio * 100),
+      exactPercent: Number((ratio * 100).toFixed(1)),
     };
-    filteredRows.forEach(row => {
-      visibleColumns.forEach(col => {
-        countValue(String(row[col.key] || ''));
-        if ((col as any).isSplit) {
-          countValue(String(row[(col as any).payKey] || ''));
-        }
-      });
-    });
-
-    const totalRequired = done + notDone + warning + text;
-    const percent = totalRequired > 0 ? Math.round((done / totalRequired) * 100) : 0;
-    const exactPercent = totalRequired > 0 ? Number(((done / totalRequired) * 100).toFixed(1)) : 0;
-
-    return { done, notDone, na, warning, text, totalRequired, percent, exactPercent };
-  }, [filteredRows, visibleColumns]);
+  }, [filteredRows, tallyOf]);
 
   // Per-accountant real-time progress
   const accountantProgress = useMemo(() => {
-    const map = new Map<string, { total: number; done: number; notDone: number; warning: number }>();
+    const map = new Map<string, StatusTally>();
     rows.forEach(row => {
       const acc = row.accountant && row.accountant !== '—' ? row.accountant : 'Biriktirilmagan';
-      if (!map.has(acc)) map.set(acc, { total: 0, done: 0, notDone: 0, warning: 0 });
-      const entry = map.get(acc)!;
-
-      visibleColumns.forEach(col => {
-        const val = String(row[col.key] || '').trim().toLowerCase();
-        if (val && val !== '0' && val !== 'topshirmaydi') {
-          entry.total++;
-          if (val === '+' || val === 'topshirildi') entry.done++;
-          else if (val === '-') entry.notDone++;
-          else if (val === 'kartoteka') entry.warning++;
-        }
-        if ((col as any).isSplit) {
-          const pVal = String(row[(col as any).payKey] || '').trim().toLowerCase();
-          if (pVal && pVal !== '0' && pVal !== 'topshirmaydi') {
-            entry.total++;
-            if (pVal === '+' || pVal === 'topshirildi') entry.done++;
-            else if (pVal === '-') entry.notDone++;
-            else if (pVal === 'kartoteka') entry.warning++;
-          }
-        }
-      });
+      const entry = map.get(acc) ?? emptyTally();
+      if (!map.has(acc)) map.set(acc, entry);
+      const t = tallyOf(row);
+      entry.approved += t.approved;
+      entry.submitted += t.submitted;
+      entry.zero += t.zero;
+      entry.blocked += t.blocked;
+      entry.failed += t.failed;
+      entry.error += t.error;
+      entry.note += t.note;
+      entry.required += t.required;
+      entry.settled += t.settled;
+      entry.outstanding += t.outstanding;
     });
 
-    return Array.from(map.entries()).map(([name, data]) => ({
+    return Array.from(map.entries()).map(([name, t]) => ({
       name,
-      total: data.total,
-      done: data.done,
-      notDone: data.notDone,
-      warning: data.warning,
-      percent: data.total > 0 ? Math.round((data.done / data.total) * 100) : 0
+      total: t.required,
+      done: t.settled,
+      notDone: t.failed,
+      warning: t.blocked,
+      percent: Math.round(settledRatio(t) * 100),
     })).sort((a, b) => b.percent - a.percent);
-  }, [rows, visibleColumns]);
+  }, [rows, tallyOf]);
 
   // Per-category real-time progress
   const categoryProgress = useMemo(() => {
@@ -1230,19 +1309,17 @@ const OperationModule: React.FC<Props> = ({
       if (!map.has(cat)) map.set(cat, { total: 0, done: 0 });
       const entry = map.get(cat)!;
 
+      // `classifyCell` bilan — bu yerda ham 'nol' bajarilgan deb sanaladi.
+      const count = (raw: unknown) => {
+        const t = emptyTally();
+        addToTally(t, raw);
+        entry.total += t.required;
+        entry.done += t.settled;
+      };
+
       filteredRows.forEach(row => {
-        const val = String(row[col.key] || '').trim().toLowerCase();
-        if (val && val !== '0' && val !== 'topshirmaydi') {
-          entry.total++;
-          if (val === '+' || val === 'topshirildi') entry.done++;
-        }
-        if ((col as any).isSplit) {
-          const pVal = String(row[(col as any).payKey] || '').trim().toLowerCase();
-          if (pVal && pVal !== '0' && pVal !== 'topshirmaydi') {
-            entry.total++;
-            if (pVal === '+' || pVal === 'topshirildi') entry.done++;
-          }
-        }
+        count(row[col.key]);
+        if ((col as any).isSplit) count(row[(col as any).payKey]);
       });
     });
 
@@ -1393,23 +1470,123 @@ const OperationModule: React.FC<Props> = ({
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-3)' }} />
             </div>
 
-            {/* Bajarilish bo'yicha saralash. Matritsada bo'sh ustun yo'q, shuning
-                uchun bu tartib asboblar panelidan boshqariladi. Nazoratchi uchun
-                eng kerakli savol shu: "qaysi firmalar eng orqada?" */}
-            <button
-              onClick={() => table.toggleSort('completion')}
-              aria-pressed={table.sortKey === 'completion'}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-meta font-bold uppercase tracking-widest shadow-sm"
-              style={
-                table.sortKey === 'completion'
-                  ? { background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }
-                  : { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }
-              }
-              title="Bajarilish foizi bo'yicha saralash"
-            >
-              Bajarilish
-              {table.sortKey === 'completion' && (table.sortDir === 'asc' ? ' ↑' : ' ↓')}
-            </button>
+            {/* BAJARILISH — filtr + saralash.
+                Avval bu tugma FAQAT saralardi: bosilganda ro'yxat joyidan
+                qimirlardi, lekin kerakmas qatorlar ekranda qolaverardi va
+                foydalanuvchi ularni faqat aylantirib o'ta olardi. Endi ochilgan
+                menyudan holat tanlanadi (sanoqlari bilan), saralash esa o'sha
+                menyuning oxirgi qatorida qoldi. */}
+            <div className="relative" ref={statusPanelRef}>
+              <button
+                onClick={() => setStatusPanelOpen(o => !o)}
+                aria-expanded={statusPanelOpen}
+                aria-haspopup="menu"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-meta font-bold uppercase tracking-widest shadow-sm"
+                style={
+                  filterStatus !== 'all' || table.sortKey === 'completion'
+                    ? { background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }
+                    : { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }
+                }
+                title="Bajarilish holati bo'yicha filtrlash va saralash"
+              >
+                Bajarilish
+                {table.sortKey === 'completion' && (table.sortDir === 'asc' ? ' ↑' : ' ↓')}
+                <ChevronDown size={13} />
+              </button>
+
+              {statusPanelOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2 z-[200] w-72 rounded-xl layer-overlay overflow-hidden"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--rule-strong)' }}
+                >
+                  <div className="px-3 pt-3 pb-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-2)' }}>
+                      Bajarilish holati
+                    </span>
+                  </div>
+
+                  <div className="p-1.5">
+                    {MATRIX_STATUS_FILTERS.map(opt => {
+                      const active = filterStatus === opt.value;
+                      const count = statusCounts[opt.value];
+                      return (
+                        <button
+                          key={opt.value}
+                          role="menuitemradio"
+                          aria-checked={active}
+                          onClick={() => { setFilterStatus(opt.value); setStatusPanelOpen(false); }}
+                          className="w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors hover:bg-[var(--surface-2)]"
+                          style={active ? { background: 'var(--primary-ghost)' } : undefined}
+                        >
+                          <span
+                            className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-md text-micro font-bold mt-0.5"
+                            style={{ background: 'var(--surface-2)', color: active ? 'var(--primary)' : 'var(--text-3)' }}
+                            aria-hidden
+                          >
+                            {opt.icon}
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className="flex items-center justify-between gap-2">
+                              <span
+                                className="text-meta font-bold uppercase tracking-widest"
+                                style={{ color: active ? 'var(--primary)' : 'var(--text)' }}
+                              >
+                                {opt.label}
+                              </span>
+                              <span
+                                className="text-micro font-bold tabular-nums"
+                                style={{ color: count > 0 ? 'var(--text-2)' : 'var(--text-3)' }}
+                              >
+                                {count}
+                              </span>
+                            </span>
+                            <span className="block text-micro mt-0.5" style={{ color: 'var(--text-3)' }}>
+                              {opt.hint}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Saralash — eski tugmaning vazifasi yo'qolmasin. */}
+                  <div className="p-1.5" style={{ borderTop: '1px solid var(--border)' }}>
+                    <button
+                      onClick={() => table.toggleSort('completion')}
+                      aria-pressed={table.sortKey === 'completion'}
+                      className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                      style={table.sortKey === 'completion' ? { background: 'var(--primary-ghost)' } : undefined}
+                    >
+                      <span
+                        className="text-meta font-bold uppercase tracking-widest"
+                        style={{ color: table.sortKey === 'completion' ? 'var(--primary)' : 'var(--text-2)' }}
+                      >
+                        Foiz bo'yicha saralash
+                      </span>
+                      <span className="text-micro font-bold" style={{ color: 'var(--text-3)' }}>
+                        {table.sortKey === 'completion' ? (table.sortDir === 'asc' ? 'kamdan ↑' : 'ko’pdan ↓') : '—'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Faol holat chipi — menyu yopilgach filtr ko'rinmas bo'lib
+                qolmasligi uchun (kategoriya chipi bilan bir xil naqsh). */}
+            {filterStatus !== 'all' && (
+              <button
+                onClick={() => setFilterStatus('all')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-meta font-bold uppercase tracking-widest shadow-sm"
+                style={{ background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                title="Holat filtrini olib tashlash"
+              >
+                {activeStatusOption.label}
+                <span className="tabular-nums" style={{ opacity: 0.75 }}>{statusCounts[filterStatus]}</span>
+                <X size={13} />
+              </button>
+            )}
 
             {/* Faol kategoriya chipi — statistika oynasidan qo'yilgan filtr
                 ko'rinmas bo'lib qolmasligi uchun. Busiz foydalanuvchi ustunlar
@@ -1815,23 +1992,33 @@ const OperationModule: React.FC<Props> = ({
                     }}
                   />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                  <div className="p-3 rounded-xl" style={{ background: 'var(--success-bg)', border: '1px solid var(--success-border)', color: 'var(--success)' }}>
-                    <span className="text-micro font-bold uppercase tracking-wider block">Topshirildi</span>
-                    <span className="text-base font-semibold tabular-nums">{stats.done} ta</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500">
-                    <span className="text-micro font-bold uppercase tracking-wider block">Qolib ketgan (-)</span>
-                    <span className="text-base font-semibold tabular-nums">{stats.notDone} ta</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
-                    <span className="text-micro font-bold uppercase tracking-wider block">Kartoteka</span>
-                    <span className="text-base font-semibold tabular-nums">{stats.warning} ta</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500">
-                    <span className="text-micro font-bold uppercase tracking-wider block">Topshirilishi kutilgan</span>
-                    <span className="text-base font-semibold tabular-nums">{stats.totalRequired} ta</span>
-                  </div>
+                {/* Plitkalar endi FILTR tugmasi ham: raqamni ko'rgan odam
+                    darhol "qaysi firmalar?" deb so'raydi. Kategoriya va
+                    buxgalter plitkalari allaqachon shunday ishlardi. */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+                  {([
+                    { filter: 'done' as const, label: 'Topshirildi', value: stats.settled, style: { background: 'var(--success-bg)', border: '1px solid var(--success-border)', color: 'var(--success)' } },
+                    { filter: 'pending' as const, label: 'Qolib ketgan (-)', value: stats.failed, className: 'bg-rose-500/10 border border-rose-500/20 text-rose-500' },
+                    { filter: 'kartoteka' as const, label: 'Kartoteka', value: stats.blocked, className: 'bg-amber-500/10 border border-amber-500/20 text-amber-500' },
+                    { filter: 'nol' as const, label: 'Nol hisobot', value: stats.zero, style: { background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' } },
+                    { filter: 'izoh' as const, label: 'Izohli', value: stats.note, className: 'bg-blue-500/10 border border-blue-500/20 text-blue-500' },
+                    { filter: 'all' as const, label: 'Topshirilishi kutilgan', value: stats.required, className: 'bg-slate-500/10 border border-slate-500/20 text-[var(--text-2)]' },
+                  ]).map(tile => (
+                    <button
+                      key={tile.label}
+                      onClick={() => { setFilterStatus(tile.filter); setShowStatsModal(false); }}
+                      className={`p-3 rounded-xl text-left transition-all hover:brightness-125 ${tile.className ?? ''}`}
+                      style={tile.style}
+                      title={
+                        tile.filter === 'all'
+                          ? 'Filtrni tozalash'
+                          : `"${MATRIX_STATUS_FILTERS.find(o => o.value === tile.filter)?.label}" bo'yicha filtrlash`
+                      }
+                    >
+                      <span className="text-micro font-bold uppercase tracking-wider block">{tile.label}</span>
+                      <span className="text-base font-semibold tabular-nums">{tile.value} ta</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
