@@ -17,6 +17,18 @@ import ReportProofModal, { ProofModalState } from './ReportProofModal';
 import { BASE_REPORT_COLUMNS, type ReportColumn } from '@/lib/reportColumns';
 import { tryGetColumnCategory, CATEGORY_LABEL_UZ, type ReportCategory } from '@/lib/reportGroups';
 import { allowedCellActions, canApproveCell, canEditMatrix, isCompanyReviewer, isReviewerOwnedValue, type CellAction } from '@/lib/reportPermissions';
+import MatrixFilterPanel, { type MatrixFilterOptions } from './MatrixFilterPanel';
+import {
+  activeChips,
+  filtersSignature,
+  matchesColStatus,
+  matchesFacets,
+  matchesSearch,
+  parseFilters,
+  EMPTY_FILTERS,
+  FILTER_URL_KEYS,
+  type MatrixFilters,
+} from '@/lib/matrixFilters';
 import {
   addToTally,
   classifyCell,
@@ -640,6 +652,20 @@ interface ReportRow {
   name: string;
   inn: string;
   accountant: string;
+  /**
+   * Qolgan mas'ullar va firma xossalari — FILTR uchun.
+   *
+   * Avval qatorda faqat `accountant` bor edi, shuning uchun "Go'zaloy nazorat
+   * qiladigan firmalar" yoki "QQS to'lovchilar" kabi savollarga matritsada
+   * javob topib bo'lmasdi — ma'lumot `companies` propida bor edi, lekin
+   * qatorga o'tkazilmagan.
+   */
+  supervisor: string;
+  chief: string;
+  bank: string;
+  regime: string;
+  department: string;
+  director: string;
   taxType: string;
   login: string;
   password: string;
@@ -677,9 +703,22 @@ const OperationModule: React.FC<Props> = ({
    */
   const table = useTableState({
     ns: 'mx',
-    // `st` — bajarilish holati filtri. U ham URL'da: nazoratchi "mana bu
-    // firmalar kartotekada" ko'rinishini havola qilib yubora oladi.
-    defaultFilters: { acc: 'all', grp: 'all', st: 'all' },
+    // Barcha filtrlar URL'da: nazoratchi "mana bu firmalar kartotekada"
+    // ko'rinishini havola qilib yubora oladi.
+    //   st  — bajarilish holati (lib/reportStatus.ts)
+    //   grp — ustun guruhi (ko'rinish, qator filtri emas)
+    //   qolganlari — lib/matrixFilters.ts (FILTER_URL_KEYS bilan bir xil)
+    defaultFilters: {
+      grp: 'all', st: 'all',
+      [FILTER_URL_KEYS.accountant]: 'all',
+      [FILTER_URL_KEYS.supervisor]: 'all',
+      [FILTER_URL_KEYS.chief]: 'all',
+      [FILTER_URL_KEYS.bank]: 'all',
+      [FILTER_URL_KEYS.regime]: 'all',
+      [FILTER_URL_KEYS.department]: 'all',
+      [FILTER_URL_KEYS.colKey]: 'all',
+      [FILTER_URL_KEYS.colStatus]: 'any',
+    },
     debounceMs: 300,
   });
   const search = table.search;
@@ -705,8 +744,33 @@ const OperationModule: React.FC<Props> = ({
    * plitkani bosgach butun matritsa yo'qolardi.
    */
   const [filterCategory, setFilterCategory] = useState<ReportCategory | 'all'>('all');
-  const filterAccountant = table.filters.acc;
-  const setFilterAccountant = (v: string) => table.setFilter('acc', v);
+  /**
+   * "Aqlli filtrlar" — mas'ul, firma xossasi va USTUN KESIMI.
+   * Mantiqi `lib/matrixFilters.ts` da (sof, sinovdan o'tgan), bu yerda faqat
+   * URL bilan bog'lash.
+   */
+  // Bog'liqlik obyekt EMAS, imzo satri: `useTableState` har renderda yangi
+  // `filters` obyektini qaytaradi va uni to'g'ridan-to'g'ri bog'liqlik qilsak
+  // 263 qator har renderda qayta filtrlanardi.
+  const filterSig = filtersSignature((k) => table.filters[k]);
+  const filters = useMemo(
+    () => parseFilters((k) => table.filters[k]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filterSig]
+  );
+  const setFilter = useCallback(
+    (key: keyof MatrixFilters, value: string) => table.setFilter(FILTER_URL_KEYS[key], value),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [table.setFilter]
+  );
+  const resetFilters = useCallback(() => {
+    for (const k of Object.keys(EMPTY_FILTERS) as (keyof MatrixFilters)[]) {
+      table.setFilter(FILTER_URL_KEYS[k], EMPTY_FILTERS[k]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table.setFilter]);
+  /** Statistika oynasidagi buxgalter qatori shu orqali filtr qo'yadi. */
+  const setFilterAccountant = (v: string) => setFilter('accountant', v);
   /**
    * Bajarilish holati filtri. `parseStatusFilter` — URL'dan kelgan xom matn
    * uchun qo'riqchi: noto'g'ri qiymat butun matritsani bo'sh qoldirmaydi.
@@ -838,11 +902,28 @@ const OperationModule: React.FC<Props> = ({
     const newRows: ReportRow[] = companies.map((comp, index) => {
       const op = opsMap.get(comp.id);
 
+      // Mas'ul ismini olishning ikki yo'li bor: Prisma relation (`comp.supervisor`)
+      // yoki tekislangan `*Name` maydoni. Ikkalasi ham to'ldirilishi shart emas,
+      // shuning uchun har biri uchun zaxira zanjiri.
+      const nameOf = (rel: unknown, flat?: string) =>
+        (rel as { fullName?: string } | undefined)?.fullName || flat || '—';
+      const c = comp as unknown as {
+        supervisor?: unknown; chiefAccountant?: unknown; bankClient?: unknown;
+        departmentRef?: { name?: string };
+        directorName?: string; taxRegime?: string;
+      };
+
       const row: ReportRow = {
         index: index + 1,
         name: comp.name,
         inn: comp.inn,
         accountant: op?.assigned_accountant_name || comp.accountantName || (comp as any).accountant?.fullName || '—',
+        supervisor: nameOf(c.supervisor, comp.supervisorName),
+        chief: nameOf(c.chiefAccountant, comp.chiefAccountantName),
+        bank: nameOf(c.bankClient, comp.bankClientName),
+        regime: c.taxRegime || '',
+        department: c.departmentRef?.name || comp.department || '',
+        director: c.directorName || '',
         taxType: comp.taxType || '',
         login: comp.login || '',       // From DB company profile
         password: comp.password || '', // From DB company profile
@@ -1025,6 +1106,53 @@ const OperationModule: React.FC<Props> = ({
     return [...set].sort();
   }, [staff, rows]);
 
+  /**
+   * Filtr tanlagichlaridagi variantlar — MAVJUD qatorlardan yig'iladi.
+   *
+   * Ataylab butun xodimlar ro'yxatidan emas: nazoratchi ro'yxatida hech qachon
+   * firmasi bo'lmagan odam turishi foydalanuvchini "nega bo'sh chiqdi?" degan
+   * savolga olib boradi. Buxgalter ro'yxati esa istisno — u yuqorida
+   * `accountants` da xodimlar bilan birga yig'iladi (biriktirilmagan xodimga
+   * firma berish uchun kerak edi).
+   */
+  const filterOptions = useMemo<MatrixFilterOptions>(() => {
+    const uniq = (pick: (r: ReportRow) => string) => {
+      const set = new Set<string>();
+      for (const r of rows) {
+        const v = (pick(r) ?? '').trim();
+        if (v && v !== '—') set.add(v);
+      }
+      return [...set].sort((a, b) => a.localeCompare(b, 'uz'));
+    };
+
+    // Ustunlar: bo'linadigan ustunning to'lov juftligi ham alohida tanlanadi —
+    // "AQt (to'lov) bajarilmagan" mustaqil savol.
+    const columns: { key: string; label: string }[] = [];
+    for (const c of REPORT_COLUMNS) {
+      columns.push({ key: c.key, label: c.label });
+      const split = c as { isSplit?: boolean; payKey?: string };
+      if (split.isSplit && split.payKey) {
+        columns.push({ key: split.payKey, label: `${c.label} — to'lov` });
+      }
+    }
+
+    return {
+      accountants,
+      supervisors: uniq(r => r.supervisor),
+      chiefs: uniq(r => r.chief),
+      banks: uniq(r => r.bank),
+      regimes: uniq(r => r.regime),
+      departments: uniq(r => r.department),
+      columns,
+    };
+  }, [rows, accountants, REPORT_COLUMNS]);
+
+  /** Yoqilgan filtrlarning chiplari — panel yopiq bo'lsa ham ko'rinadi. */
+  const chips = useMemo(
+    () => activeChips(filters, (key) => filterOptions.columns.find(c => c.key === key)?.label ?? key),
+    [filters, filterOptions.columns]
+  );
+
   const visibleColumns = useMemo(() => {
     let base = filterGroup === 'all' ? REPORT_COLUMNS : REPORT_COLUMNS.filter(c => c.group === filterGroup);
     if (filterCategory !== 'all') {
@@ -1061,15 +1189,32 @@ const OperationModule: React.FC<Props> = ({
     [tallyByRow]
   );
 
-  /** Qidiruv + buxgalter filtri (holat filtridan OLDINGI ro'yxat). */
+  /**
+   * Qidiruv + aqlli filtrlar (bajarilish holatidan OLDINGI ro'yxat).
+   *
+   * Qidiruv endi direktor, nazoratchi va bank-klient bo'yicha ham topadi —
+   * avval faqat nom/INN/buxgalter edi.
+   */
   const searchedRows = useMemo(() => rows.filter(r => {
-    if (debouncedSearch) {
-      const s = debouncedSearch.toLowerCase();
-      if (!r.name.toLowerCase().includes(s) && !r.inn.includes(s) && !r.accountant.toLowerCase().includes(s)) return false;
+    if (!matchesSearch(
+      [r.name, r.inn, r.accountant, r.supervisor, r.bank, r.chief, r.director],
+      debouncedSearch
+    )) return false;
+
+    if (!matchesFacets(
+      {
+        accountant: r.accountant, supervisor: r.supervisor, chief: r.chief,
+        bank: r.bank, regime: r.regime, department: r.department,
+      },
+      filters
+    )) return false;
+
+    // Ustun kesimi: tanlangan ustunda so'ralgan holat bo'lsagina qator qoladi.
+    if (filters.colKey !== 'all' && !matchesColStatus(r[filters.colKey], filters.colStatus)) {
+      return false;
     }
-    if (filterAccountant !== 'all' && r.accountant !== filterAccountant) return false;
     return true;
-  }), [rows, debouncedSearch, filterAccountant]);
+  }), [rows, debouncedSearch, filters]);
 
   /**
    * Menyudagi sanoqlar. ATAYLAB holat filtri QO'LLANMAGAN ro'yxatdan
@@ -1603,16 +1748,18 @@ const OperationModule: React.FC<Props> = ({
               </button>
             )}
 
-            {/* Accountant Filter */}
-            <div className="relative">
-              <select value={filterAccountant} onChange={e => setFilterAccountant(e.target.value)}
-                className="pl-4 pr-9 py-2 rounded-xl text-meta font-bold uppercase tracking-widest outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 appearance-none min-w-[130px] cursor-pointer"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}>
-                <option value="all">{t.allAccountants}</option>
-                {accountants.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-3)' }} />
-            </div>
+            {/* AQLLI FILTRLAR. Bitta buxgalter tanlagichi o'rniga: to'rtala
+                mas'ul + soliq rejimi + bo'lim + USTUN KESIMI. Oxirgisi eng
+                muhimi — "AQh ni kim topshirmagan?" degan savolga bungacha
+                matritsada javob beradigan vosita umuman yo'q edi. */}
+            <MatrixFilterPanel
+              filters={filters}
+              options={filterOptions}
+              onChange={setFilter}
+              onReset={resetFilters}
+              shown={filteredRows.length}
+              total={rows.length}
+            />
 
             {/* Group Filter */}
             <div className="relative">
@@ -1704,6 +1851,42 @@ const OperationModule: React.FC<Props> = ({
             </button>
           </div>
         </div>
+
+        {/* YOQILGAN FILTRLAR — panel yopilgach ular ko'rinmas bo'lib qolmasin.
+            Foydalanuvchi "nega faqat 12 ta firma chiqdi?" degan savolga
+            javobni ekranning o'zidan topsin va bitta bosishda olib tashlasin. */}
+        {chips.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap mt-3">
+            <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+              Filtr:
+            </span>
+            {chips.map(chip => (
+              <button
+                key={chip.key}
+                onClick={() => {
+                  setFilter(chip.key, EMPTY_FILTERS[chip.key]);
+                  // Ustun tanlovi olib tashlansa, holat ham bosh holatga qaytsin —
+                  // aks holda URL'da "ustun yo'q, lekin holat bor" qoladi.
+                  if (chip.key === 'colKey') setFilter('colStatus', EMPTY_FILTERS.colStatus);
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro font-bold shadow-sm"
+                style={{ background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                title={`"${chip.label}" filtrini olib tashlash`}
+              >
+                <span style={{ opacity: 0.75 }}>{chip.label}:</span>
+                {chip.value}
+                <X size={12} />
+              </button>
+            ))}
+            <button
+              onClick={resetFilters}
+              className="px-2.5 py-1 rounded-lg text-micro font-bold uppercase tracking-widest transition-colors"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}
+            >
+              Hammasini tozalash
+            </button>
+          </div>
+        )}
 
         {/* Legend */}
         <div className="flex items-center gap-5 mt-4 pt-3 overflow-x-auto scrollbar-hide" style={{ borderTop: '1px solid var(--border)' }}>
