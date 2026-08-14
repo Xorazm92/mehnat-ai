@@ -765,12 +765,28 @@ const OperationModule: React.FC<Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [table.setFilter]
   );
+  /**
+   * BITTA yozuv — `setFilter` ni sakkiz marta chaqirib bo'lmaydi: har chaqiruv
+   * URL'ni o'sha renderdagi nusxadan qayta quradi va oldingisini bekor qiladi,
+   * natijada faqat oxirgi filtr tozalanardi.
+   */
   const resetFilters = useCallback(() => {
+    const patch: Record<string, string> = {};
     for (const k of Object.keys(EMPTY_FILTERS) as (keyof MatrixFilters)[]) {
-      table.setFilter(FILTER_URL_KEYS[k], EMPTY_FILTERS[k]);
+      patch[FILTER_URL_KEYS[k]] = EMPTY_FILTERS[k];
     }
+    table.setFilters(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table.setFilter]);
+  }, [table.setFilters]);
+
+  /** Ustun kesimi — ustun va holat birga tozalanadi (bitta yozuvda). */
+  const clearColumnFilter = useCallback(() => {
+    table.setFilters({
+      [FILTER_URL_KEYS.colKey]: EMPTY_FILTERS.colKey,
+      [FILTER_URL_KEYS.colStatus]: EMPTY_FILTERS.colStatus,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table.setFilters]);
   /** Statistika oynasidagi buxgalter qatori shu orqali filtr qo'yadi. */
   const setFilterAccountant = (v: string) => setFilter('accountant', v);
   /**
@@ -1292,15 +1308,19 @@ const OperationModule: React.FC<Props> = ({
   /** Tahlildagi "Matritsada ochish" — kesimni matritsa filtriga o'tkazadi. */
   const applyInsight = useCallback(
     ({ colKey, dimension, groupKey }: { colKey: string; dimension: InsightDimension; groupKey: string | null }) => {
-      setFilter('colKey', colKey);
-      // Ustun tanlangan bo'lsa, savol doim "kim topshirmagan" — shuni ko'rsatamiz.
-      setFilter('colStatus', colKey === 'all' ? 'any' : 'outstanding');
+      const patch: Record<string, string> = {
+        [FILTER_URL_KEYS.colKey]: colKey,
+        // Ustun tanlangan bo'lsa, savol doim "kim topshirmagan" — shuni ko'rsatamiz.
+        [FILTER_URL_KEYS.colStatus]: colKey === 'all' ? 'any' : 'outstanding',
+      };
       if (groupKey && dimension !== 'company') {
-        setFilter(dimension as keyof MatrixFilters, groupKey);
+        patch[FILTER_URL_KEYS[dimension as keyof MatrixFilters]] = groupKey;
       }
+      table.setFilters(patch);
       if (dimension === 'company' && groupKey) setSearch(groupKey);
     },
-    [setFilter, setSearch]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [table.setFilters, setSearch]
   );
 
   const paginatedRows = useMemo(() => {
@@ -1816,6 +1836,7 @@ const OperationModule: React.FC<Props> = ({
               filters={filters}
               options={filterOptions}
               onChange={setFilter}
+              onClearColumn={clearColumnFilter}
               onReset={resetFilters}
               shown={filteredRows.length}
               total={rows.length}
@@ -1924,10 +1945,17 @@ const OperationModule: React.FC<Props> = ({
               <button
                 key={chip.key}
                 onClick={() => {
-                  setFilter(chip.key, EMPTY_FILTERS[chip.key]);
-                  // Ustun tanlovi olib tashlansa, holat ham bosh holatga qaytsin —
-                  // aks holda URL'da "ustun yo'q, lekin holat bor" qoladi.
-                  if (chip.key === 'colKey') setFilter('colStatus', EMPTY_FILTERS.colStatus);
+                  // Ustun chipi IKKI maydonni tozalaydi (ustun + holat), shuning
+                  // uchun bitta yozuvda — ketma-ket chaqiruvda ikkinchisi
+                  // birinchisini bekor qilardi.
+                  table.setFilters(
+                    chip.key === 'colKey'
+                      ? {
+                          [FILTER_URL_KEYS.colKey]: EMPTY_FILTERS.colKey,
+                          [FILTER_URL_KEYS.colStatus]: EMPTY_FILTERS.colStatus,
+                        }
+                      : { [FILTER_URL_KEYS[chip.key]]: EMPTY_FILTERS[chip.key] }
+                  );
                 }}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro font-bold shadow-sm"
                 style={{ background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }}

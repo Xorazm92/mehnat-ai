@@ -45,6 +45,16 @@ export interface TableState {
   /** Ixtiyoriy nomlangan filtrlar — ular ham URL'ga tushadi */
   filters: Record<string, string>;
   setFilter: (key: string, value: string) => void;
+  /**
+   * Bir NECHTA filtrni BITTA yozuvda o'zgartirish.
+   *
+   * MAJBURIY: `setFilter` ni ketma-ket chaqirib bo'lmaydi. Har chaqiruv URL'ni
+   * o'sha renderdagi `params` NUSXASIDAN qayta quradi, ya'ni ikkita chaqiruv
+   * bir xil eski nusxadan boshlanadi va ikkinchisi birinchisini bekor qiladi —
+   * natijada faqat OXIRGI o'zgarish saqlanadi. "Hammasini tozalash" aynan
+   * shu sababli bitta filtrni tozalab qo'yardi.
+   */
+  setFilters: (patch: Record<string, string>) => void;
 
   /** Barcha holatni tozalash */
   reset: () => void;
@@ -148,10 +158,24 @@ export function useTableState({
     (d: Density) => write({ d: d === defaultDensity ? null : d }),
     [write, defaultDensity]
   );
+  /** Standart qiymat URL'da saqlanmaydi — manzil keraksiz uzaymasin. */
+  const normalize = useCallback(
+    (key: string, value: string) => (value === defaultFilters[key] ? null : value),
+    [defaultFilters]
+  );
+
   const setFilter = useCallback(
-    (key: string, value: string) =>
-      write({ [key]: value === defaultFilters[key] ? null : value, page: null }),
-    [write, defaultFilters]
+    (key: string, value: string) => write({ [key]: normalize(key, value), page: null }),
+    [write, normalize]
+  );
+
+  const setFilters = useCallback(
+    (patch: Record<string, string>) => {
+      const out: Record<string, string | null> = { page: null };
+      for (const [key, value] of Object.entries(patch)) out[key] = normalize(key, value);
+      write(out);
+    },
+    [write, normalize]
   );
 
   const reset = useCallback(() => {
@@ -180,6 +204,7 @@ export function useTableState({
     setDensity,
     filters,
     setFilter,
+    setFilters,
     reset,
     isDirty,
   };

@@ -34,6 +34,13 @@ interface Props {
   filters: MatrixFilters;
   options: MatrixFilterOptions;
   onChange: (key: keyof MatrixFilters, value: string) => void;
+  /**
+   * Ustun kesimini tozalash — IKKI maydon birga (ustun + holat).
+   * Alohida prop, chunki `onChange` ni ketma-ket ikki marta chaqirish
+   * ishlamaydi: ikkinchi chaqiruv birinchisini bekor qiladi
+   * (qarang: `useTableState.setFilters`).
+   */
+  onClearColumn: () => void;
   onReset: () => void;
   /** Filtrdan keyin qolgan / jami qator — panel ichida darhol ko'rinadi. */
   shown: number;
@@ -130,6 +137,7 @@ export default function MatrixFilterPanel({
   filters,
   options,
   onChange,
+  onClearColumn,
   onReset,
   shown,
   total,
@@ -254,7 +262,7 @@ export default function MatrixFilterPanel({
               <Field
                 label="Ustun kesimi"
                 active={filters.colKey !== "all"}
-                onClear={() => { onChange("colKey", "all"); onChange("colStatus", "any"); }}
+                onClear={onClearColumn}
                 value={filters.colKey}
                 onChange={(v) => onChange("colKey", v)}
                 hint={
