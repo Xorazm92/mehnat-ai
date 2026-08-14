@@ -16,7 +16,7 @@ import { getReportProofsMeta } from '@/server/proofs';
 import ReportProofModal, { ProofModalState } from './ReportProofModal';
 import { BASE_REPORT_COLUMNS, type ReportColumn } from '@/lib/reportColumns';
 import { tryGetColumnCategory, CATEGORY_LABEL_UZ, type ReportCategory } from '@/lib/reportGroups';
-import { allowedCellActions, canApproveCell, canEditMatrix, isReviewerOwnedValue, type CellAction } from '@/lib/reportPermissions';
+import { allowedCellActions, canApproveCell, canEditMatrix, isCompanyReviewer, isReviewerOwnedValue, type CellAction } from '@/lib/reportPermissions';
 import { companyRelations, type CompanyRelation } from '@/lib/access';
 import { useDismissable } from '@/hooks/useDismissable';
 import { Button } from "@/components/ui/Button";
@@ -687,7 +687,26 @@ const OperationModule: React.FC<Props> = ({
   // ── Report Proofs (skrinshot dalillari) ───────────────────────
   const [proofMeta, setProofMeta] = useState<Map<string, string>>(new Map());
   const [proofModal, setProofModal] = useState<ProofModalState | null>(null);
-  const canReview = userRole === 'super_admin' || userRole === 'admin' || userRole === 'chief_accountant' || userRole === 'supervisor';
+  /**
+   * Dalilni tekshirish huquqi — LAVOZIM bo'yicha emas, AYNAN SHU FIRMA
+   * bo'yicha (`isCompanyReviewer`).
+   *
+   * Ilgari bu yerda faqat rol tekshirilardi va natija butun matritsa uchun
+   * BITTA qiymat edi. Server esa har firmani alohida tekshiradi
+   * (`server/proofs.ts` → `isReviewerOn`) va o'z-o'zini nazorat blokini
+   * qo'llaydi: nazoratchi O'ZI BUXGALTERLIK QILADIGAN firmada tasdiqlay
+   * olmaydi.
+   *
+   * Natijada Go'zaloy (lavozimi nazoratchi, lekin 10 ta firmada buxgalter)
+   * o'sha 10 firmada "Tasdiqlash" tugmasini KO'RARDI, bosardi, server esa
+   * "Bu firmada tasdiqlash huquqingiz yo'q" deb rad etardi va katak eski
+   * holatiga qaytardi. Foydalanuvchi buni "tasdiqladim, lekin yana
+   * tasdiqlanmagan bo'lib qoldi" deb ko'rardi.
+   *
+   * Katak menyusi allaqachon shu qoidaga amal qilardi (`allowedCellActions`) —
+   * faqat dalil oynasi undan ajralib qolgan edi.
+   */
+  // Hisoblash `relationsByCompany` yonida — dalil oynasi chizilgan joyda.
 
   const reloadProofMeta = useCallback(async () => {
     try {
@@ -1881,7 +1900,11 @@ const OperationModule: React.FC<Props> = ({
       <ReportProofModal
         state={proofModal}
         period={selectedPeriod}
-        canReview={canReview}
+        // Huquq AYNAN SHU FIRMA bo'yicha — server ham shunday tekshiradi.
+        canReview={
+          !!proofModal &&
+          isCompanyReviewer(userRole, relationsByCompany.get(proofModal.companyId))
+        }
         onClose={() => setProofModal(null)}
         onSubmitted={handleProofSubmitted}
         onReviewed={handleProofReviewed}
