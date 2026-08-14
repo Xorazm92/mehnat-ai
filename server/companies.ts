@@ -367,6 +367,41 @@ function sanitizeCompanyData(raw: Record<string, unknown>) {
   return data;
 }
 
+/**
+ * Shu INN bilan FAOL firma allaqachon bormi?
+ *
+ * `Company.inn` da DB darajasida unique cheklov YO'Q (faqat `@@index`), shuning
+ * uchun bir xil STIR bilan ikkinchi firma yaratish mumkin edi. 2026-08 da prodda
+ * shu sababli 10 ta dublikat yig'ilgan: xodim mavjud firmani TAHRIRLASH o'rniga
+ * yangisini yaratgan, natijada bitta firma uchun ikki karra majburiyat hosil
+ * bo'lgan va hisobotlar ikki qatorga bo'linib ketgan
+ * (`scripts/sql/2026-08-dublikat-va-bank-tozalash.sql` bilan tozalandi).
+ *
+ * ARXIVLANGAN qatorlar ATAYLAB hisobga olinmaydi: tozalashdan keyin ular aynan
+ * shu INN'ni saqlab turibdi, ya'ni ularni ham qamrasak yangi firma ochib
+ * bo'lmasdi.
+ */
+async function assertInnFree(inn: string, exceptId?: string): Promise<void> {
+  const trimmed = inn.trim();
+  if (!trimmed) return;
+
+  const clash = await prisma.company.findFirst({
+    where: {
+      inn: trimmed,
+      isActive: true,
+      ...(exceptId ? { id: { not: exceptId } } : {}),
+    },
+    select: { name: true },
+  });
+
+  if (clash) {
+    throw new Error(
+      `"${trimmed}" STIR bilan faol firma allaqachon bor: "${clash.name}". ` +
+        `Yangi firma yaratish o'rniga o'shani tahrirlang.`
+    );
+  }
+}
+
 export async function createCompany(companyData: Record<string, unknown>, assignments?: CompanyAssignment[]) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -375,6 +410,7 @@ export async function createCompany(companyData: Record<string, unknown>, assign
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
   const data = sanitizeCompanyData(companyData);
+  if (typeof data.inn === "string") await assertInnFree(data.inn);
 
   const normalized = assignments?.length ? await normalizeAssignments(assignments) : [];
   applyAssignmentsToCompanyData(data, normalized);
@@ -460,6 +496,9 @@ export async function updateCompany(
     for (const f of RESTRICTED_FIELDS) delete data[f];
     assignments = undefined;
   }
+
+  // Tahrirlashda ham: STIRni boshqa FAOL firmanikiga o'zgartirib bo'lmaydi.
+  if (typeof data.inn === "string") await assertInnFree(data.inn, id);
 
   const normalized = assignments?.length ? await normalizeAssignments(assignments) : [];
   applyAssignmentsToCompanyData(data, normalized);
