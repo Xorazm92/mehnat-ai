@@ -12,7 +12,7 @@ import {
   type UserRole,
   type AppView,
 } from "@/lib/permissions";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { serialize } from "@/lib/serialize";
 
 const SETTING_KEY = "roleViews";
@@ -117,6 +117,6 @@ export async function saveRoleViews(enabled: Record<string, Record<string, boole
     update: { value: overrides as object, updatedBy: session.user.id },
     create: { key: SETTING_KEY, value: overrides as object, updatedBy: session.user.id },
   });
-  revalidateTag("system-settings", "max");
+  updateTag("system-settings");
   return serialize(result);
 }

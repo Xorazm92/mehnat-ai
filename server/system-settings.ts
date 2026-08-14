@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
 import {
@@ -46,6 +46,6 @@ export async function upsertSystemSetting(key: string, value: Prisma.InputJsonVa
     update: { value, updatedBy: session.user.id },
     create: { key, value, updatedBy: session.user.id },
   });
-  revalidateTag("system-settings", "max");
+  updateTag("system-settings");
   return serialize(result);
 }

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/permissions";
 import { scopedStaffIds } from "@/lib/access";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import bcrypt from "bcryptjs";
 import type { UserRole } from "@/lib/permissions";
 import { serialize } from "@/lib/serialize";
@@ -163,7 +163,7 @@ export async function createUser(data: {
     },
     select: SAFE_USER_SELECT,
   });
-  revalidateTag("users", "max");
+  updateTag("users");
   return serialize(result);
 }
 
@@ -216,7 +216,7 @@ export async function updateUser(
     data: updateData,
     select: SAFE_USER_SELECT,
   });
-  revalidateTag("users", "max");
+  updateTag("users");
   return serialize(result);
 }
 
@@ -263,7 +263,7 @@ export async function deactivateUser(id: string) {
     data: { isActive: false, firedAt: new Date() },
     select: SAFE_USER_SELECT,
   });
-  revalidateTag("users", "max");
+  updateTag("users");
   return serialize(result);
 }
 
@@ -285,6 +285,6 @@ export async function resetUserPassword(id: string, newPassword: string) {
     data: { passwordHash },
     select: SAFE_USER_SELECT,
   });
-  revalidateTag("users", "max");
+  updateTag("users");
   return serialize(result);
 }

@@ -6,7 +6,7 @@ import { isSeniorRole } from "@/lib/permissions";
 import { companyRelations, assertCompanyPermission } from "@/lib/access";
 import { checkCellWrite, CELL_EMPTY } from "@/lib/reportPermissions";
 import { clearCellEvidence, syncCellToObligation } from "@/lib/obligationBridge";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
@@ -147,7 +147,24 @@ export async function upsertMonthlyReport(data: MonthlyReportWriteInput) {
     }
   }
 
-  revalidateTag("operations", "max");
+  /**
+   * `revalidateTag(tag, "max")` EMAS, `updateTag(tag)`.
+   *
+   * Bu farq matritsadagi eng og'riqli xatoning sababi edi: nazoratchi katakni
+   * tasdiqlardi, ✅ chiqardi, keyin bir necha soniyadan so'ng belgi YO'QOLARDI
+   * ("nol hisobot" ham xuddi shunday uchib ketardi).
+   *
+   * Sababi Next 16 hujjatida yozilgan: `revalidateTag(tag, "max")` keshni
+   * O'CHIRMAYDI — uni "eskirgan" deb belgilaydi va keyingi so'rovga
+   * stale-while-revalidate qoidasi bo'yicha ESKI ma'lumotni beradi, yangisini
+   * esa fonda oladi. `getCachedOperations` 5 daqiqalik keshda turadi, sahifa
+   * esa har 15 soniyada `router.refresh()` qiladi — ya'ni yozuvdan keyingi
+   * birinchi yangilanish katakni tasdiqlashdan OLDINGI holatiga qaytarardi.
+   *
+   * `updateTag` esa "read-your-own-writes" uchun mo'ljallangan: keshni darhol
+   * muddati o'tgan deb belgilaydi va keyingi so'rov yangi ma'lumotni kutadi.
+   */
+  updateTag("operations");
   return serialize(result);
 }
 
@@ -202,6 +219,6 @@ export async function clearColumnForPeriod(rawPeriod: string, colKey: string) {
     await clearCellEvidence({ companyId, period, colKey, actorId: session.user.id });
   }
 
-  revalidateTag("operations", "max");
+  updateTag("operations");
   return { success: true, cleared: res.count, proofsRemoved: withProof.length };
 }

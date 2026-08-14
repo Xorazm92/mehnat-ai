@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
 import { recordAuditLog } from "@/lib/auditTrail";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import type { Periodicity, DeadlineAnchorType, WorkdayAdjustmentPolicy, TemplateLifecycle } from "@prisma/client";
 
 async function requireAdmin(): Promise<string> {
@@ -66,7 +66,7 @@ export async function createDeadlineTemplate(input: TemplateInput) {
     data: { ...toData(input), version: 1, lifecycle: "draft", active: true, createdBy: uid },
   });
   await recordAuditLog({ userId: uid, action: "create", tableName: "DeadlineTemplate", recordId: t.id, newData: { code: t.code, version: t.version } });
-  revalidateTag("deadline-templates", "max");
+  updateTag("deadline-templates");
   return t;
 }
 
@@ -78,7 +78,7 @@ export async function updateDeadlineTemplate(id: string, input: TemplateInput) {
   if (cur.lifecycle !== "draft") throw new Error("Faqat qoralama (draft) tahrirlanadi — yangi versiya yarating");
   await prisma.deadlineTemplate.update({ where: { id }, data: toData(input) });
   await recordAuditLog({ userId: uid, action: "update", tableName: "DeadlineTemplate", recordId: id });
-  revalidateTag("deadline-templates", "max");
+  updateTag("deadline-templates");
   return { ok: true };
 }
 
@@ -102,7 +102,7 @@ export async function setTemplateLifecycle(id: string, lifecycle: TemplateLifecy
   if (lifecycle === "retired") data.active = false;
   await prisma.deadlineTemplate.update({ where: { id }, data });
   await recordAuditLog({ userId: uid, action: "update", tableName: "DeadlineTemplate", recordId: id, oldData: { lifecycle: cur.lifecycle }, newData: { lifecycle } });
-  revalidateTag("deadline-templates", "max");
+  updateTag("deadline-templates");
   return { ok: true };
 }
 
@@ -134,7 +134,7 @@ export async function createNewVersion(id: string) {
     },
   });
   await recordAuditLog({ userId: uid, action: "create", tableName: "DeadlineTemplate", recordId: t.id, newData: { code: t.code, version: nextVersion } });
-  revalidateTag("deadline-templates", "max");
+  updateTag("deadline-templates");
   return t;
 }
 
@@ -142,7 +142,7 @@ export async function addTemplateApplicability(templateId: string, criteriaType:
   const uid = await requireAdmin();
   await prisma.templateApplicability.create({ data: { templateId, criteriaType: criteriaType.trim(), criteriaValue: criteriaValue.trim() } });
   await recordAuditLog({ userId: uid, action: "create", tableName: "TemplateApplicability", recordId: templateId, newData: { criteriaType, criteriaValue } });
-  revalidateTag("deadline-templates", "max");
+  updateTag("deadline-templates");
   return { ok: true };
 }
 
@@ -150,6 +150,6 @@ export async function removeTemplateApplicability(id: string) {
   const uid = await requireAdmin();
   await prisma.templateApplicability.delete({ where: { id } });
   await recordAuditLog({ userId: uid, action: "delete", tableName: "TemplateApplicability", recordId: id });
-  revalidateTag("deadline-templates", "max");
+  updateTag("deadline-templates");
   return { ok: true };
 }

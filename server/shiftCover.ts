@@ -8,7 +8,7 @@ import { serialize } from "@/lib/serialize";
 import { toYearMonthKey } from "@/lib/periods";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { computeCoverTransfers } from "@/lib/shiftCover";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 
 /** `UserRole` → yo'qlik qoidasi nomi (lib/kpiEvidence bilan bir xil xarita). */
 const ABSENCE_RULE_BY_USER_ROLE: Record<string, string> = {
@@ -99,7 +99,7 @@ export async function assignShiftCover(input: {
         },
       });
 
-  revalidateTag("operations", "max");
+  updateTag("operations");
   return { ok: true, cover: serialize(cover) };
 }
 
@@ -230,6 +230,6 @@ export async function applyCoverTransfers(month: string) {
     }
   }
 
-  revalidateTag("operations", "max");
+  updateTag("operations");
   return { transfers: created, total };
 }

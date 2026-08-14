@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
 import { recordAuditLog } from "@/lib/auditTrail";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 
 async function requireAdmin(): Promise<string> {
   const session = await auth();
@@ -49,7 +49,7 @@ export async function upsertCalendarDay(input: CalendarDayInput) {
     update: { isWorkday: input.isWorkday, isHoliday: input.isHoliday, name: input.name?.trim() || null, approvedById: uid },
   });
   await recordAuditLog({ userId: uid, action: "update", tableName: "BusinessCalendarDay", recordId: row.id, newData: { date: input.date, isWorkday: input.isWorkday, isHoliday: input.isHoliday } });
-  revalidateTag("business-calendar", "max");
+  updateTag("business-calendar");
   return row;
 }
 
@@ -57,6 +57,6 @@ export async function deleteCalendarDay(id: string) {
   const uid = await requireAdmin();
   await prisma.businessCalendarDay.delete({ where: { id } });
   await recordAuditLog({ userId: uid, action: "delete", tableName: "BusinessCalendarDay", recordId: id });
-  revalidateTag("business-calendar", "max");
+  updateTag("business-calendar");
   return { ok: true };
 }

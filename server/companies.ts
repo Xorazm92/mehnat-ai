@@ -12,7 +12,7 @@ import {
 } from "@/lib/permissions";
 import { companyScopeWhere, assertCompanyPermission } from "@/lib/access";
 import { recordAuditLog } from "@/lib/auditTrail";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import type { TaxRegime, StatsType } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
 import { decryptSecret } from "@/lib/crypto";
@@ -420,12 +420,12 @@ export async function createCompany(companyData: Record<string, unknown>, assign
       },
       { dispatchTelegram: telegramQueueDispatcher }
     );
-    revalidateTag("notifications", "max");
+    updateTag("notifications");
   } catch (err) {
     logServerError("companies.notifyOneCBase", err, { companyId: result.id });
   }
 
-  revalidateTag("companies", "max");
+  updateTag("companies");
   return serialize(result);
 }
 
@@ -530,7 +530,7 @@ export async function updateCompany(
     });
   }
 
-  revalidateTag("companies", "max");
+  updateTag("companies");
   return serialize(result);
 }
 
@@ -545,7 +545,7 @@ export async function deleteCompany(id: string) {
     where: { id },
     data: { isActive: false },
   });
-  revalidateTag("companies", "max");
+  updateTag("companies");
   return serialize(result);
 }
 

@@ -12,7 +12,7 @@ import { recordAuditLog } from "@/lib/auditTrail";
 import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/access";
 import { canTransitionTask, taskTimingPatch } from "@/lib/taskWorkflow";
 import { syncTaskDoneToObligation } from "@/lib/obligationBridge";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import type { Prisma, TaskStatus, TaskPriority } from "@prisma/client";
 
 async function requireActor(): Promise<Actor> {
@@ -122,7 +122,7 @@ export async function createTask(input: CreateTaskInput) {
     select: { id: true },
   });
   await recordAuditLog({ userId: actor.id, action: "create", tableName: "Task", recordId: task.id, newData: { title: input.title } });
-  revalidateTag("tasks", "max");
+  updateTag("tasks");
   return task;
 }
 
@@ -143,11 +143,11 @@ export async function updateTaskStatus(id: string, toStatus: TaskStatus, note?: 
   // qoldirardi va bir ishni ikkinchi joyda qaytadan belgilashi kerak edi.
   if (toStatus === "done" && t.obligationId) {
     await syncTaskDoneToObligation(t.obligationId, actor.id);
-    revalidateTag("obligations", "max");
+    updateTag("obligations");
   }
 
   await recordAuditLog({ userId: actor.id, action: "update", tableName: "Task", recordId: id, oldData: { status: t.status }, newData: { status: toStatus } });
-  revalidateTag("tasks", "max");
+  updateTag("tasks");
   return { ok: true };
 }
 
@@ -161,7 +161,7 @@ export async function assignTask(id: string, toUserId: string | null) {
     prisma.taskEvent.create({ data: { taskId: id, type: "assign", fromUserId: t.assigneeUserId, toUserId, byUserId: actor.id } }),
   ]);
   await recordAuditLog({ userId: actor.id, action: "update", tableName: "Task", recordId: id, newData: { assigneeUserId: toUserId } });
-  revalidateTag("tasks", "max");
+  updateTag("tasks");
   return { ok: true };
 }
 
@@ -184,6 +184,6 @@ export async function addTaskComment(id: string, note: string) {
   await assertCanAct(actor, id);
   if (!note?.trim()) throw new Error("Izoh bo'sh");
   await prisma.taskEvent.create({ data: { taskId: id, type: "comment", note: note.trim(), byUserId: actor.id } });
-  revalidateTag("tasks", "max");
+  updateTag("tasks");
   return { ok: true };
 }

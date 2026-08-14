@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { serialize } from "@/lib/serialize";
 
 async function requireAdmin() {
@@ -41,7 +41,7 @@ export async function createDepartment(data: {
       isActive: true,
     },
   });
-  revalidateTag("departments", "max");
+  updateTag("departments");
   return serialize(result);
 }
 
@@ -63,7 +63,7 @@ export async function updateDepartment(
       ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
     },
   });
-  revalidateTag("departments", "max");
+  updateTag("departments");
   return serialize(result);
 }
 
@@ -73,6 +73,6 @@ export async function deactivateDepartment(id: string) {
     where: { id },
     data: { isActive: false },
   });
-  revalidateTag("departments", "max");
+  updateTag("departments");
   return serialize(result);
 }

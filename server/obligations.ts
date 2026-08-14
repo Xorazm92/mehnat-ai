@@ -22,7 +22,7 @@ import {
   approveObligationDelayReason,
   reassignObligationTo,
 } from "@/lib/obligationDelay";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import type { ObligationStatus, SubmissionStatus, EvidenceType, DelayReason } from "@prisma/client";
 
 async function requireActor(): Promise<Actor> {
@@ -147,7 +147,7 @@ export async function updateObligationStatus(id: string, toStatus: ObligationSta
     oldData: { status: o.status },
     newData: { status: toStatus },
   });
-  revalidateTag("obligations", "max");
+  updateTag("obligations");
   return { ok: true };
 }
 
@@ -158,21 +158,21 @@ export async function updateObligationStatus(id: string, toStatus: ObligationSta
 export async function setDelayReason(id: string, reason: DelayReason, comment?: string) {
   const actor = await requireActor();
   await markObligationDelayReason(prisma, actor, id, reason, comment);
-  revalidateTag("obligations", "max");
+  updateTag("obligations");
   return { ok: true };
 }
 
 export async function approveDelayReason(id: string) {
   const actor = await requireActor();
   await approveObligationDelayReason(prisma, actor, id);
-  revalidateTag("obligations", "max");
+  updateTag("obligations");
   return { ok: true };
 }
 
 export async function reassignObligation(id: string, toUserId: string, reason?: string) {
   const actor = await requireActor();
   await reassignObligationTo(prisma, actor, id, toUserId, reason);
-  revalidateTag("obligations", "max");
+  updateTag("obligations");
   return { ok: true };
 }
 
@@ -214,6 +214,6 @@ export async function addSubmission(
     include: { evidence: true },
   });
   await recordAuditLog({ userId: actor.id, action: "create", tableName: "ObligationSubmission", recordId: submission.id });
-  revalidateTag("obligations", "max");
+  updateTag("obligations");
   return submission;
 }

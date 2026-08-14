@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole, isSeniorRole } from "@/lib/permissions";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import type { AuditAction } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
 
@@ -118,7 +118,7 @@ export async function markNotificationsRead(ids?: string[]) {
     },
     data: { isRead: true },
   });
-  revalidateTag("notifications", "max");
+  updateTag("notifications");
   return serialize(result);
 }
 
@@ -162,7 +162,7 @@ export async function createNotification(data: {
       link: link || null,
     },
   });
-  revalidateTag("notifications", "max");
+  updateTag("notifications");
   return serialize(result);
 }
 

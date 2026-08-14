@@ -8,7 +8,7 @@ import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
 import { normalizePeriodKey, isFuturePeriod, formatPeriodLabel } from "@/lib/periods";
 import type { OperationFieldKey } from "@/types";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { syncProofToObligation } from "@/lib/obligationBridge";
 
@@ -194,8 +194,8 @@ export async function saveReportProof(input: {
     });
   }
 
-  revalidateTag("operations", "max");
-  revalidateTag("notifications", "max");
+  updateTag("operations");
+  updateTag("notifications");
   return { ok: true };
 }
 
@@ -362,7 +362,7 @@ export async function reviewReportProof(input: {
     });
   }
 
-  revalidateTag("operations", "max");
-  revalidateTag("notifications", "max");
+  updateTag("operations");
+  updateTag("notifications");
   return { ok: true, cellValue };
 }

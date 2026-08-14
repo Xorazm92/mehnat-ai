@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { serialize } from "@/lib/serialize";
 import {
   BASE_REPORT_COLUMNS,
@@ -91,6 +91,6 @@ export async function saveOperationColumns(rows: OperationColumnRow[]) {
     update: { value: config as unknown as object, updatedBy: session.user.id },
     create: { key: SETTING_KEY, value: config as unknown as object, updatedBy: session.user.id },
   });
-  revalidateTag("system-settings", "max");
+  updateTag("system-settings");
   return serialize(result);
 }
