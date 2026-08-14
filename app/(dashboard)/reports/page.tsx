@@ -1,8 +1,13 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
+import {
+  getCachedCompanies,
+  getCachedUsers,
+  getCachedOperations,
+  getCachedObligationCoverage,
+} from "@/lib/cached-queries";
 import { getEffectiveReportColumns } from "@/server/report-columns";
-import { getCurrentPeriodKey, normalizePeriodKey } from "@/lib/periods";
+import { getCurrentPeriodKey, normalizePeriodKey, toObligationMonthKey } from "@/lib/periods";
 import { readTabParam } from "@/lib/tabs";
 import { REPORTS_TAB_IDS, type ReportsTabId } from "@/lib/reportsTabs";
 import ReportsClient from "./ReportsClient";
@@ -39,11 +44,18 @@ export default async function ReportsPage({
   const userRole = session?.user?.role || "employee";
   const userName = session?.user?.name ?? "";
 
-  const [companies, staff, operations, reportColumns] = await Promise.all([
+  // Matritsa foizining MAXRAJI shu ro'yxatdan chiqadi ("kim topshirishi
+  // shart"), shuning uchun u davrga bog'liq va davr o'zgarganda qayta olinadi.
+  const obligationMonthKey = toObligationMonthKey(initialPeriod) ?? "";
+
+  const [companies, staff, operations, reportColumns, obligationCoverage] = await Promise.all([
     getCachedCompanies(userId, userRole),
     getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
     getEffectiveReportColumns(),
+    obligationMonthKey
+      ? getCachedObligationCoverage(userId, userRole, obligationMonthKey)
+      : Promise.resolve([]),
   ]);
 
   const mappedStaff = staff.map((u) => ({
@@ -65,6 +77,7 @@ export default async function ReportsPage({
         focusCol={sp.col ?? null}
         initialPeriod={initialPeriod}
         reportColumns={reportColumns}
+        obligationCoverage={obligationCoverage}
         initialTab={readTabParam<ReportsTabId>(sp.tab, REPORTS_TAB_IDS, "matrix")}
       />
     </div>

@@ -31,7 +31,21 @@ export type CellStatus =
   /** Xatolik qaytgan. */
   | "error"
   /** Erkin matn (izoh) — ko'rib chiqilishi kerak. */
-  | "note";
+  | "note"
+  /**
+   * TALAB QILINADI, LEKIN KATAK BO'SH.
+   *
+   * `classifyCell` buni HECH QACHON qaytarmaydi — katakning o'zida bunday
+   * qiymat yo'q. U faqat majburiyat dvigateli bilan solishtirilganda paydo
+   * bo'ladi: shablon shu firmaga shu davrda majburiyat yaratgan, matritsada
+   * esa katak belgilanmagan.
+   *
+   * Nima uchun kerak: busiz maxraj "kimdir belgilagan kataklar" edi. Ya'ni
+   * hisobotni 253 firmadan 2 tasi belgilagan bo'lsa, foiz o'sha 2 tadan
+   * hisoblanardi ("50%"), holbuki savol — talab qilingan firmalardan
+   * qanchasi topshirgani.
+   */
+  | "missing";
 
 const NONE = new Set(["", "0", "not_required", "topshirmaydi"]);
 const APPROVED = new Set(["+", "accepted"]);
@@ -65,6 +79,18 @@ export function isSettled(s: CellStatus): boolean {
   return s === "approved" || s === "submitted" || s === "zero";
 }
 
+/**
+ * Katakni MAJBURIYAT bilan solishtirib tasniflash.
+ *
+ * `required` — majburiyat dvigateli shu firma uchun shu davrda shu hisobotni
+ * talab qiladimi. Talab qilinsa-yu katak bo'sh bo'lsa, u "shart emas" emas,
+ * BAJARILMAGAN ish (`missing`) va maxrajga kiradi.
+ */
+export function classifyCellWithObligation(raw: unknown, required: boolean): CellStatus {
+  const s = classifyCell(raw);
+  return s === "none" && required ? "missing" : s;
+}
+
 /** Talab qilinadigan katakmi (maxrajga kiradimi). */
 export function isRequired(s: CellStatus): boolean {
   return s !== "none";
@@ -79,6 +105,8 @@ export interface StatusTally {
   failed: number;
   error: number;
   note: number;
+  /** Talab qilinadi, lekin belgilanmagan. */
+  missing: number;
   /** Talab qilingan kataklar soni (bo'shlar hisobga olinmaydi). */
   required: number;
   /** Yopilgan: approved + submitted + zero. */
@@ -90,20 +118,46 @@ export interface StatusTally {
 export function emptyTally(): StatusTally {
   return {
     approved: 0, submitted: 0, zero: 0,
-    blocked: 0, failed: 0, error: 0, note: 0,
+    blocked: 0, failed: 0, error: 0, note: 0, missing: 0,
     required: 0, settled: 0, outstanding: 0,
   };
 }
 
-/** Bitta katakni mavjud hisobga qo'shadi (o'sha obyektni o'zgartiradi). */
-export function addToTally(tally: StatusTally, raw: unknown): CellStatus {
-  const s = classifyCell(raw);
+/**
+ * Bitta katakni mavjud hisobga qo'shadi (o'sha obyektni o'zgartiradi).
+ *
+ * `required` berilsa — majburiyat dvigateli fikri: bo'sh katak ham maxrajga
+ * kiradi va `missing` deb sanaladi.
+ */
+export function addToTally(tally: StatusTally, raw: unknown, required = false): CellStatus {
+  const s = classifyCellWithObligation(raw, required);
   if (s === "none") return s;
   tally[s]++;
   tally.required++;
   if (isSettled(s)) tally.settled++;
   else tally.outstanding++;
   return s;
+}
+
+/**
+ * Ikkita hisobni qo'shadi.
+ *
+ * ATAYLAB shu yerda: qo'shish `reportInsight.mergeInto` va `OperationModule.stats`
+ * da QO'LDA takrorlangan edi va `StatusTally` ga yangi maydon (`missing`)
+ * qo'shilganda ikkalasi ham jimgina eskicha qolib, maydon yo'qolib ketdi.
+ */
+export function mergeTally(target: StatusTally, src: StatusTally): void {
+  target.approved += src.approved;
+  target.submitted += src.submitted;
+  target.zero += src.zero;
+  target.blocked += src.blocked;
+  target.failed += src.failed;
+  target.error += src.error;
+  target.note += src.note;
+  target.missing += src.missing;
+  target.required += src.required;
+  target.settled += src.settled;
+  target.outstanding += src.outstanding;
 }
 
 export function tally(values: Iterable<unknown>): StatusTally {

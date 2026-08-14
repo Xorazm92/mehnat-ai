@@ -48,6 +48,8 @@ interface Props {
   initialPeriod: string;
   reportColumns?: ReportColumn[];
   initialTab?: ReportsTabId;
+  /** (companyId, shablon kodi) — matritsa foizining maxraji. */
+  obligationCoverage?: { companyId: string; code: string }[];
 }
 
 export default function ReportsClient({
@@ -61,6 +63,7 @@ export default function ReportsClient({
   focusCol,
   initialPeriod,
   reportColumns,
+  obligationCoverage,
   initialTab = "matrix",
 }: Props) {
   useAutoRefresh();
@@ -125,6 +128,7 @@ export default function ReportsClient({
             userName={userName}
             focusProof={hasFocus ? { companyId: focusCompany as string, colKey: focusCol as string } : null}
             reportColumns={reportColumns}
+            obligationCoverage={obligationCoverage}
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
             onCompanySelect={() => {}}

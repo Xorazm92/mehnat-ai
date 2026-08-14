@@ -34,6 +34,7 @@ import {
   addToTally,
   classifyCell,
   emptyTally,
+  mergeTally,
   matchesStatusFilter,
   parseStatusFilter,
   settledRatio,
@@ -43,6 +44,7 @@ import {
   type StatusTally,
 } from '@/lib/reportStatus';
 import { friendlyError } from '@/lib/actionError';
+import { COL_KEY_TO_TEMPLATE_CODES } from '@/lib/obligationBridge';
 import { companyRelations, type CompanyRelation } from '@/lib/access';
 import { useDismissable } from '@/hooks/useDismissable';
 import { Button } from "@/components/ui/Button";
@@ -155,6 +157,9 @@ const buildGroupEdges = (cols: readonly ReportColumn[]): Set<string> => {
  */
 const STATUS_STYLE: Record<CellStatus, { bg: string; text: string; icon: string; tooltip: string }> = {
   none: { bg: 'transparent', text: 'var(--text-muted)', icon: '—', tooltip: "Bo'sh" },
+  // `missing` katakda HECH QACHON chizilmaydi (u faqat hisobda paydo bo'ladi),
+  // lekin `Record<CellStatus, …>` to'liq bo'lishi shart.
+  missing: { bg: tint('var(--danger)', 8), text: 'var(--danger)', icon: '—', tooltip: 'Talab qilinadi, belgilanmagan' },
   approved: { bg: tint('var(--success)', 13), text: 'var(--success)', icon: '✓', tooltip: 'Bajarildi (+)' },
   failed: { bg: tint('var(--danger)', 13), text: 'var(--danger)', icon: '✗', tooltip: 'Bajarilmadi (-)' },
   submitted: { bg: tint('var(--info)', 13), text: 'var(--info)', icon: '·', tooltip: 'Topshirildi (Kutilmoqda)' },
@@ -637,6 +642,11 @@ interface Props {
   focusProof?: { companyId: string; colKey: string } | null;
   /** Admin config qo'llangan effektiv ustunlar; berilmasa BASE_REPORT_COLUMNS. */
   reportColumns?: ReportColumn[];
+  /**
+   * (companyId, shablon kodi) — shu davrda kimdan qaysi hisobot TALAB
+   * QILINISHI. Foizning maxraji shundan chiqadi.
+   */
+  obligationCoverage?: { companyId: string; code: string }[];
 }
 
 interface ReportRow {
@@ -680,7 +690,8 @@ const OperationModule: React.FC<Props> = ({
   currentUserId,
   userName,
   focusProof,
-  reportColumns
+  reportColumns,
+  obligationCoverage
 }) => {
   // Amaldagi ustunlar: admin config qo'llangan ro'yxat yoki baza.
   // useMemo — barqaror referens (faqat prop o'zgarganda yangilanadi).
@@ -1193,6 +1204,41 @@ const OperationModule: React.FC<Props> = ({
   );
 
   /**
+   * MAXRAJ MANBAI: ustun kaliti → shu hisobot talab qilinadigan firmalar.
+   *
+   * `COL_KEY_TO_TEMPLATE_CODES` matritsa ustunini majburiyat shabloniga
+   * bog'laydi; majburiyat esa firma va davrga qarab farqlanadi (masalan
+   * QQS_DECL faqat QQS to'lovchilarda). Shablon topilmasa — bu ustun uchun
+   * dvigatel hech narsa bilmaydi va eski qoida amal qiladi: faqat belgilangan
+   * kataklar sanaladi.
+   */
+  const requiredByColumn = useMemo(() => {
+    const byCode = new Map<string, Set<string>>();
+    for (const { companyId, code } of obligationCoverage ?? []) {
+      let set = byCode.get(code);
+      if (!set) { set = new Set(); byCode.set(code, set); }
+      set.add(companyId);
+    }
+    const out = new Map<string, Set<string>>();
+    for (const [colKey, codes] of Object.entries(COL_KEY_TO_TEMPLATE_CODES)) {
+      const merged = new Set<string>();
+      for (const code of codes) {
+        const set = byCode.get(code);
+        if (set) for (const id of set) merged.add(id);
+      }
+      if (merged.size > 0) out.set(colKey, merged);
+    }
+    return out;
+  }, [obligationCoverage]);
+
+  /** Shu katak (firma × ustun) majburiyat bo'yicha talab qilinadimi. */
+  const isCellRequired = useCallback(
+    (companyId: string | undefined, colKey: string) =>
+      !!companyId && (requiredByColumn.get(colKey)?.has(companyId) ?? false),
+    [requiredByColumn]
+  );
+
+  /**
    * Har bir qatorning katak hisobi — BIR MARTA hisoblanadi.
    *
    * Avval `rowCompletion` saralash komparatorining ichidan chaqirilardi, ya'ni
@@ -1207,19 +1253,20 @@ const OperationModule: React.FC<Props> = ({
       if (focusKey) {
         // Fokus rejimida AYNAN tanlangan katak — bo'linadigan ustunning
         // juftligi qo'shilsa "AQh foizi" AQt ni ham qamrab olardi.
-        addToTally(t, row[focusKey]);
+        addToTally(t, row[focusKey], isCellRequired(row.companyId, focusKey));
       } else {
         for (const col of visibleColumns) {
-          addToTally(t, row[col.key]);
+          addToTally(t, row[col.key], isCellRequired(row.companyId, col.key));
           if ((col as { isSplit?: boolean }).isSplit) {
-            addToTally(t, row[(col as unknown as { payKey: string }).payKey]);
+            const pk = (col as unknown as { payKey: string }).payKey;
+            addToTally(t, row[pk], isCellRequired(row.companyId, pk));
           }
         }
       }
       map.set(row, t);
     }
     return map;
-  }, [rows, visibleColumns, focusKey]);
+  }, [rows, visibleColumns, focusKey, isCellRequired]);
 
   const tallyOf = useCallback(
     (row: ReportRow): StatusTally => tallyByRow.get(row) ?? emptyTally(),
@@ -1310,11 +1357,16 @@ const OperationModule: React.FC<Props> = ({
    */
   const insightRows = useMemo<InsightRowInput[]>(
     () => searchedRows.map(r => {
-      const values: Record<string, unknown> = {};
+      // Har katak uchun qiymat + "talab qilinadimi" birga uzatiladi —
+      // Tahlil foizi matritsa foizi bilan bir xil maxrajdan chiqishi kerak.
+      const values: Record<string, { value: unknown; required: boolean }> = {};
+      const put = (key: string) => {
+        values[key] = { value: r[key], required: isCellRequired(r.companyId, key) };
+      };
       for (const c of availableColumns) {
-        values[c.key] = r[c.key];
+        put(c.key);
         const split = c as { isSplit?: boolean; payKey?: string };
-        if (split.isSplit && split.payKey) values[split.payKey] = r[split.payKey];
+        if (split.isSplit && split.payKey) put(split.payKey);
       }
       return {
         companyId: r.companyId, name: r.name, inn: r.inn,
@@ -1322,7 +1374,7 @@ const OperationModule: React.FC<Props> = ({
         bank: r.bank, department: r.department, values,
       };
     }),
-    [searchedRows, availableColumns]
+    [searchedRows, availableColumns, isCellRequired]
   );
 
   const insightColumns = useMemo(
@@ -1485,19 +1537,7 @@ const OperationModule: React.FC<Props> = ({
    */
   const stats = useMemo(() => {
     const total = emptyTally();
-    for (const row of filteredRows) {
-      const t = tallyOf(row);
-      total.approved += t.approved;
-      total.submitted += t.submitted;
-      total.zero += t.zero;
-      total.blocked += t.blocked;
-      total.failed += t.failed;
-      total.error += t.error;
-      total.note += t.note;
-      total.required += t.required;
-      total.settled += t.settled;
-      total.outstanding += t.outstanding;
-    }
+    for (const row of filteredRows) mergeTally(total, tallyOf(row));
     const ratio = settledRatio(total);
     return {
       ...total,

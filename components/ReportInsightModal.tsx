@@ -40,8 +40,8 @@ export interface InsightRowInput {
   chief: string;
   bank: string;
   department: string;
-  /** Ustun kaliti → xom katak qiymati. */
-  values: Record<string, unknown>;
+  /** Ustun kaliti → katak qiymati + majburiyat bo'yicha talab qilinishi. */
+  values: Record<string, { value: unknown; required: boolean }>;
 }
 
 export interface InsightColumn {
@@ -75,6 +75,7 @@ const STATUS_TONE: Record<CellStatus, string> = {
   error: "var(--danger)",
   note: "var(--info)",
   none: "var(--text-3)",
+  missing: "var(--danger)",
 };
 
 // ── Ustun tanlagich (qidiruvli) ──────────────────────────────────
@@ -330,12 +331,22 @@ export default function ReportInsightModal({ open, onClose, period, columns, row
         chief: r.chief,
         bank: r.bank,
         department: r.department,
-        cells: activeColumns.map((k) => r.values[k]),
+        cells: activeColumns.map((k) => r.values[k] ?? { value: undefined, required: false }),
       })),
     [rows, activeColumns]
   );
 
   const insight = useMemo(() => buildInsight(sourceRows, dimension), [sourceRows, dimension]);
+
+  /**
+   * Maxraj majburiyatga tayanadimi. Tayanmasa — foiz "kimdir belgilagan
+   * kataklardan" chiqadi va buni foydalanuvchiga AYTISH kerak, aks holda
+   * "253 firmadan 2 tasi" degan holat "50%" bo'lib ko'rinadi.
+   */
+  const hasObligationBasis = useMemo(
+    () => sourceRows.some((r) => r.cells.some((c) => c.required)),
+    [sourceRows]
+  );
 
   const visibleGroups = useMemo(
     () => (onlyPending ? insight.groups.filter((g) => g.tally.outstanding > 0) : insight.groups),
@@ -443,11 +454,29 @@ export default function ReportInsightModal({ open, onClose, period, columns, row
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${overall.percent}%`, background: tone }} />
             </div>
 
+            {/* MAXRAJ ASOSI — raqamning ma'nosi shunga bog'liq, shuning uchun
+                u hech qachon taxmin qilinmasligi kerak. */}
+            <p className="text-micro mt-2" style={{ color: overall.tally.missing > 0 || hasObligationBasis ? "var(--text-3)" : "var(--warning)" }}>
+              {hasObligationBasis ? (
+                <>
+                  Maxraj: <strong>{formatNum(overall.tally.required)}</strong> ta majburiyat
+                  ({formatNum(overall.companies)} ta firmadan) — muddat jadvali bo&apos;yicha
+                  shu hisobot talab qilinadiganlar.
+                </>
+              ) : (
+                <>
+                  Bu hisobot uchun muddat shabloni sozlanmagan, shuning uchun maxraj —
+                  faqat <strong>{formatNum(overall.tally.required)}</strong> ta BELGILANGAN katak
+                  ({formatNum(overall.companies)} ta firmadan). Kim topshirishi shartligini tizim bilmaydi.
+                </>
+              )}
+            </p>
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
               {[
                 { label: "Yopilgan", value: overall.tally.settled, color: "var(--success)" },
+                { label: "Belgilanmagan", value: overall.tally.missing, color: "var(--danger)" },
                 { label: "Kartoteka", value: overall.tally.blocked, color: "var(--warning)" },
-                { label: "Izohli", value: overall.tally.note, color: "var(--info)" },
                 { label: "Talab qilingan", value: overall.tally.required, color: "var(--text-2)" },
               ].map((s) => (
                 <div key={s.label} className="rounded-lg px-2.5 py-1.5" style={{ background: "var(--surface)" }}>

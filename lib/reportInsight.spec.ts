@@ -6,7 +6,10 @@ import {
   type InsightSourceRow,
 } from "./reportInsight";
 
-const row = (over: Partial<InsightSourceRow> & { cells: unknown[] }): InsightSourceRow => ({
+/** Test yozuvini qisqartirish: xom qiymat → {value, required:false}. */
+const cell = (v: unknown, required = false) => ({ value: v, required });
+
+const row = (over: Omit<Partial<InsightSourceRow>, "cells"> & { cells: unknown[] }): InsightSourceRow => ({
   companyId: over.name ?? "c",
   name: "FIRMA",
   inn: "123",
@@ -16,6 +19,7 @@ const row = (over: Partial<InsightSourceRow> & { cells: unknown[] }): InsightSou
   bank: "Ruslan",
   department: "Yorqinoy bo'limi",
   ...over,
+  cells: over.cells.map((c) => (c && typeof c === "object" && "value" in (c as object) ? c : cell(c))) as InsightSourceRow["cells"],
 });
 
 describe("buildInsight — bitta hisobot kesimi", () => {
@@ -160,5 +164,45 @@ describe("INSIGHT_DIMENSIONS", () => {
     const values = new Set(INSIGHT_DIMENSIONS.map((d) => d.value));
     expect(values.size).toBe(INSIGHT_DIMENSIONS.length);
     for (const d of INSIGHT_DIMENSIONS) expect(d.empty).toBeTruthy();
+  });
+});
+
+describe("majburiyat maxraji", () => {
+  it("talab qilingan, lekin BO'SH katak maxrajga kiradi", () => {
+    // Aynan shu nuqson edi: hisobotni 253 firmadan 2 tasi belgilagan bo'lsa,
+    // foiz o'sha 2 tadan hisoblanib "50%" ko'rsatardi.
+    const { overall } = buildInsight(
+      [
+        row({ name: "A", cells: [cell("+", true)] }),
+        row({ name: "B", cells: [cell("", true)] }),
+        row({ name: "C", cells: [cell("", true)] }),
+        row({ name: "D", cells: [cell("", true)] }),
+      ],
+      "company"
+    );
+    expect(overall.tally.required).toBe(4);
+    expect(overall.percent).toBe(25);
+    expect(overall.tally.missing).toBe(3);
+  });
+
+  it("majburiyat YO'Q bo'lsa bo'sh katak maxrajga kirmaydi (eski qoida)", () => {
+    const { overall } = buildInsight(
+      [
+        row({ name: "A", cells: [cell("+", false)] }),
+        row({ name: "B", cells: [cell("", false)] }),
+      ],
+      "company"
+    );
+    expect(overall.tally.required).toBe(1);
+    expect(overall.percent).toBe(100);
+  });
+
+  it("bo'sh va talab qilingan firma 'topshirmaganlar' ro'yxatiga tushadi", () => {
+    const { overall } = buildInsight(
+      [row({ name: "UNUTILGAN", accountant: "Humora", cells: [cell("", true)] })],
+      "company"
+    );
+    expect(overall.pending.map((p) => p.name)).toEqual(["UNUTILGAN"]);
+    expect(overall.pending[0].worst).toBe("missing");
   });
 });

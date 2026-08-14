@@ -173,6 +173,44 @@ export const getCachedOperations = cache(
 );
 
 // ─────────────────────────────────────────────
+// MAJBURIYAT QAMROVI — "kim nimani topshirishi SHART"
+// ─────────────────────────────────────────────
+// Matritsa foizi uchun MAXRAJ shu yerdan keladi.
+//
+// Bungacha maxraj "kimdir belgilagan kataklar" edi. Ya'ni hisobotni 253
+// firmadan 2 tasi belgilagan bo'lsa, foiz o'sha 2 tadan hisoblanardi ("50%"),
+// holbuki savol — talab qilingan firmalardan qanchasi topshirgani.
+//
+// `Company.requiredReports` bu ishga yaramaydi: prodda u 263 firmaning
+// HAMMASIDA bo'sh (`activeServices` ham). Yagona ishonchli manba — majburiyat
+// dvigateli: u firma va davrga qarab farqlaydi (masalan QQS_DECL faqat QQS
+// to'lovchilarda).
+//
+// Faqat (companyId, templateCode) juftliklari qaytariladi — 2026-08 da ~3100
+// qator, ya'ni arzon.
+const _getCachedObligationCoverage = unstable_cache(
+  async (userId: string, role: string, periodKey: string) => {
+    const rows = await prisma.obligation.findMany({
+      where: {
+        periodKey,
+        status: { not: "cancelled" },
+        company: scopeFor(userId, role),
+      },
+      select: { companyId: true, template: { select: { code: true } } },
+    });
+    return rows.map((r) => ({ companyId: r.companyId, code: r.template.code }));
+  },
+  ["obligation-coverage"],
+  { tags: ["obligations", "companies"], revalidate: 300 }
+);
+
+/** Davr bo'yicha "qaysi firmadan qaysi hisobot talab qilinadi" ro'yxati. */
+export const getCachedObligationCoverage = cache(
+  async (userId: string, role: string, periodKey: string) =>
+    _getCachedObligationCoverage(userId, role, periodKey)
+);
+
+// ─────────────────────────────────────────────
 // COMPANY STATS
 // ─────────────────────────────────────────────
 

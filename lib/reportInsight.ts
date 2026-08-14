@@ -11,6 +11,7 @@
 import {
   addToTally,
   emptyTally,
+  mergeTally,
   settledRatio,
   type CellStatus,
   type StatusTally,
@@ -51,8 +52,14 @@ export interface InsightSourceRow {
   chief: string;
   bank: string;
   department: string;
-  /** Tanlangan ustun(lar)dagi XOM qiymatlar. */
-  cells: readonly unknown[];
+  /**
+   * Tanlangan ustun(lar)dagi kataklar.
+   *
+   * `required` — majburiyat dvigateli shu firmadan shu hisobotni talab
+   * qiladimi. Talab qilinsa-yu katak bo'sh bo'lsa, u maxrajga kiradi
+   * (`missing`). Busiz foiz "kimdir belgilagan kataklardan" hisoblanardi.
+   */
+  cells: readonly { value: unknown; required: boolean }[];
 }
 
 /** Bitta firmaning tanlangan hisobot(lar) bo'yicha holati. */
@@ -95,24 +102,11 @@ export interface InsightResult {
  * `blocked` (kartoteka) keyingi: ish bajarilgan bo'lishi mumkin, lekin
  * hisob bloklangan. `note` oxirgi: u ko'pincha izoh, muammo emas.
  */
-const SEVERITY: CellStatus[] = ["failed", "error", "blocked", "note", "none", "submitted", "zero", "approved"];
+const SEVERITY: CellStatus[] = ["failed", "missing", "error", "blocked", "note", "none", "submitted", "zero", "approved"];
 const severityOf = (s: CellStatus) => {
   const i = SEVERITY.indexOf(s);
   return i === -1 ? SEVERITY.length : i;
 };
-
-function mergeInto(target: StatusTally, src: StatusTally): void {
-  target.approved += src.approved;
-  target.submitted += src.submitted;
-  target.zero += src.zero;
-  target.blocked += src.blocked;
-  target.failed += src.failed;
-  target.error += src.error;
-  target.note += src.note;
-  target.required += src.required;
-  target.settled += src.settled;
-  target.outstanding += src.outstanding;
-}
 
 const pct = (t: StatusTally) => Math.round(settledRatio(t) * 100);
 
@@ -146,7 +140,7 @@ export function buildInsight(
     const tally = emptyTally();
     let worst: CellStatus = "approved";
     for (const cell of row.cells) {
-      const s = addToTally(tally, cell);
+      const s = addToTally(tally, cell.value, cell.required);
       if (severityOf(s) < severityOf(worst)) worst = s;
     }
 
@@ -157,8 +151,8 @@ export function buildInsight(
       byKey.set(key, bucket);
     }
 
-    mergeInto(bucket.tally, tally);
-    mergeInto(overallTally, tally);
+    mergeTally(bucket.tally, tally);
+    mergeTally(overallTally, tally);
     bucket.companies++;
     overallCompanies++;
 
@@ -218,6 +212,7 @@ export function buildInsight(
 /** Holat → qisqa yorliq (ro'yxatdagi nishon uchun). */
 export const STATUS_LABEL: Record<CellStatus, string> = {
   none: "Belgilanmagan",
+  missing: "Topshirilmagan (belgilanmagan)",
   approved: "Tasdiqlangan",
   submitted: "Topshirildi",
   zero: "Nol hisobot",
@@ -229,6 +224,7 @@ export const STATUS_LABEL: Record<CellStatus, string> = {
 
 export const STATUS_ICON: Record<CellStatus, string> = {
   none: "—",
+  missing: "○",
   approved: "✓",
   submitted: "·",
   zero: "Ø",
