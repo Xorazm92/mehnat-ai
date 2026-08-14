@@ -26,8 +26,11 @@ export const getReportStatusMultiplier = (status?: string): number => {
     if (!status) return 0;
     const s = status.toLowerCase();
 
-    // Reward shorthands or full DB strings
-    if (s === '+' || s === 'accepted' || s === 'topshirildi' || s === 'submitted') return 1;
+    // Reward shorthands or full DB strings.
+    // 'nol' (nol hisobot) ham shu yerda: u topshirilgan ish — buxgalter nil
+    // deklaratsiyani yuborgan. Avval u pastdagi `return 0` ga tushib, nol
+    // hisobotli firmalar KPI'da umuman hisobga olinmasdi.
+    if (s === '+' || s === 'accepted' || s === 'topshirildi' || s === 'submitted' || s === 'nol') return 1;
 
     // Penalties
     if (s === '-' || s === 'not_submitted' || s === 'rejected' || s === 'rad etildi' || s === 'error' || s === 'oshibka' || s === 'blocked' || s === 'kartoteka') return -1;

@@ -23,12 +23,16 @@ const OBLIGATION_NOT_DONE: ObligationStatus[] = [
   "rejected",
 ];
 
-// Hisobot katakchasi "bajarildi" deb sanaladigan qiymatlar (OperationModule bilan bir xil).
+// Hisobot katakchasi "bajarildi" deb sanaladigan qiymatlar (nazoratchi tasdig'i).
 const REPORT_DONE = new Set(["+", "accepted"]);
 // "Topshirildi — tasdiq kutmoqda" qiymatlari.
-const REPORT_PENDING = new Set(["topshirildi", "submitted"]);
+// 'nol' (nol hisobot) shu yerda: buxgalter nil deklaratsiyani topshirgan, lekin
+// nazoratchi hali tasdiqlamagan — ya'ni 'topshirildi' bilan bir xil bosqich.
+// Avval u uchala to'plamdan ham tashqarida qolib, `missing` deb sanalardi.
+const REPORT_PENDING = new Set(["topshirildi", "submitted", "nol"]);
 // "Bo'sh / kerak emas" — maxrajdan tashqarida.
-const REPORT_EMPTY = new Set(["", "0", "not_required"]);
+// 'topshirmaydi' ham shu yerda: matritsa uni "shart emas" deb ko'rsatadi.
+const REPORT_EMPTY = new Set(["", "0", "not_required", "topshirmaydi"]);
 // Barcha hisobot maydonlari (matritsa universumi).
 const REPORT_FIELD_KEYS = Object.keys(FIELD_TO_DB_COLUMN);
 

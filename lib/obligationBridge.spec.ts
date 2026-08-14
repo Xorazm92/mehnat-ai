@@ -79,6 +79,21 @@ describe("katak qiymati → majburiyat holati", () => {
     expect(cellValueToStatus("topshirildi")).toBe("sent");
   });
 
+  it("nol hisobot ham yuborilgan — 'topshirildi' bilan bir xil", () => {
+    // Regressiya: 'nol' hech qayerda ushlanmasdi va oxirgi "erkin matn"
+    // tarmog'iga tushib `in_progress` qaytarardi. Natijada nol deklaratsiya
+    // topshirgan buxgalterning majburiyati ochiq qolib, u muddati o'tgan ish
+    // uchun ogohlantirish olishda davom etardi.
+    expect(cellValueToStatus("nol")).toBe("sent");
+    expect(cellValueToStatus("nol")).not.toBe("in_progress");
+  });
+
+  it("nol hisobot majburiyatni O'ZI YOPMAYDI (self-approval bloki)", () => {
+    // `allowedCellActions` da 'nol' buxgalterga ochiq. Uni `accepted` ga
+    // bog'lasak, buxgalter nazoratchisiz o'z ishini yopib qo'yardi.
+    expect(cellValueToStatus("nol")).not.toBe("accepted");
+  });
+
   it("minus → rad etilgan", () => {
     expect(cellValueToStatus("-")).toBe("rejected");
   });

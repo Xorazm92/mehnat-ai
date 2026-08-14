@@ -18,6 +18,7 @@ import {
   CELL_FAILED,
   CELL_KARTOTEKA,
   CELL_SUBMITTED,
+  CELL_ZERO_REPORT,
 } from "@/lib/reportPermissions";
 import type { ObligationStatus } from "@prisma/client";
 
@@ -89,12 +90,24 @@ export const COL_KEY_TO_TEMPLATE_CODE: Record<string, string> = Object.fromEntri
  * `kartoteka` ATAYLAB `null`: u to'lov topshirig'i bankda kartotekada turganini
  * bildiradi, hisobot topshirilgan-topshirilmaganini emas. Uni holatga aylantirsak
  * to'lov muammosi hisobot kechikishi bo'lib KPI'ga tushardi.
+ *
+ * `nol` (nol hisobot) → `sent`, ya'ni `topshirildi` BILAN BIR XIL.
+ *
+ * Avval u hech qayerda ushlanmasdi va oxirgi tarmoqqa — "erkin matn" ga —
+ * tushib `in_progress` qaytarardi. Natijada nol deklaratsiya topshirgan
+ * buxgalterning majburiyati OCHIQ qolaverardi va u muddati o'tgan ish uchun
+ * ogohlantirish olishda davom etardi.
+ *
+ * `accepted` EMAS, ataylab: `allowedCellActions` da `nol` buxgalterga ham
+ * ochiq (`CELL_ZERO_REPORT`), `isReviewerOwnedValue` esa uni himoyalamaydi.
+ * Uni `accepted` ga bog'lasak, buxgalter o'z ishini nazoratchisiz yopib,
+ * majburiyatni xohlagancha ochib-yopa olardi.
  */
 export function cellValueToStatus(value: unknown): ObligationStatus | null {
   const v = String(value ?? "").trim().toLowerCase();
   if (v === "" || v === CELL_EMPTY) return "planned"; // tozalash
   if (v === CELL_APPROVED || v === "accepted") return "accepted";
-  if (v === CELL_SUBMITTED || v === "submitted") return "sent";
+  if (v === CELL_SUBMITTED || v === "submitted" || v === CELL_ZERO_REPORT) return "sent";
   if (v === CELL_FAILED) return "rejected";
   if (v === CELL_KARTOTEKA) return null;
   // Erkin matn (sana, izoh, summa) — ish boshlanganining belgisi.
