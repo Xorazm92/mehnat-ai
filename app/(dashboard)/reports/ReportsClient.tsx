@@ -95,11 +95,14 @@ export default function ReportsClient({
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {/* IXCHAM: matritsa — zich ish yuzasi va sarlavha ~64px joyni yeb qo'yardi.
+          Uning ustiga matn uch marta takrorlanardi: yon panelda "Hisobotlar",
+          bu yerda "Hisobotlar", modul ichida "Amallar Matritsasi". Endi faqat
+          yorliqlar qoladi; `h1` ekran o'quvchi uchun saqlanib turadi. */}
       <PageHeader
-        icon={<FileText size={20} />}
         title="Hisobotlar"
-        description="Amallar matritsasi va moliyaviy hujjatlar"
         className="flex-shrink-0"
+        compact
       >
         <Tabs items={tabs} value={tab} onChange={setTab} idBase="reports" ariaLabel="Hisobot bo'limlari" />
       </PageHeader>

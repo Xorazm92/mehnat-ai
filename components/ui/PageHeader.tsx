@@ -26,6 +26,20 @@ export interface PageHeaderProps {
   /** Sarlavha ostidagi qo'shimcha qator (filtr, tab va h.k.) */
   children?: React.ReactNode;
   className?: string;
+  /**
+   * IXCHAM REJIM — zich ish yuzalari uchun (masalan amallar matritsasi).
+   *
+   * Ikonka, ko'rinadigan sarlavha va tavsif olib tashlanadi, `children`
+   * (yorliqlar) qoladi. `h1` YO'QOLMAYDI, faqat ko'zdan yashiriladi: sahifa
+   * tuzilmasi ekran o'quvchi uchun buzilmasligi kerak — aynan shu nuqson
+   * auditda topilib tuzatilgan edi.
+   *
+   * Nima uchun kerak: matritsa ekranida sarlavha ~64px vertikal joyni oladi,
+   * holbuki modulning O'ZI ham "Amallar Matritsasi" deb yozadi va yon panelda
+   * "Hisobotlar" allaqachon yoritilgan — ya'ni matn uch marta takrorlanadi,
+   * jadvalga esa joy qolmaydi.
+   */
+  compact?: boolean;
 }
 
 export function PageHeader({
@@ -35,7 +49,22 @@ export function PageHeader({
   actions,
   children,
   className = "",
+  compact = false,
 }: PageHeaderProps) {
+  if (compact) {
+    return (
+      <header className={`flex flex-col gap-2 mb-2 ${className}`}>
+        <h1 className="sr-only">{title}</h1>
+        {(actions || children) && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {children}
+            {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
+          </div>
+        )}
+      </header>
+    );
+  }
+
   // Ostki chiziq: sarlavhani kontentdan ajratadi. Lekin `children` (yorliqlar
   // qatori) berilganda uning O'ZI chiziq chizadi — ikkalasi qolsa ikkita
   // parallel hairline hosil bo'lib, yorliqlar "qayerga ulanishi" noaniq
