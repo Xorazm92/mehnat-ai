@@ -74,12 +74,25 @@ export interface MatrixFilters {
   /** Ustun kesimi: qaysi ustunda + qanday holat. */
   colKey: string;
   colStatus: ColStatusFilter;
+  /**
+   * Ustun tanlanganda jadvalda FAQAT o'sha ustun qolsinmi ("1"/"0").
+   *
+   * Sukut bo'yicha YOQILGAN. Sabab: "INPS ni kim topshirmagan?" deb ustun
+   * tanlagan odam 47 ta ustunni emas, o'sha bitta ustunni ko'rmoqchi bo'ladi —
+   * qolganlari chiziqchalar devori bo'lib turadi. Yoqilganda butun ekran shu
+   * hisobot rejimiga o'tadi: foiz ham, sanoqlar ham, "bajarilish" filtri ham
+   * FAQAT shu ustunni hisoblaydi.
+   *
+   * O'chirilsa — ustun kesimi qatorlarni filtrlaydi, lekin qolgan ustunlar
+   * ham ko'rinib turadi (kontekst kerak bo'lganda).
+   */
+  colOnly: string;
 }
 
 /** Barcha filtr maydonlari — barqaror tartibda (imzo qurish uchun). */
 export const FILTER_FIELDS = [
   "accountant", "supervisor", "chief", "bank",
-  "regime", "department", "colKey", "colStatus",
+  "regime", "department", "colKey", "colStatus", "colOnly",
 ] as const satisfies readonly (keyof MatrixFilters)[];
 
 export const EMPTY_FILTERS: MatrixFilters = {
@@ -91,6 +104,7 @@ export const EMPTY_FILTERS: MatrixFilters = {
   department: "all",
   colKey: "all",
   colStatus: "any",
+  colOnly: "1",
 };
 
 /**
@@ -106,6 +120,7 @@ export const FILTER_URL_KEYS: Record<keyof MatrixFilters, string> = {
   department: "dep",
   colKey: "col",
   colStatus: "cst",
+  colOnly: "conly",
 };
 
 const COL_STATUS_VALUES = new Set<string>(COL_STATUS_OPTIONS.map((o) => o.value));
@@ -125,6 +140,7 @@ export function parseFilters(get: (key: string) => string | null | undefined): M
     regime: read(FILTER_URL_KEYS.regime, "all"),
     department: read(FILTER_URL_KEYS.department, "all"),
     colKey: read(FILTER_URL_KEYS.colKey, "all"),
+    colOnly: read(FILTER_URL_KEYS.colOnly, "1") === "0" ? "0" : "1",
     // Noma'lum qiymat butun matritsani bo'sh qoldirmasligi kerak.
     colStatus: (COL_STATUS_VALUES.has(rawStatus) ? rawStatus : "any") as ColStatusFilter,
   };
@@ -148,8 +164,9 @@ export function filtersSignature(get: (key: string) => string | null | undefined
 export function activeFilterCount(f: MatrixFilters): number {
   let n = 0;
   for (const key of Object.keys(EMPTY_FILTERS) as (keyof MatrixFilters)[]) {
-    // Ustun + holat BITTA filtr deb sanaladi: ular birga ma'noga ega.
-    if (key === "colStatus") continue;
+    // Ustun + holat + "faqat shu ustun" BITTA filtr deb sanaladi: ular birga
+    // bitta savolni ifodalaydi.
+    if (key === "colStatus" || key === "colOnly") continue;
     if (f[key] !== EMPTY_FILTERS[key]) n++;
   }
   return n;

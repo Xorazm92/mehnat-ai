@@ -352,6 +352,30 @@ export default function MatrixFilterPanel({
               </Field>
 
               {filters.colKey !== "all" && (
+                <>
+                  {/* Sukut bo'yicha YOQIQ: ustun tanlagan odam o'sha ustunni
+                      ko'rmoqchi, 47 ta chiziqchani emas. O'chirilsa qolgan
+                      ustunlar ham ko'rinadi (kontekst kerak bo'lganda). */}
+                  <label
+                    className="flex items-start gap-2 px-2.5 py-2 rounded-lg cursor-pointer"
+                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.colOnly === "1"}
+                      onChange={(e) => onChange("colOnly", e.target.checked ? "1" : "0")}
+                      className="mt-0.5"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text)" }}>
+                        Faqat shu ustunni ko&apos;rsat
+                      </span>
+                      <span className="block text-micro mt-0.5" style={{ color: "var(--text-3)" }}>
+                        Foiz va sanoqlar ham shu hisobot bo&apos;yicha hisoblanadi
+                      </span>
+                    </span>
+                  </label>
+
                 <Field
                   label="Shu ustundagi holat"
                   value={filters.colStatus}
@@ -364,6 +388,7 @@ export default function MatrixFilterPanel({
                     </option>
                   ))}
                 </Field>
+                </>
               )}
             </div>
           </div>

@@ -193,3 +193,29 @@ describe("regimeLabel", () => {
     expect(regimeLabel("xyz")).toBe("xyz");
   });
 });
+
+describe("colOnly — bitta hisobot rejimi", () => {
+  const from = (map: Record<string, string>) => parseFilters((k) => map[k] ?? null);
+
+  it("sukut bo'yicha YOQIQ", () => {
+    // Ustun tanlagan odam o'sha ustunni ko'rmoqchi bo'ladi, 47 ta chiziqchani emas.
+    expect(EMPTY_FILTERS.colOnly).toBe("1");
+    expect(from({}).colOnly).toBe("1");
+  });
+
+  it("faqat aniq '0' o'chiradi — noto'g'ri qiymat yoqiq qoldiradi", () => {
+    expect(from({ [FILTER_URL_KEYS.colOnly]: "0" }).colOnly).toBe("0");
+    expect(from({ [FILTER_URL_KEYS.colOnly]: "xyz" }).colOnly).toBe("1");
+    expect(from({ [FILTER_URL_KEYS.colOnly]: "" }).colOnly).toBe("1");
+  });
+
+  it("filtr sanog'iga QO'SHILMAYDI — u ustun kesimining bir qismi", () => {
+    const f = { ...EMPTY_FILTERS, colKey: "inps", colStatus: "outstanding" as const, colOnly: "0" };
+    expect(activeFilterCount(f)).toBe(1);
+  });
+
+  it("alohida chip chiqarmaydi", () => {
+    const chips = activeChips({ ...EMPTY_FILTERS, colOnly: "0" }, (k) => k);
+    expect(chips).toEqual([]);
+  });
+});

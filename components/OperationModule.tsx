@@ -1159,12 +1159,38 @@ const OperationModule: React.FC<Props> = ({
     [filters, filterOptions.columns]
   );
 
-  const visibleColumns = useMemo(() => {
+  /**
+   * Mavjud ustunlar — guruh + qo'lda yashirilganlar. Ustun KESIMIDAN mustaqil:
+   * "Tahlil" oynasi va ustun tanlagichi shu to'liq ro'yxatga tayanadi.
+   */
+  const availableColumns = useMemo(() => {
     // Guruh tanlovi endi "Ustunlar" paneli ichida (alohida tanlagich olib
     // tashlandi — u shu panel bilan bir vazifani bajarardi).
     const base = filterGroup === 'all' ? REPORT_COLUMNS : REPORT_COLUMNS.filter(c => c.group === filterGroup);
     return base.filter(c => !hiddenCols.has(c.key));
   }, [filterGroup, REPORT_COLUMNS, hiddenCols]);
+
+  /**
+   * BITTA HISOBOT REJIMI — ustun tanlangan va "faqat shu ustun" yoqilgan.
+   *
+   * Yoqilganda butun ekran o'sha hisobotga qaraydi: jadvalda bitta ustun,
+   * foiz o'sha ustunniki, "bajarilish" sanoqlari ham o'sha ustun bo'yicha.
+   * Avval ustun kesimi FAQAT qatorlarni filtrlardi — foydalanuvchi INPS ni
+   * tanlab, ekranda 47 ta ustunni va umumiy foizni ko'rar edi.
+   */
+  const focusKey = filters.colKey !== 'all' && filters.colOnly === '1' ? filters.colKey : null;
+
+  const focusColumn = useMemo(
+    () => (focusKey
+      ? REPORT_COLUMNS.find(c => c.key === focusKey || (c as { payKey?: string }).payKey === focusKey) ?? null
+      : null),
+    [focusKey, REPORT_COLUMNS]
+  );
+
+  const visibleColumns = useMemo(
+    () => (focusColumn ? [focusColumn] : availableColumns),
+    [focusColumn, availableColumns]
+  );
 
   /**
    * Har bir qatorning katak hisobi — BIR MARTA hisoblanadi.
@@ -1178,16 +1204,22 @@ const OperationModule: React.FC<Props> = ({
     const map = new Map<ReportRow, StatusTally>();
     for (const row of rows) {
       const t = emptyTally();
-      for (const col of visibleColumns) {
-        addToTally(t, row[col.key]);
-        if ((col as { isSplit?: boolean }).isSplit) {
-          addToTally(t, row[(col as unknown as { payKey: string }).payKey]);
+      if (focusKey) {
+        // Fokus rejimida AYNAN tanlangan katak — bo'linadigan ustunning
+        // juftligi qo'shilsa "AQh foizi" AQt ni ham qamrab olardi.
+        addToTally(t, row[focusKey]);
+      } else {
+        for (const col of visibleColumns) {
+          addToTally(t, row[col.key]);
+          if ((col as { isSplit?: boolean }).isSplit) {
+            addToTally(t, row[(col as unknown as { payKey: string }).payKey]);
+          }
         }
       }
       map.set(row, t);
     }
     return map;
-  }, [rows, visibleColumns]);
+  }, [rows, visibleColumns, focusKey]);
 
   const tallyOf = useCallback(
     (row: ReportRow): StatusTally => tallyByRow.get(row) ?? emptyTally(),
@@ -1279,7 +1311,7 @@ const OperationModule: React.FC<Props> = ({
   const insightRows = useMemo<InsightRowInput[]>(
     () => searchedRows.map(r => {
       const values: Record<string, unknown> = {};
-      for (const c of visibleColumns) {
+      for (const c of availableColumns) {
         values[c.key] = r[c.key];
         const split = c as { isSplit?: boolean; payKey?: string };
         if (split.isSplit && split.payKey) values[split.payKey] = r[split.payKey];
@@ -1290,7 +1322,7 @@ const OperationModule: React.FC<Props> = ({
         bank: r.bank, department: r.department, values,
       };
     }),
-    [searchedRows, visibleColumns]
+    [searchedRows, availableColumns]
   );
 
   const insightColumns = useMemo(
@@ -1561,8 +1593,15 @@ const OperationModule: React.FC<Props> = ({
               >
                 <div className="flex flex-col items-start">
                   <div className="flex items-center gap-2">
-                    <span className="text-micro font-semibold uppercase tracking-wider text-[var(--text-3)]">
-                      Topshirildi:
+                    {/* Fokus rejimida foiz UMUMIY emas, tanlangan hisobotniki —
+                        yorliq ham shuni aytishi kerak, aks holda raqam nimaga
+                        tegishli ekani noaniq qolardi. */}
+                    <span
+                      className="text-micro font-semibold uppercase tracking-wider max-w-[160px] truncate"
+                      style={{ color: focusColumn ? 'var(--primary)' : 'var(--text-3)' }}
+                      title={focusColumn ? `"${focusColumn.label}" bo'yicha topshirilish` : undefined}
+                    >
+                      {focusColumn ? focusColumn.label : 'Topshirildi'}:
                     </span>
                     <span className="text-xs font-semibold tabular-nums text-[var(--primary)]">
                       {stats.exactPercent}%
