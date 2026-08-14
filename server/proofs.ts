@@ -222,6 +222,9 @@ export async function getReportProofsMeta(period: string) {
       colKey: true,
       status: true,
       note: true,
+      // Kim topshirgani — buxgalter O'Z kutilayotgan topshirig'ini qaytarib
+      // olishi mumkin (lib/reportPermissions.checkCellWrite → evidence.isMine).
+      submittedById: true,
       submittedByName: true,
       submittedAt: true,
       reviewedByName: true,

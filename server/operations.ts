@@ -138,12 +138,24 @@ export async function upsertMonthlyReport(
     });
     const currentRow = current as Record<string, unknown> | null;
 
-    for (const [dbCol, nextValue] of Object.entries(fields)) {
+    // Dalil holati — "o'z topshirig'ini qaytarib olish" qoidasi uchun.
+    // Matritsa kalitlari bo'yicha (snake_case), chunki `ReportProof.colKey`
+    // ham shu shaklda saqlanadi; `fields` esa DB ustun nomlarida.
+    const proofs = await prisma.reportProof.findMany({
+      where: { companyId, period, colKey: { in: Object.keys(rawFields) } },
+      select: { colKey: true, status: true, submittedById: true },
+    });
+    const proofByCol = new Map(proofs.map((p) => [p.colKey, p]));
+
+    for (const [rawKey, nextValue] of Object.entries(rawFields)) {
+      const dbCol = FIELD_TO_DB_COLUMN[rawKey as OperationFieldKey] ?? rawKey;
+      const p = proofByCol.get(rawKey);
       const reason = checkCellWrite({
         role,
         relations,
         nextValue,
         currentValue: currentRow ? currentRow[dbCol] : undefined,
+        evidence: p ? { status: p.status, isMine: p.submittedById === userId } : null,
       });
       if (reason) return rejected(reason);
     }

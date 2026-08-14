@@ -138,6 +138,12 @@ export interface CellWriteCheck {
   nextValue: unknown;
   /** Katakning hozirgi qiymati (bilingan bo'lsa) — ortga qaytarishni bloklash uchun. */
   currentValue?: unknown;
+  /**
+   * Shu katakdagi dalil (skrinshot) holati — "o'z topshirig'ini qaytarib
+   * olish" uchun. `isMine` — dalilni AYNAN shu foydalanuvchi topshirganmi.
+   * Dalil bo'lmasa `null`/berilmaydi.
+   */
+  evidence?: { status: string; isMine: boolean } | null;
 }
 
 /**
@@ -149,6 +155,7 @@ export function checkCellWrite({
   relations,
   nextValue,
   currentValue,
+  evidence,
 }: CellWriteCheck): string | null {
   if (!canEditMatrix(role, relations)) return "Bu amal uchun ruxsat yo'q";
   if (isCompanyReviewer(role, relations)) return null;
@@ -166,7 +173,24 @@ export function checkCellWrite({
   // Nazoratchi tasdiqlagan yoki tekshiruvda turgan katakni buxgalter
   // o'zgartira/tozalay olmaydi — aks holda tasdiqni o'chirib yuborardi.
   if (currentValue !== undefined && isReviewerOwnedValue(currentValue)) {
-    return "Tasdiqlangan yoki tekshiruvdagi katakni o'zgartirib bo'lmaydi.";
+    /**
+     * O'Z TOPSHIRIG'INI QAYTARIB OLISH.
+     *
+     * Nazoratchi hali KO'RMAGAN (`pending`) va topshirgan odam O'ZI bo'lsa —
+     * qaytarib olishga ruxsat. Busiz noto'g'ri ustunga yoki noto'g'ri firmaga
+     * yuborilgan skrinshotni buxgalter hech qanday yo'l bilan tuzata olmasdi:
+     * "Tozalash" ham, boshqa qiymat ham to'silardi, qayta yuklash esa faqat
+     * rasmni almashtirardi — katak baribir "topshirildi" bo'lib qolaverardi.
+     * Yagona chora nazoratchidan rad etishni so'rash edi.
+     *
+     * Nazoratchi qaror qilgandan keyin (`approved`/`rejected`) bu yo'l
+     * yopiladi — qaror faqat nazoratchining o'zida.
+     */
+    if (evidence && evidence.status === "pending" && evidence.isMine) return null;
+
+    return evidence && evidence.status === "approved"
+      ? "Nazoratchi tasdiqlagan. O'zgartirish uchun undan qayta ko'rishni so'rang."
+      : "Tekshiruvdagi katakni o'zgartirib bo'lmaydi.";
   }
 
   return null;

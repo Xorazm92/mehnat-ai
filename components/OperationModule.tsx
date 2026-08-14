@@ -185,6 +185,9 @@ const statusesForRole = (role: string, relations: CompanyRelation[], hasPendingP
   });
 };
 
+/** Katakdagi dalil haqida menyu uchun kerak bo'ladigan minimal ma'lumot. */
+interface ProofMeta { status: string; mine: boolean }
+
 interface StatusCellProps {
   value: string;
   onUpdate: (newValue: string) => void;
@@ -193,6 +196,8 @@ interface StatusCellProps {
   /** Foydalanuvchining AYNAN SHU firmadagi mas'uliyatlari. */
   relations: CompanyRelation[];
   proofStatus?: string; // 'pending' | 'approved' | 'rejected'
+  /** Kutilayotgan dalilni AYNAN shu foydalanuvchi topshirganmi. */
+  proofMine?: boolean;
   onRequestSubmit?: () => void;
   onViewProof?: () => void;
 }
@@ -203,7 +208,7 @@ const PROOF_DOT: Record<string, string> = {
   rejected: 'var(--danger)',
 };
 
-const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, userRole, relations, proofStatus, onRequestSubmit, onViewProof }) => {
+const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, userRole, relations, proofStatus, proofMine, onRequestSubmit, onViewProof }) => {
   const style = getStatusStyle(value);
   // "isAccountant" = tasdiqlash huquqi YO'Q degani (server bilan bir xil qoida).
   // Nazoratchi o'zi buxgalteri bo'lgan firmada ham shu tarmoqqa tushadi.
@@ -212,10 +217,16 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
     () => statusesForRole(userRole, relations, proofStatus === 'pending'),
     [userRole, relations, proofStatus]
   );
-  // Tasdiqlangan yoki tekshiruvda turgan katak buxgalter uchun QULFLANGAN —
-  // server ham shuni rad etadi (lib/reportPermissions.checkCellWrite), shuning
-  // uchun bu yerda ham urinishga yo'l qo'ymaymiz.
-  const lockedForAccountant = isAccountant && isReviewerOwnedValue(value);
+  /**
+   * Tasdiqlangan yoki tekshiruvda turgan katak buxgalter uchun QULFLANGAN —
+   * server ham shuni rad etadi (lib/reportPermissions.checkCellWrite).
+   *
+   * ISTISNO: nazoratchi HALI KO'RMAGAN (`pending`) va topshirgan odam O'ZI
+   * bo'lsa — katak ochiq qoladi. Busiz noto'g'ri ustunga yuborilgan
+   * skrinshotni buxgalter tuzata olmasdi: menyu umuman ochilmasdi.
+   */
+  const canWithdrawOwn = proofStatus === 'pending' && proofMine === true;
+  const lockedForAccountant = isAccountant && isReviewerOwnedValue(value) && !canWithdrawOwn;
   const effectiveReadOnly = readOnly || lockedForAccountant;
   const [isOpen, setIsOpen] = useState(false);
   // Izohni ko'rsatish oynasi — matn katakka sig'maydi, shuning uchun alohida.
@@ -449,7 +460,7 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
       )}
     </div>
   );
-}, (prev, next) => prev.value === next.value && prev.readOnly === next.readOnly && prev.proofStatus === next.proofStatus && prev.relations === next.relations);
+}, (prev, next) => prev.value === next.value && prev.readOnly === next.readOnly && prev.proofStatus === next.proofStatus && prev.proofMine === next.proofMine && prev.relations === next.relations);
 
 // ── Memoized Table Row ─────────────────────────────────────────
 const OperationRow = React.memo<{
@@ -459,7 +470,7 @@ const OperationRow = React.memo<{
   userRole: string;
   relations: CompanyRelation[];
   activeServices: string[];
-  proofMeta: Map<string, string>;
+  proofMeta: Map<string, ProofMeta>;
   onCellUpdate: (companyId: string, colKey: string, newValue: string) => void;
   onCompanySelect: (companyId: string) => void;
   onRequestSubmit: (companyId: string, colKey: string) => void;
@@ -467,6 +478,8 @@ const OperationRow = React.memo<{
 }>(({ row, idx, visibleColumns, userRole, relations, activeServices, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
   const proofOf = (colKey: string) => (row.companyId ? proofMeta.get(`${row.companyId}::${colKey}`) : undefined);
+  const proofStatusOf = (colKey: string) => proofOf(colKey)?.status;
+  const proofMineOf = (colKey: string) => proofOf(colKey)?.mine === true;
   const groupEdges = useMemo(() => buildGroupEdges(visibleColumns), [visibleColumns]);
 
   return (
@@ -518,7 +531,8 @@ const OperationRow = React.memo<{
                     readOnly={isReadOnly}
                     userRole={userRole}
                     relations={relations}
-                    proofStatus={proofOf(col.key)}
+                    proofStatus={proofStatusOf(col.key)}
+                    proofMine={proofMineOf(col.key)}
                     onRequestSubmit={() => row.companyId && onRequestSubmit(row.companyId as string, col.key as string)}
                     onViewProof={() => row.companyId && onViewProof(row.companyId as string, col.key as string)}
                   />
@@ -534,7 +548,8 @@ const OperationRow = React.memo<{
                     readOnly={isReadOnly}
                     userRole={userRole}
                     relations={relations}
-                    proofStatus={proofOf(payKey)}
+                    proofStatus={proofStatusOf(payKey)}
+                    proofMine={proofMineOf(payKey)}
                     onRequestSubmit={() => row.companyId && onRequestSubmit(row.companyId as string, payKey as string)}
                     onViewProof={() => row.companyId && onViewProof(row.companyId as string, payKey as string)}
                   />
@@ -555,7 +570,8 @@ const OperationRow = React.memo<{
                 readOnly={isReadOnly}
                 userRole={userRole}
                 relations={relations}
-                proofStatus={proofOf(col.key)}
+                proofStatus={proofStatusOf(col.key)}
+                proofMine={proofMineOf(col.key)}
                 onRequestSubmit={() => row.companyId && onRequestSubmit(row.companyId as string, col.key as string)}
                 onViewProof={() => row.companyId && onViewProof(row.companyId as string, col.key as string)}
               />
@@ -686,7 +702,7 @@ const OperationModule: React.FC<Props> = ({
   useEffect(() => { currentUserIdRef.current = currentUserId; }, [currentUserId]);
 
   // ── Report Proofs (skrinshot dalillari) ───────────────────────
-  const [proofMeta, setProofMeta] = useState<Map<string, string>>(new Map());
+  const [proofMeta, setProofMeta] = useState<Map<string, ProofMeta>>(new Map());
   const [proofModal, setProofModal] = useState<ProofModalState | null>(null);
   /**
    * Dalilni tekshirish huquqi — LAVOZIM bo'yicha emas, AYNAN SHU FIRMA
@@ -712,9 +728,10 @@ const OperationModule: React.FC<Props> = ({
   const reloadProofMeta = useCallback(async () => {
     try {
       const list = await getReportProofsMeta(selectedPeriod);
-      const m = new Map<string, string>();
-      (list as Array<{ companyId: string; colKey: string; status: string }>).forEach((p) => {
-        m.set(`${p.companyId}::${p.colKey}`, p.status);
+      const m = new Map<string, ProofMeta>();
+      (list as Array<{ companyId: string; colKey: string; status: string; submittedById: string | null }>).forEach((p) => {
+        // `mine` — o'z topshirig'ini qaytarib olish huquqi shunga bog'liq.
+        m.set(`${p.companyId}::${p.colKey}`, { status: p.status, mine: p.submittedById === currentUserId });
       });
       setProofMeta(m);
     } catch (e) {
@@ -743,13 +760,13 @@ const OperationModule: React.FC<Props> = ({
   const handleProofSubmitted = useCallback((companyId: string, colKey: string) => {
     skipNextSyncRef.current = true;
     setRows(prev => prev.map(r => (r.companyId === companyId ? { ...r, [colKey]: 'topshirildi' } : r)));
-    setProofMeta(prev => new Map(prev).set(`${companyId}::${colKey}`, 'pending'));
+    setProofMeta(prev => new Map(prev).set(`${companyId}::${colKey}`, { status: 'pending', mine: true }));
   }, []);
 
   const handleProofReviewed = useCallback((companyId: string, colKey: string, cellValue: string) => {
     skipNextSyncRef.current = true;
     setRows(prev => prev.map(r => (r.companyId === companyId ? { ...r, [colKey]: cellValue } : r)));
-    setProofMeta(prev => new Map(prev).set(`${companyId}::${colKey}`, cellValue === '+' ? 'approved' : 'rejected'));
+    setProofMeta(prev => new Map(prev).set(`${companyId}::${colKey}`, { status: cellValue === '+' ? 'approved' : 'rejected', mine: false }));
   }, []);
 
   // Notifikatsiyadan kelgan chuqur havola: bevosita shu katak dalilini ochamiz.
