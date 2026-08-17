@@ -33,6 +33,7 @@ import {
   type MatrixFilters,
 } from '@/lib/matrixFilters';
 import { pendingCellKey, readRowCells, reconcilePendingCells } from '@/lib/matrixRows';
+import { columnAppliesToRegime, regimeBlockReason } from '@/lib/reportApplicability';
 import {
   addToTally,
   classifyCell,
@@ -586,6 +587,15 @@ const OperationRow = React.memo<{
   onViewProof: (companyId: string, colKey: string) => void;
 }>(({ row, idx, visibleColumns, userRole, relations, activeServices, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
   const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
+  /**
+   * SOLIQ REJIMI bo'yicha yopish.
+   *
+   * QQS to'lovchi firmada "Aylanma" ustuni, aylanma rejimidagi firmada esa
+   * "QQS" ustuni yopiq turadi. Ilgari ikkalasi bitta `aylanma_qqs` katagi edi
+   * va kim nimani topshirishi kerakligi matritsadan ko'rinmasdi.
+   */
+  const regimeOf = String((row as { regime?: string }).regime ?? '');
+  const isRegimeEnabled = (key: string) => columnAppliesToRegime(key, regimeOf);
   const proofOf = (colKey: string) => (row.companyId ? proofMeta.get(`${row.companyId}::${colKey}`) : undefined);
   const proofStatusOf = (colKey: string) => proofOf(colKey)?.status;
   const proofMineOf = (colKey: string) => proofOf(colKey)?.mine === true;
@@ -620,19 +630,22 @@ const OperationRow = React.memo<{
       </td>
       {visibleColumns.map(col => {
         const isReadOnly = !row.companyId || !canEditMatrix(userRole, relations);
-        const serviceDisabled = !isServiceEnabled(col.key);
+        // Xizmat o'chirilgan YOKI bu hisobot firma rejimiga tegishli emas.
+        const serviceDisabled = !isServiceEnabled(col.key) || !isRegimeEnabled(col.key);
+        const blockReason = regimeBlockReason(col.key, regimeOf);
         const st = getGroupStyle(col.group);
         const isEdge = groupEdges.has(col.key);
         const borderRightStyle = isEdge ? `2px solid ${st.border}` : '1px solid var(--border)';
 
         if ((col as any).isSplit) {
           const payKey = (col as any).payKey as string;
-          const payDisabled = !isServiceEnabled(payKey);
+          const payDisabled = !isServiceEnabled(payKey) || !isRegimeEnabled(payKey);
+          const payBlockReason = regimeBlockReason(payKey, regimeOf);
           return (
             <React.Fragment key={col.key}>
               <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: serviceDisabled ? 'var(--bg-sunken)' : `color-mix(in srgb, var(--success) 6%, ${st.cellBg})` }}>
                 {serviceDisabled ? (
-                  <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
+                  <span className="text-micro" style={{ color: 'var(--text-3)' }} title={blockReason ?? undefined}>—</span>
                 ) : (
                   <StatusCell
                     value={String(row[col.key] || '')}
@@ -649,7 +662,7 @@ const OperationRow = React.memo<{
               </td>
               <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: borderRightStyle, background: payDisabled ? 'var(--bg-sunken)' : `color-mix(in srgb, var(--warning) 6%, ${st.cellBg})` }}>
                 {payDisabled ? (
-                  <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
+                  <span className="text-micro" style={{ color: 'var(--text-3)' }} title={payBlockReason ?? undefined}>—</span>
                 ) : (
                   <StatusCell
                     value={String(row[payKey] || '')}
@@ -671,7 +684,7 @@ const OperationRow = React.memo<{
         return (
           <td key={col.key} className="px-0.5 py-0.5 text-center h-8 transition-colors group-hover:opacity-90" style={{ borderRight: borderRightStyle, background: serviceDisabled ? 'var(--surface-2)' : st.cellBg }}>
             {serviceDisabled ? (
-              <span className="text-micro" style={{ color: 'var(--text-3)' }}>—</span>
+              <span className="text-micro" style={{ color: 'var(--text-3)' }} title={blockReason ?? undefined}>—</span>
             ) : (
               <StatusCell
                 value={String(row[col.key] || '')}

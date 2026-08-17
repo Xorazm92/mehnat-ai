@@ -41,6 +41,11 @@ export const COLUMN_CATEGORY: Record<OperationFieldKey, ReportCategory> = {
   // ═══ SOLIQ — soliq hisoboti va to'lovlari ═══
   chiqadigan_soliqlar: "SOLIQ",
   nds_bekor_qilish: "SOLIQ",
+  qqs: "SOLIQ",
+  qqs_tolov: "SOLIQ",
+  aylanma: "SOLIQ",
+  aylanma_tolov: "SOLIQ",
+  // DEPRECATED — bo'lingunga qadar ishlatilgan birlashgan kalit.
   aylanma_qqs: "SOLIQ",
   aylanma_qqs_tolov: "SOLIQ",
   daromad_soliq: "SOLIQ",

@@ -266,7 +266,7 @@ export interface KPIMetrics {
 
 export type OperationFieldKey = 'didox' | 'xatlar' | 'avtokameral' | 'my_mehnat' | 'one_c' |
   'pul_oqimlari' | 'chiqadigan_soliqlar' | 'hisoblangan_oylik' | 'debitor_kreditor' |
-  'foyda_va_zarar' | 'tovar_ostatka' | 'aylanma_qqs' | 'daromad_soliq' | 'inps' | 'foyda_soliq' |
+  'foyda_va_zarar' | 'tovar_ostatka' | 'qqs' | 'aylanma' | 'aylanma_qqs' | 'daromad_soliq' | 'inps' | 'foyda_soliq' |
   'bonak' | 'yer_soligi' | 'mol_mulk_soligi' | 'suv_soligi' | 'moliyaviy_natija' | 'buxgalteriya_balansi' |
   'statistika' | 'itpark_oylik' | 'itpark_chorak' | 'kom_suv' | 'kom_gaz' | 'kom_svet' |
   'bank_klient' | 'nds_bekor_qilish' | 'ekologiya' |
@@ -274,7 +274,7 @@ export type OperationFieldKey = 'didox' | 'xatlar' | 'avtokameral' | 'my_mehnat'
   'stat_4_invest' | 'stat_4_mehnat' | 'stat_4_korxona_miz' | 'stat_4_kb_qur_sav_xiz' | 'stat_4_kb_sanoat' |
   'stat_1_invest' | 'stat_1_ih' | 'stat_1_energiya' | 'stat_1_korxona' | 'stat_1_korxona_tif' | 'stat_1_moliya' | 'stat_1_akt' |
   'aksiz_soligi' | 'nedro_soligi' | 'norezident_foyda' | 'norezident_nds' |
-  'aylanma_qqs_tolov' | 'daromad_soliq_tolov' | 'inps_tolov' | 'foyda_soliq_tolov';
+  'qqs_tolov' | 'aylanma_tolov' | 'aylanma_qqs_tolov' | 'daromad_soliq_tolov' | 'inps_tolov' | 'foyda_soliq_tolov';
 
 export type TaskStatus = 'new' | 'submitted' | 'pending_review' |
   'approved' | 'rejected' | 'overdue' | 'not_required' | 'blocked';
@@ -330,7 +330,10 @@ export interface OperationEntry {
   foyda_va_zarar?: string;
   tovar_ostatka?: string;
   nds_bekor_qilish?: string;
+  /** @deprecated 2026-08 da `qqs` va `aylanma` ga bo'lindi. */
   aylanma_qqs?: string;
+  qqs?: string;
+  aylanma?: string;
   daromad_soliq?: string;
   inps?: string;
   foyda_soliq?: string;
@@ -346,7 +349,10 @@ export interface OperationEntry {
   nedro_soligi?: string;
   norezident_foyda?: string;
   norezident_nds?: string;
+  /** @deprecated 2026-08 da `qqs_tolov` va `aylanma_tolov` ga bo'lindi. */
   aylanma_qqs_tolov?: string;
+  qqs_tolov?: string;
+  aylanma_tolov?: string;
   daromad_soliq_tolov?: string;
   inps_tolov?: string;
   foyda_soliq_tolov?: string;

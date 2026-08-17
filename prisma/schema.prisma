@@ -286,7 +286,21 @@ model MonthlyReport {
   foydaVaZarar        String?
   tovarOstatka        String?
   ndsBekorQilish      String?
+  /// DEPRECATED — "Aylanma/QQS" birlashgan ustuni.
+  /// 2026-08 da ikkiga bo'lindi: `qqs` (QQS to'lovchilar) va `aylanma`
+  /// (aylanma rejimi). Ma'lumot `20260817140000_split_qqs_aylanma`
+  /// migratsiyasida rejim bo'yicha ko'chirildi. Ustun ATAYLAB saqlanadi —
+  /// ko'chirishni tekshirish va ortga qaytarish uchun.
   aylanmaQqs          String?
+  /// QQS deklaratsiyasi (OYLIK, 20-kun) — faqat `taxRegime = vat` firmalarda.
+  qqs                 String?
+  /// Aylanma soliq (CHORAKLIK, 15-kun) — faqat `taxRegime = turnover` firmalarda.
+  ///
+  /// NEGA AJRATILDI: bitta katak ikki xil hisobotni ko'tarardi. Davriyligi ham,
+  /// muddati ham, majburiyat shabloni ham boshqa (QQS_DECL / AYLANMA_SOLIQ),
+  /// shuning uchun birlashgan ustunda "kim nimani topshirishi kerak" degan
+  /// savolga javob yo'q edi.
+  aylanma             String?
   daromadSoliq        String?
   inps                String?
   foydaSoliq          String?
@@ -321,7 +335,10 @@ model MonthlyReport {
   nedroSoligi       String?
   norezidentFoyda   String?
   norezidentNds     String?
+  /// DEPRECATED — yuqoridagi `aylanmaQqs` ning to'lov juftligi.
   aylanmaQqsTolov   String?
+  qqsTolov          String?
+  aylanmaTolov      String?
   daromadSoliqTolov String?
   inpsTolov         String?
   foydaSoliqTolov   String?

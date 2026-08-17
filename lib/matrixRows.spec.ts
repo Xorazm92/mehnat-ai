@@ -10,7 +10,7 @@ import {
 
 /** Haqiqiy matritsadagi kabi: bo'linadigan ustun + oddiy ustun. */
 const columns: MatrixColumnKeys[] = [
-  { key: "aylanma_qqs", payKey: "aylanma_qqs_tolov" },
+  { key: "qqs", payKey: "qqs_tolov" },
   { key: "inps", payKey: "inps_tolov" },
   { key: "didox" },
 ];
@@ -27,22 +27,22 @@ describe("readRowCells", () => {
    */
   it("bo'linadigan ustunning TO'LOV yarmini ham o'qiydi", () => {
     const cells = readRowCells(
-      { aylanma_qqs: "+", aylanma_qqs_tolov: "topshirildi", inps_tolov: "nol" },
+      { qqs: "+", qqs_tolov: "topshirildi", inps_tolov: "nol" },
       columns,
     );
-    expect(cells.aylanma_qqs).toBe("+");
-    expect(cells.aylanma_qqs_tolov).toBe("topshirildi");
+    expect(cells.qqs).toBe("+");
+    expect(cells.qqs_tolov).toBe("topshirildi");
     expect(cells.inps_tolov).toBe("nol");
   });
 
   it("har bir ustun uchun kalit bo'ladi — hatto yozuv bo'sh bo'lsa ham", () => {
     const cells = readRowCells(undefined, columns);
     expect(Object.keys(cells).sort()).toEqual([
-      "aylanma_qqs",
-      "aylanma_qqs_tolov",
       "didox",
       "inps",
       "inps_tolov",
+      "qqs",
+      "qqs_tolov",
     ]);
     expect(Object.values(cells).every((v) => v === "")).toBe(true);
   });
@@ -62,10 +62,10 @@ describe("readRowCells", () => {
 
 describe("pending katak kaliti", () => {
   it("qurish va ajratish teng", () => {
-    const key = pendingCellKey("firma-1", "aylanma_qqs_tolov");
+    const key = pendingCellKey("firma-1", "qqs_tolov");
     expect(parsePendingCellKey(key)).toEqual({
       companyId: "firma-1",
-      colKey: "aylanma_qqs_tolov",
+      colKey: "qqs_tolov",
     });
   });
 });

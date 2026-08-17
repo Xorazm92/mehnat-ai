@@ -35,7 +35,7 @@ const steps = [
     { id: 'team', title: 'Jamoa', icon: Users }
 ];
 
-const ALL_SERVICE_KEYS = ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'];
+const ALL_SERVICE_KEYS = ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'qqs', 'aylanma', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'];
 
 const SERVICE_LABELS: Record<string, string> = {
     didox: 'Didox', xatlar: 'Xatlar', avtokameral: 'Avtokameral', my_mehnat: 'My Mehnat', one_c: '1C',
@@ -43,7 +43,7 @@ const SERVICE_LABELS: Record<string, string> = {
     debitor_kreditor: 'Deb/Kred', foyda_va_zarar: 'F/Z', tovar_ostatka: 'Tovar Qoldiq',
     yer_soligi: "Yer", mol_mulk_soligi: "Mol-mulk", suv_soligi: "Suv",
     bonak: "Bo'nak", aksiz_soligi: 'AKSIZ', nedro_soligi: 'NEDRO', norezident_foyda: 'Nor. Foyda',
-    norezident_nds: 'Nor. NDS', aylanma_qqs: 'Ayl/QQS', daromad_soliq: 'Daromad',
+    norezident_nds: 'Nor. NDS', qqs: 'QQS', aylanma: 'Aylanma', daromad_soliq: 'Daromad',
     inps: 'INPS', foyda_soliq: 'Foyda', moliyaviy_natija: 'Mol. Natija',
     buxgalteriya_balansi: 'Balans',
     stat_12_invest: '12-inv', stat_12_moliya: '12-mol', stat_12_korxona: '12-kor', stat_12_narx: '12-narx',
@@ -56,7 +56,7 @@ const SERVICE_LABELS: Record<string, string> = {
 const SERVICE_GROUPS = [
     { group: 'Oylik', keys: ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka'] },
     { group: 'Soliqlar', keys: ['yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds'] },
-    { group: 'Soliq H/T', keys: ['aylanma_qqs', 'daromad_soliq', 'inps', 'foyda_soliq'] },
+    { group: 'Soliq H/T', keys: ['qqs', 'aylanma', 'daromad_soliq', 'inps', 'foyda_soliq'] },
     { group: 'Yillik', keys: ['moliyaviy_natija', 'buxgalteriya_balansi'] },
     { group: 'Statistika', keys: ['stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt'] },
     { group: 'IT Park', keys: ['itpark_oylik', 'itpark_chorak'] },

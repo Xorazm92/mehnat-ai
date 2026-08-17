@@ -14,13 +14,16 @@ import {
  * sabab uzilishi bilinmasdi — auditda uchta mapping YO'Q ustunga ishora qilib
  * turgani aniqlandi:
  *
- *   "qqs" → QQS_DECL          — bunday ustun yo'q, ustun nomi `aylanma_qqs`
+ *   "qqs" → QQS_DECL          — o'shanda bunday ustun yo'q edi
  *   "aylanma_soliq" → …       — bunday ustun yo'q
  *   "payroll_posted" → …      — bunday ustun yo'q
  *
  * Ya'ni QQS deklaratsiyasi ham, aylanma soliq ham matritsadan HECH QACHON
  * harakatlanmagan: buxgalter katakni belgilagan, majburiyat esa "kechikkan"
  * bo'lib qolavergan. Test shu sinfdagi xatoni qaytib kelishiga yo'l qo'ymaydi.
+ *
+ * 2026-08: "aylanma_qqs" ustuni `qqs` va `aylanma` ga bo'lindi, ya'ni yuqoridagi
+ * birinchi qator endi haqiqiy ustunga ishora qiladi.
  */
 
 const matrixKeys = new Set<string>();
@@ -63,10 +66,19 @@ describe("matritsa → majburiyat mappingi", () => {
     expect(contradictions).toEqual([]);
   });
 
-  it("soliq rejimiga qarab ikkilanadigan katak ikkala shablonni biladi", () => {
-    // "Aylanma/QQS" bitta ustun: QQS to'lovchida QQS_DECL, aylanma rejimida
-    // AYLANMA_SOLIQ majburiyati hosil bo'ladi.
-    expect(COL_KEY_TO_TEMPLATE_CODES.aylanma_qqs).toEqual(["QQS_DECL", "AYLANMA_SOLIQ"]);
+  /**
+   * 2026-08: "Aylanma/QQS" ustuni IKKIGA bo'lindi. Endi har ustun bitta
+   * shablonga bog'lanadi — birlashgan holatda maxraj "QQS to'lovchilar +
+   * aylanma rejimidagilar" bo'lib, foiz ikki xil majburiyatni aralashtirardi.
+   */
+  it("QQS va aylanma ustunlari o'z shabloniga bog'langan", () => {
+    expect(COL_KEY_TO_TEMPLATE_CODES.qqs).toEqual(["QQS_DECL"]);
+    expect(COL_KEY_TO_TEMPLATE_CODES.aylanma).toEqual(["AYLANMA_SOLIQ"]);
+  });
+
+  it("birlashgan eski kalit endi mapping'da yo'q", () => {
+    // Qolib ketsa, o'chirilgan ustun uchun maxraj hisoblanaverardi.
+    expect(COL_KEY_TO_TEMPLATE_CODES.aylanma_qqs).toBeUndefined();
   });
 });
 

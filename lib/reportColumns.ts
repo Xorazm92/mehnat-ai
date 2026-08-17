@@ -40,7 +40,12 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   { key: "norezident_nds", label: "Nor. NDS", short: "NN", group: "Soliqlar" },
 
   // ═══ SOLIQLAR (Hisobot + To'lov) ═══
-  { key: "aylanma_qqs", label: "Aylanma Hisobot", short: "AQh", group: "Soliq H/T", isSplit: true, payKey: "aylanma_qqs_tolov", payShort: "AQt" },
+  // "Aylanma/QQS" IKKIGA BO'LINDI. Ular bitta katakda turolmaydi: QQS oylik
+  // (20-kun, faqat QQS to'lovchilarda), aylanma soliq esa choraklik (15-kun,
+  // faqat aylanma rejimida). Majburiyat dvigatelida ular allaqachon alohida
+  // shablon edi (QQS_DECL / AYLANMA_SOLIQ) — matritsa ulardan orqada qolgan edi.
+  { key: "qqs", label: "QQS Hisobot", short: "QQh", group: "Soliq H/T", isSplit: true, payKey: "qqs_tolov", payShort: "QQt" },
+  { key: "aylanma", label: "Aylanma Hisobot", short: "AYh", group: "Soliq H/T", isSplit: true, payKey: "aylanma_tolov", payShort: "AYt" },
   { key: "daromad_soliq", label: "DS Hisobot", short: "DSh", group: "Soliq H/T", isSplit: true, payKey: "daromad_soliq_tolov", payShort: "DSt" },
   { key: "inps", label: "INPS Hisobot", short: "INh", group: "Soliq H/T", isSplit: true, payKey: "inps_tolov", payShort: "INt" },
   { key: "foyda_soliq", label: "FS Hisobot", short: "FSh", group: "Soliq H/T", isSplit: true, payKey: "foyda_soliq_tolov", payShort: "FSt" },

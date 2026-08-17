@@ -2,12 +2,22 @@ import { OperationTemplate, OperationFieldKey, OperationEntry } from '@/types';
 
 export const OPERATION_TEMPLATES: OperationTemplate[] = [
     {
-        key: 'aylanma_qqs',
-        nameUz: 'Aylanma / QQS Hisoboti',
-        nameRu: 'Отчет по обороту / НДС',
+        key: 'qqs',
+        nameUz: 'QQS Hisoboti',
+        nameRu: 'Отчет по НДС',
         assignedRole: 'accountant',
         deadlineDay: 20,
         frequency: 'monthly'
+    },
+    {
+        // Aylanma soliq CHORAKLIK — QQS bilan bitta ustunda turolmasligining
+        // sabablaridan biri aynan shu.
+        key: 'aylanma',
+        nameUz: 'Aylanma Soliq Hisoboti',
+        nameRu: 'Отчет по налогу с оборота',
+        assignedRole: 'accountant',
+        deadlineDay: 15,
+        frequency: 'quarterly'
     },
     {
         key: 'daromad_soliq',
@@ -220,6 +230,9 @@ export const FIELD_TO_DB_COLUMN: Record<OperationFieldKey, string> = {
     tovar_ostatka: 'tovarOstatka',
     bank_klient: 'bankKlient',
     nds_bekor_qilish: 'ndsBekorQilish',
+    qqs: 'qqs',
+    aylanma: 'aylanma',
+    // DEPRECATED — matritsada ustuni yo'q, lekin eski ma'lumot DB'da turibdi.
     aylanma_qqs: 'aylanmaQqs',
     daromad_soliq: 'daromadSoliq',
     inps: 'inps',
@@ -251,6 +264,8 @@ export const FIELD_TO_DB_COLUMN: Record<OperationFieldKey, string> = {
     nedro_soligi: 'nedroSoligi',
     norezident_foyda: 'norezidentFoyda',
     norezident_nds: 'norezidentNds',
+    qqs_tolov: 'qqsTolov',
+    aylanma_tolov: 'aylanmaTolov',
     aylanma_qqs_tolov: 'aylanmaQqsTolov',
     daromad_soliq_tolov: 'daromadSoliqTolov',
     inps_tolov: 'inpsTolov',
@@ -291,7 +306,8 @@ export const mapMonthlyReportToOperationEntry = (report: {
 };
 
 export const MAP_JSON_FIELD_TO_KEY: Record<string, OperationFieldKey> = {
-    'Aylanma/QQS': 'aylanma_qqs',
+    'Aylanma/QQS': 'aylanma',
+    'QQS': 'qqs',
     'Daromad soliq': 'daromad_soliq',
     'INPS': 'inps',
     'Foyda soliq': 'foyda_soliq',

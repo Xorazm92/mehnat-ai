@@ -25,7 +25,11 @@ export const COL_KEY_TO_TEMPLATE_CODES: Record<string, string[]> = {
   // ── Soliq deklaratsiyalari ───────────────────────────────
   inps: ["INPS_IJTIMOIY"],
   daromad_soliq: ["DAROMAD_AGENT"],
-  aylanma_qqs: ["QQS_DECL", "AYLANMA_SOLIQ"],
+  // Har ustun O'Z shabloniga. Ilgari bitta ustun ikkalasini ko'targani uchun
+  // maxraj "QQS to'lovchilar + aylanma rejimidagilar" bo'lib, foiz ikki xil
+  // majburiyatni aralashtirardi.
+  qqs: ["QQS_DECL"],
+  aylanma: ["AYLANMA_SOLIQ"],
   foyda_soliq: ["FOYDA_YILLIK"],
   yer_soligi: ["YER_SOLIQ"],
   suv_soligi: ["SUV_SOLIQ"],
