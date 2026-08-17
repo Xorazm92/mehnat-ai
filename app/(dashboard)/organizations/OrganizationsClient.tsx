@@ -17,7 +17,7 @@ interface Props {
   userRole: string;
   tariffPreset: TariffPreset;
   /** "Ichki shartnoma tomoni" variantlari — bazadagi o'z firmalarimiz. */
-  internalContractors: string[];
+  internalContractors: { id: string; name: string }[];
 }
 
 export default function OrganizationsClient({ companies, staff, operations, tariffPreset, internalContractors }: Props) {

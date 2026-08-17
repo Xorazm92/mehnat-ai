@@ -29,7 +29,7 @@ interface Props {
   /** "Standart taqsimot" tugmasi qo'yadigan foizlar (admin sozlamalaridan). */
   tariffPreset?: TariffPreset;
   /** "Ichki shartnoma tomoni" variantlari — bazadagi o'z firmalarimiz. */
-  internalContractors?: string[];
+  internalContractors?: { id: string; name: string }[];
 }
 
 const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect, tariffPreset, internalContractors }) => {

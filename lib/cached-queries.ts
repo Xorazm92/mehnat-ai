@@ -38,6 +38,9 @@ const scopeFor = (userId: string, role: string, context?: string) =>
 // tomonda `companyRelations` hisoblanadi — shuning uchun include hamma uchun bir xil.
 const COMPANY_INCLUDE = {
   accountant: { select: { id: true, fullName: true, avatarColor: true } },
+  // "Ichki shartnoma tomoni" — shartnoma qaysi O'Z firmamiz nomidan tuzilgan.
+  // ID saqlanadi, ekranga esa NOM chiqadi, shuning uchun relation kerak.
+  internalContractorFirm: { select: { id: true, name: true } },
   supervisor: { select: { id: true, fullName: true } },
   chiefAccountant: { select: { id: true, fullName: true } },
   bankClient: { select: { id: true, fullName: true } },

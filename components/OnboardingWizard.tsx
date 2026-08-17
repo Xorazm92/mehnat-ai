@@ -23,7 +23,7 @@ interface Props {
      * bazadan ajralib ketgan: "FINFO INFO BEST" yo'q, o'rniga o'z firma
      * bo'lmagan "Plastik" bor edi.
      */
-    internalContractors?: string[];
+    internalContractors?: { id: string; name: string }[];
     onSave: (company: Partial<Company>, assignments: any[]) => void;
     onCancel: () => void;
 }
@@ -102,10 +102,15 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
      */
     const contractorOptions = React.useMemo(() => {
         const list = [...(internalContractors ?? [])];
-        const current = (formData.internalContractor || '').trim();
-        if (current && !list.includes(current)) list.push(`${current}`);
+        // Joriy qiymat ro'yxatda bo'lmasa ham QO'SHILADI: o'z firma keyinchalik
+        // arxivlansa, tahrirlashga ochilgan mijoz jimgina shartnoma tomonini
+        // yo'qotib qo'ymasligi kerak.
+        const id = formData.internalContractorId;
+        if (id && !list.some(o => o.id === id)) {
+            list.push({ id, name: formData.internalContractor || 'Arxivdagi firma' });
+        }
         return list;
-    }, [internalContractors, formData.internalContractor]);
+    }, [internalContractors, formData.internalContractorId, formData.internalContractor]);
 
     // Har bir o'rinda HAMMA xodim chiqadi — odatdagi lavozim ro'yxat boshida.
     // Bitta odam bir firmada nazoratchi, boshqasida buxgalter bo'ladi, shuning
@@ -331,12 +336,21 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Ichki Shartnoma Tomoni</label>
                                 <select
                                     className="erp-input"
-                                    value={formData.internalContractor || ''}
-                                    onChange={e => setFormData({ ...formData, internalContractor: e.target.value, isInternalContractor: false })}
+                                    value={formData.internalContractorId || ''}
+                                    onChange={e => {
+                                        // Bazaga ID yoziladi (firma nomi o'zgarsa bog'lanish
+                                        // uzilmasin), nom esa faqat ekran uchun yonida yuriydi.
+                                        const id = e.target.value;
+                                        setFormData({
+                                            ...formData,
+                                            internalContractorId: id || undefined,
+                                            internalContractor: contractorOptions.find(o => o.id === id)?.name,
+                                        });
+                                    }}
                                 >
                                     <option value="">Tanlanmagan</option>
-                                    {contractorOptions.map(name => (
-                                        <option key={name} value={name}>{name}</option>
+                                    {contractorOptions.map(o => (
+                                        <option key={o.id} value={o.id}>{o.name}</option>
                                     ))}
                                 </select>
                                 {contractorOptions.length === 0 && (

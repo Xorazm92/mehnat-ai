@@ -24,6 +24,9 @@ function mapCompany(c: any) {
     ...c,
     taxType,
     accountantName: c.accountant?.fullName ?? null,
+    // Ekran `internalContractor` (nom) kutadi, bazada esa ID turadi.
+    internalContractorId: c.internalContractorId ?? null,
+    internalContractor: c.internalContractorFirm?.name ?? null,
     supervisorName: c.supervisor?.fullName ?? null,
     chiefAccountantName: c.chiefAccountant?.fullName ?? null,
     bankClientName: c.bankClient?.fullName ?? c.bankClientName ?? null,
@@ -89,7 +92,7 @@ export default async function OrganizationsPage() {
         operations={JSON.parse(JSON.stringify(operations))}
         userRole={userRole}
         tariffPreset={tariffPreset}
-        internalContractors={ownFirms.map((f) => f.name)}
+        internalContractors={ownFirms}
       />
     </div>
   );

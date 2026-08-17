@@ -313,6 +313,13 @@ function sanitizeCompanyData(raw: Record<string, unknown>) {
   if (raw.hasPropertyTax !== undefined) data.hasPropertyTax = Boolean(raw.hasPropertyTax);
   if (raw.hasExciseTax !== undefined) data.hasExciseTax = Boolean(raw.hasExciseTax);
   if (raw.isInternalContractor !== undefined) data.isInternalContractor = Boolean(raw.isInternalContractor);
+  // Ichki shartnoma tomoni — ID bo'yicha. Bo'sh satr "Tanlanmagan" degani,
+  // shuning uchun `null` ga aylantiriladi: aks holda Prisma mavjud bo'lmagan
+  // "" id'li firmaga bog'lashga urinib, FK xatosi bilan yiqilardi.
+  if (raw.internalContractorId !== undefined) {
+    const v = raw.internalContractorId;
+    data.internalContractorId = v ? String(v) : null;
+  }
   if (raw.isActive !== undefined) data.isActive = Boolean(raw.isActive);
 
   if (raw.contractAmount !== undefined) data.contractAmount = raw.contractAmount !== null ? Number(raw.contractAmount) : null;

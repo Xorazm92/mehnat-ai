@@ -186,6 +186,22 @@ model Company {
   activeServices       String[] // Active service keys
   itParkResident       String?
   isInternalContractor Boolean  @default(false)
+  /// Mijoz bilan shartnoma ASRO'ning QAYSI yuridik shaxsi nomidan tuzilgan
+  /// (`isOwnFirm = true` bo'lgan firma).
+  ///
+  /// NEGA USTUN KERAK BO'LDI: ekranda "Ichki shartnoma tomoni" tanlagichi bor
+  /// edi va `types.ts` da `internalContractor` maydoni turardi, lekin BAZADA
+  /// ustun yo'q edi. `sanitizeCompanyData` uni oq ro'yxatda topmay jimgina
+  /// tashlab yuborardi: foydalanuvchi tanlaydi, "firma qo'shildi" degan
+  /// muvaffaqiyat xabarini oladi, tahrirlashga qaytganda esa maydon yana
+  /// "Tanlanmagan" bo'lib turadi.
+  ///
+  /// NOM emas, ID: firma nomi o'zgarganda ("HOME SPOT STORY" → "FINFO INFO
+  /// BEST" kabi) bog'lanish uzilmasligi kerak.
+  internalContractorId   String?
+  internalContractorFirm Company?  @relation("InternalContractor", fields: [internalContractorId], references: [id], onDelete: SetNull)
+  /// Teskari tomon — shu o'z firmamiz nomidan tuzilgan mijoz shartnomalari.
+  internalContractorFor  Company[] @relation("InternalContractor")
   notes                String?
   isActive             Boolean  @default(true)
 
@@ -225,6 +241,7 @@ model Company {
   @@index([isActive])
   @@index([departmentId])
   @@index([isOwnFirm])
+  @@index([internalContractorId])
 }
 
 // =====================================================
