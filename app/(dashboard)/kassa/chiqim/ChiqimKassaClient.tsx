@@ -11,7 +11,9 @@ import { formatNum, formatUzDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { EXPENSE_CATEGORY_LABELS, isPostableExpense, type ExpenseCategory } from "@/lib/bank/classifyExpense";
 import { postExpenseTransaction } from "@/server/bankImport";
-import { CHANNEL_TYPE_LABELS, type ChannelType } from "@/lib/transit";
+// Sof konstantalar moduli — `lib/transit.ts` orqali kelsa Prisma/`pg` mijoz
+// to'plamiga tortiladi va build "Can't resolve 'dns'/'net'/'tls'" bilan yiqiladi.
+import { CHANNEL_TYPE_LABELS, type ChannelType } from "@/lib/transitChannels";
 import {
   upsertChannel,
   setChannelActive,
