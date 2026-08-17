@@ -14,6 +14,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
 import { useTableState } from '@/hooks/useTableState';
 import type { TariffPreset } from '@/lib/tariffPresets';
+import { hiddenMatchOnly, matchesCompanySearch } from '@/lib/companySearch';
 
 interface Props {
   companies: Company[];
@@ -27,9 +28,11 @@ interface Props {
   onCompanySelect: (c: Company) => void;
   /** "Standart taqsimot" tugmasi qo'yadigan foizlar (admin sozlamalaridan). */
   tariffPreset?: TariffPreset;
+  /** "Ichki shartnoma tomoni" variantlari — bazadagi o'z firmalarimiz. */
+  internalContractors?: string[];
 }
 
-const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect, tariffPreset }) => {
+const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect, tariffPreset, internalContractors }) => {
   const confirm = useConfirm();
   const t = translations[lang];
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -110,12 +113,10 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const filtered = useMemo(() => {
     return companies
       .filter(c => {
-        // Search: name, INN, or director name
-        const searchLower = table.debouncedSearch.toLowerCase();
-        const matchesSearch =
-          c.name.toLowerCase().includes(searchLower) ||
-          c.inn.includes(table.debouncedSearch) ||
-          (c.directorName?.toLowerCase().includes(searchLower));
+        // Qidiruv: nom / brend / STIR / direktor — mantiq lib/companySearch.ts da.
+        // Brend ATAYLAB qo'shildi: u jadvalda chizilgani uchun moslik sababi
+        // ko'rinib turadi (direktor esa ko'rinmaydi — pastda tushuntiriladi).
+        const matchesSearch = matchesCompanySearch(c, table.debouncedSearch);
 
         // Active/Archive filter
         const matchesActive = filterActive === null || c.isActive === filterActive;
@@ -165,6 +166,19 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full" style={{ background: risk.stripe }} title={risk.label} />
             <div className="truncate max-w-[210px] uppercase tracking-tight font-bold" title={c.name} style={{ color: 'var(--text)' }}>{c.name}</div>
             {c.brandName && <div className="text-micro font-bold truncate uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{c.brandName}</div>}
+            {/* MOSLIK SABABI. Qator faqat direktor ismi bo'yicha topilgan bo'lsa,
+                jadvalda direktor ustuni yo'qligi uchun u "nega chiqdi?" degan
+                savol tug'diradi — buxgalter buni o'xshashlik izlash deb o'yladi.
+                Sabab shu yerda yoziladi. */}
+            {hiddenMatchOnly(c, table.debouncedSearch) && (
+              <div
+                className="text-micro font-bold truncate mt-0.5"
+                style={{ color: 'var(--accent-blue)' }}
+                title={`Qidiruv direktor ismi bo'yicha topdi: ${c.directorName}`}
+              >
+                Direktor: {c.directorName}
+              </div>
+            )}
           </div>
         );
       },
@@ -240,8 +254,10 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         </div>
       ),
     },
+    // `debouncedSearch` — "Direktor: …" moslik sababi shu qiymatga bog'liq;
+    // usiz qidiruv o'zgarganda ustun eski holatda qotib qolardi.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [t, opByCompany, onCompanySelect]);
+  ], [t, opByCompany, onCompanySelect, table.debouncedSearch]);
 
 
   const handleExport = async () => {
@@ -548,6 +564,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 initialData={form}
                 initialAssignments={editingAssignments}
                 tariffPreset={tariffPreset}
+                internalContractors={internalContractors}
                 onSave={handleSave}
                 onCancel={() => {
                   if (isSaving) return;

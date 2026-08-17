@@ -5,6 +5,7 @@ import {
   getCachedUsers,
   getCachedOperations,
   getCachedTariffPreset,
+  getCachedOwnFirms,
 } from "@/lib/cached-queries";
 import { getRoleContext } from "@/server/roleContext";
 import OrganizationsClient from "./OrganizationsClient";
@@ -62,12 +63,14 @@ export default async function OrganizationsPage() {
   // torayadi (lib/roleContext.ts). Bu HUQUQ emas, ko'rinish filtri.
   const roleContext = await getRoleContext().catch(() => "all" as const);
 
-  const [companies, archivedCompanies, staff, operations, tariffPreset] = await Promise.all([
+  const [companies, archivedCompanies, staff, operations, tariffPreset, ownFirms] = await Promise.all([
     getCachedCompanies(userId, userRole, roleContext),
     getCachedArchivedCompanies(userId, userRole),
     getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
     getCachedTariffPreset(),
+    // "Ichki shartnoma tomoni" tanlagichi — bazadagi o'z firmalarimiz.
+    getCachedOwnFirms(),
   ]);
 
   const mappedStaff = staff.map(u => ({
@@ -86,6 +89,7 @@ export default async function OrganizationsPage() {
         operations={JSON.parse(JSON.stringify(operations))}
         userRole={userRole}
         tariffPreset={tariffPreset}
+        internalContractors={ownFirms.map((f) => f.name)}
       />
     </div>
   );

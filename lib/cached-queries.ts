@@ -84,6 +84,36 @@ export const getCachedCompanies = cache(
     _getCachedCompanies(userId, role, context)
 );
 
+/**
+ * O'Z FIRMALARIMIZ — "Ichki shartnoma tomoni" tanlagichi uchun.
+ *
+ * ALOHIDA SO'ROV SHART: `getCachedCompanies` ataylab `isOwnFirm: false` bilan
+ * ishlaydi (o'z firmalarimiz mijozlar ro'yxatida, qarzdorlikda va payrollda
+ * qatnashmasligi kerak), shuning uchun ular yuqoridagi ro'yxatda YO'Q.
+ *
+ * NEGA BAZADAN: bu ro'yxat `OnboardingWizard` ichida QO'LDA yozilgan edi va
+ * bazadan ajralib ketgan — "FINFO INFO BEST" (mijozlar "Fininfo best" deb
+ * ataydigan firma) ro'yxatda yo'q edi, o'rniga bazada o'z firma sifatida
+ * turmagan "Plastik" bor edi. Natijada shartnomasi shu firma bilan tuzilgan
+ * mijozni to'g'ri belgilash imkoni bo'lmagan.
+ *
+ * Arxivlanganlar chiqarilmaydi: yangi shartnoma tugatilgan firma nomiga
+ * yozilmasligi kerak. Eski qiymat esa tahrirlashda saqlanadi (mijoz tomonda).
+ */
+const _getCachedOwnFirms = unstable_cache(
+  async () => {
+    return prisma.company.findMany({
+      where: { isOwnFirm: true, isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  },
+  ["own-firms"],
+  { tags: ["companies"], revalidate: 300 }
+);
+
+export const getCachedOwnFirms = cache(async () => _getCachedOwnFirms());
+
 const _getCachedArchivedCompanies = unstable_cache(
   async (userId: string, role: string) => {
     return prisma.company.findMany({

@@ -17,6 +17,13 @@ interface Props {
     initialAssignments?: any[];
     /** Admin sozlamalaridan kelgan "Standart" taqsimot; berilmasa STANDARD_TARIFF. */
     tariffPreset?: TariffPreset;
+    /**
+     * "Ichki shartnoma tomoni" variantlari — bazadagi o'z firmalarimiz
+     * (`isOwnFirm`). Ilgari bu ro'yxat SHU FAYLDA qo'lda yozilgan edi va
+     * bazadan ajralib ketgan: "FINFO INFO BEST" yo'q, o'rniga o'z firma
+     * bo'lmagan "Plastik" bor edi.
+     */
+    internalContractors?: string[];
     onSave: (company: Partial<Company>, assignments: any[]) => void;
     onCancel: () => void;
 }
@@ -58,8 +65,14 @@ const SERVICE_GROUPS = [
 
 const fieldLabelStyle: React.CSSProperties = { color: 'var(--text-muted)' };
 
-const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignments, tariffPreset, onSave, onCancel }) => {
+const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignments, tariffPreset, internalContractors, onSave, onCancel }) => {
     const [currentStep, setCurrentStep] = useState(0);
+    /**
+     * Xatolar DARHOL emas, urinishdan KEYIN ko'rsatiladi.
+     * Aks holda bo'sh forma ochilishi bilanoq qizil ogohlantirishlar bilan
+     * qarshi olardi.
+     */
+    const [showErrors, setShowErrors] = useState(false);
     const [formData, setFormData] = useState<Partial<Company>>(initialData || {
         taxType: TaxType.TURNOVER,
         serverInfo: 'CR1',
@@ -79,6 +92,21 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
 
     const preset = tariffPreset ?? STANDARD_TARIFF;
 
+    /**
+     * "Ichki shartnoma tomoni" variantlari.
+     *
+     * Joriy qiymat ro'yxatda bo'lmasa ham QO'SHILADI: eski firmalarda bazadan
+     * ajralib qolgan nomlar bor ("Plastik", "Seven UP" kabi qo'lda yozilgan
+     * imlolar). Ularni tushirib qoldirsak, boshqa maydonni tahrirlash uchun
+     * ochilgan firma jimgina shartnoma tomonini yo'qotib qo'yardi.
+     */
+    const contractorOptions = React.useMemo(() => {
+        const list = [...(internalContractors ?? [])];
+        const current = (formData.internalContractor || '').trim();
+        if (current && !list.includes(current)) list.push(`${current}`);
+        return list;
+    }, [internalContractors, formData.internalContractor]);
+
     // Har bir o'rinda HAMMA xodim chiqadi — odatdagi lavozim ro'yxat boshida.
     // Bitta odam bir firmada nazoratchi, boshqasida buxgalter bo'ladi, shuning
     // uchun "Buxgalter" o'rnini lavozim bo'yicha qisqartirish mumkin emas.
@@ -90,19 +118,36 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
         return map;
     }, [staff]);
 
-    const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
-    const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
-
     const updateAssignment = (role: string, field: string, value: any) => {
-        setAssignments(prev => prev.map(a => a.role === role ? { ...a, [field]: value } : a));
+        setAssignments(prev => prev.map(a => {
+            if (a.role !== role) return a;
+            const next = { ...a, [field]: value };
+            /**
+             * Odam olib tashlansa ulushi ham tushadi.
+             *
+             * Busiz bo'sh o'rin qiymatni saqlab turardi va keyingi "Standart
+             * taqsimot" yoki saqlash paytida "kimga tegishli ekani noma'lum"
+             * foiz qolib ketardi.
+             */
+            if (field === 'userId' && !value) next.salaryValue = 0;
+            return next;
+        }));
     };
 
-    /** "Standart" — to'rtala qatorni foizga o'tkazib, kelishilgan taqsimotni qo'yadi. */
+    /**
+     * "Standart" — kelishilgan taqsimotni qo'yadi, LEKIN FAQAT odam tanlangan
+     * o'rinlarga.
+     *
+     * Ilgari u har to'rt qatorga foiz yozardi: nazoratchi tanlanmagan bo'lsa ham
+     * unga 5% tegib turardi va buxgalter uni har firmada qo'lda nolga tushirishga
+     * majbur bo'lardi. Bo'sh o'rin — "bu firmada bunday mas'ul yo'q" degani,
+     * demak unga ulush ham yo'q.
+     */
     const applyStandardTariff = () => {
         setAssignments(prev => prev.map(a => {
             const percent = preset[a.role as AssignmentRole];
             if (percent == null) return a;
-            return { ...a, salaryType: 'percent', salaryValue: percent };
+            return { ...a, salaryType: 'percent', salaryValue: a.userId ? percent : 0 };
         }));
     };
 
@@ -110,10 +155,72 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
     const isStandardTariff = assignments.every(a => {
         const percent = preset[a.role as AssignmentRole];
         if (percent == null) return true;
-        return a.salaryType === 'percent' && Number(a.salaryValue) === percent;
+        const expected = a.userId ? percent : 0;
+        return a.salaryType === 'percent' && Number(a.salaryValue) === expected;
     });
 
+    /**
+     * QADAM-QADAM TEKSHIRUV.
+     *
+     * Ilgari wizard'da tekshiruv UMUMAN yo'q edi: "Keyingisi" har doim o'tardi,
+     * "Tamomlash" esa firmani buxgalterisiz yaratardi (yagona tekshiruv
+     * `OrganizationModule.handleSave` dagi `name && inn` edi, u ham to'rtinchi
+     * qadamdan keyin ishga tushardi). Buxgalter biriktirilmagan firma esa
+     * matritsada, majburiyat dvigatelida va oylikda egasiz qolardi.
+     *
+     * STIR uzunligi YANGI firmada qat'iy: prodda bir xil STIR bilan 10 ta
+     * dublikat aynan qo'lda yozishdagi xatolardan yig'ilgan. Tahrirlashda esa
+     * faqat qiymat O'ZGARGANDA tekshiriladi — aks holda eski, nomuvofiq STIR'li
+     * firmaning boshqa maydonini tuzatib bo'lmasdi.
+     */
+    const isEdit = Boolean(initialData?.id);
+    const innTouched = (formData.inn || '') !== (initialData?.inn || '');
+
+    const stepErrors = (step: number): string[] => {
+        const errs: string[] = [];
+        if (step === 0) {
+            if (!(formData.name || '').trim()) errs.push('Firma nomi kiritilishi shart');
+            const inn = (formData.inn || '').trim();
+            if (!inn) errs.push('INN kiritilishi shart');
+            else if (!isEdit || innTouched) {
+                if (!/^\d{9}$/.test(inn)) errs.push("INN 9 ta raqamdan iborat bo'lishi kerak");
+            }
+        }
+        if (step === 3) {
+            const accountant = assignments.find(a => a.role === 'accountant');
+            if (!accountant?.userId) {
+                errs.push('Buxgalter tanlanishi shart — firma egasiz qolmasligi kerak');
+            }
+        }
+        return errs;
+    };
+
+    /** Barcha qadamlar bo'yicha xatolar (Tamomlash uchun). */
+    const allErrors = steps.flatMap((_, i) => stepErrors(i));
+    const currentErrors = stepErrors(currentStep);
+
+    const nextStep = () => {
+        if (currentErrors.length > 0) {
+            setShowErrors(true);
+            return;
+        }
+        setShowErrors(false);
+        setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
+    };
+    const prevStep = () => {
+        setShowErrors(false);
+        setCurrentStep(prev => Math.max(prev - 1, 0));
+    };
+
     const handleFinish = () => {
+        if (allErrors.length > 0) {
+            setShowErrors(true);
+            // Xato boshqa qadamda bo'lsa — o'sha qadamga qaytaramiz, aks holda
+            // foydalanuvchi "nega tamomlanmadi?" degan savol bilan qolardi.
+            const firstBad = steps.findIndex((_, i) => stepErrors(i).length > 0);
+            if (firstBad >= 0 && firstBad !== currentStep) setCurrentStep(firstBad);
+            return;
+        }
         onSave(formData, assignments);
     };
 
@@ -168,6 +275,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     autoFocus
                                     className="erp-input"
                                     placeholder="Masalan: MONTAJ TEPLO"
+                                    style={showErrors && !(formData.name || '').trim() ? { borderColor: 'var(--danger)' } : undefined}
                                     value={formData.name || ''}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                 />
@@ -177,6 +285,8 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 <input
                                     className="erp-input font-mono"
                                     placeholder="123456789"
+                                    inputMode="numeric"
+                                    style={showErrors && stepErrors(0).some(e => e.includes('INN')) ? { borderColor: 'var(--danger)' } : undefined}
                                     value={formData.inn || ''}
                                     onChange={e => setFormData({ ...formData, inn: e.target.value })}
                                 />
@@ -225,17 +335,15 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     onChange={e => setFormData({ ...formData, internalContractor: e.target.value, isInternalContractor: false })}
                                 >
                                     <option value="">Tanlanmagan</option>
-                                    <option value="Seven UP">Seven UP</option>
-                                    <option value="Finance Council">Finance Council</option>
-                                    <option value="The power full">The power full</option>
-                                    <option value="Barokat team">Barokat team</option>
-                                    <option value="SOFI TEAM">SOFI TEAM</option>
-                                    <option value="OOO SARDORBEK HOUSE">OOO SARDORBEK HOUSE</option>
-                                    <option value="TASTIFY">TASTIFY</option>
-                                    <option value="Toolstrek Ca">Toolstrek Ca</option>
-                                    <option value="MOLIYA AI">MOLIYA AI</option>
-                                    <option value="Plastik">Plastik</option>
+                                    {contractorOptions.map(name => (
+                                        <option key={name} value={name}>{name}</option>
+                                    ))}
                                 </select>
+                                {contractorOptions.length === 0 && (
+                                    <p className="text-2xs ml-1" style={{ color: 'var(--text-muted)' }}>
+                                        O&apos;z firmalar ro&apos;yxati bo&apos;sh — bazada `isOwnFirm` belgilangan firma yo&apos;q.
+                                    </p>
+                                )}
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shartnoma Summasi</label>
@@ -470,16 +578,24 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                             {assignments.map((asgn) => {
                                 const options = staffForRole[asgn.role as AssignmentRole] ?? [];
                                 const label = ASSIGNMENT_ROLE_LABELS[asgn.role as AssignmentRole] ?? asgn.role;
+                                // Bo'sh o'ringa ulush yozilmaydi — maydon ham yopiladi, chunki
+                                // "kimga tegishli ekani noma'lum foiz" oylikda ma'nosiz.
+                                const noPerson = !asgn.userId;
+                                const isRequired = asgn.role === 'accountant';
                                 return (
                                 <div key={asgn.role} className="p-4 rounded-xl grid grid-cols-12 gap-4 items-end" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
                                     <div className="col-span-12 lg:col-span-4 space-y-1">
                                         <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>
                                             {label}
+                                            {isRequired && <span style={{ color: 'var(--danger)' }}> *</span>}
                                         </label>
                                         <select
                                             className="erp-input font-bold"
                                             value={asgn.userId || ''}
                                             disabled={options.length === 0}
+                                            style={showErrors && isRequired && noPerson
+                                                ? { borderColor: 'var(--danger)' }
+                                                : undefined}
                                             onChange={e => updateAssignment(asgn.role, 'userId', e.target.value)}
                                         >
                                             <option value="">
@@ -500,14 +616,21 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                         <div className="relative">
                                             <input
                                                 type="number"
-                                                className="erp-input font-semibold tabular-nums !pr-12 text-right"
-                                                value={asgn.salaryValue ?? 0}
+                                                className="erp-input font-semibold tabular-nums !pr-12 text-right disabled:opacity-40"
+                                                value={noPerson ? 0 : (asgn.salaryValue ?? 0)}
+                                                disabled={noPerson}
+                                                title={noPerson ? "Avval xodimni tanlang — bo'sh o'ringa ulush berilmaydi" : undefined}
                                                 onChange={e => updateAssignment(asgn.role, 'salaryValue', Number(e.target.value))}
                                             />
                                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-micro font-semibold uppercase" style={fieldLabelStyle}>
                                                 {asgn.salaryType === 'percent' ? '%' : "so'm"}
                                             </span>
                                         </div>
+                                        {noPerson && (
+                                            <p className="text-2xs ml-1" style={{ color: 'var(--text-muted)' }}>
+                                                Xodim tanlanmagan — ulush berilmaydi
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 );
@@ -540,6 +663,23 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                     </div>
                 )}
             </div>
+
+            {/* Tekshiruv xabarlari — tugmalar ustida, sabab bilan. */}
+            {showErrors && currentErrors.length > 0 && (
+                <div
+                    className="mx-5 mb-0 mt-1 p-3 rounded-lg shrink-0"
+                    style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border, var(--danger))' }}
+                    role="alert"
+                >
+                    <ul className="space-y-1">
+                        {currentErrors.map(e => (
+                            <li key={e} className="text-meta font-semibold" style={{ color: 'var(--danger)' }}>
+                                • {e}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             {/* Footer / Buttons */}
             <div className="p-5 flex items-center justify-between shrink-0" style={{ background: 'var(--input-bg)', borderTop: '1px solid var(--card-border)' }}>

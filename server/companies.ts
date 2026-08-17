@@ -402,6 +402,45 @@ async function assertInnFree(inn: string, exceptId?: string): Promise<void> {
   }
 }
 
+/**
+ * YANGI firma to'liq ochilganmi.
+ *
+ * Wizard'da tekshiruv umuman yo'q edi va buxgalteri biriktirilmagan firma
+ * yaratilib ketardi. Bunday firma EGASIZ qoladi: matritsada uni kim
+ * to'ldirishi noma'lum, majburiyat dvigateli mas'ulni topmaydi, oylikda esa
+ * shartnoma summasi hech kimga taqsimlanmaydi.
+ *
+ * Chegara SERVERDA ham turishi shart — mijoz tekshiruvi faqat qulaylik, uni
+ * bitta so'rov bilan chetlab o'tish mumkin.
+ *
+ * ATAYLAB faqat YARATISHDA: mavjud firmalar orasida buxgalteri yo'qlari bor,
+ * ularni ham qamrasak boshqa maydonni tuzatish uchun ochilgan firma
+ * saqlanmay qolardi (`updateCompany` shu sababli tekshirilmaydi).
+ */
+function assertNewCompanyComplete(
+  data: Record<string, unknown>,
+  assignments?: CompanyAssignment[]
+): void {
+  const name = typeof data.name === "string" ? data.name.trim() : "";
+  if (!name) throw new Error("Firma nomi kiritilishi shart");
+
+  const inn = typeof data.inn === "string" ? data.inn.trim() : "";
+  if (!inn) throw new Error("INN kiritilishi shart");
+  if (!/^\d{9}$/.test(inn)) {
+    throw new Error("INN 9 ta raqamdan iborat bo'lishi kerak");
+  }
+
+  const hasAccountant = (assignments ?? []).some(
+    (a) => normalizeAssignmentRole(a.role) === "accountant" && a.userId
+  );
+  if (!hasAccountant) {
+    throw new Error(
+      "Buxgalter tanlanishi shart — firma egasiz qolmasligi kerak " +
+        "(Jamoa qadamidagi \"Buxgalter\" qatori)."
+    );
+  }
+}
+
 export async function createCompany(companyData: Record<string, unknown>, assignments?: CompanyAssignment[]) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -410,6 +449,7 @@ export async function createCompany(companyData: Record<string, unknown>, assign
   if (!isAdminRole(role)) throw new Error("Forbidden");
 
   const data = sanitizeCompanyData(companyData);
+  assertNewCompanyComplete(data, assignments);
   if (typeof data.inn === "string") await assertInnFree(data.inn);
 
   const normalized = assignments?.length ? await normalizeAssignments(assignments) : [];

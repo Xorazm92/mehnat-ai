@@ -16,9 +16,11 @@ interface Props {
   operations: OperationEntry[];
   userRole: string;
   tariffPreset: TariffPreset;
+  /** "Ichki shartnoma tomoni" variantlari — bazadagi o'z firmalarimiz. */
+  internalContractors: string[];
 }
 
-export default function OrganizationsClient({ companies, staff, operations, tariffPreset }: Props) {
+export default function OrganizationsClient({ companies, staff, operations, tariffPreset, internalContractors }: Props) {
   const router = useRouter();
   useAutoRefresh();
   const [selectedPeriod, setSelectedPeriod] = useState<string>(getCurrentPeriodKey());
@@ -60,6 +62,7 @@ export default function OrganizationsClient({ companies, staff, operations, tari
         operations={operations}
         lang="uz"
         tariffPreset={tariffPreset}
+        internalContractors={internalContractors}
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
         onSave={handleSave}
