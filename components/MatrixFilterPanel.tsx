@@ -7,6 +7,7 @@ import {
   COL_STATUS_OPTIONS,
   activeFilterCount,
   regimeLabel,
+  type FacetOption,
   type MatrixFilters,
 } from "@/lib/matrixFilters";
 import { MATRIX_STATUS_FILTERS, type MatrixStatusFilter } from "@/lib/reportStatus";
@@ -22,10 +23,12 @@ import { MATRIX_STATUS_FILTERS, type MatrixStatusFilter } from "@/lib/reportStat
  */
 
 export interface MatrixFilterOptions {
-  accountants: string[];
-  supervisors: string[];
-  chiefs: string[];
-  banks: string[];
+  /** Istalgan o'rindagi xodimlar — o'rni bilan qidirmaydiganlar uchun. */
+  people: FacetOption[];
+  accountants: FacetOption[];
+  supervisors: FacetOption[];
+  chiefs: FacetOption[];
+  banks: FacetOption[];
   regimes: string[];
   departments: string[];
   columns: { key: string; label: string }[];
@@ -167,12 +170,21 @@ export default function MatrixFilterPanel({
   // filtrlarning to'liq sonini ko'rsatishi kerak.
   const count = activeFilterCount(filters) + (status !== "all" ? 1 : 0);
 
-  const people: Array<{ key: keyof MatrixFilters; label: string; list: string[] }> = [
+  const people: Array<{ key: keyof MatrixFilters; label: string; list: FacetOption[] }> = [
     { key: "accountant", label: "Buxgalter", list: options.accountants },
     { key: "supervisor", label: "Nazoratchi", list: options.supervisors },
     { key: "chief", label: "Bosh buxgalter", list: options.chiefs },
     { key: "bank", label: "Bank-klient", list: options.banks },
   ];
+
+  /**
+   * Variant matni — nom yonida firmalar soni.
+   *
+   * Tanlangan odamda shu o'rinda firma bo'lmasa, jadval bo'sh chiqadi; sanoq
+   * buni TANLASHDAN OLDIN aytadi, aks holda bo'sh ekran nosozlik bo'lib
+   * ko'rinadi.
+   */
+  const optionLabel = (o: FacetOption) => `${o.value} — ${o.count}`;
 
   return (
     <div className="relative" ref={ref}>
@@ -272,24 +284,45 @@ export default function MatrixFilterPanel({
             </div>
 
             {/* ── Mas'ullar ────────────────────────────────────── */}
-            <div className="pt-3 grid grid-cols-2 gap-2.5" style={{ borderTop: "1px solid var(--border)" }}>
-              {people.map((p) => (
-                <Field
-                  key={p.key}
-                  label={p.label}
-                  value={String(filters[p.key])}
-                  active={filters[p.key] !== "all"}
-                  onChange={(v) => onChange(p.key, v)}
-                  onClear={() => onChange(p.key, "all")}
-                >
-                  <option value="all">Barchasi</option>
-                  {p.list.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </Field>
-              ))}
+            <div className="pt-3 space-y-2.5" style={{ borderTop: "1px solid var(--border)" }}>
+              {/* Eng ko'p so'raladigan savol — "falonchining firmalari". O'rni
+                  bo'yicha emas, ISMI bo'yicha, shuning uchun butun kenglikda
+                  va o'rin tanlagichlaridan YUQORIDA turadi. */}
+              <Field
+                label="Xodim (istalgan o'rin)"
+                value={filters.person}
+                active={filters.person !== "all"}
+                onChange={(v) => onChange("person", v)}
+                onClear={() => onChange("person", "all")}
+                hint="Buxgalter, nazoratchi, bosh buxgalter yoki bank-klient — qaysi o'rinda bo'lsa ham"
+              >
+                <option value="all">Barchasi</option>
+                {options.people.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {optionLabel(o)}
+                  </option>
+                ))}
+              </Field>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                {people.map((p) => (
+                  <Field
+                    key={p.key}
+                    label={p.label}
+                    value={String(filters[p.key])}
+                    active={filters[p.key] !== "all"}
+                    onChange={(v) => onChange(p.key, v)}
+                    onClear={() => onChange(p.key, "all")}
+                  >
+                    <option value="all">Barchasi</option>
+                    {p.list.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {optionLabel(o)}
+                      </option>
+                    ))}
+                  </Field>
+                ))}
+              </div>
             </div>
 
             {/* ── Firma xossalari ──────────────────────────────── */}

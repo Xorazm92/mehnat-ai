@@ -26,10 +26,13 @@ import {
   matchesFacets,
   matchesSearch,
   parseFilters,
+  personFacetOptions,
+  slotFacetOptions,
   EMPTY_FILTERS,
   FILTER_URL_KEYS,
   type MatrixFilters,
 } from '@/lib/matrixFilters';
+import { pendingCellKey, readRowCells, reconcilePendingCells } from '@/lib/matrixRows';
 import {
   addToTally,
   classifyCell,
@@ -170,12 +173,32 @@ const STATUS_STYLE: Record<CellStatus, { bg: string; text: string; icon: string;
   // NOL HISOBOT — topshirilgan, ichida raqam nol. "0" (shart emas) dan farqli:
   // u ish BAJARILGANINI bildiradi, shuning uchun belgisi ham boshqa.
   zero: { bg: tint('var(--brand)', 13), text: 'var(--brand)', icon: 'Ø', tooltip: 'Nol hisobot topshirildi' },
-  // ERKIN MATN (izoh). Matnning O'ZI katakka chizilmaydi — ilgari shunday
-  // qilingani uchun uzun izoh ustunni cho'zib, butun jadval qatorini
-  // kengaytirib yuborardi. Endi faqat belgi turadi, to'liq matn bosilganda
-  // ochiladi (va tooltipda ko'rinadi).
+  /**
+   * ERKIN MATN (izoh).
+   *
+   * Katakda matnning O'ZI qisqartirilib chiziladi, `icon` esa faqat ZAXIRA
+   * (matn bo'sh bo'lib qolgan holat uchun).
+   *
+   * TARIX — ikkita qarama-qarshi xato:
+   *   1. Avval to'liq matn chizilardi: uzun izoh ustunni cho'zib, butun jadval
+   *      qatorini kengaytirib yuborardi.
+   *   2. Keyin matn butunlay olib tashlanib, o'rniga faqat "✎" qo'yildi. Ammo
+   *      izoh oynasi FAQAT o'qish huquqidagilar uchun ochilardi — tahrirlay
+   *      oladigan odam katakni bossa, menyu chiqardi va matn hech qayerda
+   *      ko'rinmasdi. Buxgalterlar buni "izoh yozsak uchib ketyapti" deb
+   *      xabar qildi va bir izohni qayta-qayta yozib chiqdi.
+   * Yechim ikkalasini ham qoplaydi: katakda `max-w` + `truncate` (ustun
+   * cho'zilmaydi), to'liq matn esa menyuning tepasida turadi.
+   */
   note: { bg: tint('var(--info)', 13), text: 'var(--info)', icon: '✎', tooltip: '', },
 };
+
+/**
+ * Serverdan tasdiq kelmagan katak yozuvi shuncha vaqt ekranda ushlab turiladi.
+ * Bu — himoya chegarasi: server umuman javob bermay qolsa, eskirgan optimistik
+ * qiymat abadiy qotib qolmasligi kerak.
+ */
+const PENDING_TTL_MS = 60_000;
 
 interface StatusStyle {
   bg: string;
@@ -333,7 +356,15 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
 
   const handleSelect = (statusValue: string) => {
     if (statusValue === 'izoh') {
-      setInputValue(value === '0' || value === '+' || value === '-' ? '' : value);
+      /**
+       * FAQAT haqiqiy izoh oldindan to'ldiriladi — tasniflagich hal qiladi.
+       *
+       * Ilgari bu yerda uchta qiymat qo'lda sanab o'tilgan edi ('0', '+', '-'),
+       * ya'ni "nol"/"kartoteka"/"topshirildi" katagida "Matn yozish" bosilsa,
+       * maydonga o'sha KOD SO'ZI tushardi. Foydalanuvchi uni saqlab qo'ysa
+       * katak holatdan erkin matnga aylanib, hisobdan tushib qolardi.
+       */
+      setInputValue(classifyCell(value) === 'note' ? value : '');
       setShowInput(true);
       return;
     }
@@ -398,7 +429,14 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
             : proofStatus ? `${style.tooltip} · Skrinshot biriktirilgan` : style.tooltip
         }
       >
-        <span className="truncate w-full text-center block uppercase">{style.icon}</span>
+        {/* Izohda MATN ko'rinadi (qisqartirilgan), boshqa holatlarda belgi.
+            `truncate` overflow'ni yopgani uchun flex bolasi 0 gacha siqiladi
+            va `max-w-[52px]` ustunni cho'zilishdan saqlaydi. */}
+        <span
+          className={`truncate w-full block ${style.isNote ? 'text-left normal-case font-semibold' : 'text-center uppercase'}`}
+        >
+          {style.isNote ? value : style.icon}
+        </span>
       </button>
       {proofStatus && (
         <span
@@ -437,16 +475,42 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
       {isOpen && createPortal(
         <div
           ref={popoverRef}
+          /**
+           * `role="dialog"` ATAYLAB: `useAutoRefresh` ochiq dialog ustida
+           * `router.refresh()` ni to'xtatadi. Busiz katak menyusi ochiq
+           * turganda — ya'ni aynan izoh yozilayotgan paytda — har 15 soniyada
+           * sahifa server ma'lumoti bilan qayta to'ldirilardi.
+           */
+          role="dialog"
+          aria-label="Katak amallari"
           style={{
             position: 'absolute',
             top: coords.top + 2,
             left: coords.left,
             transform: 'translateX(-50%)'
           }}
-          className="z-[110] min-w-[180px] bg-[var(--card-bg)] dark:bg-[var(--surface-2)] p-1 shadow-md border border-[var(--rule)] dark:border-[var(--rule-strong)] rounded-lg"
+          className="z-[110] min-w-[180px] max-w-[280px] bg-[var(--card-bg)] dark:bg-[var(--surface-2)] p-1 shadow-md border border-[var(--rule)] dark:border-[var(--rule-strong)] rounded-lg"
         >
           {!showInput ? (
             <div className="grid grid-cols-1">
+              {/* YOZILGAN IZOH — menyuning eng tepasida.
+                  Tahrirlash huquqi bor odam katakni bosganda menyu ochiladi,
+                  ya'ni `noteOpen` oynasiga hech qachon yetib bormaydi. Matn
+                  shu sabab aynan SHU YERDA turishi shart: busiz izoh
+                  yozilgandan keyin uni qayta o'qishning yo'li qolmaydi. */}
+              {style.isNote && (
+                <>
+                  <div className="px-3 pt-2 pb-1.5">
+                    <div className="text-2xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-3)' }}>
+                      Yozilgan izoh
+                    </div>
+                    <p className="text-meta whitespace-pre-wrap break-words" style={{ color: 'var(--text)' }}>
+                      {value}
+                    </p>
+                  </div>
+                  <div className="h-px my-1" style={{ background: 'var(--border)' }} />
+                </>
+              )}
               {proofStatus && onViewProof && (
                 <>
                   <button
@@ -468,7 +532,9 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
                   className="flex items-center gap-3 px-3 py-2 hover:bg-[var(--bg-sunken)] dark:hover:bg-[var(--surface-2)] transition-colors w-full text-left group"
                 >
                   <span className={`font-bold text-xs w-5 h-5 flex items-center justify-center rounded-lg bg-[var(--bg-sunken)] dark:bg-white/5 border border-[var(--rule)] dark:border-white/10 ${status.color}`}>{status.icon}</span>
-                  <span className="text-meta font-bold text-[var(--text-secondary)] group-hover:text-[var(--brand)]">{status.label}</span>
+                  <span className="text-meta font-bold text-[var(--text-secondary)] group-hover:text-[var(--brand)]">
+                    {status.value === 'izoh' && style.isNote ? 'Izohni tahrirlash' : status.label}
+                  </span>
                   {value === status.value && <div className="ml-auto w-1 h-1 rounded-full bg-[var(--brand)]"></div>}
                 </button>
               ))}
@@ -715,6 +781,7 @@ const OperationModule: React.FC<Props> = ({
     //   qolganlari — lib/matrixFilters.ts (FILTER_URL_KEYS bilan bir xil)
     defaultFilters: {
       grp: 'all', st: 'all',
+      [FILTER_URL_KEYS.person]: 'all',
       [FILTER_URL_KEYS.accountant]: 'all',
       [FILTER_URL_KEYS.supervisor]: 'all',
       [FILTER_URL_KEYS.chief]: 'all',
@@ -819,7 +886,26 @@ const OperationModule: React.FC<Props> = ({
   const staffRef = useRef(staff);
   const userNameRef = useRef(userName);
   const currentUserIdRef = useRef(currentUserId);
-  const skipNextSyncRef = useRef(false);
+  /**
+   * O'ZIMIZ YOZGAN, LEKIN SERVERDAN HALI QAYTMAGAN KATAKLAR.
+   *
+   * Kalit `companyId::colKey`, qiymat — biz kutayotgan katak qiymati.
+   *
+   * NIMA UCHUN KERAK: ilgari bu yerda bitta martalik `skipNextSync` bayrog'i
+   * turardi va u POYGADA yutqazardi. `useAutoRefresh` har 15 soniyada
+   * `router.refresh()` chaqiradi; yozuvdan bir lahza OLDIN boshlangan
+   * yangilanish server javobini yozuvdan KEYIN olib keladi va u ESKI
+   * ma'lumotga tayanadi (`getCachedOperations` 5 daqiqalik keshda). Bayroq
+   * esa allaqachon birinchi (yozuvning o'z) yangilanishida sarflangan bo'lardi,
+   * shuning uchun kechikkan eski javob katakni bo'shatib ketardi. Ekranda bu
+   * "yozdim — o'chib ketdi" bo'lib ko'rinardi; keyingi yangilanish qiymatni
+   * qaytarardi, lekin foydalanuvchi bunga qadar hammasini qaytadan yozgan
+   * bo'lardi.
+   *
+   * Endi yozuv server ma'lumoti bilan MOS KELMAGUNCHA saqlanadi va har
+   * qayta qurishda uning ustiga qo'yiladi.
+   */
+  const pendingCellsRef = useRef(new Map<string, { value: string; at: number }>());
 
   useEffect(() => { companiesRef.current = companies; }, [companies]);
   useEffect(() => { staffRef.current = staff; }, [staff]);
@@ -882,17 +968,30 @@ const OperationModule: React.FC<Props> = ({
     setProofModal({ mode: 'review', companyId, companyName: company?.name || '', colKey, colLabel: colLabelFor(colKey) });
   }, []);
 
-  const handleProofSubmitted = useCallback((companyId: string, colKey: string) => {
-    skipNextSyncRef.current = true;
-    setRows(prev => prev.map(r => (r.companyId === companyId ? { ...r, [colKey]: 'topshirildi' } : r)));
-    setProofMeta(prev => new Map(prev).set(`${companyId}::${colKey}`, { status: 'pending', mine: true }));
+  /** Katakni ekranda ham, "kutilayotganlar" ro'yxatida ham belgilaydi. */
+  const markPendingCell = useCallback((companyId: string, colKey: string, value: string) => {
+    pendingCellsRef.current.set(pendingCellKey(companyId, colKey), { value, at: Date.now() });
   }, []);
 
+  /**
+   * Davr almashsa kuzatuv tozalanadi.
+   *
+   * Kalitda davr yo'q (`companyId::colKey`), shuning uchun iyul oyida yozilgan
+   * qiymat avgust matritsasidagi o'sha katak ustiga tushib qolardi.
+   */
+  useEffect(() => { pendingCellsRef.current.clear(); }, [selectedPeriod]);
+
+  const handleProofSubmitted = useCallback((companyId: string, colKey: string) => {
+    markPendingCell(companyId, colKey, 'topshirildi');
+    setRows(prev => prev.map(r => (r.companyId === companyId ? { ...r, [colKey]: 'topshirildi' } : r)));
+    setProofMeta(prev => new Map(prev).set(`${companyId}::${colKey}`, { status: 'pending', mine: true }));
+  }, [markPendingCell]);
+
   const handleProofReviewed = useCallback((companyId: string, colKey: string, cellValue: string) => {
-    skipNextSyncRef.current = true;
+    markPendingCell(companyId, colKey, cellValue);
     setRows(prev => prev.map(r => (r.companyId === companyId ? { ...r, [colKey]: cellValue } : r)));
     setProofMeta(prev => new Map(prev).set(`${companyId}::${colKey}`, { status: cellValue === '+' ? 'approved' : 'rejected', mine: false }));
-  }, []);
+  }, [markPendingCell]);
 
   // Notifikatsiyadan kelgan chuqur havola: bevosita shu katak dalilini ochamiz.
   const focusHandledRef = useRef(false);
@@ -904,12 +1003,7 @@ const OperationModule: React.FC<Props> = ({
   }, [focusProof, companies.length, openViewModal]);
 
   // ── Build Rows from DB Props (companies + operations) ──────────
-  // ── Build Rows from DB Props (companies + operations) ──────────
   useEffect(() => {
-    if (skipNextSyncRef.current) {
-      skipNextSyncRef.current = false;
-      return;
-    }
     // Optimization: Create a map of current period's operations for O(1) lookup
     const opsMap = new Map<string, OperationEntry>();
     operations.forEach(op => {
@@ -917,6 +1011,22 @@ const OperationModule: React.FC<Props> = ({
         opsMap.set(op.companyId, op);
       }
     });
+
+    /**
+     * KUTILAYOTGAN YOZUVLARNI SERVER MA'LUMOTI BILAN SOLISHTIRISH.
+     *
+     * Server bizning qiymatimizga yetgan bo'lsa — kuzatuv tugaydi. Yetmagan
+     * bo'lsa (kechikkan yoki keshdan kelgan javob) — bizning qiymatimiz
+     * ustun turadi, aks holda foydalanuvchi yozgani ekrandan yo'qoladi.
+     */
+    const pending = pendingCellsRef.current;
+    const { overrides, settled } = reconcilePendingCells(
+      pending,
+      (companyId, colKey) => String((opsMap.get(companyId) as any)?.[colKey] ?? ''),
+      Date.now(),
+      PENDING_TTL_MS,
+    );
+    for (const key of settled) pending.delete(key);
 
     const newRows: ReportRow[] = companies.map((comp, index) => {
       const op = opsMap.get(comp.id);
@@ -950,14 +1060,13 @@ const OperationModule: React.FC<Props> = ({
         activeServices: comp.activeServices || [],
       };
 
-      // Fill columns from OperationEntry (or '0' / default)
-      for (const col of REPORT_COLUMNS) {
-        if (op && (op as any)[col.key] !== undefined && (op as any)[col.key] !== null) {
-          row[col.key] = String((op as any)[col.key]);
-        } else {
-          row[col.key] = '';
-        }
-      }
+      // Katak qiymatlari — `payKey` bilan birga (qarang: lib/matrixRows.ts).
+      Object.assign(row, readRowCells(op as Record<string, unknown> | undefined, REPORT_COLUMNS));
+
+      // O'zimiz yozgan, serverda hali ko'rinmagan kataklar — server ustidan.
+      const byCol = overrides.get(comp.id);
+      if (byCol) for (const [colKey, value] of byCol) row[colKey] = value;
+
       return row;
     });
 
@@ -1007,9 +1116,11 @@ const OperationModule: React.FC<Props> = ({
       }
       return row;
     }));
+    // Server javob qaytarib, ma'lumot ekranga yetib kelmaguncha bu qiymat
+    // har qanday qayta qurishdan omon qoladi.
+    markPendingCell(companyId, colKey, newValue);
 
     try {
-      skipNextSyncRef.current = true;
       const company = companiesRef.current.find(c => c.id === companyId);
       const res = await upsertMonthlyReport({
         companyId,
@@ -1026,6 +1137,9 @@ const OperationModule: React.FC<Props> = ({
        * render…" degan to'rt qatorlik inglizcha matnni ko'rardi.
        */
       if (res && res.ok === false) {
+        // Yozuv qabul qilinmadi — kuzatuvni ham bekor qilamiz, aks holda
+        // rad etilgan qiymat server ma'lumoti ustidan turib qolardi.
+        pendingCellsRef.current.delete(pendingCellKey(companyId, colKey));
         setRows(prevRows => prevRows.map(row =>
           row.companyId === companyId ? { ...row, [colKey]: prevValue } : row
         ));
@@ -1054,6 +1168,7 @@ const OperationModule: React.FC<Props> = ({
       console.error('Update error:', e);
       // Optimistik o'zgarishni ORQAGA QAYTARISH — aks holda katak saqlanmagan
       // qiymatni ko'rsatib turaveradi va foydalanuvchi ishonib qoladi.
+      pendingCellsRef.current.delete(pendingCellKey(companyId, colKey));
       setRows(prevRows => prevRows.map(row =>
         row.companyId === companyId ? { ...row, [colKey]: prevValue } : row
       ));
@@ -1063,7 +1178,7 @@ const OperationModule: React.FC<Props> = ({
       // matn o'rniga o'zbekcha xabar chiqishi uchun.
       toast.error(friendlyError(e, 'Saqlashda xatolik. Qaytadan urinib ko\'ring.'));
     }
-  }, [selectedPeriod, onUpdate, REPORT_COLUMNS]); // Minimal dependencies
+  }, [selectedPeriod, onUpdate, REPORT_COLUMNS, markPendingCell]); // Minimal dependencies
 
   // ── Handle Column Clear (Superadmin only) ─────────────────────
   const handleClearColumn = useCallback(async (colKey: string) => {
@@ -1095,20 +1210,24 @@ const OperationModule: React.FC<Props> = ({
     // o'qib, butun oyni qayta kiritishga tushardi.
     const snapshot = new Map(rows.map(r => [r.companyId, r[colKey]]));
 
+    // Butun ustun kuzatuvga olinadi: tozalash ham yozuv, uni ham kechikkan
+    // server javobi qaytarib qo'yishi mumkin.
+    const clearedKeys = rows.map(r => pendingCellKey(String(r.companyId), colKey));
     try {
-      skipNextSyncRef.current = true;
+      for (const r of rows) if (r.companyId) markPendingCell(String(r.companyId), colKey, '');
       setRows(prev => prev.map(r => ({ ...r, [colKey]: '' })));
       await clearColumnForPeriod(selectedPeriod, colKey);
       await onUpdate({});
       toast.success('Ustun tozalandi');
     } catch (e) {
       console.error(e);
+      for (const key of clearedKeys) pendingCellsRef.current.delete(key);
       setRows(prev => prev.map(r =>
         snapshot.has(r.companyId) ? { ...r, [colKey]: snapshot.get(r.companyId) } : r
       ));
       toast.error('Ustun tozalanmadi — qiymatlar qaytarildi');
     }
-  }, [selectedPeriod, userRole, onUpdate, REPORT_COLUMNS, rows, confirm]);
+  }, [selectedPeriod, userRole, onUpdate, REPORT_COLUMNS, rows, confirm, markPendingCell]);
 
   // ── Computed data ────────────────────────────────────────────
   const accountants = useMemo(() => {
@@ -1144,6 +1263,14 @@ const OperationModule: React.FC<Props> = ({
       return [...set].sort((a, b) => a.localeCompare(b, 'uz'));
     };
 
+    // `matchesFacets` bilan BIR XIL maydonlar: sanoq filtr natijasidan
+    // farq qilmasligi kerak, aks holda "Ruslan — 12" yozilib, jadval bo'sh
+    // chiqadi.
+    const facetRows = rows.map(r => ({
+      accountant: r.accountant, supervisor: r.supervisor, chief: r.chief,
+      bank: r.bank, regime: r.regime, department: r.department,
+    }));
+
     // Ustunlar: bo'linadigan ustunning to'lov juftligi ham alohida tanlanadi —
     // "AQt (to'lov) bajarilmagan" mustaqil savol.
     const columns: { key: string; label: string }[] = [];
@@ -1156,10 +1283,13 @@ const OperationModule: React.FC<Props> = ({
     }
 
     return {
-      accountants,
-      supervisors: uniq(r => r.supervisor),
-      chiefs: uniq(r => r.chief),
-      banks: uniq(r => r.bank),
+      // Xodimlar ro'yxati BUTUN shtatdan — matritsada bitta ham firmasi
+      // yo'q odam ham ko'rinadi, lekin sanog'i "0" bo'lib turadi.
+      people: personFacetOptions(facetRows, accountants),
+      accountants: slotFacetOptions(facetRows, r => r.accountant, accountants),
+      supervisors: slotFacetOptions(facetRows, r => r.supervisor),
+      chiefs: slotFacetOptions(facetRows, r => r.chief),
+      banks: slotFacetOptions(facetRows, r => r.bank),
       regimes: uniq(r => r.regime),
       departments: uniq(r => r.department),
       columns,
@@ -1942,10 +2072,36 @@ const OperationModule: React.FC<Props> = ({
             </div>
           </div>
         ) : filteredRows.length === 0 ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
+          /**
+           * BO'SH NATIJA O'ZINI TUSHUNTIRSIN.
+           *
+           * Avval bu yerda faqat "Ma'lumot topilmadi" turardi. Filtrda o'zi
+           * mas'ul bo'lmagan o'rinni tanlagan odam (masalan bank-klientni
+           * "Buxgalter" ro'yxatidan qidirgan) buni "firmalar yo'qolib qoldi"
+           * deb o'qirdi. Endi ekran nima yoqilganini aytadi va bitta bosishda
+           * ortga qaytaradi.
+           */
+          <div className="flex items-center justify-center h-64 px-4">
+            <div className="text-center max-w-md">
               <Info size={40} className="mx-auto mb-2 text-[var(--text-muted)]" />
               <p className="text-[var(--text-secondary)] text-sm font-medium">{t.noData}</p>
+              {rows.length > 0 && (
+                <>
+                  <p className="mt-1.5 text-xs" style={{ color: 'var(--text-3)' }}>
+                    {rows.length} ta firmadan hech biri joriy filtrga mos kelmadi.
+                    {filters.person !== 'all' && ' Xodim boshqa o\'rinda biriktirilgan bo\'lishi mumkin.'}
+                  </p>
+                  {(chips.length > 0 || filterStatus !== 'all' || debouncedSearch.trim() !== '') && (
+                    <button
+                      onClick={() => { resetAllFilters(); setSearch(''); }}
+                      className="mt-3 px-3 py-1.5 rounded-lg text-meta font-bold uppercase tracking-widest"
+                      style={{ background: 'var(--primary-ghost)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                    >
+                      Filtrlarni tozalash
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         ) : (

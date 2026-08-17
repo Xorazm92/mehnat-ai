@@ -9,7 +9,9 @@ import {
   matchesFacets,
   matchesSearch,
   parseFilters,
+  personFacetOptions,
   regimeLabel,
+  slotFacetOptions,
   type MatrixFilters,
 } from "./matrixFilters";
 
@@ -86,6 +88,73 @@ describe("matchesFacets", () => {
 
   it("bo'shliq e'tiborga olinmaydi", () => {
     expect(matchesFacets(facets({ accountant: "  Mirahmad  " }), filters({ accountant: "Mirahmad" }))).toBe(true);
+  });
+});
+
+describe("'Xodim' filtri — o'rin ahamiyatsiz", () => {
+  /**
+   * ASOSIY HOLAT: Ruslan 65 firmada bank-klient, buxgalter esa birortasida ham
+   * emas. "Buxgalter → Ruslan" bo'sh jadval berardi va bu "firmalari
+   * yo'qoldi" degan shikoyatga sabab bo'ldi.
+   */
+  it("bank-klient o'rnidagi odamni topadi", () => {
+    expect(matchesFacets(facets(), filters({ person: "Ruslan" }))).toBe(true);
+    expect(matchesFacets(facets(), filters({ accountant: "Ruslan" }))).toBe(false);
+  });
+
+  it("to'rt o'rinning har biridan topadi", () => {
+    for (const name of ["Mirahmad", "Go'zaloy", "Yorqinoy", "Ruslan"]) {
+      expect(matchesFacets(facets(), filters({ person: name }))).toBe(true);
+    }
+  });
+
+  it("umuman biriktirilmagan odam mos kelmaydi", () => {
+    expect(matchesFacets(facets(), filters({ person: "Muslimbek" }))).toBe(false);
+  });
+
+  it("bo'sh o'rin ('—') nom sifatida sanalmaydi", () => {
+    expect(matchesFacets(facets({ bank: "—", chief: "" }), filters({ person: "—" }))).toBe(false);
+  });
+
+  it("boshqa filtrlar bilan VA orqali birikadi", () => {
+    expect(matchesFacets(facets(), filters({ person: "Ruslan", regime: "vat" }))).toBe(true);
+    expect(matchesFacets(facets(), filters({ person: "Ruslan", regime: "turnover" }))).toBe(false);
+  });
+});
+
+describe("tanlagich variantlari va sanoqlari", () => {
+  const rows = [
+    facets({ accountant: "Mirahmad", bank: "Ruslan" }),
+    facets({ accountant: "Mirahmad", bank: "Ruslan" }),
+    facets({ accountant: "Zamira", bank: "Ruslan" }),
+  ];
+
+  it("o'rin bo'yicha nechta firma borligini sanaydi", () => {
+    expect(slotFacetOptions(rows, (r) => r.accountant)).toEqual([
+      { value: "Mirahmad", count: 2 },
+      { value: "Zamira", count: 1 },
+    ]);
+  });
+
+  it("firmasi yo'q xodim ro'yxatda 0 bilan qoladi", () => {
+    // Aynan shu sanoq bo'sh jadvalni OLDINDAN tushuntiradi.
+    const opts = slotFacetOptions(rows, (r) => r.accountant, ["Ruslan"]);
+    expect(opts.find((o) => o.value === "Ruslan")).toEqual({ value: "Ruslan", count: 0 });
+  });
+
+  it("'istalgan o'rin' sanog'i bitta firmani ikki marta sanamaydi", () => {
+    const both = [facets({ accountant: "Ruslan", bank: "Ruslan" })];
+    expect(personFacetOptions(both).find((o) => o.value === "Ruslan")).toEqual({
+      value: "Ruslan",
+      count: 1,
+    });
+  });
+
+  it("'istalgan o'rin' barcha o'rinlarni qamrab oladi", () => {
+    expect(personFacetOptions(rows).find((o) => o.value === "Ruslan")).toEqual({
+      value: "Ruslan",
+      count: 3,
+    });
   });
 });
 

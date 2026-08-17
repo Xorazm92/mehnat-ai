@@ -63,6 +63,17 @@ export function matchesColStatus(raw: unknown, filter: ColStatusFilter): boolean
  * (ustun holati uchun `any`), shu bois `isFilterActive` oddiy solishtirish.
  */
 export interface MatrixFilters {
+  /**
+   * XODIM — o'rni AHAMIYATSIZ (buxgalter / nazoratchi / bosh buxgalter /
+   * bank-klient — qaysi biri bo'lsa ham).
+   *
+   * Nima uchun alohida maydon kerak bo'ldi: filtrda faqat to'rtta O'RIN bor
+   * edi va foydalanuvchi odamni odatda o'rni bilan emas, ISMI bilan qidiradi.
+   * Ruslan 65 firmada bank-klient, buxgalter esa birortasida ham emas —
+   * "Buxgalter → Ruslan" bo'sh jadval berardi va bu "firmalari yo'qoldi" deb
+   * o'qilardi. Bu maydon shu savolga bitta qadamda javob beradi.
+   */
+  person: string;
   /** Mas'ul shaxslar — nomi bo'yicha (`ReportRow` da nom saqlanadi). */
   accountant: string;
   supervisor: string;
@@ -91,11 +102,12 @@ export interface MatrixFilters {
 
 /** Barcha filtr maydonlari — barqaror tartibda (imzo qurish uchun). */
 export const FILTER_FIELDS = [
-  "accountant", "supervisor", "chief", "bank",
+  "person", "accountant", "supervisor", "chief", "bank",
   "regime", "department", "colKey", "colStatus", "colOnly",
 ] as const satisfies readonly (keyof MatrixFilters)[];
 
 export const EMPTY_FILTERS: MatrixFilters = {
+  person: "all",
   accountant: "all",
   supervisor: "all",
   chief: "all",
@@ -112,6 +124,7 @@ export const EMPTY_FILTERS: MatrixFilters = {
  * `mx_sort` bor va manzil o'qib bo'lmas holga kelmasligi kerak.
  */
 export const FILTER_URL_KEYS: Record<keyof MatrixFilters, string> = {
+  person: "per",
   accountant: "acc",
   supervisor: "sup",
   chief: "chf",
@@ -133,6 +146,7 @@ export function parseFilters(get: (key: string) => string | null | undefined): M
   };
   const rawStatus = read(FILTER_URL_KEYS.colStatus, "any");
   return {
+    person: read(FILTER_URL_KEYS.person, "all"),
     accountant: read(FILTER_URL_KEYS.accountant, "all"),
     supervisor: read(FILTER_URL_KEYS.supervisor, "all"),
     chief: read(FILTER_URL_KEYS.chief, "all"),
@@ -184,6 +198,74 @@ export interface RowFacets {
   department: string;
 }
 
+/** Qatordagi to'rt o'rindagi haqiqiy ismlar (bo'shlari tashlanadi). */
+function slotNames(r: RowFacets): string[] {
+  const out: string[] = [];
+  for (const raw of [r.accountant, r.supervisor, r.chief, r.bank]) {
+    const v = (raw ?? "").trim();
+    if (v && v !== "—" && !out.includes(v)) out.push(v);
+  }
+  return out;
+}
+
+/** Tanlagichdagi bitta variant — nomi va shu nom nechta firmada uchrashi. */
+export interface FacetOption {
+  value: string;
+  count: number;
+}
+
+/**
+ * Bitta O'RIN bo'yicha variantlar (nomi + firmalar soni), alifbo tartibida.
+ *
+ * SANOQ SHUNING UCHUN KERAK: ro'yxatda turgan, lekin shu o'rinda hech qanday
+ * firmasi yo'q odamni tanlash bo'sh jadval berardi va buni foydalanuvchi
+ * "firmalar yo'qolib qoldi" deb o'qirdi. "Ruslan — 0" esa o'zini o'zi
+ * tushuntiradi.
+ */
+export function slotFacetOptions(
+  rows: readonly RowFacets[],
+  pick: (r: RowFacets) => string,
+  extraNames: readonly string[] = [],
+): FacetOption[] {
+  const counts = new Map<string, number>();
+  for (const name of extraNames) {
+    const v = (name ?? "").trim();
+    if (v && v !== "—") counts.set(v, counts.get(v) ?? 0);
+  }
+  for (const r of rows) {
+    const v = (pick(r) ?? "").trim();
+    if (!v || v === "—") continue;
+    counts.set(v, (counts.get(v) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => a.value.localeCompare(b.value, "uz"));
+}
+
+/**
+ * "Istalgan o'rin" variantlari: xodim to'rt o'rindan birortasida tursa ham
+ * sanaladi, lekin BITTA firma bir marta (bir odam bir firmada ham buxgalter,
+ * ham bank-klient bo'lishi mumkin).
+ */
+export function personFacetOptions(
+  rows: readonly RowFacets[],
+  extraNames: readonly string[] = [],
+): FacetOption[] {
+  const counts = new Map<string, number>();
+  for (const name of extraNames) {
+    const v = (name ?? "").trim();
+    if (v && v !== "—") counts.set(v, counts.get(v) ?? 0);
+  }
+  for (const r of rows) {
+    for (const name of slotNames(r)) {
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+  }
+  return [...counts]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => a.value.localeCompare(b.value, "uz"));
+}
+
 /**
  * Mas'ul/xossa filtrlari mos keladimi (ustun kesimi ALOHIDA — u ustun
  * qiymatini talab qiladi va chaqiruvchi tomonda tekshiriladi).
@@ -198,6 +280,9 @@ export function matchesFacets(facets: RowFacets, f: MatrixFilters): boolean {
     if (!v || v === "—") return false;
     return v === wanted;
   };
+  // "Xodim" — TO'RTTA o'rindan birortasi mos kelsa yetarli. Qolgan filtrlar
+  // bilan VA orqali birikadi ("Ruslan" + "QQS to'lovchilar" ma'noli savol).
+  if (f.person !== "all" && !slotNames(facets).includes(f.person)) return false;
   return (
     eq(facets.accountant, f.accountant) &&
     eq(facets.supervisor, f.supervisor) &&
@@ -261,6 +346,7 @@ export function activeChips(
     if (f[key] !== EMPTY_FILTERS[key]) chips.push({ key, label, value });
   };
 
+  push("person", "Xodim", f.person);
   push("accountant", "Buxgalter", f.accountant);
   push("supervisor", "Nazoratchi", f.supervisor);
   push("chief", "Bosh buxgalter", f.chief);
