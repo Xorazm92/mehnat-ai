@@ -23,6 +23,7 @@ import {
   activeChips,
   filtersSignature,
   matchesColStatus,
+  passesColumnSection,
   matchesFacets,
   matchesSearch,
   parseFilters,
@@ -1391,20 +1392,41 @@ const OperationModule: React.FC<Props> = ({
    * o'tishda tayyorlanadi va filtr, saralash hamda menyudagi sanoqlar shu
    * bitta manbadan oziqlanadi.
    */
+  /** Qatordagi firma soliq rejimi (ustun tegishliligini hal qiladi). */
+  const regimeOfRow = (row: ReportRow) => String((row as { regime?: string }).regime ?? '');
+
   const tallyByRow = useMemo(() => {
     const map = new Map<ReportRow, StatusTally>();
     for (const row of rows) {
       const t = emptyTally();
+      /**
+        * REJIMGA TEGISHLI BO'LMAGAN USTUN HISOBGA UMUMAN KIRMAYDI.
+        *
+        * QQS to'lovchida "Aylanma" katagi (va aksincha) na suratga, na
+        * maxrajga qo'shiladi — u shu firma uchun mavjud emas, "bajarilmagan"
+        * ham emas. Amalda katak bo'sh bo'lgani uchun natija ko'pincha bir xil
+        * chiqadi, lekin bu ATAYLAB aniq qilingan: majburiyat qamrovi bilan
+        * firma rejimi bir-biriga zid ma'lumot bersa (masalan rejim
+        * o'zgartirilgan, majburiyat esa eski davrdan qolgan), foiz jimgina
+        * buzilib ketmasin.
+        */
+      const countable = (key: string) => columnAppliesToRegime(key, regimeOfRow(row));
       if (focusKey) {
         // Fokus rejimida AYNAN tanlangan katak — bo'linadigan ustunning
         // juftligi qo'shilsa "AQh foizi" AQt ni ham qamrab olardi.
-        addToTally(t, row[focusKey], isCellRequired(row.companyId, focusKey));
+        if (countable(focusKey)) {
+          addToTally(t, row[focusKey], isCellRequired(row.companyId, focusKey));
+        }
       } else {
         for (const col of visibleColumns) {
-          addToTally(t, row[col.key], isCellRequired(row.companyId, col.key));
+          if (countable(col.key)) {
+            addToTally(t, row[col.key], isCellRequired(row.companyId, col.key));
+          }
           if ((col as { isSplit?: boolean }).isSplit) {
             const pk = (col as unknown as { payKey: string }).payKey;
-            addToTally(t, row[pk], isCellRequired(row.companyId, pk));
+            if (countable(pk)) {
+              addToTally(t, row[pk], isCellRequired(row.companyId, pk));
+            }
           }
         }
       }
@@ -1438,10 +1460,13 @@ const OperationModule: React.FC<Props> = ({
       filters
     )) return false;
 
-    // Ustun kesimi: tanlangan ustunda so'ralgan holat bo'lsagina qator qoladi.
-    if (filters.colKey !== 'all' && !matchesColStatus(r[filters.colKey], filters.colStatus)) {
-      return false;
-    }
+    // Ustun kesimi — rejim + holat birga (lib/matrixFilters.ts).
+    if (!passesColumnSection({
+      colKey: filters.colKey,
+      colStatus: filters.colStatus,
+      regime: r.regime,
+      value: r[filters.colKey],
+    })) return false;
     return true;
   }), [rows, debouncedSearch, filters]);
 
@@ -1506,6 +1531,10 @@ const OperationModule: React.FC<Props> = ({
       // Tahlil foizi matritsa foizi bilan bir xil maxrajdan chiqishi kerak.
       const values: Record<string, { value: unknown; required: boolean }> = {};
       const put = (key: string) => {
+        // Firma rejimiga tegishli bo'lmagan ustun Tahlilga ham kirmaydi —
+        // aks holda "Aylanma Hisobot" kesimida QQS to'lovchilar maxrajga
+        // qo'shilib, foizni pasaytirardi.
+        if (!columnAppliesToRegime(key, regimeOfRow(r))) return;
         values[key] = { value: r[key], required: isCellRequired(r.companyId, key) };
       };
       for (const c of availableColumns) {
@@ -1712,9 +1741,14 @@ const OperationModule: React.FC<Props> = ({
       const header = ['#', 'Korxona', 'INN', 'Buxgalter', 'Soliq turi', ...headerCols];
       const data = filteredRows.map(r => {
         const vals: string[] = [];
+        // Rejimga tegishli bo'lmagan katak ekranda "—" bo'lib turadi; eksportda
+        // ham shunday chiqishi kerak, aks holda u "hali to'ldirilmagan" bo'sh
+        // katakdan ajralmay qolardi.
+        const cellFor = (key: string) =>
+          columnAppliesToRegime(key, regimeOfRow(r)) ? String(r[key] || '') : '—';
         visibleColumns.forEach(c => {
-          vals.push(String(r[c.key] || ''));
-          if ((c as any).isSplit) vals.push(String(r[(c as any).payKey] || ''));
+          vals.push(cellFor(c.key));
+          if ((c as any).isSplit) vals.push(cellFor((c as any).payKey));
         });
         return [
           r.index,

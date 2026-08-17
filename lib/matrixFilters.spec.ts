@@ -9,6 +9,7 @@ import {
   matchesFacets,
   matchesSearch,
   parseFilters,
+  passesColumnSection,
   personFacetOptions,
   regimeLabel,
   slotFacetOptions,
@@ -155,6 +156,48 @@ describe("tanlagich variantlari va sanoqlari", () => {
       value: "Ruslan",
       count: 3,
     });
+  });
+});
+
+describe("passesColumnSection — ustun kesimi + soliq rejimi", () => {
+  const base = { colStatus: "any" as const, value: "" };
+
+  it("ustun tanlanmagan bo'lsa hamma qator o'tadi", () => {
+    expect(passesColumnSection({ ...base, colKey: "all", regime: "vat" })).toBe(true);
+  });
+
+  /**
+   * ASOSIY HOLAT: "Aylanma Hisobot" kesimida QQS to'lovchilar ham ro'yxatda
+   * qolardi (katagi "—" bo'lsa ham) va foiz 257 tadan hisoblanardi.
+   */
+  it("QQS firma 'Aylanma' kesimida ro'yxatdan chiqadi", () => {
+    expect(passesColumnSection({ ...base, colKey: "aylanma", regime: "vat" })).toBe(false);
+    expect(passesColumnSection({ ...base, colKey: "aylanma_tolov", regime: "vat" })).toBe(false);
+  });
+
+  it("aylanma firma 'QQS' kesimida ro'yxatdan chiqadi", () => {
+    expect(passesColumnSection({ ...base, colKey: "qqs", regime: "turnover" })).toBe(false);
+    expect(passesColumnSection({ ...base, colKey: "qqs_tolov", regime: "turnover" })).toBe(false);
+  });
+
+  it("o'z rejimidagi firma qoladi", () => {
+    expect(passesColumnSection({ ...base, colKey: "aylanma", regime: "turnover" })).toBe(true);
+    expect(passesColumnSection({ ...base, colKey: "qqs", regime: "vat" })).toBe(true);
+  });
+
+  it("rejim to'g'ri bo'lsa ham holat mos kelmasa chiqadi", () => {
+    expect(passesColumnSection({
+      colKey: "aylanma", colStatus: "blocked", regime: "turnover", value: "+",
+    })).toBe(false);
+    expect(passesColumnSection({
+      colKey: "aylanma", colStatus: "settled", regime: "turnover", value: "+",
+    })).toBe(true);
+  });
+
+  it("rejimga bog'liq bo'lmagan ustunda eski xatti-harakat saqlanadi", () => {
+    for (const regime of ["vat", "turnover", "fixed", ""]) {
+      expect(passesColumnSection({ ...base, colKey: "didox", regime })).toBe(true);
+    }
   });
 });
 

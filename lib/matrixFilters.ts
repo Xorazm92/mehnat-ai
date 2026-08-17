@@ -12,6 +12,7 @@
 // da DB'siz sinaladi.
 
 import { classifyCell, isSettled, type CellStatus } from "./reportStatus";
+import { columnAppliesToRegime } from "./reportApplicability";
 
 // ── Ustun kesimidagi holat ───────────────────────────────────────
 
@@ -54,6 +55,29 @@ export function matchesColStatus(raw: unknown, filter: ColStatusFilter): boolean
   if (filter === "settled") return isSettled(s);
   if (filter === "outstanding") return s !== "none" && !isSettled(s);
   return s === filter;
+}
+
+/**
+ * USTUN KESIMI: qator ro'yxatda qoladimi.
+ *
+ * Ikki shart BIRGA tekshiriladi:
+ *   1. ustun shu firmaning soliq rejimiga tegishlimi;
+ *   2. katak qiymati so'ralgan holatga mos keladimi.
+ *
+ * Birinchisi qo'shilishining sababi: "Aylanma Hisobot" kesimida ro'yxatda 257
+ * ta firma qolardi — QQS to'lovchilar ham, garchi ularning katagi "—" bo'lsa
+ * ham. Buxgalter buni "QQS firma aylanmada chiqyapti" deb o'qirdi, foiz esa
+ * 257 tadan hisoblanib yolg'on gapirardi.
+ */
+export function passesColumnSection(opts: {
+  colKey: string;
+  colStatus: ColStatusFilter;
+  regime: string | null | undefined;
+  value: unknown;
+}): boolean {
+  if (opts.colKey === "all") return true;
+  if (!columnAppliesToRegime(opts.colKey, opts.regime)) return false;
+  return matchesColStatus(opts.value, opts.colStatus);
 }
 
 // ── Filtr holati ─────────────────────────────────────────────────
