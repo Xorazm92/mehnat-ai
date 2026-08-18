@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { isAdminRole } from "@/lib/permissions";
+import { currentUserViews } from "@/server/rbac";
 import { prisma } from "@/lib/prisma";
 import { getTransitOverview, getUnlinkedCardTransfers, getHouseholdExpenses } from "@/server/transit";
 import { getBankExpenses } from "@/server/bankImport";
@@ -12,9 +12,16 @@ export default async function ChiqimKassaPage() {
   const session = await auth();
   if (!session) redirect("/login?expired=1");
 
-  // "Rasxodni faqat man qilaman" — bu sahifa faqat admin uchun.
-  // proxy.ts ham to'sadi, lekin sahifa o'zini o'zi qo'riqlashi kerak.
-  if (!isAdminRole(session.user.role as string)) redirect("/cabinet");
+  // Darvoza `kassa_expense` ko'rinishi orqali — proxy bilan AYNAN bir manba
+  // (server/rbac.ts → currentUserViews), ya'ni admin RBAC editoridan
+  // o'zgartirilsa bu sahifa ham darhol unga bo'ysunadi.
+  //
+  // Ilgari bu yerda qattiq `isAdminRole` turardi ("rasxodni faqat man
+  // qilaman"). Qoida 2026-08-18 da o'zgardi — kassani kundalik yurituvchi
+  // xodim chiqim tomonini ham yozadi; server action'lar o'z tekshiruvini
+  // saqlaydi (server/transit.ts requireKassa / requireAdmin).
+  const views = await currentUserViews();
+  if (!views.includes("kassa_expense")) redirect("/cabinet");
 
   const [overview, unlinked, household, bankExpenses, employees] = await Promise.all([
     getTransitOverview(),

@@ -187,13 +187,25 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "notifications",
     "settings",
   ],
-  // Bank-klient FAQAT kirim kassasini ko'radi. "kassa" (shartnoma to'lovlari
-  // jadvali) va "expenses" (chiqim) ATAYIN olib tashlangan: rasxodni faqat
-  // admin qiladi.
+  // Bank-klient KASSA XODIMI: kirim ham, chiqim ham unda.
+  //
+  // Ilgari bu yerda faqat `kassa_income` bor edi va izohda "rasxodni faqat
+  // admin qiladi" deb yozilgandi. Qoida 2026-08-18 da o'zgardi: kassani
+  // kundalik yurituvchi xodim chiqim tomonini ham yozadi.
+  //
+  // Bu PUL CHIQARISH huquqi EMAS. `/kassa/chiqim` dagi amallar allaqachon
+  // sodir bo'lgan harakatni QAYD qiladi: bank pulni o'tkazib bo'lgan, karta
+  // xarajati qilingan. Haqiqiy ruxsat qatlami boshqa joyda va o'zgarmadi —
+  // xarajat tasdig'i summaga qarab (`lib/expenseApproval.ts`), kanalni
+  // muzlatish faqat adminda (`server/transit.ts setChannelActive`).
   [ROLES.BANK_MANAGER]: [
     "cabinet",
     "cabinet_bank",
+    "kassa",
     "kassa_income",
+    "kassa_expense",
+    "kassa_debt",
+    "expenses",
     "notifications",
     "settings",
   ],
