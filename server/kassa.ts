@@ -68,6 +68,60 @@ export async function getKassaEntries(filters?: {
   );
 }
 
+/**
+ * Oylik OPERATSION XARAJAT emas — u `Payout` qatlamidan chiqadi.
+ *
+ * Qoida `lib/cashGate.ts` dagi bilan bir xil, lekin UI yo'lida QAT'IYROQ:
+ * bu yerda `SALARY_EXPENSE` ga yozish imkoni umuman berilmaydi, chunki
+ * ekrandan oylik kiritish `/payroll` orqali bo'lishi kerak. Tranzit backfilli
+ * (kartadan berilgan mehnat haqi) darvoza orqali o'tadi va u yerda ruxsat bor.
+ */
+function assertNotSalary(type: string, category: string) {
+  if (
+    type === "expense" &&
+    /oylik|ish\s*haqi|mehnat\s*haqi|maosh|zarplata|зарплат|ойлик|иш\s*хак/i.test(category)
+  ) {
+    throw new Error(
+      "Oylik kassa chiqimi sifatida yozilmaydi — u ikki marta hisobga kirardi. " +
+        "Oylik to'lovi \"Oylik\" bo'limi (/payroll) orqali beriladi."
+    );
+  }
+}
+
+/** Tasdiqlangan kassa yozuvining ikki tomonlama izi. */
+async function postExpenseLegs(
+  tx: Prisma.TransactionClient,
+  row: { id: string; amount: Prisma.Decimal | number; category: string; date: Date; channelId: string | null; type: string },
+  userId: string
+) {
+  const amount = Number(row.amount);
+  await postLedger(tx, {
+    legs:
+      row.type === "income"
+        ? [
+            { accountId: ACCOUNTS.CASH, debit: amount, channelId: row.channelId },
+            { accountId: ACCOUNTS.KASSA_INCOME, credit: amount },
+          ]
+        : [
+            { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: amount },
+            { accountId: ACCOUNTS.CASH, credit: amount, channelId: row.channelId },
+          ],
+    period: periodKeyOf(row.date),
+    sourceTable: "KassaEntry",
+    sourceId: row.id,
+    createdBy: userId,
+    description: `Kassa ${row.type === "income" ? "kirim" : "chiqim"}: ${row.category}`,
+  });
+}
+
+/**
+ * Kassa kirimi/chiqimi — YAGONA yozuv yo'li.
+ *
+ * Chiqimda tasdiq oqimi ishlaydi (`lib/expenseApproval.ts` chegaralari):
+ * <1 mln avto-tasdiq, undan yuqorisi `pending` bo'lib navbatga tushadi.
+ * JURNALGA faqat TASDIQLANGAN yozuv tushadi — `pending` da pul hali
+ * chiqmagan, shuning uchun uni balansdan ayirish noto'g'ri bo'lardi.
+ */
 export async function createKassaEntry(data: {
   type: string;
   category: string;
@@ -82,72 +136,48 @@ export async function createKassaEntry(data: {
   if (!session) throw new Error("Unauthorized");
 
   const role = session.user.role as string;
+  const userId = session.user.id as string;
   if (!isFinanceRole(role)) throw new Error("Forbidden");
 
   if (data.type !== "income" && data.type !== "expense") {
     throw new Error("Kassa turi noto'g'ri: 'income' yoki 'expense' bo'lishi kerak");
   }
-  // Oylik kassa chiqimi sifatida yozilsa, `Payout` bilan IKKI MARTA sanaladi:
-  // `lib/balance.ts` chiqimni ikkala jadvaldan ham oladi. Toifa ro'yxatidan
-  // olib tashlangan (`lib/kassaCategories.ts`), lekin ro'yxat sozlamada —
-  // korxona uni qayta qo'shib qo'yishi mumkin, shuning uchun server tomonda
-  // ham qo'riqchi turadi.
-  // Naqsh KENG: prod bazasida oylik "Ish haqi" deb yozilgan (70.6 mln) —
-  // tor naqsh uni o'tkazib yuborardi. "Ish haqi", "oylik", "maosh",
-  // "zarplata" va ruscha/lotincha variantlari qamrab olinadi.
-  if (
-    data.type === "expense" &&
-    /oylik|ish\s*haqi|mehnat\s*haqi|maosh|zarplata|зарплат|ойлик|иш\s*хак/i.test(data.category)
-  ) {
-    throw new Error(
-      "Oylik kassa chiqimi sifatida yozilmaydi — u ikki marta hisobga kirardi. " +
-        "Oylik to'lovi \"Oylik\" bo'limi (/payroll) orqali beriladi."
-    );
-  }
+  assertNotSalary(data.type, data.category);
   assertPositiveAmount(data.amount);
-  await assertPeriodOpen(prisma, data.date, "kassa yozuvi");
+  if (data.channelId) await assertFundingSource(data.channelId);
+
+  // Kirim har doim yakuniy; chiqimda chegara qaraladi.
+  const autoApprove = data.type === "income" || data.amount < 1_000_000;
 
   const created = await serializable(async (tx) => {
-    // Kassa chiqimi mavjud balansdan oshmasligi kerak (kirim shart emas).
-    // Tekshiruv YOZUV BILAN BIR TRANZAKSIYADA — aks holda ikki parallel chiqim
-    // bir xil balansni ko'rib ikkalasi ham o'tib ketardi.
-    if (data.type === "expense") {
+    await assertPeriodOpen(tx, data.date, "kassa yozuvi");
+
+    // Chiqim mavjud balansdan oshmasligi kerak. Tekshiruv YOZUV BILAN BIR
+    // TRANZAKSIYADA — aks holda ikki parallel chiqim bir xil balansni ko'rib
+    // ikkalasi ham o'tib ketardi.
+    if (data.type === "expense" && autoApprove) {
       await assertSufficientFunds({
-        amount: data.amount, role, userId: session.user.id, context: "expense", db: tx,
+        amount: data.amount, role, userId, context: "expense", db: tx,
       });
     }
     const row = await tx.kassaEntry.create({
       data: {
         ...data,
-        createdBy: session.user.id,
+        createdBy: userId,
+        status: autoApprove ? "approved" : "pending",
+        ...(autoApprove ? { approvedBy: userId, approvedAt: new Date() } : {}),
       },
     });
-    await postLedger(tx, {
-      legs:
-        data.type === "income"
-          ? [
-              { accountId: ACCOUNTS.CASH, debit: data.amount },
-              { accountId: ACCOUNTS.KASSA_INCOME, credit: data.amount },
-            ]
-          : [
-              { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: data.amount },
-              { accountId: ACCOUNTS.CASH, credit: data.amount },
-            ],
-      period: periodKeyOf(data.date),
-      sourceTable: "KassaEntry",
-      sourceId: row.id,
-      createdBy: session.user.id,
-      description: `Kassa ${data.type === "income" ? "kirim" : "chiqim"}: ${data.category}`,
-    });
+    if (autoApprove) await postExpenseLegs(tx, row, userId);
     return row;
   });
 
   await recordAuditLog({
-    userId: session.user.id,
+    userId,
     action: "create",
     tableName: "KassaEntry",
     recordId: created.id,
-    newData: { type: data.type, category: data.category, amount: data.amount },
+    newData: { type: data.type, category: data.category, amount: data.amount, status: created.status },
   });
 
   return serialize(created);
@@ -194,9 +224,26 @@ export async function deleteKassaEntry(id: string, reason?: string) {
 }
 
 // =====================================================
-// EXPENSES
+// XARAJATLAR — `KassaEntry(expense)` ustida
 // =====================================================
+//
+// ILGARI ALOHIDA `Expense` JADVALI BOR EDI. Ikkala jadval ham bitta savolga
+// javob berardi ("pul chiqdi"), lekin `Expense` da tasdiq oqimi bor edi,
+// `KassaEntry` da yo'q. Natijada olti modulda ikkita shox olib yurilardi
+// (`lib/balance.ts`, `lib/monthClose.ts`, `lib/reconciliation.ts`,
+// `scripts/backfill-ledger.ts`, `lib/cashGate.ts`, shu fayl), holbuki prodda
+// `Expense` da atigi 3 ta `pending` qator va NOLTA tasdiqlangan qator bor edi.
+//
+// Endi tasdiq oqimi `KassaEntry` ning o'zida (`status`/`approvedBy`/
+// `approvedAt`/`rejectedReason`) va jadval BITTA. `/expenses` ekrani
+// o'zgarmadi — u faqat props va callback ishlatadi, quyidagi funksiyalar esa
+// endi `KassaEntry` bilan gaplashadi.
+//
+// `paymentMethod` OLIB TASHLANDI: `channelId` uni to'liq almashtiradi va
+// undan boyroq ("qaysi schyot/karta", nafaqat "naqdmi yoki plastikmi").
+// Ikkalasini saqlash aynan biz yo'q qilayotgan takroriylik bo'lardi.
 
+/** Xarajat ro'yxati — `/expenses` ekrani uchun. */
 export async function getExpenses(filters?: {
   category?: string;
   from?: Date;
@@ -204,13 +251,12 @@ export async function getExpenses(filters?: {
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-
-  const role = session.user.role as string;
-  if (!isFinanceRole(role)) throw new Error("Forbidden");
+  if (!isFinanceRole(session.user.role as string)) throw new Error("Forbidden");
 
   return serialize(
-    await prisma.expense.findMany({
+    await prisma.kassaEntry.findMany({
       where: {
+        type: "expense",
         deletedAt: null,
         ...(filters?.category ? { category: filters.category } : {}),
         ...(filters?.from || filters?.to
@@ -222,128 +268,81 @@ export async function getExpenses(filters?: {
             }
           : {}),
       },
-      include: {
-        user: { select: { id: true, fullName: true } },
-      },
+      include: { user: { select: { id: true, fullName: true } } },
       orderBy: { date: "desc" },
     })
   );
 }
 
-// Tasdiqlangan xarajatning ikki tomonlama yozuvi: xarajat oshdi, kassa kamaydi.
-async function postExpenseLedger(tx: Prisma.TransactionClient, exp: { id: string; amount: number; category: string; date: Date }, userId: string) {
-  await postLedger(tx, {
-    legs: [
-      { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: exp.amount },
-      { accountId: ACCOUNTS.CASH, credit: exp.amount },
-    ],
-    period: periodKeyOf(exp.date),
-    sourceTable: "Expense",
-    sourceId: exp.id,
-    createdBy: userId,
-    description: `Xarajat: ${exp.category}`,
-  });
-}
-
+/**
+ * Xarajat kiritish. Tasdiq chegarasi `lib/expenseApproval.ts` da:
+ * <1 mln avto-tasdiq · 1–10 mln bosh buxgalter · >10 mln superadmin.
+ *
+ * Yozuv `createKassaEntry` orqali ketadi — bitta yozuv yo'li, bitta jurnal.
+ */
 export async function createExpense(data: {
   amount: number;
   date: Date;
   category: string;
   description?: string;
-  paymentMethod?: string;
-  /** Pul qaysi manbadan chiqdi — DisbursementChannel.id (schyot yoki plastik). */
   channelId?: string;
 }) {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-
-  const role = session.user.role as string;
-  // Xarajat kiritish — xarajatlar bo'limini ko'ra oladigan rollar bilan bir xil
-  // (getExpenses); aks holda buxgalter <1 mln xarajatni avto-tasdiq bilan o'tkaza olardi.
-  if (!isFinanceRole(role)) throw new Error("Forbidden");
-  assertPositiveAmount(data.amount, "Xarajat summasi");
-  // Manba serverda tekshiriladi: formaning majburiyligi yetarli emas, aks holda
-  // bitta so'rov bilan "pul qayerdan chiqdi" savoli javobsiz qolardi.
-  if (data.channelId) await assertFundingSource(data.channelId);
-  await assertPeriodOpen(prisma, data.date, "xarajat");
-
-  const autoApprove = data.amount < 1_000_000; // kichik xarajatlar avtomatik tasdiqlanadi
-  // Avto-tasdiqda pul darhol chiqadi → mavjud balansdan oshmasligini tekshir.
-  // Katta (pending) xarajatlar tasdiq paytida (approveExpense) tekshiriladi.
-  const created = await serializable(async (tx) => {
-    if (autoApprove) {
-      await assertSufficientFunds({
-        amount: data.amount, role, userId: session.user.id, context: "expense", db: tx,
-      });
-    }
-    const row = await tx.expense.create({
-      data: {
-        ...data,
-        createdBy: session.user.id,
-        status: autoApprove ? "approved" : "pending",
-        ...(autoApprove ? { approvedBy: session.user.id, approvedAt: new Date() } : {}),
-      },
-    });
-    // Ledger faqat pul haqiqatan chiqqanda (tasdiqda) yoziladi.
-    if (autoApprove) {
-      await postExpenseLedger(tx, { id: row.id, amount: data.amount, category: data.category, date: data.date }, session.user.id);
-    }
-    return row;
-  });
-
-  await recordAuditLog({
-    userId: session.user.id,
-    action: "create",
-    tableName: "Expense",
-    recordId: created.id,
-    newData: { amount: data.amount, category: data.category, status: created.status },
-  });
-
-  return serialize(created);
+  return createKassaEntry({ ...data, type: "expense" });
 }
 
+/**
+ * Kutilayotgan xarajatni tasdiqlash — pul SHU PAYTDA chiqadi.
+ *
+ * Jurnal yozuvi ham aynan shu yerda: `createKassaEntry` `pending` yozuvga
+ * jurnal yozmaydi (pul hali chiqmagan), tasdiqda esa yoziladi.
+ */
 export async function approveExpense(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   const role = session.user.role as string;
 
-  const exp = await prisma.expense.findUnique({ where: { id } });
-  if (!exp || exp.deletedAt) throw new Error("Xarajat topilmadi");
-  // Ikki marta tasdiqlash — ikki marta ledger yozuvi degani; qat'iy bloklanadi.
-  if (exp.status === "approved") throw new Error("Xarajat allaqachon tasdiqlangan");
-  if (!canApproveExpense(role, Number(exp.amount))) {
-    throw new Error(Number(exp.amount) > 10_000_000 ? "10 mln dan yuqori — faqat Superadmin tasdiqlaydi" : "Tasdiqlash huquqi yo'q");
+  const row = await prisma.kassaEntry.findUnique({ where: { id } });
+  if (!row || row.deletedAt || row.type !== "expense") throw new Error("Xarajat topilmadi");
+  // Ikki marta tasdiqlash — ikki marta jurnal yozuvi; qat'iy bloklanadi.
+  if (row.status === "approved") throw new Error("Xarajat allaqachon tasdiqlangan");
+  if (!canApproveExpense(role, Number(row.amount))) {
+    throw new Error(
+      Number(row.amount) > 10_000_000
+        ? "10 mln dan yuqori — faqat Superadmin tasdiqlaydi"
+        : "Tasdiqlash huquqi yo'q"
+    );
   }
 
-  await assertPeriodOpen(prisma, exp.date, "xarajat");
-
   const approved = await serializable(async (tx) => {
-    // Holatni tranzaksiya ICHIDA qayta o'qiymiz: yuqoridagi tekshiruvdan beri
-    // boshqa seans tasdiqlab ulgurgan bo'lishi mumkin, va ikki marta tasdiq =
-    // ikki marta ledger yozuvi.
-    const fresh = await tx.expense.findUnique({ where: { id }, select: { status: true } });
+    // Holatni tranzaksiya ICHIDA qayta o'qiymiz: tekshiruvdan beri boshqa
+    // seans tasdiqlab ulgurgan bo'lishi mumkin.
+    const fresh = await tx.kassaEntry.findUnique({ where: { id }, select: { status: true } });
     if (!fresh || fresh.status === "approved") throw new Error("Xarajat allaqachon tasdiqlangan");
 
-    // Tasdiqdan keyin pul chiqadi → mavjud balans yetarli bo'lishi kerak.
+    await assertPeriodOpen(tx, row.date, "xarajat");
     await assertSufficientFunds({
-      amount: Number(exp.amount), role, userId: session.user.id,
-      excludeExpenseId: id, context: "expense", db: tx,
+      amount: Number(row.amount), role, userId: session.user.id, context: "expense", db: tx,
     });
 
-    const row = await tx.expense.update({
+    const updated = await tx.kassaEntry.update({
       where: { id },
-      data: { status: "approved", approvedBy: session.user.id, approvedAt: new Date(), rejectedReason: null },
+      data: {
+        status: "approved",
+        approvedBy: session.user.id,
+        approvedAt: new Date(),
+        rejectedReason: null,
+      },
     });
-    await postExpenseLedger(tx, { id, amount: Number(exp.amount), category: exp.category, date: exp.date }, session.user.id);
-    return row;
+    await postExpenseLegs(tx, updated, session.user.id);
+    return updated;
   });
 
   await recordAuditLog({
     userId: session.user.id,
     action: "update",
-    tableName: "Expense",
+    tableName: "KassaEntry",
     recordId: id,
-    newData: { status: "approved", amount: Number(exp.amount) },
+    newData: { status: "approved", amount: Number(row.amount) },
   });
 
   return serialize(approved);
@@ -354,25 +353,32 @@ export async function rejectExpense(id: string, reason: string) {
   if (!session) throw new Error("Unauthorized");
   if (!isSeniorRole(session.user.role as string)) throw new Error("Forbidden");
 
-  const exp = await prisma.expense.findUnique({ where: { id } });
-  if (!exp || exp.deletedAt) throw new Error("Xarajat topilmadi");
-
-  await assertPeriodOpen(prisma, exp.date, "xarajat");
+  const row = await prisma.kassaEntry.findUnique({ where: { id } });
+  if (!row || row.deletedAt || row.type !== "expense") throw new Error("Xarajat topilmadi");
 
   const rejected = await prisma.$transaction(async (tx) => {
-    const row = await tx.expense.update({
+    await assertPeriodOpen(tx, row.date, "xarajat");
+    const updated = await tx.kassaEntry.update({
       where: { id },
-      data: { status: "rejected", approvedBy: session.user.id, approvedAt: new Date(), rejectedReason: reason },
+      data: {
+        status: "rejected",
+        approvedBy: session.user.id,
+        approvedAt: new Date(),
+        rejectedReason: reason,
+      },
     });
-    // Avval tasdiqlangan bo'lsa — pul "qaytadi": ledger izi nolga tushiriladi.
-    await reverseLedger(tx, { sourceTable: "Expense", sourceId: id, createdBy: session.user.id, reason: `rad etildi: ${reason}` });
-    return row;
+    // Avval tasdiqlangan bo'lsa — pul "qaytadi": jurnal izi nolga tushadi.
+    await reverseLedger(tx, {
+      sourceTable: "KassaEntry", sourceId: id,
+      createdBy: session.user.id, reason: `rad etildi: ${reason}`,
+    });
+    return updated;
   });
 
   await recordAuditLog({
     userId: session.user.id,
     action: "update",
-    tableName: "Expense",
+    tableName: "KassaEntry",
     recordId: id,
     newData: { status: "rejected", rejectedReason: reason },
   });
@@ -385,63 +391,62 @@ export async function updateExpense(id: string, data: {
   date: Date;
   category: string;
   description?: string;
-  paymentMethod?: string;
-  /** Pul manbai — DisbursementChannel.id (schyot yoki plastik). */
   channelId?: string;
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-
   const role = session.user.role as string;
-  const userId = session.user.id;
+  const userId = session.user.id as string;
+
   if (data.channelId) await assertFundingSource(data.channelId);
 
-  const existing = await prisma.expense.findUnique({ where: { id } });
-  if (!existing || existing.deletedAt) throw new Error("Xarajat topilmadi");
-
-  // Faqat senior rollar yoki (kutilayotgan xarajatning) muallifi tahrirlaydi
+  const existing = await prisma.kassaEntry.findUnique({ where: { id } });
+  if (!existing || existing.deletedAt || existing.type !== "expense") {
+    throw new Error("Xarajat topilmadi");
+  }
+  // Faqat senior rollar yoki (kutilayotgan xarajatning) muallifi tahrirlaydi.
   if (!isSeniorRole(role) && !(existing.createdBy === userId && existing.status === "pending")) {
     throw new Error("Forbidden");
   }
-
   assertPositiveAmount(data.amount, "Xarajat summasi");
-  // Ham eski, ham yangi davr ochiq bo'lishi kerak (yozuvni yopiq oydan olib chiqib ketish ham taqiq).
-  await assertPeriodOpen(prisma, existing.date, "xarajat");
-  await assertPeriodOpen(prisma, data.date, "xarajat");
+  assertNotSalary("expense", data.category);
 
-  // Tahrir tasdiq oqimini qayta boshlaydi (createExpense bilan bir xil qoida)
+  // Tahrir tasdiq oqimini QAYTA BOSHLAYDI — `createExpense` bilan bir xil qoida.
   const autoApprove = data.amount < 1_000_000;
-  // Avto-tasdiqlanadigan bo'lsa balansni tekshir — o'zining eski summasini
-  // ikki marta sanamaslik uchun joriy xarajat chiqim yig'indisidan chiqariladi.
+
   const updated = await serializable(async (tx) => {
+    // Ham eski, ham yangi davr ochiq bo'lishi kerak: yozuvni yopiq oydan
+    // olib chiqib ketish ham taqiq.
+    await assertPeriodOpen(tx, existing.date, "xarajat");
+    await assertPeriodOpen(tx, data.date, "xarajat");
+
     if (autoApprove) {
       await assertSufficientFunds({
-        amount: data.amount, role, userId, excludeExpenseId: id, context: "expense", db: tx,
+        amount: data.amount, role, userId, excludeKassaEntryId: id, context: "expense", db: tx,
       });
     }
-    // Eski tasdiqlangan holatning ledger izi netto nolga tushadi, keyin
-    // (agar yana avto-tasdiq bo'lsa) yangi summa bilan qayta yoziladi.
-    await reverseLedger(tx, { sourceTable: "Expense", sourceId: id, createdBy: userId, reason: "xarajat tahrirlandi" });
-    const row = await tx.expense.update({
+    // Eski jurnal izi netto nolga tushadi, so'ng (avto-tasdiqda) qayta yoziladi.
+    await reverseLedger(tx, {
+      sourceTable: "KassaEntry", sourceId: id, createdBy: userId, reason: "xarajat tahrirlandi",
+    });
+    const row = await tx.kassaEntry.update({
       where: { id },
       data: {
         ...data,
         status: autoApprove ? "approved" : "pending",
-        approvedBy: autoApprove ? session.user.id : null,
+        approvedBy: autoApprove ? userId : null,
         approvedAt: autoApprove ? new Date() : null,
         rejectedReason: null,
       },
     });
-    if (autoApprove) {
-      await postExpenseLedger(tx, { id, amount: data.amount, category: data.category, date: data.date }, userId);
-    }
+    if (autoApprove) await postExpenseLegs(tx, row, userId);
     return row;
   });
 
   await recordAuditLog({
     userId,
     action: "update",
-    tableName: "Expense",
+    tableName: "KassaEntry",
     recordId: id,
     oldData: { amount: Number(existing.amount), category: existing.category, status: existing.status },
     newData: { amount: data.amount, category: data.category, status: updated.status },
@@ -450,42 +455,9 @@ export async function updateExpense(id: string, data: {
   return serialize(updated);
 }
 
+/** Xarajatni o'chirish — `deleteKassaEntry` bilan bir xil yo'l. */
 export async function deleteExpense(id: string, reason?: string) {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-
-  const role = session.user.role as string;
-  if (!isAdminRole(role)) throw new Error("Forbidden");
-
-  const existing = await prisma.expense.findUnique({ where: { id } });
-  if (!existing || existing.deletedAt) throw new Error("Xarajat topilmadi");
-
-  await assertPeriodOpen(prisma, existing.date, "xarajat");
-
-  const deleted = await prisma.$transaction(async (tx) => {
-    const row = await tx.expense.update({
-      where: { id },
-      data: { deletedAt: new Date(), deletedBy: session.user.id, deleteReason: reason?.trim() || null },
-    });
-    await reverseLedger(tx, {
-      sourceTable: "Expense",
-      sourceId: id,
-      createdBy: session.user.id,
-      reason: reason?.trim() || "xarajat o'chirildi",
-    });
-    return row;
-  });
-
-  await recordAuditLog({
-    userId: session.user.id,
-    action: "delete",
-    tableName: "Expense",
-    recordId: id,
-    oldData: { amount: Number(existing.amount), category: existing.category, status: existing.status, date: existing.date.toISOString() },
-    newData: { deleteReason: reason?.trim() || null },
-  });
-
-  return serialize(deleted);
+  return deleteKassaEntry(id, reason);
 }
 
 // =====================================================

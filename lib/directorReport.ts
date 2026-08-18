@@ -116,7 +116,7 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
           dueAt: { gte: todayStart, lt: tomorrowStart },
         },
       }),
-      db.expense.count({ where: { status: "pending", deletedAt: null } }),
+      db.kassaEntry.count({ where: { status: "pending", deletedAt: null } }),
       countPendingProofs(db),
     ]);
 

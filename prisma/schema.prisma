@@ -815,6 +815,15 @@ model KassaEntry {
   /// xalaqit bermaydi. Qisman unikal indeks migratsiyada.
   dedupKey String?
 
+  // ── TASDIQ OQIMI (`Expense` dan ko'chirilgan) ──────────────────────────
+  // <1 mln avto-tasdiq · 1–10 mln bosh buxgalter · >10 mln superadmin
+  // (`lib/expenseApproval.ts`). Standart "approved": mavjud qatorlar
+  // tasdiqsiz yozilgan va allaqachon balansda sanaladi.
+  status         String    @default("approved") // pending | approved | rejected
+  approvedBy     String?
+  approvedAt     DateTime?
+  rejectedReason String?
+
   // Soft delete
   deletedAt    DateTime?
   deletedBy    String?
@@ -825,6 +834,7 @@ model KassaEntry {
   @@index([deletedAt])
   @@index([companyId])
   @@index([channelId])
+  @@index([status])
 }
 
 // =====================================================

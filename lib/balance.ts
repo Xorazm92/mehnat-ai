@@ -1,8 +1,11 @@
 // lib/balance.ts
 // Yagona balans manbai — barcha pul jadvallarini bitta "mavjud mablag'" ga bog'laydi.
-//   Kirim  = to'langan shartnoma to'lovlari (Payment.paid) + kassa kirimlari (KassaEntry.income)
-//   Chiqim = tasdiqlangan xarajatlar (Expense.approved) + kassa chiqimlari (KassaEntry.expense)
-//            + REAL berilgan oyliklar/avanslar (Payout)
+//   Kirim  = to'langan shartnoma to'lovlari (Payment.paid) + kassa kirimlari
+//   Chiqim = TASDIQLANGAN kassa chiqimlari + REAL berilgan oyliklar (Payout)
+//
+// `Expense` jadvali OLIB TASHLANDI: u `KassaEntry(expense)` bilan bir xil
+// savolga javob berardi va tasdiq oqimi endi `KassaEntry.status` da.
+// Shuning uchun bu yerda ham bitta shox qoldi.
 // PayrollAdjustment endi faqat MAJBURIYAT (qancha to'lash kerak) — kassadan pul
 // faqat Payout yozilganda chiqadi. Soft-delete qilingan yozuvlar hisobga kirmaydi.
 // Bu server-only modul (prisma ishlatadi) — faqat server komponent/actionlardan chaqiriladi.
@@ -29,16 +32,16 @@ const n = (v: unknown) => {
 
 /**
  * Butun tizim bo'yicha joriy mavjud mablag'ni hisoblaydi.
- * @param opts.excludeExpenseId — tahrir/qayta tasdiqda xarajat o'z summasini
+ * @param opts.excludeKassaEntryId — tahrir/qayta tasdiqda yozuv o'z summasini
  *   ikki marta sanamasligi uchun chiqim yig'indisidan chiqarib tashlanadi.
  */
 export async function getAvailableBalance(opts?: {
-  excludeExpenseId?: string;
+  excludeKassaEntryId?: string;
   /** Tranzaksiya klienti — berilsa balans o'sha tranzaksiya ichida o'qiladi. */
   db?: Db;
 }): Promise<BalanceBreakdown> {
   const db = opts?.db ?? prisma;
-  const [paidPayments, kassaIncome, kassaExpense, approvedExpenses, payouts] =
+  const [paidPayments, kassaIncome, kassaExpense, payouts] =
     await Promise.all([
       db.payment.aggregate({
         where: { status: { in: ["paid", "partial"] }, deletedAt: null },
@@ -49,14 +52,11 @@ export async function getAvailableBalance(opts?: {
         _sum: { amount: true },
       }),
       db.kassaEntry.aggregate({
-        where: { type: "expense", deletedAt: null },
-        _sum: { amount: true },
-      }),
-      db.expense.aggregate({
         where: {
+          type: "expense",
           status: "approved",
           deletedAt: null,
-          ...(opts?.excludeExpenseId ? { id: { not: opts.excludeExpenseId } } : {}),
+          ...(opts?.excludeKassaEntryId ? { id: { not: opts.excludeKassaEntryId } } : {}),
         },
         _sum: { amount: true },
       }),
@@ -69,12 +69,15 @@ export async function getAvailableBalance(opts?: {
 
   const incomePayments = n(paidPayments._sum.amount);
   const incomeKassa = n(kassaIncome._sum.amount);
-  const outflowExpenses = n(approvedExpenses._sum.amount);
   const outflowKassa = n(kassaExpense._sum.amount);
   const outflowPayroll = n(payouts._sum.amount);
+  // `outflowExpenses` endi doim 0: `Expense` jadvali `KassaEntry` ga
+  // birlashtirildi. Maydon `BalanceBreakdown` da qoldirilgan — uni o'qiydigan
+  // ekranlar (BalanceOverview) buzilmasin.
+  const outflowExpenses = 0;
 
   const income = incomePayments + incomeKassa;
-  const outflow = outflowExpenses + outflowKassa + outflowPayroll;
+  const outflow = outflowKassa + outflowPayroll;
 
   return {
     income,
@@ -88,7 +91,7 @@ export async function getAvailableBalance(opts?: {
   };
 }
 
-type MovementDb = Pick<typeof prisma, "payment" | "kassaEntry" | "expense" | "payout">;
+type MovementDb = Pick<typeof prisma, "payment" | "kassaEntry" | "payout">;
 
 interface MovementRange {
   /** Payment.period ("YYYY-MM" string) uchun filtr */
@@ -106,7 +109,7 @@ async function movementInRange(
   const dateWhere = { ...(range.from ? { gte: range.from } : {}), lt: range.to };
   const periodWhere =
     typeof range.paymentPeriod === "string" ? range.paymentPeriod : range.paymentPeriod;
-  const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
+  const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
     db.payment.aggregate({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: periodWhere },
       _sum: { amount: true },
@@ -116,11 +119,7 @@ async function movementInRange(
       _sum: { amount: true },
     }),
     db.kassaEntry.aggregate({
-      where: { type: "expense", deletedAt: null, date: dateWhere },
-      _sum: { amount: true },
-    }),
-    db.expense.aggregate({
-      where: { status: "approved", deletedAt: null, date: dateWhere },
+      where: { type: "expense", status: "approved", deletedAt: null, date: dateWhere },
       _sum: { amount: true },
     }),
     db.payout.aggregate({
@@ -130,7 +129,7 @@ async function movementInRange(
   ]);
   return {
     income: n(payments._sum.amount) + n(kassaIn._sum.amount),
-    outflow: n(expenses._sum.amount) + n(kassaOut._sum.amount) + n(payouts._sum.amount),
+    outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
   };
 }
 
@@ -164,7 +163,7 @@ export async function getDayMovement(
   const to = new Date(from.getTime() + 86_400_000);
   const dateWhere = { gte: from, lt: to };
 
-  const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
+  const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
     db.payment.aggregate({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, paymentDate: dateWhere },
       _sum: { amount: true },
@@ -174,11 +173,7 @@ export async function getDayMovement(
       _sum: { amount: true },
     }),
     db.kassaEntry.aggregate({
-      where: { type: "expense", deletedAt: null, date: dateWhere },
-      _sum: { amount: true },
-    }),
-    db.expense.aggregate({
-      where: { status: "approved", deletedAt: null, date: dateWhere },
+      where: { type: "expense", status: "approved", deletedAt: null, date: dateWhere },
       _sum: { amount: true },
     }),
     db.payout.aggregate({ where: { deletedAt: null, paidAt: dateWhere }, _sum: { amount: true } }),
@@ -186,7 +181,7 @@ export async function getDayMovement(
 
   return {
     income: n(payments._sum.amount) + n(kassaIn._sum.amount),
-    outflow: n(expenses._sum.amount) + n(kassaOut._sum.amount) + n(payouts._sum.amount),
+    outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
   };
 }
 
@@ -210,7 +205,7 @@ export async function getMovementBeforeMonth(
 export async function getYearMovement(year: number): Promise<{ income: number; outflow: number }> {
   const from = new Date(year, 0, 1);
   const to = new Date(year + 1, 0, 1);
-  const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
+  const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
     prisma.payment.aggregate({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { startsWith: `${year}-` } },
       _sum: { amount: true },
@@ -220,11 +215,7 @@ export async function getYearMovement(year: number): Promise<{ income: number; o
       _sum: { amount: true },
     }),
     prisma.kassaEntry.aggregate({
-      where: { type: "expense", deletedAt: null, date: { gte: from, lt: to } },
-      _sum: { amount: true },
-    }),
-    prisma.expense.aggregate({
-      where: { status: "approved", deletedAt: null, date: { gte: from, lt: to } },
+      where: { type: "expense", status: "approved", deletedAt: null, date: { gte: from, lt: to } },
       _sum: { amount: true },
     }),
     prisma.payout.aggregate({
@@ -234,14 +225,14 @@ export async function getYearMovement(year: number): Promise<{ income: number; o
   ]);
   return {
     income: n(payments._sum.amount) + n(kassaIn._sum.amount),
-    outflow: n(expenses._sum.amount) + n(kassaOut._sum.amount) + n(payouts._sum.amount),
+    outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
   };
 }
 
 /** Yil boshigacha bo'lgan butun tarix harakati (birinchi snapshot uchun ochilish qoldig'i). */
 export async function getMovementBefore(year: number): Promise<{ income: number; outflow: number }> {
   const to = new Date(year, 0, 1);
-  const [payments, kassaIn, kassaOut, expenses, payouts] = await Promise.all([
+  const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
     prisma.payment.aggregate({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { lt: `${year}-01` } },
       _sum: { amount: true },
@@ -251,11 +242,7 @@ export async function getMovementBefore(year: number): Promise<{ income: number;
       _sum: { amount: true },
     }),
     prisma.kassaEntry.aggregate({
-      where: { type: "expense", deletedAt: null, date: { lt: to } },
-      _sum: { amount: true },
-    }),
-    prisma.expense.aggregate({
-      where: { status: "approved", deletedAt: null, date: { lt: to } },
+      where: { type: "expense", status: "approved", deletedAt: null, date: { lt: to } },
       _sum: { amount: true },
     }),
     prisma.payout.aggregate({
@@ -265,7 +252,7 @@ export async function getMovementBefore(year: number): Promise<{ income: number;
   ]);
   return {
     income: n(payments._sum.amount) + n(kassaIn._sum.amount),
-    outflow: n(expenses._sum.amount) + n(kassaOut._sum.amount) + n(payouts._sum.amount),
+    outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
   };
 }
 
@@ -282,7 +269,7 @@ export async function assertSufficientFunds(params: {
   amount: number;
   role: string;
   userId?: string;
-  excludeExpenseId?: string;
+  excludeKassaEntryId?: string;
   context: "expense" | "payroll";
   /**
    * Tranzaksiya klienti. HAR DOIM berilishi kerak: usiz tekshiruv va yozuv
@@ -291,8 +278,8 @@ export async function assertSufficientFunds(params: {
    */
   db?: Db;
 }): Promise<void> {
-  const { amount, role, userId, excludeExpenseId, context, db = prisma } = params;
-  const { balance } = await getAvailableBalance({ excludeExpenseId, db });
+  const { amount, role, userId, excludeKassaEntryId, context, db = prisma } = params;
+  const { balance } = await getAvailableBalance({ excludeKassaEntryId, db });
 
   if (amount <= balance) return; // mablag' yetarli — ruxsat
 

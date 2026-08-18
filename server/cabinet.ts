@@ -763,7 +763,7 @@ export async function getAdminCabinetData() {
     prisma.payment.groupBy({ by: ["period"], where: { status: "paid", deletedAt: null, period: { in: months } }, _sum: { amount: true } }),
     prisma.kassaEntry.findMany({ where: { date: { gte: rangeStart }, deletedAt: null }, select: { type: true, amount: true, date: true } }),
     // Faqat TASDIQLANGAN xarajatlar chiqim sifatida sanaladi (pending/rejected emas)
-    prisma.expense.findMany({ where: { date: { gte: rangeStart }, status: "approved", deletedAt: null }, select: { amount: true, date: true } }),
+    prisma.kassaEntry.findMany({ where: { type: "expense", date: { gte: rangeStart }, status: "approved", deletedAt: null }, select: { amount: true, date: true } }),
     // REAL berilgan oyliklar (Payout) — majburiyat emas, faqat qo'lga berilgan pul chiqim
     prisma.payout.findMany({ where: { deletedAt: null, paidAt: { gte: rangeStart } }, select: { amount: true, paidAt: true } }),
     // Yagona joriy balans (butun tizim bo'yicha)

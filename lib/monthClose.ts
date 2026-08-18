@@ -57,7 +57,8 @@ export async function ensureGlobalPeriod(db: Db, year: number, month: number) {
  * dublikat post, orphan (manbasi yo'q ledger yozuvi), buzilgan bog'lanish.
  */
 async function checkLedgerSourceIntegrity(db: Db, key: string): Promise<string[]> {
-  const BASE_TABLES = ["Expense", "KassaEntry", "Payout", "Payment"] as const;
+  // `Expense` OLIB TASHLANDI — u `KassaEntry` ga birlashtirildi.
+  const BASE_TABLES = ["KassaEntry", "Payout", "Payment"] as const;
   const tables = BASE_TABLES.flatMap((t) => [t, `${t}-reversal`]);
   const entries = await db.ledgerEntry.findMany({
     where: { period: key, sourceTable: { in: tables } },
@@ -76,14 +77,10 @@ async function checkLedgerSourceIntegrity(db: Db, key: string): Promise<string[]
   const idsOf = (table: string) =>
     [...net.keys()].filter((k) => k.startsWith(`${table}|`)).map((k) => k.split("|")[1]);
 
-  const [expenses, kassa, payouts, payments] = await Promise.all([
-    db.expense.findMany({
-      where: { id: { in: idsOf("Expense") } },
-      select: { id: true, amount: true, status: true, deletedAt: true, date: true },
-    }),
+  const [kassa, payouts, payments] = await Promise.all([
     db.kassaEntry.findMany({
       where: { id: { in: idsOf("KassaEntry") } },
-      select: { id: true, amount: true, type: true, deletedAt: true, date: true },
+      select: { id: true, amount: true, type: true, deletedAt: true, date: true, status: true },
     }),
     db.payout.findMany({
       where: { id: { in: idsOf("Payout") } },
@@ -97,17 +94,13 @@ async function checkLedgerSourceIntegrity(db: Db, key: string): Promise<string[]
 
   const keyOfDate = (d: Date) => monthKey(d.getFullYear(), d.getMonth() + 1);
   const expected = new Map<string, number>();
-  for (const e of expenses) {
-    expected.set(
-      `Expense|${e.id}`,
-      keyOfDate(e.date) === key && e.status === "approved" && !e.deletedAt ? -Number(e.amount) : 0
-    );
-  }
   for (const k of kassa) {
     const sign = k.type === "income" ? 1 : -1;
     expected.set(
       `KassaEntry|${k.id}`,
-      keyOfDate(k.date) === key && !k.deletedAt ? sign * Number(k.amount) : 0
+      keyOfDate(k.date) === key && !k.deletedAt && k.status === "approved"
+        ? sign * Number(k.amount)
+        : 0
     );
   }
   for (const p of payouts) {
@@ -155,7 +148,7 @@ export async function gatherChecklist(db: Db, year: number, month: number): Prom
     cashBalance,
     integrityErrors,
   ] = await Promise.all([
-    db.expense.count({
+    db.kassaEntry.count({
       where: { status: "pending", deletedAt: null, date: { gte: from, lt: to } },
     }),
     db.payrollAdjustment.count({

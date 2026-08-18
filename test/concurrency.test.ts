@@ -75,14 +75,31 @@ beforeAll(async () => {
 afterAll(async () => {
   await prisma.ledgerEntry.deleteMany({ where: { createdBy: accountantId } }).catch(() => {});
   await prisma.kassaEntry.deleteMany({ where: { description: TAG } });
-  await prisma.expense.deleteMany({ where: { description: { contains: TAG } } });
+  await prisma.kassaEntry.deleteMany({ where: { description: { contains: TAG } } });
   await prisma.auditLog.deleteMany({ where: { userId: accountantId } });
   await prisma.user.delete({ where: { id: accountantId } });
   await prisma.$disconnect();
 });
 
 describe("#30 · kassa chiqimi ikki barobar chiqib keta olmaydi", () => {
-  it("balansga BITTA sig'adigan ikki chiqim parallel yuborilsa, biri rad etiladi", async () => {
+  // DIQQAT — TEKSHIRUV QATLAMI KO'CHDI. `Expense` jadvali `KassaEntry` ga
+  // birlashtirilgandan keyin chiqim TASDIQ OQIMIDAN o'tadi: 1 mln dan katta
+  // yozuv `pending` bo'lib yaratiladi va PUL O'SHA PAYTDA CHIQMAYDI.
+  // Shuning uchun "ikki chiqim balansni ikki barobar bo'shatmasin" invarianti
+  // endi TASDIQ paytida tekshiriladi — invariant o'sha, joyi boshqa.
+  const pending = async (amount: number, tag: string) => {
+    const row = await prisma.kassaEntry.create({
+      data: {
+        type: "expense", amount, date: new Date(),
+        category: "boshqa", description: `${TAG} ${tag}`,
+        status: "pending", createdBy: accountantId,
+      },
+      select: { id: true },
+    });
+    return row.id;
+  };
+
+  it("balansga BITTA sig'adigan ikki chiqim parallel tasdiqlansa, biri rad etiladi", async () => {
     // Summa balansga NISBATAN olinadi. Qat'iy son yozib bo'lmaydi: bu test
     // haqiqiy bazaga qarshi ishlaydi va u yerda balans yuz millionlab bo'lishi
     // mumkin — 700 000 lik ikki chiqim bemalol sig'ib ketardi va test
@@ -91,23 +108,17 @@ describe("#30 · kassa chiqimi ikki barobar chiqib keta olmaydi", () => {
     // Har biri balansning 60% i ⇒ ikkitasi 120%, ya'ni ikkalasi sig'maydi.
     const amount = Math.floor(before * 0.6) + 1;
 
-    const draft = (i: number) => ({
-      type: "expense" as const,
-      amount,
-      date: new Date(),
-      category: "boshqa",
-      description: `${TAG} parallel ${i}`,
-    });
+    const [a, b] = await Promise.all([pending(amount, "parallel 1"), pending(amount, "parallel 2")]);
 
     const results = await Promise.allSettled([
-      kassa.createKassaEntry(draft(1)),
-      kassa.createKassaEntry(draft(2)),
+      kassa.approveExpense(a),
+      kassa.approveExpense(b),
     ]);
 
     const ok = results.filter((r) => r.status === "fulfilled").length;
     const failed = results.filter((r) => r.status === "rejected").length;
 
-    // Asosiy da'vo: IKKALASI HAM o'tmaydi. Tuzatishdan oldin bu yerda 2 chiqardi.
+    // Asosiy da'vo: IKKALASI HAM o'tmaydi.
     expect(ok).toBe(1);
     expect(failed).toBe(1);
 
@@ -117,26 +128,43 @@ describe("#30 · kassa chiqimi ikki barobar chiqib keta olmaydi", () => {
     expect(after).toBeGreaterThanOrEqual(0);
   }, 30_000);
 
-  it("balans yetganda ikkala parallel chiqim ham o'tadi (tekshiruv ortiqcha qattiq emas)", async () => {
+  it("balans yetganda ikkala parallel tasdiq ham o'tadi (tekshiruv ortiqcha qattiq emas)", async () => {
     const before = await ensureBalance(10_000_000);
     // Har biri 20% ⇒ ikkitasi 40%, bemalol sig'adi. Serializable qayta
     // urinishlari bilan ikkalasi ham o'tishi shart — aks holda tuzatish
     // haqiqiy ishni ham bloklab qo'ygan bo'lardi.
     const amount = Math.floor(before * 0.2);
 
-    const results = await Promise.allSettled([
-      kassa.createKassaEntry({
-        type: "expense", amount, date: new Date(),
-        category: "boshqa", description: `${TAG} sig'adi 1`,
-      }),
-      kassa.createKassaEntry({
-        type: "expense", amount, date: new Date(),
-        category: "boshqa", description: `${TAG} sig'adi 2`,
-      }),
-    ]);
+    const [a, b] = await Promise.all([pending(amount, "sig'adi 1"), pending(amount, "sig'adi 2")]);
+    const results = await Promise.allSettled([kassa.approveExpense(a), kassa.approveExpense(b)]);
 
     expect(results.filter((r) => r.status === "rejected")).toHaveLength(0);
     expect((await getAvailableBalance()).balance).toBeCloseTo(before - amount * 2, 2);
+  }, 30_000);
+
+  // Kichik chiqim (1 mln dan kam) AVTO-TASDIQLANADI, ya'ni pul darhol chiqadi
+  // va tekshiruv `createKassaEntry` ning o'zida bo'ladi. Bu yo'l ham
+  // qo'riqlangan bo'lishi kerak.
+  it("avto-tasdiqlanadigan kichik chiqimda ham balans qo'riqlanadi", async () => {
+    await ensureBalance(1_500_000);
+    const before = (await getAvailableBalance()).balance;
+    const amount = 900_000;
+
+    const results = await Promise.allSettled([
+      kassa.createKassaEntry({
+        type: "expense", amount, date: new Date(),
+        category: "boshqa", description: `${TAG} kichik 1`,
+      }),
+      kassa.createKassaEntry({
+        type: "expense", amount, date: new Date(),
+        category: "boshqa", description: `${TAG} kichik 2`,
+      }),
+    ]);
+
+    const after = (await getAvailableBalance()).balance;
+    // Balans qancha chiqim o'tganiga qarab kamayadi, lekin MANFIYGA tushmaydi.
+    expect(after).toBeGreaterThanOrEqual(0);
+    expect(after).toBeCloseTo(before - results.filter((r) => r.status === "fulfilled").length * amount, 2);
   }, 30_000);
 });
 
@@ -146,8 +174,9 @@ describe("#30 · xarajatni ikki marta tasdiqlab bo'lmaydi", () => {
     SESSION.user = { id: accountantId, role: "super_admin", kind: "staff", companyId: null };
 
     // 1 mln dan katta ⇒ 'pending' bo'lib yaratiladi, tasdiq talab qiladi.
-    const exp = await prisma.expense.create({
-      data: {
+    const exp = await prisma.kassaEntry.create({
+    data: {
+      type: "expense",
         amount: 5_000_000,
         date: new Date(),
         category: "boshqa",
@@ -170,7 +199,7 @@ describe("#30 · xarajatni ikki marta tasdiqlab bo'lmaydi", () => {
     expect((await getAvailableBalance()).balance).toBeCloseTo(before - 5_000_000, 2);
 
     const legs = await prisma.ledgerEntry.count({
-      where: { sourceTable: "Expense", sourceId: exp.id },
+      where: { sourceTable: "KassaEntry", sourceId: exp.id },
     });
     // Bitta tasdiq = bitta juft oyoq (debet + kredit). Ikki marta yozilganda 4 bo'lardi.
     expect(legs).toBe(2);

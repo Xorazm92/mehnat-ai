@@ -54,8 +54,10 @@ beforeAll(async () => {
     })
   ).id;
   ids.expense = (
-    await prisma.expense.create({
-      data: { amount: 1_000_000, date: new Date(YEAR, 4, 10), category: `${TAG}`, status: "approved" },
+    await prisma.kassaEntry.create({
+    data: {
+      type: "expense",
+      amount: 1_000_000, date: new Date(YEAR, 4, 10), category: `${TAG}`, status: "approved" },
       select: { id: true },
     })
   ).id;
@@ -72,7 +74,7 @@ afterAll(async () => {
   await prisma.accountingPeriod.deleteMany({ where: { year: YEAR } });
   await prisma.payment.deleteMany({ where: { id: ids.payment } });
   await prisma.kassaEntry.deleteMany({ where: { id: ids.kassa } });
-  await prisma.expense.deleteMany({ where: { id: ids.expense } });
+  await prisma.kassaEntry.deleteMany({ where: { id: ids.expense } });
   await prisma.payout.deleteMany({ where: { id: ids.payout } });
   await prisma.auditLog.deleteMany({ where: { userId: ids.user } });
   await prisma.company.deleteMany({ where: { id: ids.company } });
@@ -130,8 +132,8 @@ describe("year closing", () => {
     });
     expect(exp.id).toBeTruthy();
     // tozalash
-    const row = await prisma.expense.findUnique({ where: { id: exp.id }, select: { id: true } });
+    const row = await prisma.kassaEntry.findUnique({ where: { id: exp.id }, select: { id: true } });
     await prisma.ledgerEntry.deleteMany({ where: { sourceId: row!.id } });
-    await prisma.expense.deleteMany({ where: { id: row!.id } });
+    await prisma.kassaEntry.deleteMany({ where: { id: row!.id } });
   });
 });

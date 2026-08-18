@@ -89,8 +89,9 @@ beforeAll(async () => {
   await prisma.kassaEntry.create({
     data: { type: "income", category: TAG, amount: 1_000_000, date: new Date(2094, 2, 10) },
   });
-  await prisma.expense.create({
-    data: { amount: 500_000, date: new Date(2094, 2, 15), category: TAG, status: "approved" },
+  await prisma.kassaEntry.create({
+    data: {
+      type: "expense", amount: 500_000, date: new Date(2094, 2, 15), category: TAG, status: "approved" },
   });
   await prisma.payout.create({
     data: { employeeId: user.id, month: "2094-03", amount: 300_000, paidAt: new Date(2094, 2, 20) },
@@ -106,7 +107,7 @@ afterAll(async () => {
   await cleanupYears();
   await prisma.payment.deleteMany({ where: { companyId: ids.company } });
   await prisma.kassaEntry.deleteMany({ where: { category: { startsWith: TAG } } });
-  await prisma.expense.deleteMany({ where: { category: { startsWith: TAG } } });
+  await prisma.kassaEntry.deleteMany({ where: { category: { startsWith: TAG } } });
   await prisma.payout.deleteMany({ where: { employeeId: ids.user } });
   await prisma.payrollAdjustment.deleteMany({ where: { employeeId: ids.user } });
   await prisma.auditLog.deleteMany({ where: { userId: ids.user } });
@@ -181,8 +182,10 @@ describe("closeMonth — happy path (OPEN → LOCKED)", () => {
 
 describe("closeMonth — pending blockers → FAILED", () => {
   it("rejects when a pending expense exists and marks the period FAILED", async () => {
-    const exp = await prisma.expense.create({
-      data: { amount: 5_000_000, date: new Date(2095, 1, 10), category: `${TAG}-pend`, status: "pending" },
+    const exp = await prisma.kassaEntry.create({
+    data: {
+      type: "expense",
+      amount: 5_000_000, date: new Date(2095, 1, 10), category: `${TAG}-pend`, status: "pending" },
     });
 
     await expect(closeMonth({ year: 2095, month: 2 })).rejects.toThrow(/Tasdiqlanmagan xarajatlar/);
@@ -193,7 +196,7 @@ describe("closeMonth — pending blockers → FAILED", () => {
     expect(period!.status).toBe("FAILED");
     expect(period!.statusNote).toMatch(/xarajat/i);
 
-    await prisma.expense.delete({ where: { id: exp.id } });
+    await prisma.kassaEntry.delete({ where: { id: exp.id } });
   });
 
   it("rejects when an unapproved payroll adjustment exists", async () => {

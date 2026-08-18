@@ -35,11 +35,11 @@ afterAll(async () => {
     await prisma.kassaEntry.findMany({ where: { createdBy: ids.user }, select: { id: true } })
   ).map((k) => k.id);
   const expenseIds = (
-    await prisma.expense.findMany({ where: { createdBy: ids.user }, select: { id: true } })
+    await prisma.kassaEntry.findMany({ where: { createdBy: ids.user }, select: { id: true } })
   ).map((e) => e.id);
   await prisma.ledgerEntry.deleteMany({ where: { sourceId: { in: [...kassaIds, ...expenseIds] } } });
   await prisma.kassaEntry.deleteMany({ where: { createdBy: ids.user } });
-  await prisma.expense.deleteMany({ where: { createdBy: ids.user } });
+  await prisma.kassaEntry.deleteMany({ where: { createdBy: ids.user } });
   await prisma.auditLog.deleteMany({ where: { userId: ids.user } });
   await prisma.user.deleteMany({ where: { id: ids.user } });
   await prisma.$disconnect();
@@ -91,12 +91,12 @@ describe("soft delete", () => {
 
     await deleteExpense(exp.id, "xato kiritilgan");
 
-    const raw = await prisma.expense.findUnique({ where: { id: exp.id } });
+    const raw = await prisma.kassaEntry.findUnique({ where: { id: exp.id } });
     expect(raw!.deletedAt).not.toBeNull();
 
     // Audit: oldData'da summa/kategoriya saqlangan.
     const audit = await prisma.auditLog.findFirst({
-      where: { tableName: "Expense", recordId: exp.id, action: "delete" },
+      where: { tableName: "KassaEntry", recordId: exp.id, action: "delete" },
     });
     expect(audit).not.toBeNull();
     const old = audit!.oldData as { amount?: number; category?: string };

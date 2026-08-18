@@ -98,7 +98,7 @@ async function collect(): Promise<Candidate[]> {
 
   // ── KassaEntry ────────────────────────────────────────
   const kassa = await prisma.kassaEntry.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, status: "approved" },
     select: { id: true, type: true, category: true, amount: true, date: true, channelId: true },
   });
   const kassaSeen = await coveredIds("KassaEntry", kassa.map((k) => k.id));
@@ -122,29 +122,6 @@ async function collect(): Promise<Candidate[]> {
               { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: amount },
               { accountId: ACCOUNTS.CASH, credit: amount, channelId: k.channelId },
             ],
-    });
-  }
-
-  // ── Expense (faqat tasdiqlangani pul harakati) ────────
-  const expenses = await prisma.expense.findMany({
-    where: { deletedAt: null, status: "approved" },
-    select: { id: true, amount: true, category: true, date: true, channelId: true },
-  });
-  const expSeen = await coveredIds("Expense", expenses.map((e) => e.id));
-  for (const e of expenses) {
-    if (expSeen.has(e.id)) continue;
-    const amount = Number(e.amount);
-    if (!(amount > 0)) continue;
-    out.push({
-      sourceTable: "Expense",
-      sourceId: e.id,
-      period: periodKeyOf(e.date),
-      amount,
-      description: `Xarajat: ${e.category}`,
-      legs: [
-        { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: amount },
-        { accountId: ACCOUNTS.CASH, credit: amount, channelId: e.channelId },
-      ],
     });
   }
 

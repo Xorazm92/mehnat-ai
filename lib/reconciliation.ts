@@ -202,8 +202,7 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
   const [firstOut, firstIn] = await Promise.all([
     db.$queryRaw<{ d: Date | null }[]>`
       SELECT min(d) AS d FROM (
-        SELECT min(date)   AS d FROM "KassaEntry" WHERE type = 'expense' AND "deletedAt" IS NULL
-        UNION ALL SELECT min(date)   FROM "Expense" WHERE status = 'approved' AND "deletedAt" IS NULL
+        SELECT min(date)   AS d FROM "KassaEntry" WHERE type = 'expense' AND status = 'approved' AND "deletedAt" IS NULL
         UNION ALL SELECT min("paidAt") FROM "Payout" WHERE "deletedAt" IS NULL
       ) x`,
     db.$queryRaw<{ d: Date | null }[]>`
@@ -275,12 +274,6 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
        AND NOT EXISTS (SELECT 1 FROM "LedgerEntry" l
                         WHERE l."sourceId" = p.id AND l."sourceTable" = 'Payment')
     UNION ALL
-    SELECT 'Expense', count(*)::bigint, coalesce(sum(e.amount), 0)::float8
-      FROM "Expense" e
-     WHERE e."deletedAt" IS NULL AND e.status = 'approved'
-       AND NOT EXISTS (SELECT 1 FROM "LedgerEntry" l
-                        WHERE l."sourceId" = e.id AND l."sourceTable" = 'Expense')
-    UNION ALL
     SELECT 'Payout', count(*)::bigint, coalesce(sum(o.amount), 0)::float8
       FROM "Payout" o
      WHERE o."deletedAt" IS NULL
@@ -293,7 +286,6 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
   const gapLabels: Record<string, string> = {
     KassaEntry: "kassa yozuvi",
     Payment: "shartnoma to'lovi",
-    Expense: "xarajat",
     Payout: "oylik to'lovi",
   };
 
