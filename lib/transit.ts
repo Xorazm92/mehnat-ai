@@ -24,19 +24,14 @@
 
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
+import { recordKassaMovement, type CashActor } from "@/lib/cashGate";
 
 type Db = Prisma.TransactionClient;
 
-/** Kanal turlari. `employee_card` — o'zini-o'zi band qilgan xodim kartasi. */
-export const CHANNEL_TYPES = ["employee_card", "own_bank", "cash", "plastik"] as const;
-export type ChannelType = (typeof CHANNEL_TYPES)[number];
-
-export const CHANNEL_TYPE_LABELS: Record<ChannelType, string> = {
-  employee_card: "Xodim kartasi",
-  own_bank: "O'z bank hisobi",
-  cash: "Naqd",
-  plastik: "Plastik terminal",
-};
+// Kanal turlari/yorliqlari `lib/transitChannels.ts` da — mijoz komponenti ham
+// ularni ishlatadi va bu fayl orqali import qilinsa Prisma brauzerga tushardi.
+// Qayta eksport ATAYLAB: server tomondagi mavjud import yo'llari saqlanadi.
+export { CHANNEL_TYPES, CHANNEL_TYPE_LABELS, type ChannelType } from "@/lib/transitChannels";
 
 export interface ChannelBalance {
   id: string;
@@ -189,9 +184,16 @@ export class InsufficientTransitFunds extends Error {
  * `KassaEntry(expense)` MANA SHU YERDA yoziladi — haqiqiy xarajat shu.
  * Qoldiqdan ortiq sarflashga yo'l qo'yilmaydi: kartada bo'lmagan pulni
  * sarflash yozuvi daftarni ma'nosiz qilardi.
+ *
+ * DIQQAT — `db` SERIALIZABLE tranzaksiya klienti bo'lishi SHART
+ * (`lib/tx.ts` `serializable()`). Bu funksiya qoldiqni o'qiydi, keyin yozadi;
+ * tranzaksiyasiz ikki parallel chiqim bir xil qoldiqni ko'radi va overdraft
+ * qo'riqchisi hech nimani kafolatlamaydi (`assertSufficientFunds` bilan bir xil
+ * sabab).
  */
 export async function recordTransitOut(
   db: Db,
+  actor: CashActor,
   input: {
     channelId: string;
     amount: number;
@@ -199,7 +201,6 @@ export async function recordTransitOut(
     category: string;
     description?: string | null;
     companyId?: string | null;
-    createdBy?: string | null;
     /** Qoldiqdan ortiq sarflashga ruxsat (admin tuzatishi uchun). */
     allowOverdraft?: boolean;
   }
@@ -217,18 +218,18 @@ export async function recordTransitOut(
     throw new InsufficientTransitFunds(balances.balance, input.amount);
   }
 
-  const kassaEntry = await db.kassaEntry.create({
-    data: {
-      companyId: input.companyId ?? null,
-      type: "expense",
-      category: input.category,
-      amount: new Prisma.Decimal(input.amount.toFixed(2)),
-      description: input.description ?? `${balances.label} kartasidan xarajat`,
-      date: input.date,
-      channelId: input.channelId,
-      createdBy: input.createdBy ?? null,
-    },
-    select: { id: true },
+  // DARVOZA ORQALI (`lib/cashGate.ts`): ilgari bu yerda `kassaEntry.create`
+  // to'g'ridan-to'g'ri chaqirilardi va JURNALGA HECH NARSA YOZILMASDI — ya'ni
+  // kartadan qilingan har bir xarajat ikki tomonlama hisobdan tashqarida
+  // qolardi. Endi manba qatori va jurnal bitta yo'ldan o'tadi.
+  const kassaEntry = await recordKassaMovement(db, actor, {
+    type: "expense",
+    category: input.category,
+    amount: input.amount,
+    date: input.date,
+    description: input.description ?? `${balances.label} kartasidan xarajat`,
+    companyId: input.companyId ?? null,
+    channelId: input.channelId,
   });
 
   const entry = await db.transitEntry.create({
@@ -241,7 +242,7 @@ export async function recordTransitOut(
       description: input.description ?? null,
       kassaEntryId: kassaEntry.id,
       dedupKey: `out:${randomUUID()}`,
-      createdBy: input.createdBy ?? null,
+      createdBy: actor.kind === "user" ? actor.userId : (actor.userId ?? null),
     },
     select: { id: true },
   });

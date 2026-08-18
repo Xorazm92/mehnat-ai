@@ -25,6 +25,12 @@ const ACC = `8${Date.now()}`.slice(0, 20).padEnd(20, "0");
 const ids = { channel: "", other: "", company: "", account: "", import: "", tx: "" };
 const day = (d: number) => new Date(Date.UTC(2099, 9, d)); // 2099-10 — ochiq davr
 
+// `script` aktyori ATAYIN: bu testlar tranzit mexanikasi haqida, balans
+// darvozasi haqida emas. `user` bo'lsa `assertSufficientFunds` ishga tushar va
+// test bazasida kirim yo'qligi uchun har bir yozuv admin-override audit qatori
+// yozardi — ya'ni test o'zi tekshirmayotgan narsani shovqin qilib chiqarardi.
+const ACTOR = { kind: "script", name: "vitest-transit" } as const;
+
 beforeAll(async () => {
   const company = await prisma.company.create({
     data: { name: `${TAG} OWN`, inn: "444444444", isOwnFirm: true },
@@ -136,7 +142,7 @@ describe("recordTransitIn — kartaga pul tushishi", () => {
 
 describe("recordTransitOut — kartadan sarflash", () => {
   it("xarajat KassaEntry sifatida yoziladi va qoldiq kamayadi", async () => {
-    const res = await recordTransitOut(prisma, {
+    const res = await recordTransitOut(prisma, ACTOR, {
       channelId: ids.channel,
       amount: 4_000_000,
       date: day(10),
@@ -161,7 +167,7 @@ describe("recordTransitOut — kartadan sarflash", () => {
 
   it("qoldiqdan ortiq sarflashga yo'l qo'ymaydi", async () => {
     await expect(
-      recordTransitOut(prisma, {
+      recordTransitOut(prisma, ACTOR, {
         channelId: ids.channel,
         amount: 99_000_000,
         date: day(11),
@@ -175,7 +181,7 @@ describe("recordTransitOut — kartadan sarflash", () => {
   });
 
   it("admin ataylab ruxsat bersa ortiqcha yozuvga yo'l qo'yadi", async () => {
-    const res = await recordTransitOut(prisma, {
+    const res = await recordTransitOut(prisma, ACTOR, {
       channelId: ids.channel,
       amount: 7_000_000,
       date: day(12),
@@ -190,10 +196,10 @@ describe("recordTransitOut — kartadan sarflash", () => {
 
   it("manfiy yoki nol summani rad etadi", async () => {
     await expect(
-      recordTransitOut(prisma, { channelId: ids.channel, amount: 0, date: day(13), category: "boshqa" })
+      recordTransitOut(prisma, ACTOR, { channelId: ids.channel, amount: 0, date: day(13), category: "boshqa" })
     ).rejects.toThrow(/musbat/i);
     await expect(
-      recordTransitOut(prisma, { channelId: ids.channel, amount: -5, date: day(13), category: "boshqa" })
+      recordTransitOut(prisma, ACTOR, { channelId: ids.channel, amount: -5, date: day(13), category: "boshqa" })
     ).rejects.toThrow(/musbat/i);
   });
 });

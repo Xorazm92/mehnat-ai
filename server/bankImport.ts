@@ -4,22 +4,22 @@
 // BANK VIPISKASINI YUKLASH VA MOSLASHTIRISH
 // =====================================================
 //
-// ROL CHEGARASI (foydalanuvchi talabi: "vipiska kirituvchi xodimga faqat kirim
-// kassa ko'rinsin", "rasxodni faqat admin qiladi"):
+// ROL CHEGARASI (2026-08-18 da kengaydi — kassa xodimi chiqimni ham yuritadi):
 //
 //   yuklash, ko'rish, moslashtirish, kirimni hisobga olish → bank_manager + admin
-//   CHIQIMNI hisobga olish                                  → FAQAT admin
+//   chiqimni toifalash va kassaga yozish                    → moliya rollari
 //
 // Chegara faqat menyuda emas, aynan shu yerda — server action'da qo'yiladi:
 // proxy.ts ko'rinishni boshqaradi, xavfsizlikni esa shu tekshiruvlar.
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { isFinanceRole } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/serialize";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { assertPeriodOpen } from "@/lib/periodLock";
+import { recordKassaMovement, runCashTx } from "@/lib/cashGate";
 import { parseWorkbook, transactionHash } from "@/lib/bank/parseStatement";
 import { parsePlastik } from "@/lib/bank/parsePlastik";
 import { looksLikeHtml, readHtmlTables } from "@/lib/bank/readHtmlTables";
@@ -45,12 +45,19 @@ async function requireStatementRole() {
   return { userId: session.user.id, role };
 }
 
-/** Chiqim bilan ishlash — faqat admin ("rasxodni faqat man qilaman"). */
-async function requireAdmin() {
+/**
+ * Chiqim bilan ishlash — moliya rollari.
+ *
+ * Ilgari bu FAQAT admin edi ("rasxodni faqat man qilaman"). Qoida 2026-08-18
+ * da o'zgardi: kassani kundalik yurituvchi xodim chiqimni ham toifalaydi.
+ * Bu pul chiqarish EMAS — bank allaqachon o'tkazgan qatorni moddaga bog'lash,
+ * ya'ni buxgalteriya qaydi (server/transit.ts dagi izohga qarang).
+ */
+async function requireKassa() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   const role = session.user.role as string;
-  if (!isAdminRole(role)) throw new Error("Forbidden");
+  if (!isFinanceRole(role)) throw new Error("Forbidden");
   return { userId: session.user.id, role };
 }
 
@@ -229,9 +236,9 @@ export async function getNonBankIncome(limit = 100) {
   return serialize(rows);
 }
 
-/** Chiqimlar — FAQAT admin. */
+/** Chiqimlar ro'yxati — moliya rollari. */
 export async function getBankExpenses(limit = 200) {
-  await requireAdmin();
+  await requireKassa();
   const rows = await prisma.bankTransaction.findMany({
     where: { direction: "expense" },
     select: {
@@ -675,7 +682,7 @@ export async function postExpenseTransaction(input: {
   category?: ExpenseCategory;
   channelId?: string | null;
 }) {
-  const { userId } = await requireAdmin();
+  const { userId } = await requireKassa();
 
   const tx = await prisma.bankTransaction.findUnique({
     where: { id: input.transactionId },
@@ -703,31 +710,45 @@ export async function postExpenseTransaction(input: {
     );
   }
 
-  await assertPeriodOpen(prisma, periodOf(tx.valueDate), "bank chiqimi");
+  // DARVOZA ORQALI (`lib/cashGate.ts`): ilgari bu yerda `kassaEntry.create`
+  // to'g'ridan-to'g'ri chaqirilardi va jurnalga hech narsa yozilmasdi.
+  //
+  // Aktyor `import` — `user` EMAS. Vipiska qatori ALLAQACHON sodir bo'lgan
+  // pul harakati; uni "kassada mablag' yetmaydi" deb rad etish ma'nosiz
+  // bo'lardi. Shuning uchun balans darvozasi bu yo'lda ishlamaydi (izoh:
+  // lib/cashGate.ts CashActor).
+  //
+  // Ikkala yozuv bitta tranzaksiyada: kassa qatori yozilib, vipiska qatori
+  // "posted" bo'lmay qolsa, xarajat ikkinchi marta yozilishi mumkin edi.
+  const entry = await runCashTx(async (db) => {
+    const created = await recordKassaMovement(
+      db,
+      { kind: "import", source: "bank", userId },
+      {
+        type: "expense",
+        category,
+        amount: Number(tx.amount),
+        date: tx.valueDate,
+        description: tx.purpose?.slice(0, 500) ?? tx.counterpartyName,
+        companyId: tx.account.ownerCompanyId,
+        channelId: input.channelId ?? null,
+        // Xuddi shu vipiska qatorini ikkinchi marta yozib bo'lmaydi.
+        dedupKey: `bank:${tx.id}`,
+      }
+    );
 
-  const entry = await prisma.kassaEntry.create({
-    data: {
-      companyId: tx.account.ownerCompanyId,
-      type: "expense",
-      category,
-      amount: tx.amount,
-      description: tx.purpose?.slice(0, 500) ?? tx.counterpartyName,
-      date: tx.valueDate,
-      channelId: input.channelId ?? null,
-      createdBy: userId,
-    },
-    select: { id: true },
-  });
+    await db.bankTransaction.update({
+      where: { id: tx.id },
+      data: {
+        kassaEntryId: created.id,
+        expenseCategory: category,
+        status: "posted",
+        postedAt: new Date(),
+        postedBy: userId,
+      },
+    });
 
-  await prisma.bankTransaction.update({
-    where: { id: tx.id },
-    data: {
-      kassaEntryId: entry.id,
-      expenseCategory: category,
-      status: "posted",
-      postedAt: new Date(),
-      postedBy: userId,
-    },
+    return created;
   });
 
   revalidatePath("/kassa/kirim");

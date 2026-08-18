@@ -1,20 +1,32 @@
 "use server";
 
 // =====================================================
-// TRANZIT KASSA — server amallari (FAQAT ADMIN)
+// TRANZIT KASSA — server amallari
 // =====================================================
 //
-// Foydalanuvchi talabi: "Rasxod ya'ni chiqim kassadan faqat admin ya'ni man
-// rasxod qilaman". Shuning uchun bu fayldagi HAR BIR amal `isAdminRole`
-// tekshiruvidan o'tadi — bank-klient bu yerga umuman kira olmaydi.
+// RUXSAT QOIDASI (2026-08-18 da o'zgardi).
+//
+// Ilgari bu fayldagi HAR BIR amal `isAdminRole` talab qilardi — talab shunday
+// edi: "rasxod kassadan faqat admin qiladi". Endi kassani kundalik yurituvchi
+// xodim ham bor, va u chiqim tomonini yozadi.
+//
+// MUHIM AJRATMA. Bu yerdagi amallar PUL CHIQARMAYDI — ular allaqachon sodir
+// bo'lgan harakatni QAYD qiladi: bank pulni kartaga o'tkazib bo'lgan, karta
+// bilan ijara to'langan. Ya'ni bu buxgalteriya yozuvi, ruxsat emas.
+//
+// Shu sababdan ikki daraja:
+//   `requireKassa` — kundalik qayd (kanal ochish, o'tkazmani bog'lash,
+//                    kartadan xarajat yozish). Moliya rollari.
+//   `requireAdmin` — QAYTARIB BO'LMAYDIGAN amal: kanalni muzlatish. Faqat admin.
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { isAdminRole, isFinanceRole } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/serialize";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { assertPeriodOpen } from "@/lib/periodLock";
+import { serializable } from "@/lib/tx";
 import { periodOf } from "@/lib/bank/importStatement";
 import { extractCardTransfer } from "@/lib/bank/classifyExpense";
 import {
@@ -28,6 +40,16 @@ import {
   type ChannelType,
 } from "@/lib/transit";
 
+/** Kundalik kassa qaydi — moliya rollari (admin, superadmin, bosh buxgalter, bank-klient). */
+async function requireKassa() {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  const role = session.user.role as string;
+  if (!isFinanceRole(role)) throw new Error("Forbidden");
+  return { userId: session.user.id, role };
+}
+
+/** Qaytarib bo'lmaydigan amal (kanalni muzlatish) — faqat admin. */
 async function requireAdmin() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -44,7 +66,7 @@ export type Outcome<T> = { ok: true; data: T } | { ok: false; error: string };
 // ─────────────────────────────────────────────────────────
 
 export async function getTransitOverview() {
-  await requireAdmin();
+  await requireKassa();
   const [channels, totalBalance, unlinkedCount] = await Promise.all([
     getChannelBalances(prisma, { includeInactive: true }),
     getTotalTransitBalance(prisma),
@@ -56,7 +78,7 @@ export async function getTransitOverview() {
 }
 
 export async function getTransitLedger(channelId: string) {
-  await requireAdmin();
+  await requireKassa();
   return serialize(await getChannelLedger(prisma, channelId));
 }
 
@@ -66,7 +88,7 @@ export async function getTransitLedger(channelId: string) {
  * tasdiqlanmagan tranzaksiyalar.
  */
 export async function getUnlinkedCardTransfers(limit = 100) {
-  await requireAdmin();
+  await requireKassa();
   const rows = await prisma.bankTransaction.findMany({
     where: { direction: "expense", expenseCategory: "xodim_kartasi", status: "unmatched" },
     select: {
@@ -109,7 +131,7 @@ export async function getUnlinkedCardTransfers(limit = 100) {
  * xarajat faqat bazada qolib ketardi.
  */
 export async function getHouseholdExpenses(months = 12) {
-  await requireAdmin();
+  await requireKassa();
   const rows = await prisma.kassaEntry.findMany({
     where: { type: "expense", category: "ovqat_xojalik", deletedAt: null },
     select: { amount: true, date: true },
@@ -146,7 +168,7 @@ export async function upsertChannel(input: {
   notes?: string | null;
   isActive?: boolean;
 }): Promise<Outcome<{ id: string }>> {
-  const { userId } = await requireAdmin();
+  const { userId } = await requireKassa();
 
   if (!CHANNEL_TYPES.includes(input.type)) return { ok: false, error: "Kanal turi noto'g'ri" };
   const label = input.label.trim();
@@ -247,7 +269,7 @@ export async function setChannelActive(id: string, isActive: boolean): Promise<O
 export async function autoCreateChannelsFromStatements(): Promise<
   Outcome<{ created: number; existing: number; withoutCard: number }>
 > {
-  const { userId } = await requireAdmin();
+  const { userId } = await requireKassa();
 
   const transfers = await prisma.bankTransaction.findMany({
     where: { direction: "expense", expenseCategory: "xodim_kartasi" },
@@ -307,7 +329,7 @@ export async function linkCardTransfer(input: {
   transactionId: string;
   channelId: string;
 }): Promise<Outcome<{ alreadyLinked: boolean }>> {
-  const { userId } = await requireAdmin();
+  const { userId } = await requireKassa();
 
   const tx = await prisma.bankTransaction.findUnique({
     where: { id: input.transactionId },
@@ -317,14 +339,19 @@ export async function linkCardTransfer(input: {
   if (tx.direction !== "expense") return { ok: false, error: "Bu chiqim tranzaksiyasi emas" };
 
   try {
-    await assertPeriodOpen(prisma, periodOf(tx.valueDate), "karta o'tkazmasi");
-    const res = await recordTransitIn(prisma, {
-      channelId: input.channelId,
-      bankTransactionId: tx.id,
-      amount: Number(tx.amount),
-      date: tx.valueDate,
-      description: tx.purpose?.slice(0, 300) ?? null,
-      createdBy: userId,
+    // Davr tekshiruvi ham yozuv ham bitta tranzaksiyada: `recordTransitIn`
+    // ikkita jadvalga yozadi (TransitEntry + BankTransaction.status), ular
+    // yarim holatda qolmasin.
+    const res = await serializable(async (db) => {
+      await assertPeriodOpen(db, periodOf(tx.valueDate), "karta o'tkazmasi");
+      return recordTransitIn(db, {
+        channelId: input.channelId,
+        bankTransactionId: tx.id,
+        amount: Number(tx.amount),
+        date: tx.valueDate,
+        description: tx.purpose?.slice(0, 300) ?? null,
+        createdBy: userId,
+      });
     });
     revalidatePath("/kassa/chiqim");
     return { ok: true, data: { alreadyLinked: res.alreadyLinked } };
@@ -343,24 +370,32 @@ export async function spendFromChannel(input: {
   companyId?: string | null;
   allowOverdraft?: boolean;
 }): Promise<Outcome<{ balanceAfter: number }>> {
-  const { userId } = await requireAdmin();
+  const { userId, role } = await requireKassa();
 
   const date = new Date(input.date);
   if (Number.isNaN(date.getTime())) return { ok: false, error: "Sana noto'g'ri" };
   if (!input.category?.trim()) return { ok: false, error: "Toifa tanlanishi kerak" };
 
   try {
-    await assertPeriodOpen(prisma, periodOf(date), "karta xarajati");
-    const res = await recordTransitOut(prisma, {
-      channelId: input.channelId,
-      amount: Number(input.amount),
-      date,
-      category: input.category.trim(),
-      description: input.description?.trim() || null,
-      companyId: input.companyId ?? null,
-      createdBy: userId,
-      allowOverdraft: input.allowOverdraft,
-    });
+    // SERIALIZABLE SHART. `recordTransitOut` avval kanal qoldig'ini O'QIYDI,
+    // keyin YOZADI — tranzaksiyasiz ikki parallel chiqim bir xil qoldiqni
+    // ko'radi va ikkalasi ham overdraft qo'riqchisidan o'tib ketadi. Bu aynan
+    // `lib/tx.ts` da tasvirlangan TOCTOU poygasi; loyihaning boshqa hamma pul
+    // yo'li allaqachon yopgan, bu bittasi qolib ketgan edi.
+    const res = await serializable(async (db) =>
+      // Davr qulfi endi darvoza ichida (`lib/cashGate.ts` commit) — tranzaksiya
+      // ICHIDA, chunki `assertPeriodOpen` READY_TO_CLOSE → OPEN yozuvini ham
+      // qiladi va amal yiqilsa u qaytishi kerak.
+      recordTransitOut(db, { kind: "user", userId: userId as string, role }, {
+        channelId: input.channelId,
+        amount: Number(input.amount),
+        date,
+        category: input.category.trim(),
+        description: input.description?.trim() || null,
+        companyId: input.companyId ?? null,
+        allowOverdraft: input.allowOverdraft,
+      })
+    );
 
     await recordAuditLog({
       userId,

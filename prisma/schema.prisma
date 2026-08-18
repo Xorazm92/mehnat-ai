@@ -186,6 +186,7 @@ model Company {
   activeServices       String[] // Active service keys
   itParkResident       String?
   isInternalContractor Boolean  @default(false)
+
   /// Mijoz bilan shartnoma ASRO'ning QAYSI yuridik shaxsi nomidan tuzilgan
   /// (`isOwnFirm = true` bo'lgan firma).
   ///
@@ -636,10 +637,32 @@ model LedgerEntry {
   createdAt     DateTime @default(now())
   createdBy     String?
 
+  // ── O'LCHOVLAR (lib/ledger.ts ACCOUNT_SPEC) ────────────────────────────
+  // Hisoblar ro'yxati KICHIK qoladi (~9 ta), kesim esa shu ustunlar orqali.
+  // `accountId` ni "CASH_BANK:<uuid>" qilib kompozit qilish `getTrialBalance`
+  // ni yuzlab qatorga bo'lib yuborardi va `ACCOUNTS` yopiq union bo'lishdan
+  // to'xtardi — migratsiyadagi izohga qarang.
+
+  /// Naqd QAYERDA turibdi: DisbursementChannel.id (bank hisobi / naqd / karta).
+  /// FK EMAS — `KassaEntry.channelId` uslubiga mos. NULL = kanal noma'lum
+  /// (tarixiy qatorlar; sverkada nolga intilishi kerak bo'lgan ko'rsatkich).
+  channelId String?
+  /// Kontragent turi: "company" (AR) | "user" (SALARY_PAYABLE).
+  /// Chaqiruvchidan OLINMAYDI — `postLedger` uni hisob spetsifikatsiyasidan
+  /// yozadi, shunda yozuv xatosi ko'rinmas ikkinchi chelak yarata olmaydi.
+  subjectType String?
+  /// Kontragent id — companyId yoki userId.
+  subjectId   String?
+
   @@index([transactionId])
   @@index([accountId, period])
   @@index([sourceTable, sourceId])
   @@index([period])
+  // Kanal kesimidagi naqd pozitsiya. Yuqoridagi [accountId, period] ning
+  // o'rnini BOSMAYDI: bu yerda `channelId` o'rtada turadi.
+  @@index([accountId, channelId, period])
+  // Kontragent qoldig'i (AR / SALARY_PAYABLE).
+  @@index([accountId, subjectType, subjectId, period])
 }
 
 // =====================================================
@@ -785,6 +808,12 @@ model KassaEntry {
   // o'zini-o'zi band qilgan xodimning kartasi. FK emas — mavjud `companyId`
   // uslubiga mos (kanal o'chirilsa tarixiy yozuv yo'qolmasin).
   channelId String?
+
+  /// Takrorlanmaslik kaliti — import yo'llari uchun ("bank:<txId>",
+  /// "kassa-import:<fayl>:<qator>"). Qo'lda kiritilgan yozuvlarda NULL:
+  /// Postgres NULL'larni farqli deb hisoblaydi, ya'ni ular bir-biriga
+  /// xalaqit bermaydi. Qisman unikal indeks migratsiyada.
+  dedupKey String?
 
   // Soft delete
   deletedAt    DateTime?
