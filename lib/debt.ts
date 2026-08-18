@@ -46,12 +46,14 @@
 //     qolishi kerak.
 
 import { Prisma } from "@prisma/client";
+import { periodKeyOf } from "@/lib/periods";
 
 type Db = Prisma.TransactionClient;
 
-/** "2026-08" — joriy davr kaliti. */
-export const periodKeyOf = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+// Davr kaliti YAGONA manbadan (`lib/periods.ts`) — bu yerda o'z nusxasi bor
+// edi. Mavjud importerlar (`lib/directorReport.ts`, `server/debt.ts`) buzilmasin
+// deb qayta eksport qilinadi.
+export { periodKeyOf };
 
 /**
  * ASRO qaysi davrdan boshlab hisob qo'yadi.

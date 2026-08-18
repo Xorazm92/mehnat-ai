@@ -147,6 +147,29 @@ export const getCurrentPeriod = () => {
 };
 
 /**
+ * Sana → davr kaliti ("YYYY-MM"), MAHALLIY vaqt bo'yicha.
+ *
+ * YAGONA MANBA. Bu bir qatorlik funksiya kod bazasida OLTI MARTA qayta
+ * yozilgan edi (`periodKeyOf`, `periodOf` ×2, `monthOf` ×2, `periodOfDate`) —
+ * moliya, bank importi, kassa va skriptlarda. Hammasi bir xil ishlardi, lekin
+ * bittasini tuzatgan odam qolganini ko'rmasdi.
+ *
+ * MAHALLIY, UTC EMAS. Jarayon `TZ=Asia/Tashkent` bilan yuradi
+ * (ecosystem.config.cjs), server OS esa UTC. Ya'ni pul yozuvining davri
+ * Toshkent kalendari bo'yicha aniqlanadi — buxgalteriya uchun to'g'risi shu:
+ * 1-avgust soat 02:00 da yozilgan chiqim avgustga tegishli, iyulga emas.
+ *
+ * DIQQAT — TIZIMDA IKKI KONVENSIYA YONMA-YON YURADI. Quyidagi
+ * `getCurrentPeriodKey` va 17 ta boshqa joy `toISOString().slice(0,7)`
+ * ishlatadi, ya'ni UTC. Har oyning 1-sanasida 00:00–05:00 (Toshkent) oralig'ida
+ * ikkalasi BIR OYGA farq qiladi. Bu bo'shliq kassadan tashqarida (KPI, oylik,
+ * davomat ekranlari) ham bor va alohida hal qilinishi kerak — shuning uchun
+ * bu yerda faqat NOMLANGAN, jimgina o'zgartirilmagan.
+ */
+export const periodKeyOf = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+/**
  * Joriy davr KALITI ("YYYY-MM") — server currentMonth bilan bir xil (UTC).
  * UI period-selektorlarining REAL-VAQT standarti: hech qayerda oyni qotirmang,
  * shu funksiyani chaqiring (server `new Date().toISOString().slice(0,7)` bilan mos).

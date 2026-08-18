@@ -12,20 +12,13 @@
 // kiritilmaganini bildiradi. Shuning uchun farqi katta qatorlar TEPADA.
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { isSeniorRole, isAdminRole } from "@/lib/permissions";
+import { isAdminRole } from "@/lib/permissions";
+import { requireSenior } from "@/server/guards";
 import { companyScopeWhere } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
 import { computeContractDebt, listDebtors, periodKeyOf } from "@/lib/debt";
 import { runReconciliation } from "@/lib/reconciliation";
 
-async function requireSenior() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  const role = session.user.role as string;
-  if (!isSeniorRole(role)) throw new Error("Forbidden");
-  return { userId: session.user.id, role };
-}
 
 export interface DebtRow {
   key: string;

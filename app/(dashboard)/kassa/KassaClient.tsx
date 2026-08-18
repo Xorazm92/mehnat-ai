@@ -8,13 +8,17 @@ import BalanceOverview from "@/components/BalanceOverview";
 import { Company, Payment, BalanceBreakdown } from "@/types";
 import { upsertPayment, deletePayment } from "@/server/kassa";
 
+/** companyId → serverda hisoblangan qarz (lib/debt.ts). */
+export type DebtByCompany = Record<string, { dueNow: number; overdue: number; outstanding: number }>;
+
 interface Props {
   companies: Company[];
   payments: Payment[];
+  debtByCompany?: DebtByCompany;
   balance?: BalanceBreakdown;
 }
 
-export default function KassaClient({ companies, payments, balance }: Props) {
+export default function KassaClient({ companies, payments, balance, debtByCompany = {} }: Props) {
   const router = useRouter();
   useAutoRefresh();
 
@@ -42,6 +46,7 @@ export default function KassaClient({ companies, payments, balance }: Props) {
       <KassaModule
         companies={companies}
         payments={payments}
+        debtByCompany={debtByCompany}
         lang="uz"
         onSavePayment={handleSave}
         onDeletePayment={handleDelete}

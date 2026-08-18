@@ -21,6 +21,7 @@ import { assertFundingSource } from "@/server/fundingSources";
 import { isFinanceRole } from "@/lib/permissions";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { serialize } from "@/lib/serialize";
+import { periodKeyOf } from "@/lib/periods";
 
 // Summa har doim musbat son bo'lishi kerak — manfiy/NaN qiymat balans
 // agregatlarini (lib/balance.ts) buzadi, shuning uchun serverda qat'iy tekshiriladi.
@@ -29,11 +30,6 @@ function assertPositiveAmount(amount: number, label = "Summa") {
     throw new Error(`${label} musbat son bo'lishi kerak`);
   }
 }
-
-const monthOf = (d: Date | string) => {
-  const date = d instanceof Date ? d : new Date(d);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-};
 
 export async function getKassaEntries(filters?: {
   type?: string;
@@ -137,7 +133,7 @@ export async function createKassaEntry(data: {
               { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: data.amount },
               { accountId: ACCOUNTS.CASH, credit: data.amount },
             ],
-      period: monthOf(data.date),
+      period: periodKeyOf(data.date),
       sourceTable: "KassaEntry",
       sourceId: row.id,
       createdBy: session.user.id,
@@ -197,41 +193,6 @@ export async function deleteKassaEntry(id: string, reason?: string) {
   return serialize(deleted);
 }
 
-export async function getKassaSummary(from?: Date, to?: Date) {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-
-  const role = session.user.role as string;
-  if (!["super_admin", "admin", "chief_accountant", "bank_manager"].includes(role)) {
-    throw new Error("Forbidden");
-  }
-
-  const dateFilter = from || to
-    ? { date: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
-    : {};
-
-  const [income, expense] = await Promise.all([
-    prisma.kassaEntry.aggregate({
-      where: { type: "income", deletedAt: null, ...dateFilter },
-      _sum: { amount: true },
-      _count: true,
-    }),
-    prisma.kassaEntry.aggregate({
-      where: { type: "expense", deletedAt: null, ...dateFilter },
-      _sum: { amount: true },
-      _count: true,
-    }),
-  ]);
-
-  return {
-    totalIncome: Number(income._sum.amount || 0),
-    totalExpense: Number(expense._sum.amount || 0),
-    balance: Number(income._sum.amount || 0) - Number(expense._sum.amount || 0),
-    incomeCount: income._count,
-    expenseCount: expense._count,
-  };
-}
-
 // =====================================================
 // EXPENSES
 // =====================================================
@@ -276,7 +237,7 @@ async function postExpenseLedger(tx: Prisma.TransactionClient, exp: { id: string
       { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: exp.amount },
       { accountId: ACCOUNTS.CASH, credit: exp.amount },
     ],
-    period: monthOf(exp.date),
+    period: periodKeyOf(exp.date),
     sourceTable: "Expense",
     sourceId: exp.id,
     createdBy: userId,

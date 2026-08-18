@@ -20,8 +20,7 @@
 //   `requireAdmin` — QAYTARIB BO'LMAYDIGAN amal: kanalni muzlatish. Faqat admin.
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { isAdminRole, isFinanceRole } from "@/lib/permissions";
+import { requireKassa, requireAdmin } from "@/server/guards";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/serialize";
 import { recordAuditLog } from "@/lib/auditTrail";
@@ -39,24 +38,6 @@ import {
   CHANNEL_TYPES,
   type ChannelType,
 } from "@/lib/transit";
-
-/** Kundalik kassa qaydi — moliya rollari (admin, superadmin, bosh buxgalter, bank-klient). */
-async function requireKassa() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  const role = session.user.role as string;
-  if (!isFinanceRole(role)) throw new Error("Forbidden");
-  return { userId: session.user.id, role };
-}
-
-/** Qaytarib bo'lmaydigan amal (kanalni muzlatish) — faqat admin. */
-async function requireAdmin() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  const role = session.user.role as string;
-  if (!isAdminRole(role)) throw new Error("Forbidden");
-  return { userId: session.user.id, role };
-}
 
 /** Kutilgan xatolar otilmaydi — prod'da matn brauzerga yetmaydi. */
 export type Outcome<T> = { ok: true; data: T } | { ok: false; error: string };

@@ -37,7 +37,14 @@ export interface PeriodKey {
 }
 
 /** "YYYY-MM", "YYYY-MM-DD" yoki Date dan (yil, oy) ni ajratadi. */
-export function periodKeyOf(input: string | Date): PeriodKey {
+/**
+ * Davrni {year, month} ga ajratadi.
+ *
+ * NOMI ATAYIN `periodKeyOf` EMAS: `lib/periods.ts` da shu nomli funksiya bor
+ * va u SATR ("YYYY-MM") qaytaradi. Ikkalasi bir xil nom bilan yonma-yon
+ * yurgani uchun o'qiyotgan odam qaysi biri kelayotganini ayta olmasdi.
+ */
+export function periodPartsOf(input: string | Date): PeriodKey {
   if (input instanceof Date) {
     if (Number.isNaN(input.getTime())) throw new Error("Davr sanasi noto'g'ri");
     return { year: input.getFullYear(), month: input.getMonth() + 1 };
@@ -58,7 +65,7 @@ export const periodLabel = (k: PeriodKey) => `${k.year}-${String(k.month).padSta
  * (yangi hujjat checklist natijasini eskirtiradi — "statuslar avtomatik").
  */
 export async function assertPeriodOpen(db: Db, input: string | Date, label = "moliyaviy yozuv"): Promise<void> {
-  const key = periodKeyOf(input);
+  const key = periodPartsOf(input);
   const period = await db.accountingPeriod.findFirst({
     where: { companyId: null, year: key.year, month: key.month },
     select: { id: true, status: true },

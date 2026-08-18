@@ -17,12 +17,22 @@ import { useTableState } from "@/hooks/useTableState";
 interface KassaModuleProps {
     companies: Company[];
     payments: Payment[];
+    /**
+     * companyId → SERVERDA hisoblangan qarz (`lib/debt.ts`).
+     *
+     * Klient pulni O'ZI HISOBLAMAYDI. Ilgari bu faylda `contractAmount −
+     * shu davr to'lovi` formulasi IKKI MARTA yozilgan edi (ustunda va
+     * kartochkada) va u `PAYMENT_TERM_MONTHS` ni bilmasdi — ya'ni "iyulning
+     * puli avgustda" qoidasi ekranda ishlamasdi va raqam Telegram
+     * hisobotidagidan farq qilardi.
+     */
+    debtByCompany?: Record<string, { dueNow: number; overdue: number; outstanding: number }>;
     lang: Language;
     onSavePayment: (payment: Partial<Payment>) => Promise<void>;
     onDeletePayment: (id: string) => Promise<void>;
 }
 
-const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, onSavePayment, onDeletePayment }) => {
+const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCompany = {}, lang, onSavePayment, onDeletePayment }) => {
     const table = useTableState({ ns: 'kassa', defaultSortKey: 'name' });
   const confirm = useConfirm();
     const t = translations[lang];
@@ -78,9 +88,14 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
             pendingCount
         };
     }, [companies, payments, selectedPeriod, filteredData]);
-    /** Qolgan to'lov — ustunda ham, saralashda ham, eksportda ham bir xil. */
-    const remaining = (item: (typeof filteredData)[number]) =>
-        Math.max(0, Number(item.contractAmount || 0) - (item.payment && (item.payment.status === PaymentStatus.PAID || item.payment.status === PaymentStatus.PARTIAL) ? Number(item.payment.amount || 0) : 0));
+    /**
+     * Qolgan to'lov — ustunda ham, saralashda ham, eksportda ham, kartochkada
+     * ham AYNAN BIR XIL. Manba: server (`lib/debt.ts` → `getDebtors`).
+     *
+     * Serverda qatori yo'q firma = qarzi yo'q (0). Bu to'g'ri: `listDebtors`
+     * faqat qoldig'i borlarni qaytaradi.
+     */
+    const remaining = (item: { id: string }) => debtByCompany[item.id]?.outstanding ?? 0;
 
     const kassaColumns = useMemo<DataColumn<(typeof filteredData)[number]>[]>(() => [
         {
@@ -301,7 +316,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, lang, on
                                 </div>
                                 <div className="text-right shrink-0">
                                     <div className="font-semibold text-sm tabular-nums" style={{ color: 'var(--text)' }}>
-                                        {formatNum(Math.max(0, Number(item.contractAmount || 0) - (item.payment && (item.payment.status === PaymentStatus.PAID || item.payment.status === PaymentStatus.PARTIAL) ? Number(item.payment.amount || 0) : 0)))}
+                                        {formatNum(remaining(item))}
                                     </div>
                                     <div className="text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
                                 </div>

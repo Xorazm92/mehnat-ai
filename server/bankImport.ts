@@ -13,8 +13,7 @@
 // proxy.ts ko'rinishni boshqaradi, xavfsizlikni esa shu tekshiruvlar.
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { isFinanceRole } from "@/lib/permissions";
+import { requireStatementRole, requireKassa } from "@/server/guards";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/serialize";
 import { recordAuditLog } from "@/lib/auditTrail";
@@ -33,33 +32,6 @@ import {
   periodOf,
 } from "@/lib/bank/importStatement";
 import type { ParsedStatement, StatementPreview, Workbook } from "@/lib/bank/types";
-
-/** Vipiska bilan ishlay oladigan rollar. */
-const STATEMENT_ROLES = ["super_admin", "admin", "bank_manager"];
-
-async function requireStatementRole() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  const role = session.user.role as string;
-  if (!STATEMENT_ROLES.includes(role)) throw new Error("Forbidden");
-  return { userId: session.user.id, role };
-}
-
-/**
- * Chiqim bilan ishlash — moliya rollari.
- *
- * Ilgari bu FAQAT admin edi ("rasxodni faqat man qilaman"). Qoida 2026-08-18
- * da o'zgardi: kassani kundalik yurituvchi xodim chiqimni ham toifalaydi.
- * Bu pul chiqarish EMAS — bank allaqachon o'tkazgan qatorni moddaga bog'lash,
- * ya'ni buxgalteriya qaydi (server/transit.ts dagi izohga qarang).
- */
-async function requireKassa() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  const role = session.user.role as string;
-  if (!isFinanceRole(role)) throw new Error("Forbidden");
-  return { userId: session.user.id, role };
-}
 
 // ─────────────────────────────────────────────────────────
 // O'QISH

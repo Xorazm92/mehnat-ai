@@ -33,6 +33,8 @@
 
 import "./load-env";
 import { prisma } from "@/lib/prisma";
+import { periodKeyOf } from "@/lib/periods";
+import { formatNum as som } from "@/lib/format";
 import { ACCOUNTS, postLedger, reverseLedger, type LedgerLeg } from "@/lib/ledger";
 import { PERIOD_STATUS } from "@/lib/periodLock";
 import { serializable } from "@/lib/tx";
@@ -45,9 +47,7 @@ const ROLLBACK = process.argv.includes("--rollback");
 const receiptArg = process.argv.indexOf("--receipt");
 const RECEIPT_PATH = receiptArg >= 0 ? process.argv[receiptArg + 1] : null;
 
-const som = (n: number) => Math.round(n).toLocaleString("ru-RU");
-const periodOfDate = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
 
 interface Candidate {
   sourceTable: string;
@@ -109,7 +109,7 @@ async function collect(): Promise<Candidate[]> {
     out.push({
       sourceTable: "KassaEntry",
       sourceId: k.id,
-      period: periodOfDate(k.date),
+      period: periodKeyOf(k.date),
       amount,
       description: `Kassa ${k.type === "income" ? "kirim" : "chiqim"}: ${k.category}`,
       legs:
@@ -138,7 +138,7 @@ async function collect(): Promise<Candidate[]> {
     out.push({
       sourceTable: "Expense",
       sourceId: e.id,
-      period: periodOfDate(e.date),
+      period: periodKeyOf(e.date),
       amount,
       description: `Xarajat: ${e.category}`,
       legs: [
@@ -182,7 +182,7 @@ async function collect(): Promise<Candidate[]> {
     if (outSeen.has(p.id)) continue;
     const amount = Number(p.amount);
     if (!(amount > 0)) continue;
-    const period = /^\d{4}-\d{2}$/.test(p.month) ? p.month : periodOfDate(p.paidAt);
+    const period = /^\d{4}-\d{2}$/.test(p.month) ? p.month : periodKeyOf(p.paidAt);
     out.push({
       sourceTable: "Payout",
       sourceId: p.id,

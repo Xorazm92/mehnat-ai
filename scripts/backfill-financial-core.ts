@@ -12,11 +12,11 @@
  */
 import "./load-env";
 import { prisma } from "@/lib/prisma";
+import { periodKeyOf } from "@/lib/periods";
 import { ACCOUNTS, postLedger, getLedgerCashBalance, getTrialBalance } from "@/lib/ledger";
 import { adjustmentMagnitude } from "@/lib/adjustments";
 import { getAvailableBalance } from "@/lib/balance";
 
-const monthOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
 async function backfillPayouts(): Promise<number> {
   const adjustments = await prisma.payrollAdjustment.findMany({
@@ -102,7 +102,7 @@ async function backfillLedger(): Promise<Record<string, number>> {
               { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: amount },
               { accountId: ACCOUNTS.CASH, credit: amount },
             ],
-      period: monthOf(k.date),
+      period: periodKeyOf(k.date),
       sourceTable: "KassaEntry",
       sourceId: k.id,
       createdBy: k.createdBy,
@@ -121,7 +121,7 @@ async function backfillLedger(): Promise<Record<string, number>> {
         { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: amount },
         { accountId: ACCOUNTS.CASH, credit: amount },
       ],
-      period: monthOf(e.date),
+      period: periodKeyOf(e.date),
       sourceTable: "Expense",
       sourceId: e.id,
       createdBy: e.createdBy,

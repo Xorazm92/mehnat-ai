@@ -9,6 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { isAdminRole, ROLE_LABELS, type UserRole } from "@/lib/permissions";
 import type { Prisma } from "@prisma/client";
+import { formatNum } from "@/lib/format";
 import type { BalanceBreakdown } from "@/types";
 
 /**
@@ -268,7 +269,9 @@ export async function getMovementBefore(year: number): Promise<{ income: number;
   };
 }
 
-const som = (v: number) => Math.round(v).toLocaleString("ru-RU");
+// Summa formatlash YAGONA manbadan (`lib/format.ts`). Bu yerda o'z nusxasi
+// bor edi va u `toLocaleString("ru-RU")` ishlatardi — ya'ni xato matnidagi
+// raqam ekrandagidan boshqacha ko'rinardi (probel va vergul).
 
 /**
  * Chiqim yoki oylik summasi mavjud balansdan oshib ketmasligini tekshiradi.
@@ -295,8 +298,8 @@ export async function assertSufficientFunds(params: {
 
   if (!isAdminRole(role)) {
     throw new Error(
-      `Kassada yetarli mablag' yo'q. Mavjud balans: ${som(balance)} so'm, ` +
-        `so'ralgan summa: ${som(amount)} so'm. ` +
+      `Kassada yetarli mablag' yo'q. Mavjud balans: ${formatNum(balance)} so'm, ` +
+        `so'ralgan summa: ${formatNum(amount)} so'm. ` +
         `Kirim yetarli bo'lmaguncha bu summani faqat Admin yoki Superadmin tasdiqlashi mumkin.`
     );
   }

@@ -28,6 +28,7 @@ import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { assertSufficientFunds } from "@/lib/balance";
 import { ACCOUNTS, postLedger, reverseLedger, type LedgerLeg } from "@/lib/ledger";
+import { periodKeyOf } from "@/lib/periods";
 
 type Db = Prisma.TransactionClient;
 
@@ -53,10 +54,6 @@ const needsFundsCheck = (actor: CashActor): actor is Extract<CashActor, { kind: 
 
 const actorUserId = (actor: CashActor): string | null =>
   actor.kind === "user" ? actor.userId : (actor.userId ?? null);
-
-/** "YYYY-MM" — jurnal davri. */
-const periodOf = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
 /**
  * Tranzaksiyasi yo'q chaqiruvchilar uchun (import, skript, cron).
@@ -112,7 +109,7 @@ async function commit(
   const row = await spec.write(db);
   const transactionId = await postLedger(db, {
     legs: spec.legs(row),
-    period: periodOf(spec.date),
+    period: periodKeyOf(spec.date),
     sourceTable: spec.sourceTable,
     sourceId: row.id,
     createdBy: actorUserId(actor),

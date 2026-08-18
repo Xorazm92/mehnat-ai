@@ -14,6 +14,7 @@
 // Ikkalasi bir vaqtda YOZILMAYDI — aks holda bitta pul ikki marta sanalardi.
 
 import { Prisma } from "@prisma/client";
+import { periodKeyOf } from "@/lib/periods";
 import { transactionHash } from "./parseStatement";
 import { extractContract } from "./extractContract";
 import { classifyExpense, type ExpenseCategory } from "./classifyExpense";
@@ -221,8 +222,10 @@ export async function autoMatchTransactions(
 }
 
 /** "YYYY-MM" — Payment.period formati. */
-export const periodOf = (d: Date): string =>
-  `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+// Davr kaliti `lib/periods.ts` dan — bank moduli o'z nusxasini yuritmaydi.
+// Qayta eksport: mavjud importerlar (`server/bankImport.ts`, `server/transit.ts`,
+// `scripts/import-statements.ts`) `periodOf` nomi bilan chaqiradi.
+export const periodOf = periodKeyOf;
 
 export interface PostResult {
   paymentId: string;

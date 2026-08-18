@@ -1,4 +1,5 @@
 import type { DirectorReport } from "../../../../lib/directorReport";
+import { formatNum as som } from "../../../../lib/format";
 
 /**
  * Direktorning ertalabki hisoboti (09:00).
@@ -19,12 +20,9 @@ function uzDate(d: Date): string {
   return `${d.getDate()}-${UZ_MONTHS[d.getMonth()]}`;
 }
 
-/** Vergul bilan ajratilgan summa — lib/format.ts formatNum bilan bir xil. */
-function som(value: number): string {
-  const n = Math.round(value);
-  const sign = n < 0 ? "-" : "";
-  return sign + String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
+// Summa formatlash `lib/format.ts` dan. Bu yerda AYNI shu algoritmning
+// nusxasi bor edi ("formatNum bilan bir xil" deb izohlangan holda) — ya'ni
+// ikkalasi qo'lda sinxron tutilishi kerak edi. Endi bitta manba.
 
 export function renderDirectorReport(report: DirectorReport): string {
   const lines = [`📊 Kunlik hisobot — ${uzDate(report.forDate)}`, ""];
