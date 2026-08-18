@@ -35,6 +35,8 @@ export interface GenerateResult {
   created: number;
   skippedExisting: number;
   skippedNotApplicable: number;
+  /** Rejim o'zgargani uchun bekor qilingan (faqat `planned` bo'lganlari). */
+  cancelledNotApplicable: number;
 }
 
 
@@ -106,6 +108,7 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
     created: 0,
     skippedExisting: 0,
     skippedNotApplicable: 0,
+    cancelledNotApplicable: 0,
   };
 
   for (const t of templates) {
@@ -114,6 +117,45 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
       const f = facts.get(c.id)!;
       if (!templateApplies(t.applicability, f)) {
         res.skippedNotApplicable++;
+        /**
+         * REJIM O'ZGARSA ESKI MAJBURIYAT QOLIB KETMASIN.
+         *
+         * Generator faqat YARATARDI. Firma aylanmadan QQS ga o'tkazilganda
+         * (2026-08 da 119 ta firma birdaniga) unga allaqachon yaratilgan
+         * "Aylanma soliq" majburiyati joyida qolardi: /deadlines da soxta
+         * kechikish sifatida turardi va bot ular uchun eskalatsiya yuborardi.
+         *
+         * FAQAT `planned` bekor qilinadi. Undan nariga o'tgani (`sent`,
+         * `accepted`, `rejected`) — bajarilgan ish tarixi; uni bekor qilish
+         * dalilni yo'q qilardi. Bunday holat qo'lda ko'rib chiqilishi kerak.
+         */
+        const stale = await db.obligation.findUnique({
+          where: {
+            companyId_templateId_periodStart_periodEnd: {
+              companyId: c.id,
+              templateId: t.id,
+              periodStart: window.periodStart,
+              periodEnd: window.periodEnd,
+            },
+          },
+          select: { id: true, status: true },
+        });
+        if (stale && stale.status === "planned") {
+          await db.obligation.update({
+            where: { id: stale.id },
+            data: { status: "cancelled" },
+          });
+          await db.obligationStatusEvent.create({
+            data: {
+              obligationId: stale.id,
+              fromStatus: "planned",
+              toStatus: "cancelled",
+              byUserId: null,
+              note: "Firma bu shablonga endi mos kelmaydi (masalan soliq rejimi o'zgargan)",
+            },
+          });
+          res.cancelledNotApplicable++;
+        }
         continue;
       }
       // Muddat — shablon qoidasi + biznes kalendar. Firma-darajali istisno

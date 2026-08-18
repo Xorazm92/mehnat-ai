@@ -297,7 +297,7 @@ async function main() {
     const r = gen.results?.[0];
     console.log(`3) Generatsiya (ref=${r?.ref?.slice(0, 10)}):`);
     console.log(`   templatelar=${r?.templatesConsidered}  yaroqli firma=${r?.companiesEligible}`);
-    console.log(`   yaratildi=${r?.created}  mavjud(skip)=${r?.skippedExisting}  mos emas(skip)=${r?.skippedNotApplicable}`);
+    console.log(`   yaratildi=${r?.created}  mavjud(skip)=${r?.skippedExisting}  mos emas(skip)=${r?.skippedNotApplicable}  bekor=${r?.cancelledNotApplicable}`);
   }
 
   // ── Yakuniy tekshiruv ───────────────────────────────────────
