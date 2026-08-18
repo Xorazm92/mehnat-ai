@@ -265,6 +265,10 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
     SELECT 'KassaEntry' AS table_name, count(*)::bigint AS cnt, coalesce(sum(k.amount), 0)::float8 AS total
       FROM "KassaEntry" k
      WHERE k."deletedAt" IS NULL
+       -- FAQAT TASDIQLANGAN. `pending` yozuvda pul hali chiqmagan, ya'ni
+       -- jurnal qatori bo'lmasligi TO'G'RI — uni "bo'shliq" deb sanash
+       -- tasdiq navbatini doimiy qizil qilib qo'yardi.
+       AND k.status = 'approved'
        AND NOT EXISTS (SELECT 1 FROM "LedgerEntry" l
                         WHERE l."sourceId" = k.id AND l."sourceTable" = 'KassaEntry')
     UNION ALL
