@@ -137,6 +137,14 @@ export interface KassaMovementInput {
    * allaqachon bo'lsa — YANGI YOZUV YOZILMAYDI, mavjudi qaytariladi.
    */
   dedupKey?: string | null;
+  /**
+   * Chiqim QAYSI hisobga tushsin. Standart — operatsion xarajat.
+   *
+   * Oylik `SALARY_EXPENSE` ga tushishi kerak: aks holda mehnat haqi
+   * operatsion xarajat bo'lib ko'rinadi va foyda tahlili buziladi. Prodda
+   * bu 269 mln so'mlik farq (tranzit kartalaridan berilgan oylik).
+   */
+  expenseAccount?: typeof ACCOUNTS.OPERATING_EXPENSE | typeof ACCOUNTS.SALARY_EXPENSE;
 }
 
 export interface CashResult {
@@ -163,6 +171,24 @@ export async function recordKassaMovement(
   }
   if (!Number.isFinite(input.amount) || input.amount <= 0) {
     throw new Error("Summa musbat son bo'lishi kerak");
+  }
+
+  const expenseAccount = input.expenseAccount ?? ACCOUNTS.OPERATING_EXPENSE;
+
+  // OYLIK OPERATSION XARAJAT EMAS. Qoida atayin "kassaga oylik yozilmasin"
+  // emas, "oylik operatsion xarajatga yozilmasin" — chunki kartadan berilgan
+  // mehnat haqi kassa yozuvi bo'lishi TO'G'RI, faqat u `SALARY_EXPENSE` ga
+  // tushishi kerak. Shu ko'rinishda qoida chaqiruvchini to'g'ri hisobga
+  // yo'naltiradi, uni butunlay to'sib qo'ymaydi.
+  if (
+    input.type === "expense" &&
+    expenseAccount === ACCOUNTS.OPERATING_EXPENSE &&
+    /oylik|ish\s*haqi|mehnat\s*haqi|maosh|zarplata|зарплат|ойлик|иш\s*хак/i.test(input.category)
+  ) {
+    throw new Error(
+      `"${input.category}" mehnat haqiga o'xshaydi — operatsion xarajatga yozilmaydi. ` +
+        `Oylik uchun expenseAccount: SALARY_EXPENSE bering yoki /payroll orqali to'lang.`
+    );
   }
 
   // Idempotentlik: qaytadan yurgizilgan import dublikat xarajat yozmasin.
@@ -202,7 +228,7 @@ export async function recordKassaMovement(
             { accountId: ACCOUNTS.KASSA_INCOME, credit: input.amount },
           ]
         : [
-            { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: input.amount },
+            { accountId: expenseAccount, debit: input.amount },
             { accountId: ACCOUNTS.CASH, credit: input.amount, channelId: input.channelId ?? null },
           ],
   });
