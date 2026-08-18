@@ -20,6 +20,7 @@ import { PRIMARY_SERVICE } from "@/lib/credentials";
 import { notifyOneCBaseNeeded } from "@/lib/oneCBase";
 import { telegramQueueDispatcher } from "@/lib/notifyDispatch";
 import { logServerError } from "@/lib/logger";
+import { normalizeTaxRegime } from "@/lib/taxRegimes";
 
 // Shartnoma/pul maydonlari — o'zgarishi auditga yoziladi va faqat senior tahrirlaydi.
 const MONEY_FIELDS = [
@@ -256,16 +257,8 @@ export async function getCompanyById(id: string) {
   return serialize(withCred);
 }
 
-const mapTaxRegime = (val: unknown): TaxRegime => {
-  if (!val) return "vat";
-  const normalized = String(val).toLowerCase();
-  if (normalized === "nds_profit" || normalized === "vat") return "vat";
-  if (normalized === "turnover") return "turnover";
-  if (normalized === "fixed") return "fixed";
-  if (normalized === "yatt") return "yatt";
-  if (normalized === "income") return "income";
-  return "vat";
-};
+const mapTaxRegime = (val: unknown): TaxRegime =>
+  normalizeTaxRegime(val) as TaxRegime;
 
 const mapStatsType = (val: unknown): StatsType | null => {
   if (!val) return null;
@@ -345,6 +338,19 @@ function sanitizeCompanyData(raw: Record<string, unknown>) {
     data.contractDate = raw.contractDate ? new Date(raw.contractDate as string | number | Date) : null;
   }
 
+  /**
+   * SOLIQ REJIMI — `taxRegime` ustun turadi, `taxType` faqat zaxira.
+   *
+   * Tartib ATAYLAB shunday va uni almashtirib bo'lmaydi: `taxType` — uch
+   * qiymatli eski ko'rinish (`yatt` va `income` ikkalasi ham "fixed" ga
+   * tushadi), ya'ni undan yozish rejimni JIMGINA pasaytirardi.
+   *
+   * Shu sababdan tahrirlash ekrani KANONIK maydonni yozishi shart. Ilgari
+   * wizard faqat `taxType` ni o'zgartirardi, `taxRegime` esa server
+   * qatoridan qaytib kelgan eski qiymat bo'lib payload'da qolardi — va shu
+   * yerda ustun bo'lib, tahrirni yutib yuborardi. Foydalanuvchi buni
+   * "o'zgartiraman, saqlayman, o'zgarmaydi" deb ko'rardi.
+   */
   if (raw.taxRegime !== undefined) {
     data.taxRegime = mapTaxRegime(raw.taxRegime);
   } else if (raw.taxType !== undefined) {

@@ -15,6 +15,7 @@ import { DataTable, type DataColumn } from '@/components/ui/DataTable';
 import { useTableState } from '@/hooks/useTableState';
 import type { TariffPreset } from '@/lib/tariffPresets';
 import { hiddenMatchOnly, matchesCompanySearch } from '@/lib/companySearch';
+import { TAX_REGIME_SHORT, normalizeTaxRegime } from '@/lib/taxRegimes';
 
 interface Props {
   companies: Company[];
@@ -209,7 +210,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)',
           color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)',
         }}>
-          {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'AYLANMA' : (c.taxType?.toUpperCase() || 'FIX'))}
+          {TAX_REGIME_SHORT[normalizeTaxRegime(c.taxRegime ?? c.taxType)]}
         </span>
       ),
     },
@@ -610,7 +611,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                         </span>
                         <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>INN: {c.inn}</span>
                         <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)' }}>
-                          {c.taxType === 'nds_profit' ? 'VAT' : (c.taxType === 'turnover' ? 'AYLANMA' : (c.taxType?.toUpperCase() || 'FIX'))}
+                          {TAX_REGIME_SHORT[normalizeTaxRegime(c.taxRegime ?? c.taxType)]}
                         </span>
                       </div>
                     </div>

@@ -34,6 +34,7 @@ import { getClientCredentials, createClientCredential, deleteClientCredential, s
 import { formatUzDate, formatUzDateTime, formatNum } from '@/lib/format';
 import { kpiCategoryLabel } from '@/lib/kpiLabels';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { taxRegimeLabel } from '@/lib/taxRegimes';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
@@ -255,7 +256,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 <h2 className="text-sm font-semibold tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.name}</h2>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>INN: {company.inn}</span>
-                  <span className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{company.taxType}</span>
+                  <span className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{taxRegimeLabel(company.taxRegime ?? company.taxType)}</span>
                 </div>
               </div>
             </div>

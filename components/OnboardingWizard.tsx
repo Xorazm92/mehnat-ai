@@ -10,6 +10,13 @@ import {
     type AssignmentRole,
 } from '@/lib/permissions';
 import { STANDARD_TARIFF, type TariffPreset } from '@/lib/tariffPresets';
+import {
+    TAX_REGIMES,
+    TAX_REGIME_HINT,
+    TAX_REGIME_LABEL,
+    legacyTaxType,
+    normalizeTaxRegime,
+} from '@/lib/taxRegimes';
 
 interface Props {
     staff: Staff[];
@@ -74,6 +81,8 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
      */
     const [showErrors, setShowErrors] = useState(false);
     const [formData, setFormData] = useState<Partial<Company>>(initialData || {
+        // KANONIK maydon `taxRegime`; `taxType` faqat eski ekranlar uchun nusxa.
+        taxRegime: 'turnover',
         taxType: TaxType.TURNOVER,
         serverInfo: 'CR1',
         kpiEnabled: true,
@@ -191,7 +200,16 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                 if (!/^\d{9}$/.test(inn)) errs.push("INN 9 ta raqamdan iborat bo'lishi kerak");
             }
         }
-        if (step === 3) {
+        if (step === 3 && !isEdit) {
+            /**
+             * Buxgalter faqat YANGI firmada majburiy — server qoidasi bilan bir xil
+             * (`assertNewCompanyComplete`).
+             *
+             * Tahrirlashda ATAYLAB talab qilinmaydi: bazada buxgalteri yo'q eski
+             * firmalar bor (prodda 1 ta), va ularni ham qamrasak boshqa maydonni —
+             * masalan soliq rejimini — tuzatish uchun ochilgan firma umuman
+             * saqlanmay qolardi.
+             */
             const accountant = assignments.find(a => a.role === 'accountant');
             if (!accountant?.userId) {
                 errs.push('Buxgalter tanlanishi shart — firma egasiz qolmasligi kerak');
@@ -483,15 +501,23 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                             <div>
                                 <label className="text-micro font-bold uppercase tracking-widest mb-3 block ml-1" style={fieldLabelStyle}>Soliq Turi</label>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {[
-                                        { id: TaxType.NDS_PROFIT, label: 'QQS va Foyda', desc: 'УСН + НДС' },
-                                        { id: TaxType.TURNOVER, label: 'Aylanmadan soliq', desc: 'Упрощенный налог' }
-                                    ].map(tax => {
-                                        const selected = formData.taxType === tax.id;
+                                    {TAX_REGIMES.map(code => {
+                                        const tax = { id: code, label: TAX_REGIME_LABEL[code], desc: TAX_REGIME_HINT[code] };
+                                        /**
+                                         * TANLOV KANONIK MAYDONGA YOZILADI.
+                                         *
+                                         * Ilgari bu yerda faqat `taxType` o'zgarardi, `taxRegime` esa
+                                         * server qatoridan kelgan ESKI qiymat bo'lib payload'da qolib
+                                         * ketardi. `sanitizeCompanyData` avval `taxRegime` ni
+                                         * tekshirgani uchun tahrir jimgina yo'qolardi — foydalanuvchi
+                                         * "o'zgartiraman, saqlayman, o'zgarmaydi" deb xabar qildi.
+                                         */
+                                        const current = normalizeTaxRegime(formData.taxRegime ?? formData.taxType);
+                                        const selected = current === code;
                                         return (
                                             <button
                                                 key={tax.id}
-                                                onClick={() => setFormData({ ...formData, taxType: tax.id })}
+                                                onClick={() => setFormData({ ...formData, taxRegime: code, taxType: legacyTaxType(code) as Company['taxType'] })}
                                                 className="p-5 rounded-xl transition-all text-left"
                                                 style={selected
                                                     ? { border: '1px solid var(--accent-blue)', background: 'var(--accent-blue-light)' }

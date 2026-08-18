@@ -13,6 +13,7 @@
 
 import { classifyCell, isSettled, type CellStatus } from "./reportStatus";
 import { columnAppliesToRegime } from "./reportApplicability";
+import { TAX_REGIME_LABEL } from "./taxRegimes";
 
 // ── Ustun kesimidagi holat ───────────────────────────────────────
 
@@ -337,14 +338,14 @@ export function matchesSearch(haystack: readonly (string | undefined)[], query: 
 
 // ── Yorliqlar ────────────────────────────────────────────────────
 
-/** Soliq rejimi kodi → ekrandagi nom (Company.taxRegime enum qiymatlari). */
-export const REGIME_LABEL: Record<string, string> = {
-  vat: "QQS (VAT)",
-  turnover: "Aylanma",
-  fixed: "Qat'iy soliq",
-  yatt: "YaTT",
-  income: "Daromad solig'i",
-};
+/**
+ * Soliq rejimi yorliqlari — `lib/taxRegimes.ts` dan.
+ *
+ * Ilgari ro'yxat SHU YERDA takrorlangan edi va "QQS (VAT)" deb yozilardi;
+ * korxonada esa kundalik atama "NDS". Yagona manba shu bilan birga wizard
+ * tanlagichini ham oziqlantiradi.
+ */
+export const REGIME_LABEL: Record<string, string> = TAX_REGIME_LABEL;
 
 export const regimeLabel = (code: string): string => REGIME_LABEL[code] ?? code;
 

@@ -280,7 +280,7 @@ describe("activeChips", () => {
     const chips = activeChips(filters({ supervisor: "Go'zaloy", regime: "vat" }), label);
     expect(chips.map((c) => c.key)).toEqual(["supervisor", "regime"]);
     // Rejim kodi emas, o'qiladigan nom ko'rinadi.
-    expect(chips[1].value).toBe("QQS (VAT)");
+    expect(chips[1].value).toBe("NDS");
   });
 
   it("ustun kesimi bitta chipga birlashadi", () => {
@@ -297,8 +297,8 @@ describe("activeChips", () => {
 
 describe("regimeLabel", () => {
   it("ma'lum kodlar tarjima qilinadi", () => {
-    expect(regimeLabel("vat")).toBe("QQS (VAT)");
-    expect(regimeLabel("turnover")).toBe("Aylanma");
+    expect(regimeLabel("vat")).toBe("NDS");
+    expect(regimeLabel("turnover")).toBe("Aylanmadan soliq");
   });
 
   it("noma'lum kod o'zi qaytadi (bo'sh yorliq ko'rsatmaydi)", () => {
