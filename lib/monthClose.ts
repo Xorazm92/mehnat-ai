@@ -8,7 +8,8 @@
 import { Prisma } from "@prisma/client";
 import { getTrialBalance, getLedgerCashBalance, ACCOUNTS } from "@/lib/ledger";
 import { getMonthMovement, getMovementBeforeMonth } from "@/lib/balance";
-import { adjustmentMagnitude } from "@/lib/adjustments";
+import { computeObligation, computeRemaining } from "@/lib/payrollObligation";
+import { isSettledPayment } from "@/lib/debt";
 import { PERIOD_STATUS } from "@/lib/periodLock";
 
 type Db = Prisma.TransactionClient;
@@ -113,9 +114,13 @@ async function checkLedgerSourceIntegrity(db: Db, key: string): Promise<string[]
     expected.set(`Payout|${p.id}`, p.month === key && !p.deletedAt ? -Number(p.amount) : 0);
   }
   for (const p of payments) {
+    // `isSettledPayment` — 'paid' VA 'partial'. Aynan shu shart bilan
+    // `server/kassa.ts` `upsertPayment` jurnalga yozadi; bu yerda faqat 'paid'
+    // kutilardi, ya'ni qo'lda kiritilgan HAR QANDAY qisman to'lov "ledger mos
+    // emas" xatosi berib oy yopilishini BLOKLAB qo'yardi.
     expected.set(
       `Payment|${p.id}`,
-      p.period === key && p.status === "paid" && !p.deletedAt ? Number(p.amount) : 0
+      p.period === key && isSettledPayment(p.status) && !p.deletedAt ? Number(p.amount) : 0
     );
   }
 
@@ -162,12 +167,10 @@ export async function gatherChecklist(db: Db, year: number, month: number): Prom
     db.payment.count({ where: { status: "pending", deletedAt: null, period: key } }),
     db.payrollAdjustment.findMany({
       where: {
-        isApproved: true,
         deletedAt: null,
-        adjustmentType: { in: ["payment", "avans"] },
         month: { in: [key, `${key}-01`] },
       },
-      select: { amount: true },
+      select: { adjustmentType: true, amount: true, isApproved: true },
     }),
     db.payout.aggregate({
       where: { deletedAt: null, month: key },
@@ -178,9 +181,13 @@ export async function gatherChecklist(db: Db, year: number, month: number): Prom
     checkLedgerSourceIntegrity(db, key),
   ]);
 
-  const obligationTotal = obligations.reduce((s, a) => s + adjustmentMagnitude(a.amount), 0);
+  // Majburiyat formulasi to'lov chegarasi bilan BIR XIL manbadan
+  // (`lib/payrollObligation.ts`). Ilgari bu yerda avans majburiyatga
+  // qo'shilardi, ya'ni to'liq to'langan oy ham "to'lanmagan majburiyat =
+  // avans summasi" degan doimiy soxta ogohlantirish berardi.
+  const obligationTotal = computeObligation(obligations);
   const paidTotal = Number(payoutsPaid._sum.amount ?? 0);
-  const unpaid = Math.round((obligationTotal - paidTotal) * 100) / 100;
+  const unpaid = computeRemaining(obligationTotal, paidTotal);
 
   const items: ChecklistItem[] = [
     {

@@ -34,9 +34,22 @@ export function renderDirectorReport(report: DirectorReport): string {
   lines.push(`   Chiqim: ${som(report.yesterday.outflow)} so'm`);
   const net = report.yesterday.income - report.yesterday.outflow;
   lines.push(`   Sof:    ${net >= 0 ? "+" : ""}${som(net)} so'm`);
+  // Nol harakat — ma'lumot emas, TEKSHIRISH SABABI: ish kunida bank vipiskasi
+  // yuklanmagan yoki kassa yuritilmagan bo'lishi mumkin. Buni aytmasa,
+  // "0 so'm" tinchlik belgisi bo'lib ko'rinadi.
+  if (report.yesterday.income === 0 && report.yesterday.outflow === 0) {
+    lines.push("   ⚠️ Harakat umuman yo'q — vipiska yuklanganini tekshiring");
+  }
   lines.push("");
 
   lines.push(`🏦 Kassa balansi: ${som(report.balance.balance)} so'm`);
+  // Manfiy balans — o'z-o'zidan "pul tugadi" degani EMAS. Amalda buning
+  // sababi import assimetriyasi: xarajatlar eski davrdan yuklangan, ularni
+  // qoplagan kirim esa yo'q (lib/reconciliation.ts "import-window" bandi).
+  // Sababsiz ko'rsatilsa direktor bekorga vahimaga tushadi.
+  if (report.balance.balance < 0) {
+    lines.push("   ⚠️ Manfiy — kirim/chiqim import davrlari mos emas (/kassa/qarzdorlik → sverka)");
+  }
   if (report.plan) {
     const mark = report.plan.percent >= 100 ? "✅" : report.plan.percent >= 90 ? "🟡" : "🔴";
     lines.push(
@@ -47,11 +60,44 @@ export function renderDirectorReport(report: DirectorReport): string {
   lines.push("");
 
   const alerts: string[] = [];
-  if (report.debt.companies > 0) {
-    alerts.push(
-      `💳 Qarzdorlik: ${report.debt.companies} ta firma — ${som(report.debt.total)} so'm` +
-        (report.debt.red > 0 ? `\n   🔴 ${report.debt.red} tasi umuman to'lamagan` : "")
-    );
+
+  // QARZDORLIK — IKKI XIL ISH, ikki xil blok.
+  //
+  // Biznes qoidasi: ish oyi tugagach mijoz KEYINGI oy davomida to'laydi
+  // ("iyulning puli avgustda olinadi"). Shuning uchun:
+  //   dueNow  — shu oy yig'ilishi kerak. Bu BUZILISH EMAS, ish ro'yxati.
+  //   overdue — to'lov oynasi yopilgan. Mana bu aralashuv sababi.
+  //
+  // Ilgari ikkalasi bitta raqamga qo'shilardi va natijada 18-avgustda iyul
+  // qarzi "muddati o'tgan" bo'lib chiqardi — ya'ni o'z muddati ichidagi
+  // 111 ta firma buzuvchi deb ko'rsatilardi.
+  const d = report.debt;
+
+  if (d.dueNowCompanies > 0) {
+    // Emoji "💰 Kecha" sarlavhasidan FARQLI bo'lishi kerak — aks holda matnni
+    // qidirib bo'lmaydi (test aynan shunga qoqildi).
+    let block = `📥 Bu oy yig'ilishi kerak: ${d.dueNowCompanies} ta firma — ${som(d.dueNowTotal)} so'm`;
+    for (const row of report.topDebtors.filter((r) => r.dueNow > 0).slice(0, 5)) {
+      const kim = row.accountantName ? ` · ${row.accountantName}` : "";
+      block += `\n   • ${row.name} — ${som(row.dueNow)} so'm${kim}`;
+    }
+    alerts.push(block);
+  }
+
+  if (d.overdueCompanies > 0) {
+    let block = `⚠️ Muddati o'tgan qarz: ${d.overdueCompanies} ta firma — ${som(d.overdueTotal)} so'm`;
+    if (d.neverPaid > 0) {
+      block += `\n   🔴 ${d.neverPaid} tasi bir marta ham to'lamagan`;
+    }
+    for (const row of report.topDebtors.filter((r) => r.overdue > 0).slice(0, 5)) {
+      // Kasrli qiymat ham ko'rsatiladi ("0.5 oylik" = yarim oylik qarz).
+      const oy = row.monthsOverdue > 0 ? ` · ${row.monthsOverdue} oylik` : "";
+      const kim = row.accountantName ? ` · ${row.accountantName}` : "";
+      block += `\n   • ${row.name} — ${som(row.overdue)} so'm${oy}${kim}`;
+    }
+    const qolgan = d.overdueCompanies - report.topDebtors.filter((r) => r.overdue > 0).length;
+    if (qolgan > 0) block += `\n   … va yana ${qolgan} ta (to'liq ro'yxat: /kassa/qarzdorlik)`;
+    alerts.push(block);
   }
   if (report.obligations.overdue > 0) {
     alerts.push(`⏰ Muddati o'tgan majburiyat: ${report.obligations.overdue} ta`);
@@ -73,15 +119,23 @@ export function renderDirectorReport(report: DirectorReport): string {
   if (report.unmatchedBank.expense > 0) {
     alerts.push(`🧮 Toifalanmagan chiqim: ${report.unmatchedBank.expense} ta (admin)`);
   }
-  // 1C bilan solishtirish: ASRO joriy oyni, 1C esa jamg'arilgan qarzni
-  // ko'rsatadi. Farq katta bo'lsa eski oylardan qarz qolgan degani.
+  // 1C bilan solishtirish. Endi MA'NOLI: ikkala tomon ham JAMG'ARILGAN qarzni
+  // beradi. Ilgari ASRO joriy oyni, 1C esa jamg'arilganini ko'rsatardi va
+  // ularning farqi hech narsani anglatmasdi — har doim katta chiqardi.
   if (report.debt1C) {
     const d = report.debt1C;
-    const diff = d.total - report.debt.total;
-    alerts.push(
-      `📒 1C bo'yicha qarz: ${som(d.total)} so'm (${uzDate(d.asOf)} holatiga, ${d.contracts} shartnoma)` +
-        (Math.abs(diff) > 1000 ? `\n      ASRO hisobidan farqi: ${diff > 0 ? "+" : ""}${som(diff)} so'm` : "")
-    );
+    // AYNAN SHU KESIM DAVRIGA hisoblangan ASRO raqami bilan solishtiriladi —
+    // aks holda farq har doim bir oylik shartnoma summasicha yolg'on chiqadi.
+    const diff = d.total - d.asroComparable;
+    let block =
+      `📒 1C bo'yicha qarz: ${som(d.total)} so'm (${uzDate(d.asOf)} holatiga, ${d.contracts} shartnoma)`;
+    block += `\n      ASRO hisobi (o'sha sanaga): ${som(d.asroComparable)} so'm`;
+    if (Math.abs(diff) > 1000) {
+      block += `\n      Farq: ${diff > 0 ? "+" : ""}${som(diff)} so'm — tekshirish kerak`;
+    } else {
+      block += `\n      ✅ Mos keladi`;
+    }
+    alerts.push(block);
   }
 
   if (alerts.length > 0) {

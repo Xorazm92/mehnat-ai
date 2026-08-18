@@ -119,6 +119,38 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
     });
   }
 
+  // ── 4b. Boshlang'ich qarz to'ldirilganmi ─────────────────────────────
+  //
+  // ASRO 2026-07 dan hisob yuritadi (`lib/debt.ts` BILLING_START_PERIOD).
+  // Undan OLDINGI qarz `Contract.openingDebt` da turishi kerak — schema
+  // izohi shunday deydi: "boshlang'ich + yangi oylar − to'lovlar".
+  //
+  // To'ldirilmagan shartnoma = o'sha mijozning eski qarzi ASRO hisobida
+  // UMUMAN YO'Q. Aynan shu 1C bilan farqning asosiy sababi bo'ladi, va u
+  // raqamga qarab tushunarli emas — shuning uchun alohida ko'rsatiladi.
+  const [contractTotal, withOpening, openingSum] = await Promise.all([
+    db.contract.count({ where: { isActive: true } }),
+    db.contract.count({ where: { isActive: true, openingDebt: { not: null } } }),
+    db.contract.aggregate({ where: { isActive: true }, _sum: { openingDebt: true } }),
+  ]);
+  const missingOpening = contractTotal - withOpening;
+  checks.push({
+    key: "opening-debt",
+    title: "Boshlang'ich qarz to'ldirilgan",
+    status: missingOpening === 0 ? "ok" : missingOpening > contractTotal / 2 ? "error" : "warn",
+    value: missingOpening,
+    detail:
+      missingOpening === 0
+        ? `${contractTotal} shartnomaning hammasida boshlang'ich qarz bor (${Math.round(n(openingSum._sum.openingDebt)).toLocaleString("ru-RU")} so'm)`
+        : `${contractTotal} shartnomadan ${missingOpening} tasida boshlang'ich qarz yo'q — ` +
+          `o'sha mijozlarning 2026-iyulgacha bo'lgan qarzi ASRO hisobida ko'rinmaydi`,
+    action:
+      missingOpening > 0
+        ? "1C «Задолженность покупателей» dan boshlang'ich qarzni yuklang " +
+          "(scripts/import-debt-1c.ts) — busiz ASRO va 1C raqamlari hech qachon mos kelmaydi"
+        : undefined,
+  });
+
   // ── 5. To'lov holati summaga mos ─────────────────────────────────────
   const badStatus = await db.$queryRaw<{ c: bigint }[]>`
     SELECT count(*)::bigint AS c

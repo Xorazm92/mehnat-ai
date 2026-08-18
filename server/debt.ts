@@ -16,7 +16,7 @@ import { auth } from "@/lib/auth";
 import { isSeniorRole, isAdminRole } from "@/lib/permissions";
 import { companyScopeWhere } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
-import { computeContractDebt, periodKeyOf } from "@/lib/debt";
+import { computeContractDebt, listDebtors, periodKeyOf } from "@/lib/debt";
 import { runReconciliation } from "@/lib/reconciliation";
 
 async function requireSenior() {
@@ -127,6 +127,54 @@ export async function getDebtComparison() {
     rows,
     totals,
     unlinked: rows.filter((r) => !r.linked).length,
+  });
+}
+
+/**
+ * TO'LAMAGAN FIRMALAR RO'YXATI.
+ *
+ * Direktorning kunlik hisoboti bilan AYNAN bir manbadan (`lib/debt.ts`
+ * `listDebtors`) — shuning uchun Telegramdagi raqam va ekrandagi ro'yxat
+ * hech qachon ajralmaydi.
+ *
+ * Scope: admin/superadmin hammasini, bosh buxgalter va nazoratchi esa faqat
+ * o'z portfelini ko'radi (`companyScopeWhere`) — `getDebtComparison` bilan
+ * bir xil qoida.
+ *
+ * @param scope "collect" standart — muddati o'tgan VA shu oy yig'ilishi kerak
+ *   bo'lganlar. Ish oyi tugagach mijoz KEYINGI oy davomida to'laydi
+ *   (`PAYMENT_TERM_MONTHS`), shuning uchun "hali to'lamagan" o'z-o'zidan
+ *   buzilish emas — u inkasso ish ro'yxati.
+ */
+export async function getDebtors(opts: { scope?: "overdue" | "collect" | "all" } = {}) {
+  const actor = await requireSenior();
+
+  const isAdmin = isAdminRole(actor.role);
+  const scopedIds = isAdmin
+    ? null
+    : (
+        await prisma.company.findMany({
+          where: companyScopeWhere({ id: actor.userId, role: actor.role }),
+          select: { id: true },
+        })
+      ).map((c) => c.id);
+
+  const rows = await listDebtors(prisma, {
+    companyIds: scopedIds,
+    period: periodKeyOf(new Date()),
+    scope: opts.scope ?? "collect",
+  });
+
+  return serialize({
+    rows,
+    totals: {
+      companies: rows.length,
+      overdue: rows.reduce((s, r) => s + r.overdue, 0),
+      dueNow: rows.reduce((s, r) => s + r.dueNow, 0),
+      outstanding: rows.reduce((s, r) => s + r.outstanding, 0),
+      overdueCompanies: rows.filter((r) => r.overdue > 0).length,
+      neverPaid: rows.filter((r) => r.overdue > 0 && r.paid === 0).length,
+    },
   });
 }
 

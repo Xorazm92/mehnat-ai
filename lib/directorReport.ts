@@ -18,7 +18,7 @@ import { getAvailableBalance, getDayMovement } from "@/lib/balance";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
 import { logServerError } from "@/lib/logger";
 import { formatNum } from "@/lib/format";
-import { computeContractDebt, periodKeyOf } from "@/lib/debt";
+import { computeContractDebt, listDebtors, periodKeyOf, type DebtTotals, type DebtorRow } from "@/lib/debt";
 
 type Db = Prisma.TransactionClient;
 
@@ -37,7 +37,16 @@ export interface DirectorReport {
   forDate: Date;
   yesterday: { income: number; outflow: number };
   balance: { income: number; outflow: number; balance: number };
-  debt: { companies: number; total: number; red: number };
+  /**
+   * Jamg'arilgan qarzdorlik (lib/debt.ts).
+   *
+   * `overdueTotal` — to'lov oynasi YOPILGAN qarz (aralashuv kerak).
+   * `dueNowTotal` — SHU OY yig'ilishi kerak (ish ro'yxati; buzilish emas).
+   * `total` esa joriy oy ishini ham qo'shadi va o'zi bilan hech narsa demaydi.
+   */
+  debt: Omit<DebtTotals, "byCompany">;
+  /** Muddati o'tgan qarzi eng katta firmalar — xabarda nomma-nom ko'rinadi. */
+  topDebtors: DebtorRow[];
   obligations: { overdue: number; dueToday: number };
   pending: { expenses: number; proofs: number };
   /**
@@ -52,12 +61,12 @@ export interface DirectorReport {
   /**
    * 1C «Задолженность покупателей» ning oxirgi kesimi.
    *
-   * ASRO o'zi hisoblagan qarz (`debt`) faqat JORIY oyni ko'radi, 1C esa
-   * jamg'arilgan qarzni beradi — shuning uchun ikkalasi yonma-yon
-   * ko'rsatiladi. Farq katta bo'lsa, demak eski oylardan qarz qolgan
-   * yoki to'lov tizimga kiritilmagan.
+   * `asroComparable` — ASRO ning O'SHA KESIM DAVRIGA hisoblangan va FAQAT
+   * hisob qo'yilgan (muddati o'tgan + shu oy to'lanadigan) qarzi. Joriy oy
+   * ishi qo'shilmaydi: 1C uni hali ko'rmaydi, ya'ni qo'shilsa farq har doim
+   * bir oylik aylanma summasicha yolg'on kattayardi.
    */
-  debt1C: { asOf: Date; total: number; contracts: number } | null;
+  debt1C: { asOf: Date; total: number; contracts: number; asroComparable: number } | null;
   /** Joriy oyning tushum rejasi va bajarilishi. */
   plan: { period: string; plan: number; fact: number; percent: number } | null;
 }
@@ -89,11 +98,15 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
   const tomorrowStart = new Date(todayStart.getTime() + 86_400_000);
   const period = periodKeyOf(now);
 
-  const [yesterday, balance, debts, overdue, dueToday, pendingExpenses, pendingProofs] =
+  const [yesterday, balance, debts, topDebtors, overdue, dueToday, pendingExpenses, pendingProofs] =
     await Promise.all([
       getDayMovement(yesterdayDate, db),
       getAvailableBalance(),
       computeContractDebt(db, period),
+      // Nomma-nom ro'yxat: "kim" degan savolga javob raqamdan muhimroq.
+      // `collect` — muddati o'tgan VA shu oy yig'ilishi kerak bo'lganlar:
+      // direktorga ikkalasi ham kerak, biri aralashuv, biri inkasso rejasi.
+      listDebtors(db, { period, scope: "collect", limit: 5 }),
       db.obligation.count({
         where: { status: { in: OPEN_OBLIGATION_STATUSES }, dueAt: { lt: todayStart } },
       }),
@@ -107,17 +120,45 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
       countPendingProofs(db),
     ]);
 
+  // `byCompany` xaritasi xabarga kerak emas (va Telegram qatlamiga Map
+  // uzatish serializatsiyada muammo beradi) — faqat yig'ma sonlar ketadi.
+  const { byCompany: _byCompany, ...debtTotals } = debts;
+
   return {
     forDate: yesterdayDate,
     yesterday,
     balance: { income: balance.income, outflow: balance.outflow, balance: balance.balance },
-    debt: debts,
+    debt: debtTotals,
+    topDebtors,
     obligations: { overdue, dueToday },
     pending: { expenses: pendingExpenses, proofs: pendingProofs },
     unmatchedBank: await countUnmatchedBank(db),
-    debt1C: await latestDebtSnapshot(db),
+    debt1C: await debt1CWithComparable(db),
     plan: await revenuePlan(db, period),
   };
+}
+
+/**
+ * 1C kesimi + ASRO ning O'SHA DAVRGA hisoblangan raqami.
+ *
+ * Ikkalasi bir xil davrga keltirilmasa, farq har doim bir oylik shartnoma
+ * summasicha "yolg'on" chiqadi va sverka ma'nosini yo'qotadi.
+ */
+async function debt1CWithComparable(db: Db) {
+  const snapshot = await latestDebtSnapshot(db);
+  if (!snapshot) return null;
+  try {
+    const aligned = await computeContractDebt(db, periodKeyOf(snapshot.asOf));
+    // Solishtiruvga FAQAT HISOB QO'YILGAN qarz kiradi: muddati o'tgan +
+    // shu oy to'lanadigan. Joriy oy ishi (`total` ichida) hali hisob
+    // qo'yilmagan — 1C uni ko'rmaydi, ya'ni uni qo'shsak farq har doim bir
+    // oylik aylanma summasicha yolg'on kattayardi.
+    return { ...snapshot, asroComparable: aligned.overdueTotal + aligned.dueNowTotal };
+  } catch (err) {
+    logServerError("directorReport.debt1CAligned", err);
+    // Solishtiruv chiqmasa hisobot baribir ketsin — 1C raqami o'zi ham foydali.
+    return { ...snapshot, asroComparable: 0 };
+  }
 }
 
 /** Ko'rib chiqish kutayotgan hisobot dalillari. Model bo'lmasa 0. */
@@ -353,8 +394,12 @@ function summarizeForInApp(r: DirectorReport): string {
     `Kecha: kirim ${formatNum(r.yesterday.income)} / chiqim ${formatNum(r.yesterday.outflow)} so'm`,
     `Balans: ${formatNum(r.balance.balance)} so'm`,
   ];
-  if (r.debt.companies > 0) {
-    parts.push(`Qarzdor: ${r.debt.companies} ta firma, ${formatNum(r.debt.total)} so'm`);
+  // Sayt ichidagi matnda ham MUDDATI O'TGAN qarz asosiy — joriy oy qoldig'i
+  // oy boshida hammada bo'ladi va hech narsa demaydi.
+  if (r.debt.overdueCompanies > 0) {
+    parts.push(
+      `Muddati o'tgan qarz: ${r.debt.overdueCompanies} ta firma, ${formatNum(r.debt.overdueTotal)} so'm`
+    );
   }
   if (r.obligations.overdue > 0) parts.push(`Muddati o'tgan: ${r.obligations.overdue} ta`);
   if (r.pending.expenses > 0) parts.push(`Tasdiq kutmoqda: ${r.pending.expenses} ta xarajat`);

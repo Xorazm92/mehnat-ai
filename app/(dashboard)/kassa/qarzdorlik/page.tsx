@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { currentUserViews } from "@/server/rbac";
-import { getDebtComparison, getPlanFact, getReconciliation } from "@/server/debt";
+import { getDebtComparison, getDebtors, getPlanFact, getReconciliation } from "@/server/debt";
 import QarzdorlikClient from "./QarzdorlikClient";
 
 export const metadata = { title: "Qarzdorlik" };
@@ -14,8 +14,10 @@ export default async function QarzdorlikPage() {
   const views = await currentUserViews();
   if (!views.includes("kassa_debt")) redirect("/cabinet");
 
-  const [debt, planFact, recon] = await Promise.all([
+  const [debt, debtors, planFact, recon] = await Promise.all([
     getDebtComparison(),
+    // To'lamagan firmalar — direktorning kunlik hisoboti bilan bir manbadan.
+    getDebtors(),
     getPlanFact(),
     getReconciliation(),
   ]);
@@ -24,6 +26,7 @@ export default async function QarzdorlikPage() {
     <div className="h-full">
       <QarzdorlikClient
         debt={JSON.parse(JSON.stringify(debt))}
+        debtors={JSON.parse(JSON.stringify(debtors))}
         planFact={JSON.parse(JSON.stringify(planFact))}
         recon={JSON.parse(JSON.stringify(recon))}
       />
