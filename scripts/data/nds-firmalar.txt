@@ -2,11 +2,11 @@
 # Bir qator = bitta firma nomi. "#" bilan boshlangan qator izoh.
 ЧП "ROAD RIDERS"
 "DILFUZAXON AVTO"
-"SOF MEDTEX" MCHJ
+# "SOF MEDTEX" MCHJ — ARXIVDA. Qaror: arxivda tursin.
 OOO "RONICS"
 "SAPRAMTECH" OOO
 GELECTRONIC
-MELIOMASH
+# MELIOMASH — ARXIVDA. Qaror: arxivda tursin.
 "C A WOLVES"
 ООО "INTEST MAX"
 KOLBERG PRODUCTION
@@ -88,15 +88,15 @@ GELATO ICE CREAM
 TERRA AGRO
 SHEL A
 RICH Y S
-RAMAZON OF LINE
+RAMAZON PRODUCT LINE
 LINE OF NATURE
 TAKSIM-KEBAB TEAM
-LEMON FIT
+Lemon-Sport -Group
 URBAN HEATING GROUP
 ARVAGTEXNIK
-DARVESHI NAVOI
-LIDERS BARAKA
-BORAN LIDERS
+# DARVESHI NAVOI — ARXIVDA. Qaror: arxivda tursin.
+# LIDERS BARAKA — bazada "LEADERS BARAKA", ALLAQACHON ARXIVDA. Qaror: tegilmasin.
+# BORAN LIDERS — ARXIVDA. Qaror: arxivda tursin.
 AYOQSH
 AZS SHOFAYZ
 ELIT CHICKEN
@@ -124,7 +124,7 @@ EUROSOFT
 Avto nams
 Hyper nams
 FAROBIY 77
-SIRLY MCHJ
+# SIRLY MCHJ — ARXIVDA. Qaror: arxivda tursin.
 BRR OIL BIZNES
 IBRAGIMOV SALE
 GREAT KOMAX
@@ -144,18 +144,20 @@ The One National Trade Mchj
 Alfraganus University Hospital Mchj
 Agri-Parts Osiyo Mchj
 Mirgazeden
-STANDART LAB MCHJ
+# STANDART LAB MCHJ — bazada yo'q, keyin qo'lda qo'shiladi.
 VITAMIN PHARM SERVIS
 OPTIMART
 RIELTORLAR PALATASI
 ACADEMY RIZOMULK
-UP grade auto
-SHIRIN XK
+# UP grade auto — bazada yo'q, keyin qo'lda qo'shiladi.
+# SHIRIN XK — arxivdagi ALOHIDA firma (STIR 200454180). Faol "SHIRIN LYUKS TAOM"
+# va "SHIRIN SUPER TAOM" ikkalasi ham allaqachon NDS. Qaror: arxivdagiga tegilmasin.
 VT TRAVEL
 INTEGRAL SERVIS
-DAVLATGAZ
-AMUDARYO GAZ SERVIS
+# DAVLATGAZ — ARXIVDA. Qaror: arxivda tursin.
+# AMUDARYO GAZ SERVIS — ARXIVDA. Qaror: arxivda tursin.
 ACCELERATED BUSINESS CONSULTING
 STROY SURXON INDUSTRY
 ALIEV'S DENTISTRY
-# "CARAMEL va YATT lar" ATAYLAB tashlab ketildi — bu bitta firma emas, guruh.
+# "CARAMEL va YATT lar" — bazada AYNAN shu nom bilan firma bor (STIR 301087555).
+CARAMEL va YATT lar
