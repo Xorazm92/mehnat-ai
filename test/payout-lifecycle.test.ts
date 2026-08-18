@@ -15,7 +15,8 @@ vi.mock("@/lib/auth", () => ({ auth: async () => SESSION }));
 vi.mock("server-only", () => ({}));
 
 const { prisma } = await import("@/lib/prisma");
-const { approveEmployeeSalary } = await import("@/server/payroll");
+const { approveEmployeeSalary, createPayrollAdjustment, approvePayrollAdjustment } =
+  await import("@/server/payroll");
 const { createPayout, softDeletePayout, getPayouts } = await import("@/server/payouts");
 
 const TAG = `vitest-payout-${Date.now()}`;
@@ -155,5 +156,115 @@ describe("payout lifecycle", () => {
       where: { tableName: "Payout", userId: ids.employee },
     });
     expect(audits).toBeGreaterThanOrEqual(3); // 3 create + 1 delete
+  });
+});
+
+// =====================================================
+// AVANS — oylikning oldindan berilgan qismi
+// =====================================================
+// REGRESSIYA. Ilgari `obligationAndPaid` avansni MAJBURIYAT deb sanardi va
+// shu bilan birga avans payoutini "berilgan" deb hisoblardi:
+//     remaining = (oylik + avans) − avans = oylik
+// ya'ni avans hech qachon ayirilmasdi va xodimga oylik + avans to'lash
+// mumkin edi. Endi avans faqat TO'LOV tomonida (lib/payrollObligation.ts).
+describe("avans oylikdan ayiriladi", () => {
+  const AVANS_MONTH = "2099-07-01";
+  const AVANS_KEY = "2099-07";
+
+  const paidTotal = async () => {
+    const agg = await prisma.payout.aggregate({
+      where: { employeeId: ids.employee, month: AVANS_KEY, deletedAt: null },
+      _sum: { amount: true },
+    });
+    return Number(agg._sum.amount ?? 0);
+  };
+
+  it("avans tasdig'i darhol Payout yozadi", async () => {
+    // Majburiyat: shartnoma 10 mln × 20% = 2 000 000.
+    await approveEmployeeSalary({ employeeId: ids.employee, month: AVANS_MONTH });
+
+    const adj = await createPayrollAdjustment({
+      month: AVANS_MONTH,
+      employeeId: ids.employee,
+      adjustmentType: "avans",
+      amount: -500_000, // UI konventsiyasi: avans manfiy yuboriladi
+      reason: "vitest avans",
+    });
+    await approvePayrollAdjustment(adj.id);
+
+    expect(await paidTotal()).toBe(500_000);
+  });
+
+  it("qolgan majburiyatdan avans ayirilgan (2 000 000 − 500 000)", async () => {
+    await expect(
+      createPayout({ employeeId: ids.employee, month: AVANS_KEY, amount: 1_500_001 })
+    ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
+
+    await createPayout({ employeeId: ids.employee, month: AVANS_KEY, amount: 1_500_000 });
+
+    // Jami berilgan = majburiyat. Avans ustiga qo'shimcha pul chiqmadi.
+    expect(await paidTotal()).toBe(2_000_000);
+  });
+
+  it("majburiyat to'lingandan keyin bir tiyin ham o'tmaydi", async () => {
+    await expect(
+      createPayout({ employeeId: ids.employee, month: AVANS_KEY, amount: 1 })
+    ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
+  });
+});
+
+// =====================================================
+// QO'LDA BONUS VA JARIMA majburiyatga ta'sir qiladi
+// =====================================================
+// REGRESSIYA. Majburiyat faqat `payment` va `avans` dan yig'ilardi, ya'ni
+// qo'lda berilgan bonusni to'lashning ILOJI YO'Q edi (UI uni "Jami maosh"
+// ga qo'shar, server esa `Ortiqcha to'lov bloklandi` deb rad etardi), qo'lda
+// jarima esa to'lov chegarasini umuman kamaytirmasdi.
+describe("qo'lda bonus va jarima majburiyatni o'zgartiradi", () => {
+  const MONTH_FULL = "2099-08-01";
+  const KEY = "2099-08";
+
+  it("bonus majburiyatga qo'shiladi, jarima ayiriladi", async () => {
+    await approveEmployeeSalary({ employeeId: ids.employee, month: MONTH_FULL }); // 2 000 000
+
+    const bonus = await createPayrollAdjustment({
+      month: MONTH_FULL,
+      employeeId: ids.employee,
+      adjustmentType: "bonus",
+      amount: 300_000,
+      reason: "vitest bonus",
+    });
+    await approvePayrollAdjustment(bonus.id);
+
+    const jarima = await createPayrollAdjustment({
+      month: MONTH_FULL,
+      employeeId: ids.employee,
+      adjustmentType: "jarima",
+      amount: -100_000,
+      reason: "vitest jarima",
+    });
+    await approvePayrollAdjustment(jarima.id);
+
+    // 2 000 000 + 300 000 − 100 000 = 2 200 000
+    await expect(
+      createPayout({ employeeId: ids.employee, month: KEY, amount: 2_200_001 })
+    ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
+
+    const payout = await createPayout({ employeeId: ids.employee, month: KEY, amount: 2_200_000 });
+    expect(Number(payout.amount)).toBe(2_200_000);
+  });
+
+  it("tasdiqlanmagan bonus majburiyatni oshirmaydi", async () => {
+    await createPayrollAdjustment({
+      month: MONTH_FULL,
+      employeeId: ids.employee,
+      adjustmentType: "bonus",
+      amount: 900_000,
+      reason: "vitest tasdiqlanmagan bonus",
+    });
+
+    await expect(
+      createPayout({ employeeId: ids.employee, month: KEY, amount: 1 })
+    ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
   });
 });

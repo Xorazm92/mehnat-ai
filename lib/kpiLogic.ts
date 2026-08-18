@@ -379,6 +379,12 @@ export const calculateEmployeeSalary = ({
             .forEach(res => {
                 const bonus = res.finalAmount > res.baseAmount ? res.finalAmount - res.baseAmount : 0;
                 const penalty = res.finalAmount < res.baseAmount ? res.baseAmount - res.finalAmount : 0;
+                // Jarima shu firmadagi bazani yeb tugatgan bo'lsa, ortig'i
+                // `finalAmount = max(0, raw)` da yo'qoladi. `rawTotal` faqat
+                // UMUMIY manfiylikni ushlaydi — bitta firmada qisilib, boshqa
+                // firmalar uni qoplab yuborsa hech kim sezmaydi. Shu sababdan
+                // yo'qolgan miqdor firma kesimida saqlanadi.
+                const clampedLoss = res.rawAmount < 0 ? -res.rawAmount : 0;
 
                 baseSalary += res.baseAmount;
                 kpiBonus += bonus;
@@ -393,6 +399,7 @@ export const calculateEmployeeSalary = ({
                     baseAmount: res.baseAmount,
                     kpiBonus: bonus,
                     kpiPenalty: penalty,
+                    clampedLoss,
                     details: res.details,
                 });
             });

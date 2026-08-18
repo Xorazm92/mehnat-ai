@@ -352,17 +352,18 @@ export async function approveEmployeeSalary(data: { employeeId: string; month: s
     );
   }
 
-  // Oylik ham chiqim — mavjud balansdan oshsa oddiy foydalanuvchi bloklanadi,
-  // Admin/Superadmin o'tkaza oladi (audit logga yozilib).
-  // Balans + takror-tekshiruv + yozuv bitta Serializable tranzaksiyada: ikki
-  // parallel tasdiqlash (double-click / ikki brauzer) bir oy uchun ikkita
-  // 'payment' yozib qo'ymasin — dublikat to'g'ridan-to'g'ri oylikni ikkilantiradi.
+  // Takror-tekshiruv + yozuv bitta Serializable tranzaksiyada: ikki parallel
+  // tasdiqlash (double-click / ikki brauzer) bir oy uchun ikkita 'payment'
+  // yozib qo'ymasin — dublikat to'g'ridan-to'g'ri oylikni ikkilantiradi.
+  //
+  // BALANS BU YERDA TEKSHIRILMAYDI. Oylikni tasdiqlash — MAJBURIYAT yozish,
+  // pul harakati emas: kassadan bir tiyin ham chiqmaydi. Chinakam tekshiruv
+  // pul berilganda, `server/payouts.ts` `createPayout` da. Ilgari bu yerda
+  // `assertSufficientFunds` turardi va kassada pul yetmasa oylikni HISOBLAB
+  // qo'yish ham bloklanardi — holbuki xodim baribir shu pulni olishi kerak,
+  // faqat keyinroq.
   const adjustment = await serializable(
     async (tx) => {
-      // Oylik ham chiqim — mavjud balansdan oshsa oddiy foydalanuvchi bloklanadi,
-      // Admin/Superadmin o'tkaza oladi (audit logga yozilib).
-      await assertSufficientFunds({ amount: draft.totalSalary, role, userId, context: "payroll", db: tx });
-
       const dupe = await tx.payrollAdjustment.findFirst({
         where: {
           employeeId: data.employeeId,

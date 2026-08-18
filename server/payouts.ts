@@ -11,7 +11,8 @@
 //   - Payout.amount har doim musbat;
 //   - (xodim, oy) bo'yicha jami payout tasdiqlangan majburiyatdan oshmaydi —
 //     qisman to'lash mumkin, ikki marta/ortiqcha to'lash Serializable
-//     tranzaksiyada bloklanadi;
+//     tranzaksiyada bloklanadi. Majburiyat formulasi `lib/payrollObligation.ts`
+//     da (avans MAJBURIYAT emas, TO'LOV — u yerdagi izohga qarang);
 //   - yopiq davrga payout yozilmaydi/o'chirilmaydi;
 //   - har payout double-entry ledger (SALARY_EXPENSE / CASH) bilan atomar;
 //   - o'chirish faqat soft delete + ledger reversal.
@@ -26,7 +27,7 @@ import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { recordAuditLog } from "@/lib/auditTrail";
-import { adjustmentMagnitude } from "@/lib/adjustments";
+import { computeObligation, computeRemaining } from "@/lib/payrollObligation";
 import { serialize } from "@/lib/serialize";
 
 const PAYMENT_METHODS = ["naqd", "plastik", "schyot", "terminal", "boshqa"];
@@ -35,27 +36,30 @@ const PAYMENT_METHODS = ["naqd", "plastik", "schyot", "terminal", "boshqa"];
 const canDisburse = (role: string) =>
   ["super_admin", "admin", "chief_accountant"].includes(role);
 
-/** (xodim, oy) bo'yicha tasdiqlangan majburiyat va berilgan pul yig'indisi. */
+/**
+ * (xodim, oy) bo'yicha tasdiqlangan majburiyat va berilgan pul yig'indisi.
+ *
+ * TURLAR BO'YICHA FILTR YO'Q — `computeObligation` har bir turga o'z og'irligini
+ * beradi (`payment` +, `bonus` +, `jarima` −, `avans` 0). Ilgari bu yerda
+ * `adjustmentType: { in: ["payment", "avans"] }` turardi va ikkita nuqson
+ * bergan edi: avans majburiyatga qo'shilib hech qachon ayirilmasdi, qo'lda
+ * bonus esa umuman to'lanmasdi.
+ */
 async function obligationAndPaid(db: Prisma.TransactionClient, employeeId: string, month: string) {
   const monthKeys = [month, `${month}-01`]; // PayrollAdjustment.month ikkala formatda uchraydi
   const [adjustments, payouts] = await Promise.all([
     db.payrollAdjustment.findMany({
-      where: {
-        employeeId,
-        month: { in: monthKeys },
-        isApproved: true,
-        deletedAt: null,
-        adjustmentType: { in: ["payment", "avans"] },
-      },
-      select: { amount: true },
+      where: { employeeId, month: { in: monthKeys }, deletedAt: null },
+      select: { adjustmentType: true, amount: true, isApproved: true },
     }),
     db.payout.aggregate({
       where: { employeeId, month, deletedAt: null },
       _sum: { amount: true },
     }),
   ]);
-  // Tarixiy qatorlar aralash ishorada — miqdor sifatida o'qiladi (lib/adjustments.ts).
-  const obligation = adjustments.reduce((s, a) => s + adjustmentMagnitude(a.amount), 0);
+  // Avans tasdiqlanganda Payout yozilgan (server/payroll.ts) — ya'ni u shu
+  // yerdagi `paid` ichida, `obligation` da emas.
+  const obligation = computeObligation(adjustments);
   const paid = Number(payouts._sum.amount ?? 0);
   return { obligation, paid };
 }
@@ -132,11 +136,14 @@ export async function createPayout(data: {
 
       const { obligation, paid } = await obligationAndPaid(tx, data.employeeId, month);
       if (obligation <= 0) {
+        // Faqat avans tasdiqlangan holat ham shu yerga tushadi — va tushishi
+        // KERAK: avansning o'z Payout'i allaqachon yozilgan, oylik esa hali
+        // tasdiqlanmagan, ya'ni to'lanadigan qoldiq yo'q.
         throw new Error(
-          `${month} oyi uchun tasdiqlangan oylik/avans majburiyati yo'q — avval oylik tasdiqlansin`
+          `${month} oyi uchun tasdiqlangan oylik majburiyati yo'q — avval oylik tasdiqlansin`
         );
       }
-      const remaining = Math.round((obligation - paid) * 100) / 100;
+      const remaining = computeRemaining(obligation, paid);
       if (data.amount > remaining) {
         throw new Error(
           `Ortiqcha to'lov bloklandi: ${month} uchun qolgan majburiyat ` +

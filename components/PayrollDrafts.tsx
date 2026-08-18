@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useViewMode } from '@/hooks/useViewMode';
-import { Staff, Company, Language, EmployeeSalarySummary, OperationEntry, MonthlyPerformance, KPIRule, CompanyKPIRule, EmployeeSalary } from '@/types';
+import { Staff, Company, Language, EmployeeSalarySummary, OperationEntry, MonthlyPerformance, KPIRule, CompanyKPIRule, EmployeeSalary, CompanyBreakdown } from '@/types';
 import { calculateEmployeeSalary } from '@/lib/kpiLogic';
 import { DollarSign, CheckCircle2, AlertCircle, FileText, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
@@ -22,18 +22,9 @@ interface Props {
     userRole?: string;
 }
 
-// Per-company breakdown for evidence
-interface CompanyBreakdown {
-    companyId: string;
-    companyName: string;
-    contractAmount: number;
-    role: string;
-    baseAmount: number;
-    kpiBonus: number;
-    kpiPenalty: number;
-    details: string[];
-}
-
+// `CompanyBreakdown` `@/types` dan olinadi. Ilgari bu yerda uning MAHALLIY
+// NUSXASI turardi — ya'ni kanonik tipga yangi maydon qo'shilsa (masalan
+// `clampedLoss`) bu komponent uni ko'rmasdi va tafsilot jimgina tushib qolardi.
 interface DraftWithBreakdowns extends EmployeeSalarySummary {
     companyBreakdowns: CompanyBreakdown[];
 }
@@ -607,6 +598,20 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                                     ))}
                                                     {b.details.filter(d => d.includes('KPI -') || d.includes('Auto KPI -')).length === 0 && (
                                                         <p className="text-micro italic" style={{ color: "var(--text-muted)" }}>Jarima sababi aniqlanmadi</p>
+                                                    )}
+                                                    {/* Jarima bu firmadagi bazani yeb tugatgan — ortig'i oylikdan
+                                                        UNDIRILMAYDI (firma ulushi nolda qisiladi). Ilgari bu jimgina
+                                                        sodir bo'lardi va nazoratchi jarima to'liq ta'sir qildi deb
+                                                        o'ylardi. */}
+                                                    {b.clampedLoss > 0 && (
+                                                        <div className="flex items-start gap-2 mt-1 pt-2 text-meta font-medium"
+                                                            style={{ color: "var(--warning)", borderTop: "1px dashed var(--card-border)" }}>
+                                                            <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
+                                                            <span>
+                                                                Jarima bu firmadagi stavkadan {formatNum(b.clampedLoss)} so&apos;mga oshdi —
+                                                                oshgan qism undirilmadi (ulush nolda to&apos;xtadi).
+                                                            </span>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>

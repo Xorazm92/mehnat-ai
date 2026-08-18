@@ -418,10 +418,12 @@ export async function getBankCabinetData() {
       orderBy: { name: "asc" },
     }),
 
-    // Kassa yozuvlari (bank operatsiyalari)
+    // Kassa yozuvlari (bank operatsiyalari) — EKRANDAGI RO'YXAT uchun,
+    // oxirgi 20 tasi. Qoldiq bundan hisoblanmaydi (pastdagi izohga qarang).
     prisma.kassaEntry.findMany({
       where: {
         createdBy: userId,
+        deletedAt: null,
         date: {
           gte: new Date(`${currentMonth}-01`),
         },
@@ -441,13 +443,25 @@ export async function getBankCabinetData() {
     }),
   ]);
 
-  const totalIncome = kassaEntries
-    .filter((k) => k.type === "income")
-    .reduce((sum, k) => sum + Number(k.amount), 0);
-
-  const totalExpense = kassaEntries
-    .filter((k) => k.type === "expense")
-    .reduce((sum, k) => sum + Number(k.amount), 0);
+  // Qoldiq YUQORIDAGI RO'YXATDAN hisoblanmaydi. Ikki sabab, ikkalasi ham
+  // ekranda noto'g'ri raqam berardi:
+  //   1) ro'yxat `take: 20` bilan cheklangan — 21-yozuvdan boshlab qoldiqqa
+  //      umuman kirmasdi;
+  //   2) soft-delete qilingan yozuvlar ham sanalardi (`deletedAt` filtri yo'q
+  //      edi), ya'ni o'chirilgan chiqim baribir qoldiqni kamaytirib turardi.
+  const kassaTotals = await prisma.kassaEntry.groupBy({
+    by: ["type"],
+    where: {
+      createdBy: userId,
+      deletedAt: null,
+      date: { gte: new Date(`${currentMonth}-01`) },
+    },
+    _sum: { amount: true },
+  });
+  const sumOf = (type: string) =>
+    Number(kassaTotals.find((t) => t.type === type)?._sum.amount ?? 0);
+  const totalIncome = sumOf("income");
+  const totalExpense = sumOf("expense");
 
   return serialize({
     assignedCompanies,

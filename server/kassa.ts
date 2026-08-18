@@ -91,6 +91,23 @@ export async function createKassaEntry(data: {
   if (data.type !== "income" && data.type !== "expense") {
     throw new Error("Kassa turi noto'g'ri: 'income' yoki 'expense' bo'lishi kerak");
   }
+  // Oylik kassa chiqimi sifatida yozilsa, `Payout` bilan IKKI MARTA sanaladi:
+  // `lib/balance.ts` chiqimni ikkala jadvaldan ham oladi. Toifa ro'yxatidan
+  // olib tashlangan (`lib/kassaCategories.ts`), lekin ro'yxat sozlamada —
+  // korxona uni qayta qo'shib qo'yishi mumkin, shuning uchun server tomonda
+  // ham qo'riqchi turadi.
+  // Naqsh KENG: prod bazasida oylik "Ish haqi" deb yozilgan (70.6 mln) —
+  // tor naqsh uni o'tkazib yuborardi. "Ish haqi", "oylik", "maosh",
+  // "zarplata" va ruscha/lotincha variantlari qamrab olinadi.
+  if (
+    data.type === "expense" &&
+    /oylik|ish\s*haqi|mehnat\s*haqi|maosh|zarplata|зарплат|ойлик|иш\s*хак/i.test(data.category)
+  ) {
+    throw new Error(
+      "Oylik kassa chiqimi sifatida yozilmaydi — u ikki marta hisobga kirardi. " +
+        "Oylik to'lovi \"Oylik\" bo'limi (/payroll) orqali beriladi."
+    );
+  }
   assertPositiveAmount(data.amount);
   await assertPeriodOpen(prisma, data.date, "kassa yozuvi");
 

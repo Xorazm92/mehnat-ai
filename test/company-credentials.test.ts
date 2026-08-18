@@ -17,7 +17,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 const SESSION = { user: { id: "", role: "", kind: "staff", companyId: null as string | null } };
 vi.mock("@/lib/auth", () => ({ auth: async () => (SESSION.user.id ? SESSION : null) }));
 vi.mock("server-only", () => ({}));
-vi.mock("next/cache", () => ({ revalidateTag: () => {} }));
+vi.mock("next/cache", () => ({ revalidateTag: () => {}, updateTag: () => {} }));
 
 const { prisma } = await import("@/lib/prisma");
 const companies = await import("@/server/companies");
@@ -88,13 +88,19 @@ describe("ochiq matn hech qachon yangi yozuvda saqlanmaydi (KRITIK)", () => {
 
   it("createCompany ham ochiq matn credential yozmaydi", async () => {
     asUser(ids.admin, "admin");
-    const created = await companies.createCompany({
-      name: `${TAG} Yangi`,
-      inn: "9",
-      taxRegime: "vat",
-      login: "yangi-login",
-      password: "yangi-parol",
-    });
+    // INN 9 XONALI va BUXGALTER majburiy — `assertNewCompanyComplete`
+    // (server/companies.ts) shu ikki qoidani talab qiladi. Test ma'lumoti
+    // o'sha qoidalar kiritilgunga qadar yozilgan edi va eskirib qolgandi.
+    const created = await companies.createCompany(
+      {
+        name: `${TAG} Yangi`,
+        inn: String(900_000_000 + (Date.now() % 99_999_999)).slice(0, 9),
+        taxRegime: "vat",
+        login: "yangi-login",
+        password: "yangi-parol",
+      },
+      [{ userId: ids.accA, role: "accountant", salaryType: "percent", salaryValue: 20 }]
+    );
     const id = (created as { id: string }).id;
     try {
       const row = await prisma.company.findUnique({ where: { id }, select: { login: true, password: true } });
@@ -102,6 +108,7 @@ describe("ochiq matn hech qachon yangi yozuvda saqlanmaydi (KRITIK)", () => {
       expect(row!.password).toBeNull();
     } finally {
       await prisma.clientCredential.deleteMany({ where: { companyId: id } });
+      await prisma.contractAssignment.deleteMany({ where: { companyId: id } });
       await prisma.company.delete({ where: { id } });
     }
   });

@@ -41,7 +41,9 @@ export interface Expense {
 }
 
 // Yagona kassa balansi tafsiloti (lib/balance.ts getAvailableBalance natijasi).
-// Barcha pul jadvallari (Payment + KassaEntry + Expense + PayrollAdjustment) bitta balansga bog'lanadi.
+// Barcha pul jadvallari (Payment + KassaEntry + Expense + Payout) bitta balansga
+// bog'lanadi. DIQQAT: chiqim `Payout` dan sanaladi, `PayrollAdjustment` dan emas —
+// tasdiqlangan majburiyat hali pul emas (lib/balance.ts:5-7).
 export interface BalanceBreakdown {
   income: number; // jami kirim
   outflow: number; // jami chiqim
@@ -50,7 +52,7 @@ export interface BalanceBreakdown {
   incomeKassa: number; // kassa kirimlari
   outflowExpenses: number; // tasdiqlangan xarajatlar
   outflowKassa: number; // kassa chiqimlari
-  outflowPayroll: number; // tasdiqlangan oyliklar (to'lov/avans)
+  outflowPayroll: number; // REAL berilgan oyliklar/avanslar (Payout)
 }
 
 export enum TaxType {
@@ -589,6 +591,10 @@ export interface CompanyBreakdown {
   baseAmount: number;
   kpiBonus: number;
   kpiPenalty: number;
+  // Jarima shu firmadagi bazadan OSHIB ketgan qismi. Oylik firma bo'yicha
+  // nolga qisiladi (`lib/kpiLogic.ts` finalAmount = max(0, raw)), ya'ni oshgan
+  // jarima jimgina yo'qoladi. Bu — yo'qolgan miqdor; 0 bo'lsa qisish bo'lmagan.
+  clampedLoss: number;
   details: string[];
 }
 

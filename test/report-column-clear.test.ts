@@ -14,7 +14,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 const SESSION = { user: { id: "", role: "super_admin" } };
 vi.mock("@/lib/auth", () => ({ auth: async () => (SESSION.user.id ? SESSION : null) }));
 vi.mock("server-only", () => ({}));
-vi.mock("next/cache", () => ({ revalidateTag: () => {} }));
+vi.mock("next/cache", () => ({ revalidateTag: () => {}, updateTag: () => {} }));
 
 const { prisma } = await import("@/lib/prisma");
 const { clearColumnForPeriod, upsertMonthlyReport } = await import("@/server/operations");

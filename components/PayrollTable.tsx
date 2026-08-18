@@ -14,6 +14,7 @@ import {
 import { getPayouts, createPayout } from '@/server/payouts';
 import { groupDigits, ungroupDigits, submitOnCtrlEnter, formatNum } from '@/lib/format';
 import { adjustmentMagnitude } from '@/lib/adjustments';
+import { computeObligation } from '@/lib/payrollObligation';
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { useTableState } from "@/hooks/useTableState";
 import { toast } from "sonner";
@@ -39,7 +40,10 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
     const [editingAdj, setEditingAdj] = useState<{ empId: string, type: 'bonus' | 'jarima' | 'avans' | 'payment', amount: number, reason: string } | null>(null);
     const [adjustmentsList, setAdjustmentsList] = useState<PayrollAdjustment[]>([]);
     // REAL berilgan pullar (Payout jadvali) — majburiyatdan alohida o'qiladi.
-    // Avans-payout bu ro'yxatga KIRMAYDI: avans allaqachon totalReceived'da hisoblangan.
+    // AVANS-PAYOUT HAM SHU YERDA. Ilgari u chiqarib tashlanardi va avans
+    // "totalReceived" orqali ikkinchi yo'ldan ayirilardi; endi majburiyat
+    // (`lib/payrollObligation.ts`) avansni umuman sanamaydi, ya'ni u FAQAT
+    // to'lov tomonida — server bilan bir xil.
     const [payoutsList, setPayoutsList] = useState<{ employeeId: string; amount: number }[]>([]);
     const [performanceList, setPerformanceList] = useState<MonthlyPerformance[]>([]);
     const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
@@ -83,7 +87,6 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                 amount: Number(a.amount ?? 0),
             })));
             setPayoutsList((payouts as any[])
-                .filter(p => p.adjustment?.adjustmentType !== 'avans')
                 .map(p => ({
                     employeeId: p.employeeId as string,
                     amount: Number(p.amount ?? 0),
@@ -230,24 +233,38 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
             });
 
             const employeeAdjustments = adjustmentsByStaff.get(s.id) || [];
+            // FAQAT TASDIQLANGAN tuzatma pulga ta'sir qiladi — server ham
+            // shunday qiladi. Ilgari bu yerda filtr yo'q edi, ya'ni hali
+            // tasdiqlanmagan avans kiritilishi bilanoq ekrandagi "Qolgan"
+            // serverning chegarasidan pastga tushib ketardi.
+            const approved = employeeAdjustments.filter(a => a.isApproved);
 
-            // Miqdor sifatida (lib/adjustments.ts): tarixiy qatorlar aralash ishorada.
-            // Konventsiya: received/paid manfiy saqlanadi (displey Math.abs ishlatadi).
-            const totalReceived = -employeeAdjustments
+            // Ustunlarda ko'rsatish uchun (miqdor sifatida — lib/adjustments.ts:
+            // tarixiy qatorlar aralash ishorada). Konventsiya: received/paid
+            // manfiy saqlanadi, displey Math.abs ishlatadi.
+            const totalReceived = -approved
                 .filter(a => a.adjustmentType === 'avans' || a.adjustmentType === 'jarima')
                 .reduce((sum, a) => sum + adjustmentMagnitude(a.amount), 0);
 
-            // REAL berilgan pul — Payout jadvalidan (majburiyat emas).
+            const manualBonuses = approved
+                .filter(a => a.adjustmentType === 'bonus')
+                .reduce((sum, a) => sum + adjustmentMagnitude(a.amount), 0);
+
+            // REAL berilgan pul — Payout jadvalidan (majburiyat emas), avans ham ichida.
             const totalPaid = -payoutsList
                 .filter(p => p.employeeId === s.id)
                 .reduce((sum, p) => sum + Math.abs(p.amount), 0);
 
-            const manualBonuses = employeeAdjustments
-                .filter(a => a.adjustmentType === 'bonus')
-                .reduce((sum, a) => sum + adjustmentMagnitude(a.amount), 0);
-
-            const kpiSalary = totalBase - totalKpiPenalty + totalKpiBonus + manualBonuses;
-            const remainingBalance = kpiSalary + totalReceived + totalPaid;
+            // MAJBURIYAT — server bilan AYNAN bir xil funksiya
+            // (`lib/payrollObligation.ts`). 'payment' qatori ataylab tashlanadi:
+            // uning o'rniga yuqorida jonli hisoblangan KPI oyligi turadi, shunda
+            // oylik hali tasdiqlanmagan oyda ham raqam ko'rinadi. Qolgan turlar
+            // (bonus +, jarima −, avans 0) o'z og'irligini o'sha yerdan oladi.
+            const kpiSalary = totalBase - totalKpiPenalty + totalKpiBonus;
+            const obligation = kpiSalary + computeObligation(
+                approved.filter(a => a.adjustmentType !== 'payment')
+            );
+            const remainingBalance = obligation + totalPaid;
 
             return {
                 employeeId: s.id,
@@ -259,7 +276,11 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                 kpiBonus: totalKpiBonus,
                 kpiPenalty: -totalKpiPenalty,
                 adjustments: totalReceived + manualBonuses,
-                totalSalary: kpiSalary,
+                // "Jami maosh" = to'liq MAJBURIYAT (KPI oyligi + qo'lda bonus −
+                // qo'lda jarima), ya'ni server to'lashga ruxsat beradigan tom
+                // summa. Ilgari bu yerda faqat KPI oyligi turardi va qo'lda
+                // bonus ustunda ko'rinsa-da jamiga kirmasdi.
+                totalSalary: obligation,
                 remainingBalance: remainingBalance,
                 totalPaid: totalPaid,
                 totalReceived: totalReceived,

@@ -18,8 +18,14 @@ export const DEFAULT_KASSA_CATEGORIES: KassaCategories = {
     "Firma to'lovi", "Vostanavleniya", "Tezkor audit", "Firma ochish",
     "Firma yopish", "Pereregistratsiya", "Yurxizmat", "1C sopr", "Boshlang'ich qoldiq",
   ],
+  // "Oylik" ATAYIN YO'Q. Oylik `Payout` jadvalidan chiqadi va balans uni
+  // o'sha yerdan sanaydi (`lib/balance.ts`) — kassa chiqimi sifatida ham
+  // yozilsa bitta to'lov ikki marta hisobga kirardi. Bank importi buni
+  // allaqachon bloklaydi (`lib/bank/classifyExpense.ts` NON_POSTABLE_CATEGORIES),
+  // qo'lda kiritish yo'lida esa himoya yo'q edi — endi `server/kassa.ts`
+  // `createKassaEntry` da qo'riqchi bor.
   expense: [
-    "Oylik", "Arenda", "Internet", "Telefon", "Dividend", "Qarz", "Ovqatga",
+    "Arenda", "Internet", "Telefon", "Dividend", "Qarz", "Ovqatga",
     "Moliyaviy yordam", "Suvga", "Kommunal (svet)", "Texnika", "1C server",
     "Soliqlar", "Bank usluga", "Boshqa xarajatlar", "Ma'muriy xarajatlar",
     "Marketing", "Finschool", "Vostanavleniy xodimi",
