@@ -3,6 +3,8 @@ import { getCachedCompanies } from "@/lib/cached-queries";
 import { getPayments } from "@/server/kassa";
 import { getAvailableBalance } from "@/lib/balance";
 import { getDebtors } from "@/server/debt";
+import { getCashDeskReport } from "@/server/kassaReport";
+import CashDeskTable from "./CashDeskTable";
 import KassaClient from "./KassaClient";
 
 export const metadata = { title: "Kassa" };
@@ -22,6 +24,10 @@ export default async function KassaPage() {
     getDebtors({ scope: "all" }),
   ]);
 
+  // Kassalar jadvali — auditning markaziy jadvali. Xato bo'lsa sahifa
+  // yiqilmasin: qolgan bloklar baribir foydali.
+  const cashDesk = await getCashDeskReport().catch(() => null);
+
   // companyId → qarz. Klient endi hech narsa hisoblamaydi, faqat ko'rsatadi.
   const debtByCompany = Object.fromEntries(
     debtors.rows.map((r) => [r.companyId, { dueNow: r.dueNow, overdue: r.overdue, outstanding: r.outstanding }])
@@ -40,6 +46,11 @@ export default async function KassaPage() {
 
   return (
     <div className="h-full">
+      {cashDesk && (
+        <div className="p-4 md:p-6 pb-0">
+          <CashDeskTable report={JSON.parse(JSON.stringify(cashDesk))} />
+        </div>
+      )}
       <KassaClient
         companies={JSON.parse(JSON.stringify(companies))}
         payments={JSON.parse(JSON.stringify(mappedPayments))}
