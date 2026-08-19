@@ -5,8 +5,10 @@
 // =====================================================
 //
 // Bitta tanlov ikki turni qamraydi (server/fundingSources.ts):
-//   SCHYOT  — o'z firmaning bank hisobi (`own_firm_account`)
-//   PLASTIK — xodimga berilgan karta      (`employee_card`)
+// TO'RT TUR: bank hisobi (schyot), naqd kassa (seyf), plastik terminal va
+// xodim kartasi. Ilgari tanlagich faqat IKKITASINI bilardi va qolgani
+// "xodim kartasi" guruhiga tushib qolardi — shu sababdan naqd va plastik
+// kassalar umuman ochilmagan edi.
 //
 // Uch formada ishlatiladi: xarajat, chiqim kassa, kirim kassa. Ro'yxat
 // serverdan bir joydan keladi — aks holda uch ekranda uch xil filtr paydo
@@ -14,6 +16,7 @@
 
 import React, { useEffect, useState } from "react";
 import { getFundingSources, type FundingSourceGroups } from "@/server/fundingSources";
+import { CHANNEL_TYPE_LABELS, CHANNEL_TYPE_ORDER } from "@/lib/transitChannels";
 import { friendlyError } from "@/lib/actionError";
 
 interface Props {
@@ -49,59 +52,43 @@ export const FundingSourceSelect: React.FC<Props> = ({
     return <p className="text-micro" style={{ color: "var(--danger)" }}>Manbalar yuklanmadi: {error}</p>;
   }
 
-  const loading = groups === null;
-  const empty = !loading && groups.accounts.length === 0 && groups.cards.length === 0;
+  const total = groups
+    ? CHANNEL_TYPE_ORDER.reduce((n, t) => n + (groups[t]?.length ?? 0), 0)
+    : 0;
+
+  // Bitta ham kanal yo'q bo'lsa jim bo'sh ro'yxat ko'rsatmaymiz — foydalanuvchi
+  // nima qilishini bilishi kerak.
+  if (groups && total === 0) {
+    return (
+      <p className="text-micro" style={{ color: "var(--warning)" }}>
+        Kassa ochilmagan. <a href="/kassa/chiqim" className="underline">Chiqim kassa</a> →
+        &quot;Kanal qo&apos;shish&quot; orqali naqd kassa yoki plastik terminal oching.
+      </p>
+    );
+  }
 
   return (
-    <div>
-      <select
-        value={value}
-        disabled={disabled || loading || empty}
-        onChange={(e) => onChange(e.target.value)}
-        className={className}
-      >
-        {/* Bo'sh variant HAR DOIM bor: majburiy bo'lsa ham foydalanuvchi
-            "tanlanmagan" holatni ko'rishi kerak, aks holda ro'yxatdagi
-            birinchi manba jimgina tanlangandek ko'rinardi. */}
-        <option value="">
-          {loading ? "Yuklanmoqda…" : empty ? "Manba topilmadi" : "— Pul manbaini tanlang —"}
-        </option>
-
-        {groups && groups.accounts.length > 0 && (
-          <optgroup label="SCHYOT (o'z firma hisobi)">
-            {groups.accounts.map((s) => (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled || !groups}
+      className={className}
+      style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+    >
+      <option value="">{allowEmpty ? "— Tanlanmagan —" : "Manbani tanlang…"}</option>
+      {groups &&
+        CHANNEL_TYPE_ORDER.filter((t) => (groups[t]?.length ?? 0) > 0).map((t) => (
+          <optgroup key={t} label={CHANNEL_TYPE_LABELS[t]}>
+            {groups[t].map((s) => (
               <option key={s.id} value={s.id}>
                 {s.label}
                 {s.detail ? ` · ${s.detail}` : ""}
+                {s.ownFirmName ? ` · ${s.ownFirmName}` : ""}
               </option>
             ))}
           </optgroup>
-        )}
-
-        {groups && groups.cards.length > 0 && (
-          <optgroup label="PLASTIK (xodim kartasi)">
-            {groups.cards.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-                {s.detail ? ` · ${s.detail}` : ""}
-                {s.ownFirmName ? ` — ${s.ownFirmName}` : ""}
-              </option>
-            ))}
-          </optgroup>
-        )}
-      </select>
-
-      {empty && (
-        <p className="text-micro mt-1" style={{ color: "var(--text-3)" }}>
-          Schyot kanallari hali yaratilmagan: <code>npm run seed:own-accounts -- --apply</code>
-        </p>
-      )}
-      {!allowEmpty && !loading && !empty && !value && (
-        <p className="text-micro mt-1" style={{ color: "var(--warning)" }}>
-          Manba tanlanmagan — pul qayerdan chiqqani yozilmaydi.
-        </p>
-      )}
-    </div>
+        ))}
+    </select>
   );
 };
 

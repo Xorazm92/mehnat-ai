@@ -20,26 +20,35 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { isFinanceRole } from "@/lib/permissions";
+import {
+  CHANNEL_TYPES,
+  CHANNEL_TYPE_ORDER,
+  normalizeChannelType,
+  type ChannelType,
+} from "@/lib/transitChannels";
 
-export type FundingSourceKind = "own_firm_account" | "employee_card";
+export type FundingSourceKind = ChannelType;
 
 export interface FundingSource {
   id: string;
   kind: FundingSourceKind;
   /** Ro'yxatda ko'rinadigan nom. */
   label: string;
-  /** Plastik uchun niqoblangan karta raqami, schyot uchun hisob raqami. */
+  /** Plastik/karta uchun niqob, schyot uchun hisob raqami. */
   detail: string | null;
   /** Qaysi o'z firmaga tegishli (ikkala turda ham bo'lishi mumkin). */
   ownFirmName: string | null;
 }
 
-export interface FundingSourceGroups {
-  /** Schyot — o'z firmalarning bank hisoblari. */
-  accounts: FundingSource[];
-  /** Plastik — xodim kartalari. */
-  cards: FundingSource[];
-}
+/**
+ * Manbalar TUR bo'yicha guruhlangan.
+ *
+ * Ilgari faqat IKKI guruh bor edi (`accounts` va `cards`) va qolgan hamma
+ * tur `cards` ga tushardi — ya'ni naqd kassa ham, plastik terminal ham
+ * "xodim kartasi" bo'lib ko'rinardi. Shu sababdan ular umuman ochilmagan:
+ * ochilsa ham ro'yxatda noto'g'ri joyda chiqardi.
+ */
+export type FundingSourceGroups = Record<ChannelType, FundingSource[]>;
 
 /**
  * Tanlash uchun faol manbalar, ikki guruhga bo'lingan.
@@ -66,21 +75,30 @@ export async function getFundingSources(): Promise<FundingSourceGroups> {
     orderBy: [{ type: "asc" }, { label: "asc" }],
   });
 
-  const groups: FundingSourceGroups = { accounts: [], cards: [] };
+  const groups = Object.fromEntries(
+    CHANNEL_TYPES.map((t) => [t, [] as FundingSource[]])
+  ) as FundingSourceGroups;
 
   for (const c of channels) {
-    const item: FundingSource = {
+    // Noma'lum tur JIM YUTILMAYDI: ilgari `else` shoxi uni kartaga aylantirardi
+    // va qoldiq noto'g'ri guruhda ko'rinardi. Endi u ro'yxatga umuman kirmaydi.
+    const kind = normalizeChannelType(c.type);
+    if (!kind) continue;
+    groups[kind].push({
       id: c.id,
-      kind: c.type === "own_firm_account" ? "own_firm_account" : "employee_card",
+      kind,
       label: c.label,
-      detail: c.type === "own_firm_account" ? c.transitAccount : c.cardMask,
+      detail: kind === "own_firm_account" ? c.transitAccount : c.cardMask,
       ownFirmName: c.ownFirm?.name ?? null,
-    };
-    if (item.kind === "own_firm_account") groups.accounts.push(item);
-    else groups.cards.push(item);
+    });
   }
 
   return groups;
+}
+
+/** Tanlagichda ko'rinadigan tartib — UI shu ro'yxatga tayanadi. */
+export async function getFundingSourceOrder(): Promise<ChannelType[]> {
+  return CHANNEL_TYPE_ORDER;
 }
 
 /**
