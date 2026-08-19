@@ -48,6 +48,7 @@ export interface BalanceBreakdown {
   income: number; // jami kirim
   outflow: number; // jami chiqim
   balance: number; // income − outflow (mavjud mablag')
+  transitBalance?: number; // tranzit kartalardagi sarflanmagan qoldiq
   incomePayments: number; // to'langan shartnoma to'lovlari
   incomeKassa: number; // kassa kirimlari
   outflowExpenses: number; // tasdiqlangan xarajatlar

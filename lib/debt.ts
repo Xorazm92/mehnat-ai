@@ -145,6 +145,8 @@ export interface CompanyDebtInput {
    * va eski qarz ko'rinmay ketardi.
    */
   openingDebt?: Prisma.Decimal | number | null;
+  /** "Bugun" — kun hisobini testlash uchun. Berilmasa joriy vaqt. */
+  now?: Date;
 }
 
 export interface CompanyDebtBreakdown {
@@ -162,6 +164,67 @@ export interface CompanyDebtBreakdown {
   monthsCharged: number;
   /** Muddati o'tgan qarz necha oylik shartnomaga teng (yaxlitlangan). */
   monthsOverdue: number;
+  /**
+   * ENG ESKI to'lanmagan hisob muddatidan beri o'tgan KUNLAR.
+   *
+   * Bu `monthsOverdue × 30` EMAS. `monthsOverdue` — pul nisbati (qarz / oylik),
+   * vaqt emas; undan kun yasash "1-10 kun" yorlig'ini yolg'onga aylantirardi.
+   * Bu yerda to'lovlar FIFO tartibida eng eski hisobdan yopiladi va birinchi
+   * yopilmagan hisobning to'lov oynasi qachon yopilgani topiladi.
+   */
+  overdueDays: number;
+}
+
+/** Davr TUGAGAN payt (keyingi oyning 1-kuni, UTC). */
+function periodEndsAt(period: string): Date {
+  const [y, m] = period.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 1));
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * Eng eski to'lanmagan hisobning muddati o'tganiga necha kun bo'ldi.
+ *
+ * Ish oyi P uchun pul P+TERM oyi DAVOMIDA to'lanadi, ya'ni muddat P+TERM
+ * tugaganda o'tadi. Boshlang'ich (1C) qarz ASRO ishga tushgan birinchi oy
+ * oxirigacha to'lanishi kerak deb qabul qilinadi.
+ */
+function computeOverdueDays(args: {
+  opening: number;
+  monthly: number;
+  billingStart: string;
+  overdueThrough: string;
+  paid: number;
+  now: Date;
+}): number {
+  const { opening, monthly, billingStart, overdueThrough, paid, now } = args;
+
+  // FIFO navbat: boshlang'ich qarz, keyin har bir ish oyi.
+  const queue: { amount: number; dueEndsAt: Date }[] = [];
+  if (opening > 0) queue.push({ amount: opening, dueEndsAt: periodEndsAt(billingStart) });
+  if (monthly > 0) {
+    const months = monthsInclusive(billingStart, overdueThrough);
+    for (let i = 0; i < months; i++) {
+      const workPeriod = shiftPeriod(billingStart, i);
+      queue.push({
+        amount: monthly,
+        dueEndsAt: periodEndsAt(shiftPeriod(workPeriod, PAYMENT_TERM_MONTHS)),
+      });
+    }
+  }
+
+  let remaining = paid;
+  for (const item of queue) {
+    if (remaining >= item.amount) {
+      remaining -= item.amount;
+      continue;
+    }
+    // Mana shu hisob to'liq yopilmagan — eng eski qarz shu.
+    const days = Math.floor((now.getTime() - item.dueEndsAt.getTime()) / DAY_MS);
+    return Math.max(0, days);
+  }
+  return 0;
 }
 
 /**
@@ -178,18 +241,32 @@ export function computeCompanyDebt(input: CompanyDebtInput): CompanyDebtBreakdow
     .filter((p) => isSettledPayment(p.status))
     .reduce((sum, p) => sum + num(p.amount), 0);
 
+  const now = input.now ?? new Date();
+
   if (monthly <= 0) {
     // Shartnoma summasi yo'q — yangi hisob qo'yib bo'lmaydi. Boshlang'ich qarz
     // bo'lsa u saqlanadi; tushgan pul uni kamaytiradi va ortig'i avans bo'ladi.
     const outstanding = opening - paid;
+    const overdue = Math.max(0, outstanding);
     return {
       charged: opening,
       paid,
       outstanding,
-      overdue: Math.max(0, outstanding),
+      overdue,
       dueNow: 0,
       monthsCharged: 0,
       monthsOverdue: 0,
+      overdueDays:
+        overdue > 0
+          ? computeOverdueDays({
+              opening,
+              monthly: 0,
+              billingStart: input.billingStart,
+              overdueThrough: input.billingStart,
+              paid,
+              now,
+            })
+          : 0,
     };
   }
 
@@ -221,6 +298,17 @@ export function computeCompanyDebt(input: CompanyDebtInput): CompanyDebtBreakdow
     dueNow,
     monthsCharged,
     monthsOverdue: overdue > 0 ? Math.round((overdue / monthly) * 10) / 10 : 0,
+    overdueDays:
+      overdue > 0
+        ? computeOverdueDays({
+            opening,
+            monthly,
+            billingStart: input.billingStart,
+            overdueThrough,
+            paid,
+            now,
+          })
+        : 0,
   };
 }
 
@@ -253,6 +341,8 @@ export interface DebtorRow {
   /** Shu oy yig'ilishi kerak (muddati hali o'tmagan). */
   dueNow: number;
   monthsOverdue: number;
+  /** Eng eski to'lanmagan hisob muddatidan beri o'tgan kunlar. */
+  overdueDays: number;
   /** Oxirgi tushum bo'lgan davr — "hech qachon" bo'lsa null. */
   lastPaidPeriod: string | null;
   /** Mas'ul buxgalter (kim bilan gaplashish kerakligi). */
@@ -373,6 +463,7 @@ function rowFor(c: CompanyWithPayments, currentPeriod: string): DebtorRow {
     overdue: breakdown.overdue,
     dueNow: breakdown.dueNow,
     monthsOverdue: breakdown.monthsOverdue,
+    overdueDays: breakdown.overdueDays,
     lastPaidPeriod,
     accountantName: c.accountant?.fullName ?? null,
     supervisorName: c.supervisor?.fullName ?? null,
@@ -484,4 +575,113 @@ export async function listDebtors(
     .sort((a, b) => b.overdue - a.overdue || b.dueNow - a.dueNow);
 
   return opts.limit ? rows.slice(0, opts.limit) : rows;
+}
+
+// ─────────────────────────────────────────────────────────
+// 4 BOSQICHLI AGING DEBT MATRITSASI
+// ─────────────────────────────────────────────────────────
+
+export type DebtAgingStage = "normal" | "warning" | "suspension" | "critical";
+
+export interface DebtAgingStageGroup {
+  stage: DebtAgingStage;
+  label: string;
+  daysRange: string;
+  companyCount: number;
+  totalAmount: number;
+  companies: DebtorRow[];
+}
+
+export interface DebtAgingMatrix {
+  stages: {
+    normal: DebtAgingStageGroup;
+    warning: DebtAgingStageGroup;
+    suspension: DebtAgingStageGroup;
+    critical: DebtAgingStageGroup;
+  };
+  totalOverdueCompanies: number;
+  totalOverdueAmount: number;
+}
+
+/**
+ * Muddati o'tgan qarzdorlarni 4 ta bosqichga ajratadi:
+ *  - 1-10 kun:  normal / operatsion
+ *  - 11-30 kun: ogohlantirish / bildirishnoma
+ *  - 31-60 kun: xizmatni to'xtatish xavfi
+ *  - 60+ kun:   kritik qarzdorlik / shartnomani bekor qilish / sud
+ */
+export function computeDebtAgingMatrix(debtors: DebtorRow[]): DebtAgingMatrix {
+  const matrix: DebtAgingMatrix = {
+    stages: {
+      normal: {
+        stage: "normal",
+        label: "1-10 kun (Operatsion)",
+        daysRange: "1-10",
+        companyCount: 0,
+        totalAmount: 0,
+        companies: [],
+      },
+      warning: {
+        stage: "warning",
+        label: "11-30 kun (Ogohlantirish)",
+        daysRange: "11-30",
+        companyCount: 0,
+        totalAmount: 0,
+        companies: [],
+      },
+      suspension: {
+        stage: "suspension",
+        label: "31-60 kun (Xizmatni to'xtatish xavfi)",
+        daysRange: "31-60",
+        companyCount: 0,
+        totalAmount: 0,
+        companies: [],
+      },
+      critical: {
+        stage: "critical",
+        label: "60+ kun (Kritik / Sud)",
+        daysRange: "60+",
+        companyCount: 0,
+        totalAmount: 0,
+        companies: [],
+      },
+    },
+    totalOverdueCompanies: 0,
+    totalOverdueAmount: 0,
+  };
+
+  for (const d of debtors) {
+    if (d.overdue <= 0) continue;
+
+    const days = d.overdueDays;
+
+    let targetStage: DebtAgingStage;
+    if (days <= 10) {
+      targetStage = "normal";
+    } else if (days <= 30) {
+      targetStage = "warning";
+    } else if (days <= 60) {
+      targetStage = "suspension";
+    } else {
+      targetStage = "critical";
+    }
+
+    const group = matrix.stages[targetStage];
+    group.companyCount++;
+    group.totalAmount += d.overdue;
+    group.companies.push(d);
+
+    matrix.totalOverdueCompanies++;
+    matrix.totalOverdueAmount += d.overdue;
+  }
+
+  return matrix;
+}
+
+export async function getDebtAgingMatrix(
+  db: Db,
+  opts: DebtScopeOptions & { period?: string } = {}
+): Promise<DebtAgingMatrix> {
+  const debtors = await listDebtors(db, { ...opts, scope: "overdue" });
+  return computeDebtAgingMatrix(debtors);
 }

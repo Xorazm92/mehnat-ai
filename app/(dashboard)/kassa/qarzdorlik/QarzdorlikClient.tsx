@@ -53,6 +53,8 @@ interface DebtorRow {
   overdue: number;
   dueNow: number;
   monthsOverdue: number;
+  /** Eng eski to'lanmagan hisob muddatidan beri o'tgan kunlar (`lib/debt.ts`). */
+  overdueDays: number;
   lastPaidPeriod: string | null;
   accountantName: string | null;
   supervisorName: string | null;
@@ -96,6 +98,30 @@ interface Props {
 
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
 
+/**
+ * 4 BOSQICHLI AGING MATRITSASI.
+ *
+ * Chegaralar `lib/debt.ts` `computeDebtAgingMatrix` bilan AYNAN bir xil —
+ * ekran va direktorning kunlik hisoboti bir xil bosqichni ko'rsatishi kerak.
+ * Kun `overdueDays` dan olinadi: u eng eski to'lanmagan hisobning to'lov
+ * oynasi yopilganidan beri o'tgan HAQIQIY kun.
+ */
+const AGING_STAGES = [
+  { key: "normal", label: "1-10 kun", hint: "Operatsion", max: 10, color: "var(--text-muted)" },
+  { key: "warning", label: "11-30 kun", hint: "Ogohlantirish", max: 30, color: "var(--warning)" },
+  { key: "suspension", label: "31-60 kun", hint: "To'xtatish xavfi", max: 60, color: "var(--accent-orange, #f97316)" },
+  { key: "critical", label: "60+ kun", hint: "Kritik / sud", max: Infinity, color: "var(--danger)" },
+] as const;
+
+type AgingStageKey = (typeof AGING_STAGES)[number]["key"];
+
+const stageOf = (days: number): AgingStageKey => {
+  if (days <= 10) return "normal";
+  if (days <= 30) return "warning";
+  if (days <= 60) return "suspension";
+  return "critical";
+};
+
 export default function QarzdorlikClient({
   debt,
   debtors,
@@ -112,17 +138,39 @@ export default function QarzdorlikClient({
   // Farqi bor qatorlar tepada — aynan ular e'tibor talab qiladi.
   const [onlyDiff, setOnlyDiff] = useState(false);
   const [debtorQuery, setDebtorQuery] = useState("");
+  // Bosqich filtri — kartani bosganda jadval o'sha bosqichga qisqaradi.
+  const [stageFilter, setStageFilter] = useState<AgingStageKey | null>(null);
+
+  // Matritsa FAQAT muddati o'tganlardan quriladi: "bu oy yig'iladi" hali
+  // kechikish emas va uni bosqichga qo'yish soxta signal berardi.
+  const aging = useMemo(() => {
+    const acc: Record<AgingStageKey, { count: number; amount: number }> = {
+      normal: { count: 0, amount: 0 },
+      warning: { count: 0, amount: 0 },
+      suspension: { count: 0, amount: 0 },
+      critical: { count: 0, amount: 0 },
+    };
+    for (const r of debtors.rows) {
+      if (r.overdue <= 0) continue;
+      const bucket = acc[stageOf(r.overdueDays)];
+      bucket.count++;
+      bucket.amount += r.overdue;
+    }
+    return acc;
+  }, [debtors.rows]);
 
   const debtorRows = useMemo(() => {
     const q = debtorQuery.trim().toLowerCase();
-    if (!q) return debtors.rows;
-    return debtors.rows.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.inn.includes(q) ||
-        (r.accountantName ?? "").toLowerCase().includes(q)
-    );
-  }, [debtors.rows, debtorQuery]);
+    return debtors.rows
+      .filter((r) => (stageFilter ? r.overdue > 0 && stageOf(r.overdueDays) === stageFilter : true))
+      .filter(
+        (r) =>
+          !q ||
+          r.name.toLowerCase().includes(q) ||
+          r.inn.includes(q) ||
+          (r.accountantName ?? "").toLowerCase().includes(q)
+      );
+  }, [debtors.rows, debtorQuery, stageFilter]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -152,6 +200,45 @@ export default function QarzdorlikClient({
       {/* Rahbarga kerak bo'lgan birinchi narsa — raqam emas, HARAKAT ro'yxati.
           Shuning uchun u sahifaning eng tepasida. */}
       <CollectionQueue rows={queue.rows} totals={queue.totals} />
+
+      {/* AGING MATRITSASI — "qancha qarz" emas, "qancha VAQTDAN BERI".
+          60 kunlik 10 mln 10 kunlik 50 mln dan xavfliroq, va bu farq
+          yig'ma summada umuman ko'rinmaydi. */}
+      {debtors.totals.overdue > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {AGING_STAGES.map((s) => {
+            const b = aging[s.key];
+            const active = stageFilter === s.key;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setStageFilter(active ? null : s.key)}
+                disabled={b.count === 0}
+                className="rounded-xl px-3 py-2.5 text-left transition-opacity disabled:opacity-45 disabled:cursor-default"
+                style={{
+                  ...card,
+                  borderColor: active ? s.color : "var(--card-border)",
+                  boxShadow: active ? `inset 0 0 0 1px ${s.color}` : undefined,
+                }}
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-micro font-semibold uppercase tracking-wider" style={{ color: s.color }}>
+                    {s.label}
+                  </span>
+                  <span className="text-micro tabular-nums" style={{ color: "var(--text-muted)" }}>
+                    {b.count} ta
+                  </span>
+                </div>
+                <div className="text-meta font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
+                  {formatNum(b.amount)} so&apos;m
+                </div>
+                <div className="text-micro" style={{ color: "var(--text-muted)" }}>{s.hint}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* TO'LAMAGAN FIRMALAR — sahifaning eng amaliy bloki, shuning uchun
           eng tepada. Direktorning kunlik Telegram hisoboti aynan shu
@@ -214,7 +301,7 @@ export default function QarzdorlikClient({
             <table className="w-full text-meta">
               <thead>
                 <tr style={{ background: "var(--table-header-bg)" }}>
-                  {["Firma", "Shartnoma", "Bu oy yig'iladi", "Muddati o'tgan", "Oy", "Oxirgi to'lov", "Mas'ul"].map((h, i) => (
+                  {["Firma", "Shartnoma", "Bu oy yig'iladi", "Muddati o'tgan", "Kun", "Oxirgi to'lov", "Mas'ul"].map((h, i) => (
                     <th
                       key={h}
                       className={`px-3 py-2 text-micro font-semibold uppercase tracking-wider whitespace-nowrap ${i >= 1 && i <= 4 ? "text-right" : "text-left"}`}
@@ -241,8 +328,16 @@ export default function QarzdorlikClient({
                     <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: "var(--danger)" }}>
                       {r.overdue > 0 ? formatNum(r.overdue) : "—"}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: "var(--text-muted)" }}>
-                      {r.monthsOverdue > 0 ? r.monthsOverdue : "—"}
+                    <td
+                      className="px-3 py-2 text-right tabular-nums font-semibold"
+                      style={{
+                        color:
+                          r.overdue > 0
+                            ? AGING_STAGES.find((s) => s.key === stageOf(r.overdueDays))!.color
+                            : "var(--text-muted)",
+                      }}
+                    >
+                      {r.overdue > 0 ? r.overdueDays : "—"}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       {r.lastPaidPeriod ? (

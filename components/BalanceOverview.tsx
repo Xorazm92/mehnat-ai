@@ -110,6 +110,17 @@ export default function BalanceOverview({ breakdown: b, variant = "full", title 
         </div>
       )}
 
+      {b.transitBalance !== undefined && b.transitBalance > 0 && (
+        <div className="mb-4 p-3 rounded-xl flex items-center justify-between text-xs" style={{ background: "var(--accent-bg, rgba(59, 130, 246, 0.08))", border: "1px solid var(--accent-border, rgba(59, 130, 246, 0.2))" }}>
+          <span style={{ color: "var(--text-secondary)" }}>
+            Joylashuvi: <strong style={{ color: "var(--text-primary)" }}>Kassada: {som(b.balance - b.transitBalance)} so&apos;m</strong>
+          </span>
+          <span className="font-bold" style={{ color: "var(--accent-color, #3b82f6)" }}>
+            Kartalarda (Tranzit): {som(b.transitBalance)} so&apos;m
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <div className="text-micro font-bold uppercase tracking-widest mb-2" style={{ color: "var(--success)" }}>Kirim manbalari</div>

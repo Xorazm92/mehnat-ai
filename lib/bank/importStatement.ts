@@ -15,6 +15,7 @@
 
 import { Prisma } from "@prisma/client";
 import { periodKeyOf } from "@/lib/periods";
+import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { transactionHash } from "./parseStatement";
 import { extractContract } from "./extractContract";
 import { classifyExpense, type ExpenseCategory } from "./classifyExpense";
@@ -350,6 +351,27 @@ export async function applyAllocation(db: Db, input: AllocationInput): Promise<P
     where: { id: payment.id },
     data: { amount: paymentTotal, status, paymentDate: input.receivedAt },
   });
+
+  await reverseLedger(db, {
+    sourceTable: "Payment",
+    sourceId: payment.id,
+    createdBy: input.createdBy ?? null,
+    reason: "to'lov taqsimoti yangilandi",
+  });
+
+  if ((status === "paid" || status === "partial") && paymentTotal > 0) {
+    await postLedger(db, {
+      legs: [
+        { accountId: ACCOUNTS.CASH, debit: paymentTotal, channelId: input.channelId ?? null },
+        { accountId: ACCOUNTS.CONTRACT_INCOME, credit: paymentTotal, subjectId: input.companyId },
+      ],
+      period,
+      sourceTable: "Payment",
+      sourceId: payment.id,
+      createdBy: input.createdBy ?? null,
+      description: `Shartnoma to'lovi (${period})`,
+    });
+  }
 
   return {
     paymentId: payment.id,

@@ -55,13 +55,27 @@ export function computeCoverTransfers(
 ): CoverTransfer[] {
   if (absencePercent <= 0 || companies.length === 0) return [];
 
+  // Bitta xodim bir kunda bitta smena bajaradi.
+  // companyId = null (global) yozuvi companyId = X (firma) yozuvidan ustun turadi.
+  const byDate = new Map<string, CoverInput>();
+  for (const c of covers) {
+    const dStr = c.date instanceof Date ? c.date.toISOString().slice(0, 10) : new Date(c.date).toISOString().slice(0, 10);
+    const existing = byDate.get(dStr);
+    if (!existing) {
+      byDate.set(dStr, c);
+    } else if (existing.companyId !== null && c.companyId === null) {
+      byDate.set(dStr, c);
+    }
+  }
+  const dedupedCovers = Array.from(byDate.values());
+
   const byCompany = new Map<string, CompanyBase>();
   for (const c of companies) byCompany.set(c.companyId, c);
 
   // (cover, company, kind) bo'yicha yig'amiz — bitta xodimga bitta qator.
   const acc = new Map<string, CoverTransfer>();
 
-  for (const cover of covers) {
+  for (const cover of dedupedCovers) {
     if (cover.coverUserId === cover.absentUserId) continue;
 
     const targets = cover.companyId

@@ -105,6 +105,10 @@ export const calculateCompanySalaries = (
     };
     const contract = toNum((operation as any)?.contract_amount ?? company.contractAmount ?? (company as any).contract_amount ?? 0);
 
+    // ATAYLAB dedup QILINMAYDI: (month, companyId, employeeId, ruleId) DB darajasida
+    // unique (prisma/schema.prisma), ya'ni dublikat bo'lishi mumkin emas. Bu yerda
+    // qatorlarni yig'ish qonuniy bir nechta KPI yozuvini yo'qotadi va chegara
+    // (capKpiPercent) hech qachon ishga tushmaydi. Qarang: ADR-0004.
     const companyPerf = performances.filter(p => {
         if (p.companyId !== company.id) return false;
         // Only approved KPI affects payroll. Backward compatible: if status is missing, assume approved.

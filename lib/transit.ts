@@ -25,6 +25,8 @@
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { recordKassaMovement, type CashActor } from "@/lib/cashGate";
+import { ACCOUNTS, postLedger } from "@/lib/ledger";
+import { periodKeyOf } from "@/lib/periods";
 
 type Db = Prisma.TransactionClient;
 
@@ -152,7 +154,7 @@ export async function recordTransitIn(
   });
 
   // Tranzaksiya endi hal qilingan — chiqim navbatida qolmasin.
-  await db.bankTransaction.update({
+  const bankTx = await db.bankTransaction.update({
     where: { id: input.bankTransactionId },
     data: {
       status: "posted",
@@ -160,6 +162,19 @@ export async function recordTransitIn(
       postedAt: new Date(),
       postedBy: input.createdBy ?? null,
     },
+    select: { accountId: true },
+  });
+
+  await postLedger(db, {
+    legs: [
+      { accountId: ACCOUNTS.CASH, debit: input.amount, channelId: input.channelId },
+      { accountId: ACCOUNTS.CASH, credit: input.amount, channelId: bankTx.accountId },
+    ],
+    period: periodKeyOf(input.date),
+    sourceTable: "TransitEntry",
+    sourceId: entry.id,
+    createdBy: input.createdBy ?? null,
+    description: input.description ?? "Tranzit kartaga o'tkazildi",
   });
 
   return { entryId: entry.id, alreadyLinked: false };

@@ -147,6 +147,7 @@ export async function gatherChecklist(db: Db, year: number, month: number): Prom
     trial,
     cashBalance,
     integrityErrors,
+    closeFigures,
   ] = await Promise.all([
     db.kassaEntry.count({
       where: { status: "pending", deletedAt: null, date: { gte: from, lt: to } },
@@ -172,6 +173,7 @@ export async function gatherChecklist(db: Db, year: number, month: number): Prom
     getTrialBalance(db, key),
     getLedgerCashBalance(db, key),
     checkLedgerSourceIntegrity(db, key),
+    computeCloseFigures(db, year, month),
   ]);
 
   // Majburiyat formulasi to'lov chegarasi bilan BIR XIL manbadan
@@ -181,6 +183,7 @@ export async function gatherChecklist(db: Db, year: number, month: number): Prom
   const obligationTotal = computeObligation(obligations);
   const paidTotal = Number(payoutsPaid._sum.amount ?? 0);
   const unpaid = computeRemaining(obligationTotal, paidTotal);
+  const balanceDiff = Math.abs(closeFigures.closingBalance - closeFigures.ledgerBalance);
 
   const items: ChecklistItem[] = [
     {
@@ -235,6 +238,18 @@ export async function gatherChecklist(db: Db, year: number, month: number): Prom
     },
     // OGOHLANTIRISHLAR — buxgalteriya jihatdan yopishni bloklamaydi:
     // ochiq debitorka (mijoz to'lamagan) va keyin to'lanadigan oylik normal holat.
+    {
+      // ATAYLAB bloklamaydi. Kassa balansi va ledger balansi ikki MUSTAQIL manbadan
+      // hisoblanadi (jadval agregatlari vs LedgerEntry), va tarixiy import yo'llari
+      // ledgerga yozmagani uchun prodda ular hali teng emas. Bloklovchi qilinsa oy
+      // umuman yopilmay qoladi. Farq nolga tushirilgandan keyin blocking: true ga
+      // o'tkazish kerak.
+      key: "ledger_source_balance_match",
+      label: "Kassa balansi ↔ Ledger balansi farqi (ogohlantirish)",
+      ok: balanceDiff <= 0.01,
+      blocking: false,
+      detail: balanceDiff > 0.01 ? `Kassa = ${closeFigures.closingBalance}, Ledger = ${closeFigures.ledgerBalance} (farq: ${closeFigures.closingBalance - closeFigures.ledgerBalance})` : undefined,
+    },
     {
       key: "pending_payments",
       label: "Mijoz to'lovlari 'pending' holatda (debitorka — ogohlantirish)",

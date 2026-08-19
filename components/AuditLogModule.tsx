@@ -193,16 +193,18 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                                     </td>
                                     <td className="px-6 py-4 border-l" style={{ borderColor: 'var(--card-border)' }}>
                                         <span className="px-3 py-1.5 rounded-lg text-micro font-semibold uppercase tracking-widest inline-block" style={{
-                                            background: log.action.includes('delete') ? 'color-mix(in srgb, var(--danger) 10%, transparent)' :
+                                            background: log.action === 'negative_balance_override' ? 'color-mix(in srgb, var(--danger) 20%, transparent)' :
+                                                log.action.includes('delete') ? 'color-mix(in srgb, var(--danger) 10%, transparent)' :
                                                 log.action.includes('create') || log.action.includes('insert') ? 'color-mix(in srgb, var(--success) 10%, transparent)' :
-                                                    log.action.includes('update') ? 'color-mix(in srgb, var(--warning) 10%, transparent)' :
-                                                        'var(--accent-blue-light)',
-                                            color: log.action.includes('delete') ? 'var(--danger)' :
+                                                log.action.includes('update') ? 'color-mix(in srgb, var(--warning) 10%, transparent)' :
+                                                'var(--accent-blue-light)',
+                                            color: log.action === 'negative_balance_override' ? 'var(--danger)' :
+                                                log.action.includes('delete') ? 'var(--danger)' :
                                                 log.action.includes('create') || log.action.includes('insert') ? 'var(--success)' :
-                                                    log.action.includes('update') ? 'var(--warning)' :
-                                                        'var(--accent-blue)'
+                                                log.action.includes('update') ? 'var(--warning)' :
+                                                'var(--accent-blue)'
                                         }}>
-                                            {log.action.replace('_', ' ')}
+                                            {log.action === 'negative_balance_override' ? 'MANFIY BALANS OVERRIDE' : log.action.replace('_', ' ')}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 border-l" style={{ borderColor: 'var(--card-border)' }}>

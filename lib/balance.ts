@@ -14,6 +14,7 @@ import { isAdminRole, ROLE_LABELS, type UserRole } from "@/lib/permissions";
 import type { Prisma } from "@prisma/client";
 import { formatNum } from "@/lib/format";
 import type { BalanceBreakdown } from "@/types";
+import { getTotalTransitBalance } from "@/lib/transit";
 
 /**
  * Balansni tranzaksiya ICHIDA o'qish uchun. Chaqiruvchi `tx` bersa, o'qish
@@ -41,7 +42,7 @@ export async function getAvailableBalance(opts?: {
   db?: Db;
 }): Promise<BalanceBreakdown> {
   const db = opts?.db ?? prisma;
-  const [paidPayments, kassaIncome, kassaExpense, payouts] =
+  const [paidPayments, kassaIncome, kassaExpense, payouts, transitBalance] =
     await Promise.all([
       db.payment.aggregate({
         where: { status: { in: ["paid", "partial"] }, deletedAt: null },
@@ -65,6 +66,7 @@ export async function getAvailableBalance(opts?: {
         where: { deletedAt: null },
         _sum: { amount: true },
       }),
+      getTotalTransitBalance(db as Prisma.TransactionClient).catch(() => 0),
     ]);
 
   const incomePayments = n(paidPayments._sum.amount);
@@ -83,6 +85,7 @@ export async function getAvailableBalance(opts?: {
     income,
     outflow,
     balance: income - outflow,
+    transitBalance,
     incomePayments,
     incomeKassa,
     outflowExpenses,
@@ -309,5 +312,7 @@ export async function assertSufficientFunds(params: {
         },
       },
     })
-    .catch(() => {});
+    .catch((err) => {
+      console.error("Admin override audit log yaratishda xatolik:", err);
+    });
 }

@@ -18,7 +18,15 @@ import { getAvailableBalance, getDayMovement } from "@/lib/balance";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
 import { logServerError } from "@/lib/logger";
 import { formatNum } from "@/lib/format";
-import { computeContractDebt, listDebtors, periodKeyOf, type DebtTotals, type DebtorRow } from "@/lib/debt";
+import {
+  computeContractDebt,
+  getDebtAgingMatrix,
+  listDebtors,
+  periodKeyOf,
+  type DebtAgingMatrix,
+  type DebtTotals,
+  type DebtorRow,
+} from "@/lib/debt";
 
 type Db = Prisma.TransactionClient;
 
@@ -45,6 +53,12 @@ export interface DirectorReport {
    * `total` esa joriy oy ishini ham qo'shadi va o'zi bilan hech narsa demaydi.
    */
   debt: Omit<DebtTotals, "byCompany">;
+  /** 4 bosqichli qarzdorlik matritsasi (1-10, 11-30, 31-60, 60+ kun). */
+  agingMatrix: DebtAgingMatrix;
+  /** Top 10 yirik hamkorlar va ularning qarzdorlik/shartnoma holati. */
+  topPartners: DebtorRow[];
+  /** B2B va B2C tushumlar bo'linmasi. */
+  revenueBreakdown: { b2bIncome: number; b2cIncome: number };
   /** Muddati o'tgan qarzi eng katta firmalar — xabarda nomma-nom ko'rinadi. */
   topDebtors: DebtorRow[];
   obligations: { overdue: number; dueToday: number };
@@ -78,13 +92,54 @@ export interface DirectorRecipient {
   telegramUserId: bigint | null;
 }
 
+/**
+ * Hisobotni KO'RISHGA haqli rollar — yagona manba.
+ *
+ * Bu ro'yxat ikki joyda ishlaydi: kimga yuboriladi (`collectDirectorRecipients`)
+ * va kim tugmani bosib ichkariga kira oladi (`canSeeDirectorReport`). Ikkisi
+ * ajralib qolsa, hisobotni olmagan odam uning batafsil ekranini ocha olardi —
+ * hisobot butun firma kesimini beradi va portfelga bo'linmagan.
+ */
+export const DIRECTOR_ROLES = ["super_admin", "admin"] as const;
+
+export const canSeeDirectorReport = (role: string): boolean =>
+  (DIRECTOR_ROLES as readonly string[]).includes(role);
+
 /** Direktorlar: faol super_admin va admin. */
 export async function collectDirectorRecipients(db: Db): Promise<DirectorRecipient[]> {
   return db.user.findMany({
-    where: { isActive: true, role: { in: ["super_admin", "admin"] } },
+    where: { isActive: true, role: { in: [...DIRECTOR_ROLES] } },
     select: { id: true, fullName: true, role: true, telegramUserId: true },
     orderBy: { fullName: "asc" },
   });
+}
+
+/**
+ * B2B (shartnomali) va B2C (chakana/kassa) tushumlari.
+ */
+async function getRevenueBreakdown(db: Db, period: string) {
+  // IKKALASI HAM SHU DAVR uchun. `KassaEntry` da `period` ustuni yo'q, shuning
+  // uchun sana oralig'i bilan filtrlanadi — busiz B2C tizim ochilganidan beri
+  // JAMI kirimni bergan va B2B yonida taqqoslab bo'lmas raqam bo'lardi.
+  const [y, m] = period.split("-").map(Number);
+  const from = new Date(Date.UTC(y, m - 1, 1));
+  const to = new Date(Date.UTC(y, m, 1));
+
+  const [b2bPayment, kassaIncome] = await Promise.all([
+    db.payment.aggregate({
+      where: { period, status: { in: ["paid", "partial"] }, deletedAt: null },
+      _sum: { amount: true },
+    }),
+    db.kassaEntry.aggregate({
+      where: { type: "income", deletedAt: null, date: { gte: from, lt: to } },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const b2bIncome = Number(b2bPayment._sum?.amount ?? 0);
+  const b2cIncome = Number(kassaIncome._sum?.amount ?? 0);
+
+  return { b2bIncome, b2cIncome };
 }
 
 /**
@@ -98,27 +153,38 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
   const tomorrowStart = new Date(todayStart.getTime() + 86_400_000);
   const period = periodKeyOf(now);
 
-  const [yesterday, balance, debts, topDebtors, overdue, dueToday, pendingExpenses, pendingProofs] =
-    await Promise.all([
-      getDayMovement(yesterdayDate, db),
-      getAvailableBalance(),
-      computeContractDebt(db, period),
-      // Nomma-nom ro'yxat: "kim" degan savolga javob raqamdan muhimroq.
-      // `collect` — muddati o'tgan VA shu oy yig'ilishi kerak bo'lganlar:
-      // direktorga ikkalasi ham kerak, biri aralashuv, biri inkasso rejasi.
-      listDebtors(db, { period, scope: "collect", limit: 5 }),
-      db.obligation.count({
-        where: { status: { in: OPEN_OBLIGATION_STATUSES }, dueAt: { lt: todayStart } },
-      }),
-      db.obligation.count({
-        where: {
-          status: { in: OPEN_OBLIGATION_STATUSES },
-          dueAt: { gte: todayStart, lt: tomorrowStart },
-        },
-      }),
-      db.kassaEntry.count({ where: { status: "pending", deletedAt: null } }),
-      countPendingProofs(db),
-    ]);
+  const [
+    yesterday,
+    balance,
+    debts,
+    topDebtors,
+    topPartners,
+    agingMatrix,
+    revenueBreakdown,
+    overdue,
+    dueToday,
+    pendingExpenses,
+    pendingProofs,
+  ] = await Promise.all([
+    getDayMovement(yesterdayDate, db),
+    getAvailableBalance(),
+    computeContractDebt(db, period),
+    listDebtors(db, { period, scope: "collect", limit: 5 }),
+    listDebtors(db, { period, scope: "all", limit: 10 }),
+    getDebtAgingMatrix(db, { period }),
+    getRevenueBreakdown(db, period),
+    db.obligation.count({
+      where: { status: { in: OPEN_OBLIGATION_STATUSES }, dueAt: { lt: todayStart } },
+    }),
+    db.obligation.count({
+      where: {
+        status: { in: OPEN_OBLIGATION_STATUSES },
+        dueAt: { gte: todayStart, lt: tomorrowStart },
+      },
+    }),
+    db.kassaEntry.count({ where: { status: "pending", deletedAt: null } }),
+    countPendingProofs(db),
+  ]);
 
   // `byCompany` xaritasi xabarga kerak emas (va Telegram qatlamiga Map
   // uzatish serializatsiyada muammo beradi) — faqat yig'ma sonlar ketadi.
@@ -129,6 +195,9 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
     yesterday,
     balance: { income: balance.income, outflow: balance.outflow, balance: balance.balance },
     debt: debtTotals,
+    agingMatrix,
+    topPartners,
+    revenueBreakdown,
     topDebtors,
     obligations: { overdue, dueToday },
     pending: { expenses: pendingExpenses, proofs: pendingProofs },

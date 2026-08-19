@@ -95,8 +95,25 @@ export async function resolveObligationForCell(
   period: string,
   colKey: string,
 ): Promise<ResolvedObligation | null> {
+  if (!companyId || typeof companyId !== "string" || !companyId.trim()) {
+    throw new Error("resolveObligationForCell: companyId majburiy va bo'sh bo'lmasligi kerak");
+  }
+  if (!period || typeof period !== "string" || !period.trim()) {
+    throw new Error("resolveObligationForCell: period majburiy va bo'sh bo'lmasligi kerak");
+  }
+
+  // Bog'lanmagan ustun THROW QILMAYDI: matritsada shablonsiz ("matritsa-only")
+  // ustunlar bor (stat12*, bank_klient, kartoteka ...). Throw qilinsa o'sha
+  // kataklarni saqlashning o'zi xato bilan tugaydi — chaqiruvchi
+  // (server/operations.ts) buni catch qilmaydi. Jim no-op qaytaramiz, faqat
+  // dev'da ogohlantiramiz.
   const codes = COL_KEY_TO_TEMPLATE_CODES[colKey];
-  if (!codes?.length) return null;
+  if (!codes?.length) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[obligationBridge] '${colKey}' ustuni hech qanday shablonga bog'lanmagan — majburiyat yangilanmadi`);
+    }
+    return null;
+  }
 
   const monthKey = toObligationMonthKey(period);
   const ym = toYearMonthKey(period);

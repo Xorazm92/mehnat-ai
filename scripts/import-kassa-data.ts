@@ -21,6 +21,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseMealWorkbook } from "@/lib/mealExpenses";
 import { KASSA_CATEGORIES_KEY } from "@/lib/kassaCategories";
+import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
+import { periodKeyOf } from "@/lib/periods";
 
 const DIR = path.join(process.cwd(), "others_json_files");
 
@@ -99,19 +101,40 @@ async function main() {
         where: { description: { startsWith: key }, deletedAt: null },
         select: { id: true },
       });
+      let entryId: string;
       if (existing) {
         await prisma.kassaEntry.update({ where: { id: existing.id }, data: { amount: e.amount } });
+        entryId = existing.id;
+        await reverseLedger(prisma, {
+          sourceTable: "KassaEntry",
+          sourceId: entryId,
+          createdBy: "import_kassa_data",
+          reason: "import xarajat yangilandi",
+        });
       } else {
-        await prisma.kassaEntry.create({
+        const created = await prisma.kassaEntry.create({
           data: {
             type: "expense",
             category: "ovqat_xojalik",
             amount: e.amount,
             date: e.date,
             description: `${key} — ${e.category}`,
+            status: "approved",
           },
         });
+        entryId = created.id;
       }
+      await postLedger(prisma, {
+        legs: [
+          { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: e.amount },
+          { accountId: ACCOUNTS.CASH, credit: e.amount, channelId: null },
+        ],
+        period: periodKeyOf(e.date),
+        sourceTable: "KassaEntry",
+        sourceId: entryId,
+        createdBy: "import_kassa_data",
+        description: `${key} — ${e.category}`,
+      });
       written++;
     }
   }
