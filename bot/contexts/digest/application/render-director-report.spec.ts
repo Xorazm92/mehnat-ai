@@ -5,7 +5,22 @@
 // (masalan "233 tasi umuman to'lamagan") u oylar davomida shovqin bo'lib
 // turadi va hech kim sezmaydi.
 import { describe, it, expect } from "vitest";
-import { renderDirectorReport } from "./render-director-report";
+import { renderDirectorReport as renderHtml } from "./render-director-report";
+
+/**
+ * Testlar MA'NONI tekshiradi, RAZMETKANI emas.
+ *
+ * Hisobot Telegram HTML chizadi (qalin sarlavha, yig'iladigan sitata). Agar
+ * har tasdiq `<b>` va `<i>` larni ham yozib chiqsa, keyingi dizayn tuzatishi
+ * o'nlab testni buzadi va ular tekshirayotgan qoidalar ko'rinmay ketadi.
+ * Shuning uchun teglar olib tashlanadi va qochirilgan belgilar qaytariladi.
+ */
+const renderDirectorReport = (report: Parameters<typeof renderHtml>[0]): string =>
+  renderHtml(report)
+    .replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
 import type { DirectorReport } from "../../../../lib/directorReport";
 
 const empty: DirectorReport = {
@@ -62,8 +77,8 @@ const debtor = (name: string, overdue: number, monthsOverdue = 1, accountantName
 describe("renderDirectorReport", () => {
   it("sarlavha va kassa balansini chizadi", () => {
     const text = renderDirectorReport(empty);
-    expect(text).toContain("📊 Kunlik hisobot — 13-avgust");
-    expect(text).toContain("🏦 Kassa balansi: 666,019,900 so'm");
+    expect(text).toContain("📊 Kunlik hisobot · 13-avgust");
+    expect(text).toContain("🏦 Kassa balansi  666,019,900 so'm");
   });
 
   // Nol harakat tinchlik belgisi EMAS — ish kunida vipiska yuklanmagan
@@ -78,7 +93,8 @@ describe("renderDirectorReport", () => {
       yesterday: { income: 5_000_000, outflow: 1_000_000 },
     });
     expect(text).not.toContain("Harakat umuman yo'q");
-    expect(text).toContain("Sof:    +4,000,000 so'm");
+    // Kirim · chiqim · sof — bitta qatorda.
+    expect(text).toContain("⬆️ 5,000,000 · ⬇️ 1,000,000 · +4,000,000 so'm");
   });
 
   // ASOSIY REGRESSIYA. Joriy oy qoldig'i o'zi bilan ogohlantirish EMAS:
@@ -142,8 +158,8 @@ describe("renderDirectorReport", () => {
       debt: { ...empty.debt, total: 832_200_000 },
       debt1C: { asOf: new Date(2026, 7, 7), total: 902_233_000, contracts: 131, asroComparable: 832_200_000 },
     });
-    expect(text).toContain("📒 1C bo'yicha qarz: 902,233,000 so'm (7-avgust holatiga, 131 shartnoma)");
-    expect(text).toContain("ASRO hisobi (o'sha sanaga): 832,200,000 so'm");
+    expect(text).toContain("📒 1C sverka · 7-avgust · 131 shartnoma");
+    expect(text).toContain("1C: 902,233,000 · ASRO: 832,200,000 so'm");
     expect(text).toContain("Farq: +70,033,000 so'm");
   });
 

@@ -131,11 +131,14 @@ async function dispatch(
     case ACTION.RECEIPT_DISMISS:
       return handleReceiptDismiss(prisma, payload.id, user.id);
 
+    // Bu uch ekran HTML chizadi (qalin sarlavha, yig'iladigan sitata) —
+    // ularning renderer'lari har dinamik qiymatni `esc()` dan o'tkazadi.
     case ACTION.MENU:
       return {
         edit: {
           text: renderMenu(user.fullName),
           replyMarkup: mainMenuKeyboard(opts.secret, user.role),
+          parseMode: "HTML",
         },
       };
     case ACTION.MENU_TASKS:
@@ -143,6 +146,7 @@ async function dispatch(
         edit: {
           text: await renderMyTasks(prisma, user),
           replyMarkup: backToMenuKeyboard(opts.secret),
+          parseMode: "HTML",
         },
       };
     case ACTION.MENU_KPI:
@@ -150,6 +154,7 @@ async function dispatch(
         edit: {
           text: await renderMyKpi(prisma, user),
           replyMarkup: backToMenuKeyboard(opts.secret),
+          parseMode: "HTML",
         },
       };
     case ACTION.MENU_TODAY: {
@@ -181,6 +186,7 @@ async function dispatch(
         edit: {
           text: await renderTeam(prisma, actor),
           replyMarkup: backToMenuKeyboard(opts.secret),
+          parseMode: "HTML",
         },
       };
     case ACTION.MENU_PASSWORD:

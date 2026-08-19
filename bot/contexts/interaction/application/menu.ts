@@ -13,6 +13,7 @@ import {
   type InlineKeyboardMarkup,
 } from "../../../telegram/keyboard";
 import { appBaseUrl } from "../../../config";
+import { b, esc, expandableQuote, i } from "../../../telegram/html";
 import { rollupLedger } from "../../kpi/application/rollup";
 import { periodOf } from "../../kpi/domain/kpi-event";
 
@@ -87,7 +88,7 @@ export function backToMenuKeyboard(secret: string): InlineKeyboardMarkup {
 }
 
 export function renderMenu(fullName: string): string {
-  return [`👋 ${fullName}`, "", "Nima qilamiz?"].join("\n");
+  return [`👋 ${b(fullName)}`, i("Nima qilamiz?")].join("\n");
 }
 
 /**
@@ -104,17 +105,20 @@ export async function renderMyKpi(
     select: { type: true, points: true },
   });
   const roll = rollupLedger(events.map((e) => ({ type: e.type, points: Number(e.points) })));
+  const head = `${b("📊 KPI ballarim")} ${i(`— ${period}`)}`;
   if (roll.count === 0) {
-    return `📊 ${user.fullName} — ${period}\nBu oyda hali KPI hodisasi yo'q.`;
+    return [head, "", "Bu oyda hali KPI hodisasi yo'q."].join("\n");
   }
-  const breakdown = Object.entries(roll.byType)
-    .map(([t, v]) => `• ${KPI_TYPE_LABEL[t] ?? t}: ${v >= 0 ? "+" : ""}${v}`)
-    .join("\n");
+  const breakdown = Object.entries(roll.byType).map(
+    ([t, v]) => `${v >= 0 ? "🟢" : "🔴"} ${esc(KPI_TYPE_LABEL[t] ?? t)} — ${v >= 0 ? "+" : ""}${v}`,
+  );
   return [
-    `📊 ${user.fullName} — ${period}`,
-    `Sof ball: ${roll.net >= 0 ? "+" : ""}${roll.net}`,
-    `Hodisalar: ${roll.count}`,
-    breakdown,
+    head,
+    "",
+    // Sof ball — ekrandagi YAGONA muhim raqam, shuning uchun yolg'iz turadi.
+    `${b(`Sof ball: ${roll.net >= 0 ? "+" : ""}${roll.net}`)} ${i(`· ${roll.count} ta hodisa`)}`,
+    "",
+    ...breakdown,
   ].join("\n");
 }
 
@@ -145,16 +149,24 @@ export async function renderMyTasks(
   }
 
   const shown = obligations.slice(0, TASK_LIMIT);
+  // Ish NOMI qalin, tafsilot esa so'nik: ro'yxatga qaragan odam avval "nima
+  // qilish kerak" ni ko'radi, "qaysi firma, qachon" keyingi navbatda turadi.
   const lines = shown.map((o) => {
     // isOverdue is computed, never stored — see the Obligation model comment.
     const overdue = o.dueAt < now;
-    return `${overdue ? "🔴" : "🟡"} ${o.template.name} — ${o.company.name} · ${o.periodKey} · ${ymd(o.dueAt)}`;
+    return [
+      `${overdue ? "🔴" : "🟡"} ${b(o.template.name)}`,
+      `      ${esc(o.company.name)} ${i(`· ${o.periodKey} · ${ymd(o.dueAt)}`)}`,
+    ].join("\n");
   });
   if (obligations.length > TASK_LIMIT) {
-    lines.push(`… va yana ${obligations.length - TASK_LIMIT} ta`);
+    lines.push(i(`… va yana ${obligations.length - TASK_LIMIT} ta`));
   }
   const overdueCount = shown.filter((o) => o.dueAt < now).length;
-  const head = overdueCount > 0 ? `📋 Vazifalar (${overdueCount} ta muddati o'tgan)` : "📋 Vazifalar";
+  const head =
+    overdueCount > 0
+      ? `${b("📋 Vazifalarim")} ${i(`— ${overdueCount} ta muddati o'tgan`)}`
+      : b("📋 Vazifalarim");
   return [head, "", ...lines].join("\n");
 }
 
@@ -197,7 +209,7 @@ export async function renderTeam(
     prisma.monthlyPerformance.count({ where: { status: "submitted", ...scope } }),
   ]);
 
-  const lines = ["🏢 Portfelim", ""];
+  const lines = [b("🏢 Portfelim"), ""];
   if (behind.length === 0) {
     lines.push("✅ Muddati o'tgan majburiyat yo'q.");
   } else {
@@ -229,26 +241,34 @@ export async function renderTeam(
       }
     }
 
-    lines.push(`Muddati o'tgan majburiyatlar — jami ${totalOverdue} ta`);
+    lines.push(i(`Muddati o'tgan majburiyatlar — jami ${totalOverdue} ta`), "");
+    // Har xodim — ikki qator: kim/qancha, keyin eng eski ishi. Uch bo'lakni
+    // bitta qatorga tiqish telefonda o'ralib ketardi va ro'yxat o'qilmasdi.
+    const rows: string[] = [];
     for (const row of behind) {
       // Biriktirilmagan qatorni ism bilan yozib bo'lmaydi va u BOSHQA ish:
       // odamga emas, biriktiruvga e'tibor kerak.
       const who = row.responsibleUserId
         ? (names.get(row.responsibleUserId) ?? "—")
         : "⚠️ biriktirilmagan";
-      lines.push("", `🔴 ${who}: ${row._count._all} ta`);
+      rows.push(`🔴 ${b(who)} — ${row._count._all} ta`);
       const o = row.responsibleUserId ? firstFor.get(row.responsibleUserId) : undefined;
       if (o) {
-        lines.push(
-          `   eng eskisi: ${o.template.name} — ${o.company.name} · ${o.periodKey} · ${daysLate(o.dueAt, now)} kun`,
+        rows.push(
+          `      ${esc(o.template.name)}`,
+          `      ${esc(o.company.name)} ${i(`· ${o.periodKey} · ${daysLate(o.dueAt, now)} kun`)}`,
         );
       }
+      rows.push("");
     }
-    const qolgan = totalOverdue - behind.reduce((sum, b) => sum + b._count._all, 0);
-    if (qolgan > 0) lines.push("", `… va yana ${qolgan} ta boshqalarda`);
+    // Yig'iladigan sitata: yopiq holda xabar qisqa turadi, bosilganda hammasi
+    // ochiladi — ya'ni hech narsa yashirilmaydi, lekin ekran to'lib ketmaydi.
+    lines.push(expandableQuote(rows.filter((r, idx) => !(r === "" && idx === rows.length - 1))));
+    const qolgan = totalOverdue - behind.reduce((sum, x) => sum + x._count._all, 0);
+    if (qolgan > 0) lines.push(i(`… va yana ${qolgan} ta boshqalarda`));
   }
   if (pendingKpi > 0) {
-    lines.push("", `📊 ${pendingKpi} ta KPI qatori tasdiqingizni kutmoqda`);
+    lines.push("", `📊 ${b(pendingKpi)} ta KPI qatori tasdiqingizni kutmoqda`);
   }
   return lines.join("\n");
 }

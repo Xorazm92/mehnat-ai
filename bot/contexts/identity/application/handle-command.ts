@@ -25,6 +25,8 @@ export interface CommandContext {
 export interface CommandReplyPayload {
   text: string;
   replyMarkup?: ReplyMarkup;
+  /** "HTML" ⇒ matn qochirilgan HTML (bot/telegram/html.ts). */
+  parseMode?: "HTML";
 }
 
 /** A handler may answer with plain text or with text plus a keyboard. */
@@ -149,7 +151,11 @@ async function start(prisma: PrismaClient, ctx: CommandContext): Promise<Command
 
   if (user) {
     return isPrivate
-      ? { text: renderMenu(user.fullName), replyMarkup: mainMenuKeyboard(ctx.secret, user.role) }
+      ? {
+          text: renderMenu(user.fullName),
+          replyMarkup: mainMenuKeyboard(ctx.secret, user.role),
+          parseMode: "HTML" as const,
+        }
       : `Siz: ${user.fullName} — ${user.role}. Menyu uchun botga shaxsiy yozing.`;
   }
 
@@ -169,10 +175,10 @@ async function whoami(prisma: PrismaClient, ctx: CommandContext): Promise<string
 }
 
 /** Hidden alias for the "📊 KPI ballarim" button. */
-async function stats(prisma: PrismaClient, ctx: CommandContext): Promise<string> {
+async function stats(prisma: PrismaClient, ctx: CommandContext): Promise<CommandResult> {
   const user = await resolveUserByTelegramId(prisma, ctx.callerTelegramId);
   if (!user) return "Avval /start bosing va raqamingizni yuboring.";
-  return renderMyKpi(prisma, user);
+  return { text: await renderMyKpi(prisma, user), parseMode: "HTML" as const };
 }
 
 /**

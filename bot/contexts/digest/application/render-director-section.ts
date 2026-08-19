@@ -25,6 +25,7 @@ import {
   type InlineKeyboardMarkup,
 } from "../../../telegram/keyboard";
 import { uzDate } from "./render-director-report";
+import { b, esc, expandableQuote, i, quote } from "../../../telegram/html";
 
 /**
  * Bo'lim kalitlari. Qiymatlar SIM formatining bir qismi: `callback_data` ichida
@@ -54,9 +55,15 @@ export function isDirectorSectionKey(key: string): key is DirectorSectionKey {
 /** Batafsil ekranda nechta firma ko'rinadi — Telegram xabari 4096 belgi. */
 const DETAIL_ROWS = 15;
 
-/** "ℹ️ Asos:" — raqam qaysi hisobdan chiqqani. Har ekranning oxirgi qatori. */
+/**
+ * "ℹ️ Asos:" — raqam qaysi hisobdan chiqqani. Har ekranning oxirgi bloki.
+ *
+ * Sitata ichida va so'nik: bu ma'lumot HAR SAFAR o'qilishi shart emas, lekin
+ * bir marta o'qilganda raqamga bo'lgan ishonchni belgilaydi. Shuning uchun
+ * ko'rinadi, ammo asosiy raqamlar bilan bir og'irlikda turmaydi.
+ */
 function basis(...lines: string[]): string[] {
-  return ["", "ℹ️ Asos:", ...lines.map((l) => `   ${l}`)];
+  return ["", quote([`ℹ️ ${b("Asos")}`, ...lines.map((l) => i(l))])];
 }
 
 function debtorLine(row: DebtorRow, amount: number, extra = ""): string {
@@ -75,21 +82,20 @@ export interface DirectorSectionView {
 function cashSection(r: DirectorReport): string[] {
   const net = r.yesterday.income - r.yesterday.outflow;
   const lines = [
-    `💰 Pul harakati — ${uzDate(r.forDate)}`,
+    `💰 ${b("Pul harakati")} ${i(`· ${uzDate(r.forDate)}`)}`,
     "",
-    `Kirim:  ${som(r.yesterday.income)} so'm`,
-    `Chiqim: ${som(r.yesterday.outflow)} so'm`,
-    `Sof:    ${net >= 0 ? "+" : ""}${som(net)} so'm`,
+    `⬆️ Kirim   ${som(r.yesterday.income)} so'm`,
+    `⬇️ Chiqim  ${som(r.yesterday.outflow)} so'm`,
+    `${net >= 0 ? "🟢" : "🔴"} Sof     ${b(`${net >= 0 ? "+" : ""}${som(net)} so'm`)}`,
     "",
-    `🏦 Kassa qoldig'i: ${som(r.balance.balance)} so'm`,
-    `   Jami kirim:  ${som(r.balance.income)} so'm`,
-    `   Jami chiqim: ${som(r.balance.outflow)} so'm`,
+    `🏦 ${b("Kassa qoldig'i")}  ${b(`${som(r.balance.balance)} so'm`)}`,
+    i(`   jami kirim ${som(r.balance.income)} · jami chiqim ${som(r.balance.outflow)}`),
   ];
   const { b2bIncome, b2cIncome } = r.revenueBreakdown;
   if (b2bIncome > 0 || b2cIncome > 0) {
     lines.push(
       "",
-      "📈 Joriy oy tushumi",
+      `📈 ${b("Joriy oy tushumi")}`,
       `   Shartnoma (B2B): ${som(b2bIncome)} so'm`,
       `   Kassa (B2C):     ${som(b2cIncome)} so'm`,
     );
@@ -97,7 +103,7 @@ function cashSection(r: DirectorReport): string[] {
   if (r.plan) {
     lines.push(
       "",
-      `🎯 ${r.plan.period} rejasi: ${r.plan.percent}%`,
+      `🎯 ${b(`${r.plan.period} rejasi: ${r.plan.percent}%`)}`,
       `   Reja: ${som(r.plan.plan)} so'm`,
       `   Fakt: ${som(r.plan.fact)} so'm`,
     );
@@ -115,13 +121,14 @@ function cashSection(r: DirectorReport): string[] {
 function collectSection(r: DirectorReport): string[] {
   const rows = r.topDebtors.filter((x) => x.dueNow > 0);
   const lines = [
-    `📥 Bu oy yig'ilishi kerak — ${r.debt.dueNowCompanies} ta firma`,
-    `Jami: ${som(r.debt.dueNowTotal)} so'm`,
+    `📥 ${b("Bu oy yig'ilishi kerak")} ${i(`· ${r.debt.dueNowCompanies} ta firma`)}`,
+    `Jami: ${b(`${som(r.debt.dueNowTotal)} so'm`)}`,
     "",
   ];
-  for (const row of rows.slice(0, DETAIL_ROWS)) lines.push(debtorLine(row, row.dueNow));
+  const shown = rows.slice(0, DETAIL_ROWS).map((row) => debtorLine(row, row.dueNow));
   const qolgan = r.debt.dueNowCompanies - Math.min(DETAIL_ROWS, rows.length);
-  if (qolgan > 0) lines.push(`… va yana ${qolgan} ta — to'liq ro'yxat saytda`);
+  if (qolgan > 0) shown.push(i(`… va yana ${qolgan} ta — to'liq ro'yxat saytda`));
+  if (shown.length > 0) lines.push(expandableQuote(shown));
   return [
     ...lines,
     ...basis(
@@ -135,8 +142,8 @@ function collectSection(r: DirectorReport): string[] {
 function overdueSection(r: DirectorReport): string[] {
   const rows = r.topDebtors.filter((x) => x.overdue > 0);
   const lines = [
-    `⚠️ Muddati o'tgan qarz — ${r.debt.overdueCompanies} ta firma`,
-    `Jami: ${som(r.debt.overdueTotal)} so'm`,
+    `⚠️ ${b("Muddati o'tgan qarz")} ${i(`· ${r.debt.overdueCompanies} ta firma`)}`,
+    `Jami: ${b(`${som(r.debt.overdueTotal)} so'm`)}`,
   ];
   if (r.debt.neverPaid > 0) {
     lines.push(`🔴 ${r.debt.neverPaid} tasi bir marta ham to'lamagan`);
@@ -149,21 +156,23 @@ function overdueSection(r: DirectorReport): string[] {
     (s) => s.companyCount > 0,
   );
   if (stages.length > 0) {
-    lines.push("", "📊 Kechikish bosqichlari");
-    for (const s of stages) {
-      lines.push(`   ${s.label}: ${s.companyCount} ta — ${som(s.totalAmount)} so'm`);
+    lines.push("", `📊 ${b("Kechikish bosqichlari")}`);
+    for (const st of stages) {
+      lines.push(`   ${esc(st.label)}: ${st.companyCount} ta — ${som(st.totalAmount)} so'm`);
     }
   }
 
+  const rowsOut: string[] = [];
   if (rows.length > 0) {
-    lines.push("", "Eng yiriklari");
+    lines.push("", b("Eng yiriklari"));
     for (const row of rows.slice(0, DETAIL_ROWS)) {
       const oy = row.monthsOverdue > 0 ? ` · ${row.monthsOverdue} oylik` : "";
       const oxirgi = row.lastPaidPeriod ? "" : " · hech to'lamagan";
-      lines.push(`   ${debtorLine(row, row.overdue, `${oy}${oxirgi}`)}`);
+      rowsOut.push(debtorLine(row, row.overdue, `${i(`${oy}${oxirgi}`)}`));
     }
     const qolgan = r.debt.overdueCompanies - Math.min(DETAIL_ROWS, rows.length);
-    if (qolgan > 0) lines.push(`   … va yana ${qolgan} ta — to'liq ro'yxat saytda`);
+    if (qolgan > 0) rowsOut.push(i(`… va yana ${qolgan} ta — to'liq ro'yxat saytda`));
+    lines.push(expandableQuote(rowsOut));
   }
   return [
     ...lines,
@@ -178,22 +187,22 @@ function overdueSection(r: DirectorReport): string[] {
 function obligationsSection(r: DirectorReport): string[] {
   const o = r.obligations;
   const lines = [
-    "⏰ Majburiyatlar",
+    b("⏰ Majburiyatlar"),
     "",
-    `🔴 Muddati o'tgan: ${o.overdue} ta`,
-    `🟡 Bugun oxirgi kun: ${o.dueToday} ta`,
+    `🔴 Muddati o'tgan: ${b(`${o.overdue} ta`)}`,
+    `🟡 Bugun oxirgi kun: ${b(`${o.dueToday} ta`)}`,
   ];
   // "1890 ta" o'zi qaror uchun yaroqsiz raqam — kimda to'planganini bilmasa,
   // direktor buni har kuni o'qib, hech qachon hech narsa qilmaydi.
   if (o.topResponsible.length > 0) {
-    lines.push("", "Kimda to'planib qolgan");
+    lines.push("", b("Kimda to'planib qolgan"));
     for (const row of o.topResponsible) {
-      lines.push(`   🔴 ${row.name}: ${row.count} ta · eng eskisi ${row.oldestDays} kun`);
+      lines.push(`   🔴 ${esc(row.name)}: ${row.count} ta ${i(`· eng eskisi ${row.oldestDays} kun`)}`);
     }
   }
   if (o.unassigned > 0) {
     // Bu boshqacha ish: odamni emas, BIRIKTIRUVNI tuzatish kerak.
-    lines.push("", `⚠️ Mas'uli biriktirilmagan: ${o.unassigned} ta`);
+    lines.push("", `⚠️ ${b(`Mas'uli biriktirilmagan: ${o.unassigned} ta`)}`);
   }
   return [
     ...lines,
@@ -207,11 +216,11 @@ function obligationsSection(r: DirectorReport): string[] {
 }
 
 function queuesSection(r: DirectorReport): string[] {
-  const lines = ["🧾 Navbatlar — kim nima qilishi kerak", ""];
-  lines.push(`🧾 Tasdiq kutayotgan xarajat: ${r.pending.expenses} ta · admin`);
-  lines.push(`📎 Ko'rib chiqilmagan dalil: ${r.pending.proofs} ta · nazoratchi`);
-  lines.push(`🔗 Mijozi topilmagan kirim: ${r.unmatchedBank.income} ta · bank-klient`);
-  lines.push(`🧮 Toifalanmagan chiqim: ${r.unmatchedBank.expense} ta · admin`);
+  const lines = [`🧾 ${b("Navbatlar")} ${i("— kim nima qilishi kerak")}`, ""];
+  lines.push(`🧾 Tasdiq kutayotgan xarajat: ${b(`${r.pending.expenses} ta`)} ${i("· admin")}`);
+  lines.push(`📎 Ko'rib chiqilmagan dalil: ${b(`${r.pending.proofs} ta`)} ${i("· nazoratchi")}`);
+  lines.push(`🔗 Mijozi topilmagan kirim: ${b(`${r.unmatchedBank.income} ta`)} ${i("· bank-klient")}`);
+  lines.push(`🧮 Toifalanmagan chiqim: ${b(`${r.unmatchedBank.expense} ta`)} ${i("· admin")}`);
   return [
     ...lines,
     ...basis(
@@ -224,16 +233,16 @@ function queuesSection(r: DirectorReport): string[] {
 
 function onecSection(r: DirectorReport): string[] {
   const d = r.debt1C;
-  if (!d) return ["📒 1C bo'yicha kesim yuklanmagan."];
+  if (!d) return [`📒 ${b("1C bo'yicha kesim yuklanmagan.")}`];
   const diff = d.total - d.asroComparable;
   const lines = [
-    `📒 1C bilan sverka — ${uzDate(d.asOf)} holatiga`,
+    `📒 ${b("1C bilan sverka")} ${i(`· ${uzDate(d.asOf)} holatiga`)}`,
     "",
-    `1C:   ${som(d.total)} so'm (${d.contracts} shartnoma)`,
+    `1C:   ${som(d.total)} so'm ${i(`(${d.contracts} shartnoma)`)}`,
     `ASRO: ${som(d.asroComparable)} so'm`,
   ];
   if (Math.abs(diff) > 1000) {
-    lines.push(`Farq: ${diff > 0 ? "+" : ""}${som(diff)} so'm`);
+    lines.push(`${b(`Farq: ${diff > 0 ? "+" : ""}${som(diff)} so'm`)}`);
     lines.push(
       "",
       diff > 0

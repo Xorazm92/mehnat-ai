@@ -1,5 +1,6 @@
 import type { DirectorReport } from "../../../../lib/directorReport";
 import { formatNum as som } from "../../../../lib/format";
+import { b, esc, expandableQuote, i } from "../../../telegram/html";
 
 /**
  * Direktorning ertalabki hisoboti (09:00).
@@ -35,34 +36,38 @@ export function uzDate(d: Date): string {
 const SUMMARY_ROWS = 3;
 
 export function renderDirectorReport(report: DirectorReport): string {
-  const lines = [`📊 Kunlik hisobot — ${uzDate(report.forDate)}`, ""];
+  const lines = [`📊 ${b("Kunlik hisobot")} ${i(`· ${uzDate(report.forDate)}`)}`, ""];
 
-  lines.push("💰 Kecha");
-  lines.push(`   Kirim:  ${som(report.yesterday.income)} so'm`);
-  lines.push(`   Chiqim: ${som(report.yesterday.outflow)} so'm`);
+  // Uch qator o'rniga bitta: kecha bo'lgan harakat — bu bitta fakt, uch emas.
+  // Uch qator ekranning uchdan birini egallab, ostidagi ogohlantirishlarni
+  // pastga surib yuborardi.
   const net = report.yesterday.income - report.yesterday.outflow;
-  lines.push(`   Sof:    ${net >= 0 ? "+" : ""}${som(net)} so'm`);
+  lines.push(`💰 ${b("Kecha")}`);
+  lines.push(
+    `   ⬆️ ${som(report.yesterday.income)} · ⬇️ ${som(report.yesterday.outflow)} · ` +
+      `${b(`${net >= 0 ? "+" : ""}${som(net)}`)} so'm`,
+  );
   // Nol harakat — ma'lumot emas, TEKSHIRISH SABABI: ish kunida bank vipiskasi
   // yuklanmagan yoki kassa yuritilmagan bo'lishi mumkin. Buni aytmasa,
   // "0 so'm" tinchlik belgisi bo'lib ko'rinadi.
   if (report.yesterday.income === 0 && report.yesterday.outflow === 0) {
-    lines.push("   ⚠️ Harakat umuman yo'q — vipiska yuklanganini tekshiring");
+    lines.push(`   ⚠️ ${i("Harakat umuman yo'q — vipiska yuklanganini tekshiring")}`);
   }
   lines.push("");
 
-  lines.push(`🏦 Kassa balansi: ${som(report.balance.balance)} so'm`);
+  lines.push(`🏦 ${b("Kassa balansi")}  ${b(`${som(report.balance.balance)} so'm`)}`);
   // Manfiy balans — o'z-o'zidan "pul tugadi" degani EMAS. Amalda buning
   // sababi import assimetriyasi: xarajatlar eski davrdan yuklangan, ularni
   // qoplagan kirim esa yo'q (lib/reconciliation.ts "import-window" bandi).
   // Sababsiz ko'rsatilsa direktor bekorga vahimaga tushadi.
   if (report.balance.balance < 0) {
-    lines.push("   ⚠️ Manfiy — kirim/chiqim import davrlari mos emas (/kassa/qarzdorlik → sverka)");
+    lines.push(`   ⚠️ ${i("Manfiy — kirim/chiqim import davrlari mos emas")}`);
   }
   if (report.plan) {
     const mark = report.plan.percent >= 100 ? "✅" : report.plan.percent >= 90 ? "🟡" : "🔴";
     lines.push(
-      `${mark} ${report.plan.period} rejasi: ${report.plan.percent}% ` +
-        `(${som(report.plan.fact)} / ${som(report.plan.plan)})`
+      `${mark} ${b(`${report.plan.period} rejasi: ${report.plan.percent}%`)} ` +
+        i(`(${som(report.plan.fact)} / ${som(report.plan.plan)})`),
     );
   }
   lines.push("");
@@ -84,34 +89,34 @@ export function renderDirectorReport(report: DirectorReport): string {
   if (d.dueNowCompanies > 0) {
     // Emoji "💰 Kecha" sarlavhasidan FARQLI bo'lishi kerak — aks holda matnni
     // qidirib bo'lmaydi (test aynan shunga qoqildi).
-    let block = `📥 Bu oy yig'ilishi kerak: ${d.dueNowCompanies} ta firma — ${som(d.dueNowTotal)} so'm`;
+    let block = `📥 ${b(`Bu oy yig'ilishi kerak: ${d.dueNowCompanies} ta firma`)} — ${som(d.dueNowTotal)} so'm`;
     for (const row of report.topDebtors.filter((r) => r.dueNow > 0).slice(0, SUMMARY_ROWS)) {
-      const kim = row.accountantName ? ` · ${row.accountantName}` : "";
-      block += `\n   • ${row.name} — ${som(row.dueNow)} so'm${kim}`;
+      const kim = row.accountantName ? ` · ${esc(row.accountantName)}` : "";
+      block += `\n   • ${esc(row.name)} — ${som(row.dueNow)} so'm${kim}`;
     }
     alerts.push(block);
   }
 
   if (d.overdueCompanies > 0) {
-    let block = `⚠️ Muddati o'tgan qarz: ${d.overdueCompanies} ta firma — ${som(d.overdueTotal)} so'm`;
+    let block = `⚠️ ${b(`Muddati o'tgan qarz: ${d.overdueCompanies} ta firma`)} — ${som(d.overdueTotal)} so'm`;
     if (d.neverPaid > 0) {
       block += `\n   🔴 ${d.neverPaid} tasi bir marta ham to'lamagan`;
     }
     for (const row of report.topDebtors.filter((r) => r.overdue > 0).slice(0, SUMMARY_ROWS)) {
       // Kasrli qiymat ham ko'rsatiladi ("0.5 oylik" = yarim oylik qarz).
       const oy = row.monthsOverdue > 0 ? ` · ${row.monthsOverdue} oylik` : "";
-      const kim = row.accountantName ? ` · ${row.accountantName}` : "";
-      block += `\n   • ${row.name} — ${som(row.overdue)} so'm${oy}${kim}`;
+      const kim = row.accountantName ? ` · ${esc(row.accountantName)}` : "";
+      block += `\n   • ${esc(row.name)} — ${som(row.overdue)} so'm${oy}${kim}`;
     }
     const qolgan = d.overdueCompanies - Math.min(SUMMARY_ROWS, report.topDebtors.filter((r) => r.overdue > 0).length);
-    if (qolgan > 0) block += `\n   … va yana ${qolgan} ta — «⚠️ Muddati o'tgan» tugmasi`;
+    if (qolgan > 0) block += "\n   " + i(`… va yana ${qolgan} ta — «⚠️ Muddati o'tgan» tugmasi`);
     alerts.push(block);
   }
   if (report.obligations.overdue > 0) {
     // Sanoq yonida ENG OG'IR mas'ul: busiz "1890 ta" har kuni o'qiladi va
     // hech qachon hech kimni harakatga chorlamaydi.
     const top = report.obligations.topResponsible[0];
-    const kim = top ? ` — eng ko'pi: ${top.name} (${top.count} ta)` : "";
+    const kim = top ? ` — ${i(`eng ko'pi: ${esc(top.name)} (${top.count} ta)`)}` : "";
     alerts.push(`⏰ Muddati o'tgan majburiyat: ${report.obligations.overdue} ta${kim}`);
   }
   if (report.obligations.dueToday > 0) {
@@ -139,11 +144,10 @@ export function renderDirectorReport(report: DirectorReport): string {
     // AYNAN SHU KESIM DAVRIGA hisoblangan ASRO raqami bilan solishtiriladi —
     // aks holda farq har doim bir oylik shartnoma summasicha yolg'on chiqadi.
     const diff = d.total - d.asroComparable;
-    let block =
-      `📒 1C bo'yicha qarz: ${som(d.total)} so'm (${uzDate(d.asOf)} holatiga, ${d.contracts} shartnoma)`;
-    block += `\n      ASRO hisobi (o'sha sanaga): ${som(d.asroComparable)} so'm`;
+    let block = `📒 ${b("1C sverka")} ${i(`· ${uzDate(d.asOf)} · ${d.contracts} shartnoma`)}`;
+    block += `\n      1C: ${som(d.total)} · ASRO: ${som(d.asroComparable)} so'm`;
     if (Math.abs(diff) > 1000) {
-      block += `\n      Farq: ${diff > 0 ? "+" : ""}${som(diff)} so'm — tekshirish kerak`;
+      block += `\n      ${b(`Farq: ${diff > 0 ? "+" : ""}${som(diff)} so'm`)} — tekshirish kerak`;
     } else {
       block += `\n      ✅ Mos keladi`;
     }
@@ -151,8 +155,11 @@ export function renderDirectorReport(report: DirectorReport): string {
   }
 
   if (alerts.length > 0) {
-    lines.push("⚠️ E'tibor talab qiladi");
-    lines.push(...alerts.map((a) => `   ${a}`));
+    lines.push(`⚠️ ${b("E'tibor talab qiladi")}`);
+    // Yig'iladigan sitata: yopiq holda xabar bir ekranga sig'adi, bosilganda
+    // hammasi ochiladi. Hech narsa yashirilmaydi — faqat birinchi qarashda
+    // ko'z bir devor matnga urilmaydi.
+    lines.push(expandableQuote(alerts));
   } else {
     lines.push("✅ E'tibor talab qiladigan holat yo'q");
   }

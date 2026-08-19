@@ -34,7 +34,17 @@ export interface CallbackOutcome {
    * the action visibly cannot be repeated. The server-side effect is idempotent
    * regardless; this is only the visible half.
    */
-  edit?: { text: string; replyMarkup?: InlineKeyboardMarkup };
+  edit?: {
+    text: string;
+    replyMarkup?: InlineKeyboardMarkup;
+    /**
+     * "HTML" ⇒ matn Telegram HTML sifatida chiziladi (qalin sarlavha,
+     * yig'iladigan sitata). Bunda matndagi HAR dinamik qiymat
+     * `bot/telegram/html.ts` dagi `esc()` dan o'tgan bo'lishi SHART — bitta
+     * qochirilmagan `&` butun xabarni rad ettiradi.
+     */
+    parseMode?: "HTML";
+  };
   /** Messages to deliver to other chats (notifying a chief, DMing a staffer). */
   send?: OutboundMessage[];
 }

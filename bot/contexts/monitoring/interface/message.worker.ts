@@ -108,7 +108,10 @@ async function runSideEffects(
   const reply = await routeCommand(prisma, update, { secret });
   if (reply) {
     try {
-      await sendMessage(reply.chatId, reply.text, { replyMarkup: reply.replyMarkup });
+      await sendMessage(reply.chatId, reply.text, {
+        replyMarkup: reply.replyMarkup,
+        parseMode: reply.parseMode,
+      });
     } catch (err) {
       console.error(
         `[message.worker] reply send failed for chat ${reply.chatId}: ${(err as Error).message}`,
@@ -155,6 +158,7 @@ async function handleCallback(update: RawTelegramUpdate, secret: string): Promis
   if (outcome.edit && callback.chatId != null && callback.messageId != null) {
     const edited = await editMessageText(callback.chatId, callback.messageId, outcome.edit.text, {
       replyMarkup: outcome.edit.replyMarkup,
+      parseMode: outcome.edit.parseMode,
     });
     // A button attached to a PHOTO (a forwarded receipt) has no text to edit.
     // Strip its keyboard instead, so the action still visibly cannot repeat.

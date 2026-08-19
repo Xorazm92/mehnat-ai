@@ -16,6 +16,10 @@ export function makeDirectorSender(secret: string): DirectorSender {
     if (recipient.telegramUserId == null) return false;
     const res = await trySendMessage(recipient.telegramUserId, renderDirectorReport(report), {
       replyMarkup: directorReportKeyboard(secret, report),
+      // Hisobot Telegram HTML chizadi; renderer har dinamik qiymatni `esc()`
+      // dan o'tkazadi, aks holda bitta `&` li firma nomi butun xabarni
+      // yubormay qo'yardi.
+      parseMode: "HTML",
     });
     return res.ok;
   };

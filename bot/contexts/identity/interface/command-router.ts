@@ -7,6 +7,7 @@ export interface CommandReply {
   chatId: bigint;
   text: string;
   replyMarkup?: ReplyMarkup;
+  parseMode?: "HTML";
 }
 
 /**
@@ -41,5 +42,5 @@ export async function routeCommand(
   if (!reply) return null;
   return typeof reply === "string"
     ? { chatId, text: reply }
-    : { chatId, text: reply.text, replyMarkup: reply.replyMarkup };
+    : { chatId, text: reply.text, replyMarkup: reply.replyMarkup, parseMode: reply.parseMode };
 }

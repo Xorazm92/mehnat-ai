@@ -73,19 +73,36 @@ export function verifyInitData(
   const hash = params.get("hash");
   if (!hash) return { ok: false, reason: "missing_hash" };
 
-  // `hash` ning o'zi tekshiruv satriga kirmaydi. `signature` ham chiqariladi:
-  // u Telegramning alohida Ed25519 imzosi va HMAC hisobiga qo'shilmaydi.
-  const pairs: string[] = [];
-  for (const [key, value] of params.entries()) {
-    if (key === "hash" || key === "signature") continue;
-    pairs.push(`${key}=${value}`);
-  }
-  pairs.sort();
-  const dataCheckString = pairs.join("\n");
-
+  // `hash` ning o'zi hech qachon tekshiruv satriga kirmaydi.
+  //
+  // `signature` esa — IKKI XIL TALQIN. Bot API 7.10 dan beri Telegram
+  // initData'ga o'zining Ed25519 imzosini (`signature`) ham qo'shadi. Uchinchi
+  // tomon tekshiruvida u albatta chiqariladi; bot tokeni bilan HMAC
+  // tekshiruvida esa Telegramning o'z hujjati "faqat hash chiqariladi" deydi
+  // va mijozlar amalda ham shunday hisoblaydi.
+  //
+  // Bu farq prod'da qimmatga tushdi: testda `signature` maydoni yo'q edi,
+  // shuning uchun uni chiqarib tashlash to'g'ri ko'rinardi va butun Mini App
+  // haqiqiy Telegram'da "imzo mos emas" deb rad etardi — token joyida bo'lsa
+  // ham. Shuning uchun IKKALA variant ham hisoblanadi va biri mos kelsa
+  // yetarli.
+  //
+  // Bu xavfsizlikni pasaytirmaydi: ikkala satr ham AYNI shu ma'lumot ustidan,
+  // AYNI bot tokeni bilan imzolangan. Kalitni bilmagan odam ikkalasidan ham
+  // birortasini yasay olmaydi.
   const secretKey = createHmac("sha256", "WebAppData").update(botToken).digest();
-  const expected = createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
-  if (!safeEqualHex(hash, expected)) return { ok: false, reason: "bad_signature" };
+  const matches = (excludeSignature: boolean): boolean => {
+    const pairs: string[] = [];
+    for (const [key, value] of params.entries()) {
+      if (key === "hash") continue;
+      if (excludeSignature && key === "signature") continue;
+      pairs.push(`${key}=${value}`);
+    }
+    pairs.sort();
+    const expected = createHmac("sha256", secretKey).update(pairs.join("\n")).digest("hex");
+    return safeEqualHex(hash, expected);
+  };
+  if (!matches(false) && !matches(true)) return { ok: false, reason: "bad_signature" };
 
   const authDateRaw = Number(params.get("auth_date"));
   if (!Number.isFinite(authDateRaw)) return { ok: false, reason: "expired" };

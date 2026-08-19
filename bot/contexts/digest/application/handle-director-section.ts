@@ -81,6 +81,7 @@ export async function handleDirectorSection(
       edit: {
         text: renderDirectorReport(report),
         replyMarkup: directorReportKeyboard(opts.secret, report),
+        parseMode: "HTML",
       },
     };
   }
@@ -90,6 +91,7 @@ export async function handleDirectorSection(
     edit: {
       text: view.text,
       replyMarkup: directorSectionKeyboard(opts.secret, sectionKey, appBaseUrl()),
+      parseMode: "HTML",
     },
   };
 }

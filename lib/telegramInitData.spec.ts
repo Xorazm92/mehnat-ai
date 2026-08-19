@@ -98,4 +98,31 @@ describe("verifyInitData — rejection", () => {
     // Otherwise a deployment with no token would accept anything.
     expect(verifyInitData(validInitData(), "", NOW)).toEqual({ ok: false, reason: "no_token" });
   });
+
+  // BOT API 7.10+ — haqiqiy Telegram initData'da `signature` ham keladi.
+  // Prod'da butun Mini App aynan shu maydon tufayli ishlamay turgan edi:
+  // testlarda u yo'q, shuning uchun xato ko'rinmasdi.
+  it("signature maydoni HMAC ichida bo'lsa ham qabul qiladi", () => {
+    const fields = {
+      auth_date: String(Math.floor(Date.now() / 1000)),
+      query_id: "AAF",
+      signature: "ed25519-imzo",
+      user: JSON.stringify({ id: 42, first_name: "Test" }),
+    };
+    // `signature` CHIQARILMASDAN imzolangan — Telegram shunday yuboradi.
+    const initData = signInitDataForTest(fields, TOKEN);
+    const res = verifyInitData(initData, TOKEN);
+    expect(res.ok).toBe(true);
+  });
+
+  // Eski talqin ham ishlashda davom etsin (signature hisobga kirmagan holat).
+  it("signature chiqarib imzolangan initData ham o'tadi", () => {
+    const base = {
+      auth_date: String(Math.floor(Date.now() / 1000)),
+      user: JSON.stringify({ id: 42, first_name: "Test" }),
+    };
+    const signed = new URLSearchParams(signInitDataForTest(base, TOKEN));
+    signed.set("signature", "ed25519-imzo");
+    expect(verifyInitData(signed.toString(), TOKEN).ok).toBe(true);
+  });
 });

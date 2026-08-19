@@ -18,6 +18,17 @@ import { ACTION } from "../../interaction/domain/actions";
 
 const SECRET = "test-secret";
 
+/**
+ * Testlar MA'NONI tekshiradi, razmetkani emas — ekran Telegram HTML chizadi
+ * va keyingi dizayn tuzatishi tasdiqlarni buzmasligi kerak.
+ */
+const plain = (text: string): string =>
+  text
+    .replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+
 const empty: DirectorReport = {
   forDate: new Date(2026, 7, 13),
   yesterday: { income: 0, outflow: 0 },
@@ -113,22 +124,22 @@ describe("directorReportKeyboard", () => {
 
 describe("renderDirectorSection", () => {
   it("pul harakati ekrani qoldiq va rejani ochib beradi", () => {
-    const { text } = renderDirectorSection(DIRECTOR_SECTION.CASH, {
+    const { text: raw } = renderDirectorSection(DIRECTOR_SECTION.CASH, {
       ...empty,
       yesterday: { income: 5_000_000, outflow: 2_000_000 },
       revenueBreakdown: { b2bIncome: 300_000_000, b2cIncome: 12_000_000 },
       plan: { period: "2026-08", plan: 500_000_000, fact: 312_000_000, percent: 62 },
     });
-    expect(text).toContain("💰 Pul harakati — 13-avgust");
-    expect(text).toContain("Sof:    +3,000,000 so'm");
-    expect(text).toContain("Shartnoma (B2B): 300,000,000 so'm");
-    expect(text).toContain("🎯 2026-08 rejasi: 62%");
-    expect(text).toContain("ℹ️ Asos:");
+    expect(plain(raw)).toContain("💰 Pul harakati · 13-avgust");
+    expect(plain(raw)).toContain("Sof     +3,000,000 so'm");
+    expect(plain(raw)).toContain("Shartnoma (B2B): 300,000,000 so'm");
+    expect(plain(raw)).toContain("🎯 2026-08 rejasi: 62%");
+    expect(plain(raw)).toContain("ℹ️ Asos");
   });
 
   it("muddati o'tgan ekrani kechikish bosqichlarini beradi", () => {
     const alfa = debtor("Alfa MChJ", 9_000_000, 2);
-    const { text } = renderDirectorSection(DIRECTOR_SECTION.OVERDUE, {
+    const { text: raw } = renderDirectorSection(DIRECTOR_SECTION.OVERDUE, {
       ...empty,
       debt: { ...empty.debt, overdueCompanies: 2, overdueTotal: 15_000_000, neverPaid: 1 },
       topDebtors: [alfa, debtor("Beta MChJ", 6_000_000)],
@@ -142,47 +153,47 @@ describe("renderDirectorSection", () => {
         totalOverdueAmount: 9_000_000,
       },
     });
-    expect(text).toContain("⚠️ Muddati o'tgan qarz — 2 ta firma");
-    expect(text).toContain("60+ kun: 1 ta — 9,000,000 so'm");
-    expect(text).toContain("• Alfa MChJ — 9,000,000 so'm · 2 oylik · hech to'lamagan · Aziza");
+    expect(plain(raw)).toContain("⚠️ Muddati o'tgan qarz · 2 ta firma");
+    expect(plain(raw)).toContain("60+ kun: 1 ta — 9,000,000 so'm");
+    expect(plain(raw)).toContain("• Alfa MChJ — 9,000,000 so'm · 2 oylik · hech to'lamagan · Aziza");
   });
 
   // Biriktirilmagan firma — o'zi topilma: qarzni hech kim yurgizmayapti.
   it("mas'ul yo'q bo'lsa buni ochiq aytadi", () => {
-    const { text } = renderDirectorSection(DIRECTOR_SECTION.COLLECT, {
+    const { text: raw } = renderDirectorSection(DIRECTOR_SECTION.COLLECT, {
       ...empty,
       debt: { ...empty.debt, dueNowCompanies: 1, dueNowTotal: 2_000_000 },
       topDebtors: [{ ...debtor("Gamma MChJ", 0, 0, null), dueNow: 2_000_000 }],
     });
-    expect(text).toContain("• Gamma MChJ — 2,000,000 so'm · biriktirilmagan");
+    expect(plain(raw)).toContain("• Gamma MChJ — 2,000,000 so'm · biriktirilmagan");
   });
 
   it("navbatlarni egasi bilan ajratadi", () => {
-    const { text } = renderDirectorSection(DIRECTOR_SECTION.QUEUES, {
+    const { text: raw } = renderDirectorSection(DIRECTOR_SECTION.QUEUES, {
       ...empty,
       pending: { expenses: 3, proofs: 384 },
       unmatchedBank: { income: 57, expense: 446 },
     });
-    expect(text).toContain("Mijozi topilmagan kirim: 57 ta · bank-klient");
-    expect(text).toContain("Toifalanmagan chiqim: 446 ta · admin");
+    expect(plain(raw)).toContain("Mijozi topilmagan kirim: 57 ta · bank-klient");
+    expect(plain(raw)).toContain("Toifalanmagan chiqim: 446 ta · admin");
   });
 
   it("1C farqini yo'nalishi bilan izohlaydi", () => {
-    const { text } = renderDirectorSection(DIRECTOR_SECTION.ONEC, {
+    const { text: raw } = renderDirectorSection(DIRECTOR_SECTION.ONEC, {
       ...empty,
       debt1C: { asOf: new Date(2026, 7, 7), total: 902_233_000, contracts: 131, asroComparable: 427_055_555 },
     });
-    expect(text).toContain("📒 1C bilan sverka — 7-avgust");
-    expect(text).toContain("Farq: +475,177,445 so'm");
-    expect(text).toContain("1C ko'proq");
+    expect(plain(raw)).toContain("📒 1C bilan sverka · 7-avgust");
+    expect(plain(raw)).toContain("Farq: +475,177,445 so'm");
+    expect(plain(raw)).toContain("1C ko'proq");
   });
 
   it("kesim yo'q bo'lsa 1C ekrani buni aytadi, bo'sh chiqmaydi", () => {
-    expect(renderDirectorSection(DIRECTOR_SECTION.ONEC, empty).text).toContain("yuklanmagan");
+    expect(plain(renderDirectorSection(DIRECTOR_SECTION.ONEC, empty).text)).toContain("yuklanmagan");
   });
 
   it("majburiyat sanog'ini kimda to'planganiga bog'laydi", () => {
-    const { text } = renderDirectorSection(DIRECTOR_SECTION.OBLIGATIONS, {
+    const { text: raw } = renderDirectorSection(DIRECTOR_SECTION.OBLIGATIONS, {
       ...empty,
       obligations: {
         overdue: 1890,
@@ -194,10 +205,10 @@ describe("renderDirectorSection", () => {
         unassigned: 44,
       },
     });
-    expect(text).toContain("🔴 Muddati o'tgan: 1890 ta");
-    expect(text).toContain("🔴 Sevara: 126 ta · eng eskisi 212 kun");
+    expect(plain(raw)).toContain("🔴 Muddati o'tgan: 1890 ta");
+    expect(plain(raw)).toContain("🔴 Sevara: 126 ta · eng eskisi 212 kun");
     // Biriktirilmagan — odamni emas, biriktiruvni tuzatish kerak.
-    expect(text).toContain("Mas'uli biriktirilmagan: 44 ta");
+    expect(plain(raw)).toContain("Mas'uli biriktirilmagan: 44 ta");
   });
 });
 

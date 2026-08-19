@@ -26,9 +26,9 @@ describe("diagnoseInitData", () => {
     expect(d.message).toContain("TELEGRAM_BOT_TOKEN");
   });
 
-  it("imzo mos kelmasa tokenlar farqini ko'rsatadi", () => {
+  it("imzo mos kelmasa sozlama xatosi deb belgilaydi, sababni qat'iy aytmaydi", () => {
     const d = diagnoseInitData({ ok: false, reason: "bad_signature" })!;
-    expect(d.code).toBe("token_mismatch");
+    expect(d.code).toBe("bad_signature");
     expect(d.admin).toBe(true);
     // Tokenning O'ZI emas, faqat mos kelmagani aytiladi.
     expect(d.message).not.toMatch(/\d{6,}:/);

@@ -17,8 +17,8 @@ import type { InitDataResult } from "@/lib/telegramInitData";
 export type MiniAppDiagnosisCode =
   /** Saytda TELEGRAM_BOT_TOKEN yo'q — kirish umuman ishlamaydi. */
   | "server_no_token"
-  /** Imzo mos emas: sayt boshqa (eski) bot tokeni bilan ishlayapti. */
-  | "token_mismatch"
+  /** Imzo tekshiruvidan o'tmadi (token boshqa yoki tekshiruv qoidasi eskirgan). */
+  | "bad_signature"
   /** Telegram initData bermadi — sahifa brauzerda ochilgan. */
   | "not_in_telegram"
   /** Oyna uzoq ochiq turgan, initData eskirgan. */
@@ -62,11 +62,17 @@ export function diagnoseInitData(result: InitDataResult): MiniAppDiagnosis | nul
         admin: true,
       };
     case "bad_signature":
+      // ATAYIN sababni QAT'IY aytmaydi. Ilgari bu yerda "sayt boshqa bot
+      // tokeni bilan ishlayapti" deb yozilgandi va u prod'da YOLG'ON chiqdi:
+      // tokenlar bir xil edi, mos kelmagani esa tekshiruv qoidasi haqiqiy
+      // Telegram initData'siga (Bot API 7.10 `signature` maydoni) mos
+      // emasligidan edi. Aniq bo'lmagan narsani aniq deb aytish — noto'g'ri
+      // joyni soatlab qidirishga sabab.
       return {
-        code: "token_mismatch",
+        code: "bad_signature",
         message:
-          "Telegram imzosi mos kelmadi — sayt bot protsessidan boshqa bot " +
-          "tokeni bilan ishlayapti.",
+          "Telegram imzosi tekshiruvdan o'tmadi. Sayt va bot bir xil " +
+          "TELEGRAM_BOT_TOKEN ishlatayotganini tekshirish kerak.",
         admin: true,
       };
     case "expired":
