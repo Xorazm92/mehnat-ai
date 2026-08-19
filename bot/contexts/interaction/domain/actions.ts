@@ -24,6 +24,13 @@ export const ACTION = {
   /** Menu → issue a fresh website password to the caller's private chat. */
   MENU_PASSWORD: "mpwd",
 
+  /**
+   * Direktor hisobotining bo'limini ochish: "<sectionKey>".
+   * Bitta fe'l — kalit id'da keladi, chunki har bo'lim uchun alohida fe'l
+   * 64 baytlik byudjetdan yeyishdan boshqa hech narsa bermaydi.
+   */
+  DIR_SECTION: "drs",
+
   // ── Escalation verdicts ("<questionId>" / "<obligationId>") ──────────────
   /** Question: dock KPI points and ask the chief to confirm in the ERP. */
   Q_PENALTY: "qpen",

@@ -47,7 +47,7 @@ export function startNotifyWorker(): Worker<NotifyJob> {
 
       if (job.data.kind === "director-report") {
         const now = new Date();
-        const send = hasTelegramToken() ? makeDirectorSender() : undefined;
+        const send = hasTelegramToken() ? makeDirectorSender(secret) : undefined;
         const res = await runDirectorReport(prisma, { send, now });
         console.log(`[notify.worker] director report:`, res);
         return res;

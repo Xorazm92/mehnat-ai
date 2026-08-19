@@ -1,6 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 import { OPEN_OBLIGATION_STATUSES } from "../../../../lib/obligationWorkflow";
 import { isSeniorRole } from "../../../../lib/permissions";
+import { canSeeDirectorReport } from "../../../../lib/directorReport";
+import { DIRECTOR_SECTION } from "../../digest/application/render-director-section";
 import { scopeCompanyIds } from "../../../../lib/dailyDigest";
 import { encodeCallback } from "../domain/callback-token";
 import { ACTION } from "../domain/actions";
@@ -19,6 +21,20 @@ const OPEN_STATUSES = OPEN_OBLIGATION_STATUSES;
 
 /** How many rows a Telegram message can show before it stops being scannable. */
 const TASK_LIMIT = 8;
+
+/** Portfel ekranida nechta xodim ko'rinadi. */
+const TEAM_LIMIT = 5;
+
+/**
+ * Eng eski ishni topish uchun nechta majburiyat ko'riladi. Ko'rinadigan 5
+ * kishining har biri ro'yxatda uchrashi uchun yetarli zaxira bilan olinadi —
+ * biri 100 ta ish bilan boshini to'sib qo'ymasin.
+ */
+const OLDEST_SCAN = 200;
+
+/** Muddatdan beri necha kun o'tgani — sanoqqa ma'no beradigan yagona raqam. */
+const daysLate = (dueAt: Date, now: Date) =>
+  Math.max(0, Math.floor((now.getTime() - dueAt.getTime()) / 86_400_000));
 
 const KPI_TYPE_LABEL: Record<string, string> = {
   response: "Javob (savollarga)",
@@ -49,6 +65,12 @@ export function mainMenuKeyboard(secret: string, role?: string): InlineKeyboardM
     ],
     role && isSeniorRole(role)
       ? [cbButton("🏢 Portfelim", encodeCallback(secret, ACTION.MENU_TEAM))]
+      : null,
+    // Kunlik hisobot 09:00 da o'zi keladi; bu tugma uni ISTALGAN paytda qayta
+    // ochadi — ertalabki xabar chatda ko'milib ketsa ham. Handler rolni
+    // qaytadan tekshiradi: klaviatura rol o'zgarishidan uzoq yashaydi.
+    role && canSeeDirectorReport(role)
+      ? [cbButton("📊 Kunlik hisobot", encodeCallback(secret, ACTION.DIR_SECTION, DIRECTOR_SECTION.HOME))]
       : null,
     app
       ? [
@@ -109,6 +131,10 @@ export async function renderMyTasks(
       periodKey: true,
       status: true,
       company: { select: { name: true } },
+      // Ish NOMI. Busiz qator "firma + davr + sana" dan iborat bo'lardi va
+      // xodim ro'yxatga qarab nima qilishi kerakligini bilmasdi — soliq
+      // deklaratsiyasimi, statistikami, hisobotmi.
+      template: { select: { name: true } },
     },
     orderBy: { dueAt: "asc" },
     take: TASK_LIMIT + 1,
@@ -122,7 +148,7 @@ export async function renderMyTasks(
   const lines = shown.map((o) => {
     // isOverdue is computed, never stored — see the Obligation model comment.
     const overdue = o.dueAt < now;
-    return `${overdue ? "🔴" : "🟡"} ${o.company.name} — ${o.periodKey} · ${ymd(o.dueAt)}`;
+    return `${overdue ? "🔴" : "🟡"} ${o.template.name} — ${o.company.name} · ${o.periodKey} · ${ymd(o.dueAt)}`;
   });
   if (obligations.length > TASK_LIMIT) {
     lines.push(`… va yana ${obligations.length - TASK_LIMIT} ta`);
@@ -133,10 +159,15 @@ export async function renderMyTasks(
 }
 
 /**
- * The portfolio screen: who in my scope is behind, and what is waiting on me.
+ * Portfel ekrani: mening qamrovimda kim orqada va menda nima kutmoqda.
  *
- * Grouped in the database rather than pulled and counted in memory — a
- * supervisor's portfolio can hold thousands of obligations.
+ * Sanoq o'zi hech narsa demaydi — "Sevara: 126 ta" ni o'qigan rahbar keyin
+ * baribir saytga kirib qaramaguncha nima qilishini bilmaydi. Shuning uchun
+ * har ism yonida ENG ESKI ochiq majburiyat ko'rsatiladi: qaysi firma, qaysi
+ * davr va necha kun kechikkani — suhbat aynan shundan boshlanadi.
+ *
+ * Guruhlash bazada bajariladi (nazoratchi portfelida minglab majburiyat
+ * bo'lishi mumkin), tafsilot esa faqat ko'rinadigan 5 kishi uchun olinadi.
  */
 export async function renderTeam(
   prisma: PrismaClient,
@@ -152,15 +183,17 @@ export async function renderTeam(
     return "🏢 Portfelingizda korxona yo'q.";
   }
   const scope = companyIds === null ? {} : { companyId: { in: companyIds } };
+  const overdueWhere = { status: { in: OPEN_STATUSES }, dueAt: { lt: now }, ...scope };
 
-  const [behind, pendingKpi] = await Promise.all([
+  const [behind, totalOverdue, pendingKpi] = await Promise.all([
     prisma.obligation.groupBy({
       by: ["responsibleUserId"],
-      where: { status: { in: OPEN_STATUSES }, dueAt: { lt: now }, ...scope },
+      where: overdueWhere,
       _count: { _all: true },
       orderBy: { _count: { responsibleUserId: "desc" } },
-      take: 5,
+      take: TEAM_LIMIT,
     }),
+    prisma.obligation.count({ where: overdueWhere }),
     prisma.monthlyPerformance.count({ where: { status: "submitted", ...scope } }),
   ]);
 
@@ -169,18 +202,50 @@ export async function renderTeam(
     lines.push("✅ Muddati o'tgan majburiyat yo'q.");
   } else {
     const ids = behind.map((b) => b.responsibleUserId).filter((id): id is string => !!id);
-    const names = new Map(
-      (
-        await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, fullName: true } })
-      ).map((u) => [u.id, u.fullName]),
-    );
-    lines.push("Muddati o'tgan majburiyatlar:");
+    const [users, oldest] = await Promise.all([
+      ids.length
+        ? prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, fullName: true } })
+        : Promise.resolve([]),
+      // Har bir odamning eng eski ishi. Bittalab so'rov o'rniga bitta so'rov:
+      // eng eskilar boshida turadi, birinchi uchragani o'sha odamniki bo'ladi.
+      prisma.obligation.findMany({
+        where: { ...overdueWhere, responsibleUserId: { in: ids } },
+        select: {
+          responsibleUserId: true,
+          dueAt: true,
+          periodKey: true,
+          company: { select: { name: true } },
+          template: { select: { name: true } },
+        },
+        orderBy: { dueAt: "asc" },
+        take: OLDEST_SCAN,
+      }),
+    ]);
+    const names = new Map(users.map((u) => [u.id, u.fullName]));
+    const firstFor = new Map<string, (typeof oldest)[number]>();
+    for (const o of oldest) {
+      if (o.responsibleUserId && !firstFor.has(o.responsibleUserId)) {
+        firstFor.set(o.responsibleUserId, o);
+      }
+    }
+
+    lines.push(`Muddati o'tgan majburiyatlar — jami ${totalOverdue} ta`);
     for (const row of behind) {
+      // Biriktirilmagan qatorni ism bilan yozib bo'lmaydi va u BOSHQA ish:
+      // odamga emas, biriktiruvga e'tibor kerak.
       const who = row.responsibleUserId
         ? (names.get(row.responsibleUserId) ?? "—")
-        : "biriktirilmagan";
-      lines.push(`🔴 ${who}: ${row._count._all} ta`);
+        : "⚠️ biriktirilmagan";
+      lines.push("", `🔴 ${who}: ${row._count._all} ta`);
+      const o = row.responsibleUserId ? firstFor.get(row.responsibleUserId) : undefined;
+      if (o) {
+        lines.push(
+          `   eng eskisi: ${o.template.name} — ${o.company.name} · ${o.periodKey} · ${daysLate(o.dueAt, now)} kun`,
+        );
+      }
     }
+    const qolgan = totalOverdue - behind.reduce((sum, b) => sum + b._count._all, 0);
+    if (qolgan > 0) lines.push("", `… va yana ${qolgan} ta boshqalarda`);
   }
   if (pendingKpi > 0) {
     lines.push("", `📊 ${pendingKpi} ta KPI qatori tasdiqingizni kutmoqda`);

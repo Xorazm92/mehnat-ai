@@ -35,7 +35,7 @@ const empty: DirectorReport = {
   topPartners: [],
   revenueBreakdown: { b2bIncome: 0, b2cIncome: 0 },
   topDebtors: [],
-  obligations: { overdue: 0, dueToday: 0 },
+  obligations: { overdue: 0, dueToday: 0, topResponsible: [], unassigned: 0 },
   pending: { expenses: 0, proofs: 0 },
   unmatchedBank: { income: 0, expense: 0 },
   debt1C: null,
@@ -205,6 +205,21 @@ describe("renderDirectorReport", () => {
     const dueBlock = text.slice(text.indexOf("📥"), text.indexOf("⚠️ Muddati"));
     expect(dueBlock).toContain("Yangi MChJ");
     expect(dueBlock).not.toContain("Eski MChJ");
+  });
+
+  // Xulosadagi sanoq o'zi yetarli emas: yonida javobgar turmasa, direktor uni
+  // har kuni o'qib hech qachon hech narsa qilmaydi.
+  it("majburiyat sanogʻi yonida eng ogʻir masʼulni koʻrsatadi", () => {
+    const text = renderDirectorReport({
+      ...empty,
+      obligations: {
+        overdue: 1890,
+        dueToday: 0,
+        topResponsible: [{ name: "Sevara", count: 126, oldestDays: 212 }],
+        unassigned: 0,
+      },
+    });
+    expect(text).toContain("⏰ Muddati o'tgan majburiyat: 1890 ta — eng ko'pi: Sevara (126 ta)");
   });
 
   it("bank navbatlarini ikki xil ish sifatida ajratadi", () => {

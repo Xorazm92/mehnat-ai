@@ -10,19 +10,29 @@ import { formatNum as som } from "../../../../lib/format";
  * mumkin), shuning uchun sukut bilan yo'qotilmasin.
  */
 
-const UZ_MONTHS = [
+export const UZ_MONTHS = [
   "yanvar", "fevral", "mart", "aprel", "may", "iyun",
   "iyul", "avgust", "sentyabr", "oktyabr", "noyabr", "dekabr",
 ];
 
 /** "6-avgust" — Intl'siz (worker'da locale ma'lumoti bo'lmasligi mumkin). */
-function uzDate(d: Date): string {
+export function uzDate(d: Date): string {
   return `${d.getDate()}-${UZ_MONTHS[d.getMonth()]}`;
 }
 
 // Summa formatlash `lib/format.ts` dan. Bu yerda AYNI shu algoritmning
 // nusxasi bor edi ("formatNum bilan bir xil" deb izohlangan holda) — ya'ni
 // ikkalasi qo'lda sinxron tutilishi kerak edi. Endi bitta manba.
+
+/**
+ * Xulosada nechta firma nomma-nom ko'rinadi.
+ *
+ * 5 emas, 3: qolganini tugma ochadi. Xabar uzunligi o'zi ma'no tashiydi —
+ * ekranga sig'maydigan hisobotni direktor oxirigacha o'qimaydi va aynan
+ * pastda turgan navbatlar (tasdiq kutayotgan xarajat, sverka farqi)
+ * ko'rinmay qoladi.
+ */
+const SUMMARY_ROWS = 3;
 
 export function renderDirectorReport(report: DirectorReport): string {
   const lines = [`📊 Kunlik hisobot — ${uzDate(report.forDate)}`, ""];
@@ -75,7 +85,7 @@ export function renderDirectorReport(report: DirectorReport): string {
     // Emoji "💰 Kecha" sarlavhasidan FARQLI bo'lishi kerak — aks holda matnni
     // qidirib bo'lmaydi (test aynan shunga qoqildi).
     let block = `📥 Bu oy yig'ilishi kerak: ${d.dueNowCompanies} ta firma — ${som(d.dueNowTotal)} so'm`;
-    for (const row of report.topDebtors.filter((r) => r.dueNow > 0).slice(0, 5)) {
+    for (const row of report.topDebtors.filter((r) => r.dueNow > 0).slice(0, SUMMARY_ROWS)) {
       const kim = row.accountantName ? ` · ${row.accountantName}` : "";
       block += `\n   • ${row.name} — ${som(row.dueNow)} so'm${kim}`;
     }
@@ -87,18 +97,22 @@ export function renderDirectorReport(report: DirectorReport): string {
     if (d.neverPaid > 0) {
       block += `\n   🔴 ${d.neverPaid} tasi bir marta ham to'lamagan`;
     }
-    for (const row of report.topDebtors.filter((r) => r.overdue > 0).slice(0, 5)) {
+    for (const row of report.topDebtors.filter((r) => r.overdue > 0).slice(0, SUMMARY_ROWS)) {
       // Kasrli qiymat ham ko'rsatiladi ("0.5 oylik" = yarim oylik qarz).
       const oy = row.monthsOverdue > 0 ? ` · ${row.monthsOverdue} oylik` : "";
       const kim = row.accountantName ? ` · ${row.accountantName}` : "";
       block += `\n   • ${row.name} — ${som(row.overdue)} so'm${oy}${kim}`;
     }
-    const qolgan = d.overdueCompanies - report.topDebtors.filter((r) => r.overdue > 0).length;
-    if (qolgan > 0) block += `\n   … va yana ${qolgan} ta (to'liq ro'yxat: /kassa/qarzdorlik)`;
+    const qolgan = d.overdueCompanies - Math.min(SUMMARY_ROWS, report.topDebtors.filter((r) => r.overdue > 0).length);
+    if (qolgan > 0) block += `\n   … va yana ${qolgan} ta — «⚠️ Muddati o'tgan» tugmasi`;
     alerts.push(block);
   }
   if (report.obligations.overdue > 0) {
-    alerts.push(`⏰ Muddati o'tgan majburiyat: ${report.obligations.overdue} ta`);
+    // Sanoq yonida ENG OG'IR mas'ul: busiz "1890 ta" har kuni o'qiladi va
+    // hech qachon hech kimni harakatga chorlamaydi.
+    const top = report.obligations.topResponsible[0];
+    const kim = top ? ` — eng ko'pi: ${top.name} (${top.count} ta)` : "";
+    alerts.push(`⏰ Muddati o'tgan majburiyat: ${report.obligations.overdue} ta${kim}`);
   }
   if (report.obligations.dueToday > 0) {
     alerts.push(`🟡 Bugun oxirgi kun: ${report.obligations.dueToday} ta`);

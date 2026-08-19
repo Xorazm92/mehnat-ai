@@ -26,6 +26,7 @@ import {
 } from "../application/menu";
 import { buildDigest } from "../../../../lib/dailyDigest";
 import { renderDigest } from "../../digest/application/render-digest";
+import { handleDirectorSection } from "../../digest/application/handle-director-section";
 import {
   handleReceiptAsk,
   handleReceiptDismiss,
@@ -170,6 +171,11 @@ async function dispatch(
         },
       };
     }
+    // Direktor hisobotining batafsil ekranlari. Rol tekshiruvi handler ichida:
+    // hisobot butun firma kesimini beradi, portfelga bo'linmagan.
+    case ACTION.DIR_SECTION:
+      return handleDirectorSection(prisma, payload.id, actor, opts);
+
     case ACTION.MENU_TEAM:
       return {
         edit: {

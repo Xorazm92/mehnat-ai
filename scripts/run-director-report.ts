@@ -18,6 +18,8 @@ import {
   collectDirectorRecipients,
 } from "@/lib/directorReport";
 import { renderDirectorReport } from "@/bot/contexts/digest/application/render-director-report";
+import { directorReportKeyboard } from "@/bot/contexts/digest/application/render-director-section";
+import { callbackSecret } from "@/bot/config";
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
@@ -33,6 +35,12 @@ async function main() {
   const report = await buildDirectorReport(prisma, now);
   console.log("\n--- Telegram ko'rinishi ---");
   console.log(renderDirectorReport(report));
+  // Tugmalar ham ko'rsatiladi: hisobotning yarmi endi ular ortida turadi va
+  // "bo'lim bo'sh bo'lsa tugma yo'q" qoidasi shu yerda ko'zga tashlanadi.
+  const buttons = directorReportKeyboard(callbackSecret(), report)
+    .inline_keyboard.map((row) => row.map((b) => `[ ${b.text} ]`).join(" "))
+    .join("\n");
+  console.log(`\nTugmalar:\n${buttons}`);
   console.log("---------------------------\n");
 
   if (dryRun) {

@@ -61,7 +61,19 @@ export interface DirectorReport {
   revenueBreakdown: { b2bIncome: number; b2cIncome: number };
   /** Muddati o'tgan qarzi eng katta firmalar — xabarda nomma-nom ko'rinadi. */
   topDebtors: DebtorRow[];
-  obligations: { overdue: number; dueToday: number };
+  /**
+   * Majburiyatlar. "1890 ta" o'zi hech kimni harakatga chorlamaydi — shuning
+   * uchun raqam bilan birga KIMDA to'planib qolgani ham keladi: direktor
+   * ertalab aynan shu 5 ta odam bilan gaplashadi.
+   */
+  obligations: {
+    overdue: number;
+    dueToday: number;
+    /** Muddati o'tganlar bo'yicha eng og'ir 5 mas'ul. */
+    topResponsible: { name: string; count: number; oldestDays: number }[];
+    /** Mas'uli biriktirilmagan muddati o'tganlar — bu boshqacha ish. */
+    unassigned: number;
+  };
   pending: { expenses: number; proofs: number };
   /**
    * Bank vipiskasidan hal qilinmagan qatorlar — IKKI XIL ISH, shuning uchun
@@ -165,6 +177,7 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
     dueToday,
     pendingExpenses,
     pendingProofs,
+    obligationLoad,
   ] = await Promise.all([
     getDayMovement(yesterdayDate, db),
     getAvailableBalance(),
@@ -184,6 +197,7 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
     }),
     db.kassaEntry.count({ where: { status: "pending", deletedAt: null } }),
     countPendingProofs(db),
+    obligationLoadByResponsible(db, todayStart),
   ]);
 
   // `byCompany` xaritasi xabarga kerak emas (va Telegram qatlamiga Map
@@ -199,12 +213,64 @@ export async function buildDirectorReport(db: Db, now = new Date()): Promise<Dir
     topPartners,
     revenueBreakdown,
     topDebtors,
-    obligations: { overdue, dueToday },
+    obligations: { overdue, dueToday, ...obligationLoad },
     pending: { expenses: pendingExpenses, proofs: pendingProofs },
     unmatchedBank: await countUnmatchedBank(db),
     debt1C: await debt1CWithComparable(db),
     plan: await revenuePlan(db, period),
   };
+}
+
+/**
+ * Muddati o'tgan majburiyatlar KIMDA to'planib qolgan.
+ *
+ * Guruhlash bazada: bir nazoratchida minglab majburiyat bo'lishi mumkin va
+ * ularni xotiraga tortish hisobotni sekinlashtiradi. Eng eski ish esa faqat
+ * ko'rinadigan 5 kishi uchun olinadi.
+ */
+async function obligationLoadByResponsible(
+  db: Db,
+  todayStart: Date
+): Promise<{
+  topResponsible: { name: string; count: number; oldestDays: number }[];
+  unassigned: number;
+}> {
+  const where = {
+    status: { in: OPEN_OBLIGATION_STATUSES },
+    dueAt: { lt: todayStart },
+  };
+
+  const [grouped, unassigned] = await Promise.all([
+    db.obligation.groupBy({
+      by: ["responsibleUserId"],
+      where: { ...where, responsibleUserId: { not: null } },
+      _count: { _all: true },
+      _min: { dueAt: true },
+      orderBy: { _count: { responsibleUserId: "desc" } },
+      take: 5,
+    }),
+    db.obligation.count({ where: { ...where, responsibleUserId: null } }),
+  ]);
+
+  const ids = grouped
+    .map((g) => g.responsibleUserId)
+    .filter((id): id is string => id !== null);
+  const users = ids.length
+    ? await db.user.findMany({ where: { id: { in: ids } }, select: { id: true, fullName: true } })
+    : [];
+  const names = new Map(users.map((u) => [u.id, u.fullName]));
+
+  const topResponsible = grouped.map((g) => ({
+    name: (g.responsibleUserId && names.get(g.responsibleUserId)) || "—",
+    count: g._count._all,
+    // Eng eski ochiq ish necha kun kechikkani — "1890 ta" ning og'irligini
+    // aynan shu raqam ko'rsatadi.
+    oldestDays: g._min.dueAt
+      ? Math.max(0, Math.floor((todayStart.getTime() - g._min.dueAt.getTime()) / 86_400_000))
+      : 0,
+  }));
+
+  return { topResponsible, unassigned };
 }
 
 /**
