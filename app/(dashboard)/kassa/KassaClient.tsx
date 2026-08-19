@@ -1,56 +1,21 @@
 "use client";
 
-import React from "react";
-import { useRouter } from "next/navigation";
-import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import KassaModule from "@/components/KassaModule";
-import BalanceOverview from "@/components/BalanceOverview";
-import { Company, Payment, BalanceBreakdown } from "@/types";
-import { upsertPayment, deletePayment } from "@/server/kassa";
+// Bosh kassaning balans bloki. Firmalar bo'yicha to'lovlar jadvali bu yerdan
+// OLIB TASHLANDI va `/kassa/qarzdorlik` ga ko'chdi — u yerda qarzdorlar bilan
+// yonma-yon turgani mantiqan to'g'ri va bitta sahifada ikki xil firma ro'yxati
+// qolmaydi.
 
-/** companyId → serverda hisoblangan qarz (lib/debt.ts). */
-export type DebtByCompany = Record<string, { dueNow: number; overdue: number; outstanding: number }>;
+import React from "react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import BalanceOverview from "@/components/BalanceOverview";
+import { BalanceBreakdown } from "@/types";
 
 interface Props {
-  companies: Company[];
-  payments: Payment[];
-  debtByCompany?: DebtByCompany;
   balance?: BalanceBreakdown;
 }
 
-export default function KassaClient({ companies, payments, balance, debtByCompany = {} }: Props) {
-  const router = useRouter();
+export default function KassaClient({ balance }: Props) {
   useAutoRefresh();
-
-  const handleSave = async (payment: Partial<Payment>) => {
-    await upsertPayment({
-      companyId: payment.companyId as string,
-      period: payment.period as string,
-      amount: Number(payment.amount || 0),
-      status: payment.status as string,
-      paymentDate: payment.paymentDate ? new Date(payment.paymentDate) : undefined,
-      paymentMethod: payment.paymentMethod || "naqd",
-      comment: payment.comment,
-    });
-    router.refresh();
-  };
-
-  const handleDelete = async (id: string) => {
-    await deletePayment(id);
-    router.refresh();
-  };
-
-  return (
-    <div className="space-y-4">
-      {balance && <BalanceOverview breakdown={balance} />}
-      <KassaModule
-        companies={companies}
-        payments={payments}
-        debtByCompany={debtByCompany}
-        lang="uz"
-        onSavePayment={handleSave}
-        onDeletePayment={handleDelete}
-      />
-    </div>
-  );
+  if (!balance) return null;
+  return <BalanceOverview breakdown={balance} />;
 }

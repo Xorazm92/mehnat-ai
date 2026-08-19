@@ -8,6 +8,8 @@ import {
   getReconciliation,
   getCollectionQueue,
 } from "@/server/debt";
+import { getCachedCompanies } from "@/lib/cached-queries";
+import { getPayments } from "@/server/kassa";
 import QarzdorlikClient from "./QarzdorlikClient";
 
 export const metadata = { title: "Qarzdorlik" };
@@ -20,7 +22,11 @@ export default async function QarzdorlikPage() {
   const views = await currentUserViews();
   if (!views.includes("kassa_debt")) redirect("/cabinet");
 
-  const [debt, debtors, queue, planFact, recon] = await Promise.all([
+  // Firmalar bo'yicha oylik to'lovlar jadvali `/kassa` dan shu yerga ko'chdi.
+  const userId = session.user?.id ?? "";
+  const userRole = session.user?.role || "employee";
+
+  const [debt, debtors, queue, planFact, recon, companies, payments] = await Promise.all([
     getDebtComparison(),
     // To'lamagan firmalar — direktorning kunlik hisoboti bilan bir manbadan.
     getDebtors(),
@@ -28,7 +34,29 @@ export default async function QarzdorlikPage() {
     getCollectionQueue(),
     getPlanFact(),
     getReconciliation(),
+    getCachedCompanies(userId, userRole),
+    getPayments(),
   ]);
+
+  // companyId → qarz. Qarz SERVERDA hisoblanadi (`lib/debt.ts`), klient
+  // faqat ko'rsatadi.
+  const debtByCompany = Object.fromEntries(
+    debtors.rows.map((r) => [
+      r.companyId,
+      { dueNow: r.dueNow, overdue: r.overdue, outstanding: r.outstanding },
+    ])
+  );
+
+  const mappedPayments = payments.map((p) => ({
+    id: p.id,
+    companyId: p.companyId,
+    amount: Number(p.amount),
+    period: p.period,
+    paymentDate: p.paymentDate ? p.paymentDate.toISOString() : "",
+    status: p.status,
+    comment: p.comment || "",
+    createdAt: p.createdAt.toISOString(),
+  }));
 
   return (
     <div className="h-full">
@@ -36,6 +64,9 @@ export default async function QarzdorlikPage() {
         debt={JSON.parse(JSON.stringify(debt))}
         debtors={JSON.parse(JSON.stringify(debtors))}
         queue={JSON.parse(JSON.stringify(queue))}
+        companies={JSON.parse(JSON.stringify(companies))}
+        payments={JSON.parse(JSON.stringify(mappedPayments))}
+        debtByCompany={debtByCompany}
         planFact={JSON.parse(JSON.stringify(planFact))}
         recon={JSON.parse(JSON.stringify(recon))}
       />

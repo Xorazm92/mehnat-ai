@@ -5,6 +5,14 @@ import { AlertTriangle, Search, TrendingUp, CheckCircle2, XCircle } from "lucide
 import { formatNum, formatUzDate } from "@/lib/format";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import CollectionQueue from "./CollectionQueue";
+import { useRouter } from "next/navigation";
+import KassaModule from "@/components/KassaModule";
+import { upsertPayment, deletePayment } from "@/server/kassa";
+import type { Company, Payment } from "@/types";
+
+/** companyId → serverda hisoblangan qarz (`lib/debt.ts`). Klient hech narsa
+    hisoblamaydi, faqat ko'rsatadi. */
+type DebtByCompany = Record<string, { dueNow: number; overdue: number; outstanding: number }>;
 
 interface DebtRow {
   key: string;
@@ -77,6 +85,10 @@ interface Props {
     rows: DebtorRow[];
     totals: { companies: number; overdue: number; dueNow: number; neverContacted: number };
   };
+  /** Firmalar bo'yicha oylik to'lovlar — `/kassa` dan ko'chirildi. */
+  companies: Company[];
+  payments: Payment[];
+  debtByCompany: DebtByCompany;
   planFact: PlanFactRow[];
   /** Sverka — moliyaviy invariantlar. Faqat adminda to'ladi. */
   recon?: ReconCheck[];
@@ -84,7 +96,17 @@ interface Props {
 
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
 
-export default function QarzdorlikClient({ debt, debtors, queue, planFact, recon = [] }: Props) {
+export default function QarzdorlikClient({
+  debt,
+  debtors,
+  queue,
+  companies,
+  payments,
+  debtByCompany,
+  planFact,
+  recon = [],
+}: Props) {
+  const router = useRouter();
   useAutoRefresh();
   const [query, setQuery] = useState("");
   // Farqi bor qatorlar tepada — aynan ular e'tibor talab qiladi.
@@ -414,6 +436,33 @@ export default function QarzdorlikClient({ debt, debtors, queue, planFact, recon
           </tbody>
         </table>
       </div>
+
+      {/* FIRMALAR BO'YICHA OYLIK TO'LOVLAR — `/kassa` dan ko'chirildi.
+          U yerda kassalar qoldig'i bilan bir ekranda turib, ikki xil firma
+          ro'yxati va uch xil "balans" chalkashligini keltirib chiqarardi.
+          Qarzdorlar ro'yxati bilan yonma-yon turgani mantiqan to'g'ri. */}
+      <KassaModule
+        companies={companies}
+        payments={payments}
+        debtByCompany={debtByCompany}
+        lang="uz"
+        onSavePayment={async (payment) => {
+          await upsertPayment({
+            companyId: payment.companyId as string,
+            period: payment.period as string,
+            amount: Number(payment.amount || 0),
+            status: payment.status as string,
+            paymentDate: payment.paymentDate ? new Date(payment.paymentDate) : undefined,
+            paymentMethod: payment.paymentMethod || "naqd",
+            comment: payment.comment,
+          });
+          router.refresh();
+        }}
+        onDeletePayment={async (id) => {
+          await deletePayment(id);
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

@@ -80,15 +80,20 @@ export async function getCashDeskReport(period?: string): Promise<CashDeskReport
   ]);
 
   const byId = new Map(channels.map((c) => [c.id, c]));
-  const openingBy = new Map(before.map((r) => [r.channelId ?? "", r.balance]));
+  const beforeBy = new Map(before.map((r) => [r.channelId ?? "", r]));
   const transitBy = new Map(transit.map((t) => [t.id, t.balance]));
 
-  // Davr harakati = shu davr oxirigacha − oldingi davr oxirigacha.
+  const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+  // Davr harakati = shu davr oxirigacha (debit/credit) − oldingi davr oxirigacha.
   const rows: CashDeskRow[] = through.map((r) => {
     const id = r.channelId;
     const ch = id ? byId.get(id) : undefined;
     const kind = ch ? normalizeChannelType(ch.type) : null;
-    const opening = openingBy.get(id ?? "") ?? 0;
+    const beforeRow = beforeBy.get(id ?? "");
+    const opening = beforeRow ? r2(beforeRow.debit - beforeRow.credit) : 0;
+    const income = r2(Math.max(0, r.debit - (beforeRow?.debit ?? 0)));
+    const outflow = r2(Math.max(0, r.credit - (beforeRow?.credit ?? 0)));
     const closing = r.balance;
 
     return {
@@ -98,10 +103,8 @@ export async function getCashDeskReport(period?: string): Promise<CashDeskReport
       typeLabel: kind ? CHANNEL_TYPE_LABELS[kind] : "—",
       detail: ch ? (kind === "own_firm_account" ? ch.transitAccount : ch.cardMask) : null,
       opening,
-      // Kirim/chiqim davr ichidagi xom debit/credit emas: ular butun tarixni
-      // qamraydi. Shuning uchun farq olinadi va faqat SHU davr harakati chiqadi.
-      income: Math.max(0, closing - opening),
-      outflow: Math.max(0, opening - closing),
+      income,
+      outflow,
       closing,
       isActive: ch?.isActive ?? false,
       transitBalance: id ? (transitBy.get(id) ?? null) : null,

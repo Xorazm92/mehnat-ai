@@ -65,13 +65,17 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
             const contractAmt = Number(c.contractAmount || 0);
             baseExpected += contractAmt;
 
-            const paymentForCompany = payments.find(p => p.companyId === c.id && p.period === selectedPeriod);
-            let paidAmt = 0;
-            if (paymentForCompany && (paymentForCompany.status === PaymentStatus.PAID || paymentForCompany.status === PaymentStatus.PARTIAL)) {
-                paidAmt = Number(paymentForCompany.amount || 0);
+            const debtInfo = debtByCompany[c.id];
+            if (debtInfo !== undefined) {
+                remainingExpected += debtInfo.outstanding;
+            } else {
+                const paymentForCompany = payments.find(p => p.companyId === c.id && p.period === selectedPeriod);
+                let paidAmt = 0;
+                if (paymentForCompany && (paymentForCompany.status === PaymentStatus.PAID || paymentForCompany.status === PaymentStatus.PARTIAL)) {
+                    paidAmt = Number(paymentForCompany.amount || 0);
+                }
+                remainingExpected += Math.max(0, contractAmt - paidAmt);
             }
-
-            remainingExpected += Math.max(0, contractAmt - paidAmt);
         });
 
         const totalPaid = payments
@@ -87,7 +91,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
             percent: baseExpected > 0 ? Math.round((totalPaid / baseExpected) * 100) : 0,
             pendingCount
         };
-    }, [companies, payments, selectedPeriod, filteredData]);
+    }, [companies, payments, debtByCompany, selectedPeriod, filteredData]);
     /**
      * Qolgan to'lov — ustunda ham, saralashda ham, eksportda ham, kartochkada
      * ham AYNAN BIR XIL. Manba: server (`lib/debt.ts` → `getDebtors`).
