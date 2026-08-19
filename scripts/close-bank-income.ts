@@ -28,7 +28,26 @@ import { formatNum as som } from "@/lib/format";
 import { postIncomeTransaction, autoMatchTransactions } from "@/lib/bank/importStatement";
 
 const APPLY = process.argv.includes("--apply");
-const ACTOR = "script:close-bank-income";
+
+/**
+ * `Payment.createdBy` — `User` ga FOREIGN KEY (`PaymentAllocation.createdBy`
+ * esa oddiy matn). Shuning uchun bu yerga "script:..." kabi belgi yozib
+ * bo'lmaydi: FK buziladi. Haqiqiy admin foydalanuvchi topiladi, topilmasa
+ * `null` — iz `AuditLog` da qoladi.
+ */
+async function resolveActor(): Promise<string | null> {
+  const admin = await prisma.user.findFirst({
+    where: { isActive: true, role: { in: ["super_admin", "admin"] } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, email: true, role: true },
+  });
+  if (admin) {
+    console.log(`   yozuv egasi: ${admin.email} (${admin.role})`);
+    return admin.id;
+  }
+  console.log("   ⚠ admin topilmadi — createdBy bo'sh qoladi");
+  return null;
+}
 
 /** Mijoz to'lovi BO'LMAGAN kirimlar — bularni hisobga olish qarzni soxta yopadi. */
 const NON_CLIENT_INNS = new Set([
@@ -44,6 +63,7 @@ function line() {
 
 async function main() {
   console.log(APPLY ? "▶ HAQIQIY YOZUV (--apply)" : "▶ QURUQ YURISH — hech narsa yozilmaydi");
+  const ACTOR = APPLY ? await resolveActor() : null;
   line();
 
   // ─────────────────────────────────────────────────────────
