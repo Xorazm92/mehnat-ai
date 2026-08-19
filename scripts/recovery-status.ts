@@ -18,6 +18,7 @@ import "./load-env";
 import { Redis } from "ioredis";
 import { prisma } from "@/lib/prisma";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
+import { LEDGER_DRIFT_TOLERANCE } from "@/lib/ledger";
 
 const JSON_MODE = process.argv.includes("--json");
 
@@ -386,6 +387,12 @@ async function checkJournal(): Promise<void> {
       SELECT count(*)::int AS cnt, coalesce(sum(k.amount), 0)::float8 AS total
         FROM "KassaEntry" k
        WHERE k."deletedAt" IS NULL
+         -- FAQAT TASDIQLANGAN — lib/reconciliation.ts bilan bir xil shart.
+         -- "pending" yozuvda pul hali chiqmagan, ya'ni jurnal qatori
+         -- BO'LMASLIGI to'g'ri. Bu filtr yo'qligi sababli skript tasdiq
+         -- navbatidagi 3 qatorni (63 048 000 so'm) "jurnalga tushmagan" deb
+         -- ko'rsatib, backfill hammasini yopgandan keyin ham qizil turgan edi.
+         AND k.status = 'approved'
          AND NOT EXISTS (SELECT 1 FROM "LedgerEntry" l
                           WHERE l."sourceId" = k.id AND l."sourceTable" = 'KassaEntry')`,
     prisma.$queryRaw<GapRow[]>`
@@ -432,8 +439,12 @@ async function checkJournal(): Promise<void> {
     prisma.$queryRaw<{ balance: number }[]>`
       SELECT (
         coalesce((SELECT sum(amount) FROM "Payment"    WHERE "deletedAt" IS NULL AND status IN ('paid','partial')), 0)
-      + coalesce((SELECT sum(amount) FROM "KassaEntry" WHERE "deletedAt" IS NULL AND type = 'income'), 0)
-      - coalesce((SELECT sum(amount) FROM "KassaEntry" WHERE "deletedAt" IS NULL AND type = 'expense'), 0)
+      -- status = 'approved' SHART: lib/balance.ts aynan shunday filtrlaydi.
+      -- Filtrsiz bu nusxa tasdiq navbatidagi chiqimni ham ayirar va manba
+      -- balansini 63 048 000 so'mga kam ko'rsatardi — ya'ni skript o'zi
+      -- o'lchayotgan tafovutni o'zi yaratardi.
+      + coalesce((SELECT sum(amount) FROM "KassaEntry" WHERE "deletedAt" IS NULL AND type = 'income'  AND status = 'approved'), 0)
+      - coalesce((SELECT sum(amount) FROM "KassaEntry" WHERE "deletedAt" IS NULL AND type = 'expense' AND status = 'approved'), 0)
       - coalesce((SELECT sum(amount) FROM "Expense"    WHERE "deletedAt" IS NULL AND status = 'approved'), 0)
       - coalesce((SELECT sum(amount) FROM "Payout"     WHERE "deletedAt" IS NULL), 0)
       )::float8 AS balance`,
@@ -462,11 +473,21 @@ async function checkJournal(): Promise<void> {
     note("ok", "Jurnal to'liq", "har bir manba qatorining jurnalda izi bor");
   }
 
-  if (Math.abs(drift) > 1) {
+  // Chegara `lib/ledger.ts` dan — oy yopish tekshiruvi bilan AYNAN bir xil
+  // bo'lishi kerak, aks holda skript yashil bo'lgani holda oy yopilmasdi.
+  if (Math.abs(drift) > LEDGER_DRIFT_TOLERANCE) {
     note(
       "block",
       "Ikki balans mos emas",
-      `${num(Math.abs(drift))} so'm farq. Yil yopilganda jurnal qiymati snapshotga MUHRLANADI.`,
+      `${num(Math.abs(drift))} so'm farq (ruxsat: ${num(LEDGER_DRIFT_TOLERANCE)}). ` +
+        "Yil yopilganda jurnal qiymati snapshotga MUHRLANADI.",
+    );
+  } else if (Math.abs(drift) > 1) {
+    note(
+      "ok",
+      "Ikki balans mos",
+      `${num(Math.abs(drift))} so'm farq — qabul qilingan chegara ichida ` +
+        "(sabab: lib/balance.ts qaytarishlarni modellashtirmaydi).",
     );
   }
 

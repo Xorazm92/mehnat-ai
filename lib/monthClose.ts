@@ -6,7 +6,7 @@
 // validatsiyasi), yopilish raqamlari (opening/income/expense/closing) va
 // statuslarni avtomatik boshqarish.
 import { Prisma } from "@prisma/client";
-import { getTrialBalance, getLedgerCashBalance, ACCOUNTS } from "@/lib/ledger";
+import { getTrialBalance, getLedgerCashBalance, ACCOUNTS, LEDGER_DRIFT_TOLERANCE } from "@/lib/ledger";
 import { getMonthMovement, getMovementBeforeMonth } from "@/lib/balance";
 import { computeObligation, computeRemaining } from "@/lib/payrollObligation";
 import { isSettledPayment } from "@/lib/debt";
@@ -236,20 +236,24 @@ export async function gatherChecklist(db: Db, year: number, month: number): Prom
       count: integrityErrors.length,
       detail: integrityErrors.slice(0, 5).join("; ") || undefined,
     },
+    {
+      // ENDI BLOKLAYDI. Ilgari bloklamasdi: import yo'llari jurnalga yozmagani
+      // uchun tafovut 683 mln edi va bloklovchi qilinsa oy umuman yopilmasdi.
+      // `scripts/backfill-ledger.ts` 157 ta qatorni tikladi, tafovut 2 mln ga
+      // tushdi — u qabul qilingan qoldiq va sababi `LEDGER_DRIFT_TOLERANCE`
+      // izohida yozilgan.
+      key: "ledger_source_balance_match",
+      label: "Kassa balansi ↔ Ledger balansi mosligi",
+      ok: balanceDiff <= LEDGER_DRIFT_TOLERANCE,
+      blocking: true,
+      detail:
+        balanceDiff > LEDGER_DRIFT_TOLERANCE
+          ? `Kassa = ${closeFigures.closingBalance}, Ledger = ${closeFigures.ledgerBalance} ` +
+            `(farq: ${closeFigures.closingBalance - closeFigures.ledgerBalance}, ruxsat: ${LEDGER_DRIFT_TOLERANCE})`
+          : undefined,
+    },
     // OGOHLANTIRISHLAR — buxgalteriya jihatdan yopishni bloklamaydi:
     // ochiq debitorka (mijoz to'lamagan) va keyin to'lanadigan oylik normal holat.
-    {
-      // ATAYLAB bloklamaydi. Kassa balansi va ledger balansi ikki MUSTAQIL manbadan
-      // hisoblanadi (jadval agregatlari vs LedgerEntry), va tarixiy import yo'llari
-      // ledgerga yozmagani uchun prodda ular hali teng emas. Bloklovchi qilinsa oy
-      // umuman yopilmay qoladi. Farq nolga tushirilgandan keyin blocking: true ga
-      // o'tkazish kerak.
-      key: "ledger_source_balance_match",
-      label: "Kassa balansi ↔ Ledger balansi farqi (ogohlantirish)",
-      ok: balanceDiff <= 0.01,
-      blocking: false,
-      detail: balanceDiff > 0.01 ? `Kassa = ${closeFigures.closingBalance}, Ledger = ${closeFigures.ledgerBalance} (farq: ${closeFigures.closingBalance - closeFigures.ledgerBalance})` : undefined,
-    },
     {
       key: "pending_payments",
       label: "Mijoz to'lovlari 'pending' holatda (debitorka — ogohlantirish)",

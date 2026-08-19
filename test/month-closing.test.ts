@@ -21,6 +21,26 @@ vi.mock("server-only", () => ({}));
 const { prisma } = await import("@/lib/prisma");
 const { closeMonth, reopenMonth, validateMonth, getMonthSummaryData } = await import("@/server/monthClosing");
 const { createKassaEntry } = await import("@/server/kassa");
+const { ACCOUNTS, postLedger } = await import("@/lib/ledger");
+
+/**
+ * Fixture qatorining jurnaldagi juftini yozadi.
+ *
+ * NIMA UCHUN KERAK: quyidagi fixture'lar `prisma.*.create` bilan to'g'ridan-
+ * to'g'ri yoziladi, ya'ni ishlab chiqarishdagi server action'lardan farqli
+ * o'laroq `postLedger` chaqirilmaydi. Natijada test ma'lumotining O'ZIDA
+ * manba ↔ jurnal tafovuti bo'lardi va `ledger_source_balance_match`
+ * tekshiruvi (haqli ravishda) oyni yopishga qo'ymasdi. Ya'ni tekshiruv emas,
+ * fixture noto'g'ri edi.
+ */
+async function postFixtureLedger(
+  sourceTable: string,
+  sourceId: string,
+  period: string,
+  legs: Parameters<typeof postLedger>[1]["legs"],
+): Promise<void> {
+  await postLedger(prisma, { legs, period, sourceTable, sourceId, description: "vitest fixture" });
+}
 
 const TAG = `vitest-mclose-${Date.now()}`;
 const ids = { user: "", company: "" };
@@ -83,24 +103,52 @@ beforeAll(async () => {
   await seedNonNegativeOpeningCash();
 
   // 2094-03 harakati: kirim 4M (payment) + 1M (kassa) = 5M; chiqim 500k (expense) + 300k (payout)
-  await prisma.payment.create({
+  const pay = await prisma.payment.create({
     data: { companyId: company.id, period: "2094-03", amount: 4_000_000, status: "paid" },
+    select: { id: true },
   });
-  await prisma.kassaEntry.create({
+  await postFixtureLedger("Payment", pay.id, "2094-03", [
+    { accountId: ACCOUNTS.CASH, debit: 4_000_000 },
+    { accountId: ACCOUNTS.CONTRACT_INCOME, credit: 4_000_000, subjectId: company.id },
+  ]);
+
+  const kIn = await prisma.kassaEntry.create({
     data: { type: "income", category: TAG, amount: 1_000_000, date: new Date(2094, 2, 10) },
+    select: { id: true },
   });
-  await prisma.kassaEntry.create({
+  await postFixtureLedger("KassaEntry", kIn.id, "2094-03", [
+    { accountId: ACCOUNTS.CASH, debit: 1_000_000 },
+    { accountId: ACCOUNTS.KASSA_INCOME, credit: 1_000_000 },
+  ]);
+
+  const kOut = await prisma.kassaEntry.create({
     data: {
       type: "expense", amount: 500_000, date: new Date(2094, 2, 15), category: TAG, status: "approved" },
+    select: { id: true },
   });
-  await prisma.payout.create({
+  await postFixtureLedger("KassaEntry", kOut.id, "2094-03", [
+    { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: 500_000 },
+    { accountId: ACCOUNTS.CASH, credit: 500_000 },
+  ]);
+
+  const payout = await prisma.payout.create({
     data: { employeeId: user.id, month: "2094-03", amount: 300_000, paidAt: new Date(2094, 2, 20) },
+    select: { id: true },
   });
+  await postFixtureLedger("Payout", payout.id, "2094-03", [
+    { accountId: ACCOUNTS.SALARY_EXPENSE, debit: 300_000, subjectId: user.id },
+    { accountId: ACCOUNTS.CASH, credit: 300_000 },
+  ]);
 
   // 2094-04 harakati: kassa kirim 2M
-  await prisma.kassaEntry.create({
+  const kIn2 = await prisma.kassaEntry.create({
     data: { type: "income", category: TAG, amount: 2_000_000, date: new Date(2094, 3, 10) },
+    select: { id: true },
   });
+  await postFixtureLedger("KassaEntry", kIn2.id, "2094-04", [
+    { accountId: ACCOUNTS.CASH, debit: 2_000_000 },
+    { accountId: ACCOUNTS.KASSA_INCOME, credit: 2_000_000 },
+  ]);
 });
 
 afterAll(async () => {

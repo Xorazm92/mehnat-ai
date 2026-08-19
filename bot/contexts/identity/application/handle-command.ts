@@ -126,6 +126,13 @@ async function kpiAdjust(
   });
 
   const sign = res.points >= 0 ? "+" : "";
+  if (res.duplicate) {
+    return (
+      `⚠️ ${target.fullName} uchun shu oyda AYNAN shunday yozuv allaqachon bor ` +
+      `(${sign}${res.points}%, "${reason}") — takroran yozilmadi.\n` +
+      `Bu boshqa holat bo'lsa, sababni aniqlashtirib qayta yuboring.`
+    );
+  }
   return `✅ ${target.fullName}: ${sign}${res.points}% KPI ledger'ga yozildi (${reason}).`;
 }
 
