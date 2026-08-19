@@ -30,11 +30,15 @@ const APPLY = process.argv.includes("--apply");
 
 /** Vipiskadagi nomni tozalaydi — ortiqcha bo'shliq va qo'shtirnoq. Nom O'YLAB TOPILMAYDI. */
 function cleanName(raw: string): string {
-  return raw
-    .replace(/\s+/g, " ")
-    .replace(/"\s+/g, '"')
-    .replace(/\s+"/g, '"')
-    .trim();
+  return (
+    raw
+      .replace(/\s+/g, " ")
+      // Faqat QO'SHTIRNOQ ICHIDAGI ortiqcha bo'shliq olinadi: `MCHJ " ANVAR "`
+      // → `MCHJ "ANVAR"`. Qo'shtirnoqdan OLDINGI bo'shliqqa tegilmaydi — aks
+      // holda `ЧП "LIDER ELITE"` → `ЧП"LIDER ELITE"` bo'lib nom buzilardi.
+      .replace(/"\s*([^"]*?)\s*"/g, '"$1"')
+      .trim()
+  );
 }
 
 /**
