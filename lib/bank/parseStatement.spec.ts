@@ -125,6 +125,34 @@ describe("Format A — Лицевой счет", () => {
   });
 });
 
+// Bankning boshqa eksporti: hisob raqami "Cчет:" qatorida EMAS, faylning
+// BIRINCHI qatorida — ya'ni `sheet_to_json` uni ustun KALITI qilib oladi va u
+// `Object.values()` ga umuman tushmaydi. Shu sababdan vipiska "hisob o'qilmadi"
+// deb rad etilardi (Hamkorbank Andijon, MFO 00083).
+const H = '00083 / АНДИЖОН Ш., "HAMKORBANK" АТ  Cчет: 20208000905169375001  ИНН : 307077420';
+const svedeniyaNoAccountLine = [
+  { [H]: "Сведения о работе счета c 01.08.2026 по 19.08.2026", "ABS": null, __EMPTY: null, __EMPTY_1: null, __EMPTY_2: null, __EMPTY_3: null, __EMPTY_4: null, __EMPTY_5: null },
+  { [H]: "Дата", "ABS": "Cчет/ИНН", __EMPTY: "№ док", __EMPTY_1: "Оп", __EMPTY_2: "МФО", __EMPTY_3: "Оборот Дебет", __EMPTY_4: "Оборот Кредит", __EMPTY_5: "Назначение платежа" },
+  { [H]: 46211.700520833336, "ABS": '20208000805596161002/310079710/"TEST" MCHJ', __EMPTY: 5045, __EMPTY_1: 4, __EMPTY_2: "00083", __EMPTY_3: null, __EMPTY_4: 4000000, __EMPTY_5: "оплата за бух услуги" },
+];
+
+describe("Format B — hisob raqami ustun nomida", () => {
+  const parsed = parseStatementRows(svedeniyaNoAccountLine);
+
+  it("hisob raqamini ustun nomidan ham topadi", () => {
+    expect(parsed.accountNumber).toBe("20208000905169375001");
+  });
+
+  it("STIRni ham o'qiydi", () => {
+    expect(parsed.accountInn).toBe("307077420");
+  });
+
+  it("tranzaksiya baribir o'qiladi", () => {
+    expect(parsed.transactions).toHaveLength(1);
+    expect(parsed.transactions[0].amount).toBe(4_000_000);
+  });
+});
+
 describe("Format B — Сведения о работе счета", () => {
   const parsed = parseStatementRows(svedeniyaRows);
 

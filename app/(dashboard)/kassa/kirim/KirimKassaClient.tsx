@@ -540,10 +540,32 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           </div>
 
           {preview.unknownAccount ? (
-            <p className="text-body" style={{ color: "var(--danger)" }}>
-              Bu hisob raqami ({preview.accountNumber ?? "o'qilmadi"}) bazada yo&apos;q. Yuklab
-              bo&apos;lmaydi — avval hisobni o&apos;z firmalar ro&apos;yxatiga qo&apos;shing.
-            </p>
+            /* IKKI XIL MUAMMO, ikki xil xabar. Ilgari ikkalasi ham "hisob
+               bazada yo'q" derdi va foydalanuvchi mavjud hisobni qayta
+               qo'shishga urinardi, holbuki muammo faylni o'qishda edi. */
+            <div className="space-y-1">
+              {preview.accountNumber ? (
+                <>
+                  <p className="text-body" style={{ color: "var(--danger)" }}>
+                    Hisob raqami {preview.accountNumber} bazada ro&apos;yxatdan o&apos;tmagan.
+                  </p>
+                  <p className="text-meta" style={{ color: "var(--text-secondary)" }}>
+                    Yuklash uchun avval shu hisobni o&apos;z firmalar ro&apos;yxatiga qo&apos;shing.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-body" style={{ color: "var(--danger)" }}>
+                    Hisob raqami FAYLDAN o&apos;qib bo&apos;lmadi — muammo bazada emas, vipiska
+                    sarlavhasida.
+                  </p>
+                  <p className="text-meta" style={{ color: "var(--text-secondary)" }}>
+                    Sarlavhada &quot;Cчет: &lt;20 raqam&gt;&quot; qatori bormi, tekshiring. Faylni
+                    o&apos;zgartirmasdan yuboring — parser shu ko&apos;rinishga moslanadi.
+                  </p>
+                </>
+              )}
+            </div>
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-meta">

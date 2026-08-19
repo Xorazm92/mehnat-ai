@@ -87,6 +87,39 @@ export function parseSvedeniya(rows: SheetRow[]): ParsedStatement {
     }
   }
 
+  // ZAXIRA YO'L: hisob raqami "Cчет:" yorlig'i bilan topilmasa, sarlavha
+  // blokidagi HAR QANDAY katakdan va USTUN NOMLARIDAN 20 raqamli hisob
+  // qidiriladi.
+  //
+  // Nima uchun ustun nomlari ham: `sheet_to_json` faylning BIRINCHI qatorini
+  // ustun kaliti qilib oladi, ya'ni o'sha qator `Object.values()` ga umuman
+  // tushmaydi. Bankning ba'zi eksportlarida hisob raqami aynan shu birinchi
+  // qatorda turadi (masalan "00083 / … HAMKORBANK …" bilan yonma-yon) va
+  // vipiska "hisob o'qilmadi" deb rad etilardi — foydalanuvchi esa hisob
+  // bazada yo'q deb o'ylardi, holbuki u ro'yxatda bor edi.
+  if (!accountNumber) {
+    const headerCells: unknown[] = [
+      ...columns,
+      ...rows.slice(0, headerIndex).flatMap((r) => Object.values(r)),
+    ];
+    for (const cell of headerCells) {
+      const found = extractAccount(cell);
+      if (found) {
+        accountNumber = found;
+        break;
+      }
+    }
+  }
+  if (!accountInn) {
+    for (const cell of columns) {
+      const found = extractInn(cell);
+      if (found) {
+        accountInn = found;
+        break;
+      }
+    }
+  }
+
   // ── Tranzaksiyalar — bitta qator = bitta tranzaksiya ───────────────────
   const transactions: ParsedTransaction[] = [];
 
