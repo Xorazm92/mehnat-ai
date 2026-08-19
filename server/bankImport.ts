@@ -29,8 +29,11 @@ import {
   autoMatchTransactions,
   postIncomeTransaction,
   allocatePlastikReceipt,
+  applyAllocation,
   periodOf,
 } from "@/lib/bank/importStatement";
+import { assertFundingSource } from "@/server/fundingSources";
+import { Prisma } from "@prisma/client";
 import type { ParsedStatement, StatementPreview, Workbook } from "@/lib/bank/types";
 
 // ─────────────────────────────────────────────────────────
@@ -628,6 +631,175 @@ export async function matchAndPostTransaction(input: {
   revalidatePath("/kassa/kirim");
   revalidatePath("/kassa");
   return serialize(res);
+}
+
+// ─────────────────────────────────────────────────────────
+// QO'LDA KIRITILGAN TUSHUM (naqd / plastik / bank)
+// ─────────────────────────────────────────────────────────
+
+/** `manual:<manba>:<firma|anon>:<YYYY-MM-DD>:<summa>` — bir xil kalit ikki marta yozilmaydi. */
+function manualDedupKey(input: {
+  source: string;
+  companyId?: string | null;
+  receivedAt: Date;
+  amount: number;
+  docRef?: string | null;
+}): string {
+  const day = input.receivedAt.toISOString().slice(0, 10);
+  const ref = input.docRef?.trim();
+  // Hujjat raqami bo'lsa u eng ishonchli kalit; bo'lmasa kun+summa juftligi.
+  const tail = ref ? `ref:${ref}` : `${input.amount.toFixed(2)}`;
+  return `manual:${input.source}:${input.companyId ?? "anon"}:${day}:${tail}`;
+}
+
+export interface ManualReceiptInput {
+  /** Bo'sh bo'lsa — nomsiz tushum (hech kimning qarzini kamaytirmaydi). */
+  companyId?: string | null;
+  contractId?: string | null;
+  channelId: string;
+  /** naqd | plastik | bank */
+  source: string;
+  amount: number;
+  receivedAt: Date;
+  /** Chek yoki hujjat raqami. */
+  docRef?: string | null;
+  note?: string | null;
+}
+
+const MANUAL_SOURCES = new Set(["naqd", "plastik", "bank"]);
+
+/**
+ * Bir xil tushum allaqachon kiritilganmi — YUMSHOQ ogohlantirish uchun.
+ *
+ * `dedupKey` unikal indeksi qattiq to'siq, lekin u faqat AYNAN bir xil kalitni
+ * ushlaydi. Kassir bir to'lovni bir kun farq bilan yoki hujjat raqamisiz
+ * ikkinchi marta kiritsa, kalit boshqacha chiqadi va to'siq ishlamaydi.
+ * Shuning uchun UI saqlashdan oldin shu tekshiruvni chaqiradi: ±1 kun
+ * oralig'ida bir xil firma va summa bo'lsa foydalanuvchidan tasdiq so'raladi.
+ */
+export async function checkDuplicateReceipt(input: {
+  companyId?: string | null;
+  amount: number;
+  receivedAt: Date;
+}) {
+  await requireStatementRole();
+  if (!input.companyId) return { duplicates: [] };
+
+  const day = 86_400_000;
+  const rows = await prisma.paymentAllocation.findMany({
+    where: {
+      payment: { companyId: input.companyId, deletedAt: null },
+      amount: new Prisma.Decimal(input.amount.toFixed(2)),
+      receivedAt: {
+        gte: new Date(input.receivedAt.getTime() - day),
+        lte: new Date(input.receivedAt.getTime() + day),
+      },
+    },
+    select: { id: true, source: true, amount: true, receivedAt: true, externalRef: true },
+    take: 5,
+  });
+  return serialize({ duplicates: rows });
+}
+
+/**
+ * Qo'lda kiritilgan tushumni hisobga oladi.
+ *
+ * NIMA UCHUN BU BOR: ilgari kirim kassasidagi naqd/plastik forma
+ * `createKassaEntry` ni chaqirardi, ya'ni `KassaEntry(income)` yozardi. U
+ * qator MIJOZGA BOG'LANMAGAN — qarz esa `Payment` dan hisoblanadi
+ * (`lib/debt.ts`). Natijada mijoz naqd to'lasa balans o'sardi, lekin u
+ * qarzdorlar ro'yxatida QOLAVERARDI. Bank vipiskasi va 1C plastik reestri
+ * to'g'ri yo'ldan (`PaymentAllocation`) yurar edi — faqat qo'lda kiritish
+ * chetda qolgan edi.
+ *
+ * Endi firma tanlansa `applyAllocation` ga (bank/plastik bilan AYNAN bir xil
+ * yo'l) tushadi. Firma tanlanmasa — nomsiz tushum — `KassaEntry(income)`
+ * qoladi, chunki u haqiqatan hech kimning qarzini kamaytirmaydi.
+ */
+export async function recordManualReceipt(input: ManualReceiptInput) {
+  const { userId } = await requireStatementRole();
+
+  if (!MANUAL_SOURCES.has(input.source)) {
+    throw new Error("To'lov turi noto'g'ri: naqd, plastik yoki bank bo'lishi kerak");
+  }
+  const amount = Number(input.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Summa musbat bo'lishi kerak");
+  }
+  await assertFundingSource(input.channelId);
+  await assertPeriodOpen(prisma, input.receivedAt, "kassa kirimi");
+
+  // Nomsiz tushum — mijozga bog'lanmagan, qarzga ta'sir qilmaydi.
+  if (!input.companyId) {
+    const entry = await prisma.kassaEntry.create({
+      data: {
+        type: "income",
+        category: input.source === "naqd" ? "Naqd tushum" : "Plastik tushum",
+        amount: new Prisma.Decimal(amount.toFixed(2)),
+        description: input.note?.trim() || null,
+        date: input.receivedAt,
+        channelId: input.channelId,
+        createdBy: userId,
+        status: "approved",
+        approvedBy: userId,
+        approvedAt: new Date(),
+        dedupKey: manualDedupKey({ ...input, companyId: null, amount }),
+      },
+    });
+    await recordAuditLog({
+      userId,
+      action: "create",
+      tableName: "KassaEntry",
+      recordId: entry.id,
+      newData: { source: input.source, amount, anonymous: true },
+    });
+    revalidatePath("/kassa/kirim");
+    revalidatePath("/kassa");
+    return serialize({ kind: "anonymous" as const, entryId: entry.id });
+  }
+
+  // Shartnoma berilgan bo'lsa u ayni shu firmaniki ekanini tasdiqlaymiz —
+  // aks holda to'lov boshqa mijozning shartnomasiga yopishib qolardi.
+  if (input.contractId) {
+    const contract = await prisma.contract.findUnique({
+      where: { id: input.contractId },
+      select: { companyId: true },
+    });
+    if (!contract || contract.companyId !== input.companyId) {
+      throw new Error("Shartnoma tanlangan firmaga tegishli emas");
+    }
+  }
+
+  const res = await applyAllocation(prisma, {
+    companyId: input.companyId,
+    contractId: input.contractId ?? null,
+    amount,
+    receivedAt: input.receivedAt,
+    source: input.source,
+    paymentMethod: input.source === "bank" ? "schyot" : input.source,
+    dedupKey: manualDedupKey({ ...input, amount }),
+    externalRef: input.docRef?.trim() || null,
+    channelId: input.channelId,
+    createdBy: userId,
+  });
+
+  await recordAuditLog({
+    userId,
+    action: "create",
+    tableName: "PaymentAllocation",
+    recordId: res.allocationId,
+    newData: {
+      source: input.source,
+      amount,
+      companyId: input.companyId,
+      paymentTotal: res.paymentTotal,
+    },
+  });
+
+  revalidatePath("/kassa/kirim");
+  revalidatePath("/kassa");
+  revalidatePath("/kassa/qarzdorlik");
+  return serialize({ kind: "allocated" as const, ...res });
 }
 
 /** Tranzaksiyani e'tiborsiz qoldiradi (mijoz to'lovi emas). */

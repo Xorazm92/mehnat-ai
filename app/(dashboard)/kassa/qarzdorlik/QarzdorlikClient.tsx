@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, Search, TrendingUp, CheckCircle2, XCircle } from "lucide-react";
 import { formatNum, formatUzDate } from "@/lib/format";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import CollectionQueue from "./CollectionQueue";
 
 interface DebtRow {
   key: string;
@@ -47,6 +48,9 @@ interface DebtorRow {
   lastPaidPeriod: string | null;
   accountantName: string | null;
   supervisorName: string | null;
+  contactedAt?: string | null;
+  nextContactAt?: string | null;
+  contactNote?: string | null;
 }
 
 interface Props {
@@ -68,6 +72,11 @@ interface Props {
       neverPaid: number;
     };
   };
+  /** "Bugun gaplashish kerak" navbati — `getCollectionQueue`. */
+  queue: {
+    rows: DebtorRow[];
+    totals: { companies: number; overdue: number; dueNow: number; neverContacted: number };
+  };
   planFact: PlanFactRow[];
   /** Sverka — moliyaviy invariantlar. Faqat adminda to'ladi. */
   recon?: ReconCheck[];
@@ -75,7 +84,7 @@ interface Props {
 
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
 
-export default function QarzdorlikClient({ debt, debtors, planFact, recon = [] }: Props) {
+export default function QarzdorlikClient({ debt, debtors, queue, planFact, recon = [] }: Props) {
   useAutoRefresh();
   const [query, setQuery] = useState("");
   // Farqi bor qatorlar tepada — aynan ular e'tibor talab qiladi.
@@ -117,6 +126,10 @@ export default function QarzdorlikClient({ debt, debtors, planFact, recon = [] }
           </p>
         </div>
       </div>
+
+      {/* Rahbarga kerak bo'lgan birinchi narsa — raqam emas, HARAKAT ro'yxati.
+          Shuning uchun u sahifaning eng tepasida. */}
+      <CollectionQueue rows={queue.rows} totals={queue.totals} />
 
       {/* TO'LAMAGAN FIRMALAR — sahifaning eng amaliy bloki, shuning uchun
           eng tepada. Direktorning kunlik Telegram hisoboti aynan shu

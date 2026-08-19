@@ -18,6 +18,8 @@ import { companyScopeWhere } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
 import { computeContractDebt, listDebtors, periodKeyOf } from "@/lib/debt";
 import { runReconciliation } from "@/lib/reconciliation";
+import { recordAuditLog } from "@/lib/auditTrail";
+import { revalidatePath } from "next/cache";
 
 
 export interface DebtRow {
@@ -169,6 +171,97 @@ export async function getDebtors(opts: { scope?: "overdue" | "collect" | "all" }
       neverPaid: rows.filter((r) => r.overdue > 0 && r.paid === 0).length,
     },
   });
+}
+
+/**
+ * "BUGUN PUL MASALASINI GAPLASHISH KERAK" ro'yxati.
+ *
+ * `getDebtors` qarz SUMMASINI beradi, bu esa HARAKATNI: kim bilan bugun
+ * bog'lanish kerakligini. Ikkalasi bir manbadan (`listDebtors`) oziqlanadi,
+ * ya'ni raqamlar hech qachon farq qilmaydi.
+ *
+ * Ro'yxatga tushish sharti — qarzi bor VA (suhbat belgilanmagan yoki
+ * belgilangan muddati kelgan). Bugunga keyinroqqa belgilangan firma
+ * ro'yxatdan CHIQADI: shu bilan ro'yxat kundan kunga qisqaradi va o'qiladigan
+ * bo'ladi. Ilgari u har kuni bir xil turardi.
+ */
+export async function getCollectionQueue() {
+  const actor = await requireSenior();
+
+  const isAdmin = isAdminRole(actor.role);
+  const scopedIds = isAdmin
+    ? null
+    : (
+        await prisma.company.findMany({
+          where: companyScopeWhere({ id: actor.userId, role: actor.role }),
+          select: { id: true },
+        })
+      ).map((c) => c.id);
+
+  const rows = await listDebtors(prisma, {
+    companyIds: scopedIds,
+    period: periodKeyOf(new Date()),
+    scope: "collect",
+  });
+
+  const queue = rows
+    .filter((r) => r.contactDue !== false)
+    // Muddati o'tgani tepada, keyin eng uzoq vaqt gaplashilmagani.
+    .sort(
+      (a, b) =>
+        b.overdue - a.overdue ||
+        (a.contactedAt ?? "").localeCompare(b.contactedAt ?? "")
+    );
+
+  return serialize({
+    rows: queue,
+    totals: {
+      companies: queue.length,
+      overdue: queue.reduce((s, r) => s + r.overdue, 0),
+      dueNow: queue.reduce((s, r) => s + r.dueNow, 0),
+      neverContacted: queue.filter((r) => !r.contactedAt).length,
+    },
+  });
+}
+
+/**
+ * "Gaplashildi" — aloqa izini yozadi va keyingi suhbat sanasini belgilaydi.
+ *
+ * Sana berilmasa 7 kundan keyinga siljiydi: har kuni bir xil firmani qayta
+ * ko'rsatmaslik uchun standart kerak, lekin uni butunlay ro'yxatdan
+ * chiqarmaslik ham kerak.
+ */
+export async function setDebtContact(input: {
+  companyId: string;
+  nextContactAt?: string | null;
+  note?: string | null;
+}) {
+  const actor = await requireSenior();
+
+  const next = input.nextContactAt
+    ? new Date(input.nextContactAt)
+    : new Date(Date.now() + 7 * 86_400_000);
+  if (Number.isNaN(next.getTime())) throw new Error("Sana noto'g'ri");
+
+  await prisma.company.update({
+    where: { id: input.companyId },
+    data: {
+      debtContactedAt: new Date(),
+      debtNextContactAt: next,
+      debtContactNote: input.note?.trim() || null,
+    },
+  });
+
+  await recordAuditLog({
+    userId: actor.userId,
+    action: "update",
+    tableName: "Company",
+    recordId: input.companyId,
+    newData: { debtContactedAt: new Date().toISOString(), debtNextContactAt: next.toISOString() },
+  });
+
+  revalidatePath("/kassa/qarzdorlik");
+  revalidatePath("/kassa");
 }
 
 /**

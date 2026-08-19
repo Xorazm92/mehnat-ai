@@ -244,6 +244,122 @@ export interface PostResult {
   supersededManualAmount: number | null;
 }
 
+export interface AllocationInput {
+  companyId: string;
+  contractId?: string | null;
+  amount: Prisma.Decimal | number;
+  receivedAt: Date;
+  /** bank | plastik | naqd */
+  source: string;
+  /** `Payment.paymentMethod` — yangi qator yaratilganda yoziladi. */
+  paymentMethod: string;
+  /** Takrorlanmaslik kaliti: "bank:<txId>" | "plastik:<hujjat>:<STIR>" | "manual:..." */
+  dedupKey: string;
+  externalRef?: string | null;
+  bankTransactionId?: string | null;
+  channelId?: string | null;
+  createdBy?: string | null;
+}
+
+/**
+ * TUSHUMNI mijozning oylik `Payment` qatoriga qo'shadi — YAGONA yo'l.
+ *
+ * Bank vipiskasi, plastik reestri va qo'lda kiritilgan naqd/plastik tushum
+ * uchun ham AYNAN shu funksiya ishlaydi. Ilgari bu 40 qator ikki joyda
+ * nusxalangan edi (`postIncomeTransaction` va `allocatePlastikReceipt`), qo'lda
+ * kiritish esa uchinchi, NOTO'G'RI yo'ldan — `KassaEntry(income)` ga — ketardi
+ * va shuning uchun mijozning qarzini kamaytirmasdi.
+ *
+ * Qoida: `Payment.amount` HECH QACHON qo'shilmaydi, har doim shu davrdagi
+ * `PaymentAllocation` yig'indisidan QAYTA HISOBLANADI. Shu sababli qayta
+ * hisobga olish yoki tahrir summani shishirmaydi.
+ *
+ * `KassaEntry` ATAYIN yozilmaydi: lib/balance.ts kirimni Payment'dan ham,
+ * KassaEntry'dan ham sanaydi — ikkalasini yozish balansni ikki barobar
+ * ko'rsatardi.
+ */
+export async function applyAllocation(db: Db, input: AllocationInput): Promise<PostResult> {
+  const period = periodOf(input.receivedAt);
+  const amount =
+    input.amount instanceof Prisma.Decimal
+      ? input.amount
+      : new Prisma.Decimal(Number(input.amount).toFixed(2));
+
+  // Qatorda avval qo'lda kiritilgan summa bormi (taqsimotsiz)? Bo'lsa, u
+  // taqsimotlar yig'indisi bilan almashtiriladi — buni aytib qo'yish kerak.
+  const existingPayment = await db.payment.findUnique({
+    where: { companyId_period: { companyId: input.companyId, period } },
+    select: { id: true, amount: true, _count: { select: { allocations: true } } },
+  });
+  const supersededManualAmount =
+    existingPayment && existingPayment._count.allocations === 0 && Number(existingPayment.amount) > 0
+      ? Number(existingPayment.amount)
+      : null;
+
+  const payment = await db.payment.upsert({
+    where: { companyId_period: { companyId: input.companyId, period } },
+    create: {
+      companyId: input.companyId,
+      period,
+      amount: 0,
+      status: "pending",
+      paymentMethod: input.paymentMethod,
+      paymentDate: input.receivedAt,
+      createdBy: input.createdBy ?? null,
+    },
+    update: { deletedAt: null, deletedBy: null, deleteReason: null },
+    select: { id: true },
+  });
+
+  const allocation = await db.paymentAllocation.upsert({
+    where: { dedupKey: input.dedupKey },
+    create: {
+      dedupKey: input.dedupKey,
+      source: input.source,
+      externalRef: input.externalRef ?? null,
+      bankTransactionId: input.bankTransactionId ?? null,
+      paymentId: payment.id,
+      contractId: input.contractId ?? null,
+      channelId: input.channelId ?? null,
+      amount,
+      receivedAt: input.receivedAt,
+      createdBy: input.createdBy ?? null,
+    },
+    update: {
+      amount,
+      contractId: input.contractId ?? null,
+      channelId: input.channelId ?? null,
+    },
+    select: { id: true },
+  });
+
+  const total = await db.paymentAllocation.aggregate({
+    where: { paymentId: payment.id },
+    _sum: { amount: true },
+  });
+  const paymentTotal = Number(total._sum.amount ?? 0);
+
+  const company = await db.company.findUnique({
+    where: { id: input.companyId },
+    select: { contractAmount: true },
+  });
+  const due = Number(company?.contractAmount ?? 0);
+  const status = due > 0 && paymentTotal >= due ? "paid" : paymentTotal > 0 ? "partial" : "pending";
+
+  await db.payment.update({
+    where: { id: payment.id },
+    data: { amount: paymentTotal, status, paymentDate: input.receivedAt },
+  });
+
+  return {
+    paymentId: payment.id,
+    allocationId: allocation.id,
+    paymentTotal,
+    status,
+    supersededManualAmount,
+  };
+}
+
 /**
  * Moslashtirilgan KIRIMNI hisobga oladi.
  *
@@ -273,68 +389,16 @@ export async function postIncomeTransaction(
   if (tx.direction !== "income") throw new Error("Faqat kirim tranzaksiyasi hisobga olinadi");
   if (tx.status === "posted") throw new Error("Bu tranzaksiya allaqachon hisobga olingan");
 
-  const period = periodOf(tx.valueDate);
-
-  // Qatorda avval qo'lda kiritilgan summa bormi (taqsimotsiz)? Bo'lsa, u
-  // taqsimotlar yig'indisi bilan almashtiriladi — buni aytib qo'yish kerak.
-  const existingPayment = await db.payment.findUnique({
-    where: { companyId_period: { companyId: input.companyId, period } },
-    select: { id: true, amount: true, _count: { select: { allocations: true } } },
-  });
-  const supersededManualAmount =
-    existingPayment && existingPayment._count.allocations === 0 && Number(existingPayment.amount) > 0
-      ? Number(existingPayment.amount)
-      : null;
-
-  const payment = await db.payment.upsert({
-    where: { companyId_period: { companyId: input.companyId, period } },
-    create: {
-      companyId: input.companyId,
-      period,
-      amount: 0,
-      status: "pending",
-      paymentMethod: "schyot",
-      paymentDate: tx.valueDate,
-      createdBy: input.createdBy ?? null,
-    },
-    update: { deletedAt: null, deletedBy: null, deleteReason: null },
-    select: { id: true },
-  });
-
-  const allocation = await db.paymentAllocation.upsert({
-    where: { dedupKey: `bank:${tx.id}` },
-    create: {
-      dedupKey: `bank:${tx.id}`,
-      source: "bank",
-      bankTransactionId: tx.id,
-      paymentId: payment.id,
-      contractId: input.contractId ?? null,
-      amount: tx.amount,
-      receivedAt: tx.valueDate,
-      createdBy: input.createdBy ?? null,
-    },
-    update: { contractId: input.contractId ?? null, amount: tx.amount },
-    select: { id: true },
-  });
-
-  // Payment.amount — taqsimotlar YIG'INDISI (qo'shish emas, qayta hisoblash):
-  // shu bilan qayta hisobga olish yoki tahrir summani shishirmaydi.
-  const total = await db.paymentAllocation.aggregate({
-    where: { paymentId: payment.id },
-    _sum: { amount: true },
-  });
-  const paymentTotal = Number(total._sum.amount ?? 0);
-
-  const company = await db.company.findUnique({
-    where: { id: input.companyId },
-    select: { contractAmount: true },
-  });
-  const due = Number(company?.contractAmount ?? 0);
-  const status = due > 0 && paymentTotal >= due ? "paid" : paymentTotal > 0 ? "partial" : "pending";
-
-  await db.payment.update({
-    where: { id: payment.id },
-    data: { amount: paymentTotal, status, paymentDate: tx.valueDate },
+  const result = await applyAllocation(db, {
+    companyId: input.companyId,
+    contractId: input.contractId ?? null,
+    amount: tx.amount,
+    receivedAt: tx.valueDate,
+    source: "bank",
+    paymentMethod: "schyot",
+    dedupKey: `bank:${tx.id}`,
+    bankTransactionId: tx.id,
+    createdBy: input.createdBy ?? null,
   });
 
   await db.bankTransaction.update({
@@ -348,13 +412,7 @@ export async function postIncomeTransaction(
     },
   });
 
-  return {
-    paymentId: payment.id,
-    allocationId: allocation.id,
-    paymentTotal,
-    status,
-    supersededManualAmount,
-  };
+  return result;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -386,71 +444,14 @@ export async function allocatePlastikReceipt(
   db: Db,
   input: PlastikAllocationInput
 ): Promise<PostResult> {
-  const period = periodOf(input.receivedAt);
-  const dedupKey = `plastik:${input.docNumber}:${input.counterpartyInn ?? input.companyId}`;
-
-  const existingPayment = await db.payment.findUnique({
-    where: { companyId_period: { companyId: input.companyId, period } },
-    select: { id: true, amount: true, _count: { select: { allocations: true } } },
+  return applyAllocation(db, {
+    companyId: input.companyId,
+    amount: input.amount,
+    receivedAt: input.receivedAt,
+    source: "plastik",
+    paymentMethod: "plastik",
+    dedupKey: `plastik:${input.docNumber}:${input.counterpartyInn ?? input.companyId}`,
+    externalRef: input.docNumber,
+    createdBy: input.createdBy ?? null,
   });
-  const supersededManualAmount =
-    existingPayment && existingPayment._count.allocations === 0 && Number(existingPayment.amount) > 0
-      ? Number(existingPayment.amount)
-      : null;
-
-  const payment = await db.payment.upsert({
-    where: { companyId_period: { companyId: input.companyId, period } },
-    create: {
-      companyId: input.companyId,
-      period,
-      amount: 0,
-      status: "pending",
-      paymentMethod: "plastik",
-      paymentDate: input.receivedAt,
-      createdBy: input.createdBy ?? null,
-    },
-    update: { deletedAt: null, deletedBy: null, deleteReason: null },
-    select: { id: true },
-  });
-
-  const allocation = await db.paymentAllocation.upsert({
-    where: { dedupKey },
-    create: {
-      dedupKey,
-      source: "plastik",
-      externalRef: input.docNumber,
-      paymentId: payment.id,
-      amount: new Prisma.Decimal(input.amount.toFixed(2)),
-      receivedAt: input.receivedAt,
-      createdBy: input.createdBy ?? null,
-    },
-    update: { amount: new Prisma.Decimal(input.amount.toFixed(2)) },
-    select: { id: true },
-  });
-
-  const total = await db.paymentAllocation.aggregate({
-    where: { paymentId: payment.id },
-    _sum: { amount: true },
-  });
-  const paymentTotal = Number(total._sum.amount ?? 0);
-
-  const company = await db.company.findUnique({
-    where: { id: input.companyId },
-    select: { contractAmount: true },
-  });
-  const due = Number(company?.contractAmount ?? 0);
-  const status = due > 0 && paymentTotal >= due ? "paid" : paymentTotal > 0 ? "partial" : "pending";
-
-  await db.payment.update({
-    where: { id: payment.id },
-    data: { amount: paymentTotal, status, paymentDate: input.receivedAt },
-  });
-
-  return {
-    paymentId: payment.id,
-    allocationId: allocation.id,
-    paymentTotal,
-    status,
-    supersededManualAmount,
-  };
 }

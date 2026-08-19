@@ -12,10 +12,12 @@ import {
   commitStatementUpload,
   matchAndPostTransaction,
   ignoreTransaction,
+  recordManualReceipt,
+  checkDuplicateReceipt,
 } from "@/server/bankImport";
 import type { StatementPreview } from "@/lib/bank/types";
-import { createKassaEntry } from "@/server/kassa";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
+import IncomeRegister from "./IncomeRegister";
 import { friendlyError } from "@/lib/actionError";
 
 interface AccountRow {
@@ -90,6 +92,14 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   // Qo'lda kirim: naqd va plastik pul vipiskada ko'rinmaydi, uni odam
   // kiritadi. Backend (createKassaEntry) bor edi, ekran yo'q edi.
   const [manualType, setManualType] = useState<"naqd" | "plastik" | null>(null);
+  // KIMDAN tushdi. Bu maydon yo'q edi va aynan shu sababli qo'lda kiritilgan
+  // naqd to'lov mijozning qarzini kamaytirmasdi — yozuv hech kimga
+  // bog'lanmagan `KassaEntry` bo'lib qolardi.
+  const [manualCompanyId, setManualCompanyId] = useState("");
+  const [manualContractId, setManualContractId] = useState("");
+  const [manualDocRef, setManualDocRef] = useState("");
+  /** Takroriylik ogohlantirishi — foydalanuvchi tasdiqlagach saqlanadi. */
+  const [dupWarning, setDupWarning] = useState<string | null>(null);
   const [manualAmount, setManualAmount] = useState("");
   const [manualNote, setManualNote] = useState("");
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -102,7 +112,18 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   const [manualBusy, setManualBusy] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
 
-  const submitManual = async () => {
+  const resetManual = () => {
+    setManualType(null);
+    setManualAmount("");
+    setManualNote("");
+    setManualChannelId("");
+    setManualCompanyId("");
+    setManualContractId("");
+    setManualDocRef("");
+    setDupWarning(null);
+  };
+
+  const submitManual = async (opts?: { force?: boolean }) => {
     if (!manualType) return;
     const amount = Number(manualAmount.replace(/[^\d.]/g, ""));
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -123,18 +144,39 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
     setManualBusy(true);
     setManualError(null);
     try {
-      await createKassaEntry({
-        type: "income",
-        category: manualType === "naqd" ? "Naqd tushum" : "Plastik tushum",
+      const receivedAt = new Date(manualDate);
+
+      // Yumshoq ogohlantirish: ±1 kun ichida shu firmadan shu summa
+      // allaqachon kelgan bo'lsa, saqlashdan oldin tasdiq so'raymiz.
+      // Qattiq to'siq (dedupKey) serverda, lekin u faqat AYNAN bir xil
+      // kalitni ushlaydi — kassir bir kun farq bilan kiritsa o'tib ketardi.
+      if (!opts?.force && manualCompanyId) {
+        const { duplicates } = await checkDuplicateReceipt({
+          companyId: manualCompanyId,
+          amount,
+          receivedAt,
+        });
+        if (duplicates.length > 0) {
+          setDupWarning(
+            `Shu firmadan bu summada ${duplicates.length} ta to'lov allaqachon qayd etilgan. ` +
+              `Baribir saqlansinmi?`
+          );
+          setManualBusy(false);
+          return;
+        }
+      }
+
+      await recordManualReceipt({
+        companyId: manualCompanyId || null,
+        contractId: manualContractId || null,
+        channelId: manualChannelId,
+        source: manualType,
         amount,
-        description: manualNote.trim() || undefined,
-        date: new Date(manualDate),
-        channelId: manualChannelId || undefined,
+        receivedAt,
+        docRef: manualDocRef.trim() || null,
+        note: manualNote.trim() || null,
       });
-      setManualType(null);
-      setManualAmount("");
-      setManualNote("");
-      setManualChannelId("");
+      resetManual();
       router.refresh();
     } catch (e) {
       setManualError(friendlyError(e) || "Yozib bo'lmadi");
@@ -142,6 +184,12 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
       setManualBusy(false);
     }
   };
+  /** Tanlangan firmaning shartnomalari — shartnoma tanlagichi shundan to'ladi. */
+  const selectedContracts = useMemo(
+    () => companies.find((c) => c.id === manualCompanyId)?.contracts ?? [],
+    [companies, manualCompanyId]
+  );
+
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -311,7 +359,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
             <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
               {manualType === "naqd" ? "Naqd tushum" : "Plastik tushum"} qo&apos;shish
             </h2>
-            <Button variant="secondary" size="sm" onClick={() => setManualType(null)}>Yopish</Button>
+            <Button variant="secondary" size="sm" onClick={resetManual}>Yopish</Button>
           </div>
           {manualError && (
             <p className="text-meta" style={{ color: "var(--danger)" }}>{manualError}</p>
@@ -349,6 +397,61 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
               />
             </label>
           </div>
+          {/* KIMDAN — eng muhim maydon. Firma tanlansa to'lov mijozning
+              qarzini kamaytiradi; tanlanmasa nomsiz tushum bo'lib qoladi. */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label className="block">
+              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Kimdan (firma)</span>
+              <select
+                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
+                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                value={manualCompanyId}
+                onChange={(e) => {
+                  setManualCompanyId(e.target.value);
+                  setManualContractId("");
+                  setDupWarning(null);
+                }}
+              >
+                <option value="">Nomsiz tushum (firmaga bog'lanmagan)</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} — {c.inn}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Shartnoma</span>
+              <select
+                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
+                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                value={manualContractId}
+                onChange={(e) => setManualContractId(e.target.value)}
+                disabled={!manualCompanyId || selectedContracts.length === 0}
+              >
+                <option value="">
+                  {!manualCompanyId
+                    ? "Avval firmani tanlang"
+                    : selectedContracts.length === 0
+                      ? "Shartnoma kiritilmagan"
+                      : "Ko'rsatilmagan"}
+                </option>
+                {selectedContracts.map((ct) => (
+                  <option key={ct.id} value={ct.id}>{ct.number}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Chek / hujjat raqami</span>
+              <input
+                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
+                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                value={manualDocRef}
+                onChange={(e) => setManualDocRef(e.target.value)}
+                placeholder="ixtiyoriy"
+              />
+            </label>
+          </div>
           <label className="block">
             <span className="text-meta" style={{ color: "var(--text-secondary)" }}>
               {manualType === "plastik" ? "Qaysi plastikka tushdi" : "Qaysi kassaga tushdi"}{" "}
@@ -360,9 +463,43 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
               className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
             />
           </label>
-          <Button variant="primary" size="md" disabled={manualBusy} onClick={submitManual}>
-            {manualBusy ? "Yozilmoqda…" : "Saqlash"}
-          </Button>
+          {manualCompanyId ? (
+            <p className="text-micro" style={{ color: "var(--text-muted)" }}>
+              Bu to&apos;lov tanlangan firmaning qarzini kamaytiradi.
+            </p>
+          ) : (
+            <p className="text-micro" style={{ color: "var(--warning, var(--text-muted))" }}>
+              Firma tanlanmagan — tushum kassaga kiradi, lekin hech kimning qarzini kamaytirmaydi.
+            </p>
+          )}
+          {dupWarning ? (
+            <div
+              className="p-3 rounded-lg flex items-start gap-3"
+              style={{ background: "var(--danger-bg)", border: "1px solid var(--danger)" }}
+            >
+              <AlertTriangle size={16} style={{ color: "var(--danger)" }} className="mt-0.5 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-meta" style={{ color: "var(--text)" }}>{dupWarning}</p>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={manualBusy}
+                    onClick={() => submitManual({ force: true })}
+                  >
+                    Baribir saqlash
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setDupWarning(null)}>
+                    Bekor qilish
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Button variant="primary" size="md" disabled={manualBusy} onClick={() => submitManual()}>
+              {manualBusy ? "Yozilmoqda…" : "Saqlash"}
+            </Button>
+          )}
         </div>
       )}
 
@@ -561,60 +698,10 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
         </div>
       </div>
 
-      {/* Plastik va naqd tushumlari */}
-      {nonBank.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
-            Plastik va naqd tushumlari ({nonBank.length})
-          </h2>
-          <div className="overflow-x-auto rounded-xl" style={card}>
-            <table className="w-full text-meta">
-              <thead>
-                <tr style={{ background: "var(--input-bg)" }}>
-                  <th className="text-left p-2">Sana</th>
-                  <th className="text-left p-2">Manba</th>
-                  <th className="text-left p-2">Mijoz</th>
-                  <th className="text-left p-2">Davr</th>
-                  <th className="text-left p-2">Hujjat</th>
-                  <th className="text-right p-2">Summa</th>
-                </tr>
-              </thead>
-              <tbody>
-                {nonBank.map((r) => (
-                  <tr key={r.id} style={{ borderTop: "1px solid var(--card-border)" }}>
-                    <td className="p-2 whitespace-nowrap">
-                      {r.receivedAt ? formatUzDate(r.receivedAt) : "—"}
-                    </td>
-                    <td className="p-2">
-                      <span
-                        className="text-micro font-semibold px-1.5 py-0.5 rounded"
-                        style={{
-                          background: r.source === "plastik" ? "var(--accent-blue-light)" : "var(--success-bg)",
-                          color: r.source === "plastik" ? "var(--accent-blue)" : "var(--success)",
-                        }}
-                      >
-                        {r.source === "plastik" ? "Plastik" : "Naqd"}
-                      </span>
-                    </td>
-                    <td className="p-2 max-w-[280px] truncate">
-                      {r.payment?.company.name ?? (
-                        <span style={{ color: "var(--text-muted)" }}>
-                          {r.manual ? "qo'lda kiritilgan" : "—"}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-2 whitespace-nowrap">{r.payment?.period ?? "—"}</td>
-                    <td className="p-2">{r.externalRef ?? "—"}</td>
-                    <td className="p-2 text-right tabular-nums font-semibold whitespace-nowrap" style={{ color: "var(--success)" }}>
-                      +{formatNum(Number(r.amount))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* Kirim reyestri — barcha tushum (bank ham) bitta jadvalda, sana
+          oralig'i bilan. Bu blok ilgari faqat "Plastik va naqd tushumlari"
+          edi: bank tushumi ko'rinmasdi va sana filtri yo'q edi. */}
+      <IncomeRegister companies={companies} />
 
       {/* Moslashtirilmaganlar navbati */}
       <div className="space-y-2">

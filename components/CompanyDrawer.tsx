@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  getCompanyContracts,
+  createContract,
+  updateContract,
+  deactivateContract,
+} from '@/server/contracts';
 import { Company, OperationEntry, Payment, Language, ClientCredential, ClientHistory, Staff } from '@/types';
 import {
   X,
@@ -824,40 +830,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
               </div>
 
-              {/* Shartnomalar ro'yxati — 1C reestridan.
-                  Eski `Company.contractNumber` bitta ustun edi va bitta mijozda
-                  bir nechta shartnoma bo'lishini ko'tarolmasdi. */}
-              {contractList.length > 0 && (
-                <div className="dashboard-card overflow-hidden !shadow-sm">
-                  <div className="px-3 py-2 flex items-center justify-between" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                    <h4 className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>
-                      Shartnomalar ({contractList.length})
-                    </h4>
-                    <span className="text-micro font-bold tabular-nums" style={{ color: 'var(--text-muted)' }}>
-                      {formatNum(contractList.reduce((sum, k) => sum + (k.amount ?? 0), 0))} so&apos;m
-                    </span>
-                  </div>
-                  <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
-                    {contractList.map(k => (
-                      <div key={k.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                        <div className="min-w-0">
-                          <p className="text-body font-semibold tracking-tight truncate" style={{ color: 'var(--text)' }}>
-                            {k.number}
-                          </p>
-                          <p className="text-micro" style={{ color: 'var(--text-muted)' }}>
-                            {k.signedAt ? formatUzDate(k.signedAt) : 'sana ko\'rsatilmagan'}
-                            {k.ownFirmName ? ` · ${k.ownFirmName}` : ''}
-                            {k.source === '1c_import' ? ' · 1C' : ''}
-                          </p>
-                        </div>
-                        <span className="text-body font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text)' }}>
-                          {k.amount != null ? `${formatNum(k.amount)} so'm` : '—'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Shartnomalar — endi TAHRIRLANADI.
+                  Ilgari bu ro'yxat faqat o'qish uchun edi va shartnoma
+                  yaratishning yagona yo'li 1C importi (scripts/import-contracts.ts)
+                  bo'lgan: yangi mijozning shartnomasini ekrandan kiritib
+                  bo'lmasdi. */}
+              <ContractsPanel companyId={company.id} initial={contractList} />
 
               <div className="dashboard-card overflow-hidden !shadow-sm">
                 <div className="p-5 text-center" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
@@ -1177,3 +1155,252 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 };
 
 export default CompanyDrawer;
+
+// =====================================================
+// SHARTNOMALAR PANELI
+// =====================================================
+//
+// `Contract` jadvali bor edi, lekin ekranda faqat O'QILARDI — yangi shartnoma
+// qo'shishning yagona yo'li 1C importi edi. Shu sababdan yangi mijozning
+// shartnomasi eski bitta ustunga (`Company.contractNumber`) tushib qolar va
+// bitta mijozda bir nechta shartnoma bo'lishi ko'tarilmasdi.
+//
+// TO'LOV TURI (naqd/plastik/bank) bu yerda YO'Q: u shartnomaning emas, har
+// bir to'lovning xossasi va kirim kassasida tanlanadi.
+
+interface ContractRow {
+  id: string;
+  number: string;
+  signedAt: string | null;
+  amount: number | null;
+  source?: string;
+  isActive?: boolean;
+  ownFirmName?: string | null;
+}
+
+function ContractsPanel({ companyId, initial }: { companyId: string; initial: ContractRow[] }) {
+  const [rows, setRows] = useState<ContractRow[]>(initial);
+  const [editing, setEditing] = useState<ContractRow | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [number, setNumber] = useState('');
+  const [signedAt, setSignedAt] = useState('');
+  const [amount, setAmount] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reload = async () => {
+    const fresh = await getCompanyContracts(companyId);
+    setRows(
+      fresh.map((c: any) => ({
+        id: c.id,
+        number: c.number,
+        signedAt: c.signedAt,
+        amount: c.amount == null ? null : Number(c.amount),
+        source: c.source,
+        isActive: c.isActive,
+        ownFirmName: c.ownFirm?.name ?? null,
+      }))
+    );
+  };
+
+  const openNew = () => {
+    setEditing(null);
+    setAdding(true);
+    setNumber('');
+    setSignedAt('');
+    setAmount('');
+    setError(null);
+  };
+
+  const openEdit = (row: ContractRow) => {
+    setAdding(false);
+    setEditing(row);
+    setNumber(row.number);
+    setSignedAt(row.signedAt ? String(row.signedAt).slice(0, 10) : '');
+    setAmount(row.amount != null ? String(row.amount) : '');
+    setError(null);
+  };
+
+  const close = () => {
+    setAdding(false);
+    setEditing(null);
+    setError(null);
+  };
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const payload = {
+        number,
+        signedAt: signedAt || null,
+        amount: amount ? Number(amount.replace(/[^\d.]/g, '')) : null,
+      };
+      if (editing) await updateContract(editing.id, payload);
+      else await createContract({ companyId, ...payload });
+      await reload();
+      close();
+    } catch (e) {
+      setError(friendlyError(e) || 'Saqlab bo\'lmadi');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deactivate = async (row: ContractRow) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await deactivateContract(row.id);
+      await reload();
+    } catch (e) {
+      setError(friendlyError(e) || 'Bajarib bo\'lmadi');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    background: 'var(--input-bg)',
+    border: '1px solid var(--card-border)',
+    color: 'var(--text)',
+  };
+
+  const total = rows.filter(r => r.isActive !== false).reduce((sum, k) => sum + (k.amount ?? 0), 0);
+
+  return (
+    <div className="dashboard-card overflow-hidden !shadow-sm">
+      <div
+        className="px-3 py-2 flex items-center justify-between gap-2"
+        style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}
+      >
+        <h4 className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>
+          Shartnomalar ({rows.length})
+        </h4>
+        <div className="flex items-center gap-2">
+          <span className="text-micro font-bold tabular-nums" style={{ color: 'var(--text-muted)' }}>
+            {formatNum(total)} so&apos;m
+          </span>
+          <button
+            onClick={openNew}
+            className="flex items-center gap-1 px-2 py-1 rounded text-micro font-semibold"
+            style={{ background: 'var(--accent-blue)', color: '#fff' }}
+          >
+            <Plus size={12} /> Qo&apos;shish
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <p className="px-3 py-2 text-micro" style={{ color: 'var(--danger)' }}>{error}</p>
+      )}
+
+      {(adding || editing) && (
+        <div className="p-3 space-y-2" style={{ borderBottom: '1px solid var(--card-border)' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <label className="block">
+              <span className="text-micro" style={{ color: 'var(--text-muted)' }}>Shartnoma raqami *</span>
+              <input
+                className="w-full mt-1 px-2 py-1.5 rounded text-meta outline-none"
+                style={inputStyle}
+                value={number}
+                onChange={e => setNumber(e.target.value)}
+                placeholder="02/26BK"
+              />
+            </label>
+            <label className="block">
+              <span className="text-micro" style={{ color: 'var(--text-muted)' }}>Sana</span>
+              <input
+                type="date"
+                className="w-full mt-1 px-2 py-1.5 rounded text-meta outline-none"
+                style={inputStyle}
+                value={signedAt}
+                onChange={e => setSignedAt(e.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="text-micro" style={{ color: 'var(--text-muted)' }}>Oylik summa (so&apos;m)</span>
+              <input
+                inputMode="numeric"
+                className="w-full mt-1 px-2 py-1.5 rounded text-meta text-right tabular-nums outline-none"
+                style={inputStyle}
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                placeholder="3000000"
+              />
+            </label>
+          </div>
+          <p className="text-micro" style={{ color: 'var(--text-muted)' }}>
+            To&apos;lov turi (naqd / plastik / bank) shartnomada emas — u har bir to&apos;lovda
+            kirim kassasida tanlanadi.
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={busy || !number.trim()}
+              onClick={save}
+              className="px-3 py-1.5 rounded text-micro font-semibold disabled:opacity-50"
+              style={{ background: 'var(--accent-blue)', color: '#fff' }}
+            >
+              {busy ? 'Saqlanmoqda…' : 'Saqlash'}
+            </button>
+            <button
+              onClick={close}
+              className="px-3 py-1.5 rounded text-micro font-semibold"
+              style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
+            >
+              Bekor qilish
+            </button>
+          </div>
+        </div>
+      )}
+
+      {rows.length === 0 ? (
+        <p className="px-3 py-3 text-meta" style={{ color: 'var(--text-muted)' }}>
+          Shartnoma kiritilmagan.
+        </p>
+      ) : (
+        <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
+          {rows.map(k => (
+            <div
+              key={k.id}
+              className="flex items-center justify-between gap-3 px-3 py-2"
+              style={{ opacity: k.isActive === false ? 0.5 : 1 }}
+            >
+              <div className="min-w-0">
+                <p className="text-body font-semibold tracking-tight truncate" style={{ color: 'var(--text)' }}>
+                  {k.number}
+                  {k.isActive === false && (
+                    <span className="text-micro ml-2" style={{ color: 'var(--text-muted)' }}>nofaol</span>
+                  )}
+                </p>
+                <p className="text-micro" style={{ color: 'var(--text-muted)' }}>
+                  {k.signedAt ? formatUzDate(k.signedAt) : 'sana ko\'rsatilmagan'}
+                  {k.ownFirmName ? ` · ${k.ownFirmName}` : ''}
+                  {k.source === '1c_import' ? ' · 1C' : ''}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-body font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text)' }}>
+                  {k.amount != null ? `${formatNum(k.amount)} so'm` : '—'}
+                </span>
+                <button onClick={() => openEdit(k)} title="Tahrirlash" style={{ color: 'var(--text-muted)' }}>
+                  <Pencil size={14} />
+                </button>
+                {k.isActive !== false && (
+                  <button
+                    onClick={() => deactivate(k)}
+                    disabled={busy}
+                    title="Nofaol qilish (o'chirilmaydi — to'lovlar tarixi saqlanadi)"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

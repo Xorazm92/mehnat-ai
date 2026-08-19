@@ -258,6 +258,16 @@ export interface DebtorRow {
   /** Mas'ul buxgalter (kim bilan gaplashish kerakligi). */
   accountantName: string | null;
   supervisorName: string | null;
+  // ALOQA IZI — qarz HISOBIGA kirmaydi, u ustidagi ASRO izohi. Shuning uchun
+  // ixtiyoriy: bot hisoboti (`render-director-report`) sof qarz raqamlari
+  // bilan ishlaydi va bu ustunlarni bilishi shart emas.
+  /** Oxirgi marta qachon gaplashilgan (ISO). */
+  contactedAt?: string | null;
+  /** Keyingi suhbat qachonga belgilangan (ISO). */
+  nextContactAt?: string | null;
+  contactNote?: string | null;
+  /** Suhbat muddati kelgan yoki o'tgan — bugungi ro'yxat shu bo'yicha. */
+  contactDue?: boolean;
 }
 
 export interface DebtTotals {
@@ -294,6 +304,9 @@ interface CompanyWithPayments {
   contractDate: Date | null;
   accountant: { fullName: string } | null;
   supervisor: { fullName: string } | null;
+  debtContactedAt: Date | null;
+  debtNextContactAt: Date | null;
+  debtContactNote: string | null;
   payments: { period: string; amount: Prisma.Decimal; status: string }[];
   contracts: { openingDebt: Prisma.Decimal | null }[];
 }
@@ -316,6 +329,11 @@ async function loadCompanies(
       contractDate: true,
       accountant: { select: { fullName: true } },
       supervisor: { select: { fullName: true } },
+      // Qarz bo'yicha aloqa izi — "bugun kim bilan gaplashish kerak"
+      // ro'yxati shu ustunlarsiz har kuni bir xil turadi.
+      debtContactedAt: true,
+      debtNextContactAt: true,
+      debtContactNote: true,
       // BARCHA davrlar — jamg'arilgan hisob uchun. Ilgari faqat joriy oy
       // o'qilardi, shuning uchun kechikkan to'lov eski oyni yopa olmasdi.
       payments: {
@@ -358,6 +376,12 @@ function rowFor(c: CompanyWithPayments, currentPeriod: string): DebtorRow {
     lastPaidPeriod,
     accountantName: c.accountant?.fullName ?? null,
     supervisorName: c.supervisor?.fullName ?? null,
+    contactedAt: c.debtContactedAt ? c.debtContactedAt.toISOString() : null,
+    nextContactAt: c.debtNextContactAt ? c.debtNextContactAt.toISOString() : null,
+    contactNote: c.debtContactNote,
+    // Suhbat belgilanmagan bo'lsa ham "muddati keldi" deb sanaladi: qarzdor
+    // bilan hech kim gaplashmagani — kechiktirilganidan battarroq holat.
+    contactDue: !c.debtNextContactAt || c.debtNextContactAt <= new Date(),
   };
 }
 

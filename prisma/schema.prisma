@@ -86,9 +86,9 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  assignedCompanies   Company[]            @relation("AccountantCompanies")
-  supervisedCompanies Company[]            @relation("SupervisorCompanies")
-  chiefCompanies      Company[]            @relation("ChiefAccountantCompanies")
+  assignedCompanies   Company[]             @relation("AccountantCompanies")
+  supervisedCompanies Company[]             @relation("SupervisorCompanies")
+  chiefCompanies      Company[]             @relation("ChiefAccountantCompanies")
   auditLogs           AuditLog[]
   notifications       Notification[]
   contractAssignments ContractAssignment[]
@@ -96,11 +96,11 @@ model User {
   payrollAdjustments  PayrollAdjustment[]
   kassaEntries        KassaEntry[]
   expenses            Expense[]
-  attendances         Attendance[]         @relation("UserAttendance")
+  attendances         Attendance[]          @relation("UserAttendance")
   payments            Payment[]
-  payouts             Payout[]             @relation("EmployeePayouts")
-  bankClientCompanies Company[]            @relation("BankClientCompanies")
-  chiefDepartments    Department[]         @relation("DepartmentChief")
+  payouts             Payout[]              @relation("EmployeePayouts")
+  bankClientCompanies Company[]             @relation("BankClientCompanies")
+  chiefDepartments    Department[]          @relation("DepartmentChief")
   statementImports    BankStatementImport[]
   payoutChannels      DisbursementChannel[] @relation("ChannelEmployee")
 
@@ -147,19 +147,27 @@ model Company {
   founderName        String?
   bankClientLogin    String?
   bankClientPassword String?
-  ownerName      String?
-  bankClientId   String?
-  bankClient     User?             @relation("BankClientCompanies", fields: [bankClientId], references: [id], onDelete: SetNull)
-  bankClientName String?
-  statsType      StatsType?
-  kpiEnabled     Boolean           @default(false)
-  serverInfo     String?
-  serverName     String?
-  baseName1c     String?
-  contractAmount Decimal?          @db.Decimal(12, 2)
-  contractNumber String?
-  contractDate   DateTime?
-  paymentDay     Int?
+  ownerName          String?
+  bankClientId       String?
+  bankClient         User?      @relation("BankClientCompanies", fields: [bankClientId], references: [id], onDelete: SetNull)
+  bankClientName     String?
+  statsType          StatsType?
+  kpiEnabled         Boolean    @default(false)
+  serverInfo         String?
+  serverName         String?
+  baseName1c         String?
+  contractAmount     Decimal?   @db.Decimal(12, 2)
+  contractNumber     String?
+  contractDate       DateTime?
+  paymentDay         Int?
+
+  /// QARZ BO'YICHA ALOQA IZI. Rahbarga "bugun kim bilan gaplashish kerak"
+  /// ro'yxatini berish uchun: qarz raqami o'zi harakatga aylanmaydi, kimdir
+  /// qo'ng'iroq qilgani va keyingi suhbat qachonligi ham yozilishi kerak.
+  /// Aks holda ro'yxat har kuni bir xil turadi va o'qilmay qoladi.
+  debtContactedAt   DateTime?
+  debtNextContactAt DateTime?
+  debtContactNote   String?
 
   // Tab 2: SOLIQ
   vatCertificateDate String?
@@ -209,16 +217,16 @@ model Company {
   internalContractorFirm Company?  @relation("InternalContractor", fields: [internalContractorId], references: [id], onDelete: SetNull)
   /// Teskari tomon — shu o'z firmamiz nomidan tuzilgan mijoz shartnomalari.
   internalContractorFor  Company[] @relation("InternalContractor")
-  notes                String?
-  isActive             Boolean  @default(true)
+  notes                  String?
+  isActive               Boolean   @default(true)
 
   // ASRO'ning O'Z yuridik shaxsi (mijoz emas). Mijozlar to'lovi aynan shu
   // firmalarning bank hisobiga tushadi, shuning uchun ular Company jadvalida
   // turadi — lekin mijozlar ro'yxatiga, qarzdorlikka va payrollga KIRMAYDI.
-  isOwnFirm            Boolean  @default(false)
+  isOwnFirm Boolean @default(false)
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   monthlyReports      MonthlyReport[]
@@ -232,9 +240,9 @@ model Company {
   obligations         Obligation[]
   tasks               Task[]
   debtSnapshots       DebtSnapshot[]
-  contracts           Contract[]      @relation("ClientContracts")
-  ownFirmContracts    Contract[]      @relation("OwnFirmContracts")
-  ownFirmAccounts     BankAccount[]   @relation("OwnFirmAccounts")
+  contracts           Contract[]            @relation("ClientContracts")
+  ownFirmContracts    Contract[]            @relation("OwnFirmContracts")
+  ownFirmAccounts     BankAccount[]         @relation("OwnFirmAccounts")
   ownFirmChannels     DisbursementChannel[] @relation("ChannelOwnFirm")
   bankTransactions    BankTransaction[]
 
@@ -248,6 +256,7 @@ model Company {
   @@index([isActive])
   @@index([departmentId])
   @@index([isOwnFirm])
+  @@index([debtNextContactAt])
   @@index([internalContractorId])
 }
 
@@ -375,7 +384,7 @@ model ReportProof {
   period    String // "2026-03"
   colKey    String // OperationModule REPORT_COLUMNS kaliti, masalan "didox"
 
-  imageData String  @db.Text // skrinshot (base64 data URL, klient tomonda siqilgan)
+  imageData String @db.Text // skrinshot (base64 data URL, klient tomonda siqilgan)
 
   // HISOBOTNING O'ZI — skrinshotga qo'shimcha, IXTIYORIY.
   // Skrinshot majburiy bo'lib qoladi (tez ko'z yugurtirish uchun), fayl esa
@@ -387,7 +396,7 @@ model ReportProof {
   fileName String?
   fileType String?
 
-  note      String? // buxgalterning izohi
+  note String? // buxgalterning izohi
 
   status String @default("pending") // pending | approved | rejected
 
@@ -414,27 +423,27 @@ model ReportProof {
 
 // Moliyaviy hisobot hujjatlari (Foyda/zarar, Balans, QQS, Pul oqimi) — ASRO Hisobotlar moduli
 model FinancialReport {
-  id             String    @id @default(uuid())
+  id             String      @id @default(uuid())
   companyId      String
-  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company        Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
   type           String // 'profit_loss' | 'balance' | 'qqs' | 'cashflow'
   period         String // "2026-H1" | "2026-07"
   // HUJJAT holati (tayyorlanmoqda → imzolandi → topshirildi). ISH holati emas:
   // "qachon topshirilishi kerak" va "kim mas'ul" bu yerda EMAS, majburiyatda —
   // aks holda bitta hisobot ikki xil muddat va ikki xil mas'ul bilan yurardi.
-  status         String    @default("preparing") // preparing | ready | signing | submitted | rejected
+  status         String      @default("preparing") // preparing | ready | signing | submitted | rejected
   // Qaysi majburiyatning hujjati. NULL — reglamentdan tashqari tayyorlangan
   // hujjat (mijoz so'rovi, ichki tahlil).
   obligationId   String?
   obligation     Obligation? @relation(fields: [obligationId], references: [id], onDelete: SetNull)
-  data           Json      @default("{}") // hisobot satrlari (viewer uchun)
+  data           Json        @default("{}") // hisobot satrlari (viewer uchun)
   fileFormat     String? // 'PDF' | 'XLS'
   signedBy       String?
   signedAt       DateTime?
   submittedAt    DateTime?
   rejectedReason String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   @@index([companyId])
   @@index([period])
@@ -652,7 +661,7 @@ model LedgerEntry {
   /// Naqd QAYERDA turibdi: DisbursementChannel.id (bank hisobi / naqd / karta).
   /// FK EMAS — `KassaEntry.channelId` uslubiga mos. NULL = kanal noma'lum
   /// (tarixiy qatorlar; sverkada nolga intilishi kerak bo'lgan ko'rsatkich).
-  channelId String?
+  channelId   String?
   /// Kontragent turi: "company" (AR) | "user" (SALARY_PAYABLE).
   /// Chaqiruvchidan OLINMAYDI — `postLedger` uni hisob spetsifikatsiyasidan
   /// yozadi, shunda yozuv xatosi ko'rinmas ikkinchi chelak yarata olmaydi.
@@ -1455,7 +1464,7 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  events   TaskEvent[]
+  events TaskEvent[]
 
   @@index([companyId])
   @@index([assigneeUserId])
@@ -1497,19 +1506,19 @@ model TaskEvent {
 
 /// O'z firmaning bank hisobi. Vipiska aynan shu hisob nomiga tortiladi.
 model BankAccount {
-  id             String  @id @default(uuid())
-  accountNumber  String  @unique // "20208000600767792001"
+  id             String   @id @default(uuid())
+  accountNumber  String   @unique // "20208000600767792001"
   mfo            String?
   bankName       String?
   /// Hisob egasi — isOwnFirm = true bo'lgan Company.
   ownerCompanyId String
-  ownerCompany   Company @relation("OwnFirmAccounts", fields: [ownerCompanyId], references: [id], onDelete: Cascade)
+  ownerCompany   Company  @relation("OwnFirmAccounts", fields: [ownerCompanyId], references: [id], onDelete: Cascade)
   inn            String
   /// Ekranda ko'rinadigan qisqa nom ("BAROKAT TEAM").
-  label     String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  label          String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   imports      BankStatementImport[]
   transactions BankTransaction[]
@@ -1520,23 +1529,23 @@ model BankAccount {
 
 /// Bitta yuklangan vipiska fayli (audit izi: kim, qachon, nechta qator).
 model BankStatementImport {
-  id        String      @id @default(uuid())
-  accountId String
-  account   BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  fileName  String
+  id             String      @id @default(uuid())
+  accountId      String
+  account        BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  fileName       String
   /// Parser formati: 'litsevoy' (Лицевой счет) | 'svedeniya' (Сведения о работе счета)
   format         String
   periodFrom     DateTime
   periodTo       DateTime
-  openingBalance Decimal? @db.Decimal(14, 2)
-  closingBalance Decimal? @db.Decimal(14, 2)
+  openingBalance Decimal?    @db.Decimal(14, 2)
+  closingBalance Decimal?    @db.Decimal(14, 2)
   /// Faylda topilgan / bazaga yozilgan / dublikat bo'lgani uchun tashlangan.
-  rowsParsed    Int      @default(0)
-  rowsInserted  Int      @default(0)
-  rowsDuplicate Int      @default(0)
-  importedBy    String?
-  user          User?    @relation(fields: [importedBy], references: [id], onDelete: SetNull)
-  createdAt     DateTime @default(now())
+  rowsParsed     Int         @default(0)
+  rowsInserted   Int         @default(0)
+  rowsDuplicate  Int         @default(0)
+  importedBy     String?
+  user           User?       @relation(fields: [importedBy], references: [id], onDelete: SetNull)
+  createdAt      DateTime    @default(now())
 
   transactions BankTransaction[]
 
@@ -1559,16 +1568,16 @@ model BankTransaction {
   opCode    String?
   /// 'income' (kredit — pul tushdi) | 'expense' (debet — pul chiqdi)
   direction String
-  amount    Decimal @db.Decimal(14, 2)
+  amount    Decimal  @db.Decimal(14, 2)
 
   counterpartyInn     String?
   counterpartyName    String?
   counterpartyAccount String?
   purpose             String? @db.Text
   /// To'lov maqsadidan ajratilgan shartnoma raqami ("02/26БК").
-  contractHint String?
+  contractHint        String?
   /// Chiqim toifasi (soliq | bank_komissiya | xodim_kartasi | ijara | ...).
-  expenseCategory String?
+  expenseCategory     String?
 
   /// Dublikat qalqoni: account+sana+hujjat+summa+yo'nalish+maqsad sha256.
   /// Xuddi shu faylni qayta yuklash yangi qator hosil qilmaydi.
@@ -1577,12 +1586,12 @@ model BankTransaction {
   /// unmatched | matched | posted | ignored
   status String @default("unmatched")
 
-  matchedCompanyId String?
-  matchedCompany   Company?  @relation(fields: [matchedCompanyId], references: [id], onDelete: SetNull)
+  matchedCompanyId  String?
+  matchedCompany    Company?  @relation(fields: [matchedCompanyId], references: [id], onDelete: SetNull)
   matchedContractId String?
   matchedContract   Contract? @relation(fields: [matchedContractId], references: [id], onDelete: SetNull)
   /// Chiqim yozilganda hosil bo'lgan KassaEntry (FK emas — soft-delete bilan yashaydi).
-  kassaEntryId String?
+  kassaEntryId      String?
 
   ignoredReason String?
   postedAt      DateTime?
@@ -1603,24 +1612,24 @@ model BankTransaction {
 /// bo'lishi mumkin (1C reestrida shunday holat bor), shuning uchun bu alohida
 /// jadval — Company.contractNumber bitta ustun bilan yetmaydi.
 model Contract {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   companyId String
-  company   Company @relation("ClientContracts", fields: [companyId], references: [id], onDelete: Cascade)
+  company   Company  @relation("ClientContracts", fields: [companyId], references: [id], onDelete: Cascade)
   /// Shartnoma qaysi O'Z firmamiz nomidan tuzilgan.
   ownFirmId String?
   ownFirm   Company? @relation("OwnFirmContracts", fields: [ownFirmId], references: [id], onDelete: SetNull)
 
   /// "02/26БК" — vipiskadagi to'lov maqsadi bilan solishtiriladi.
-  number   String
-  signedAt DateTime?
+  number    String
+  signedAt  DateTime?
   /// 1C reestridagi oylik summa.
-  amount   Decimal? @db.Decimal(14, 2)
-  currency String   @default("UZS")
-  isActive Boolean  @default(true)
+  amount    Decimal?  @db.Decimal(14, 2)
+  currency  String    @default("UZS")
+  isActive  Boolean   @default(true)
   /// manual | 1c_import
-  source    String   @default("manual")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  source    String    @default("manual")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   /// 1C dan olingan BOSHLANG'ICH qarz (shu sanaga). Undan keyingi qarz
   /// ASRO o'zi hisoblaydi: boshlang'ich + yangi oylar − to'lovlar.
@@ -1648,7 +1657,7 @@ model Contract {
 /// yig'indidan hisoblanadi: bitta mijoz oyda bankdan ham, plastikdan ham
 /// to'lasa (real holat — iyulda 4 ta firma shunday qilgan), ikkalasi qo'shiladi.
 model PaymentAllocation {
-  id String @id @default(uuid())
+  id                String           @id @default(uuid())
   /// Faqat `source = "bank"` uchun to'ldiriladi.
   bankTransactionId String?
   bankTransaction   BankTransaction? @relation(fields: [bankTransactionId], references: [id], onDelete: Cascade)
@@ -1659,9 +1668,16 @@ model PaymentAllocation {
   amount            Decimal          @db.Decimal(14, 2)
 
   /// bank | plastik | naqd
-  source String @default("bank")
+  source      String  @default("bank")
   /// Manbadagi hujjat raqami (1C reestr nomeri) — takrorlanmaslik uchun.
   externalRef String?
+
+  /// Pul QAYSI kassaga tushdi (DisbursementChannel.id). Qo'lda kiritilgan
+  /// naqd/plastik tushum uchun majburiy, bank importi uchun bo'sh (bank
+  /// hisobi `BankTransaction.accountId` da). FK ATAYIN emas: kanal
+  /// o'chirilsa tarixiy tushum yozuvi yo'qolmasin — `KassaEntry.channelId`
+  /// bilan bir xil qoida.
+  channelId  String?
   /// Pul qachon tushgan (bank uchun valyuta sanasi, plastik uchun reestr sanasi).
   receivedAt DateTime?
 
@@ -1677,6 +1693,7 @@ model PaymentAllocation {
   @@index([paymentId])
   @@index([bankTransactionId])
   @@index([contractId])
+  @@index([channelId])
   @@index([source])
 }
 
@@ -1730,32 +1747,32 @@ model MonthlyTarget {
 }
 
 model DisbursementChannel {
-  id String @id @default(uuid())
+  id         String  @id @default(uuid())
   /// own_bank | employee_card | cash | plastik
   type       String
   label      String
   employeeId String?
   employee   User?   @relation("ChannelEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
   /// "8600****4957" — to'liq karta raqami SAQLANMAYDI.
-  cardMask String?
+  cardMask   String?
 
   // ── O'zini-o'zi band qilgan shaxsning rasmiy ma'lumotlari ──────────────
   // Bular soliq hisoboti uchun kerak: kimga, qaysi ma'lumotnoma asosida va
   // qaysi tranzit hisob orqali pul o'tkazilgani.
   /// Firma(mehnat) — qaysi o'z firmada rasmiylashtirilgan.
-  ownFirmId String?
-  ownFirm   Company? @relation("ChannelOwnFirm", fields: [ownFirmId], references: [id], onDelete: SetNull)
+  ownFirmId      String?
+  ownFirm        Company?  @relation("ChannelOwnFirm", fields: [ownFirmId], references: [id], onDelete: SetNull)
   mfo            String?
   /// Bank tranzit hisobi (23120000100001190005).
   transitAccount String?
   /// Soliq organidan olingan ma'lumotnoma raqami.
-  certificateNo String?
+  certificateNo  String?
   /// JSHSHIR — 14 raqamli shaxsiy identifikator.
-  pinfl String?
+  pinfl          String?
   /// Band qilingan sana.
-  engagedAt DateTime?
+  engagedAt      DateTime?
   /// Faoliyat turi ("Онлайн консультация бериш").
-  activityType String?
+  activityType   String?
 
   notes     String?
   isActive  Boolean  @default(true)
@@ -1786,11 +1803,11 @@ model ChannelCard {
   channelId String
   channel   DisbursementChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   /// "9860****4601" — to'liq raqam HECH QACHON saqlanmaydi.
-  cardMask  String   @unique
+  cardMask  String              @unique
   /// Asosiy karta (kanal kartochkasida ko'rsatiladi).
-  isPrimary Boolean  @default(false)
+  isPrimary Boolean             @default(false)
   notes     String?
-  createdAt DateTime @default(now())
+  createdAt DateTime            @default(now())
 
   @@index([channelId])
 }
@@ -1815,9 +1832,9 @@ model TransitEntry {
   channel   DisbursementChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   /// 'in' — kartaga tushdi · 'out' — kartadan sarflandi
-  direction String
-  amount    Decimal  @db.Decimal(14, 2)
-  date      DateTime
+  direction   String
+  amount      Decimal  @db.Decimal(14, 2)
+  date        DateTime
   /// Chiqim toifasi (ijara | aloqa | ovqat | ...). Kirimda bo'sh.
   category    String?
   description String?
@@ -1825,7 +1842,7 @@ model TransitEntry {
   /// Kirim manbai — vipiskadagi karta o'tkazmasi.
   bankTransactionId String?
   /// Chiqim natijasi — yozilgan KassaEntry (FK emas, soft-delete bilan yashaydi).
-  kassaEntryId String?
+  kassaEntryId      String?
 
   /// Takrorlanmaslik: "bank:<txId>" (kirim) yoki "out:<uuid>".
   dedupKey String @unique
