@@ -11,11 +11,11 @@ import {
 } from '@/lib/permissions';
 import { STANDARD_TARIFF, type TariffPreset } from '@/lib/tariffPresets';
 import {
-    TAX_REGIMES,
-    TAX_REGIME_HINT,
-    TAX_REGIME_LABEL,
+    TAX_CATEGORIES,
     legacyTaxType,
     normalizeTaxRegime,
+    taxRegimeCategory,
+    type TaxRegimeCode,
 } from '@/lib/taxRegimes';
 
 interface Props {
@@ -500,9 +500,16 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                         <div className="space-y-5">
                             <div>
                                 <label className="text-micro font-bold uppercase tracking-widest mb-3 block ml-1" style={fieldLabelStyle}>Soliq Turi</label>
+                                {/*
+                                 * IKKI BOSQICHLI TANLAGICH: avval rejim TOIFASI (TAX_CATEGORIES),
+                                 * so'ng — agar toifa ichida sub-variantlar bo'lsa (Aylanmadan
+                                 * soliq: foiz/qat'iy; YaTT: qat'iy/aylanma/QQS) — ICHKI radio.
+                                 * Bazaga har doim BARG kod yoziladi (masalan `turnover_fixed`),
+                                 * toifa o'zi saqlanmaydi — `taxRegimeCategory()` uni bargdan
+                                 * qayta hisoblaydi, shu bilan tanlov har doim izchil qoladi.
+                                 */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {TAX_REGIMES.map(code => {
-                                        const tax = { id: code, label: TAX_REGIME_LABEL[code], desc: TAX_REGIME_HINT[code] };
+                                    {TAX_CATEGORIES.map(cat => {
                                         /**
                                          * TANLOV KANONIK MAYDONGA YOZILADI.
                                          *
@@ -513,25 +520,68 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                          * "o'zgartiraman, saqlayman, o'zgarmaydi" deb xabar qildi.
                                          */
                                         const current = normalizeTaxRegime(formData.taxRegime ?? formData.taxType);
-                                        const selected = current === code;
+                                        const currentCategory = taxRegimeCategory(current);
+                                        const selected = currentCategory === cat.id;
+                                        const selectRegime = (code: TaxRegimeCode) =>
+                                            setFormData({ ...formData, taxRegime: code, taxType: legacyTaxType(code) as Company['taxType'] });
                                         return (
-                                            <button
-                                                key={tax.id}
-                                                onClick={() => setFormData({ ...formData, taxRegime: code, taxType: legacyTaxType(code) as Company['taxType'] })}
+                                            <div
+                                                key={cat.id}
                                                 className="p-5 rounded-xl transition-all text-left"
                                                 style={selected
                                                     ? { border: '1px solid var(--accent-blue)', background: 'var(--accent-blue-light)' }
                                                     : { border: '1px solid var(--card-border)', background: 'var(--input-bg)' }}
                                             >
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="w-5 h-5 rounded-full border flex items-center justify-center transition-all" style={{ borderColor: selected ? 'var(--accent-blue)' : 'var(--input-border)' }}>
-                                                        {selected && <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--accent-blue)' }} />}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => selectRegime(cat.code ?? cat.subOptions![0].code)}
+                                                    className="w-full text-left"
+                                                >
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="w-5 h-5 rounded-full border flex items-center justify-center transition-all" style={{ borderColor: selected ? 'var(--accent-blue)' : 'var(--input-border)' }}>
+                                                            {selected && <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--accent-blue)' }} />}
+                                                        </div>
+                                                        <Calculator size={18} style={{ color: selected ? 'var(--accent-blue)' : 'var(--text-muted)' }} />
                                                     </div>
-                                                    <Calculator size={18} style={{ color: selected ? 'var(--accent-blue)' : 'var(--text-muted)' }} />
-                                                </div>
-                                                <div className="font-bold text-base mb-1" style={{ color: 'var(--text)' }}>{tax.label}</div>
-                                                <div className="text-micro font-bold uppercase tracking-widest" style={fieldLabelStyle}>{tax.desc}</div>
-                                            </button>
+                                                    <div className="font-bold text-base mb-1" style={{ color: 'var(--text)' }}>{cat.label}</div>
+                                                    <div className="text-micro font-bold uppercase tracking-widest" style={fieldLabelStyle}>{cat.hint}</div>
+                                                </button>
+
+                                                {cat.subOptions && (
+                                                    <div className="mt-4 pt-4 space-y-2" style={{ borderTop: '1px solid var(--card-border)' }}>
+                                                        {cat.subOptions.map(sub => {
+                                                            const subSelected = current === sub.code;
+                                                            return (
+                                                                <button
+                                                                    key={sub.code}
+                                                                    type="button"
+                                                                    onClick={() => selectRegime(sub.code)}
+                                                                    className="w-full flex items-center gap-3 p-2.5 rounded-lg transition-all text-left"
+                                                                    style={subSelected
+                                                                        ? { background: 'var(--accent-blue)', color: '#fff' }
+                                                                        : { background: 'var(--card-bg)', color: 'var(--text)' }}
+                                                                >
+                                                                    <div
+                                                                        className="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
+                                                                        style={{ borderColor: subSelected ? '#fff' : 'var(--input-border)' }}
+                                                                    >
+                                                                        {subSelected && <div className="w-2 h-2 rounded-full" style={{ background: '#fff' }} />}
+                                                                    </div>
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <span className="text-xs font-bold truncate">{sub.label}</span>
+                                                                        <span
+                                                                            className="text-2xs font-semibold truncate"
+                                                                            style={{ color: subSelected ? 'rgba(255,255,255,0.85)' : 'var(--text-muted)' }}
+                                                                        >
+                                                                            {sub.hint}
+                                                                        </span>
+                                                                    </div>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
                                         );
                                     })}
                                 </div>

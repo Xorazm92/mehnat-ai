@@ -23,9 +23,15 @@ enum UserRole {
 enum TaxRegime {
   vat
   turnover
-  fixed
-  yatt
-  income
+  fixed // DEPRECATED: eski qiymat, endi `turnover_fixed`/`yatt_fixed` ishlatiladi
+  yatt // DEPRECATED: eski umumiy YaTT, endi `yatt_fixed`/`yatt_turnover`/`yatt_vat`
+  income // DEPRECATED: eski qiymat, endi `yatt_fixed` ishlatiladi
+  turnover_percent
+  turnover_fixed
+  yatt_fixed
+  yatt_turnover
+  yatt_vat
+  nonresident
 }
 
 enum StatsType {

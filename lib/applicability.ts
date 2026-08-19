@@ -9,6 +9,8 @@
 // boshlanishi (contractDate) ham tekshiriladi. #5: applicability faqat
 // taxRegime emas; #16: template.lifecycle=active bo'lishi generator gate'ida.
 
+import { normalizeTaxRegime, taxRegimeEngineBucket } from "./taxRegimes";
+
 export interface CompanyFacts {
   id: string;
   isActive: boolean;
@@ -56,10 +58,15 @@ export function templateApplies(criteria: ApplicabilityCriterion[], c: CompanyFa
 
 function matchesCriterion(type: string, value: string, c: CompanyFacts): boolean {
   switch (type) {
-    case "tax_regime":
-      return c.taxRegime === value;
+    case "tax_regime": {
+      // To'g'ridan-to'g'ri mos kelsa ham, yoki yangi sub-rejim (masalan
+      // `yatt_vat`) shu majburiyat-dvigatel bucket'iga tushsa ham — mos.
+      if (c.taxRegime === value) return true;
+      const bucket = taxRegimeEngineBucket(normalizeTaxRegime(c.taxRegime));
+      return (value === "vat" || value === "turnover") && bucket === value;
+    }
     case "vat_payer": {
-      const isVat = c.taxRegime === "vat";
+      const isVat = taxRegimeEngineBucket(normalizeTaxRegime(c.taxRegime)) === "vat";
       return value === "true" ? isVat : !isVat;
     }
     case "stats_type":

@@ -8,6 +8,14 @@
 //
 // Hozircha yagona qoida — soliq rejimi. QQS va aylanma bir-birini istisno
 // qiladi: firma yo QQS to'lovchi, yo aylanma rejimida.
+//
+// TAKSONOMIYA KENGAYTIRILGANDA (turnover_percent/fixed, yatt_vat/turnover/
+// fixed, nonresident — lib/taxRegimes.ts) bu yerda hamon faqat ikkita
+// "bucket" bor: `taxRegimeEngineBucket` har bir yangi kodni shu ikkitadan
+// biriga (yoki "other"ga) tushiradi, shuning uchun quyidagi jadval o'zgarmay
+// qoladi.
+
+import { normalizeTaxRegime, taxRegimeEngineBucket } from "./taxRegimes";
 
 /** Ustunni faqat shu soliq rejimlari ishlatadi. Ro'yxatda yo'q ustun — hammaga. */
 const REGIME_ONLY: Record<string, readonly string[]> = {
@@ -30,7 +38,8 @@ export function columnAppliesToRegime(colKey: string, regime: string | null | un
   if (!allowed) return true;
   const r = (regime ?? "").trim().toLowerCase();
   if (!r) return true;
-  return allowed.includes(r);
+  const bucket = taxRegimeEngineBucket(normalizeTaxRegime(r));
+  return allowed.includes(r) || allowed.includes(bucket);
 }
 
 /** Katak yopilgan bo'lsa — nega yopilganini tushuntiruvchi matn. */
