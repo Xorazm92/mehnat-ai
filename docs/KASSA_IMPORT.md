@@ -45,6 +45,27 @@ npm run import:firm-balances -- --as-of=2026-08-01 --apply
 Hamma skript **idempotent**: qayta ishga tushirish dublikat yaratmaydi.
 `--apply` / `--dry-run` bo'lmasa hech narsa yozilmaydi.
 
+## Prodda
+
+Yuqoridagi ketma-ketlik bitta skriptga yig'ilgan:
+
+```bash
+# Manba fayllarini serverga ko'chirish (repozitoriyda YO'Q)
+scp -i ~/Downloads/ASRO.pem -r kassa ubuntu@<server>:~/mehnat-ai/
+
+# Serverda — avval quruq hisobot, raqamlarni tekshiring
+bash scripts/deploy-kassa-import.sh
+bash scripts/deploy-kassa-import.sh --apply
+```
+
+Prod tartibida `--create-missing` ATAYIN ishlatilmaydi: reyestrda yo'q varaq
+uchun kanal ochish — taxmin, va u prodda qilinmaydi. Bunday varaq hisobotda
+alohida ro'yxat bo'lib chiqadi.
+
+Skript nolinchi qadamda `purge-synthetic-kassa.ts` ni chaqiradi — lokal
+bazada `vitest-race` va `[demo]` yozuvlari 1,63 mlrd so'mlik soxta aylanma
+yaratgan edi. Prod toza bo'lsa u "0 ta" deb o'tib ketadi.
+
 ## Nimaga e'tibor berish kerak
 
 **Har yozuv jurnalga ham tushadi.** Kassalar jadvali (`server/kassaReport.ts`)
