@@ -65,6 +65,10 @@ async function handleContact(update: RawTelegramUpdate, secret: string): Promise
   if (user) {
     await sendMessage(contact.chatId, renderMenu(user.fullName), {
       replyMarkup: mainMenuKeyboard(secret, user.role),
+      // Menyu HTML chizadi. Bu yerda `parseMode` unutilgani uchun bog'langan
+      // xodim birinchi xabarida qalin matn o'rniga `<b>Ism</b>` degan teglarni
+      // ko'rardi — bot bilan birinchi taassurot aynan shu xabar.
+      parseMode: "HTML",
     });
   }
   return true;

@@ -46,14 +46,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, ...accountProblem });
   }
 
-  // Imzo ham, hisob ham joyida. Demak to'xtatgan narsa sessiya cookie'si —
-  // deyarli har doim HTTPS/cookie sozlamasi (AUTH_TRUST_HOST, __Secure-).
+  // Imzo ham, hisob ham joyida. Demak to'xtatgan narsa cookie: Mini App
+  // boshqa saytga joylashtirilgan kontekstda ochiladi va u yerda `SameSite`
+  // cheklovi CSRF tokenini yubormay qo'yadi (`lib/auth.config.ts` ga qarang).
   return NextResponse.json({
     ok: true,
     code: "session",
     message:
-      "Telegram tekshiruvi o'tdi, lekin sessiya cookie'si o'rnatilmadi. " +
-      "Sayt sozlamasini tekshirish kerak (AUTH_URL / AUTH_TRUST_HOST).",
+      "Telegram tekshiruvi o'tdi, lekin brauzer sessiya cookie'sini saqlamadi. " +
+      "Telegram ilovasini yangilab ko'ring yoki saytga brauzerdan kiring.",
     admin: true,
   });
 }
