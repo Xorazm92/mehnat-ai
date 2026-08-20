@@ -71,6 +71,10 @@ contract_json_files/
 # Ichida xodimlarning karta raqami, JSHSHIR va mijozlar qarzdorligi bor —
 # repozitoriyga ham, serverga ham chiqmaydi. Ma'lumot bazada yashaydi.
 others_json_files/
+# Boshida `kassa/` deb yozilgan edi — u naqsh ILDIZGA BOG'LANMAGAN va
+# `app/(dashboard)/kassa/` UI modulini ham jimgina gitdan yashirardi.
+# Boshidagi `/` uni faqat repozitoriy ildizidagi papkaga qaratadi.
+/kassa/
 
 # Recovery sprint ish fayllari (majburiyat ID ro'yxatlari, baseline snapshotlar)
 .recovery/

@@ -45,8 +45,14 @@ export interface CashDeskRow {
   closing: number;
   isActive: boolean;
   /**
-   * Xodim kartalari uchun TRANZIT qoldig'i — mustaqil ikkinchi o'lchov.
+   * FAQAT XODIM KARTALARI uchun TRANZIT qoldig'i — mustaqil ikkinchi o'lchov.
    * Jurnal bilan mos kelmasa, demak karta xarajati kassaga bog'lanmagan.
+   *
+   * Boshqa turlarda ATAYIN `null`: bank schyoti, naqd seyf va plastik
+   * terminalda tranzit daftari umuman yuritilmaydi, ya'ni u yerda qiymat
+   * har doim 0 bo'ladi. UI esa "0 ≠ qoldiq" ni nomuvofiqlik deb ko'rsatib,
+   * har bir harakatdagi oddiy kassa yonida qizil "farq" yozuvini chiqarardi
+   * — hech qanday muammo bo'lmasa ham.
    */
   transitBalance: number | null;
 }
@@ -85,6 +91,10 @@ export async function getCashDeskReport(period?: string): Promise<CashDeskReport
 
   const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
+  /** Tranzit o'lchovi faqat kartada ma'noli — qolganida solishtiruv yo'q. */
+  const transitOf = (id: string | null, kind: ChannelType | null) =>
+    id && kind === "employee_card" ? (transitBy.get(id) ?? null) : null;
+
   // Davr harakati = shu davr oxirigacha (debit/credit) − oldingi davr oxirigacha.
   const rows: CashDeskRow[] = through.map((r) => {
     const id = r.channelId;
@@ -107,7 +117,7 @@ export async function getCashDeskReport(period?: string): Promise<CashDeskReport
       outflow,
       closing,
       isActive: ch?.isActive ?? false,
-      transitBalance: id ? (transitBy.get(id) ?? null) : null,
+      transitBalance: transitOf(id, kind),
     };
   });
 
@@ -125,7 +135,7 @@ export async function getCashDeskReport(period?: string): Promise<CashDeskReport
       detail: kind === "own_firm_account" ? c.transitAccount : c.cardMask,
       opening: 0, income: 0, outflow: 0, closing: 0,
       isActive: c.isActive,
-      transitBalance: transitBy.get(c.id) ?? null,
+      transitBalance: transitOf(c.id, kind),
     });
   }
 
@@ -148,5 +158,89 @@ export async function getCashDeskReport(period?: string): Promise<CashDeskReport
     rows,
     totals,
     unassigned: rows.find((r) => r.channelId === null)?.closing ?? 0,
+  });
+}
+
+// =====================================================
+// MODDALAR KESIMI — Excel "DASHBOARD" varag'ining o'rnini bosadi
+// =====================================================
+//
+// Buxgalter Excelda har oy bitta savolga javob izlaydi: "shu oyda qaysi
+// MODDA bo'yicha qancha kirdi va chiqdi". Kassalar jadvali (yuqorida) "pul
+// qayerda" ga javob beradi, bu esa "pul nimaga" ga.
+//
+// MANBA — `KassaEntry`, jurnal EMAS. Sabab: modda (`category`) jurnal
+// oyoqlarida saqlanmaydi, u faqat kassa yozuvida turadi. Ikkalasining
+// summasi bir xil bo'lishi kerak, chunki har kassa yozuvi jurnalga aynan
+// o'z summasi bilan tushadi (`server/kassa.ts` postExpenseLegs).
+//
+// MIJOZ TO'LOVLARI ATAYIN QO'SHILMAGAN va alohida qator bo'lib ko'rsatiladi.
+// Ular `Payment` jadvalida yashaydi (`/kassa/kirim`), kassa moddasi emas —
+// bittasiga qo'shib yuborilsa, "Firma to'lovi" moddasi bir xil pulni ikki
+// manbadan sanab, oylik tushum ikki barobar ko'rinardi.
+
+export interface CategoryRow {
+  category: string;
+  type: "income" | "expense";
+  count: number;
+  amount: number;
+}
+
+export interface CategoryBreakdown {
+  period: string;
+  income: CategoryRow[];
+  expense: CategoryRow[];
+  incomeTotal: number;
+  expenseTotal: number;
+  /** Shu davrdagi shartnoma to'lovlari — kassa moddasi emas, ma'lumot uchun. */
+  contractPayments: { count: number; amount: number };
+}
+
+export async function getCategoryBreakdown(period?: string): Promise<CategoryBreakdown> {
+  await requireKassa();
+  const key = period ?? periodKeyOf(new Date());
+  const [y, m] = key.split("-").map(Number);
+  // Yarim ochiq chegara [from, to) — oyning oxirgi kunidagi yozuv tushib
+  // qolmasin (`lib/dateRange.ts` bilan bir xil qoida).
+  const from = new Date(y, m - 1, 1);
+  const to = new Date(y, m, 1);
+
+  const [grouped, payments] = await Promise.all([
+    prisma.kassaEntry.groupBy({
+      by: ["type", "category"],
+      where: { deletedAt: null, status: { not: "rejected" }, date: { gte: from, lt: to } },
+      _count: true,
+      _sum: { amount: true },
+    }),
+    prisma.payment.aggregate({
+      where: { period: key, deletedAt: null, status: { in: ["paid", "partial"] } },
+      _count: true,
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const rows: CategoryRow[] = grouped.map((g) => ({
+    category: g.category,
+    type: g.type === "income" ? "income" : "expense",
+    count: g._count,
+    amount: Number(g._sum.amount ?? 0),
+  }));
+
+  const pick = (t: "income" | "expense") =>
+    rows.filter((r) => r.type === t).sort((a, b) => b.amount - a.amount);
+
+  const income = pick("income");
+  const expense = pick("expense");
+
+  return serialize({
+    period: key,
+    income,
+    expense,
+    incomeTotal: income.reduce((s, r) => s + r.amount, 0),
+    expenseTotal: expense.reduce((s, r) => s + r.amount, 0),
+    contractPayments: {
+      count: payments._count,
+      amount: Number(payments._sum.amount ?? 0),
+    },
   });
 }

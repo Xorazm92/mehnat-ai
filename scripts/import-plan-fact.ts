@@ -11,19 +11,19 @@ import { prisma } from "@/lib/prisma";
 import { formatNum as som } from "@/lib/format";
 import fs from "node:fs";
 import path from "node:path";
+import { findImportFileByPrefix, importDirs, requireImportFile } from "./import-source";
 import { parsePlanFact } from "@/lib/planFact";
 
-const DIR = path.join(process.cwd(), "others_json_files");
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
-  const file = fs.readdirSync(DIR).find((f) => f.startsWith("Plan fact"));
+  const file = findImportFileByPrefix("Plan fact");
   if (!file) {
-    console.error(`"Plan fact" fayli topilmadi (${DIR})`);
+    console.error(`"Plan fact" fayli topilmadi (${importDirs().join(", ") || "manba papkasi yo'q"})`);
     process.exit(1);
   }
 
-  const workbook = JSON.parse(fs.readFileSync(path.join(DIR, file), "utf8"));
+  const workbook = JSON.parse(fs.readFileSync(requireImportFile(file), "utf8"));
   const rows = parsePlanFact(workbook["Umumiy"] ?? []);
   const periods = [...new Set(rows.map((r) => r.period))].sort();
   const metrics = [...new Set(rows.map((r) => r.metric))];

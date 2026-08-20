@@ -7,15 +7,18 @@
 
 import React from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import BalanceOverview from "@/components/BalanceOverview";
+import BalanceOverview, { type MonthlyMovement } from "@/components/BalanceOverview";
 import { BalanceBreakdown } from "@/types";
 
 interface Props {
   balance?: BalanceBreakdown;
+  /** Tanlangan oyning harakati — bosh raqamlar shu oydan olinadi. */
+  monthly?: MonthlyMovement;
+  periodLabel?: string;
 }
 
-export default function KassaClient({ balance }: Props) {
+export default function KassaClient({ balance, monthly, periodLabel }: Props) {
   useAutoRefresh();
   if (!balance) return null;
-  return <BalanceOverview breakdown={balance} />;
+  return <BalanceOverview breakdown={balance} monthly={monthly} periodLabel={periodLabel} />;
 }

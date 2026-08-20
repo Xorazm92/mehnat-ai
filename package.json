@@ -40,7 +40,11 @@
     "recovery:b4b:preview": "tsx scripts/recovery-b4b-preview.ts --save .recovery/b4b-baseline.json",
     "recovery:b4b:clear": "tsx scripts/recovery-b4b-clear.ts --baseline .recovery/b4b-baseline.json",
     "recovery:b4b:postcheck": "tsx scripts/recovery-b4b-postcheck.ts --baseline .recovery/b4b-baseline.json",
-    "seed:own-accounts": "tsx scripts/seed-own-firm-accounts.ts"
+    "seed:own-accounts": "tsx scripts/seed-own-firm-accounts.ts",
+    "seed:kassa-desks": "tsx scripts/seed-kassa-desks.ts",
+    "import:transit": "tsx scripts/import-transit.ts",
+    "import:kassa-ops": "tsx scripts/import-kassa-operations.ts",
+    "import:firm-balances": "tsx scripts/import-firm-balances.ts"
   },
   "dependencies": {
     "@google/genai": "^2.12.0",

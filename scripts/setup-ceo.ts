@@ -28,6 +28,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
+import { findImportFile, requireImportFile } from "./import-source";
 import { phoneKey } from "@/lib/phone";
 import { SYSTEM_SETTING_DEFAULTS } from "@/lib/admin/system-settings-config";
 
@@ -45,7 +46,8 @@ const CEO = {
 /** Bu hisobga TEGILMAYDI — u boshqa odam (buxgalter). */
 const ACCOUNTANT_EMAIL = "otabek_e419@mehnat.uz";
 
-const REGISTRY = path.join(process.cwd(), "others_json_files", "Band qilganlar.json");
+// Fayl bo'lmasa ham skript ishlashda davom etadi (89-qatordagi tekshiruv).
+const REGISTRY = findImportFile("Band qilganlar.json") ?? "";
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");

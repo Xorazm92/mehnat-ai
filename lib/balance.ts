@@ -136,6 +136,64 @@ async function movementInRange(
   };
 }
 
+/**
+ * BITTA OYNING kirim/chiqim kesimi — MANBA BO'YICHA ajratilgan.
+ *
+ * NEGA KERAK: `getAvailableBalance` BOSHIDAN BERI yig'ilgan raqamni beradi
+ * (kirim 1,25 mlrd). Ekranda u "Kirim" deb turgani uchun uni oylik tushum
+ * deb o'qish oson edi, holbuki korxonaning oylik tushumi ~1 mlrd atrofida —
+ * ya'ni bitta raqam butun tarixni bitta oy qilib ko'rsatardi.
+ *
+ * Balansning O'ZI (qancha pul bor) baribir yig'ma bo'lishi SHART: bugungi
+ * qoldiq — butun tarixning natijasi. Shuning uchun bu funksiya balansni
+ * hisoblamaydi, faqat SHU OYdagi harakatni beradi.
+ */
+export async function getMonthBreakdown(
+  year: number,
+  month: number,
+  db: MovementDb = prisma
+): Promise<{
+  income: number;
+  outflow: number;
+  incomePayments: number;
+  incomeKassa: number;
+  outflowKassa: number;
+  outflowPayroll: number;
+}> {
+  const key = `${year}-${String(month).padStart(2, "0")}`;
+  const dateWhere = { gte: new Date(year, month - 1, 1), lt: new Date(year, month, 1) };
+
+  const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
+    db.payment.aggregate({
+      where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: key },
+      _sum: { amount: true },
+    }),
+    db.kassaEntry.aggregate({
+      where: { type: "income", deletedAt: null, date: dateWhere },
+      _sum: { amount: true },
+    }),
+    db.kassaEntry.aggregate({
+      where: { type: "expense", status: "approved", deletedAt: null, date: dateWhere },
+      _sum: { amount: true },
+    }),
+    db.payout.aggregate({ where: { deletedAt: null, paidAt: dateWhere }, _sum: { amount: true } }),
+  ]);
+
+  const incomePayments = n(payments._sum.amount);
+  const incomeKassa = n(kassaIn._sum.amount);
+  const outflowKassa = n(kassaOut._sum.amount);
+  const outflowPayroll = n(payouts._sum.amount);
+
+  return {
+    income: incomePayments + incomeKassa,
+    outflow: outflowKassa + outflowPayroll,
+    incomePayments,
+    incomeKassa,
+    outflowKassa,
+    outflowPayroll,
+  };
+}
+
 /** Bitta oyning kirim/chiqim harakati (oy yopilishi uchun). db — tx bo'lishi mumkin. */
 export async function getMonthMovement(
   year: number,

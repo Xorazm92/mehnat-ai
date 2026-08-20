@@ -19,20 +19,20 @@ import { prisma } from "@/lib/prisma";
 import { formatNum as som } from "@/lib/format";
 import fs from "node:fs";
 import path from "node:path";
+import { findImportFile, findImportFileByPrefix, requireImportFile } from "./import-source";
 import { parseMealWorkbook } from "@/lib/mealExpenses";
 import { KASSA_CATEGORIES_KEY } from "@/lib/kassaCategories";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { periodKeyOf } from "@/lib/periods";
 
-const DIR = path.join(process.cwd(), "others_json_files");
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
 
   // ── 1. Toifalar lug'ati ────────────────────────────────────────────────
-  const kassaPath = path.join(DIR, "Kassa.json");
+  const kassaPath = findImportFile("Kassa.json");
   let categories: { income: string[]; expense: string[] } | null = null;
-  if (fs.existsSync(kassaPath)) {
+  if (kassaPath) {
     const dict = JSON.parse(fs.readFileSync(kassaPath, "utf8"))["DICTIONARY"] ?? [];
     const pick = (col: string) =>
       Array.from(
@@ -49,9 +49,9 @@ async function main() {
   }
 
   // ── 2. Xo'jalik xarajatlari ────────────────────────────────────────────
-  const obedFile = fs.readdirSync(DIR).find((f) => f.startsWith("FinCo Obed"));
+  const obedFile = findImportFileByPrefix("FinCo Obed");
   const sheets = obedFile
-    ? parseMealWorkbook(JSON.parse(fs.readFileSync(path.join(DIR, obedFile), "utf8")))
+    ? parseMealWorkbook(JSON.parse(fs.readFileSync(requireImportFile(obedFile), "utf8")))
     : [];
 
   console.log(`\n${"═".repeat(70)}\nXO'JALIK XARAJATLARI\n${"═".repeat(70)}`);

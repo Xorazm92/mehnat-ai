@@ -3,10 +3,10 @@
  *
  * Ikki manba (`others_json_files/`):
  *   `Band qilganlar.json`      → DisbursementChannel (34 shaxs, 17 tasi karta bilan)
- *   `O'zini-o'zi band Iyul.json` → TransitEntry (iyul daftari)
+ *   `O'zini-o'zi band <Oy>.json`  → TransitEntry (o'sha oy daftari, `--month=`)
  *
- *   npx tsx scripts/import-transit.ts --dry-run
- *   npx tsx scripts/import-transit.ts
+ *   npx tsx scripts/import-transit.ts --month=iyul --dry-run
+ *   npx tsx scripts/import-transit.ts --month=avgust --create-missing
  *
  * BALANS QOIDASI: tranzit daftari — XOM yozuv, kompaniya balansiga kirmaydi.
  * Bankdan kartaga o'tkazma xarajat EMAS (o'z cho'ntagimizdan o'z
@@ -15,13 +15,14 @@
  * Kartadan qilingan xarajatni kassaga yozish `server/transit.ts`
  * `spendFromChannel` orqali, admin qo'li bilan bo'ladi.
  *
- * Idempotent: `TransitEntry.dedupKey = "xls:<varaq>:<qator>:<yo'nalish>"`.
+ * Idempotent: `TransitEntry.dedupKey = "xls:<oy>:<varaq>:<qator>:<yo'nalish>"`.
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
 import { formatNum as som } from "@/lib/format";
 import fs from "node:fs";
 import path from "node:path";
+import { requireImportFile } from "./import-source";
 import {
   parseBandQilganlar,
   parseTransitSheet,
@@ -31,9 +32,31 @@ import {
   type ParsedChannelPerson,
 } from "@/lib/transitImport";
 
-const DIR = path.join(process.cwd(), "others_json_files");
-const REGISTRY = path.join(DIR, "Band qilganlar.json");
-const LEDGER = path.join(DIR, "O'zini-o'zi band Iyul.json");
+const REGISTRY = requireImportFile("Band qilganlar.json");
+
+// ── QAYSI OY ─────────────────────────────────────────────────────────────
+// Har oy o'z daftar fayli bilan keladi ("O'zini-o'zi band <Oy>.json").
+// Skript ilgari faqat IYUL'ni bilardi va oy nomi kod ichida qotib turardi.
+//
+// DIQQAT — `dedupKey` da OY BO'LISHI SHART. Varaq nomlari ("Abror") va qator
+// raqamlari har oyda takrorlanadi, ya'ni oysiz kalit (`xls:Abror:1:in`) bilan
+// avgust qatori iyul qatorining USTIGA yozilardi: iyul daftari jimgina
+// yo'q bo'lib, qoldiqlar buzilardi.
+const MONTHS: Record<string, { file: string; period: string; fallbackDate: Date }> = {
+  iyul: { file: "O'zini-o'zi band Iyul.json", period: "2026-07", fallbackDate: new Date(2026, 6, 1) },
+  avgust: { file: "O'zini-o'zi band Avgust.json", period: "2026-08", fallbackDate: new Date(2026, 7, 1) },
+};
+
+function resolveMonth() {
+  const arg = process.argv.find((a) => a.startsWith("--month="))?.slice(8).toLowerCase();
+  const name = arg ?? "iyul";
+  const m = MONTHS[name];
+  if (!m) {
+    console.error(`Noma'lum oy: "${name}". Mavjud: ${Object.keys(MONTHS).join(", ")}`);
+    process.exit(1);
+  }
+  return { name, ...m };
+}
 
 const norm = (s: string) =>
   s.toLowerCase().replace(/[‘’'`]/g, "").replace(/\s+/g, " ").trim();
@@ -92,16 +115,36 @@ function findPerson(sheet: string, people: ParsedChannelPerson[]): ParsedChannel
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
+  const createMissing = process.argv.includes("--create-missing");
+  const month = resolveMonth();
+  const LEDGER = requireImportFile(month.file);
+  /** Shu oy qatorlarining kalit prefiksi. */
+  const key = (sheet: string, rowNo: number, dir: string) =>
+    `xls:${month.period}:${sheet}:${rowNo}:${dir}`;
 
-  for (const f of [REGISTRY, LEDGER]) {
-    if (!fs.existsSync(f)) {
-      console.error(`Fayl topilmadi: ${f}`);
-      process.exit(1);
-    }
-  }
+  console.log(`Oy: ${month.name.toUpperCase()} (${month.period}) — ${path.basename(LEDGER)}`);
 
   const registry = JSON.parse(fs.readFileSync(REGISTRY, "utf8"));
   const ledger = JSON.parse(fs.readFileSync(LEDGER, "utf8"));
+
+  // ── ESKI KALITLARNI KO'CHIRISH ─────────────────────────────────────────
+  // Birinchi import oysiz kalit yozgan (`xls:Abror:1:in`). Ular IYUL
+  // daftaridan kelgan — boshqa oy hali import qilinmagan edi. Oy qo'shilgan
+  // yangi formatga bir martalik ko'chirish, aks holda iyulni qayta ishga
+  // tushirsak har qator ikki nusxada paydo bo'lardi.
+  if (!dryRun) {
+    const legacy = await prisma.transitEntry.findMany({
+      where: { dedupKey: { startsWith: "xls:" }, NOT: { dedupKey: { startsWith: "xls:2026-" } } },
+      select: { id: true, dedupKey: true },
+    });
+    for (const e of legacy) {
+      await prisma.transitEntry.update({
+        where: { id: e.id },
+        data: { dedupKey: e.dedupKey.replace(/^xls:/, "xls:2026-07:") },
+      });
+    }
+    if (legacy.length) console.log(`Eski kalit ko'chirildi (iyul): ${legacy.length} qator`);
+  }
 
   const people = parseBandQilganlar(registry["Band Xodimlar"] ?? []);
   const totals = new Map(parseTransitTotals(ledger["Total"] ?? []).map((t) => [norm(t.person), t]));
@@ -226,7 +269,7 @@ async function main() {
   // ─────────────────────────────────────────────────────────
   // 2. DAFTAR
   // ─────────────────────────────────────────────────────────
-  console.log(`\n${"═".repeat(72)}\nIYUL DAFTARI\n${"═".repeat(72)}`);
+  console.log(`\n${"═".repeat(72)}\n${month.name.toUpperCase()} DAFTARI\n${"═".repeat(72)}`);
   console.log(
     `${"XODIM".padEnd(12)}${"kirim".padStart(14)}${"chiqim".padStart(14)}${"komis".padStart(9)}${"qoldiq".padStart(13)}  Total  kanal`
   );
@@ -239,12 +282,41 @@ async function main() {
   let totalOut = 0;
   let totalBalance = 0;
   const unmatchedSheets: string[] = [];
+  const autoCreated: string[] = [];
   const mismatched: string[] = [];
 
   for (const sheet of sheets) {
     const parsed = parseTransitSheet(sheet, ledger[sheet] ?? []);
     const person = findPerson(sheet, people);
-    const channelId = person ? channelIdByPerson.get(norm(person.fullName)) : undefined;
+    let channelId = person ? channelIdByPerson.get(norm(person.fullName)) : undefined;
+
+    // ── REYESTRDA YO'Q VARAQ ───────────────────────────────────────────
+    // Daftarda odam bor, "Band qilganlar" ro'yxatida yo'q (masalan avgustda
+    // "Uchqun Marketing" — 5 mln harakat). Bunday varaq jimgina tashlansa,
+    // pul hisobotdan tushib qolardi.
+    //
+    // Kanal ATAYIN faqat `--create-missing` bilan ochiladi va faqat VARAQ
+    // NOMI bo'yicha: mavjud xodimga taxmin bilan bog'lash — pulni boshqa
+    // odamning kartasiga yozish demak (`findPerson` izohiga qarang). Karta,
+    // MFO, JSHSHIR bo'sh qoladi, ular reyestr yangilanganda to'ladi.
+    if (!channelId && createMissing && !dryRun) {
+      const existing = await prisma.disbursementChannel.findFirst({
+        where: { type: "employee_card", label: sheet },
+        select: { id: true },
+      });
+      const row = existing
+        ? existing
+        : await prisma.disbursementChannel.create({
+            data: {
+              type: "employee_card",
+              label: sheet,
+              notes: `Daftar varag'idan ochildi (${month.period}) — "Band qilganlar" reyestrida yo'q.`,
+            },
+            select: { id: true },
+          });
+      channelId = row.id;
+      autoCreated.push(sheet);
+    }
 
     const expected = totals.get(norm(sheet)) ?? null;
     const balanceOk =
@@ -282,7 +354,7 @@ async function main() {
     const bankPool = bankIn.map((b) => ({ amount: Number(b.amount), time: b.date.getTime(), used: false }));
 
     for (const m of parsed.movements) {
-      const when = m.date ?? new Date(2026, 6, 1);
+      const when = m.date ?? month.fallbackDate;
       const sourceFirm = firmByName(m.sourceFirm);
 
       // DIQQAT: bu yerda `continue` ISHLATILMAYDI. Bitta qatorda ham kirim,
@@ -306,9 +378,9 @@ async function main() {
 
       if (m.amountIn > 0 && !skipThisInflow) {
         await prisma.transitEntry.upsert({
-          where: { dedupKey: `xls:${sheet}:${m.rowNo}:in` },
+          where: { dedupKey: key(sheet, m.rowNo, "in") },
           create: {
-            dedupKey: `xls:${sheet}:${m.rowNo}:in`,
+            dedupKey: key(sheet, m.rowNo, "in"),
             channelId,
             direction: "in",
             amount: m.amountIn,
@@ -323,9 +395,9 @@ async function main() {
       if (m.amountOut > 0) {
         const label = [m.purpose, m.comment].filter(Boolean).join(" — ");
         await prisma.transitEntry.upsert({
-          where: { dedupKey: `xls:${sheet}:${m.rowNo}:out` },
+          where: { dedupKey: key(sheet, m.rowNo, "out") },
           create: {
-            dedupKey: `xls:${sheet}:${m.rowNo}:out`,
+            dedupKey: key(sheet, m.rowNo, "out"),
             channelId,
             direction: "out",
             amount: m.amountOut,
@@ -341,9 +413,9 @@ async function main() {
       // Bank komissiyasi ham kartadan yechiladi — alohida chiqim qatori.
       if (m.commission > 0) {
         await prisma.transitEntry.upsert({
-          where: { dedupKey: `xls:${sheet}:${m.rowNo}:fee` },
+          where: { dedupKey: key(sheet, m.rowNo, "fee") },
           create: {
-            dedupKey: `xls:${sheet}:${m.rowNo}:fee`,
+            dedupKey: key(sheet, m.rowNo, "fee"),
             channelId,
             direction: "out",
             amount: m.commission,
@@ -379,9 +451,15 @@ async function main() {
     }
   }
 
+  if (autoCreated.length > 0) {
+    console.log(`\n🆕 Varaq nomi bo'yicha kanal ochildi (${autoCreated.length}) — reyestrga qo'shishni unutmang:`);
+    for (const s of autoCreated) console.log(`   ${s}`);
+  }
+
   if (unmatchedSheets.length > 0) {
     console.log(`\n📋 QO'LDA KO'RIB CHIQISH — kanal topilmadi (${unmatchedSheets.length}):`);
     for (const s of unmatchedSheets) console.log(`   varaq "${s}" — "Band qilganlar" da mos F.I.O yo'q`);
+    if (!createMissing) console.log(`   (kanal ochilsin: --create-missing)`);
   }
 
   if (dryRun) {
