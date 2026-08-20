@@ -136,3 +136,67 @@ export function applyColumnConfig(
       return oa - ob;
     });
 }
+
+// ── XIZMAT (activeServices) KALITLARI ────────────────────────────
+//
+// `Company.activeServices` matritsa ustun kalitlarining ro'yxati: bo'sh bo'lsa
+// "hamma ustun ko'rinsin", to'ldirilgan bo'lsa faqat sanab o'tilganlar.
+//
+// NEGA SHU YERDA: bu ro'yxat UCH joyda QO'LDA takrorlangan edi
+// (`OnboardingWizard.ALL_SERVICE_KEYS`, CompanyDrawer'dagi "Hammasini yoqish"
+// va uning katakchalar jadvali) va uchalasi ham eskirgan edi — ularda
+// `*_tolov` kalitlari YO'Q. Natijada xizmatlari to'ldirilgan firmada
+// (7-NINE misoli) "QQS to'lov", "DS to'lov", "INPS to'lov", "FS to'lov"
+// kataklari BUTUNLAY qulflanib, "—" bo'lib qolardi: hisobot yarmi ishlaydi,
+// to'lov yarmi esa hech qanday yo'l bilan belgilanmasdi.
+//
+// Endi manba bitta — BASE_REPORT_COLUMNS.
+
+/** Barcha xizmat kalitlari — to'lov yarmi bilan birga. */
+export const ALL_SERVICE_KEYS: string[] = BASE_REPORT_COLUMNS.flatMap((c) =>
+  c.payKey ? [c.key, c.payKey] : [c.key],
+);
+
+/** Guruhlangan xizmat kalitlari (sozlash ekranlari uchun). */
+export function serviceGroups(): { group: string; keys: string[] }[] {
+  const out: { group: string; keys: string[] }[] = [];
+  for (const c of BASE_REPORT_COLUMNS) {
+    let g = out.find((x) => x.group === c.group);
+    if (!g) {
+      g = { group: c.group, keys: [] };
+      out.push(g);
+    }
+    g.keys.push(c.key);
+    if (c.payKey) g.keys.push(c.payKey);
+  }
+  return out;
+}
+
+/** Xizmat kaliti → qisqa nom. */
+export const SERVICE_LABELS: Record<string, string> = Object.fromEntries(
+  BASE_REPORT_COLUMNS.flatMap((c) =>
+    c.payKey
+      ? [
+          [c.key, c.label] as [string, string],
+          [c.payKey, `${c.label.replace(/ Hisobot$/, "")} — to'lov`] as [string, string],
+        ]
+      : [[c.key, c.label] as [string, string]],
+  ),
+);
+
+/**
+ * Ustun shu firmada YOQILGANMI.
+ *
+ * `parentKey` — bo'linadigan ustunning to'lov yarmi uchun. To'lov yarmining
+ * o'z katakchasi hech qaysi sozlash ekranida YO'Q, shuning uchun u hisobot
+ * yarmidan meros oladi: aks holda "QQS" yoqilgan firmada "QQS to'lov"
+ * o'chirilgan bo'lib qolardi va uni yoqishning iloji bo'lmasdi.
+ */
+export function serviceEnabled(
+  activeServices: readonly string[] | null | undefined,
+  key: string,
+  parentKey?: string,
+): boolean {
+  if (!activeServices || activeServices.length === 0) return true;
+  return activeServices.includes(key) || (!!parentKey && activeServices.includes(parentKey));
+}

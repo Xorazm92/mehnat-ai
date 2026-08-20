@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ALL_SERVICE_KEYS, SERVICE_LABELS, serviceGroups } from '@/lib/reportColumns';
 import { createPortal } from 'react-dom';
 import {
   getCompanyContracts,
@@ -66,6 +67,16 @@ interface DrawerProps {
 }
 
 type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xizmatlar' | 'kpi' | 'tarix';
+
+/**
+ * Xizmat katakchalari — barcha matritsa ustunlari, guruh tartibida.
+ * Ilgari bu yerda 23 ta kalitli qo'lda yozilgan ro'yxat bor edi: undagi
+ * ustunlar yoqilib, qolgan hammasi (jumladan barcha "…to'lov" kataklari)
+ * jimgina o'chib qolardi.
+ */
+const SERVICE_ROWS: { key: string; label: string }[] = serviceGroups().flatMap((g) =>
+  g.keys.map((key) => ({ key, label: SERVICE_LABELS[key] || key })),
+);
 
 const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, onSave }) => {
   // Dialog semantikasi + fokus tuzog'i + Escape (avval hech biri yo'q edi:
@@ -909,7 +920,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                     <button
                       onClick={() => {
                         if (onSave) {
-                          const allKeys = ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'qqs', 'aylanma', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'];
+                          // Yagona manba (lib/reportColumns.ts) — to'lov yarmi bilan birga. Qo'lda
+                          // yozilgan eski ro'yxatda `*_tolov` yo'q edi va "Hammasini yoqish"
+                          // aslida to'lov kataklarini QULFLAB qo'yardi.
+                          const allKeys = ALL_SERVICE_KEYS;
                           onSave({ ...company, activeServices: allKeys });
                         }
                       }}
@@ -931,31 +945,14 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                  {[
-                    { key: 'didox', label: 'Didox / E-Docs' },
-                    { key: 'xatlar', label: 'E-Xat / Soliq Xat' },
-                    { key: 'avtokameral', label: 'Avtokameral Oylik' },
-                    { key: 'my_mehnat', label: 'My Mehnat / HR' },
-                    { key: 'one_c', label: '1C Buxgalteriya' },
-                    { key: 'pul_oqimlari', label: 'Pul oqimlari (DDS)' },
-                    { key: 'chiqadigan_soliqlar', label: 'To\'lanadigan Soliqlar' },
-                    { key: 'hisoblangan_oylik', label: 'Hisoblangan Ish Haqi' },
-                    { key: 'debitor_kreditor', label: 'Debitor & Kreditor' },
-                    { key: 'foyda_va_zarar', label: 'Foyda va Zarar (P&L)' },
-                    { key: 'tovar_ostatka', label: 'Tovar Qoldiqlari' },
-                    { key: 'qqs', label: 'QQS (oylik)' },
-                    { key: 'aylanma', label: 'Aylanma soliq (choraklik)' },
-                    { key: 'daromad_soliq', label: 'Daromad Solig\'i / INPS' },
-                    { key: 'foyda_soliq', label: 'Foyda Solig\'i (Quarterly)' },
-                    { key: 'yer_soligi', label: 'Yer Solig\'i' },
-                    { key: 'mol_mulk_soligi', label: 'Mol-Mulk Solig\'i' },
-                    { key: 'stat_12_moliya', label: 'Stat 12-Moliya' },
-                    { key: 'stat_12_korxona', label: 'Stat 12-Korxona' },
-                    { key: 'stat_4_mehnat', label: 'Stat 4-Mehnat' },
-                    { key: 'itpark_oylik', label: 'IT Park Oylik' },
-                    { key: 'itpark_chorak', label: 'IT Park Chorak' }
-                  ].map(service => {
-                    const isActive = company.activeServices?.includes(service.key);
+                  {SERVICE_ROWS.map(service => {
+                    // Bo'sh ro'yxat = "hamma ustun yoqilgan" (matritsa shunday
+                    // o'qiydi). Ilgari bu yerda hammasi BELGISIZ ko'rinardi va
+                    // bitta katakchani bosish ro'yxatni bitta kalitga
+                    // qisqartirib, qolgan hamma ustunni o'chirib qo'yardi —
+                    // firmalar shu yo'l bilan yarim qulflangan holatga tushgan.
+                    const current = company.activeServices || [];
+                    const isActive = current.length === 0 || current.includes(service.key);
                     return (
                       <label key={service.key} className="flex items-center gap-3 group cursor-pointer transition-all hover:bg-[var(--input-bg)] p-2 rounded-xl border border-transparent">
                         <div className="relative flex items-center justify-center">
@@ -966,8 +963,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             checked={isActive}
                             onChange={() => {
                               if (!onSave) return;
-                              const current = company.activeServices || [];
-                              const updated = isActive ? current.filter(k => k !== service.key) : [...current, service.key];
+                              const base = current.length === 0 ? [...ALL_SERVICE_KEYS] : current;
+                              const updated = isActive ? base.filter(k => k !== service.key) : [...base, service.key];
                               onSave({ ...company, activeServices: updated });
                             }}
                           />

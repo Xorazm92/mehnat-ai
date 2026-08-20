@@ -35,6 +35,7 @@ import {
 } from '@/lib/matrixFilters';
 import { pendingCellKey, readRowCells, reconcilePendingCells } from '@/lib/matrixRows';
 import { columnAppliesToRegime, regimeBlockReason } from '@/lib/reportApplicability';
+import { serviceEnabled } from '@/lib/reportColumns';
 import {
   addToTally,
   classifyCell,
@@ -587,7 +588,12 @@ const OperationRow = React.memo<{
   onRequestSubmit: (companyId: string, colKey: string) => void;
   onViewProof: (companyId: string, colKey: string) => void;
 }>(({ row, idx, visibleColumns, userRole, relations, activeServices, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
-  const isServiceEnabled = (key: string) => !activeServices.length || activeServices.includes(key);
+  /**
+   * Xizmat yoqilganmi. To'lov yarmi HISOBOT yarmidan meros oladi — uning o'z
+   * katakchasi hech qaysi sozlash ekranida yo'q (lib/reportColumns.ts).
+   */
+  const isServiceEnabled = (key: string, parentKey?: string) =>
+    serviceEnabled(activeServices, key, parentKey);
   /**
    * SOLIQ REJIMI bo'yicha yopish.
    *
@@ -640,7 +646,7 @@ const OperationRow = React.memo<{
 
         if ((col as any).isSplit) {
           const payKey = (col as any).payKey as string;
-          const payDisabled = !isServiceEnabled(payKey) || !isRegimeEnabled(payKey);
+          const payDisabled = !isServiceEnabled(payKey, col.key) || !isRegimeEnabled(payKey);
           const payBlockReason = regimeBlockReason(payKey, regimeOf);
           return (
             <React.Fragment key={col.key}>

@@ -76,6 +76,22 @@ describe("matritsa → majburiyat mappingi", () => {
     expect(COL_KEY_TO_TEMPLATE_CODES.aylanma).toEqual(["AYLANMA_SOLIQ"]);
   });
 
+  /**
+   * TO'LOV YARMI HAM BOG'LANGAN BO'LISHI SHART.
+   *
+   * Bu tekshiruv 7-NINE dagi shikoyatdan keyin qo'shildi: "QQS to'lov"
+   * katagi ishlamayotgandek ko'rinardi, chunki uning ortida majburiyat yo'q
+   * edi — muddat "Ishlar"ga chiqmasdi, foizga kirmasdi. Bo'linadigan ustun
+   * qo'shilib, `payKey` bog'lanmay qolsa, shu test yiqiladi.
+   */
+  it("bo'linadigan ustunning TO'LOV yarmi ham shablonga bog'langan", () => {
+    const unlinked = (BASE_REPORT_COLUMNS as ReadonlyArray<{ payKey?: string }>)
+      .map((c) => c.payKey)
+      .filter((k): k is string => !!k)
+      .filter((k) => !COL_KEY_TO_TEMPLATE_CODES[k]?.length);
+    expect(unlinked).toEqual([]);
+  });
+
   it("birlashgan eski kalit endi mapping'da yo'q", () => {
     // Qolib ketsa, o'chirilgan ustun uchun maxraj hisoblanaverardi.
     expect(COL_KEY_TO_TEMPLATE_CODES.aylanma_qqs).toBeUndefined();

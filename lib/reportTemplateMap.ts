@@ -31,6 +31,24 @@ export const COL_KEY_TO_TEMPLATE_CODES: Record<string, string[]> = {
   qqs: ["QQS_DECL"],
   aylanma: ["AYLANMA_SOLIQ"],
   foyda_soliq: ["FOYDA_YILLIK"],
+
+  // ── Soliq TO'LOVI (bo'linadigan ustunlarning `payKey` yarmi) ──
+  //
+  // 2026-08 gacha bu yarmi HECH QANDAY shablonga bog'lanmagan edi va buni
+  // hech narsa ushlamasdi: `check-matrix-obligation-link` faqat "shablon
+  // ustunga ulanganmi" deb tekshirardi, teskarisini emas. Oqibati (7-NINE
+  // misolida ko'rindi): "QQS to'lov" katagi ekranda bor, lekin
+  //   * /deadlines — "Ishlar" ro'yxatida QQS to'lov muddati umuman yo'q,
+  //   * katakni belgilash hech qanday majburiyatni harakatga keltirmaydi,
+  //   * `isCellRequired` false — foiz maxrajiga kirmaydi, belgilanmagani
+  //     "missing" bo'lib qizarmaydi, ya'ni to'lanmagan QQS jimgina yo'qoladi.
+  // Deklaratsiya va to'lov muddati bir kunda bo'lsa ham, ular AYRIM ish:
+  // hisobot topshirilgan, pul to'lanmagan holat eng ko'p uchraydigani.
+  qqs_tolov: ["QQS_TOLOV"],
+  aylanma_tolov: ["AYLANMA_TOLOV"],
+  daromad_soliq_tolov: ["DAROMAD_TOLOV"],
+  inps_tolov: ["INPS_TOLOV"],
+  foyda_soliq_tolov: ["FOYDA_TOLOV"],
   yer_soligi: ["YER_SOLIQ"],
   suv_soligi: ["SUV_SOLIQ"],
   mol_mulk_soligi: ["MOL_MULK_SOLIQ"],

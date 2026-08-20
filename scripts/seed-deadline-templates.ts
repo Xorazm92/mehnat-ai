@@ -53,6 +53,14 @@ const EFFECTIVE_FROM = new Date(Date.UTC(2026, 6, 1)); // 2026-07-01
  */
 const EFFECTIVE_FROM_IN_MONTH = new Date(Date.UTC(2026, 7, 1)); // 2026-08-01
 
+/**
+ * To'lov shablonlari uchun chegara — ular 2026-08 da qo'shildi, shuning uchun
+ * avgust davridan boshlanadi. Oldingi davrlar uchun to'lov majburiyati
+ * yaratilsa, u yaratilgan zahoti kechikkan bo'lib qizarardi (to'lovlar
+ * amalda qilingan, faqat tizimda kuzatilmagan).
+ */
+const PAYMENTS_EFFECTIVE_FROM = new Date(Date.UTC(2026, 7, 1)); // 2026-08-01
+
 interface TplSeed {
   code: string;
   name: string;
@@ -120,6 +128,68 @@ const TEMPLATES: TplSeed[] = [
     anchorType: "fixed_day_of_month",
     dueMonth: 2,
     dueDay: 15,
+  },
+  // ── SOLIQ TO'LOVI ────────────────────────────────────────────
+  //
+  // Matritsadagi "…To'lov" yarmi (`qqs_tolov`, `aylanma_tolov`, …) shu
+  // shablonlarga bog'lanadi (lib/reportTemplateMap.ts). Ilgari to'lov
+  // ustunlarining shabloni YO'Q edi: katak ekranda bor edi, lekin muddati
+  // "Ishlar" ro'yxatiga chiqmasdi va foizga kirmasdi.
+  //
+  // Muddat deklaratsiya bilan bir kun — O'zbekistonda topshirish va to'lash
+  // sanasi ustma-ust tushadi — lekin ish AYRIM: hisobot topshirilib, pul
+  // to'lanmagan holat eng ko'p uchraydigani.
+  //
+  // `PAYMENTS_EFFECTIVE_FROM` — joriy oydan. Standart EFFECTIVE_FROM
+  // (2026-07-01) qo'yilsa, kunlik catch-up iyul davri uchun ham majburiyat
+  // yaratib, ular tug'ilishi bilanoq "kechikkan" bo'lib qizarardi.
+  {
+    code: "QQS_TOLOV",
+    name: "QQS to'lovi",
+    obligationType: "tax_payment",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 20,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "tax_regime", criteriaValue: "vat" }],
+  },
+  {
+    code: "AYLANMA_TOLOV",
+    name: "Aylanma soliq to'lovi",
+    obligationType: "tax_payment",
+    periodicity: "quarterly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 15,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "tax_regime", criteriaValue: "turnover" }],
+  },
+  {
+    code: "DAROMAD_TOLOV",
+    name: "Daromad solig'i to'lovi",
+    obligationType: "tax_payment",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 15,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+  },
+  {
+    code: "INPS_TOLOV",
+    name: "INPS va ijtimoiy soliq to'lovi",
+    obligationType: "tax_payment",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 15,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+  },
+  {
+    code: "FOYDA_TOLOV",
+    name: "Foyda solig'i to'lovi (yillik)",
+    obligationType: "tax_payment",
+    periodicity: "annual",
+    anchorType: "fixed_day_of_month",
+    dueMonth: 3,
+    dueDay: 1,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
   },
   // ASRO Reglament ichki oylik takrorlanuvchi vazifalari.
   //

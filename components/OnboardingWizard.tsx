@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ALL_SERVICE_KEYS as ALL_SERVICE_KEYS_SRC, SERVICE_LABELS as SERVICE_LABELS_SRC, serviceGroups } from '@/lib/reportColumns';
 import { Company, Staff, TaxType, ServerInfo } from '@/types';
 import { ChevronRight, ChevronLeft, Check, X, Building2, Server, Calculator, Users } from 'lucide-react';
 import { groupDigits, ungroupDigits } from '@/lib/format';
@@ -42,33 +43,14 @@ const steps = [
     { id: 'team', title: 'Jamoa', icon: Users }
 ];
 
-const ALL_SERVICE_KEYS = ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka', 'yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds', 'qqs', 'aylanma', 'daromad_soliq', 'inps', 'foyda_soliq', 'moliyaviy_natija', 'buxgalteriya_balansi', 'stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt', 'itpark_oylik', 'itpark_chorak', 'kom_suv', 'kom_gaz', 'kom_svet'];
+// Xizmat kalitlari YAGONA manbadan (lib/reportColumns.ts). Ilgari bu yerda
+// qo'lda yozilgan ro'yxat turardi va u eskirgan edi — `*_tolov` kalitlari
+// yo'qligi tufayli "Yoqish" tugmasi to'lov kataklarini qulflab qo'yardi.
+const ALL_SERVICE_KEYS = ALL_SERVICE_KEYS_SRC;
 
-const SERVICE_LABELS: Record<string, string> = {
-    didox: 'Didox', xatlar: 'Xatlar', avtokameral: 'Avtokameral', my_mehnat: 'My Mehnat', one_c: '1C',
-    pul_oqimlari: 'Pul Oqimlari', chiqadigan_soliqlar: 'Sol. Chiqarish', hisoblangan_oylik: 'Oylik Hisoblash',
-    debitor_kreditor: 'Deb/Kred', foyda_va_zarar: 'F/Z', tovar_ostatka: 'Tovar Qoldiq',
-    yer_soligi: "Yer", mol_mulk_soligi: "Mol-mulk", suv_soligi: "Suv",
-    bonak: "Bo'nak", aksiz_soligi: 'AKSIZ', nedro_soligi: 'NEDRO', norezident_foyda: 'Nor. Foyda',
-    norezident_nds: 'Nor. NDS', qqs: 'QQS', aylanma: 'Aylanma', daromad_soliq: 'Daromad',
-    inps: 'INPS', foyda_soliq: 'Foyda', moliyaviy_natija: 'Mol. Natija',
-    buxgalteriya_balansi: 'Balans',
-    stat_12_invest: '12-inv', stat_12_moliya: '12-mol', stat_12_korxona: '12-kor', stat_12_narx: '12-narx',
-    stat_4_invest: '4-inv', stat_4_mehnat: '4-meh', stat_4_korxona_miz: '4-kor(miz)', stat_4_kb_qur_sav_xiz: '4-kb(all)', stat_4_kb_sanoat: '4-kb san',
-    stat_1_invest: '1-inv', stat_1_ih: '1-ih', stat_1_energiya: '1-en', stat_1_korxona: '1-kor', stat_1_korxona_tif: '1-kor(tif)', stat_1_moliya: '1-mol', stat_1_akt: '1-akt',
-    itpark_oylik: 'IT Oylik',
-    itpark_chorak: 'IT Chorak', kom_suv: 'Suv', kom_gaz: 'Gaz', kom_svet: 'Svet'
-};
+const SERVICE_LABELS: Record<string, string> = SERVICE_LABELS_SRC;
 
-const SERVICE_GROUPS = [
-    { group: 'Oylik', keys: ['didox', 'xatlar', 'avtokameral', 'my_mehnat', 'one_c', 'pul_oqimlari', 'chiqadigan_soliqlar', 'hisoblangan_oylik', 'debitor_kreditor', 'foyda_va_zarar', 'tovar_ostatka'] },
-    { group: 'Soliqlar', keys: ['yer_soligi', 'mol_mulk_soligi', 'suv_soligi', 'bonak', 'aksiz_soligi', 'nedro_soligi', 'norezident_foyda', 'norezident_nds'] },
-    { group: 'Soliq H/T', keys: ['qqs', 'aylanma', 'daromad_soliq', 'inps', 'foyda_soliq'] },
-    { group: 'Yillik', keys: ['moliyaviy_natija', 'buxgalteriya_balansi'] },
-    { group: 'Statistika', keys: ['stat_12_invest', 'stat_12_moliya', 'stat_12_korxona', 'stat_12_narx', 'stat_4_invest', 'stat_4_mehnat', 'stat_4_korxona_miz', 'stat_4_kb_qur_sav_xiz', 'stat_4_kb_sanoat', 'stat_1_invest', 'stat_1_ih', 'stat_1_energiya', 'stat_1_korxona', 'stat_1_korxona_tif', 'stat_1_moliya', 'stat_1_akt'] },
-    { group: 'IT Park', keys: ['itpark_oylik', 'itpark_chorak'] },
-    { group: 'Komunalka', keys: ['kom_suv', 'kom_gaz', 'kom_svet'] },
-];
+const SERVICE_GROUPS = serviceGroups();
 
 const fieldLabelStyle: React.CSSProperties = { color: 'var(--text-muted)' };
 
