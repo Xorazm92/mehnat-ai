@@ -78,3 +78,6 @@ others_json_files/
 
 # Recovery sprint ish fayllari (majburiyat ID ro'yxatlari, baseline snapshotlar)
 .recovery/
+
+# Tashqi loyiha nusxasi (Twenty CRM) — tahlil uchun, kodimizga aloqasi yo'q.
+twenty-main/
