@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUserViews } from "@/server/rbac";
 import { prisma } from "@/lib/prisma";
 import { getTransitOverview, getUnlinkedCardTransfers, getHouseholdExpenses } from "@/server/transit";
-import { getBankExpenses } from "@/server/bankImport";
+import { getExpenseQueue } from "@/server/bankImport";
 import ChiqimKassaClient from "./ChiqimKassaClient";
 
 export const metadata = { title: "Chiqim kassa" };
@@ -23,11 +23,11 @@ export default async function ChiqimKassaPage() {
   const views = await currentUserViews();
   if (!views.includes("kassa_expense")) redirect("/cabinet");
 
-  const [overview, unlinked, household, bankExpenses, employees] = await Promise.all([
+  const [overview, unlinked, household, queue, employees] = await Promise.all([
     getTransitOverview(),
     getUnlinkedCardTransfers(),
     getHouseholdExpenses(),
-    getBankExpenses(),
+    getExpenseQueue(),
     prisma.user.findMany({
       where: { isActive: true },
       select: { id: true, fullName: true, role: true },
@@ -41,7 +41,7 @@ export default async function ChiqimKassaPage() {
         overview={JSON.parse(JSON.stringify(overview))}
         unlinked={JSON.parse(JSON.stringify(unlinked))}
         household={JSON.parse(JSON.stringify(household))}
-        bankExpenses={JSON.parse(JSON.stringify(bankExpenses))}
+        queue={JSON.parse(JSON.stringify(queue))}
         employees={JSON.parse(JSON.stringify(employees))}
       />
     </div>

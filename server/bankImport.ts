@@ -25,6 +25,11 @@ import { looksLikeHtml, readHtmlTables } from "@/lib/bank/readHtmlTables";
 import { extractContract } from "@/lib/bank/extractContract";
 import { EXPENSE_CATEGORY_LABELS, isPostableExpense, type ExpenseCategory } from "@/lib/bank/classifyExpense";
 import {
+  expenseQueueGroup,
+  ignorableRejectionReason,
+  type ExpenseQueueGroupKey,
+} from "@/lib/bank/expenseQueue";
+import {
   commitStatement,
   autoMatchTransactions,
   postIncomeTransaction,
@@ -230,6 +235,168 @@ export async function getBankExpenses(limit = 200) {
     take: limit,
   });
   return serialize(rows);
+}
+
+// =====================================================
+// CHIQIM NAVBATI — UCH XIL YAKUN
+// =====================================================
+//
+// Vipiskadagi har chiqim qatori uch yo'ldan BIRI bilan yopiladi va ular
+// bir-birini almashtira olmaydi:
+//
+//   xarajat  — tashqi kontragentga ketgan pul (soliq, ijara, aloqa).
+//              `KassaEntry(expense)` bo'ladi va balansdan chiqadi.
+//   karta    — o'z xodimimizning kartasiga o'tkazma. XARAJAT EMAS: pul
+//              hali korxonada, faqat boshqa cho'ntakda. `TransitEntry(in)`.
+//   ichki    — o'z firmalarimiz orasidagi harakat. Umuman xarajat emas.
+//
+// NEGA AJRATILDI: navbat 446 ta qator ko'rsatardi, ulardan 97 tasi (672,7
+// mln) hech qachon xarajat bo'la olmasdi — UI ularga "boshqa joyda hisobga
+// olinadi" deb yozib, navbatda ABADIY qoldirardi. Natijada haqiqiy ish
+// (349 ta / 251 mln, asosan soliq to'lovlari) shovqin ostida ko'rinmasdi.
+//
+// Guruhlash `lib/bank/classifyExpense.ts` dagi `NON_POSTABLE_CATEGORIES` ga
+// tayanadi — ya'ni qoida bitta joyda va UI uni takrorlamaydi.
+
+export interface ExpenseQueueGroup {
+  key: ExpenseQueueGroupKey;
+  count: number;
+  amount: number;
+}
+
+export interface ExpenseQueue {
+  groups: ExpenseQueueGroup[];
+  /** Toifa bo'yicha kesim — ommaviy yozish uchun. */
+  byCategory: { category: string; label: string; count: number; amount: number; postable: boolean }[];
+  rows: {
+    id: string;
+    valueDate: string;
+    amount: number;
+    counterpartyName: string | null;
+    expenseCategory: string;
+    purpose: string | null;
+    accountLabel: string;
+    group: ExpenseQueueGroupKey;
+  }[];
+  /** Ko'rsatilgandan tashqarida qolgan qatorlar soni. */
+  truncated: number;
+}
+
+export async function getExpenseQueue(limit = 300): Promise<ExpenseQueue> {
+  await requireKassa();
+
+  const all = await prisma.bankTransaction.findMany({
+    where: { direction: "expense", status: "unmatched" },
+    select: {
+      id: true,
+      valueDate: true,
+      amount: true,
+      counterpartyName: true,
+      expenseCategory: true,
+      purpose: true,
+      account: { select: { label: true } },
+    },
+    orderBy: [{ valueDate: "desc" }, { amount: "desc" }],
+  });
+
+  const totals = new Map<string, { count: number; amount: number }>();
+  const cats = new Map<string, { count: number; amount: number }>();
+
+  for (const r of all) {
+    const cat = r.expenseCategory ?? "boshqa";
+    const g = expenseQueueGroup(cat);
+    const t = totals.get(g) ?? { count: 0, amount: 0 };
+    t.count += 1;
+    t.amount += Number(r.amount);
+    totals.set(g, t);
+
+    const c = cats.get(cat) ?? { count: 0, amount: 0 };
+    c.count += 1;
+    c.amount += Number(r.amount);
+    cats.set(cat, c);
+  }
+
+  const order: ExpenseQueueGroupKey[] = ["xarajat", "karta", "ichki"];
+
+  return serialize({
+    groups: order.map((key) => ({ key, ...(totals.get(key) ?? { count: 0, amount: 0 }) })),
+    byCategory: [...cats.entries()]
+      .map(([category, v]) => ({
+        category,
+        label: EXPENSE_CATEGORY_LABELS[category as ExpenseCategory] ?? category,
+        ...v,
+        postable: isPostableExpense(category as ExpenseCategory),
+      }))
+      .sort((a, b) => b.amount - a.amount),
+    rows: all.slice(0, limit).map((r) => ({
+      id: r.id,
+      // Sana MATN sifatida qaytadi — bu mijoz komponentiga uzatiladi va
+      // `Date` obyekti server chegarasidan o'tolmaydi.
+      valueDate: r.valueDate.toISOString(),
+      amount: Number(r.amount),
+      counterpartyName: r.counterpartyName,
+      expenseCategory: r.expenseCategory ?? "boshqa",
+      purpose: r.purpose,
+      accountLabel: r.account.label,
+      group: expenseQueueGroup(r.expenseCategory ?? "boshqa"),
+    })),
+    truncated: Math.max(0, all.length - limit),
+  });
+}
+
+/**
+ * Firmalararo o'tkazmani navbatdan yopish.
+ *
+ * Kirim tomonida bu AVTOMATIK bo'ladi (`autoMatchTransactions` o'z firma
+ * STIRini tanib, `ignored` qiladi). Chiqim tomonida esa hech qanday yo'l
+ * yo'q edi va 25 ta qator / 219 mln navbatda muzlab qolgandi.
+ *
+ * `ignored` tanlandi, `posted` emas: bu pul hech qanday hisobga YOZILMAYDI —
+ * o'z hisobimizdan o'z hisobimizga o'tgan. `posted` desak, jurnalda yozuvi
+ * bor degan ma'no chiqardi.
+ */
+export async function ignoreExpenseTransaction(input: {
+  transactionId: string;
+  reason?: string;
+}): Promise<{ ok: true }> {
+  const { userId } = await requireStatementRole();
+
+  const tx = await prisma.bankTransaction.findUnique({
+    where: { id: input.transactionId },
+    select: { direction: true, status: true, expenseCategory: true, amount: true },
+  });
+  if (!tx) throw new Error("Tranzaksiya topilmadi");
+  if (tx.direction !== "expense") throw new Error("Bu chiqim tranzaksiyasi emas");
+  if (tx.status === "posted") {
+    throw new Error("Bu qator allaqachon hisobga olingan — avval uni bekor qiling");
+  }
+
+  // Xarajat bo'la oladigan qatorni jimgina yopib yuborish — 211 mln soliq
+  // to'lovini "ichki harakat" deb belgilash demakdir. Shuning uchun faqat
+  // NON_POSTABLE toifalar bu yo'ldan o'tadi.
+  const cat = (tx.expenseCategory ?? "boshqa") as ExpenseCategory;
+  const rejection = ignorableRejectionReason(cat);
+  if (rejection) throw new Error(rejection);
+
+  await prisma.bankTransaction.update({
+    where: { id: input.transactionId },
+    data: {
+      status: "ignored",
+      ignoredReason: input.reason?.trim() || "Firmalararo o'tkazma — xarajat emas",
+      postedBy: userId,
+    },
+  });
+
+  await recordAuditLog({
+    userId,
+    action: "update",
+    tableName: "BankTransaction",
+    recordId: input.transactionId,
+    newData: { status: "ignored", amount: Number(tx.amount), category: cat },
+  });
+
+  revalidatePath("/kassa/chiqim");
+  return { ok: true };
 }
 
 // ─────────────────────────────────────────────────────────
@@ -896,6 +1063,67 @@ export async function postExpenseTransaction(input: {
   });
 
   revalidatePath("/kassa/kirim");
+  revalidatePath("/kassa/chiqim");
   revalidatePath("/expenses");
   return serialize({ kassaEntryId: entry.id, category });
+}
+
+/**
+ * Bir toifadagi hamma toifalanmagan chiqimni kassaga yozish.
+ *
+ * NEGA KERAK: prodda 135 ta soliq to'lovi navbatda turibdi. Ularni bittalab
+ * bosish real ish emas — natijada navbat umuman tozalanmasdi va 211 mln
+ * xarajat tizimga kirmay qolgandi.
+ *
+ * Har qator ALOHIDA yoziladi (yagona katta tranzaksiya emas): bittasi
+ * yiqilsa qolgani baribir o'tishi kerak, aks holda bitta buzuq qator butun
+ * toifani bloklardi. Yiqilganlar sanaladi va qaytariladi.
+ *
+ * `limit` — bir chaqiruvda nechta. Server action vaqt chegarasiga urilmaslik
+ * uchun; qolgani keyingi bosishda ketadi va son ekranda ko'rinib turadi.
+ */
+export async function postExpenseCategoryBulk(input: {
+  category: ExpenseCategory;
+  limit?: number;
+}): Promise<{ posted: number; amount: number; failed: number; remaining: number; firstError: string | null }> {
+  await requireKassa();
+
+  if (!isPostableExpense(input.category)) {
+    throw new Error(
+      `"${EXPENSE_CATEGORY_LABELS[input.category] ?? input.category}" kassaga yozilmaydi — ` +
+        `bu summa tranzit yoki firmalararo harakat sifatida hisobga olinadi.`
+    );
+  }
+
+  const limit = Math.min(Math.max(input.limit ?? 100, 1), 200);
+  const pending = await prisma.bankTransaction.findMany({
+    where: { direction: "expense", status: "unmatched", expenseCategory: input.category },
+    select: { id: true, amount: true },
+    orderBy: { valueDate: "asc" },
+    take: limit,
+  });
+
+  let posted = 0;
+  let amount = 0;
+  let failed = 0;
+  let firstError: string | null = null;
+
+  for (const row of pending) {
+    try {
+      await postExpenseTransaction({ transactionId: row.id, category: input.category });
+      posted += 1;
+      amount += Number(row.amount);
+    } catch (e) {
+      failed += 1;
+      if (!firstError) firstError = (e as Error).message;
+    }
+  }
+
+  const remaining = await prisma.bankTransaction.count({
+    where: { direction: "expense", status: "unmatched", expenseCategory: input.category },
+  });
+
+  revalidatePath("/kassa/chiqim");
+  revalidatePath("/expenses");
+  return { posted, amount, failed, remaining, firstError };
 }
