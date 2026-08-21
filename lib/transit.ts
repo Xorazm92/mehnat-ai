@@ -25,7 +25,8 @@
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { recordKassaMovement, type CashActor } from "@/lib/cashGate";
-import { ACCOUNTS, postLedger } from "@/lib/ledger";
+import { ACCOUNTS, postLedger, getCashByChannel } from "@/lib/ledger";
+import { normalizeChannelType } from "@/lib/transitChannels";
 import { periodKeyOf } from "@/lib/periods";
 
 type Db = Prisma.TransactionClient;
@@ -183,10 +184,13 @@ export async function recordTransitIn(
 export class InsufficientTransitFunds extends Error {
   constructor(
     readonly available: number,
-    readonly requested: number
+    readonly requested: number,
+    /** Kassaning nomi — xato qaysi hisob haqida ekani darhol ko'rinsin. */
+    readonly channelLabel?: string
   ) {
     super(
-      `Kartada yetarli mablag' yo'q. Qoldiq: ${Math.round(available).toLocaleString("en-US")} so'm, ` +
+      `${channelLabel ? `"${channelLabel}" kassasida` : "Kartada"} yetarli mablag' yo'q. ` +
+        `Qoldiq: ${Math.round(available).toLocaleString("en-US")} so'm, ` +
         `so'ralgan: ${Math.round(requested).toLocaleString("en-US")} so'm.`
     );
     this.name = "InsufficientTransitFunds";
@@ -219,18 +223,43 @@ export async function recordTransitOut(
     /** Qoldiqdan ortiq sarflashga ruxsat (admin tuzatishi uchun). */
     allowOverdraft?: boolean;
   }
-): Promise<{ entryId: string; kassaEntryId: string; balanceAfter: number }> {
+): Promise<{ entryId: string | null; kassaEntryId: string; balanceAfter: number }> {
   if (!Number.isFinite(input.amount) || input.amount <= 0) {
     throw new Error("Summa musbat son bo'lishi kerak");
   }
 
-  const [balances] = await getChannelBalances(db, { includeInactive: true }).then((list) =>
-    [list.find((c) => c.id === input.channelId)]
-  );
-  if (!balances) throw new Error("Kanal topilmadi");
+  const channel = await db.disbursementChannel.findUnique({
+    where: { id: input.channelId },
+    select: { id: true, label: true, type: true },
+  });
+  if (!channel) throw new Error("Kanal topilmadi");
 
-  if (!input.allowOverdraft && input.amount > balances.balance) {
-    throw new InsufficientTransitFunds(balances.balance, input.amount);
+  // ── QOLDIQ QAYERDAN O'QILADI ──────────────────────────────────────────
+  // XODIM KARTASI pulni `TransitEntry(in)` orqali oladi (bankdan kartaga
+  // o'tkazma), shuning uchun uning qoldig'i tranzit daftarida.
+  //
+  // NAQD KASSA, PLASTIK TERMINAL va FIRMA SCHYOTI esa tranzit daftarini
+  // umuman yuritmaydi — ularga pul JURNAL orqali keladi (kassa kirimi,
+  // boshlang'ich qoldiq). Ularning tranzit qoldig'i har doim NOL.
+  //
+  // Ilgari bu yerda hamma kanal uchun tranzit qoldig'i o'qilardi, ya'ni
+  // naqd/plastik/schyot kassasidan xarajat yozishga URINISH HAR SAFAR
+  // "mablag' yetarli emas" bilan rad etilardi — garchi jurnalda pul turgan
+  // bo'lsa ham (masalan Plastikda 11,85 mln). Bu kassalar qo'shilgandan
+  // keyin paydo bo'lgan: funksiya faqat kartalar bor paytda yozilgan.
+  const isCard = normalizeChannelType(channel.type) === "employee_card";
+
+  let available: number;
+  if (isCard) {
+    const list = await getChannelBalances(db, { includeInactive: true });
+    available = list.find((c) => c.id === input.channelId)?.balance ?? 0;
+  } else {
+    const cash = await getCashByChannel(db);
+    available = cash.find((c) => c.channelId === input.channelId)?.balance ?? 0;
+  }
+
+  if (!input.allowOverdraft && input.amount > available) {
+    throw new InsufficientTransitFunds(available, input.amount, channel.label);
   }
 
   // DARVOZA ORQALI (`lib/cashGate.ts`): ilgari bu yerda `kassaEntry.create`
@@ -242,30 +271,37 @@ export async function recordTransitOut(
     category: input.category,
     amount: input.amount,
     date: input.date,
-    description: input.description ?? `${balances.label} kartasidan xarajat`,
+    description: input.description ?? `${channel.label} kassasidan xarajat`,
     companyId: input.companyId ?? null,
     channelId: input.channelId,
   });
 
-  const entry = await db.transitEntry.create({
-    data: {
-      channelId: input.channelId,
-      direction: "out",
-      amount: new Prisma.Decimal(input.amount.toFixed(2)),
-      date: input.date,
-      category: input.category,
-      description: input.description ?? null,
-      kassaEntryId: kassaEntry.id,
-      dedupKey: `out:${randomUUID()}`,
-      createdBy: actor.kind === "user" ? actor.userId : (actor.userId ?? null),
-    },
-    select: { id: true },
-  });
+  // TRANZIT QATORI FAQAT KARTA UCHUN. Naqd kassa yoki schyot uchun ham
+  // yozilsa, `getTotalTransitBalance` (u BUTUN jadvalni yig'adi) "kartalarda
+  // qancha pul bor" raqamini kamaytirib yuborardi — hech qachon kartada
+  // bo'lmagan pulni sarflandi deb hisoblab. Bu kassalar uchun jurnaldagi
+  // `KassaEntry` yozuvi yagona va yetarli iz.
+  const entry = isCard
+    ? await db.transitEntry.create({
+        data: {
+          channelId: input.channelId,
+          direction: "out",
+          amount: new Prisma.Decimal(input.amount.toFixed(2)),
+          date: input.date,
+          category: input.category,
+          description: input.description ?? null,
+          kassaEntryId: kassaEntry.id,
+          dedupKey: `out:${randomUUID()}`,
+          createdBy: actor.kind === "user" ? actor.userId : (actor.userId ?? null),
+        },
+        select: { id: true },
+      })
+    : null;
 
   return {
-    entryId: entry.id,
+    entryId: entry?.id ?? null,
     kassaEntryId: kassaEntry.id,
-    balanceAfter: balances.balance - input.amount,
+    balanceAfter: available - input.amount,
   };
 }
 

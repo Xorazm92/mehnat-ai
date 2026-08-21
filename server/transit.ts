@@ -378,11 +378,14 @@ export async function spendFromChannel(input: {
       })
     );
 
+    // Naqd/plastik/schyot kassasida tranzit qatori yozilmaydi (`lib/transit.ts`),
+    // shuning uchun audit izi kassa yozuviga bog'lanadi — aks holda bu
+    // xarajatlarning jurnalda hech qanday izi qolmasdi.
     await recordAuditLog({
       userId,
       action: "create",
-      tableName: "TransitEntry",
-      recordId: res.entryId,
+      tableName: res.entryId ? "TransitEntry" : "KassaEntry",
+      recordId: res.entryId ?? res.kassaEntryId,
       newData: { channelId: input.channelId, amount: input.amount, category: input.category },
     });
 
