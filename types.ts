@@ -275,7 +275,7 @@ export type OperationFieldKey = 'didox' | 'xatlar' | 'avtokameral' | 'my_mehnat'
   'bank_klient' | 'nds_bekor_qilish' | 'ekologiya' |
   'stat_12_invest' | 'stat_12_moliya' | 'stat_12_korxona' | 'stat_12_narx' |
   'stat_4_invest' | 'stat_4_mehnat' | 'stat_4_korxona_miz' | 'stat_4_kb_qur_sav_xiz' | 'stat_4_kb_sanoat' |
-  'stat_1_invest' | 'stat_1_ih' | 'stat_1_energiya' | 'stat_1_korxona' | 'stat_1_korxona_tif' | 'stat_1_moliya' | 'stat_1_akt' | 'stat_1_tib' | 'stat_4_moliya' |
+  'stat_1_invest' | 'stat_1_ih' | 'stat_1_energiya' | 'stat_1_korxona' | 'stat_1_korxona_tif' | 'stat_1_moliya' | 'stat_1_akt' | 'stat_1_tib' | 'stat_1_turizm' | 'stat_4_moliya' |
   'aksiz_soligi' | 'nedro_soligi' | 'norezident_foyda' | 'norezident_nds' |
   'qqs_tolov' | 'aylanma_tolov' | 'aylanma_qqs_tolov' | 'daromad_soliq_tolov' | 'inps_tolov' | 'foyda_soliq_tolov';
 

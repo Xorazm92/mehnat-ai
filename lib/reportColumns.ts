@@ -72,6 +72,7 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   { key: "stat_1_moliya", label: "1-moliya", short: "1ML", group: "Statistika" },
   { key: "stat_1_akt", label: "1-akt", short: "1AK", group: "Statistika" },
   { key: "stat_1_tib", label: "1-tib (aholi)", short: "1TB", group: "Statistika" },
+  { key: "stat_1_turizm", label: "1-turizm", short: "1TR", group: "Statistika" },
   { key: "stat_4_moliya", label: "4-moliya", short: "4ML", group: "Statistika" },
 
   // ═══ IT PARK ═══

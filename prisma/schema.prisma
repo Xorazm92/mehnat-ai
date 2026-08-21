@@ -347,6 +347,11 @@ model MonthlyReport {
   stat1Akt         String?
   /// 1-tib (aholi) — yillik.
   stat1Tib         String?
+  /// 1-turizm — yillik. Tashrif buyuruvchilarga xizmat ko'rsatish va
+  /// joylashtirish hisoboti: sayyohlik-ekskursiya va jamoaviy joylashtirish
+  /// xizmatini ko'rsatuvchi yuridik shaxslar (kichik korxona va
+  /// mikrofirmalardan tashqari), zarur holatlarda alohida bo'linmalari.
+  stat1Turizm      String?
   /// 4-moliya — choraklik. Muddat CHORAK ICHIDA (18-mart/iyun/sentabr/dekabr),
   /// shuning uchun shabloni `period_end_month_day` ankoridan foydalanadi.
   stat4Moliya      String?
