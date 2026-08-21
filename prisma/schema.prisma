@@ -345,6 +345,11 @@ model MonthlyReport {
   stat1KorxonaTif  String?
   stat1Moliya      String?
   stat1Akt         String?
+  /// 1-tib (aholi) — yillik.
+  stat1Tib         String?
+  /// 4-moliya — choraklik. Muddat CHORAK ICHIDA (18-mart/iyun/sentabr/dekabr),
+  /// shuning uchun shabloni `period_end_month_day` ankoridan foydalanadi.
+  stat4Moliya      String?
 
   // Qo'shimcha soliqlar / IT Park / Komunalka
   aksizSoligi       String?
@@ -1194,6 +1199,13 @@ enum Periodicity {
 enum DeadlineAnchorType {
   period_end_offset // davr tugashidan +N kun
   fixed_day_of_month // muayyan oy-kuni
+
+  /// Davrning OXIRGI OYIDAGI dueDay kuni — muddat davr ICHIDA tugaydigan
+  /// hisobotlar uchun (masalan 4-moliya: 1-sentabr holatiga, 18-sentabrgacha).
+  /// Boshqa ikkalasi buni ifodalay olmaydi: `fixed_day_of_month` davrdan
+  /// KEYINGI oyga bog'lanadi, `period_end_offset` esa chorak oxiridan orqaga
+  /// sanaganda 30/31 kunlik oylar tufayli 17 va 18-kunga sochilib ketadi.
+  period_end_month_day
 }
 
 enum WorkdayAdjustmentPolicy {

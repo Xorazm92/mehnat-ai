@@ -54,6 +54,36 @@ describe("rawDueDate", () => {
     expect(iso(due)).toBe("2026-08-20");
   });
 
+  /**
+   * 4-moliya: "1-mart/iyun/sentabr/dekabr holatiga, 18-sanadan kechiktirmay".
+   * Muddat DAVR ICHIDA tugaydi — mavjud ikkala ankor ham buni ifodalay
+   * olmasdi: fixed_day_of_month bir oy kech (18-aprel) berardi,
+   * period_end_offset esa 30/31 kunlik oylar tufayli 17 va 18-kunga
+   * sochilib ketardi.
+   */
+  it("period_end_month_day: 4-moliya har chorakda 18-kunga tushadi", () => {
+    const expected = ["2026-03-18", "2026-06-18", "2026-09-18", "2026-12-18"];
+    const refs = [utc(2026, 1, 5), utc(2026, 4, 5), utc(2026, 7, 5), utc(2026, 10, 5)];
+    const got = refs.map((r) =>
+      iso(
+        rawDueDate(
+          { anchorType: "period_end_month_day", dueDay: 18, dueMonth: null, offsetDays: null },
+          periodWindowFor("quarterly", r),
+        ),
+      ),
+    );
+    expect(got).toEqual(expected);
+  });
+
+  it("period_end_month_day: yillik davrda dekabrga tushadi", () => {
+    const w = periodWindowFor("annual", utc(2026, 5, 1));
+    const due = rawDueDate(
+      { anchorType: "period_end_month_day", dueDay: 18, dueMonth: null, offsetDays: null },
+      w,
+    );
+    expect(iso(due)).toBe("2026-12-18");
+  });
+
   it("fixed_day_of_month clamps to month length (day 31 → Feb)", () => {
     const w = periodWindowFor("monthly", utc(2026, 1, 15)); // periodEnd = 2026-02-01
     const due = rawDueDate(

@@ -55,6 +55,12 @@ export const COL_KEY_TO_TEMPLATE_CODES: Record<string, string[]> = {
   bonak: ["BONAK"],
   ekologiya: ["EKOLOGIYA"],
 
+  // ── Statistika ───────────────────────────────────────────
+  // Statistika ustunlarining ko'pchiligi matritsa-only (muddat dvigatelida
+  // shabloni yo'q). 4-moliya istisno: uning muddati aniq belgilangan
+  // (18-mart/iyun/sentabr/dekabr) va u chorak ICHIDA tugaydi.
+  stat_4_moliya: ["STAT_4_MOLIYA"],
+
   // ── Moliyaviy hisobotlar ─────────────────────────────────
   moliyaviy_natija: ["MOLIYAVIY_YILLIK"],
   buxgalteriya_balansi: ["BUX_BALANS"],

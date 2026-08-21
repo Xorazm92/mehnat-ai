@@ -260,6 +260,8 @@ export const FIELD_TO_DB_COLUMN: Record<OperationFieldKey, string> = {
     stat_1_korxona_tif: 'stat1KorxonaTif',
     stat_1_moliya: 'stat1Moliya',
     stat_1_akt: 'stat1Akt',
+    stat_1_tib: 'stat1Tib',
+    stat_4_moliya: 'stat4Moliya',
     aksiz_soligi: 'aksizSoligi',
     nedro_soligi: 'nedroSoligi',
     norezident_foyda: 'norezidentFoyda',

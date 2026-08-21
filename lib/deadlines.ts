@@ -70,6 +70,22 @@ export function rawDueDate(rule: DueRule, window: PeriodWindow): Date {
     const lastDay = addDays(window.periodEnd, -1);
     return addDays(lastDay, rule.offsetDays ?? 0);
   }
+  if (rule.anchorType === "period_end_month_day") {
+    /**
+     * DAVR ICHIDAGI muddat: davrning OXIRGI oyi + `dueDay`.
+     *
+     * 4-moliya shundan: "1-sentabr holatiga, 18-sentabrdan kechiktirmay".
+     * `fixed_day_of_month` bo'lsa muddat 18-OKTABRGA (davrdan keyingi oyga)
+     * tushardi — bir oy kech, ya'ni KPI kechikkan ishni "o'z vaqtida" deb
+     * baholardi. `period_end_offset` esa chorak oxiridan orqaga sanaydi va
+     * 30/31 kunlik oylar tufayli 17 va 18-kunga sochilib ketardi.
+     */
+    const lastDay = addDays(window.periodEnd, -1); // davrning oxirgi kuni
+    const y = lastDay.getUTCFullYear();
+    const m = lastDay.getUTCMonth() + 1;
+    return utcDate(y, m, Math.min(rule.dueDay ?? 1, daysInMonth(y, m)));
+  }
+
   // fixed_day_of_month — periodEnd davrdan keyingi birinchi kun (monthly →
   // keyingi oy 1-kuni; quarterly → keyingi chorak boshi; annual → keyingi yil).
   const refY = window.periodEnd.getUTCFullYear();

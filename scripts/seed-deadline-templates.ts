@@ -191,6 +191,25 @@ const TEMPLATES: TplSeed[] = [
     dueDay: 1,
     effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
   },
+  // ── STATISTIKA ───────────────────────────────────────────────
+  //
+  // Statistika hisobotlari HAMMA firmada topshirilmaydi — ular faoliyat turi
+  // va statistika guruhiga bog'liq. Shuning uchun `service_key` bilan
+  // chegaralanadi: majburiyat FAQAT shu ustun yoqilgan firmada tug'iladi.
+  // Universal qilinsa, 283 firmaning hammasiga topshirmaydigan hisobot
+  // muddati yaratilib, "Ishlar" ro'yxati shovqinga aylanardi.
+  {
+    code: "STAT_4_MOLIYA",
+    name: "4-moliya (choraklik)",
+    obligationType: "statistics",
+    periodicity: "quarterly",
+    // Muddat CHORAK ICHIDA: 1-mart/iyun/sentabr/dekabr holatiga → 18-sanagacha.
+    anchorType: "period_end_month_day",
+    dueDay: 18,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "service_key", criteriaValue: "stat_4_moliya" }],
+  },
+
   // ASRO Reglament ichki oylik takrorlanuvchi vazifalari.
   //
   // ANCHOR TANLOVI — diqqat: `fixed_day_of_month` davrdan KEYINGI oyning N-kuniga
