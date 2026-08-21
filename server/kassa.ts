@@ -160,9 +160,26 @@ export async function createKassaEntry(data: {
         amount: data.amount, role, userId, context: "expense", db: tx,
       });
     }
+    // MAYDONLAR ANIQ SANALADI, `...data` EMAS.
+    //
+    // Bu server action — mijoz yuborgan obyekt RUNTIME da butunligicha
+    // keladi va TypeScript tipi uni kesib tashlamaydi (tip faqat
+    // kompilyatsiya vaqtida yashaydi). `/expenses` formasi hali eski
+    // `paymentMethod` maydonini yuborardi; u `KassaEntry` da yo'q, va
+    // spread uni to'g'ridan-to'g'ri Prisma'ga uzatib "Unknown argument
+    // `paymentMethod`" bilan har bir xarajat kiritishni yiqitardi.
+    //
+    // Sanab yozish bu sinfdagi xatoni butunlay yopadi: jadvalda bo'lmagan
+    // maydon bu yerdan o'tolmaydi, mijoz nima yuborishidan qat'i nazar.
     const row = await tx.kassaEntry.create({
       data: {
-        ...data,
+        type: data.type,
+        category: data.category,
+        amount: data.amount,
+        description: data.description ?? null,
+        date: data.date,
+        companyId: data.companyId ?? null,
+        channelId: data.channelId ?? null,
         createdBy: userId,
         status: autoApprove ? "approved" : "pending",
         ...(autoApprove ? { approvedBy: userId, approvedAt: new Date() } : {}),
@@ -431,8 +448,14 @@ export async function updateExpense(id: string, data: {
     });
     const row = await tx.kassaEntry.update({
       where: { id },
+      // Maydonlar aniq sanaladi — sabab `createKassaEntry` dagi bilan bir xil:
+      // mijoz yuborgan obyekt runtime da butunligicha keladi.
       data: {
-        ...data,
+        amount: data.amount,
+        date: data.date,
+        category: data.category,
+        description: data.description ?? null,
+        channelId: data.channelId ?? null,
         status: autoApprove ? "approved" : "pending",
         approvedBy: autoApprove ? userId : null,
         approvedAt: autoApprove ? new Date() : null,

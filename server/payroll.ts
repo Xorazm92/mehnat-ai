@@ -82,9 +82,18 @@ export async function createPayrollAdjustment(data: {
   }
   await assertPeriodOpen(prisma, data.month, "oylik tuzatmasi");
 
+  // Maydonlar aniq sanaladi, `...data` emas: bu server action va mijoz
+  // yuborgan obyekt runtime da butunligicha keladi — TypeScript tipi uni
+  // kesib tashlamaydi. Jadvalda bo'lmagan bitta ortiqcha maydon butun
+  // amalni "Unknown argument" bilan yiqitardi (xuddi `/expenses` da
+  // `paymentMethod` bilan bo'lgani kabi).
   const created = await prisma.payrollAdjustment.create({
     data: {
-      ...data,
+      month: data.month,
+      employeeId: data.employeeId,
+      adjustmentType: data.adjustmentType,
+      amount: data.amount,
+      reason: data.reason,
       createdBy: session.user.id,
     },
   });

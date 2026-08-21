@@ -27,7 +27,10 @@ export default function ExpensesClient({ expenses, userRole, balance }: Props) {
       date: new Date(expense.date as string),
       category: expense.category as string,
       description: expense.description,
-      paymentMethod: expense.paymentMethod || "naqd",
+      // `paymentMethod` YUBORILMAYDI: `KassaEntry` da bunday ustun yo'q va
+      // uni `channelId` to'liq almashtiradi ("qaysi schyot/karta", nafaqat
+      // "naqdmi yoki plastikmi"). Yuborilsa server uni tashlab yuboradi,
+      // lekin forma yo'q maydonni to'ldirishda davom etishi chalg'itadi.
       // Pul manbai — server ham tekshiradi (assertFundingSource).
       channelId: expense.channelId || undefined,
     };
