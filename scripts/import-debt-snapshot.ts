@@ -27,6 +27,7 @@ import { prisma } from "@/lib/prisma";
 import { requireImportFile } from "./import-source";
 import { readLooseJsonArray } from "@/lib/bank/parsePlastik";
 import { parseDebtSnapshot, contractKindOf, type DebtSnapshotLine } from "@/lib/debtReport";
+import { matchCompanyByName } from "@/lib/companyMatch";
 import { formatNum as som } from "@/lib/format";
 import fs from "node:fs";
 
@@ -35,14 +36,6 @@ const SOURCES = [
   { file: "31.07.2026 qarzdorlik.json", asOf: new Date(Date.UTC(2026, 6, 31)), label: "hisoblanmagacha" },
   { file: "01.08.2026 qarzdorlik.json", asOf: new Date(Date.UTC(2026, 7, 1)), label: "hisoblanmadan keyin" },
 ];
-
-const norm = (s: string) =>
-  s
-    .toLowerCase()
-    .replace(/[`'‘’"«»]/g, "")
-    .replace(/\b(mchj|mas'uliyati cheklangan jamiyati|xk|ntm|ooo|chp|yatt|ajm)\b/g, "")
-    .replace(/[^a-z0-9Ѐ-ӿ]+/g, " ")
-    .trim();
 
 /** Shartnoma raqamini solishtirish uchun — kirill/lotin aralash yoziladi. */
 const contractKey = (raw: string) =>
@@ -63,12 +56,22 @@ async function main(): Promise<void> {
     where: { isOwnFirm: false },
     select: { id: true, name: true },
   });
-  const byName = new Map(companies.map((c) => [norm(c.name), c]));
 
+  // Qo'lda tasdiqlangan bog'lanishlar — normalizatsiya topa olmagan
+  // imlo farqlari uchun (`CompanyAlias` izohiga qarang).
+  const aliasRows = await prisma.companyAlias.findMany({ select: { alias: true, companyId: true } });
+  const aliases = new Map(aliasRows.map((a) => [a.alias, a.companyId]));
+
+  // SHARTNOMA FIRMA ICHIDAN qidiriladi: raqam faqat firma ichida unikal
+  // (`@@unique([companyId, number])`). Ilgari u global kalit sifatida
+  // ishlatilgan va 228 qatordan 160 tasi TASODIFIY firmaga bog'langan edi —
+  // "13/26БК" sakkizta firmada bor.
   const contracts = await prisma.contract.findMany({
     select: { id: true, number: true, companyId: true },
   });
-  const byContract = new Map(contracts.map((c) => [contractKey(c.number), c]));
+  const byCompanyContract = new Map(
+    contracts.map((c) => [`${c.companyId}||${contractKey(c.number)}`, c])
+  );
 
   for (const src of SOURCES) {
     const path = requireImportFile(src.file);
@@ -108,8 +111,13 @@ async function main(): Promise<void> {
     let matchedCompany = 0;
     let matchedContract = 0;
     const resolve = (l: DebtSnapshotLine) => {
-      const company = byName.get(norm(l.customerName)) ?? null;
-      const contract = l.contractNumber ? (byContract.get(contractKey(l.contractNumber)) ?? null) : null;
+      const company = matchCompanyByName(l.customerName, companies, aliases);
+      // Firma topilmasa shartnoma ham qidirilmaydi — firmasiz shartnoma
+      // raqami hech narsani anglatmaydi.
+      const contract =
+        company && l.contractNumber
+          ? (byCompanyContract.get(`${company.id}||${contractKey(l.contractNumber)}`) ?? null)
+          : null;
       if (company) matchedCompany += 1;
       if (contract) matchedContract += 1;
       return { company, contract };

@@ -258,6 +258,7 @@ model Company {
   @@index([isOwnFirm])
   @@index([debtNextContactAt])
   @@index([internalContractorId])
+  aliases           CompanyAlias[]
 }
 
 // =====================================================
@@ -1721,6 +1722,27 @@ model PaymentAllocation {
 ///
 /// Har yuklash yangi `asOf` beradi, eskisi O'CHIRILMAYDI — shunda ASRO
 /// hisobi bilan 1C ni istalgan sanada solishtirish mumkin.
+/// 1C hisobotlaridagi mijoz nomi ↔ bizning firma.
+///
+/// 1C da STIR yo'q, faqat nom bor; bazada esa STIR bor va u yagona ishonchli
+/// kalit. Bu jadval o'sha ko'prik: nom bir marta qo'lda tasdiqlanadi, keyin
+/// har import uni STIRli firmaga bog'laydi. Mavhum o'xshashlik ATAYIN
+/// ishlatilmaydi (`lib/companyMatch.ts` izohiga qarang).
+model CompanyAlias {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// 1C da qanday yozilgan bo'lsa, xom holda.
+  alias     String   @unique
+  /// Qaysi manbadan keldi: "1c" | "vipiska" | "qo'lda".
+  source    String   @default("1c")
+  note      String?
+  createdAt DateTime @default(now())
+  createdBy String?
+
+  @@index([companyId])
+}
+
 model DebtSnapshot {
   id   String   @id @default(uuid())
   asOf DateTime
