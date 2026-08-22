@@ -87,36 +87,68 @@ async function main(): Promise<void> {
   const aliases = new Map(aliasRows.map((a) => [a.alias, a.companyId]));
 
   const parsed = parseDebtSnapshot(
-    readLooseJsonArray(fs.readFileSync(requireImportFile("01.08.2026 qarzdorlik.json"), "utf8")) as never
+    readLooseJsonArray(fs.readFileSync(requireImportFile("01.08.2026. qani qarzdorlik (2).json"), "utf8")) as never
   );
 
-  const unmatched = new Map<string, number>();
+  // STIRni ham olamiz: bog'lanmaganlar IKKI XIL bo'ladi va ular boshqa-boshqa
+  // ish talab qiladi —
+  //   STIRi bazada YO'Q  → mijoz tizimga hali kiritilmagan (taxallus yordam
+  //                        bermaydi, firmani ochish kerak);
+  //   STIRi bor / yo'q   → nom farqi, taxallus bilan hal bo'ladi.
+  const allCompanies = await prisma.company.findMany({ select: { id: true, inn: true } });
+  const knownInn = new Set(allCompanies.map((c) => (c.inn ?? "").replace(/\D/g, "")).filter(Boolean));
+
+  const unmatched = new Map<string, { debt: number; inn: string | null }>();
   for (const l of parsed.lines) {
     if (matchCompanyByName(l.customerName, companies, aliases)) continue;
-    unmatched.set(l.customerName, (unmatched.get(l.customerName) ?? 0) + l.debt);
+    const cur = unmatched.get(l.customerName) ?? { debt: 0, inn: l.customerInn };
+    cur.debt += l.debt;
+    if (!cur.inn) cur.inn = l.customerInn;
+    unmatched.set(l.customerName, cur);
   }
 
-  const ordered = [...unmatched.entries()].sort((a, b) => b[1] - a[1]);
+  const ordered = [...unmatched.entries()].sort((a, b) => b[1].debt - a[1].debt);
   const csv = process.argv.includes("--csv");
 
   if (csv) {
     console.log("# 1C nomi\tSTIR   — STIR ustunini to'ldiring, keyin:");
     console.log("#   npx tsx scripts/propose-company-aliases.ts --apply-file <fayl>");
-    for (const [name, debt] of ordered) {
+    for (const [name, v] of ordered) {
+      if (v.inn && !knownInn.has(v.inn.replace(/\D/g, ""))) continue; // yangi mijoz — taxallus yordam bermaydi
       const best = companies
         .map((c) => ({ c, s: similarity(name, c.name) }))
         .sort((a, b) => b.s - a.s)[0];
       const hint = best && best.s >= 0.5 ? `\t# taklif: ${best.c.name} (${best.c.inn})` : "";
-      console.log(`${name}\t${hint ? "" : ""}${hint}   # qarz ${som(debt)}`);
+      console.log(`${name}\t${hint}   # qarz ${som(v.debt)}`);
     }
     await prisma.$disconnect();
     return;
   }
 
+  const newClients = ordered.filter(([, v]) => v.inn && !knownInn.has(v.inn.replace(/\D/g, "")));
+  const needAlias = ordered.filter(([, v]) => !v.inn || knownInn.has(v.inn.replace(/\D/g, "")));
+
   console.log();
-  console.log(`BOG'LANMAGAN 1C NOMLARI: ${ordered.length} ta · jami qarz ${som(ordered.reduce((s, [, d]) => s + d, 0))}`);
+  console.log(`BOG'LANMAGAN: ${ordered.length} ta · jami qarz ${som(ordered.reduce((s, [, v]) => s + v.debt, 0))}`);
   console.log("─".repeat(78));
-  for (const [name, debt] of ordered) {
+
+  if (newClients.length) {
+    console.log(`\nTIZIMDA YO'Q MIJOZLAR (${newClients.length} ta · ${som(newClients.reduce((s, [, v]) => s + v.debt, 0))})`);
+    console.log("Bularga taxallus yordam bermaydi — avval firma sifatida ochilishi kerak:");
+    for (const [name, v] of newClients) {
+      console.log(`   ${som(v.debt).padStart(12)}  STIR ${v.inn}  ${name}`);
+    }
+  }
+
+  if (needAlias.length === 0) {
+    console.log("\n✓ Taxallus talab qiladigan nom qolmadi.");
+    await prisma.$disconnect();
+    return;
+  }
+
+  console.log(`\nNOM FARQI — taxallus bilan hal bo'ladi (${needAlias.length} ta):`);
+  for (const [name, v] of needAlias) {
+    const debt = v.debt;
     const top = companies
       .map((c) => ({ c, s: similarity(name, c.name) }))
       .filter((x) => x.s > 0)
