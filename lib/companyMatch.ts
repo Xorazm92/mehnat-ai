@@ -89,3 +89,29 @@ export function matchCompanyByName<T extends CompanyLike>(
   const hits = companies.filter((c) => normalizeCompanyName(c.name) === key);
   return hits.length === 1 ? hits[0] : null;
 }
+
+/**
+ * STIR bo'yicha YAGONA firmani qaytaradi.
+ *
+ * STIR eng ishonchli kalit, lekin bazada dublikat uchraydi: prodda 10 ta
+ * STIR ikki qatorga tegishli va deyarli hammasida bittasi ARXIVLANGAN
+ * nusxa (eski yozuv, o'chirilmagan). Arxivlangan egizak HAQIQIY IKKILANISH
+ * EMAS — faol qator bittagina bo'lsa, javob aniq.
+ *
+ * Faol qator ham bir nechta bo'lsa `null`: bu chinakam dublikat va uni
+ * moslashtirish emas, TOZALASH kerak (`assertInnFree` qo'riqchisi bor).
+ */
+export function matchCompanyByInn<T extends CompanyLike & { inn?: string | null; isActive?: boolean }>(
+  inn: string | null | undefined,
+  companies: T[]
+): T | null {
+  const key = (inn ?? "").replace(/\D/g, "");
+  if (!key) return null;
+
+  const hits = companies.filter((c) => (c.inn ?? "").replace(/\D/g, "") === key);
+  if (hits.length === 1) return hits[0];
+  if (hits.length === 0) return null;
+
+  const active = hits.filter((c) => c.isActive !== false);
+  return active.length === 1 ? active[0] : null;
+}

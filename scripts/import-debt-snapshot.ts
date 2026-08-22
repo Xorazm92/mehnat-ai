@@ -27,7 +27,7 @@ import { prisma } from "@/lib/prisma";
 import { requireImportFile } from "./import-source";
 import { readLooseJsonArray } from "@/lib/bank/parsePlastik";
 import { parseDebtSnapshot, contractKindOf, type DebtSnapshotLine } from "@/lib/debtReport";
-import { matchCompanyByName } from "@/lib/companyMatch";
+import { matchCompanyByName, matchCompanyByInn } from "@/lib/companyMatch";
 import { formatNum as som } from "@/lib/format";
 import fs from "node:fs";
 
@@ -56,15 +56,12 @@ const contractKey = (raw: string) =>
 async function main(): Promise<void> {
   const apply = process.argv.includes("--apply");
 
+  // `isActive` ham kerak: bazada arxivlangan egizak qatorlar bor va ular
+  // STIR bo'yicha moslashtirishni bloklardi (`matchCompanyByInn` izohi).
   const companies = await prisma.company.findMany({
     where: { isOwnFirm: false },
-    select: { id: true, name: true, inn: true },
+    select: { id: true, name: true, inn: true, isActive: true },
   });
-  const byInn = new Map<string, typeof companies>();
-  for (const c of companies) {
-    const k = innKey(c.inn);
-    if (k) byInn.set(k, [...(byInn.get(k) ?? []), c]);
-  }
 
   // ── OLDINDAN: STIRLI FAYLLARDAN TAXALLUS O'RGANISH ─────────────────────
   //
@@ -81,11 +78,8 @@ async function main(): Promise<void> {
       const p = requireImportFile(src.file);
       const parsedPre = parseDebtSnapshot(readLooseJsonArray(fs.readFileSync(p, "utf8")));
       for (const l of parsedPre.lines) {
-        if (!l.customerInn) continue;
-        const hits = byInn.get(innKey(l.customerInn)) ?? [];
-        // Bir nechta firma bir xil STIR bilan tursa TANLANMAYDI — dublikat
-        // STIR bu bazada allaqachon bir marta muammo bo'lgan.
-        if (hits.length !== 1) continue;
+        const hit = matchCompanyByInn(l.customerInn, companies);
+        if (!hit) continue;
         const existing = await prisma.companyAlias.findUnique({
           where: { alias: l.customerName },
           select: { id: true },
@@ -94,7 +88,7 @@ async function main(): Promise<void> {
         await prisma.companyAlias.create({
           data: {
             alias: l.customerName,
-            companyId: hits[0].id,
+            companyId: hit.id,
             source: "1c-inn",
             note: `STIR ${l.customerInn} orqali tasdiqlangan`,
           },
@@ -164,9 +158,9 @@ async function main(): Promise<void> {
       //    dublikat STIR allaqachon bir marta muammo bo'lgan.
       // 2) Qo'lda tasdiqlangan taxallus.
       // 3) Nom (normalizatsiya bilan).
-      const innHits = l.customerInn ? (byInn.get(innKey(l.customerInn)) ?? []) : [];
       const company =
-        innHits.length === 1 ? innHits[0] : matchCompanyByName(l.customerName, companies, aliases);
+        matchCompanyByInn(l.customerInn, companies) ??
+        matchCompanyByName(l.customerName, companies, aliases);
       // Firma topilmasa shartnoma ham qidirilmaydi — firmasiz shartnoma
       // raqami hech narsani anglatmaydi.
       const contract =

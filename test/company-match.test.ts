@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { normalizeCompanyName, matchCompanyByName } = await import("@/lib/companyMatch");
+const { normalizeCompanyName, matchCompanyByName, matchCompanyByInn } = await import("@/lib/companyMatch");
 
 const co = (id: string, name: string) => ({ id, name });
 
@@ -64,5 +64,41 @@ describe("matchCompanyByName", () => {
   it("taxallus mavjud bo'lmagan firmaga ishora qilsa null", () => {
     const aliases = new Map([["X", "yo'q"]]);
     expect(matchCompanyByName("X", companies, aliases)).toBeNull();
+  });
+});
+
+describe("matchCompanyByInn", () => {
+  const c = (id: string, name: string, inn: string, isActive = true) => ({ id, name, inn, isActive });
+
+  it("yagona STIRni topadi", () => {
+    const list = [c("1", "ALIF PHARMA", "301234567"), c("2", "ATAR", "309876543")];
+    expect(matchCompanyByInn("301234567", list)?.id).toBe("1");
+  });
+
+  it("STIR formatidagi ajratgichlarga qaramaydi", () => {
+    const list = [c("1", "ALIF PHARMA", "301234567")];
+    expect(matchCompanyByInn("301 234 567", list)?.id).toBe("1");
+    expect(matchCompanyByInn("301-234-567", list)?.id).toBe("1");
+  });
+
+  it("ARXIVLANGAN egizak to'siq bo'lmaydi — faol nusxa tanlanadi", () => {
+    // Prodda 10 ta STIR shunday: bittasi faol, bittasi arxivlangan eski yozuv.
+    const list = [
+      c("eski", "AVVITAL NATURALS", "311824130", false),
+      c("faol", '"AVVITAL NATURALS" MCHJ', "311824130", true),
+    ];
+    expect(matchCompanyByInn("311824130", list)?.id).toBe("faol");
+  });
+
+  it("IKKITA FAOL qator bo'lsa TANLAMAYDI — bu chinakam dublikat", () => {
+    const list = [c("a", "X", "311824130"), c("b", "Y", "311824130")];
+    expect(matchCompanyByInn("311824130", list)).toBeNull();
+  });
+
+  it("STIR bo'sh yoki topilmasa null", () => {
+    const list = [c("1", "ALIF PHARMA", "301234567")];
+    expect(matchCompanyByInn(null, list)).toBeNull();
+    expect(matchCompanyByInn("", list)).toBeNull();
+    expect(matchCompanyByInn("999999999", list)).toBeNull();
   });
 });
