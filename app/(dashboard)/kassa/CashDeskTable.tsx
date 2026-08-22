@@ -120,15 +120,22 @@ export default function CashDeskTable({ report }: Props) {
         <div
           className="px-3 py-2 flex items-start gap-2 text-micro"
           style={{
-            background: "var(--warning-bg)",
+            background: "var(--input-bg)",
             borderBottom: "1px solid var(--card-border)",
-            color: "var(--warning)",
+            color: "var(--text-muted)",
           }}
         >
           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
           <span>
-            {formatNum(report.unassigned)} so&apos;m qaysi kassada ekani noma&apos;lum — eski
-            yozuvlarda kanal ko&apos;rsatilmagan. Bu raqam nolga intilishi kerak.
+            {/* ILGARI BU OGOHLANTIRISH XATO DEB O'QILARDI. Aslida bu summaning
+                deyarli hammasi SHARTNOMA TO'LOVLARI: `upsertPayment` pul qaysi
+                hisobga tushganini bilmaydi (unda faqat `paymentMethod` bor),
+                shuning uchun jurnalga kanalsiz yoziladi — bu kutilgan holat,
+                buzilish emas (`lib/ledger.ts` ACCOUNT_SPEC izohi). */}
+            {formatNum(report.unassigned)} so&apos;m kanalsiz yozilgan — asosan
+            shartnoma to&apos;lovlari: ular qaysi hisobga tushgani jurnalda
+            ko&apos;rsatilmaydi. Bu buzilish emas; kanal backfilli tugagach
+            kamayadi.
           </span>
         </div>
       )}

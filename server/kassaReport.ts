@@ -194,6 +194,8 @@ export interface CategoryBreakdown {
   expenseTotal: number;
   /** Shu davrdagi shartnoma to'lovlari — kassa moddasi emas, ma'lumot uchun. */
   contractPayments: { count: number; amount: number };
+  /** Tasdiq kutayotgan chiqim — jamiga KIRMAYDI, alohida ko'rsatiladi. */
+  pending: { count: number; amount: number };
 }
 
 export async function getCategoryBreakdown(period?: string): Promise<CategoryBreakdown> {
@@ -205,15 +207,28 @@ export async function getCategoryBreakdown(period?: string): Promise<CategoryBre
   const from = new Date(y, m - 1, 1);
   const to = new Date(y, m, 1);
 
-  const [grouped, payments] = await Promise.all([
+  const [grouped, payments, pendingRows] = await Promise.all([
+    // FAQAT TASDIQLANGAN. Ilgari `status: { not: "rejected" }` edi, ya'ni
+    // tasdiq kutayotgan xarajat ham qo'shilardi — balans bloki esa faqat
+    // tasdiqlanganini sanaydi (`lib/balance.ts`). Natijada BITTA ekranda
+    // "Chiqim, avgust" ikki xil raqam bilan turardi: 195,826,320 va
+    // 132,778,320 (farq — 3 ta kutayotgan xarajat, 63 048 000).
     prisma.kassaEntry.groupBy({
       by: ["type", "category"],
-      where: { deletedAt: null, status: { not: "rejected" }, date: { gte: from, lt: to } },
+      where: { deletedAt: null, status: "approved", date: { gte: from, lt: to } },
       _count: true,
       _sum: { amount: true },
     }),
     prisma.payment.aggregate({
       where: { period: key, deletedAt: null, status: { in: ["paid", "partial"] } },
+      _count: true,
+      _sum: { amount: true },
+    }),
+    // Tasdiq kutayotganlar ALOHIDA — jamiga qo'shilmaydi, lekin ekranda
+    // ko'rinib turishi kerak: aks holda "3 ta xarajat kutmoqda" faqat
+    // /expenses da ko'rinardi va kassada pul yo'qolganday tuyulardi.
+    prisma.kassaEntry.aggregate({
+      where: { deletedAt: null, status: "pending", type: "expense", date: { gte: from, lt: to } },
       _count: true,
       _sum: { amount: true },
     }),
@@ -241,6 +256,10 @@ export async function getCategoryBreakdown(period?: string): Promise<CategoryBre
     contractPayments: {
       count: payments._count,
       amount: Number(payments._sum.amount ?? 0),
+    },
+    pending: {
+      count: pendingRows._count,
+      amount: Number(pendingRows._sum.amount ?? 0),
     },
   });
 }

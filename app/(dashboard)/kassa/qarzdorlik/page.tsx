@@ -12,7 +12,6 @@ import {
 import { getCachedCompanies } from "@/lib/cached-queries";
 import { getPayments } from "@/server/kassa";
 import QarzdorlikClient from "./QarzdorlikClient";
-import DebtStatement from "./DebtStatement";
 
 export const metadata = { title: "Qarzdorlik" };
 
@@ -77,13 +76,8 @@ export default async function QarzdorlikPage({
 
   return (
     <div className="h-full">
-      {/* Chekka QarzdorlikClient ichida — bu yerda takrorlanmaydi. */}
-      {statement && (
-        <div className="px-4 pt-4 md:px-6 md:pt-6">
-          <DebtStatement statement={JSON.parse(JSON.stringify(statement))} />
-        </div>
-      )}
       <QarzdorlikClient
+        statement={statement ? JSON.parse(JSON.stringify(statement)) : null}
         debt={JSON.parse(JSON.stringify(debt))}
         debtors={JSON.parse(JSON.stringify(debtors))}
         queue={JSON.parse(JSON.stringify(queue))}

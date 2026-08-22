@@ -322,38 +322,46 @@ export async function getReconciliation() {
 import { contractKindOf, CONTRACT_KIND_LABELS, type ContractKind } from "@/lib/debtReport";
 
 export interface StatementLine {
-  customerName: string;
-  /** Bazadagi firmaning STIRi — bog'lanish tasdig'i sifatida ko'rinadi. */
-  companyInn: string | null;
-  companyId: string | null;
   contractNumber: string | null;
   contractRaw: string | null;
   kind: ContractKind;
   kindLabel: string;
   ownFirmName: string | null;
-  /** Oy boshidagi sof qoldiq (musbat = qarzdor, manfiy = avansda). */
   opening: number;
-  /** Shu oyda hisoblangan xizmat haqi. */
+  /** Davr ichida hisoblangan xizmat haqi. */
   accrued: number;
-  /** Oy oxiridagi qarz va avans — 1C bo'yicha. */
   debt: number;
   advance: number;
+}
+
+export interface StatementCustomer {
+  customerName: string;
+  companyId: string | null;
+  companyInn: string | null;
+  opening: number;
+  accrued: number;
+  /** Davr ichida kelgan pul — bizning `PaymentAllocation` dan. */
+  paid: number;
+  debt: number;
+  advance: number;
+  /** Shartnoma darajasidagi tafsilot. */
+  lines: StatementLine[];
 }
 
 export interface DebtStatement {
   openingAsOf: string | null;
   closingAsOf: string | null;
-  /** Bazadagi barcha kesim sanalari — ekranda tanlash uchun. */
   availableDates: string[];
-  lines: StatementLine[];
-  totals: { opening: number; accrued: number; debt: number; advance: number };
-  /** Shartnoma turi bo'yicha kesim — doimiy va bir martalik xizmat. */
+  customers: StatementCustomer[];
+  totals: { opening: number; accrued: number; paid: number; debt: number; advance: number };
   byKind: { kind: ContractKind; label: string; count: number; debt: number; advance: number; accrued: number }[];
+  /** To'lovlar shu davrda umuman bo'lganmi — ustunni ko'rsatish/yashirish uchun. */
+  hasPayments: boolean;
 }
 
 /**
- * @param openingAsOf hisoblanma YOZILGUNGA QADAR olingan kesim sanasi
- * @param closingAsOf hisoblanma yozilgandan KEYINGI kesim sanasi
+ * @param openingAsOf davr boshidagi kesim sanasi
+ * @param closingAsOf davr oxiridagi kesim sanasi
  */
 export async function getDebtStatement(input?: {
   openingAsOf?: Date;
@@ -361,34 +369,74 @@ export async function getDebtStatement(input?: {
 }): Promise<DebtStatement> {
   await requireSenior();
 
-  // BARCHA kesim sanalari kerak: standart juftlikni tanlash uchun ham,
-  // ekranda tanlagich ko'rsatish uchun ham.
-  //
-  // Standart — eng oxirgi IKKITA kesim. Bu har doim ham to'g'ri juftlik
-  // emas: bazada uchinchi, boshqa davrga tegishli kesim bo'lsa
-  // (masalan 07.08), u eng yangisi bo'lib juftlikni buzadi va "hisoblanma"
-  // manfiy chiqadi. Shuning uchun tanlangan sanalar EKRANDA ko'rinib turadi
-  // va foydalanuvchi ularni almashtira oladi — jimgina noto'g'ri raqam
-  // ko'rsatishdan ko'ra ko'rinadigan tanlov afzal.
   const dateRows = await prisma.debtSnapshot.findMany({
     distinct: ["asOf"],
     select: { asOf: true },
     orderBy: { asOf: "desc" },
   });
   const availableDates = dateRows.map((d) => d.asOf.toISOString());
-  const closingAsOf = input?.closingAsOf ?? dateRows[0]?.asOf ?? null;
-  const openingAsOf = input?.openingAsOf ?? dateRows[1]?.asOf ?? null;
 
-  if (!closingAsOf) {
-    return {
-      openingAsOf: null,
-      closingAsOf: null,
-      availableDates,
-      lines: [],
-      totals: { opening: 0, accrued: 0, debt: 0, advance: 0 },
-      byKind: [],
-    };
+  // ── STANDART JUFTLIK — SOLISHTIRISH MUMKIN BO'LGANI ────────────────────
+  //
+  // "Eng oxirgi ikkita kesim" qoidasi noto'g'ri natija berardi. Bazada
+  // uch kesim bor: 31.07 (85 qator), 01.08 (249), 07.08 (131). Oxirgi
+  // ikkitasi — 01.08 va 07.08 — turli TO'LIQLIKDAGI hisobotlar: 07.08 eski
+  // importerdan kelgan va mijozlarning yarmini qamramaydi. Ularni
+  // solishtirish "Hisoblandi −420 mln" degan ma'nosiz raqam berardi.
+  //
+  // Endi qo'shni juftliklar orasidan OCHILISH QATORLARI YOPILISHDA ENG KO'P
+  // uchraydigani tanlanadi: solishtirish faqat ustma-ust tushgan qatorlarda
+  // ma'noli, qamrov past bo'lsa raqam shunchaki noto'liq.
+  let closingAsOf = input?.closingAsOf ?? null;
+  let openingAsOf = input?.openingAsOf ?? null;
+
+  if (!closingAsOf && dateRows.length > 0) {
+    if (dateRows.length === 1) {
+      closingAsOf = dateRows[0].asOf;
+    } else {
+      const keyOf = (r: { rawCustomer: string; rawContract: string | null; ownFirmName: string | null }) =>
+        `${r.rawCustomer}||${r.rawContract ?? ""}||${r.ownFirmName ?? ""}`;
+      const keysByDate = new Map<number, Set<string>>();
+      for (const d of dateRows) {
+        const rows = await prisma.debtSnapshot.findMany({
+          where: { asOf: d.asOf },
+          select: { rawCustomer: true, rawContract: true, ownFirmName: true },
+        });
+        keysByDate.set(d.asOf.getTime(), new Set(rows.map(keyOf)));
+      }
+
+      let best = { coverage: -1, close: dateRows[0].asOf, open: dateRows[1].asOf };
+      // `dateRows` kamayish tartibida — qo'shni juftlik (i) yopilish, (i+1) ochilish.
+      for (let i = 0; i + 1 < dateRows.length; i++) {
+        const close = dateRows[i].asOf;
+        const open = dateRows[i + 1].asOf;
+        const ck = keysByDate.get(close.getTime())!;
+        const ok = keysByDate.get(open.getTime())!;
+        if (ok.size === 0) continue;
+        let common = 0;
+        for (const k of ok) if (ck.has(k)) common += 1;
+        const coverage = common / ok.size;
+        if (coverage > best.coverage) best = { coverage, close, open };
+      }
+      closingAsOf = best.close;
+      openingAsOf = openingAsOf ?? best.open;
+    }
   }
+  if (!openingAsOf) {
+    const idx = dateRows.findIndex((d) => closingAsOf && d.asOf.getTime() === closingAsOf.getTime());
+    openingAsOf = idx >= 0 ? (dateRows[idx + 1]?.asOf ?? null) : (dateRows[1]?.asOf ?? null);
+  }
+
+  const empty: DebtStatement = {
+    openingAsOf: null,
+    closingAsOf: null,
+    availableDates,
+    customers: [],
+    totals: { opening: 0, accrued: 0, paid: 0, debt: 0, advance: 0 },
+    byKind: [],
+    hasPayments: false,
+  };
+  if (!closingAsOf) return empty;
 
   const [closing, opening] = await Promise.all([
     prisma.debtSnapshot.findMany({
@@ -402,92 +450,154 @@ export async function getDebtStatement(input?: {
     openingAsOf
       ? prisma.debtSnapshot.findMany({
           where: { asOf: openingAsOf },
-          select: { rawCustomer: true, rawContract: true, ownFirmName: true, debt: true, advance: true },
+          select: { companyId: true, rawCustomer: true, rawContract: true, ownFirmName: true, debt: true, advance: true },
         })
       : Promise.resolve([]),
   ]);
 
-  // FIRMA HAM KALITDA — bazadagi unikal kalit bilan bir xil.
-  // Bitta mijozning bir xil "Без договора" qatori har firma uchun alohida
-  // keladi ("Siddiq Biznes Group": Sardorbek House + Plastik). Firmasiz
-  // kalitda ikkala yopilish qatori bitta ochilish qatoriga tushib, oy
-  // boshidagi qoldiq IKKI MARTA qo'shilardi.
+  // ── DAVR ICHIDAGI TO'LOVLAR ────────────────────────────────────────────
+  //
+  // Ikki kesim FARQI o'z-o'zicha "hisoblanma" EMAS. U ikki narsaning
+  // yig'indisi: xizmat haqi yozilgan (qarz oshadi) va pul kelgan (qarz
+  // kamayadi). Ekranda faqat farqni ko'rsatish 01.08→07.08 juftligida
+  // "Hisoblandi −420 mln" degan ma'nosiz raqam berardi — holbuki o'sha
+  // kunlarda hisoblanma umuman bo'lmagan, faqat to'lov kelgan.
+  //
+  // To'lov o'z bazamizdan olinadi (1C kesimi uni ko'rsatmaydi):
+  //   hisoblanma = (yopilish − ochilish) + to'lovlar
+  const payments =
+    openingAsOf && closingAsOf > openingAsOf
+      ? await prisma.paymentAllocation.groupBy({
+          by: ["paymentId"],
+          where: { receivedAt: { gt: openingAsOf, lte: closingAsOf } },
+          _sum: { amount: true },
+        })
+      : [];
+
+  const paidByCompany = new Map<string, number>();
+  if (payments.length > 0) {
+    const rows = await prisma.payment.findMany({
+      where: { id: { in: payments.map((p) => p.paymentId) } },
+      select: { id: true, companyId: true },
+    });
+    const companyOf = new Map(rows.map((r) => [r.id, r.companyId]));
+    for (const p of payments) {
+      const cid = companyOf.get(p.paymentId);
+      if (!cid) continue;
+      paidByCompany.set(cid, (paidByCompany.get(cid) ?? 0) + Number(p._sum.amount ?? 0));
+    }
+  }
+
+  // FIRMA HAM KALITDA — bazadagi unikal kalit bilan bir xil. Bitta mijozning
+  // bir xil "Без договора" qatori har firma uchun alohida keladi va firmasiz
+  // kalitda ochilish qoldig'i ikki marta qo'shilardi.
   const key = (r: { rawCustomer: string; rawContract: string | null; ownFirmName: string | null }) =>
     `${r.rawCustomer}||${r.rawContract ?? ""}||${r.ownFirmName ?? ""}`;
   const openBy = new Map(opening.map((r) => [key(r), Number(r.debt) - Number(r.advance)]));
+  const closingKeys = new Set(closing.map(key));
 
-  const lines: StatementLine[] = closing.map((r) => {
+  // ── MIJOZ BO'YICHA GURUHLASH ───────────────────────────────────────────
+  // Shartnoma darajasi 251 qator beradi va uni bir ekranda o'qib bo'lmaydi.
+  // Rahbarning savoli MIJOZ haqida ("bu firma bilan ahvolimiz qanday?"),
+  // shartnoma esa tafsilot — u ochib ko'riladi.
+  const byCustomer = new Map<string, StatementCustomer>();
+
+  const ensure = (name: string, companyId: string | null, inn: string | null) => {
+    const k = companyId ?? `raw:${name}`;
+    let c = byCustomer.get(k);
+    if (!c) {
+      c = {
+        customerName: name,
+        companyId,
+        companyInn: inn,
+        opening: 0, accrued: 0, paid: 0, debt: 0, advance: 0,
+        lines: [],
+      };
+      byCustomer.set(k, c);
+    }
+    return c;
+  };
+
+  for (const r of closing) {
     const debt = Number(r.debt);
     const advance = Number(r.advance);
     const open = openBy.get(key(r)) ?? 0;
     const contractNumber = r.rawContract ? contractNumberOf(r.rawContract) : null;
     const kind = contractKindOf(contractNumber);
-    return {
-      customerName: r.rawCustomer,
-      companyInn: r.company?.inn ?? null,
-      companyId: r.companyId,
+
+    const c = ensure(r.rawCustomer, r.companyId, r.company?.inn ?? null);
+    c.opening += open;
+    c.debt += debt;
+    c.advance += advance;
+    c.lines.push({
       contractNumber,
       contractRaw: r.rawContract,
       kind,
       kindLabel: CONTRACT_KIND_LABELS[kind],
       ownFirmName: r.ownFirmName,
       opening: open,
-      // Hisoblanma = oxirgi sof qoldiq − boshlang'ich sof qoldiq.
       accrued: debt - advance - open,
       debt,
       advance,
-    };
-  });
+    });
+  }
 
-  // ── YOPILGAN HISOBLAR ──────────────────────────────────────────────────
-  // Ochilishda bor, yopilishda YO'Q qatorlar — hisob shu oyda yopilgan
-  // (masalan avans hisoblanma bilan qoplangan). Ular tushib qolsa varaqa
-  // JIM YO'QOTADI: "Boshi" jamisi manba faylning jamisiga to'g'ri kelmaydi
-  // va farqni izlash uzoq davom etadi.
-  const closingKeys = new Set(closing.map(key));
+  // Ochilishda bor, yopilishda YO'Q qatorlar — hisob shu davrda yopilgan.
+  // Tushib qolsa varaqa jim yo'qotadi va "Boshi" jamisi manbaga to'g'ri
+  // kelmaydi.
   for (const o of opening) {
     if (closingKeys.has(key(o))) continue;
     const open = Number(o.debt) - Number(o.advance);
     const contractNumber = o.rawContract ? contractNumberOf(o.rawContract) : null;
     const kind = contractKindOf(contractNumber);
-    lines.push({
-      customerName: o.rawCustomer,
-      companyInn: null,
-      companyId: null,
+    const c = ensure(o.rawCustomer, o.companyId, null);
+    c.opening += open;
+    c.lines.push({
       contractNumber,
       contractRaw: o.rawContract,
       kind,
       kindLabel: CONTRACT_KIND_LABELS[kind],
       ownFirmName: o.ownFirmName,
       opening: open,
-      // Qoldiq nolga tushgan — demak butun boshlang'ich qoldiq shu oyda
-      // yopilgan (teskari ishorada).
       accrued: -open,
       debt: 0,
       advance: 0,
     });
   }
 
-  lines.sort((a, b) => b.debt - a.debt || b.accrued - a.accrued);
+  // To'lovlarni bog'lab, hisoblanmani yakunlaymiz.
+  for (const c of byCustomer.values()) {
+    c.paid = c.companyId ? (paidByCompany.get(c.companyId) ?? 0) : 0;
+    // hisoblanma = (yopilish − ochilish) + to'langan
+    c.accrued = c.debt - c.advance - c.opening + c.paid;
+    c.lines.sort((a, b) => b.debt - a.debt || b.opening - a.opening);
+  }
 
-  const totals = lines.reduce(
-    (t, l) => ({
-      opening: t.opening + l.opening,
-      accrued: t.accrued + l.accrued,
-      debt: t.debt + l.debt,
-      advance: t.advance + l.advance,
+  const customers = [...byCustomer.values()].sort(
+    (a, b) => b.debt - a.debt || b.accrued - a.accrued
+  );
+
+  const totals = customers.reduce(
+    (t, c) => ({
+      opening: t.opening + c.opening,
+      accrued: t.accrued + c.accrued,
+      paid: t.paid + c.paid,
+      debt: t.debt + c.debt,
+      advance: t.advance + c.advance,
     }),
-    { opening: 0, accrued: 0, debt: 0, advance: 0 }
+    { opening: 0, accrued: 0, paid: 0, debt: 0, advance: 0 }
   );
 
   const kinds = new Map<ContractKind, { count: number; debt: number; advance: number; accrued: number }>();
-  for (const l of lines) {
-    const cur = kinds.get(l.kind) ?? { count: 0, debt: 0, advance: 0, accrued: 0 };
-    cur.count += 1;
-    cur.debt += l.debt;
-    cur.advance += l.advance;
-    cur.accrued += l.accrued;
-    kinds.set(l.kind, cur);
+  for (const c of customers) {
+    for (const l of c.lines) {
+      const cur = kinds.get(l.kind) ?? { count: 0, debt: 0, advance: 0, accrued: 0 };
+      cur.count += 1;
+      cur.debt += l.debt;
+      cur.advance += l.advance;
+      cur.accrued += l.accrued;
+      kinds.set(l.kind, cur);
+    }
   }
 
   const order: ContractKind[] = ["BK", "RK", "unknown"];
@@ -495,10 +605,11 @@ export async function getDebtStatement(input?: {
     openingAsOf: openingAsOf ? openingAsOf.toISOString() : null,
     closingAsOf: closingAsOf.toISOString(),
     availableDates,
-    lines,
+    customers,
     totals,
     byKind: order
       .filter((k) => kinds.has(k))
       .map((k) => ({ kind: k, label: CONTRACT_KIND_LABELS[k], ...kinds.get(k)! })),
+    hasPayments: totals.paid > 0,
   });
 }

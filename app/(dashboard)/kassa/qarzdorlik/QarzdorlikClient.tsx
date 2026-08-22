@@ -5,6 +5,7 @@ import { AlertTriangle, Search, TrendingUp, CheckCircle2, XCircle } from "lucide
 import { formatNum, formatUzDate } from "@/lib/format";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import CollectionQueue from "./CollectionQueue";
+import DebtStatement, { type DebtStatementData } from "./DebtStatement";
 import { useRouter } from "next/navigation";
 import KassaModule from "@/components/KassaModule";
 import { upsertPayment, deletePayment } from "@/server/kassa";
@@ -92,6 +93,8 @@ interface Props {
   payments: Payment[];
   debtByCompany: DebtByCompany;
   planFact: PlanFactRow[];
+  /** Hisob-kitob varaqasi — 1C kesimlaridan. */
+  statement?: DebtStatementData | null;
   /** Sverka — moliyaviy invariantlar. Faqat adminda to'ladi. */
   recon?: ReconCheck[];
 }
@@ -131,8 +134,21 @@ export default function QarzdorlikClient({
   debtByCompany,
   planFact,
   recon = [],
+  statement,
 }: Props) {
   const router = useRouter();
+
+  // TAB — sahifada to'qqizta blok bor edi va ularning hammasi bir vertikalda
+  // turardi. Foydalanuvchi "kim qarzdor?" degan savol bilan kelib, undirish
+  // ro'yxatiga yetish uchun sverka, reja/fakt va 1C solishtiruvidan o'tishi
+  // kerak edi. Endi har tab BITTA savolga javob beradi.
+  const TABS = [
+    { key: "holat", label: "Holat" },
+    { key: "undirish", label: "Undirish" },
+    { key: "tolovlar", label: "To'lovlar" },
+    { key: "tekshiruv", label: "Tekshiruv" },
+  ] as const;
+  const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("holat");
   useAutoRefresh();
   const [query, setQuery] = useState("");
   // Farqi bor qatorlar tepada — aynan ular e'tibor talab qiladi.
@@ -197,6 +213,34 @@ export default function QarzdorlikClient({
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-1.5" style={{ borderBottom: "1px solid var(--card-border)", paddingBottom: 8 }}>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className="px-3 py-1.5 rounded-lg text-meta font-semibold"
+            style={
+              tab === t.key
+                ? { background: "var(--accent-blue)", color: "#fff" }
+                : { background: "var(--input-bg)", color: "var(--text-secondary)" }
+            }
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "holat" && (
+        statement ? (
+          <DebtStatement statement={statement} />
+        ) : (
+          <div className="rounded-xl p-4 text-meta" style={{ ...card, color: "var(--text-muted)" }}>
+            Qarzdorlik kesimi hali import qilinmagan.
+          </div>
+        )
+      )}
+
+      {tab === "undirish" && (<>
       {/* Rahbarga kerak bo'lgan birinchi narsa — raqam emas, HARAKAT ro'yxati.
           Shuning uchun u sahifaning eng tepasida. */}
       <CollectionQueue rows={queue.rows} totals={queue.totals} />
@@ -359,6 +403,9 @@ export default function QarzdorlikClient({
         )}
       </div>
 
+      </>)}
+
+      {tab === "tekshiruv" && (<>
       {/* SVERKA — import nomuvofiqliklari ilgari faqat terminalda ko'rinardi
           va terminal yopilgach yo'qolardi. Endi doimiy ekranda. */}
       {recon.length > 0 && (
@@ -532,6 +579,9 @@ export default function QarzdorlikClient({
         </table>
       </div>
 
+      </>)}
+
+      {tab === "tolovlar" && (<>
       {/* FIRMALAR BO'YICHA OYLIK TO'LOVLAR — `/kassa` dan ko'chirildi.
           U yerda kassalar qoldig'i bilan bir ekranda turib, ikki xil firma
           ro'yxati va uch xil "balans" chalkashligini keltirib chiqarardi.
@@ -558,6 +608,8 @@ export default function QarzdorlikClient({
           router.refresh();
         }}
       />
+      </>)}
+
     </div>
   );
 }

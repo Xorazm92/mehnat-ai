@@ -28,6 +28,7 @@ interface Props {
     incomeTotal: number;
     expenseTotal: number;
     contractPayments: { count: number; amount: number };
+    pending: { count: number; amount: number };
   };
 }
 
@@ -162,6 +163,16 @@ export default function CategoryBreakdown({ data }: Props) {
           </b>{" "}
           so&apos;m · {data.contractPayments.count} ta
         </span>
+        {/* Tasdiq kutayotgan chiqim jamiga KIRMAYDI — u hali pul emas.
+            Lekin ko'rinmasa, /expenses dagi "3 ta kutmoqda" bilan bu
+            ekrandagi raqam farq qilib, qaysi biri to'g'ri degan savol
+            tug'ilardi. */}
+        {data.pending.count > 0 && (
+          <span style={{ color: "var(--warning)" }}>
+            Tasdiq kutmoqda: <b className="tabular-nums">{formatNum(data.pending.amount)}</b> so&apos;m ·{" "}
+            {data.pending.count} ta (jamiga kirmagan)
+          </span>
+        )}
       </div>
     </div>
   );

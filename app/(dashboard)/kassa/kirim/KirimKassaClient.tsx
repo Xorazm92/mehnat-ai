@@ -196,8 +196,17 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   // Bank / plastik / naqd — foydalanuvchi aynan shu uchtasini bir ekranda
   // ko'rishni so'ragan. Uchalasi ham Payment orqali o'tadi, shuning uchun
   // raqamlar qarzdorlik bilan bir manbadan.
-  const plastik = nonBank.filter((m) => m.source === "plastik");
-  const naqd = nonBank.filter((m) => m.source === "naqd");
+  // UCHALA KARTOCHKA BIR XIL DAVRNI KO'RSATADI. Ilgari bank "shu oy" edi,
+  // plastik va naqd esa BOSHIDAN BERI — natijada yonma-yon turgan uch raqam
+  // taqqoslab bo'lmaydigan bo'lib qolardi (plastik 40,7 mln ko'rinardi,
+  // pastdagi reyestrda esa shu oyda atigi 1 mln).
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const thisMonth = (m: NonBankRow) => !!m.receivedAt && new Date(m.receivedAt) >= monthStart;
+
+  const plastik = nonBank.filter((m) => m.source === "plastik" && thisMonth(m));
+  const naqd = nonBank.filter((m) => m.source === "naqd" && thisMonth(m));
   const sum = (rows: NonBankRow[]) => rows.reduce((s, r) => s + Number(r.amount), 0);
 
   const totalBankIncome = accounts.reduce((s, a) => s + a.monthIncome, 0);
@@ -316,7 +325,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
         </div>
         <div className="p-4 rounded-xl" style={card}>
           <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
-            <CreditCard size={14} /> Plastik karta
+            <CreditCard size={14} /> Plastik karta (shu oy)
             <button
               className="ml-auto icon-btn"
               title="Plastik tushum qo'shish"
@@ -334,7 +343,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
         </div>
         <div className="p-4 rounded-xl" style={card}>
           <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
-            <Wallet size={14} /> Naqd pul
+            <Wallet size={14} /> Naqd pul (shu oy)
             <button
               className="ml-auto icon-btn"
               title="Naqd tushum qo'shish"
