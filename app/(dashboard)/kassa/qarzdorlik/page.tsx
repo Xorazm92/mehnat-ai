@@ -7,14 +7,28 @@ import {
   getPlanFact,
   getReconciliation,
   getCollectionQueue,
+  getDebtStatement,
 } from "@/server/debt";
 import { getCachedCompanies } from "@/lib/cached-queries";
 import { getPayments } from "@/server/kassa";
 import QarzdorlikClient from "./QarzdorlikClient";
+import DebtStatement from "./DebtStatement";
 
 export const metadata = { title: "Qarzdorlik" };
 
-export default async function QarzdorlikPage() {
+/** "2026-07-31" → Date. Yaroqsiz qiymat e'tiborsiz qoldiriladi. */
+function parseDay(v: string | undefined): Date | undefined {
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined;
+  const d = new Date(`${v}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+export default async function QarzdorlikPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dan?: string; gacha?: string }>;
+}) {
+  const { dan, gacha } = await searchParams;
   const session = await auth();
   if (!session) redirect("/login?expired=1");
 
@@ -26,7 +40,7 @@ export default async function QarzdorlikPage() {
   const userId = session.user?.id ?? "";
   const userRole = session.user?.role || "employee";
 
-  const [debt, debtors, queue, planFact, recon, companies, payments] = await Promise.all([
+  const [debt, debtors, queue, planFact, recon, companies, payments, statement] = await Promise.all([
     getDebtComparison(),
     // To'lamagan firmalar — direktorning kunlik hisoboti bilan bir manbadan.
     getDebtors(),
@@ -36,6 +50,9 @@ export default async function QarzdorlikPage() {
     getReconciliation(),
     getCachedCompanies(userId, userRole),
     getPayments(),
+    // Kesim import qilinmagan bo'lsa sahifa yiqilmasin — qolgan bloklar
+    // baribir foydali.
+    getDebtStatement({ openingAsOf: parseDay(dan), closingAsOf: parseDay(gacha) }).catch(() => null),
   ]);
 
   // companyId → qarz. Qarz SERVERDA hisoblanadi (`lib/debt.ts`), klient
@@ -60,6 +77,12 @@ export default async function QarzdorlikPage() {
 
   return (
     <div className="h-full">
+      {/* Chekka QarzdorlikClient ichida — bu yerda takrorlanmaydi. */}
+      {statement && (
+        <div className="px-4 pt-4 md:px-6 md:pt-6">
+          <DebtStatement statement={JSON.parse(JSON.stringify(statement))} />
+        </div>
+      )}
       <QarzdorlikClient
         debt={JSON.parse(JSON.stringify(debt))}
         debtors={JSON.parse(JSON.stringify(debtors))}

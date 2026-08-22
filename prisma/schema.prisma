@@ -1741,7 +1741,10 @@ model DebtSnapshot {
 
   createdAt DateTime @default(now())
 
-  @@unique([asOf, rawCustomer, rawContract])
+  // Firma ham kalitda: 1C da bitta mijozning bir xil "Без договора" qatori
+  // har bir firmamiz uchun alohida keladi va ularni birlashtirish pulni
+  // yo'qotardi (migratsiya izohiga qarang).
+  @@unique([asOf, rawCustomer, rawContract, ownFirmName])
   @@index([contractId])
   @@index([companyId])
   @@index([asOf])

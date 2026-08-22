@@ -17,6 +17,7 @@ import { requireSenior } from "@/server/guards";
 import { companyScopeWhere } from "@/lib/access";
 import { serialize } from "@/lib/serialize";
 import { computeContractDebt, listDebtors, periodKeyOf } from "@/lib/debt";
+import { contractNumberOf } from "@/lib/debtReport";
 import { runReconciliation } from "@/lib/reconciliation";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { revalidatePath } from "next/cache";
@@ -290,4 +291,176 @@ export async function getReconciliation() {
   const actor = await requireSenior();
   if (!isAdminRole(actor.role)) return serialize([]);
   return serialize(await runReconciliation(prisma));
+}
+
+// =====================================================
+// HISOB-KITOB VARAQASI — mijoz bilan hisobning to'liq holati
+// =====================================================
+//
+// Rahbarning savoli: "shu mijoz bilan ahvolimiz qanday?" Javob BESH
+// ustundan iborat va ular bir-birini almashtira olmaydi:
+//
+//   Boshi        — oy boshidagi qoldiq (qarz musbat, avans manfiy)
+//   Hisoblandi   — shu oyning xizmat haqi
+//   To'landi     — shu oyda kelgan pul
+//   Qarz / Avans — oy oxiridagi holat, ALOHIDA ustunlar
+//
+// NEGA QARZ VA AVANS ALOHIDA: bitta mijozda bir shartnomada qarz, boshqasida
+// avans bo'lishi mumkin (masalan Alfraganus: 14/26БК da 8 mln qarz,
+// 11/РК da 20 mln avans). Ularni bitta "sof" raqamga qo'shib yuborish
+// "bu mijoz bizga 12 mln avans bergan" degan yolg'on xulosa berardi,
+// holbuki doimiy xizmat bo'yicha u QARZDOR.
+//
+// MANBA — 1C kesimlari (`DebtSnapshot`), ASRO ning o'z hisobi EMAS. Sabab
+// `lib/debtReport.ts` da: ASRO faqat joriy oyni ko'radi, 1C esa
+// jamg'arilgan haqiqiy qarzni beradi.
+//
+// Hisoblanma ikki kesim FARQIDAN chiqadi: 1C kesim hisoboti aylanmani
+// ko'rsatmaydi, shuning uchun oy oxirida ikkita kesim olinadi — xizmat haqi
+// yozilgunga qadar va yozilgandan keyin.
+
+import { contractKindOf, CONTRACT_KIND_LABELS, type ContractKind } from "@/lib/debtReport";
+
+export interface StatementLine {
+  customerName: string;
+  companyId: string | null;
+  contractNumber: string | null;
+  contractRaw: string | null;
+  kind: ContractKind;
+  kindLabel: string;
+  ownFirmName: string | null;
+  /** Oy boshidagi sof qoldiq (musbat = qarzdor, manfiy = avansda). */
+  opening: number;
+  /** Shu oyda hisoblangan xizmat haqi. */
+  accrued: number;
+  /** Oy oxiridagi qarz va avans — 1C bo'yicha. */
+  debt: number;
+  advance: number;
+}
+
+export interface DebtStatement {
+  openingAsOf: string | null;
+  closingAsOf: string | null;
+  /** Bazadagi barcha kesim sanalari — ekranda tanlash uchun. */
+  availableDates: string[];
+  lines: StatementLine[];
+  totals: { opening: number; accrued: number; debt: number; advance: number };
+  /** Shartnoma turi bo'yicha kesim — doimiy va bir martalik xizmat. */
+  byKind: { kind: ContractKind; label: string; count: number; debt: number; advance: number; accrued: number }[];
+}
+
+/**
+ * @param openingAsOf hisoblanma YOZILGUNGA QADAR olingan kesim sanasi
+ * @param closingAsOf hisoblanma yozilgandan KEYINGI kesim sanasi
+ */
+export async function getDebtStatement(input?: {
+  openingAsOf?: Date;
+  closingAsOf?: Date;
+}): Promise<DebtStatement> {
+  await requireSenior();
+
+  // BARCHA kesim sanalari kerak: standart juftlikni tanlash uchun ham,
+  // ekranda tanlagich ko'rsatish uchun ham.
+  //
+  // Standart — eng oxirgi IKKITA kesim. Bu har doim ham to'g'ri juftlik
+  // emas: bazada uchinchi, boshqa davrga tegishli kesim bo'lsa
+  // (masalan 07.08), u eng yangisi bo'lib juftlikni buzadi va "hisoblanma"
+  // manfiy chiqadi. Shuning uchun tanlangan sanalar EKRANDA ko'rinib turadi
+  // va foydalanuvchi ularni almashtira oladi — jimgina noto'g'ri raqam
+  // ko'rsatishdan ko'ra ko'rinadigan tanlov afzal.
+  const dateRows = await prisma.debtSnapshot.findMany({
+    distinct: ["asOf"],
+    select: { asOf: true },
+    orderBy: { asOf: "desc" },
+  });
+  const availableDates = dateRows.map((d) => d.asOf.toISOString());
+  const closingAsOf = input?.closingAsOf ?? dateRows[0]?.asOf ?? null;
+  const openingAsOf = input?.openingAsOf ?? dateRows[1]?.asOf ?? null;
+
+  if (!closingAsOf) {
+    return {
+      openingAsOf: null,
+      closingAsOf: null,
+      availableDates,
+      lines: [],
+      totals: { opening: 0, accrued: 0, debt: 0, advance: 0 },
+      byKind: [],
+    };
+  }
+
+  const [closing, opening] = await Promise.all([
+    prisma.debtSnapshot.findMany({
+      where: { asOf: closingAsOf },
+      select: {
+        companyId: true, rawCustomer: true, rawContract: true,
+        ownFirmName: true, debt: true, advance: true,
+      },
+    }),
+    openingAsOf
+      ? prisma.debtSnapshot.findMany({
+          where: { asOf: openingAsOf },
+          select: { rawCustomer: true, rawContract: true, debt: true, advance: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const key = (r: { rawCustomer: string; rawContract: string | null }) =>
+    `${r.rawCustomer}||${r.rawContract ?? ""}`;
+  const openBy = new Map(opening.map((r) => [key(r), Number(r.debt) - Number(r.advance)]));
+
+  const lines: StatementLine[] = closing.map((r) => {
+    const debt = Number(r.debt);
+    const advance = Number(r.advance);
+    const open = openBy.get(key(r)) ?? 0;
+    const contractNumber = r.rawContract ? contractNumberOf(r.rawContract) : null;
+    const kind = contractKindOf(contractNumber);
+    return {
+      customerName: r.rawCustomer,
+      companyId: r.companyId,
+      contractNumber,
+      contractRaw: r.rawContract,
+      kind,
+      kindLabel: CONTRACT_KIND_LABELS[kind],
+      ownFirmName: r.ownFirmName,
+      opening: open,
+      // Hisoblanma = oxirgi sof qoldiq − boshlang'ich sof qoldiq.
+      accrued: debt - advance - open,
+      debt,
+      advance,
+    };
+  });
+
+  lines.sort((a, b) => b.debt - a.debt || b.accrued - a.accrued);
+
+  const totals = lines.reduce(
+    (t, l) => ({
+      opening: t.opening + l.opening,
+      accrued: t.accrued + l.accrued,
+      debt: t.debt + l.debt,
+      advance: t.advance + l.advance,
+    }),
+    { opening: 0, accrued: 0, debt: 0, advance: 0 }
+  );
+
+  const kinds = new Map<ContractKind, { count: number; debt: number; advance: number; accrued: number }>();
+  for (const l of lines) {
+    const cur = kinds.get(l.kind) ?? { count: 0, debt: 0, advance: 0, accrued: 0 };
+    cur.count += 1;
+    cur.debt += l.debt;
+    cur.advance += l.advance;
+    cur.accrued += l.accrued;
+    kinds.set(l.kind, cur);
+  }
+
+  const order: ContractKind[] = ["BK", "RK", "unknown"];
+  return serialize({
+    openingAsOf: openingAsOf ? openingAsOf.toISOString() : null,
+    closingAsOf: closingAsOf.toISOString(),
+    availableDates,
+    lines,
+    totals,
+    byKind: order
+      .filter((k) => kinds.has(k))
+      .map((k) => ({ kind: k, label: CONTRACT_KIND_LABELS[k], ...kinds.get(k)! })),
+  });
 }

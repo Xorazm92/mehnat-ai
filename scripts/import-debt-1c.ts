@@ -189,10 +189,13 @@ async function main() {
   for (const r of resolved) {
     await prisma.debtSnapshot.upsert({
       where: {
-        asOf_rawCustomer_rawContract: {
+        asOf_rawCustomer_rawContract_ownFirmName: {
           asOf,
           rawCustomer: r.line.customerName,
           rawContract: r.line.contractRaw ?? "",
+          // Bo'sh satr, NULL emas — Postgres unikal indeksda NULL'larni
+          // farqli deb hisoblaydi va kalit ishlamay qolardi.
+          ownFirmName: r.line.ownFirmName ?? "",
         },
       },
       create: {
@@ -201,7 +204,7 @@ async function main() {
         contractId: r.contractId,
         rawCustomer: r.line.customerName,
         rawContract: r.line.contractRaw ?? "",
-        ownFirmName: r.line.ownFirmName,
+        ownFirmName: r.line.ownFirmName ?? "",
         debt: r.line.debt,
         advance: r.line.advance,
       },
