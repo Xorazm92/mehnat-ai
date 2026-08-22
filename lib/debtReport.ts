@@ -186,6 +186,15 @@ export function parseDebtReport(rows: Row[], ownFirmNames: Iterable<string>): Pa
 
 export interface DebtSnapshotLine {
   customerName: string;
+  /**
+   * Mijozning STIRi — hisobotda "Покупатель.ИНН" o'lchovi bo'lsa to'ladi.
+   *
+   * ENG ISHONCHLI KALIT. Nom bo'yicha bog'lash imlo farqiga qoqiladi
+   * ("Dksp Amudaryo" ↔ "DSKP AMUDARYO"), shartnoma raqami esa firma ichida
+   * unikal bo'lgani uchun kalit bo'la olmaydi. STIR ikkalasining ham
+   * o'rnini bosadi.
+   */
+  customerInn: string | null;
   contractNumber: string | null;
   contractRaw: string | null;
   ownFirmName: string | null;
@@ -238,12 +247,16 @@ export function parseDebtSnapshot(rows: Row[]): ParsedDebtSnapshot {
     if (asOf) break;
   }
 
+  // Ustun sarlavhasi "Долг" TURGAN qatorda. U hisobot variantiga qarab
+  // har xil o'lchov qatoriga tushadi: STIRsiz variantda "Договор" yonida,
+  // STIRli variantda "Покупатель.ИНН" yonida. Shuning uchun qidiruv
+  // o'lchov nomi bo'yicha emas, USTUN NOMI bo'yicha ketadi.
   const headerIndex = rows.findIndex(
-    (r) => r && Object.values(r).some((v) => String(v ?? "").trim() === "Договор")
+    (r) => r && Object.values(r).some((v) => String(v ?? "").trim() === "Долг")
   );
   if (headerIndex === -1) {
     throw new DebtReportParseError(
-      'Sarlavha qatori topilmadi — "Договор" ustuni bo\'lishi kerak.'
+      'Sarlavha qatori topilmadi — "Долг" ustuni bo\'lishi kerak.'
     );
   }
   const header = rows[headerIndex];
@@ -277,7 +290,13 @@ export function parseDebtSnapshot(rows: Row[]): ParsedDebtSnapshot {
   // hisobotning O'LCHOV nomlari, ma'lumot emas. `headerIndex` faqat
   // ikkinchisini topadi, shuning uchun "Организация" tanadan alohida
   // chiqariladi — aks holda u birinchi mijoz bo'lib o'qilardi.
-  const DIMENSION_LABELS = new Set(["Покупатель", "Договор", "Организация", "Сортировка:"]);
+  const DIMENSION_LABELS = new Set([
+    "Покупатель",
+    "Покупатель.ИНН",
+    "Договор",
+    "Организация",
+    "Сортировка:",
+  ]);
 
   const body = rows
     .slice(headerIndex + 1)
@@ -288,7 +307,14 @@ export function parseDebtSnapshot(rows: Row[]): ParsedDebtSnapshot {
     );
 
   let customer: string | null = null;
+  let customerInn: string | null = null;
   let customerHadContract = false;
+
+  // Hisobotning STIRli variantida mijozdan KEYIN uning STIRi alohida qator
+  // bo'lib keladi (9 raqam). Shartnoma qatori "№" bilan boshlanadi, firma
+  // nomi esa raqamdan iborat bo'lmaydi — shuning uchun bu shakl aralashib
+  // ketmaydi.
+  const isInnRow = (name: string) => /^\d{9}$/.test(name);
 
   for (let i = 0; i < body.length; i++) {
     const { row, name } = body[i];
@@ -309,6 +335,7 @@ export function parseDebtSnapshot(rows: Row[]): ParsedDebtSnapshot {
 
       lines.push({
         customerName: customer ?? "(mijoz ko'rsatilmagan)",
+        customerInn,
         contractNumber: name === NO_CONTRACT_LABEL ? null : contractNumberOf(name),
         contractRaw: name,
         ownFirmName,
@@ -318,9 +345,16 @@ export function parseDebtSnapshot(rows: Row[]): ParsedDebtSnapshot {
       continue;
     }
 
-    // Shartnoma emas va firma ham emas → yangi mijoz.
+    // STIR qatori — joriy mijozga tegishli, yangi mijoz EMAS.
+    if (isInnRow(name)) {
+      customerInn = name;
+      continue;
+    }
+
+    // Shartnoma emas, STIR emas va firma ham emas → yangi mijoz.
     if (customer && !customerHadContract) customersWithoutContract.push(customer);
     customer = name;
+    customerInn = null;
     customerHadContract = false;
     customerTotals.debt += debt;
     customerTotals.advance += advance;

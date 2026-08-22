@@ -28,6 +28,7 @@ type Kind = "BK" | "RK" | "unknown";
 
 interface Line {
   customerName: string;
+  companyInn: string | null;
   companyId: string | null;
   contractNumber: string | null;
   contractRaw: string | null;
@@ -240,7 +241,11 @@ export default function DebtStatement({ statement: s }: Props) {
               <tr key={`${l.customerName}-${l.contractRaw}-${l.ownFirmName}-${i}`} style={{ borderTop: "1px solid var(--card-border)" }}>
                 <td className="p-2 max-w-[240px] truncate" title={l.customerName}>
                   {l.customerName}
-                  {!l.companyId && (
+                  {l.companyInn ? (
+                    <span className="ml-1.5 text-micro tabular-nums" style={{ color: "var(--text-muted)" }} title="Bog'langan firmaning STIRi">
+                      {l.companyInn}
+                    </span>
+                  ) : (
                     <span className="ml-1 text-micro" style={{ color: "var(--warning)" }} title="Bazadagi firmaga bog'lanmagan">
                       ●
                     </span>
@@ -282,7 +287,7 @@ export default function DebtStatement({ statement: s }: Props) {
         </p>
       )}
       <p className="px-3 py-2 text-micro" style={{ color: "var(--text-muted)", borderTop: "1px solid var(--card-border)" }}>
-        ● belgisi — mijoz bazadagi firmaga bog&apos;lanmagan; nomi 1C dagidan farq qiladi.
+        Nom yonidagi raqam — bog&apos;langan firmaning STIRi. ● belgisi bog&apos;lanmaganini bildiradi.
       </p>
     </div>
   );

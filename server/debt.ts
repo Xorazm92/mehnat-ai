@@ -323,6 +323,8 @@ import { contractKindOf, CONTRACT_KIND_LABELS, type ContractKind } from "@/lib/d
 
 export interface StatementLine {
   customerName: string;
+  /** Bazadagi firmaning STIRi — bog'lanish tasdig'i sifatida ko'rinadi. */
+  companyInn: string | null;
   companyId: string | null;
   contractNumber: string | null;
   contractRaw: string | null;
@@ -394,18 +396,24 @@ export async function getDebtStatement(input?: {
       select: {
         companyId: true, rawCustomer: true, rawContract: true,
         ownFirmName: true, debt: true, advance: true,
+        company: { select: { inn: true } },
       },
     }),
     openingAsOf
       ? prisma.debtSnapshot.findMany({
           where: { asOf: openingAsOf },
-          select: { rawCustomer: true, rawContract: true, debt: true, advance: true },
+          select: { rawCustomer: true, rawContract: true, ownFirmName: true, debt: true, advance: true },
         })
       : Promise.resolve([]),
   ]);
 
-  const key = (r: { rawCustomer: string; rawContract: string | null }) =>
-    `${r.rawCustomer}||${r.rawContract ?? ""}`;
+  // FIRMA HAM KALITDA — bazadagi unikal kalit bilan bir xil.
+  // Bitta mijozning bir xil "Без договора" qatori har firma uchun alohida
+  // keladi ("Siddiq Biznes Group": Sardorbek House + Plastik). Firmasiz
+  // kalitda ikkala yopilish qatori bitta ochilish qatoriga tushib, oy
+  // boshidagi qoldiq IKKI MARTA qo'shilardi.
+  const key = (r: { rawCustomer: string; rawContract: string | null; ownFirmName: string | null }) =>
+    `${r.rawCustomer}||${r.rawContract ?? ""}||${r.ownFirmName ?? ""}`;
   const openBy = new Map(opening.map((r) => [key(r), Number(r.debt) - Number(r.advance)]));
 
   const lines: StatementLine[] = closing.map((r) => {
@@ -416,6 +424,7 @@ export async function getDebtStatement(input?: {
     const kind = contractKindOf(contractNumber);
     return {
       customerName: r.rawCustomer,
+      companyInn: r.company?.inn ?? null,
       companyId: r.companyId,
       contractNumber,
       contractRaw: r.rawContract,
@@ -429,6 +438,35 @@ export async function getDebtStatement(input?: {
       advance,
     };
   });
+
+  // ── YOPILGAN HISOBLAR ──────────────────────────────────────────────────
+  // Ochilishda bor, yopilishda YO'Q qatorlar — hisob shu oyda yopilgan
+  // (masalan avans hisoblanma bilan qoplangan). Ular tushib qolsa varaqa
+  // JIM YO'QOTADI: "Boshi" jamisi manba faylning jamisiga to'g'ri kelmaydi
+  // va farqni izlash uzoq davom etadi.
+  const closingKeys = new Set(closing.map(key));
+  for (const o of opening) {
+    if (closingKeys.has(key(o))) continue;
+    const open = Number(o.debt) - Number(o.advance);
+    const contractNumber = o.rawContract ? contractNumberOf(o.rawContract) : null;
+    const kind = contractKindOf(contractNumber);
+    lines.push({
+      customerName: o.rawCustomer,
+      companyInn: null,
+      companyId: null,
+      contractNumber,
+      contractRaw: o.rawContract,
+      kind,
+      kindLabel: CONTRACT_KIND_LABELS[kind],
+      ownFirmName: o.ownFirmName,
+      opening: open,
+      // Qoldiq nolga tushgan — demak butun boshlang'ich qoldiq shu oyda
+      // yopilgan (teskari ishorada).
+      accrued: -open,
+      debt: 0,
+      advance: 0,
+    });
+  }
 
   lines.sort((a, b) => b.debt - a.debt || b.accrued - a.accrued);
 

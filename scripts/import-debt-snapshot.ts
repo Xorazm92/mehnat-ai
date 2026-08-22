@@ -34,8 +34,12 @@ import fs from "node:fs";
 /** Fayl → qaysi sanaga yoziladi. */
 const SOURCES = [
   { file: "31.07.2026 qarzdorlik.json", asOf: new Date(Date.UTC(2026, 6, 31)), label: "hisoblanmagacha" },
-  { file: "01.08.2026 qarzdorlik.json", asOf: new Date(Date.UTC(2026, 7, 1)), label: "hisoblanmadan keyin" },
+  // STIRli variant — nomi bo'yicha taxmin qilish o'rniga aniq kalit beradi.
+  { file: "01.08.2026. qani qarzdorlik (2).json", asOf: new Date(Date.UTC(2026, 7, 1)), label: "hisoblanmadan keyin" },
 ];
+
+/** STIRni solishtirish shakli — bazada ham, faylda ham har xil yozilishi mumkin. */
+const innKey = (v: string | null | undefined) => (v ?? "").replace(/\D/g, "");
 
 /** Shartnoma raqamini solishtirish uchun — kirill/lotin aralash yoziladi. */
 const contractKey = (raw: string) =>
@@ -54,11 +58,54 @@ async function main(): Promise<void> {
 
   const companies = await prisma.company.findMany({
     where: { isOwnFirm: false },
-    select: { id: true, name: true },
+    select: { id: true, name: true, inn: true },
   });
+  const byInn = new Map<string, typeof companies>();
+  for (const c of companies) {
+    const k = innKey(c.inn);
+    if (k) byInn.set(k, [...(byInn.get(k) ?? []), c]);
+  }
 
-  // Qo'lda tasdiqlangan bog'lanishlar — normalizatsiya topa olmagan
-  // imlo farqlari uchun (`CompanyAlias` izohiga qarang).
+  // ── OLDINDAN: STIRLI FAYLLARDAN TAXALLUS O'RGANISH ─────────────────────
+  //
+  // STIRli hisobot nom va STIRni YONMA-YON beradi, ya'ni "1C nomi ↔ firma"
+  // bog'lanishi TASDIQLANGAN — taxmin emas. Uni saqlab qo'ysak, STIRsiz
+  // hisobotlar (31.07 fayli, eski eksportlar) ham to'g'ri bog'lanadi.
+  //
+  // Bu bosqich import HALQASIDAN OLDIN turadi va ATAYIN: fayllar sana
+  // tartibida qayta ishlanadi, ya'ni STIRsiz 31.07 birinchi keladi va
+  // halqa ichida o'rganilgan taxallusdan foydalana olmasdi.
+  if (apply) {
+    let learned = 0;
+    for (const src of SOURCES) {
+      const p = requireImportFile(src.file);
+      const parsedPre = parseDebtSnapshot(readLooseJsonArray(fs.readFileSync(p, "utf8")));
+      for (const l of parsedPre.lines) {
+        if (!l.customerInn) continue;
+        const hits = byInn.get(innKey(l.customerInn)) ?? [];
+        // Bir nechta firma bir xil STIR bilan tursa TANLANMAYDI — dublikat
+        // STIR bu bazada allaqachon bir marta muammo bo'lgan.
+        if (hits.length !== 1) continue;
+        const existing = await prisma.companyAlias.findUnique({
+          where: { alias: l.customerName },
+          select: { id: true },
+        });
+        if (existing) continue;
+        await prisma.companyAlias.create({
+          data: {
+            alias: l.customerName,
+            companyId: hits[0].id,
+            source: "1c-inn",
+            note: `STIR ${l.customerInn} orqali tasdiqlangan`,
+          },
+        });
+        learned += 1;
+      }
+    }
+    if (learned) console.log(`\nSTIR orqali o'rganilgan taxallus: ${learned} ta`);
+  }
+
+  // Qo'lda tasdiqlangan va STIRdan o'rganilgan bog'lanishlar.
   const aliasRows = await prisma.companyAlias.findMany({ select: { alias: true, companyId: true } });
   const aliases = new Map(aliasRows.map((a) => [a.alias, a.companyId]));
 
@@ -111,7 +158,15 @@ async function main(): Promise<void> {
     let matchedCompany = 0;
     let matchedContract = 0;
     const resolve = (l: DebtSnapshotLine) => {
-      const company = matchCompanyByName(l.customerName, companies, aliases);
+      // ── KALITLAR TARTIBI ──────────────────────────────────────────────
+      // 1) STIR — eng ishonchli, hisobotda bo'lsa boshqasi qaralmaydi.
+      //    Bazada bir nechta firma bir xil STIR bilan tursa TANLANMAYDI:
+      //    dublikat STIR allaqachon bir marta muammo bo'lgan.
+      // 2) Qo'lda tasdiqlangan taxallus.
+      // 3) Nom (normalizatsiya bilan).
+      const innHits = l.customerInn ? (byInn.get(innKey(l.customerInn)) ?? []) : [];
+      const company =
+        innHits.length === 1 ? innHits[0] : matchCompanyByName(l.customerName, companies, aliases);
       // Firma topilmasa shartnoma ham qidirilmaydi — firmasiz shartnoma
       // raqami hech narsani anglatmaydi.
       const contract =
@@ -162,6 +217,8 @@ async function main(): Promise<void> {
       });
     }
     console.log(`   ✓ yozildi     : ${parsed.lines.length} qator · firma ${matchedCompany} · shartnoma ${matchedContract}`);
+
+
   }
 
   if (!apply) {

@@ -111,6 +111,57 @@ describe("parseDebtSnapshot", () => {
   });
 });
 
+describe("STIRli variant (Покупатель.ИНН o'lchovi bilan)", () => {
+  // 1C ikki xil eksport beradi: STIRsiz (uch pog'ona) va STIRli (to'rt).
+  // Ikkalasi ham o'qilishi kerak — eski fayllar arxivda qoladi.
+  const innHeader = [
+    { [TITLE]: "Сортировка:", Column2: "Документ По возрастанию" },
+    { [TITLE]: "Покупатель", Column3: "Расчеты на 31.07.26" },
+    { [TITLE]: "Покупатель.ИНН", Column3: "Долг", Column4: "Аванс" },
+    { [TITLE]: "Договор" },
+    { [TITLE]: "Организация" },
+  ];
+
+  it("STIRni mijozga bog'laydi va uni yangi mijoz deb qabul qilmaydi", () => {
+    const p = parseDebtSnapshot([
+      ...innHeader,
+      row("Mijoz A", 1_500_000),
+      row("312351055", 1_500_000),
+      row("№25/26БК от 05.01.2026", 900_000),
+      row('"Seven`S Up" Mchj', 900_000),
+      row("№29/БК от 12.08.2025", 600_000),
+      row('"Seven`S Up" Mchj', 600_000),
+    ]);
+
+    expect(p.lines).toHaveLength(2);
+    expect(p.lines.every((l) => l.customerName === "Mijoz A")).toBe(true);
+    expect(p.lines.every((l) => l.customerInn === "312351055")).toBe(true);
+    expect(p.customerTotals.debt).toBe(1_500_000);
+  });
+
+  it("har mijozning STIRi keyingisiga o'tib ketmaydi", () => {
+    const p = parseDebtSnapshot([
+      ...innHeader,
+      row("Mijoz A", 100),
+      row("312351055", 100),
+      row("№1/26БК", 100),
+      row("Firma", 100),
+      // Ikkinchi mijozda STIR yo'q — birinchisiniki qolib ketmasligi kerak.
+      row("Mijoz B", 200),
+      row("Без договора", 200),
+      row("Plastik", 200),
+    ]);
+    expect(p.lines[0].customerInn).toBe("312351055");
+    expect(p.lines[1].customerInn).toBeNull();
+  });
+
+  it("STIRsiz variant ham ishlashda davom etadi", () => {
+    const p = parseDebtSnapshot([...header, row("Mijoz A", 100), row("№1/26БК", 100), row("Firma", 100)]);
+    expect(p.lines[0].customerInn).toBeNull();
+    expect(p.lines[0].customerName).toBe("Mijoz A");
+  });
+});
+
 describe("contractKindOf", () => {
   it("BK — doimiy xizmat", () => {
     for (const n of ["25/26БК", "29/БК", "25/26BK"]) expect(contractKindOf(n), n).toBe("BK");
