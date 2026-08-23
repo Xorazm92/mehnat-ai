@@ -19,6 +19,7 @@ import { serialize } from "@/lib/serialize";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { recordKassaMovement, runCashTx } from "@/lib/cashGate";
+import { ACCOUNTS } from "@/lib/ledger";
 import { parseWorkbook, transactionHash } from "@/lib/bank/parseStatement";
 import { parsePlastik } from "@/lib/bank/parsePlastik";
 import { looksLikeHtml, readHtmlTables } from "@/lib/bank/readHtmlTables";
@@ -854,6 +855,104 @@ export async function matchAndPostTransaction(input: {
   revalidatePath("/kassa/kirim");
   revalidatePath("/kassa");
   return serialize(res);
+}
+
+// ─────────────────────────────────────────────────────────
+// VIPISKADAN CHIQIM YOZISH — navbatdagi qator haqiqatda chiqim bo'lsa
+// ─────────────────────────────────────────────────────────
+
+/**
+ * Navbatdagi bank qatorini XARAJAT sifatida yozadi.
+ *
+ * REAL HOLAT. Vipiska qatorlari ba'zan "kirim" deb belgilanadi, lekin
+ * hayotda boshqa bo'ladi: xodimga oylik o'tkazma (Laylo, Mardon…), firmalararo
+ * yordam va h.k. Bunday qator uchun ilgari YAGONA amal bor edi — "firmaga
+ * bog'lash" — ya'ni buxgalter uni umuman yopib bilmagan va navbat abadiy
+ * to'lib turardi.
+ *
+ * Bu action KassaEntry(expense) + jurnal yozadi (`cashGate` — yagona yo'l,
+ * balans tekshiruvi bilan) va bank qatorini navbatdan chiqaradi.
+ * `dedupKey = "bank-expense:<txId>"` — ikki marta bosish ikki chiqim
+ * yozmaydi.
+ */
+export async function postExpenseFromBankTransaction(input: {
+  transactionId: string;
+  category: string;
+  description?: string | null;
+  /**
+   * Oylik — `SALARY_EXPENSE` hisobiga yoziladi. OPERATSION hisobga "oylik"
+   * toifasi cashGate tomonidan bloklanadi (ikki marta sanalmasligi uchun).
+   */
+  isSalary?: boolean;
+}) {
+  const actor = await requireStatementRole();
+
+  const tx = await prisma.bankTransaction.findUnique({
+    where: { id: input.transactionId },
+    select: {
+      id: true, amount: true, valueDate: true, status: true,
+      counterpartyName: true, purpose: true,
+      account: { select: { accountNumber: true, label: true } },
+    },
+  });
+  if (!tx) throw new Error("Tranzaksiya topilmadi");
+  if (tx.status === "posted") throw new Error("Bu tranzaksiya allaqachon hisobga olingan");
+
+  // Pul QAYSI kassadan chiqgani — vipiska hisobi o'z firmamiz kanali bilan
+  // mos kelsa shu kanalga yozamiz (aks holda kanalsiz: balans to'g'ri,
+  // faqat kassalar kesimida ajratilmagan qator sifatida ko'rinadi).
+  const channel = await prisma.disbursementChannel.findFirst({
+    where: { transitAccount: tx.account.accountNumber },
+    select: { id: true },
+  });
+
+  const category = input.category.trim();
+  if (!category) throw new Error("Toifani tanlang");
+
+  await assertPeriodOpen(prisma, periodOf(tx.valueDate), "vipiska chiqimi");
+
+  const description =
+    input.description?.trim() ||
+    [tx.counterpartyName, tx.purpose].filter(Boolean).join(" · ") ||
+    null;
+  const entry = await runCashTx((db) =>
+    recordKassaMovement(db, { kind: "user", userId: actor.userId, role: actor.role }, {
+      type: "expense",
+      category,
+      amount: Number(tx.amount),
+      date: tx.valueDate,
+      description,
+      channelId: channel?.id ?? null,
+      dedupKey: `bank-expense:${tx.id}`,
+      expenseAccount: input.isSalary ? ACCOUNTS.SALARY_EXPENSE : ACCOUNTS.OPERATING_EXPENSE,
+    })
+  );
+
+  await prisma.bankTransaction.update({
+    where: { id: tx.id },
+    data: {
+      status: "ignored",
+      ignoredReason: `Chiqim sifatida yozildi (${category}, KassaEntry ${entry.id})`,
+    },
+  });
+
+  await recordAuditLog({
+    userId: actor.userId,
+    action: "create",
+    tableName: "KassaEntry",
+    recordId: entry.id,
+    newData: {
+      source: "BankTransaction",
+      bankTransactionId: tx.id,
+      category,
+      amount: Number(tx.amount),
+      isSalary: !!input.isSalary,
+    },
+  });
+
+  revalidatePath("/kassa/kirim");
+  revalidatePath("/kassa/chiqim");
+  return serialize({ id: entry.id, alreadyRecorded: entry.alreadyRecorded });
 }
 
 // ─────────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ import {
   ignoreTransaction,
   recordManualReceipt,
   checkDuplicateReceipt,
+  postExpenseFromBankTransaction,
 } from "@/server/bankImport";
 import type { StatementPreview } from "@/lib/bank/types";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
@@ -863,6 +864,12 @@ function UnmatchedCard({
   const [companyId, setCompanyId] = useState("");
   const [contractId, setContractId] = useState("");
   const [busy, setBusy] = useState(false);
+  // "BU CHIQIM" rejimi — qator haqiqatda chiqim bo'lsa (xodimga oylik,
+  // firmalararo yordam…). Ilgari bunday qatorni yopib bo'lmagan va u
+  // navbatda abadiy turardi.
+  const [expenseMode, setExpenseMode] = useState(false);
+  const [expCategory, setExpCategory] = useState("oylik");
+  const [expNote, setExpNote] = useState("");
 
   // STIR bo'yicha taklif — ko'pincha firma bazada bor, lekin STIR biroz
   // boshqacha yozilgan yoki bir nechta firma mos kelgan.
@@ -885,6 +892,24 @@ function UnmatchedCard({
         contractId: contractId || null,
       });
       toast.success("Kirim hisobga olindi");
+      onDone();
+    } catch (e) {
+      toast.error(friendlyError(e) || "Xatolik");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveAsExpense = async (isSalary: boolean) => {
+    setBusy(true);
+    try {
+      await postExpenseFromBankTransaction({
+        transactionId: tx.id,
+        category: isSalary ? "Oylik" : expCategory,
+        description: expNote.trim() || tx.counterpartyName || null,
+        isSalary,
+      });
+      toast.success(isSalary ? "Oylik chiqimi yozildi" : "Chiqim yozildi");
       onDone();
     } catch (e) {
       toast.error(friendlyError(e) || "Xatolik");
@@ -943,60 +968,115 @@ function UnmatchedCard({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
-        <div className="flex gap-2">
-          <select
-            className="flex-1 px-2 py-1.5 rounded-lg text-meta outline-none min-w-0"
-            style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
-            value={companyId}
-            onChange={(e) => {
-              setCompanyId(e.target.value);
-              setContractId("");
-            }}
-          >
-            <option value="">Firmani tanlang…</option>
-            {suggested.length > 0 && (
-              <optgroup label="STIR bo'yicha taklif">
-                {suggested.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            <optgroup label="Barcha firmalar">
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.inn})
-                </option>
-              ))}
-            </optgroup>
-          </select>
-
-          {selected && selected.contracts.length > 0 && (
+      {expenseMode ? (
+        /* ── CHIQIM REJIMI ─────────────────────────────────────────────── */
+        <div className="mt-3 p-3 rounded-lg space-y-2" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
+          <p className="text-meta" style={{ color: "var(--text-secondary)" }}>
+            Bu pul MIJOZ to&apos;lovi emas — xarajat sifatida yoziladi (kassadan chiqdi).
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
             <select
+              value={expCategory}
+              onChange={(e) => setExpCategory(e.target.value)}
+              disabled={busy}
               className="px-2 py-1.5 rounded-lg text-meta outline-none"
-              style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
-              value={contractId}
-              onChange={(e) => setContractId(e.target.value)}
+              style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
             >
-              <option value="">Shartnomasiz</option>
-              {selected.contracts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.number}
-                </option>
-              ))}
+              <option value="oylik">Oylik / maosh</option>
+              <option value="Moliyaviy yordam">Moliyaviy yordam</option>
+              <option value="Qarz">Qarz berish</option>
+              <option value="Ijara">Ijara</option>
+              <option value="Aloqa">Aloqa</option>
+              <option value="Ovqatga">Ovqat</option>
+              <option value="Texnika">Texnika</option>
+              <option value="Boshqa xarajatlar">Boshqa</option>
             </select>
-          )}
+            <input
+              placeholder="Kimga / nima uchun (ixtiyoriy)"
+              value={expNote}
+              onChange={(e) => setExpNote(e.target.value)}
+              disabled={busy}
+              className="px-3 py-1.5 rounded-lg text-meta outline-none min-w-0"
+              style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+            />
+            <Button variant="primary" size="sm" disabled={busy} onClick={() => void saveAsExpense(expCategory === "oylik")}>
+              Yozish
+            </Button>
+            <Button variant="secondary" size="sm" disabled={busy} onClick={() => setExpenseMode(false)}>
+              Orqaga
+            </Button>
+          </div>
         </div>
+      ) : (
+        <>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
+            <div className="flex gap-2">
+              <select
+                className="flex-1 px-2 py-1.5 rounded-lg text-meta outline-none min-w-0"
+                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                value={companyId}
+                onChange={(e) => {
+                  setCompanyId(e.target.value);
+                  setContractId("");
+                }}
+              >
+                <option value="">Firmani tanlang…</option>
+                {suggested.length > 0 && (
+                  <optgroup label="STIR bo'yicha taklif">
+                    {suggested.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label="Barcha firmalar">
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.inn})
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
 
-        <Button variant="primary" size="sm" disabled={busy || !companyId} onClick={post}>
-          <Link2 size={14} /> Hisobga olish
-        </Button>
-        <Button variant="secondary" size="sm" disabled={busy} onClick={skip}>
-          <EyeOff size={14} /> E&apos;tiborsiz
-        </Button>
-      </div>
+              {selected && selected.contracts.length > 0 && (
+                <select
+                  className="px-2 py-1.5 rounded-lg text-meta outline-none"
+                  style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                  value={contractId}
+                  onChange={(e) => setContractId(e.target.value)}
+                >
+                  <option value="">Shartnomasiz</option>
+                  {selected.contracts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.number}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            <Button variant="primary" size="sm" disabled={busy || !companyId} onClick={post}>
+              <Link2 size={14} /> Hisobga olish
+            </Button>
+            <Button variant="secondary" size="sm" disabled={busy} onClick={skip}>
+              <EyeOff size={14} /> E&apos;tiborsiz
+            </Button>
+          </div>
+
+          {/* QATOR HAQIQATDA KIRIM EMASMI? — oylik o'tkazmalari kabi.
+              Buni yopishning yagona yo'li ilgari navbatni to'ldirib qo'yardi. */}
+          <button
+            type="button"
+            onClick={() => setExpenseMode(true)}
+            disabled={busy}
+            className="mt-2 text-micro underline underline-offset-2"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Bu mijoz to&apos;lovi emas — chiqim sifatida yozish (oylik, yordam…) →
+          </button>
+        </>
+      )}
     </div>
   );
 }
