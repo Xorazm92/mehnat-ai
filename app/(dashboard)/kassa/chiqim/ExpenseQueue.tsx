@@ -28,6 +28,8 @@ import {
   postExpenseTransaction,
   postExpenseCategoryBulk,
   ignoreExpenseTransaction,
+  postSalaryFromTransaction,
+  postOylikBulk,
 } from "@/server/bankImport";
 import { friendlyError } from "@/lib/actionError";
 
@@ -67,7 +69,7 @@ const GROUP_META: Record<GroupKey, { label: string; hint: string; icon: React.Re
   },
   karta: {
     label: "Kartaga o'tkazma",
-    hint: "O'z xodimimizning kartasiga. XARAJAT EMAS — pul hali korxonada, faqat boshqa cho'ntakda. Pastdagi \"bog'lanmagan karta o'tkazmalari\" bo'limida kartaga bog'lanadi.",
+    hint: "O'zini-o'zi band shaxsga chiqarilgan oylik — pul hisobdan chiqqanda xarajat bo'ladi. Bir tugma bilan yoziladi.",
     icon: <CreditCard size={14} />,
     tone: "var(--accent-blue)",
   },
@@ -190,6 +192,29 @@ export default function ExpenseQueue({ queue }: Props) {
         </div>
       )}
 
+      {/* Kartaga o'tkazmalar — OYLIK: bir tugmada hammasi */}
+      {tab === "karta" && rows.length > 0 && (
+        <div className="px-3 pb-2">
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={busy !== null}
+            onClick={() =>
+              run("oylik-bulk", async () => {
+                const r = await postOylikBulk({ limit: 100 });
+                setNote(
+                  `${r.posted} ta oylik yozildi` +
+                    (r.failed ? ` · ${r.failed} ta yiqildi: ${r.firstError ?? ""}` : "") +
+                    (r.remaining ? ` · ${r.remaining} ta qoldi, yana bosing` : "")
+                );
+              })
+            }
+          >
+            {busy === "oylik-bulk" ? "..." : `Hammasini oylik yozish (${allRows.length})`}
+          </Button>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         {rows.length === 0 ? (
           <p className="px-3 py-6 text-meta text-center" style={{ color: "var(--text-muted)" }}>
@@ -254,9 +279,18 @@ export default function ExpenseQueue({ queue }: Props) {
                       </Button>
                     )}
                     {r.group === "karta" && (
-                      <span className="text-micro" style={{ color: "var(--text-muted)" }}>
-                        pastda kartaga bog&apos;lanadi
-                      </span>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        disabled={busy !== null}
+                        onClick={() =>
+                          run(r.id, async () => {
+                            await postSalaryFromTransaction({ transactionId: r.id });
+                          })
+                        }
+                      >
+                        {busy === r.id ? "..." : "Oylik yozish"}
+                      </Button>
                     )}
                   </td>
                 </tr>

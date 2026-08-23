@@ -1224,6 +1224,102 @@ export async function postExpenseTransaction(input: {
 }
 
 /**
+ * KARTAGA O'TKAZMA = OYLIK (vipiska-only model).
+ *
+ * REAL JARAYON: firma hisobidan o'zini-o'zi band shaxsga pul chiqadi, u esa
+ * o'z yo'lida boshqa plastiklarga oylik taratadi / ta'sischiga beradi.
+ * Korxona uchun xarajat payti — pul HISOBDAN CHIQQANDA. Shu sababli
+ * "kartaga o'tkazma" guruhidagi qator endi tranzit kanalga bog'lanmaydi,
+ * balki darhol SALARY_EXPENSE xarajati sifatida yoziladi. Tizimga kirish
+ * faqat klient-bank vipiskasi orqali — boshqa manba yo'q.
+ */
+export async function postSalaryFromTransaction(input: { transactionId: string }) {
+  const { userId } = await requireKassa();
+
+  const tx = await prisma.bankTransaction.findUnique({
+    where: { id: input.transactionId },
+    select: {
+      id: true, direction: true, amount: true, valueDate: true,
+      purpose: true, counterpartyName: true, kassaEntryId: true,
+      account: { select: { ownerCompanyId: true } },
+    },
+  });
+  if (!tx) throw new Error("Tranzaksiya topilmadi");
+  if (tx.direction !== "expense") throw new Error("Bu chiqim tranzaksiyasi emas");
+  if (tx.kassaEntryId) throw new Error("Bu chiqim allaqachon kassaga yozilgan");
+
+  const description =
+    [tx.counterpartyName, tx.purpose?.slice(0, 120)].filter(Boolean).join(" — ") || "Oylik";
+
+  const entry = await runCashTx(async (db) => {
+    const created = await recordKassaMovement(
+      db,
+      { kind: "import", source: "bank", userId },
+      {
+        type: "expense",
+        category: "Oylik",
+        amount: Number(tx.amount),
+        date: tx.valueDate,
+        description,
+        companyId: tx.account.ownerCompanyId,
+        channelId: null,
+        dedupKey: `bank:${tx.id}`,
+        expenseAccount: ACCOUNTS.SALARY_EXPENSE,
+      }
+    );
+    await db.bankTransaction.update({
+      where: { id: tx.id },
+      data: {
+        kassaEntryId: created.id,
+        expenseCategory: "oylik",
+        status: "posted",
+        postedAt: new Date(),
+        postedBy: userId,
+      },
+    });
+    return created;
+  });
+
+  revalidatePath("/kassa/chiqim");
+  revalidatePath("/kassa");
+  return serialize({ kassaEntryId: entry.id });
+}
+
+/** Bir chaqiruvda navbatdagi N ta kartaga-otkazmani oylik sifatida yozish. */
+export async function postOylikBulk(input: { limit?: number }): Promise<{
+  posted: number; failed: number; remaining: number; firstError: string | null;
+}> {
+  await requireKassa();
+  const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
+
+  const rows = await prisma.bankTransaction.findMany({
+    where: {
+      direction: "expense", status: "unmatched", expenseCategory: "xodim_kartasi",
+      kassaEntryId: null,
+    },
+    select: { id: true },
+    orderBy: { valueDate: "asc" },
+    take: limit + 1,
+  });
+  const batch = rows.slice(0, limit);
+  const remaining = Math.max(0, rows.length - batch.length);
+
+  let posted = 0;
+  let failed = 0;
+  let firstError: string | null = null;
+  for (const r of batch) {
+    try {
+      await postSalaryFromTransaction({ transactionId: r.id });
+      posted++;
+    } catch (e) {
+      failed++;
+      firstError ??= (e as Error).message;
+    }
+  }
+  return serialize({ posted, failed, remaining, firstError });
+}
+
+/**
  * Bir toifadagi hamma toifalanmagan chiqimni kassaga yozish.
  *
  * NEGA KERAK: prodda 135 ta soliq to'lovi navbatda turibdi. Ularni bittalab
