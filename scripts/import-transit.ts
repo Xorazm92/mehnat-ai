@@ -31,6 +31,23 @@ import {
   nameKey,
   type ParsedChannelPerson,
 } from "@/lib/transitImport";
+import { recordKassaMovement, runCashTx } from "@/lib/cashGate";
+import { ACCOUNTS } from "@/lib/ledger";
+
+/**
+ * --with-expenses: daftar CHIQIM qatorlari faqat TransitEntry bo'lib
+ * qolmasin — KassaEntry(xarajat) ham yozilsin. Shu bo'lmaganda kartadan
+ * sarflangan oylik va boshqa xarajatlar balansda, jurnalda va P&L da
+ * UMUMAN KO'RINMASDI (qarzdorlik ekranidagi "kartada turgan pul" esa
+ * ortiqcha ko'rinardi).
+ *
+ * Oylikka o'xshagan toifalar SALARY_EXPENSE hisobiga, qolgani OPERATING_EXPENSE
+ * ga ketadi (`SALARY_CATEGORY_RE` — cashGate bilan bir xil qoida).
+ * Actor "script" — tarixiy backfill uchun balans tekshiruvi YO'Q
+ * (cashGate qoidasi: o'tmish allaqachon sodir bo'lgan).
+ */
+const withExpenses = process.argv.includes("--with-expenses");
+const actor = { kind: "script" as const, name: "import-transit" };
 
 const REGISTRY = requireImportFile("Band qilganlar.json");
 
@@ -243,8 +260,19 @@ async function main() {
       if (hits.length === 1) existing = { id: hits[0].id };
     }
 
+    // Yangi reyestr ba'zan KAMROQ ustun bilan keladi (karta/MFO/JSHSHIR yo'q).
+    // Mavjud kanalni to'liq `data` bilan yangilasak, turgan qiymatlar NULL ga
+    // aylanardi — karta niqobi yo'qolib, ChannelCard bog'lanishi buzilardi.
+    // Shuning uchun UPDATE faqat NULL BO'LMAGAN maydonlarni yozadi; CREATE
+    // esa to'liq data oladi.
     const row = existing
-      ? await prisma.disbursementChannel.update({ where: { id: existing.id }, data, select: { id: true } })
+      ? await prisma.disbursementChannel.update({
+          where: { id: existing.id },
+          data: Object.fromEntries(
+            Object.entries(data).filter(([, v]) => v !== null && v !== undefined)
+          ),
+          select: { id: true },
+        })
       : await prisma.disbursementChannel.create({ data, select: { id: true } });
 
     // Kartani ro'yxatga qo'shamiz (kanalda bir nechtasi bo'lishi mumkin).
@@ -256,7 +284,8 @@ async function main() {
       });
     }
 
-    existing ? updated++ : created++;
+    if (existing) updated++;
+    else created++;
     channelIdByPerson.set(norm(p.fullName), row.id);
   }
 
@@ -281,6 +310,8 @@ async function main() {
   let totalIn = 0;
   let totalOut = 0;
   let totalBalance = 0;
+  let postedExpenseCount = 0;
+  let postedExpenseSum = 0;
   const unmatchedSheets: string[] = [];
   const autoCreated: string[] = [];
   const mismatched: string[] = [];
@@ -394,10 +425,11 @@ async function main() {
 
       if (m.amountOut > 0) {
         const label = [m.purpose, m.comment].filter(Boolean).join(" — ");
-        await prisma.transitEntry.upsert({
-          where: { dedupKey: key(sheet, m.rowNo, "out") },
+        const outKey = key(sheet, m.rowNo, "out");
+        const trow = await prisma.transitEntry.upsert({
+          where: { dedupKey: outKey },
           create: {
-            dedupKey: key(sheet, m.rowNo, "out"),
+            dedupKey: outKey,
             channelId,
             direction: "out",
             amount: m.amountOut,
@@ -406,16 +438,47 @@ async function main() {
             description: label || null,
           },
           update: { amount: m.amountOut, date: when },
+          select: { id: true, kassaEntryId: true },
         });
         entriesWritten++;
+
+        // ── XARAJAT YOZUVI (--with-expenses) ────────────────────────────
+        // Kartadan sarflangan pul HAQIQIY xarajat: KassaEntry + ikki
+        // tomonlama jurnal. dedupKey transit bilan BIR XIL — qayta ishga
+        // tushirish ikkinchi nusha yozmaydi.
+        if (withExpenses) {
+          const text = `${m.purpose ?? ""} ${m.comment ?? ""}`;
+          const isSalary = /oylik|maosh|ish\s*haqi|mehnat\s*haqi/i.test(text);
+          const res = await runCashTx((tx) =>
+            recordKassaMovement(tx, actor, {
+              type: "expense",
+              category: m.purpose ?? "Boshqa xarajatlar",
+              amount: m.amountOut,
+              date: when,
+              description: label ? `${sheet}: ${label}` : `${sheet} kassasidan xarajat`,
+              channelId,
+              dedupKey: outKey,
+              expenseAccount: isSalary ? ACCOUNTS.SALARY_EXPENSE : ACCOUNTS.OPERATING_EXPENSE,
+            })
+          );
+          postedExpenseSum += m.amountOut;
+          postedExpenseCount += res.alreadyRecorded ? 0 : 1;
+          if (!trow.kassaEntryId) {
+            await prisma.transitEntry.update({
+              where: { id: trow.id },
+              data: { kassaEntryId: res.id },
+            });
+          }
+        }
       }
 
       // Bank komissiyasi ham kartadan yechiladi — alohida chiqim qatori.
       if (m.commission > 0) {
-        await prisma.transitEntry.upsert({
-          where: { dedupKey: key(sheet, m.rowNo, "fee") },
+        const feeKey = key(sheet, m.rowNo, "fee");
+        const frow = await prisma.transitEntry.upsert({
+          where: { dedupKey: feeKey },
           create: {
-            dedupKey: key(sheet, m.rowNo, "fee"),
+            dedupKey: feeKey,
             channelId,
             direction: "out",
             amount: m.commission,
@@ -424,8 +487,31 @@ async function main() {
             description: "Bank komissiyasi",
           },
           update: { amount: m.commission, date: when },
+          select: { id: true, kassaEntryId: true },
         });
         entriesWritten++;
+        if (withExpenses) {
+          const res = await runCashTx((tx) =>
+            recordKassaMovement(tx, actor, {
+              type: "expense",
+              category: "Bank komissiyasi",
+              amount: m.commission,
+              date: when,
+              description: `${sheet} — bank komissiyasi`,
+              channelId,
+              dedupKey: feeKey,
+              expenseAccount: ACCOUNTS.OPERATING_EXPENSE,
+            })
+          );
+          postedExpenseSum += m.commission;
+          postedExpenseCount += res.alreadyRecorded ? 0 : 1;
+          if (!frow.kassaEntryId) {
+            await prisma.transitEntry.update({
+              where: { id: frow.id },
+              data: { kassaEntryId: res.id },
+            });
+          }
+        }
       }
     }
   }
@@ -468,6 +554,12 @@ async function main() {
   }
 
   console.log(`\nTransitEntry yozildi: ${entriesWritten}`);
+  if (withExpenses) {
+    console.log(
+      `Xarajat yozuvi (KassaEntry): ${postedExpenseCount} ta / ${som(postedExpenseSum)} so'm` +
+        ` (allaqachon turganlari qayta yozilmadi)`
+    );
+  }
   if (skippedAsBankDuplicate > 0) {
     console.log(
       `Bank o'tkazmasi bilan bir xil bo'lgani uchun tashlandi: ${skippedAsBankDuplicate} ta kirim · ${som(skippedAmount)} so'm`

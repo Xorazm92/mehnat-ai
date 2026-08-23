@@ -83,25 +83,46 @@ export function maskCard(card: string | null | undefined): string | null {
 }
 
 export function parseBandQilganlar(rows: Row[]): ParsedChannelPerson[] {
-  const headerIndex = rows.findIndex((r) =>
+  // Yangi eksportlar JSON oqimida `null` elementlarni ham yuboradi —
+  // ularni sarlavha va qator sifatida ko'rmaslik kerak.
+  const solid = rows.filter((r): r is Row => !!r && typeof r === "object");
+  const headerIndex = solid.findIndex((r) =>
     Object.values(r).some((v) => String(v ?? "").trim() === "F.I.O")
   );
-  if (headerIndex === -1) {
-    throw new TransitParseError('"Band Xodimlar" varag\'ida "F.I.O" ustuni topilmadi');
-  }
 
-  const header = rows[headerIndex];
-  const col: Record<string, string> = {};
-  for (const [key, value] of Object.entries(header)) {
-    const label = String(value ?? "").trim();
-    if (label) col[label] = key;
+  // IKKI SHAKL. Eski faylda birinchi qator YORLIQ qator ("F.I.O": "F.I.O"…),
+  // qiymatlar undan keyin keladi. Yangi eksportlarda yorliq qatori YO'Q —
+  // birinchi qatordan ma'lumot boshlanadi va ustun nomlari o'zi KALIT.
+  // Bunday holda kalitlarni barcha qatorlardan yig'ib, 0-qatordan o'qiymiz.
+  let col: Record<string, string>;
+  let dataStart: number;
+  if (headerIndex === -1) {
+    col = {};
+    for (const r of solid) {
+      for (const k of Object.keys(r)) {
+        const label = String(k).trim();
+        if (label && !(label in col)) col[label] = k;
+      }
+    }
+    dataStart = 0;
+    if (!("F.I.O" in col)) {
+      throw new TransitParseError('"Band Xodimlar" varag\'ida "F.I.O" ustuni topilmadi');
+    }
+  } else {
+    const header = solid[headerIndex];
+    col = {};
+    for (const [key, value] of Object.entries(header)) {
+      const label = String(value ?? "").trim();
+      if (label) col[label] = key;
+    }
+    dataStart = headerIndex + 1;
   }
 
   const pick = (row: Row, label: string): string | null =>
     col[label] ? cleanText(row[col[label]]) : null;
 
   const people: ParsedChannelPerson[] = [];
-  for (const row of rows.slice(headerIndex + 1)) {
+  for (const row of solid.slice(dataStart)) {
     const fullName = pick(row, "F.I.O");
     if (!fullName) continue;
 
@@ -187,7 +208,9 @@ function resolveColumns(header: Row) {
 }
 
 export function parseTransitSheet(person: string, rows: Row[]): ParsedTransitSheet {
-  if (rows.length === 0) {
+  // JSON oqimidagi `null` elementlar ustun aniqlashda va o'qishda yiqitadi.
+  const solid = rows.filter((r): r is Row => !!r && typeof r === "object");
+  if (solid.length === 0) {
     return {
       person,
       movements: [],
@@ -199,14 +222,14 @@ export function parseTransitSheet(person: string, rows: Row[]): ParsedTransitShe
     };
   }
 
-  const col = resolveColumns(rows[0]);
+  const col = resolveColumns(solid[0]);
   const movements: TransitMovement[] = [];
   let declaredTotalIn: number | null = null;
   // Sana faqat guruhning birinchi qatorida yoziladi; keyingi qatorlar
   // o'sha kunga tegishli.
   let lastDate: Date | null = null;
 
-  for (const row of rows.slice(1)) {
+  for (const row of solid.slice(1)) {
     const marker = row[col.no];
 
     // JAMI qatori: `#` bo'sh, `data` ustunida "TOTAL". Uni ma'lumot deb
@@ -262,21 +285,37 @@ export interface TransitTotalsRow {
 }
 
 export function parseTransitTotals(rows: Row[]): TransitTotalsRow[] {
-  const headerIndex = rows.findIndex((r) =>
+  // JSON oqimidagi `null` elementlar Object.values'ni yiqitadi.
+  const solid = rows.filter((r): r is Row => !!r && typeof r === "object");
+  let headerIndex = solid.findIndex((r) =>
     Object.values(r).some((v) => String(v ?? "").trim().toLowerCase() === "name")
   );
-  if (headerIndex === -1) return [];
 
-  const keys = Object.keys(rows[headerIndex]);
-  const labels = keys.map((k) => String(rows[headerIndex][k] ?? "").trim().toLowerCase());
-  const nameKey = keys[labels.indexOf("name")];
-  const balanceKey = keys[labels.indexOf("kartadagi qoldiq")];
+  // IKKI SHAKL: eski faylda yorliq qatori ("Name" QIYMAT sifatida) bor;
+  // yangida yo'q — ustun nomlari o'zi kalit ("Name", "AVGUST",
+  // "kartadagi qoldiq"). Bunday holda birinchi to'liq qator yorliq hisobida.
+  if (headerIndex === -1) {
+    headerIndex = solid.findIndex(
+      (r) => "Name" in r && Object.keys(r).some((k) => /qoldiq/i.test(k))
+    );
+    if (headerIndex === -1) return [];
+  }
+
+  const keys = Object.keys(solid[headerIndex]);
+  const labels = keys.map((k) => String(solid[headerIndex][k] ?? "").trim().toLowerCase());
+  const nameKey = labels.includes("name")
+    ? keys[labels.indexOf("name")]
+    : keys.find((k) => /^name$/i.test(k)) ?? keys.find((k) => /name/i.test(k))!;
+  const balanceKey =
+    keys.find((k) => String(solid[headerIndex][k] ?? "").trim().toLowerCase() === "kartadagi qoldiq") ??
+    keys.find((k) => /qoldiq/i.test(k))!;
   // Oy ustuni nomi oyma-oy o'zgaradi ("IYUL"), shuning uchun nom bo'yicha
   // emas — ism bilan qoldiq orasidagi ustun sifatida olinadi.
-  const monthKey = keys[labels.indexOf("kartadagi qoldiq") - 1];
+  const monthKey = keys[keys.indexOf(balanceKey) - 1];
 
   const out: TransitTotalsRow[] = [];
-  for (const row of rows.slice(headerIndex + 1)) {
+  for (const row of solid.slice(headerIndex + 1)) {
+    if (!row || typeof row !== "object") continue;
     const person = cleanText(row[nameKey]);
     if (!person) continue;
     out.push({
