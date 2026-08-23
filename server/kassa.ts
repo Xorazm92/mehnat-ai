@@ -142,6 +142,14 @@ export async function createKassaEntry(data: {
   if (data.type !== "income" && data.type !== "expense") {
     throw new Error("Kassa turi noto'g'ri: 'income' yoki 'expense' bo'lishi kerak");
   }
+  // CHIQIM MANBASIZ YOZILMAYDI: "Naqd", "Plastik" yoki aniq firma hisobi —
+  // aks holda summa faqat umumiy balansdan ayirilib, manba ichki qoldig'i
+  // o'zgarmasdan qolardi va manbalar kesimida chalkashlik tug'ilar edi.
+  if (data.type === "expense" && !data.channelId) {
+    throw new Error(
+      "Chiqim qaysi manbadan chiqishini tanlang — firma hisobi, Plastik yoki Cash"
+    );
+  }
   assertNotSalary(data.type, data.category);
   assertPositiveAmount(data.amount);
   if (data.channelId) await assertFundingSource(data.channelId);

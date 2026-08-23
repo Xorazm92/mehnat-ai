@@ -317,6 +317,30 @@ export async function getMovementBefore(year: number): Promise<{ income: number;
   };
 }
 
+/**
+ * BITTA MANBA (kassa/hisob) bo'yicha qoldiq — jurnal CASH oyoqlaridan.
+ *
+ * MANBA_BALANSI = shu kanalga tushgan jami − shu kanaldan chiqqan jami.
+ * Umumiy balans aynan shu manba qoldiqlarining YIG'INDISI (`getCashByChannel`
+ * bilan bir xil manba), ya'ni chiqim tanlangan manbadan yozilsa ikkalasi
+ * bir vaqtda to'g'ri harakatlanadi.
+ */
+export async function getChannelCashBalance(
+  db: Db,
+  channelId: string,
+  opts: { excludeKassaEntryId?: string } = {}
+): Promise<number> {
+  const agg = await db.ledgerEntry.aggregate({
+    where: {
+      accountId: "CASH",
+      channelId,
+      ...(opts.excludeKassaEntryId ? { NOT: { sourceId: opts.excludeKassaEntryId } } : {}),
+    },
+    _sum: { debit: true, credit: true },
+  });
+  return n(agg._sum.debit) - n(agg._sum.credit);
+}
+
 // Summa formatlash YAGONA manbadan (`lib/format.ts`). Bu yerda o'z nusxasi
 // bor edi va u `toLocaleString("ru-RU")` ishlatardi — ya'ni xato matnidagi
 // raqam ekrandagidan boshqacha ko'rinardi (probel va vergul).

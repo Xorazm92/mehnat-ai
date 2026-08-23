@@ -892,19 +892,14 @@ export async function postExpenseFromBankTransaction(input: {
     select: {
       id: true, amount: true, valueDate: true, status: true,
       counterpartyName: true, purpose: true,
-      account: { select: { accountNumber: true, label: true } },
+      account: { select: { accountNumber: true, label: true, ownerCompanyId: true } },
     },
   });
   if (!tx) throw new Error("Tranzaksiya topilmadi");
   if (tx.status === "posted") throw new Error("Bu tranzaksiya allaqachon hisobga olingan");
 
-  // Pul QAYSI kassadan chiqgani — vipiska hisobi o'z firmamiz kanali bilan
-  // mos kelsa shu kanalga yozamiz (aks holda kanalsiz: balans to'g'ri,
-  // faqat kassalar kesimida ajratilmagan qator sifatida ko'rinadi).
-  const channel = await prisma.disbursementChannel.findFirst({
-    where: { transitAccount: tx.account.accountNumber },
-    select: { id: true },
-  });
+  // Pul QAYSI kassadan chiqgani — vipiska hisobining firmasi manba bo'ladi.
+  const channelId = await resolveOwnAccountChannel(tx.account.ownerCompanyId);
 
   const category = input.category.trim();
   if (!category) throw new Error("Toifani tanlang");
@@ -922,7 +917,7 @@ export async function postExpenseFromBankTransaction(input: {
       amount: Number(tx.amount),
       date: tx.valueDate,
       description,
-      channelId: channel?.id ?? null,
+      channelId,
       dedupKey: `bank-expense:${tx.id}`,
       expenseAccount: input.isSalary ? ACCOUNTS.SALARY_EXPENSE : ACCOUNTS.OPERATING_EXPENSE,
     })
@@ -1143,6 +1138,26 @@ export async function ignoreTransaction(transactionId: string, reason: string) {
  * bu yerdan O'TMAYDI: ular Payout qatlamiga tegishli yoki tizim ichidagi
  * harakat, KassaEntry yozilsa balans buzilardi.
  */
+/**
+ * Bank hisobi → KASSA MANBASI (DisbursementChannel) xaritasi.
+ *
+ * Vipiskadan yozilgan HAR chiqim aniq bir manbadan chiqqan: qaysi hisobdan
+ * bo'lsa, o'sha firmaning manbasi. Buni bog'lamasak summa faqat umumiy
+ * balansdan ayirilib, manba ichki qoldig'i o'zgarmasdan qolardi.
+ * Kalit: kanal.ownFirmId === account.ownerCompanyId (bir firma — bir manba).
+ */
+const accountChannelCache = new Map<string, string | null>();
+async function resolveOwnAccountChannel(ownerCompanyId: string): Promise<string | null> {
+  if (accountChannelCache.has(ownerCompanyId)) return accountChannelCache.get(ownerCompanyId)!;
+  const ch = await prisma.disbursementChannel.findFirst({
+    where: { type: "own_firm_account", ownFirmId: ownerCompanyId, isActive: true },
+    select: { id: true },
+  });
+  const id = ch?.id ?? null;
+  accountChannelCache.set(ownerCompanyId, id);
+  return id;
+}
+
 export async function postExpenseTransaction(input: {
   transactionId: string;
   category?: ExpenseCategory;
@@ -1197,7 +1212,9 @@ export async function postExpenseTransaction(input: {
         date: tx.valueDate,
         description: tx.purpose?.slice(0, 500) ?? tx.counterpartyName,
         companyId: tx.account.ownerCompanyId,
-        channelId: input.channelId ?? null,
+        // Manba AVTOMATIK: pul qaysi hisobdan chiqqan bo'lsa, o'sha
+        // firmaning kassasi. Qo'lda berilgan channelId ustuvor.
+        channelId: input.channelId ?? (await resolveOwnAccountChannel(tx.account.ownerCompanyId)),
         // Xuddi shu vipiska qatorini ikkinchi marta yozib bo'lmaydi.
         dedupKey: `bank:${tx.id}`,
       }
@@ -1262,7 +1279,7 @@ export async function postSalaryFromTransaction(input: { transactionId: string }
         date: tx.valueDate,
         description,
         companyId: tx.account.ownerCompanyId,
-        channelId: null,
+        channelId: await resolveOwnAccountChannel(tx.account.ownerCompanyId),
         dedupKey: `bank:${tx.id}`,
         expenseAccount: ACCOUNTS.SALARY_EXPENSE,
       }

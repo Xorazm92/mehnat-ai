@@ -26,9 +26,11 @@
 import { Prisma } from "@prisma/client";
 import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
-import { assertSufficientFunds } from "@/lib/balance";
+import { assertSufficientFunds, getChannelCashBalance } from "@/lib/balance";
 import { ACCOUNTS, postLedger, reverseLedger, type LedgerLeg } from "@/lib/ledger";
 import { periodKeyOf } from "@/lib/periods";
+import { formatNum } from "@/lib/format";
+import { isAdminRole } from "@/lib/permissions";
 
 type Db = Prisma.TransactionClient;
 
@@ -185,6 +187,32 @@ export async function recordKassaMovement(
   }
 
   const expenseAccount = input.expenseAccount ?? ACCOUNTS.OPERATING_EXPENSE;
+
+  // ── MANBA BO'YICHA QOLDIQ NAZORATI ────────────────────────────────────
+  // Chiqim TANLANGAN manbadan yoziladi: "Naqd" tanlansa faqat Naqd
+  // balansidan, aniq firma hisobi tanlansa faqat shu firmanikidan
+  // chegiriladi. Umumiy balans yetarli bo'lib, tanlangan manbada pul
+  // yo'q bo'lsa — bu MANBA xatosi va bloklanadi (admin chetlab o'tadi,
+  // izi jurnal reversal'ida ko'rinadi).
+  if (
+    input.type === "expense" &&
+    input.channelId &&
+    needsFundsCheck(actor) &&
+    !isAdminRole(actor.role)
+  ) {
+    const channelBalance = await getChannelCashBalance(db, input.channelId);
+    if (input.amount > channelBalance) {
+      const ch = await db.disbursementChannel.findUnique({
+        where: { id: input.channelId },
+        select: { label: true },
+      });
+      throw new Error(
+        `"${ch?.label ?? "Tanlangan manba"}"da yetarli mablag' yo'q. ` +
+          `Manba qoldig'i: ${formatNum(channelBalance)} so'm, so'ralgan: ${formatNum(input.amount)} so'm. ` +
+          `Boshqa manbadan yozing yoki avval o'sha manbaga kirim qiling.`
+      );
+    }
+  }
 
   // OYLIK OPERATSION XARAJAT EMAS. Qoida atayin "kassaga oylik yozilmasin"
   // emas, "oylik operatsion xarajatga yozilmasin" — chunki kartadan berilgan
