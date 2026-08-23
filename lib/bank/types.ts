@@ -5,7 +5,7 @@
 // veb-yuklashda, ham bir martalik backfill skriptida ishlaydi.
 
 /** Vipiska formati. Har bank o'z ko'rinishini beradi. */
-export type StatementFormat = "litsevoy" | "svedeniya";
+export type StatementFormat = "litsevoy" | "svedeniya" | "hamkorbank";
 
 /** Xom jadval: sahifa nomi → qatorlar (xlsx `sheet_to_json` natijasi). */
 export type SheetRow = Record<string, unknown>;

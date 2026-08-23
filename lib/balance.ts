@@ -15,6 +15,7 @@ import type { Prisma } from "@prisma/client";
 import { formatNum } from "@/lib/format";
 import type { BalanceBreakdown } from "@/types";
 import { getTotalTransitBalance } from "@/lib/transit";
+import { KASSA_START_DATE, KASSA_START_PERIOD } from "@/lib/constants";
 
 /**
  * Balansni tranzaksiya ICHIDA o'qish uchun. Chaqiruvchi `tx` bersa, o'qish
@@ -45,11 +46,11 @@ export async function getAvailableBalance(opts?: {
   const [paidPayments, kassaIncome, kassaExpense, payouts, transitBalance] =
     await Promise.all([
       db.payment.aggregate({
-        where: { status: { in: ["paid", "partial"] }, deletedAt: null },
+        where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { gte: KASSA_START_PERIOD } },
         _sum: { amount: true },
       }),
       db.kassaEntry.aggregate({
-        where: { type: "income", deletedAt: null },
+        where: { type: "income", deletedAt: null, date: { gte: KASSA_START_DATE } },
         _sum: { amount: true },
       }),
       db.kassaEntry.aggregate({
@@ -57,13 +58,14 @@ export async function getAvailableBalance(opts?: {
           type: "expense",
           status: "approved",
           deletedAt: null,
+          date: { gte: KASSA_START_DATE },
           ...(opts?.excludeKassaEntryId ? { id: { not: opts.excludeKassaEntryId } } : {}),
         },
         _sum: { amount: true },
       }),
       // Payout.amount har doim musbat (server yozuvda kafolatlaydi) — SUM xavfsiz.
       db.payout.aggregate({
-        where: { deletedAt: null },
+        where: { deletedAt: null, paidAt: { gte: KASSA_START_DATE } },
         _sum: { amount: true },
       }),
       getTotalTransitBalance(db as Prisma.TransactionClient).catch(() => 0),
@@ -109,12 +111,12 @@ async function movementInRange(
   db: MovementDb,
   range: MovementRange
 ): Promise<{ income: number; outflow: number }> {
-  const dateWhere = { ...(range.from ? { gte: range.from } : {}), lt: range.to };
+  const dateWhere = { gte: range.from ?? KASSA_START_DATE, lt: range.to };
   const periodWhere =
     typeof range.paymentPeriod === "string" ? range.paymentPeriod : range.paymentPeriod;
   const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
     db.payment.aggregate({
-      where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: periodWhere },
+      where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: periodWhere, ...(typeof periodWhere === "string" ? { gte: undefined } : {}) },
       _sum: { amount: true },
     }),
     db.kassaEntry.aggregate({

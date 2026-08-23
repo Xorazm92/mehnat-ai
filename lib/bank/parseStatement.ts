@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { BankStatementParseError, type ParsedStatement, type SheetRow, type Workbook } from "./types";
 import { isLitsevoyFormat, parseLitsevoy, readStatementHeader } from "./parseLitsevoy";
 import { isSvedeniyaFormat, parseSvedeniya } from "./parseSvedeniya";
+import { looksLikeHamkorbank, parseHamkorbankWorkbook } from "./parseHamkorbank";
 
 export * from "./types";
 export { extractContract, parseContractCell } from "./extractContract";
@@ -43,6 +44,13 @@ export function parseStatementRows(rows: SheetRow[]): ParsedStatement {
 export function parseWorkbook(workbook: Workbook): ParsedStatement {
   const sheets = Object.entries(workbook);
   if (sheets.length === 0) throw new BankStatementParseError("Faylda sahifa yo'q");
+
+  // Hamkorbank eksporti KO'P SAHIFALI: sarlavha bitta sahifada, tranzaksiya
+  // jadvali boshqasida — sahifa-ma-sheet loop uni hech qachon to'liq o'qiy
+  // olmasdi. Shuning uchun u avval, butun kitob darajasida aniqlanadi.
+  if (looksLikeHamkorbank(workbook)) {
+    return withSanityChecks(parseHamkorbankWorkbook(workbook));
+  }
 
   const errors: string[] = [];
   for (const [name, rows] of sheets) {

@@ -23,6 +23,7 @@ import { serialize } from "@/lib/serialize";
 import { getCashByChannel } from "@/lib/ledger";
 import { getChannelBalances } from "@/lib/transit";
 import { periodKeyOf } from "@/lib/periods";
+import { KASSA_START_PERIOD } from "@/lib/constants";
 import {
   CHANNEL_TYPE_LABELS,
   CHANNEL_TYPE_ORDER,
@@ -80,8 +81,11 @@ export async function getCashDeskReport(period?: string): Promise<CashDeskReport
     prisma.disbursementChannel.findMany({
       select: { id: true, type: true, label: true, cardMask: true, transitAccount: true, isActive: true },
     }),
-    getCashByChannel(prisma, key),
-    getCashByChannel(prisma, prevKey),
+    // KASSA START: davr harakati va qoldiqlar faqat ishga tushish
+    // (2026-08) dan keyingini sanaydi — eski qatlamlar manba balansini
+    // buzmasin. Ochilish shu sababli avgust uchun NOL bo'ladi.
+    getCashByChannel(prisma, key, { fromPeriod: KASSA_START_PERIOD }),
+    getCashByChannel(prisma, prevKey, { fromPeriod: KASSA_START_PERIOD }),
     getChannelBalances(prisma, { includeInactive: true }),
   ]);
 

@@ -3,6 +3,20 @@
  * Centralized configuration for the entire application
  */
 
+/**
+ * KASSA DAVRNING BOSHLANISHI — loyiha 2026-08-01 da ishga tushdi.
+ *
+ * Barcha kassa hisoblari (balans, manba qoldiqlari, jurnal ko'rinishlari)
+ * FAQAT shu sanadan keyingi harakatlarni sanaydi. Undan oldingi yozuvlar
+ * (tarixiy importlar, sinov ma'lumotlari) hisobga KIRMAYDI.
+ *
+ * ISTISNO — QARZDORLIK: u o'z boshlang'ich bazasidan hisoblanadi
+ * (`Contract.openingDebt` + 1C kesimlari, `lib/debt.ts`), chunki mijozlar
+ * qarzi ishga tushishdan OLDIN ham mavjud edi.
+ */
+export const KASSA_START_PERIOD = "2026-08";
+export const KASSA_START_DATE = new Date(2026, 7, 1);
+
 export const CONFIG = {
   // ============= NETWORK SETTINGS =============
   NETWORK: {
