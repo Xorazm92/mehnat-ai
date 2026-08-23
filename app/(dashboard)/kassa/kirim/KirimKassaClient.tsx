@@ -291,9 +291,18 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
       toast.success(
         `${d.account}: ${d.rowsInserted} ta yozildi` +
           (d.rowsDuplicate > 0 ? `, ${d.rowsDuplicate} ta dublikat tashlandi` : "") +
-          ` · ${d.matched} ta moslashtirildi` +
+          (d.posted > 0
+            ? ` · ${d.posted} ta hisobga olindi (${formatNum(d.postedAmount)} so'm)`
+            : d.matched > 0
+              ? " · moslashtirildi"
+              : "") +
           (d.stillUnmatched > 0 ? ` · ${d.stillUnmatched} tasi qo'lda hal qilinadi` : "")
       );
+      if (d.postErrors.length > 0) {
+        toast.warning(`${d.postErrors.length} ta qator hisobga olinmadi`, {
+          description: d.postErrors.join("\n"),
+        });
+      }
       reset();
       router.refresh();
     } catch (e) {

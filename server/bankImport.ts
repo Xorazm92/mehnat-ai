@@ -621,6 +621,16 @@ export interface CommitOutcome {
   matched: number;
   internalTransfers: number;
   stillUnmatched: number;
+  /**
+   * AVTO-HISOBGA OLGANLAR — STIR bilan bir xil topilib, darhol taqsimot
+   * yozilganlari. Ilgari match faqat BELGI qo'yardi: qator "matched" bo'lib
+   * navbatdan yo'qolardi, lekin pul hech qayerga yozilmasdi — vipiska kirdi,
+   * qarz va balans jim turaverdi.
+   */
+  posted: number;
+  postedAmount: number;
+  /** Hisobga olishda yiqilgan qatorlar (davr qulfi kabi) — ekranda ko'rsatiladi. */
+  postErrors: string[];
 }
 
 export async function commitStatementUpload(
@@ -701,6 +711,10 @@ export async function commitStatementUpload(
         matched: added,
         internalTransfers: 0,
         stillUnmatched: skipped,
+        // Plastik yo'li allaqachon TO'G'RIDA taqsimot yozadi (allocatePlastikReceipt).
+        posted: added,
+        postedAmount: 0,
+        postErrors: [],
       },
     };
   }
@@ -739,6 +753,43 @@ export async function commitStatementUpload(
 
   const match = await autoMatchTransactions(prisma, { importId: result.importId });
 
+  // ── AVTO-HISOBGA OLISH ─────────────────────────────────────────────────
+  // STIR bilan YAKKA firmaga mos kelgan har kirim darhol taqsimotga yoziladi
+  // — qo'lda "Hisobga olish" tugmasi bosilgandagi AYNAN bir yo'l
+  // (`postIncomeTransaction`). Shu bo'lmaganda vipiska "kirdi", lekin qarz,
+  // balans va to'lovlar jurnali umuman o'zgarmasdi.
+  let posted = 0;
+  let postedAmount = 0;
+  const postErrors: string[] = [];
+  const matchedRows = await prisma.bankTransaction.findMany({
+    where: { importId: result.importId, direction: "income", status: "matched" },
+    select: { id: true, matchedCompanyId: true, matchedContractId: true },
+  });
+  for (const row of matchedRows) {
+    if (!row.matchedCompanyId) continue;
+    try {
+      const txRow = await prisma.bankTransaction.findUnique({
+        where: { id: row.id },
+        select: { valueDate: true },
+      });
+      if (txRow) {
+        await assertPeriodOpen(prisma, periodOf(txRow.valueDate), "bank kirimi");
+      }
+      const res = await postIncomeTransaction(prisma, {
+        transactionId: row.id,
+        companyId: row.matchedCompanyId,
+        contractId: row.matchedContractId,
+        createdBy: userId,
+      });
+      posted++;
+      postedAmount += res.paymentTotal;
+    } catch (e) {
+      // Bir qator yiqilsa butun yuklama to'xtamasin — qator "matched" holatda
+      // qoladi va xato matni foydalanuvchiga ko'rsatiladi.
+      postErrors.push((e as Error).message);
+    }
+  }
+
   await recordAuditLog({
     userId,
     action: "create",
@@ -749,6 +800,8 @@ export async function commitStatementUpload(
       account: account.label,
       rowsInserted: result.rowsInserted,
       rowsDuplicate: result.rowsDuplicate,
+      autoPosted: posted,
+      autoPostedAmount: postedAmount,
     },
   });
 
@@ -762,6 +815,9 @@ export async function commitStatementUpload(
       matched: match.matchedByInn,
       internalTransfers: match.internalTransfers,
       stillUnmatched: match.stillUnmatched,
+      posted,
+      postedAmount,
+      postErrors: postErrors.slice(0, 5),
     },
   };
 }
