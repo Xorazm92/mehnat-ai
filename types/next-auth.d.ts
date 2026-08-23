@@ -20,11 +20,16 @@ declare module "next-auth" {
        * buxgalterlik ekranlarini ochadi.
        */
       relations?: string[];
+      /** ASOSIY rol — bazadagi `User.role`. Faol roldan farqli. */
+      primaryRole?: string;
+      /** Barcha rollar (asosiy + qo'shimchalar) — ikki rolli xodimlar uchun. */
+      roles?: string[];
     } & DefaultSession["user"];
   }
 
   interface User {
     role: string;
+    extraRoles?: string[] | null;
     avatarColor?: string | null;
     kind?: string;
     companyId?: string | null;
@@ -35,6 +40,8 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     role: string;
+    /** Qo'shimcha tizim rollari (User.extraRoles). */
+    extraRoles?: string[];
     avatarColor?: string | null;
     kind?: string;
     companyId?: string | null;

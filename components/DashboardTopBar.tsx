@@ -16,6 +16,7 @@ import GlobalSearch from "@/components/GlobalSearch";
 import FinanceAssistant from "@/components/FinanceAssistant";
 import { getHomeRoute, type AppView } from "@/lib/permissions";
 import RoleContextSwitcher from "@/components/RoleContextSwitcher";
+import MultiRoleSwitcher from "@/components/MultiRoleSwitcher";
 import type { ContextOption, RoleContext } from "@/lib/roleContext";
 import {
   useNotificationSound,
@@ -52,6 +53,8 @@ interface DashboardTopBarProps {
   /** Ko'p vazifali odam uchun kontekst tanlash (bo'sh bo'lsa chizilmaydi). */
   roleContexts?: ContextOption[];
   roleContext?: RoleContext;
+  /** Tizim rollari — ikki rolli xodim uchun (server/activeRole.ts). */
+  multiRoles?: { roles: string[]; active: string } | null;
   /** Admin RBAC override'lari — qidiruv ham yon panel bilan bir xil ko'rsin. */
   allowedViews?: AppView[];
 }
@@ -65,6 +68,7 @@ export function DashboardTopBar({
   allowedViews,
   roleContexts = [],
   roleContext = "all",
+  multiRoles = null,
 }: DashboardTopBarProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -173,6 +177,10 @@ export function DashboardTopBar({
 
         {/* Rol konteksti — qaysi sifatda ishlayotgani */}
         <RoleContextSwitcher options={roleContexts} current={roleContext} />
+
+        {/* TIZIM ROLI — ikki rolli xodimlar (bank klient + buxgalter kabi).
+            Bir rolli odamda chizilmaydi. */}
+        {multiRoles && <MultiRoleSwitcher roles={multiRoles.roles} active={multiRoles.active} />}
 
         {/* Notifications */}
         <Link

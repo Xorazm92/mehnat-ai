@@ -149,13 +149,26 @@ export async function proxy(req: NextRequest) {
    *      qoida umuman qo'llanmaydi — sikl yopiladi, sababidan qat'i nazar.
    */
   const cameFromExpiredSession = req.nextUrl.searchParams.get("expired") === "1";
+
+  // FAOL ROL — ikki rolli xodim almashtirgich orqali tanlagani.
+  // Cookie server tomonda tekshiriladi: faqat token ichidagi rollar
+  // (asosiy + extraRoles) ichidan tanlov kuchga kiradi. Edge-safe:
+  // faqat satr solishtirish, baza so'rovi yo'q.
+  const extra = Array.isArray(token?.extraRoles) ? (token!.extraRoles as string[]) : [];
+  const allowedRoles = [token?.role as string | undefined, ...extra].filter(
+    (r): r is string => typeof r === "string" && r.length > 0
+  );
+  const wantedRole = req.cookies.get("asro.active-role")?.value;
+  const activeRole =
+    wantedRole && allowedRoles.includes(wantedRole) ? wantedRole : (token?.role as string);
+
   if (token && !cameFromExpiredSession && (path === "/login" || path === "/" || path === "")) {
-    return NextResponse.redirect(new URL(getHomeRoute(token.role as string), req.url));
+    return NextResponse.redirect(new URL(getHomeRoute(activeRole), req.url));
   }
 
   // RBAC: ruxsatsiz sahifadan himoya (staff)
   if (token && isProtected) {
-    const role = token.role as string;
+    const role = activeRole;
     if (role && !(await isAllowed(path, role, parseRelations(token.relations)))) {
       return NextResponse.redirect(new URL("/403", req.url));
     }

@@ -59,6 +59,11 @@ model User {
   fullName     String
   passwordHash String
   role         UserRole  @default(accountant)
+  /// QO'SHIMCHA rollar — bir xodim bir necha vazifada (masalan bank-klient
+  /// + buxgalter). Sessiyada faol rol cookie orqali tanlanadi
+  /// (server/activeRole.ts), barcha tekshiruvlar `session.user.role` ni
+  /// o'qiyveradi — kod bo'ylab alohida ishlov shart emas.
+  extraRoles   String[]  @default([])
   avatarColor  String?   @default("hsl(200, 50%, 50%)")
   phone        String?
   pinfl        String? // JSHSHIR — 14 raqamli shaxsiy identifikatsiya raqami

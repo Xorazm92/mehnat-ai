@@ -1,7 +1,9 @@
-import NextAuth from "next-auth";
+import NextAuth, { type Session } from "next-auth";
+import { cookies } from "next/headers";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { ACTIVE_ROLE_COOKIE, rolesOf } from "@/lib/effective-role";
 import { authConfig } from "./auth.config";
 import {
   checkLoginRateLimit,
@@ -16,9 +18,7 @@ import { revalidateSessionToken } from "@/lib/sessionRevalidation";
 import { getUserCompanyRelations, parseRelations } from "@/lib/userRelations";
 import { verifyInitData } from "@/lib/telegramInitData";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
-  providers: [
+const providers = [
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -78,6 +78,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             email: user.email,
             name: user.fullName,
             role: user.role,
+            extraRoles: user.extraRoles ?? [],
             avatarColor: user.avatarColor,
           };
         }
@@ -126,16 +127,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.fullName,
           role: user.role,
+          extraRoles: user.extraRoles ?? [],
           avatarColor: user.avatarColor,
         };
       },
     }),
-  ],
+];
+
+const { handlers, signIn, signOut, auth: baseAuth } = NextAuth({
+  ...authConfig,
+  providers,
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id ?? "";
         token.role = user.role;
+        // QO'SHIMCHA ROLLAR — ikki rolli xodimlar (bank klient + buxgalter
+        // kabi). Faol rol cookie orqali tanlanadi (server/activeRole.ts),
+        // barcha tekshiruvlar `session.user.role` ni o'qiyveradi.
+        token.extraRoles = user.extraRoles ?? [];
         token.avatarColor = user.avatarColor;
         token.kind = user.kind ?? "staff";
         token.companyId = user.companyId ?? null;
@@ -161,7 +171,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id;
+        // `role` — FAOL rol. Standartda asosiy rol; ikki rolli xodim
+        // almashtirgich orqali boshqasiga o'tishi mumkin (cookie asosida,
+        // `lib/effective-role.ts` da tekshiriladi).
         session.user.role = token.role;
+        session.user.primaryRole = token.role;
+        session.user.roles = [token.role, ...(token.extraRoles ?? [])]
+          .filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
         session.user.avatarColor = token.avatarColor;
         session.user.kind = token.kind;
         session.user.companyId = token.companyId;
@@ -174,3 +190,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+/**
+ * FAOL ROL — sessiya ustidan oxirgi qatlam.
+ *
+ * Ikki rolli xodim almashtirgich orqali tanlagan rol cookie'da turadi
+ * (`server/activeRole.ts`). Bu yerda u TEKSHIRILIB (foydalanuvchida
+ * haqiqatan shu rol bormi) `session.user.role` ga yoziladi — ya'ni kod
+ * bo'ylab yuzlab `session.user.role` tekshiruvi O'ZGARMASDAN faol rolni
+ * oladi. Tekshiruv server tomonda: cookie'ni qo'lda o'zgartirish hech
+ * narsa bermaydi, chunki ruxsat ro'yxati tokenda.
+ */
+export const auth = async (): Promise<Session | null> => {
+  const session = await baseAuth();
+  if (!session?.user || session.user.kind === "client") return session;
+
+  const wanted = (await cookies()).get(ACTIVE_ROLE_COOKIE)?.value;
+  if (!wanted) return session;
+
+  // Tekshiruv server tomonda: faqat SHU odamning rollari ichida tanlov
+  // kuchga kiradi (lib/effective-role.ts).
+  const roles = rolesOf(session);
+  if (roles.includes(wanted)) {
+    session.user.role = wanted;
+  }
+  return session;
+};
+
+export { handlers, signIn, signOut };

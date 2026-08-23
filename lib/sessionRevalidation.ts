@@ -39,6 +39,8 @@ export interface RevalidatableToken {
   loginAt?: unknown;
   /** Firmadagi mas'uliyatlar — sahifa darvozasi shu yerdan o'qiydi. */
   relations?: unknown;
+  /** Qo'shimcha tizim rollari (User.extraRoles) — yangilanadi. */
+  extraRoles?: unknown;
   [key: string]: unknown;
 }
 
@@ -76,12 +78,15 @@ export async function revalidateSessionToken<T extends RevalidatableToken>(
     const [dbUser, relations] = await Promise.all([
       prisma.user.findUnique({
         where: { id },
-        select: { isActive: true, role: true, avatarColor: true },
+        select: { isActive: true, role: true, extraRoles: true, avatarColor: true },
       }),
       getUserCompanyRelations(id),
     ]);
     if (!dbUser || !dbUser.isActive) return null;
     token.role = dbUser.role;
+    // Qo'shimcha rollar ham bazadan yangilanadi: admin rolni olganda
+    // foydalanuvchining almashtirgichi 5 daqiqada moslashadi.
+    token.extraRoles = (dbUser as { extraRoles?: string[] | null }).extraRoles ?? [];
     token.avatarColor = dbUser.avatarColor;
     token.relations = relations;
     token.checkedAt = now;

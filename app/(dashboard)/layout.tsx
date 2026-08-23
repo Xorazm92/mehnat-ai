@@ -11,6 +11,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { getCachedUnreadCount } from "@/lib/cached-queries";
 import { getRoleViewOverrides } from "@/server/rbac";
 import { getMyContexts, getRoleContext } from "@/server/roleContext";
+import { getMyRoles } from "@/server/activeRole";
 import { effectiveViewsForRole, type CompanyRelation, type UserRole } from "@/lib/permissions";
 
 export default async function DashboardLayout({
@@ -22,13 +23,16 @@ export default async function DashboardLayout({
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role ?? "";
   const avatarColor = session?.user?.avatarColor ?? undefined;
-  const [unreadCount, roleViewOverrides, contexts, roleContext] = await Promise.all([
+  const [unreadCount, roleViewOverrides, contexts, roleContext, multiRoles] = await Promise.all([
     userId ? getCachedUnreadCount(userId) : Promise.resolve(0),
     userId ? getRoleViewOverrides().catch(() => ({})) : Promise.resolve({}),
     // Ko'p vazifali odam uchun kontekst tanlash. Bitta vazifasi bo'lsa
     // bo'sh massiv qaytadi va almashtirgich chizilmaydi.
     userId ? getMyContexts().catch(() => []) : Promise.resolve([]),
     userId ? getRoleContext().catch(() => "all" as const) : Promise.resolve("all" as const),
+    // TIZIM ROLI almashtirgich — ikki rolli xodim uchun (bank klient +
+    // buxgalter kabi). Bir rolli odamda null qaytadi, chizilmaydi.
+    userId ? getMyRoles().catch(() => null) : Promise.resolve(null),
   ]);
   // Menyu = proxy darvozasi bilan AYNAN bir manba: kod default'i + admin
   // override'i + foydalanuvchining haqiqiy biriktiruvlari. Uchinchisisiz
@@ -83,6 +87,7 @@ export default async function DashboardLayout({
             allowedViews={allowedViews}
             roleContexts={contexts}
             roleContext={roleContext}
+            multiRoles={multiRoles}
           />
 
           {/* Main content */}
