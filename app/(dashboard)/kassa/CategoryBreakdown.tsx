@@ -12,6 +12,7 @@
 
 import React from "react";
 import { formatNum } from "@/lib/format";
+import { Money } from "@/components/ui";
 import { ArrowDownRight, ArrowUpRight, PieChart } from "lucide-react";
 
 interface Row {
@@ -90,11 +91,8 @@ function Side({
                       <div className="h-full rounded-full" style={{ width: `${share}%`, background: tone }} />
                     </div>
                   </td>
-                  <td
-                    className="px-3 py-1.5 text-right tabular-nums whitespace-nowrap align-top"
-                    style={{ color: "var(--text)" }}
-                  >
-                    {formatNum(r.amount)}
+                  <td className="px-3 py-1.5 text-right whitespace-nowrap align-top">
+                    <Money value={r.amount} tone={tone === "var(--accent-green)" ? "in" : "out"} />
                   </td>
                 </tr>
               );

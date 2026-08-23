@@ -6,6 +6,7 @@ import { formatNum, formatUzDate } from "@/lib/format";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import CollectionQueue from "./CollectionQueue";
 import DebtStatement, { type DebtStatementData } from "./DebtStatement";
+import { Tabs, type TabItem } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import KassaModule from "@/components/KassaModule";
 import { upsertPayment, deletePayment } from "@/server/kassa";
@@ -142,13 +143,17 @@ export default function QarzdorlikClient({
   // turardi. Foydalanuvchi "kim qarzdor?" degan savol bilan kelib, undirish
   // ro'yxatiga yetish uchun sverka, reja/fakt va 1C solishtiruvidan o'tishi
   // kerak edi. Endi har tab BITTA savolga javob beradi.
-  const TABS = [
-    { key: "holat", label: "Holat" },
-    { key: "undirish", label: "Undirish" },
-    { key: "tolovlar", label: "To'lovlar" },
-    { key: "tekshiruv", label: "Tekshiruv" },
-  ] as const;
-  const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("holat");
+  // `components/ui/Tabs` — WAI-ARIA naqshi bilan. Qo'lda yozilgan tugmalar
+  // qatorida `role="tablist"` bo'lmaydi: ekran o'quvchi ularni oddiy tugma
+  // deb o'qiydi va strelka bilan yurib bo'lmaydi.
+  type TabKey = "holat" | "undirish" | "tolovlar" | "tekshiruv";
+  const [tab, setTab] = useState<TabKey>("holat");
+  const TAB_ITEMS: TabItem<TabKey>[] = [
+    { id: "holat", label: "Holat", hint: "Mijoz bilan hisob-kitob holati" },
+    { id: "undirish", label: "Undirish", hint: "Bugun kim bilan gaplashish kerak", count: queue.rows.length || undefined },
+    { id: "tolovlar", label: "To'lovlar", hint: "Firmalar bo'yicha oylik to'lovlar" },
+    { id: "tekshiruv", label: "Tekshiruv", hint: "Import nomuvofiqliklari va 1C solishtiruvi" },
+  ];
   useAutoRefresh();
   const [query, setQuery] = useState("");
   // Farqi bor qatorlar tepada — aynan ular e'tibor talab qiladi.
@@ -213,22 +218,7 @@ export default function QarzdorlikClient({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5" style={{ borderBottom: "1px solid var(--card-border)", paddingBottom: 8 }}>
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className="px-3 py-1.5 rounded-lg text-meta font-semibold"
-            style={
-              tab === t.key
-                ? { background: "var(--accent-blue)", color: "#fff" }
-                : { background: "var(--input-bg)", color: "var(--text-secondary)" }
-            }
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} ariaLabel="Qarzdorlik bo'limlari" />
 
       {tab === "holat" && (
         statement ? (

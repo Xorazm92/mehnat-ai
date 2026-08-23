@@ -26,6 +26,7 @@
 import React, { useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { formatNum, formatUzDate } from "@/lib/format";
+import { Money, StatStrip, type StatItem } from "@/components/ui";
 import { Scale, Search, AlertTriangle, ChevronRight } from "lucide-react";
 
 type Kind = "BK" | "RK" | "unknown";
@@ -72,9 +73,6 @@ const KIND_TONE: Record<Kind, string> = {
   unknown: "var(--text-muted)",
 };
 
-/** Nol bo'lsa chiziqcha — jadval raqamlar bilan to'lib ketmasin. */
-const num = (v: number) => (v ? formatNum(v) : "—");
-
 export default function DebtStatement({ statement: s }: { statement: DebtStatementData }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -118,14 +116,17 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
     );
   }
 
-  const cols: { label: string; value: number; tone: string; hint: string }[] = [
-    { label: "Boshi", value: s.totals.opening, tone: "var(--text-secondary)", hint: "Davr boshidagi sof qoldiq" },
-    { label: "Hisoblandi", value: s.totals.accrued, tone: "var(--accent-blue)", hint: "Davr ichida yozilgan xizmat haqi" },
+  // RANG PUL YO'NALISHINI BILDIRADI (`components/ui/Money` izohi):
+  // qarz — bizga kelishi kerak bo'lgan pul (chiqim tomoni emas, lekin
+  // undirilmagani uchun "out" ohangida), avans va to'lov — kirgan pul.
+  const cols: StatItem[] = [
+    { label: "Boshi", value: s.totals.opening, tone: "neutral", hint: "Davr boshidagi sof qoldiq" },
+    { label: "Hisoblandi", value: s.totals.accrued, tone: "auto", hint: "Davr ichida yozilgan xizmat haqi" },
     ...(s.hasPayments
-      ? [{ label: "To'landi", value: s.totals.paid, tone: "var(--accent-green)", hint: "Davr ichida kelgan pul" }]
+      ? [{ label: "To'landi", value: s.totals.paid, tone: "in" as const, hint: "Davr ichida kelgan pul" }]
       : []),
-    { label: "Qarz", value: s.totals.debt, tone: "var(--accent-red)", hint: "Davr oxirida bizga qarzdor" },
-    { label: "Avans", value: s.totals.advance, tone: "var(--accent-green)", hint: "Davr oxirida oldindan to'langan" },
+    { label: "Qarz", value: s.totals.debt, tone: "out", hint: "Davr oxirida bizga qarzdor" },
+    { label: "Avans", value: s.totals.advance, tone: "in", hint: "Davr oxirida oldindan to'langan" },
   ];
 
   return (
@@ -171,24 +172,7 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
         </div>
       </div>
 
-      {/* Jamilar */}
-      <div className="flex flex-wrap" style={{ borderBottom: "1px solid var(--card-border)" }}>
-        {cols.map((c) => (
-          <div
-            key={c.label}
-            className="px-3 py-2 flex-1 min-w-[130px]"
-            style={{ borderRight: "1px solid var(--card-border)" }}
-            title={c.hint}
-          >
-            <div className="text-micro font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-              {c.label}
-            </div>
-            <div className="text-meta font-semibold tabular-nums" style={{ color: c.tone }}>
-              {formatNum(c.value)}
-            </div>
-          </div>
-        ))}
-      </div>
+      <StatStrip items={cols} minWidth={130} />
 
       {s.totals.accrued < 0 && (
         <div
@@ -289,21 +273,13 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
                         )}
                       </div>
                     </td>
-                    <td className="p-2 text-right tabular-nums" style={{ color: "var(--text-muted)" }}>{num(c.opening)}</td>
-                    <td className="p-2 text-right tabular-nums" style={{ color: c.accrued < 0 ? "var(--warning)" : "var(--text-secondary)" }}>
-                      {num(c.accrued)}
-                    </td>
+                    <td className="p-2 text-right"><Money value={c.opening} tone="muted" dashIfZero /></td>
+                    <td className="p-2 text-right"><Money value={c.accrued} tone="auto" dashIfZero /></td>
                     {s.hasPayments && (
-                      <td className="p-2 text-right tabular-nums" style={{ color: c.paid ? "var(--accent-green)" : "var(--text-muted)" }}>
-                        {num(c.paid)}
-                      </td>
+                      <td className="p-2 text-right"><Money value={c.paid} tone="in" dashIfZero /></td>
                     )}
-                    <td className="p-2 text-right tabular-nums font-semibold" style={{ color: c.debt ? "var(--accent-red)" : "var(--text-muted)" }}>
-                      {num(c.debt)}
-                    </td>
-                    <td className="p-2 text-right tabular-nums font-semibold" style={{ color: c.advance ? "var(--accent-green)" : "var(--text-muted)" }}>
-                      {num(c.advance)}
-                    </td>
+                    <td className="p-2 text-right"><Money value={c.debt} tone="out" dashIfZero bold /></td>
+                    <td className="p-2 text-right"><Money value={c.advance} tone="in" dashIfZero bold /></td>
                   </tr>
 
                   {isOpen &&
@@ -323,11 +299,11 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
                             </span>
                           )}
                         </td>
-                        <td className="py-1.5 px-2 text-right tabular-nums text-micro" style={{ color: "var(--text-muted)" }}>{num(l.opening)}</td>
-                        <td className="py-1.5 px-2 text-right tabular-nums text-micro" style={{ color: "var(--text-muted)" }}>{num(l.accrued)}</td>
+                        <td className="py-1.5 px-2 text-right text-micro"><Money value={l.opening} tone="muted" dashIfZero /></td>
+                        <td className="py-1.5 px-2 text-right text-micro"><Money value={l.accrued} tone="muted" dashIfZero /></td>
                         {s.hasPayments && <td className="py-1.5 px-2 text-right text-micro" style={{ color: "var(--text-muted)" }}>—</td>}
-                        <td className="py-1.5 px-2 text-right tabular-nums text-micro" style={{ color: "var(--text-secondary)" }}>{num(l.debt)}</td>
-                        <td className="py-1.5 px-2 text-right tabular-nums text-micro" style={{ color: "var(--text-secondary)" }}>{num(l.advance)}</td>
+                        <td className="py-1.5 px-2 text-right text-micro"><Money value={l.debt} tone="muted" dashIfZero /></td>
+                        <td className="py-1.5 px-2 text-right text-micro"><Money value={l.advance} tone="muted" dashIfZero /></td>
                       </tr>
                     ))}
                 </React.Fragment>

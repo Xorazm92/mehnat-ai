@@ -18,6 +18,7 @@ import {
 import type { StatementPreview } from "@/lib/bank/types";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 import IncomeRegister from "./IncomeRegister";
+import { Tabs, type TabItem } from "@/components/ui";
 import { friendlyError } from "@/lib/actionError";
 
 interface AccountRow {
@@ -81,6 +82,12 @@ const card: React.CSSProperties = {
 
 export default function KirimKassaClient({ accounts, unmatched, nonBank, companies }: Props) {
   const router = useRouter();
+
+  // TABLAR. Sahifada 10 ta firma kartochkasi, 133 qatorli reyestr va
+  // moslashtirilmaganlar navbati bir vertikalda edi — kundalik ish
+  // (reyestr) uchun har safar pastga aylantirish kerak bo'lardi.
+  type TabKey = "reyestr" | "hisoblar" | "navbat";
+  const [tab, setTab] = useState<TabKey>("reyestr");
   useAutoRefresh();
 
   const fileInput = useRef<HTMLInputElement>(null);
@@ -360,6 +367,17 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           </div>
         </div>
       </div>
+
+      <Tabs
+        items={[
+          { id: "reyestr", label: "Reyestr", hint: "Barcha tushum: bank, plastik, naqd" },
+          { id: "hisoblar", label: "Firma hisoblari", hint: "O'z firmalarimiz bo'yicha bank kirimi" },
+          { id: "navbat", label: "Navbat", hint: "Moslashtirilmagan kirimlar", count: totalUnmatched || undefined },
+        ] as TabItem<TabKey>[]}
+        value={tab}
+        onChange={setTab}
+        ariaLabel="Kirim kassa bo'limlari"
+      />
 
       {/* Qo'lda kirim formasi */}
       {manualType && (
@@ -671,6 +689,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
         </div>
       )}
 
+      {tab === "hisoblar" && (<>
       {/* O'z firmalar hisoblari */}
       <div className="space-y-2">
         <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
@@ -729,11 +748,17 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
         </div>
       </div>
 
+      </>)}
+
+      {tab === "reyestr" && (<>
       {/* Kirim reyestri — barcha tushum (bank ham) bitta jadvalda, sana
           oralig'i bilan. Bu blok ilgari faqat "Plastik va naqd tushumlari"
           edi: bank tushumi ko'rinmasdi va sana filtri yo'q edi. */}
       <IncomeRegister companies={companies} />
 
+      </>)}
+
+      {tab === "navbat" && (<>
       {/* Moslashtirilmaganlar navbati */}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -773,6 +798,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           </div>
         )}
       </div>
+      </>)}
     </div>
   );
 }

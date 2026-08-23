@@ -21,6 +21,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, CreditCard, Building2, Layers } from "lucide-react";
 import { formatNum, formatUzDate } from "@/lib/format";
+import { Money, StatStrip, type StatItem } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from "@/lib/bank/classifyExpense";
 import {
@@ -84,8 +85,13 @@ export default function ExpenseQueue({ queue }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [limit, setLimit] = useState(40);
 
-  const rows = queue.rows.filter((r) => r.group === tab);
+  // Navbatda 349 qator bo'lishi mumkin. Hammasini birdan chiqarish sahifani
+  // o'qib bo'lmaydigan qilib cho'zadi — ommaviy tugmalar baribir hammasini
+  // qamrab oladi, ya'ni to'liq ro'yxat ish uchun shart emas.
+  const allRows = queue.rows.filter((r) => r.group === tab);
+  const rows = allRows.slice(0, limit);
   const meta = GROUP_META[tab];
   const bulkCats = queue.byCategory.filter((c) => c.postable && c.count > 1);
 
@@ -120,37 +126,19 @@ export default function ExpenseQueue({ queue }: Props) {
         </div>
       </div>
 
-      <div className="flex flex-wrap" style={{ borderBottom: "1px solid var(--card-border)" }}>
-        {queue.groups.map((g) => {
-          const m = GROUP_META[g.key];
-          const active = g.key === tab;
-          return (
-            <button
-              key={g.key}
-              onClick={() => setTab(g.key)}
-              className="px-3 py-2 text-left flex-1 min-w-[150px]"
-              style={{
-                background: active ? "var(--card-bg)" : "transparent",
-                borderBottom: active ? `2px solid ${m.tone}` : "2px solid transparent",
-              }}
-            >
-              <span
-                className="flex items-center gap-1.5 text-micro font-semibold"
-                style={{ color: active ? m.tone : "var(--text-muted)" }}
-              >
-                {m.icon}
-                {m.label}
-              </span>
-              <span className="block text-meta font-semibold tabular-nums" style={{ color: "var(--text)" }}>
-                {formatNum(g.amount)}
-              </span>
-              <span className="block text-micro" style={{ color: "var(--text-muted)" }}>
-                {g.count} ta
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Guruhlar — StatStrip ning bosiladigan varianti: har biri ham
+          ko'rsatkich, ham filtr. Ilgari bu qo'lda yozilgan tugmalar edi. */}
+      <StatStrip
+        items={queue.groups.map<StatItem>((g) => ({
+          label: GROUP_META[g.key].label,
+          value: g.amount,
+          tone: g.key === "xarajat" ? "out" : "muted",
+          meta: `${g.count} ta`,
+          onClick: () => setTab(g.key),
+          active: g.key === tab,
+        }))}
+        minWidth={150}
+      />
 
       <p className="px-3 py-2 text-micro" style={{ color: "var(--text-muted)" }}>
         {meta.hint}
@@ -230,8 +218,8 @@ export default function ExpenseQueue({ queue }: Props) {
                   <td className="p-2 whitespace-nowrap">
                     {EXPENSE_CATEGORY_LABELS[r.expenseCategory as ExpenseCategory] ?? r.expenseCategory}
                   </td>
-                  <td className="p-2 text-right tabular-nums font-semibold whitespace-nowrap">
-                    {formatNum(r.amount)}
+                  <td className="p-2 text-right whitespace-nowrap">
+                    <Money value={r.amount} tone={r.group === "xarajat" ? "out" : "muted"} bold />
                   </td>
                   <td className="p-2 text-right whitespace-nowrap">
                     {r.group === "xarajat" && (
@@ -278,11 +266,25 @@ export default function ExpenseQueue({ queue }: Props) {
         )}
       </div>
 
-      {queue.truncated > 0 && (
-        <p className="px-3 py-2 text-micro" style={{ color: "var(--text-muted)" }}>
-          Yana {queue.truncated} ta qator ko&apos;rsatilmadi — yuqoridagi ommaviy tugmalar hammasini qamrab oladi.
-        </p>
-      )}
+      <div
+        className="px-3 py-2 flex items-center justify-between gap-3 flex-wrap text-micro"
+        style={{ borderTop: "1px solid var(--card-border)", color: "var(--text-muted)" }}
+      >
+        <span>
+          {allRows.length} qatordan {rows.length} tasi
+          {queue.truncated > 0 && ` · serverda yana ${queue.truncated} ta`}
+          {" · ommaviy tugmalar hammasini qamrab oladi"}
+        </span>
+        {allRows.length > rows.length && (
+          <button
+            onClick={() => setLimit((v) => v + 100)}
+            className="px-2.5 py-1 rounded-lg font-semibold"
+            style={{ background: "var(--input-bg)", color: "var(--text-secondary)" }}
+          >
+            Yana 100 ta
+          </button>
+        )}
+      </div>
     </div>
   );
 }

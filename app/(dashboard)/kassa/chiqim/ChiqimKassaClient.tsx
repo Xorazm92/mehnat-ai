@@ -23,6 +23,7 @@ import {
 } from "@/server/transit";
 import { friendlyError } from "@/lib/actionError";
 import ExpenseQueue, { type ExpenseQueueData } from "./ExpenseQueue";
+import { Tabs, type TabItem } from "@/components/ui";
 
 interface Channel {
   id: string;
@@ -82,6 +83,12 @@ const SPEND_CATEGORIES = ["ijara", "aloqa", "ovqat", "soliq", "bank_komissiya", 
 
 export default function ChiqimKassaClient({ overview, unlinked, employees, household, queue }: Props) {
   const router = useRouter();
+
+  // TABLAR. Sahifada oltita blok bir vertikalda edi: 66 ta karta ro'yxati,
+  // chiqim navbati, 15 oylik xo'jalik tarixi va 70 ta bog'lanmagan
+  // o'tkazma. Kundalik ish — navbat — eng pastda qolib ketardi.
+  type TabKey = "navbat" | "kartalar" | "xojalik";
+  const [tab, setTab] = useState<TabKey>("navbat");
   // Toifalash navbati: qaysi qator ustida ish ketyapti va xato matni.
 
   // Kassaga hali yozilmaganlar — yozilgani ro'yxatdan chiqadi.
@@ -189,6 +196,17 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
         </div>
       </div>
 
+      <Tabs
+        items={[
+          { id: "navbat", label: "Navbat", hint: "Vipiskadan kelgan chiqimni yopish", count: queue.rows.length || undefined },
+          { id: "kartalar", label: "Kartalar", hint: "Xodim kartalari va bog'lanmagan o'tkazmalar", count: unlinked.length || undefined },
+          { id: "xojalik", label: "Xo'jalik", hint: "Ovqat, taksi, non — kunlik xarajatlar" },
+        ] as TabItem<TabKey>[]}
+        value={tab}
+        onChange={setTab}
+        ariaLabel="Chiqim kassa bo'limlari"
+      />
+
       {/* Yangi kanal */}
       {showNew && (
         <ChannelForm
@@ -202,6 +220,7 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
         />
       )}
 
+      {tab === "kartalar" && (<>
       {/* Kanallar */}
       <div className="space-y-2">
         <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
@@ -329,8 +348,14 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
         />
       )}
 
+      </>)}
+
+      {tab === "navbat" && (<>
       <ExpenseQueue queue={queue} />
 
+      </>)}
+
+      {tab === "xojalik" && (<>
       {/* Kundalik xo'jalik xarajatlari — 15 oylik tarix Excel'dan import qilingan.
           Tranzit kartalaridan alohida: bular naqd/kassadan to'langan. */}
       {household && household.count > 0 && (
@@ -370,6 +395,9 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
         </div>
       )}
 
+      </>)}
+
+      {tab === "kartalar" && (<>
       {/* Bog'lanmagan karta o'tkazmalari */}
       <div className="space-y-2">
         <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
@@ -425,6 +453,8 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
           </div>
         )}
       </div>
+      </>)}
+
     </div>
   );
 }

@@ -22,6 +22,7 @@
 
 import React, { useMemo, useState } from "react";
 import { formatNum } from "@/lib/format";
+import { Money } from "@/components/ui";
 import { Wallet, AlertTriangle, Eye, EyeOff } from "lucide-react";
 
 interface Row {
@@ -254,7 +255,7 @@ export default function CashDeskTable({ report }: Props) {
                       className="px-3 py-2 text-right tabular-nums"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      {formatNum(r.opening)}
+                      <Money value={r.opening} tone="muted" dashIfZero />
                     </td>
                     <td
                       className="px-3 py-2 text-right tabular-nums"
@@ -272,7 +273,7 @@ export default function CashDeskTable({ report }: Props) {
                       className="px-3 py-2 text-right tabular-nums font-semibold"
                       style={{ color: r.closing < 0 ? "var(--danger)" : "var(--text)" }}
                     >
-                      {formatNum(r.closing)}
+                      <Money value={r.closing} tone="neutral" bold />
                     </td>
                   </tr>
                 );

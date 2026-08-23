@@ -19,3 +19,5 @@ export { DataTable, type DataTableProps, type DataColumn } from "./DataTable";
 export { TableToolbar, type ViewMode } from "./TableToolbar";
 export { Tabs, TabPanel, type TabItem, type TabsProps, type TabPanelProps } from "./Tabs";
 export { MonthPicker } from "./MonthPicker";
+export { Money, type MoneyProps, type MoneyTone } from "./Money";
+export { StatStrip, type StatStripProps, type StatItem } from "./StatStrip";
