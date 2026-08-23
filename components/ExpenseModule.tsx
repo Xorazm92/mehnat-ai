@@ -7,30 +7,18 @@ import { translations } from '@/lib/translations';
 import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { exportToExcel } from '@/lib/exportExcel';
 import { canApproveExpense } from '@/lib/expenseApproval';
-import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_COLORS } from '@/lib/constants';
 import BalanceOverview from '@/components/BalanceOverview';
 import { TableToolbar } from '@/components/ui/TableToolbar';
 import { formatUzDateNumeric, formatNum } from '@/lib/format';
-import { groupDigits, ungroupDigits } from '@/lib/format';
+import { groupDigits, ungroupDigits, todayKey } from '@/lib/format';
 import type { BalanceBreakdown } from '@/types';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
 import { useTableState } from '@/hooks/useTableState';
-import { exportRowsToCsv } from '@/lib/exportTable';
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
-
-interface ExpenseModuleProps {
-    expenses: Expense[];
-    lang: Language;
-    userRole?: string;
-    balance?: BalanceBreakdown;
-    onSaveExpense: (expense: Partial<Expense>) => Promise<void>;
-    onDeleteExpense?: (id: string) => Promise<void>;
-    onApproveExpense?: (id: string) => Promise<void>;
-    onRejectExpense?: (id: string) => Promise<void>;
-}
+import { periodKeyOf } from '@/lib/periods';
 
 const EXP_STATUS: Record<string, { label: string; fg: string; bg: string; bd: string }> = {
     approved: { label: 'Tasdiqlangan', fg: 'var(--success)', bg: 'var(--success-bg)', bd: 'var(--success-border)' },
@@ -38,7 +26,27 @@ const EXP_STATUS: Record<string, { label: string; fg: string; bg: string; bd: st
     rejected: { label: 'Rad etildi', fg: 'var(--danger)', bg: 'var(--danger-bg)', bd: 'var(--danger-border)' },
 };
 
-const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole = '', balance, onSaveExpense, onDeleteExpense, onApproveExpense, onRejectExpense }) => {
+// Korxona lug'atini o'qib bo'lmaganda ishlaydigan zaxira ro'yxat.
+const FALLBACK_CATEGORIES = ["Arenda", "Soliqlar", "Bank usluga", "Ovqatga", "Kommunal (svet)", "Texnika", "Marketing", "Boshqa xarajatlar"];
+
+interface ExpenseModuleProps {
+    expenses: Expense[];
+    lang: Language;
+    userRole?: string;
+    balance?: BalanceBreakdown;
+    /**
+     * Korxona lug'atidan kelgan xarajat toifalari (`/expenses/page.tsx`).
+     * Berilmasa eski qattiq ro'yxat ishlaydi — komponent Dashboard kabi
+     * boshqa joylardan ham chaqirilishi mumkin.
+     */
+    categories?: string[];
+    onSaveExpense: (expense: Partial<Expense>) => Promise<void>;
+    onDeleteExpense?: (id: string) => Promise<void>;
+    onApproveExpense?: (id: string) => Promise<void>;
+    onRejectExpense?: (id: string) => Promise<void>;
+}
+
+const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole = '', balance, categories, onSaveExpense, onDeleteExpense, onApproveExpense, onRejectExpense }) => {
   const confirm = useConfirm();
     const t = translations[lang];
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -84,26 +92,18 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
             sortValue: e => e.description ?? '',
             cell: e => <span className="text-body font-bold truncate max-w-[300px] inline-block align-middle" style={{ color: 'var(--text)' }}>{e.description || '—'}</span>,
         },
-        {
-            key: 'paymentMethod', header: "To'lov usuli", width: '130px',
-            sortValue: e => PAYMENT_METHOD_LABELS[e.paymentMethod || 'naqd'] ?? '',
-            cell: e => {
-                const pm = e.paymentMethod || 'naqd';
-                const c = PAYMENT_METHOD_COLORS[pm] || 'var(--text-muted)';
-                return (
-                    <span className="text-micro font-semibold uppercase tracking-widest px-2 py-1 rounded-lg whitespace-nowrap" style={{ color: c, background: `${c}1a`, border: `1px solid ${c}40` }}>
-                        {PAYMENT_METHOD_LABELS[pm] || pm}
-                    </span>
-                );
-            },
-        },
+        // "TO'LOV USULI" USTUNI OLIB TASHLANDI. `paymentMethod` maydoni
+        // `KassaEntry` ga birlashtirilganda o'chirilgan edi — bu ustun esa
+        // har qatorga standart "Naqd" ni soxta ko'rsatib turardi (bazada
+        // maydon yo'q, klient qiymatni o'zi uylab topardi). Haqiqiy ma'lumot
+        // — pul MANBAI (`channelId`), u modalda FundingSourceSelect orqali.
         {
             key: 'amount', header: 'Summa', numeric: true, width: '150px',
             sortValue: e => Number(e.amount) || 0,
             exportValue: e => Number(e.amount) || 0,
             cell: e => (
-                <span className="font-bold text-body" style={{ color: 'var(--danger)' }}>
-                    -{formatNum(e.amount)} <span className="text-micro font-bold uppercase ml-1 opacity-60">sum</span>
+                <span className="font-bold text-body" style={{ color: 'var(--accent-red)' }}>
+                    −{formatNum(e.amount)} <span className="text-micro font-bold uppercase ml-1 opacity-60">so&apos;m</span>
                 </span>
             ),
         },
@@ -144,16 +144,26 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
     ], [userRole, onApproveExpense, onRejectExpense, onDeleteExpense, confirm]);
 
     const stats = useMemo(() => {
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        const totalMonth = expenses
-            .filter(e => e.date.startsWith(currentMonth))
-            .reduce((sum, e) => sum + (e.amount || 0), 0);
+        // Oy kaliti MAHALLIY (`periodKeyOf`) — UTC `toISOString` oy
+        // chegarasida server bilan klientga turlicha oy ko'rsatardi.
+        const currentMonth = periodKeyOf(new Date());
+        const byMonth = new Map<string, number>();
+        for (const e of expenses) {
+            const key = (e.date || '').slice(0, 7);
+            if (!key) continue;
+            byMonth.set(key, (byMonth.get(key) ?? 0) + (e.amount || 0));
+        }
+        const totalMonth = byMonth.get(currentMonth) ?? 0;
+        // Eng katta oy — progress shunga nisbatan: ilgari chiziq SOXTA
+        // `w-3/4` edi, hech qanday ma'lumotga bog'lanmagandi.
+        const maxMonth = Math.max(1, ...byMonth.values());
         const totalAll = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
         return {
             totalMonth,
             totalAll,
-            count: expenses.length
+            maxMonth,
+            count: expenses.length,
         };
     }, [expenses]);
 
@@ -183,11 +193,10 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
             Sana: fmtDate(e.date),
             Kategoriya: e.category,
             Izoh: e.description || '',
-            "To'lov usuli": PAYMENT_METHOD_LABELS[(e.paymentMethod as string)] || e.paymentMethod || '',
             Summa: e.amount || 0,
             Holat: STATUS_UZ[e.status || 'approved'] || e.status || '',
         }));
-        exportToExcel(rows, `xarajatlar-${new Date().toISOString().slice(0, 10)}`, 'Xarajatlar');
+        exportToExcel(rows, `xarajatlar-${todayKey()}`, 'Xarajatlar');
     };
     const pct = (a: number, b: number) => (b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0);
     const limitColor = (p: number) => (p >= 100 ? 'var(--danger)' : p >= 90 ? 'var(--warning)' : 'var(--accent-blue)');
@@ -201,7 +210,17 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
         }
     };
 
-    const categories = ["Office", "Salary", "Tax", "Furniture", "Marketing", "Utilities", "Other"];
+    // Korxona lug'ati (sozlamadan). Eski qattiq inglizcha ro'yxat
+    // ("Office", "Salary"…) bazadagi hech bir toifaga mos kelmasdi va
+    // undan tanlangan xarajat hisobotlarda begona modda bo'lib qolardi.
+    const categoryOptions = useMemo(() => {
+        const base = (categories && categories.length > 0 ? categories : FALLBACK_CATEGORIES).slice();
+        // Tahrirlanayotgan yozuvning o'z toifasi ham ro'yxatda tursin —
+        // aks holda eski/begona toifa select'dan "yo'qolardi".
+        const current = editingExpense?.category;
+        if (current && !base.includes(current)) base.unshift(current);
+        return base;
+    }, [categories, editingExpense?.category]);
 
     return (
         <div className="space-y-4 animate-fade-in pb-20">
@@ -227,10 +246,15 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                             <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>SHU OYDA</span>
                         </div>
                         <div className="text-3xl font-semibold tabular-nums leading-none mb-4" style={{ color: 'var(--text)' }}>
-                            {formatNum(stats.totalMonth)} <span className="text-sm font-bold ml-1" style={{ color: 'var(--text-muted)' }}>sum</span>
+                            {formatNum(stats.totalMonth)} <span className="text-sm font-bold ml-1" style={{ color: 'var(--text-muted)' }}>so&apos;m</span>
                         </div>
+                        {/* Shu oy eng katta oyinga nisbatan — ilgari chiziq
+                            dekorativ `w-3/4` edi va hech narsani o'lchamasdi. */}
                         <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
-                            <div className="h-full w-3/4 rounded-full" style={{ background: 'var(--danger)' }}></div>
+                            <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.round((stats.totalMonth / stats.maxMonth) * 100))}%`, background: 'var(--accent-red)' }} />
+                        </div>
+                        <div className="text-micro font-bold mt-1.5" style={{ color: 'var(--text-muted)' }}>
+                            eng yuqori oyga nisbatan
                         </div>
                     </div>
                 </div>
@@ -246,7 +270,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         </div>
                     </div>
                     <div className="text-2xl font-semibold tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-                        {formatNum(stats.totalAll)} <span className="text-xs font-bold ml-1" style={{ color: 'var(--text-muted)' }}>sum</span>
+                        {formatNum(stats.totalAll)} <span className="text-xs font-bold ml-1" style={{ color: 'var(--text-muted)' }}>so&apos;m</span>
                     </div>
                 </div>
 
@@ -345,9 +369,11 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         </div>
                     }
                 />
-                <Button variant="danger" size="md" onClick={() => { setEditingExpense({ date: new Date().toISOString().split('T')[0], category: 'Office', amount: 0, paymentMethod: 'naqd' }); setIsModalOpen(true); }} className="whitespace-nowrap">
+                {/* "Yangi xarajat" — YARATISH amali, `danger` (qizil) emas:
+                    qizil holat rangi xato/o'chirish ma'nosida qolishi kerak. */}
+                <Button variant="primary" size="md" onClick={() => { setEditingExpense({ date: todayKey(), category: categoryOptions[0] || '', amount: 0 }); setIsModalOpen(true); }} className="whitespace-nowrap">
                     <Plus size={16} />
-                    <span>Yangi Xarajat</span>
+                    <span>Yangi xarajat</span>
                 </Button>
             </div>
 
@@ -359,8 +385,6 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 {filteredExpenses.map((expense) => {
                     const st = EXP_STATUS[expense.status || 'approved'] || EXP_STATUS.approved;
                     const canApr = expense.status === 'pending' && canApproveExpense(userRole, expense.amount);
-                    const pm = expense.paymentMethod || 'naqd';
-                    const pmc = PAYMENT_METHOD_COLORS[pm] || 'var(--text-muted)';
                     return (
                         <div key={expense.id} className="dashboard-card p-4">
                             <div className="flex items-start justify-between gap-3">
@@ -374,12 +398,11 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                     <div className="text-body font-bold mt-1.5 truncate" style={{ color: 'var(--text)' }}>{expense.description || '—'}</div>
                                     <div className="flex items-center gap-2 mt-1 text-meta font-bold" style={{ color: 'var(--text-muted)' }}>
                                         <span className="font-mono">{fmtDate(expense.date)}</span>
-                                        <span className="text-micro font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded-lg" style={{ color: pmc, background: `${pmc}1a` }}>{PAYMENT_METHOD_LABELS[pm] || pm}</span>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <div className="font-semibold text-sm tabular-nums" style={{ color: 'var(--danger)' }}>-{formatNum(expense.amount)}</div>
-                                    <div className="text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
+                                    <div className="font-semibold text-sm tabular-nums" style={{ color: 'var(--accent-red)' }}>−{formatNum(expense.amount)}</div>
+                                    <div className="text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>so&apos;m</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
@@ -474,7 +497,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                             style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                             required
                                         />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>so&apos;m</div>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -491,27 +514,18 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.category}</label>
                                     <select
-                                        value={editingExpense?.category || 'Other'}
+                                        value={editingExpense?.category || categoryOptions[0] || ''}
                                         onChange={(e) => setEditingExpense(prev => ({ ...prev, category: e.target.value }))}
                                         className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
                                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                     >
-                                        {categories.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+                                        {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</label>
-                                    <select
-                                        value={editingExpense?.paymentMethod || 'naqd'}
-                                        onChange={(e) => setEditingExpense(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-                                    >
-                                        {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label.toUpperCase()}</option>)}
-                                    </select>
-                                </div>
-                                {/* Pul MANBAI — "to'lov usuli" dan farqli: usul naqd/plastik/schyot
-                                    ekanini aytadi, manba esa KIMNING hisobidan chiqqanini. */}
+                                {/* Pul MANBAI — "to'lov usuli" dan farqli: manba
+                                    KIMNING hisobidan chiqqanini beradi. Eski
+                                    "To'lov usuli" selecti bazada yo'q maydonni
+                                    tahrirlardi va olib tashlandi. */}
                                 <div className="space-y-2 md:col-span-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
                                         Pul manbai <span style={{ color: 'var(--danger)' }}>*</span>

@@ -252,6 +252,7 @@ export default function CashDeskTable({ report }: Props) {
                 return (
                   <tr
                     key={r.channelId ?? "none"}
+                    className="transition-colors hover:bg-[var(--input-bg)]"
                     style={{
                       borderTop: "1px solid var(--card-border)",
                       background: orphan ? "var(--warning-bg)" : undefined,

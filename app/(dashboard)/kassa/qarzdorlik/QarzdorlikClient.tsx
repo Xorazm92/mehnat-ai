@@ -348,7 +348,7 @@ export default function QarzdorlikClient({
               </thead>
               <tbody>
                 {debtorRows.map((r) => (
-                  <tr key={r.companyId} style={{ borderTop: "1px solid var(--card-border)" }}>
+                  <tr key={r.companyId} className="transition-colors hover:bg-[var(--input-bg)]" style={{ borderTop: "1px solid var(--card-border)" }}>
                     <td className="px-3 py-2">
                       <div className="font-semibold" style={{ color: "var(--text)" }}>{r.name}</div>
                       <div className="text-micro" style={{ color: "var(--text-muted)" }}>STIR {r.inn}</div>

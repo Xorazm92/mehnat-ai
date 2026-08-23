@@ -243,7 +243,7 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
                 <React.Fragment key={id}>
                   <tr
                     onClick={() => setOpen(isOpen ? null : id)}
-                    className="cursor-pointer"
+                    className="cursor-pointer transition-colors hover:bg-[var(--input-bg)]"
                     style={{ borderTop: "1px solid var(--card-border)", background: isOpen ? "var(--input-bg)" : undefined }}
                   >
                     <td className="p-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Upload, Link2, EyeOff, Banknote, CreditCard, Wallet, Search, AlertTriangle, Plus } from "lucide-react";
@@ -121,6 +121,13 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   const [manualChannelId, setManualChannelId] = useState("");
   const [manualBusy, setManualBusy] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
+
+  // Tushum formasi ochilganda ko'rinadigan joyga suring — ilgari u sahifa
+  // o'rtasida paydo bo'lib, foydalanuvchi uni qidirib topishi kerak edi.
+  const formRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (manualType) formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [manualType]);
 
   const resetManual = () => {
     setManualType(null);
@@ -308,6 +315,16 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* ASOSIY AMAL — endi tugma sifatida ko'rinadi. Ilgari tushum
+              qo'shish stat kartalar burchagidagi mayda "+" belgisi orqasida
+              edi va uni hech kim sezmagan. */}
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => { setManualType("naqd"); setManualError(null); }}
+          >
+            <Plus size={15} /> Tushum qo&apos;shish
+          </Button>
           <input
             ref={fileInput}
             type="file"
@@ -318,13 +335,14 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
               if (f) void onPick(f);
             }}
           />
-          <Button variant="primary" size="md" disabled={busy} onClick={() => fileInput.current?.click()}>
+          <Button variant="secondary" size="md" disabled={busy} onClick={() => fileInput.current?.click()}>
             <Upload size={15} /> Vipiska yuklash
           </Button>
         </div>
       </div>
 
-      {/* Umumiy raqamlar */}
+      {/* Umumiy raqamlar — plastik va naqd kartasi BUTUNLAY bosiladigan:
+          karta o'zi shu turdagi tushumni qo'shish formasi ochadi. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 rounded-xl" style={card}>
           <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
@@ -334,44 +352,58 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
             {formatNum(totalBankIncome)} <span className="text-meta">so&apos;m</span>
           </div>
         </div>
-        <div className="p-4 rounded-xl" style={card}>
+        <button
+          type="button"
+          onClick={() => { setManualType("plastik"); setManualError(null); }}
+          className="p-4 rounded-xl text-left transition-colors hover:bg-[var(--input-bg)] cursor-pointer"
+          style={card}
+        >
           <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
             <CreditCard size={14} /> Plastik karta (shu oy)
-            <button
+            <span
               className="ml-auto icon-btn"
               title="Plastik tushum qo'shish"
               aria-label="Plastik tushum qo'shish"
-              onClick={() => { setManualType("plastik"); setManualError(null); }}
+              role="button"
+              tabIndex={-1}
+              onClick={(e) => { e.stopPropagation(); setManualType("plastik"); setManualError(null); }}
             >
               <Plus size={14} />
-            </button>
+            </span>
           </div>
           <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
             {formatNum(sum(plastik))} <span className="text-meta">so&apos;m</span>
           </div>
           <div className="text-micro" style={{ color: "var(--text-muted)" }}>
-            {plastik.length} ta tushum
+            {plastik.length} ta tushum · bosib qo&apos;shing
           </div>
-        </div>
-        <div className="p-4 rounded-xl" style={card}>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setManualType("naqd"); setManualError(null); }}
+          className="p-4 rounded-xl text-left transition-colors hover:bg-[var(--input-bg)] cursor-pointer"
+          style={card}
+        >
           <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
             <Wallet size={14} /> Naqd pul (shu oy)
-            <button
+            <span
               className="ml-auto icon-btn"
               title="Naqd tushum qo'shish"
               aria-label="Naqd tushum qo'shish"
-              onClick={() => { setManualType("naqd"); setManualError(null); }}
+              role="button"
+              tabIndex={-1}
+              onClick={(e) => { e.stopPropagation(); setManualType("naqd"); setManualError(null); }}
             >
               <Plus size={14} />
-            </button>
+            </span>
           </div>
           <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
             {formatNum(sum(naqd))} <span className="text-meta">so&apos;m</span>
           </div>
           <div className="text-micro" style={{ color: "var(--text-muted)" }}>
-            {naqd.length} ta tushum
+            {naqd.length} ta tushum · bosib qo&apos;shing
           </div>
-        </div>
+        </button>
       </div>
 
       <Tabs
@@ -387,7 +419,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
 
       {/* Qo'lda kirim formasi */}
       {manualType && (
-        <div className="p-4 rounded-xl space-y-3" style={card}>
+        <div ref={formRef} className="p-4 rounded-xl space-y-3" style={{ ...card, borderColor: "var(--accent-blue)" }}>
           <div className="flex items-center justify-between">
             <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
               {manualType === "naqd" ? "Naqd tushum" : "Plastik tushum"} qo&apos;shish

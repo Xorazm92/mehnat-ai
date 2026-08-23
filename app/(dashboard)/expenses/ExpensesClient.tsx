@@ -14,9 +14,11 @@ interface Props {
   expenses: Expense[];
   userRole?: string;
   balance?: BalanceBreakdown;
+  /** Korxona lug'atidan kelgan xarajat toifalari. */
+  categories?: string[];
 }
 
-export default function ExpensesClient({ expenses, userRole, balance }: Props) {
+export default function ExpensesClient({ expenses, userRole, balance, categories }: Props) {
   const prompt = usePrompt();
   const router = useRouter();
   useAutoRefresh();
@@ -83,6 +85,7 @@ export default function ExpensesClient({ expenses, userRole, balance }: Props) {
       lang="uz"
       userRole={userRole}
       balance={balance}
+      categories={categories}
       onSaveExpense={handleSave}
       onDeleteExpense={handleDelete}
       onApproveExpense={handleApprove}

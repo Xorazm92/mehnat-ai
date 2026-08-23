@@ -299,7 +299,7 @@ export default function IncomeRegister({ companies }: Props) {
               {visible.map((r) => {
                 const c = SOURCE_COLORS[r.source] ?? SOURCE_COLORS.bank;
                 return (
-                  <tr key={r.id} style={{ borderTop: "1px solid var(--card-border)" }}>
+                  <tr key={r.id} className="transition-colors hover:bg-[var(--input-bg)]" style={{ borderTop: "1px solid var(--card-border)" }}>
                     <td className="p-2 whitespace-nowrap">
                       {r.receivedAt ? formatUzDate(r.receivedAt) : "—"}
                     </td>
