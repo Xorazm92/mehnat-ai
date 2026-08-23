@@ -55,6 +55,17 @@ const contractKey = (raw: string) =>
 
 async function main(): Promise<void> {
   const apply = process.argv.includes("--apply");
+  /**
+   * --opening: 31.07 kesimi ("hisoblanmagacha") moslashgan shartnomalarga
+   * `Contract.openingDebt` yozadi. Bu ASRO hisob yuritishdan OLDINGI qarz:
+   * iyul to'lovi hali hisoblanmagan holat, ya'ni iyul+avgust haqlarini ASRO
+   * o'zi qo'shadi (BILLING_START=2026-07). Qo'shilmasa, eski qarz umuman
+   * ko'rinmay qoladi va qarzdorlik 1C bilan hech qachon mos kelmasdi.
+   *
+   * Yagona son: debt − advance (manfiy = mijoz avans to'lagan — formula
+   * `lib/debt.ts` manfiy outstanding ni avans deb talqin qiladi).
+   */
+  const setOpening = process.argv.includes("--opening");
 
   // `isActive` ham kerak: bazada arxivlangan egizak qatorlar bor va ular
   // STIR bo'yicha moslashtirishni bloklardi (`matchCompanyByInn` izohi).
@@ -211,6 +222,40 @@ async function main(): Promise<void> {
       });
     }
     console.log(`   ✓ yozildi     : ${parsed.lines.length} qator · firma ${matchedCompany} · shartnoma ${matchedContract}`);
+
+    // ── BOSHLANG'ICH QARZ — faqat "hisoblanmagacha" kesimdan ─────────────
+    // Ikkinchi fayl (hisoblanmagan keyin) ishlatilsa, iyul haqi IKKI MARTA
+    // sanalar edi (ASRO ham o'zi qo'shadi).
+    if (setOpening && apply && src.label === "hisoblanmagacha") {
+      let opened = 0;
+      let skippedNoContract = 0;
+      const perContract = new Map<string, number>();
+      for (const l of parsed.lines) {
+        if (!l.contractNumber || !l.contractRaw) continue;
+        const company =
+          matchCompanyByInn(l.customerInn, companies) ??
+          matchCompanyByName(l.customerName, companies, aliases);
+        const contract =
+          company && l.contractNumber
+            ? (byCompanyContract.get(`${company.id}||${contractKey(l.contractNumber)}`) ?? null)
+            : null;
+        if (!contract) { skippedNoContract++; continue; }
+        // Yagona son: qarz minus avans (manfiy natija = mijoz avansida).
+        perContract.set(
+          contract.id,
+          (perContract.get(contract.id) ?? 0) + (Number(l.debt) - Number(l.advance))
+        );
+      }
+      for (const [contractId, net] of perContract) {
+        await prisma.contract.update({
+          where: { id: contractId },
+          data: { openingDebt: net.toFixed(2), openingDebtAt: src.asOf },
+        });
+        opened++;
+      }
+      console.log(`   ✓ boshlang'ich qarz: ${opened} ta shartnoma` +
+        (skippedNoContract ? ` · ${skippedNoContract} qator shartnomaga bog'lanmadi (kesimda ko'rinadi, bazada hisoblanmaydi)` : ""));
+    }
 
 
   }
