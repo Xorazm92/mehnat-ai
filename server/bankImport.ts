@@ -771,16 +771,20 @@ export async function commitStatementUpload(
     try {
       const txRow = await prisma.bankTransaction.findUnique({
         where: { id: row.id },
-        select: { valueDate: true },
+        select: { valueDate: true, account: { select: { ownerCompanyId: true } } },
       });
       if (txRow) {
         await assertPeriodOpen(prisma, periodOf(txRow.valueDate), "bank kirimi");
       }
       const res = await postIncomeTransaction(prisma, {
         transactionId: row.id,
-        companyId: row.matchedCompanyId,
+        companyId: row.matchedCompanyId!,
         contractId: row.matchedContractId,
         createdBy: userId,
+        // Kirim aniq manbaga tushadi (vipiska hisobi → firma kanali).
+        channelId: txRow
+          ? await resolveOwnAccountChannel(txRow.account.ownerCompanyId)
+          : null,
       });
       posted++;
       postedAmount += res.paymentTotal;
@@ -837,7 +841,7 @@ export async function matchAndPostTransaction(input: {
 
   const tx = await prisma.bankTransaction.findUnique({
     where: { id: input.transactionId },
-    select: { valueDate: true, direction: true },
+    select: { valueDate: true, direction: true, account: { select: { ownerCompanyId: true } } },
   });
   if (!tx) throw new Error("Tranzaksiya topilmadi");
   if (tx.direction !== "income") throw new Error("Bu kirim tranzaksiyasi emas");
@@ -850,6 +854,8 @@ export async function matchAndPostTransaction(input: {
     companyId: input.companyId,
     contractId: input.contractId ?? null,
     createdBy: userId,
+    // Kirim ham aniq manbaga tushadi — vipiska hisobining firmasi.
+    channelId: await resolveOwnAccountChannel(tx.account.ownerCompanyId),
   });
 
   revalidatePath("/kassa/kirim");

@@ -401,6 +401,8 @@ export async function postIncomeTransaction(
     companyId: string;
     contractId?: string | null;
     createdBy?: string | null;
+    /** Pul QAYSI manbaga tushdi — vipiska hisobining firmasi kanali. */
+    channelId?: string | null;
   }
 ): Promise<PostResult> {
   const tx = await db.bankTransaction.findUnique({
@@ -420,6 +422,7 @@ export async function postIncomeTransaction(
     paymentMethod: "schyot",
     dedupKey: `bank:${tx.id}`,
     bankTransactionId: tx.id,
+    channelId: input.channelId ?? null,
     createdBy: input.createdBy ?? null,
   });
 
