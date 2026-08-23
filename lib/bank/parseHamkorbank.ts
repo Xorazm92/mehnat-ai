@@ -18,7 +18,8 @@ import {
 import { cleanText, extractAccount, extractInn, toAmount, toDate } from "./normalize";
 
 const PERIOD_RE =
-  /Сведения о работе счета.*?с\s+(\d{2}\.\d{2}\.\d{4})\s+по\s+(\d{2}\.\d{2}\.\d{4})/i;
+  // "c" bu yerda ba'zan LOTIN (Hamkorbank shunday yozadi) — ikkala alifbo.
+  /Сведения о работе счета.*?[сc]\s+(\d{2}\.\d{2}\.\d{4})\s+по\s+(\d{2}\.\d{2}\.\d{4})/i;
 
 function* cells(rows: SheetRow[]): Generator<string> {
   for (const row of rows ?? []) {
@@ -46,12 +47,15 @@ function findTxHeader(
       const keys: Record<string, string> = {};
       for (const [k, v] of entries) {
         const label = String(v ?? "").toLowerCase();
+        // Hamkorbank sarlavhalarni lotin/kirill ARALASH yozadi ("Cчет/ИНН")
+        // — tekshiruvlar ikkala alifboga chidamli bo'lishi shart.
         if (/дата/.test(label)) keys.date = k;
-        else if (/счет|счёт/.test(label) && !/инн/.test(label)) keys.party = k;
+        // "Cчет/ИНН" — INN shu ustunning oxirida, alohida guard kerak emas.
+        else if (/[сc]ч[еe]т/.test(label)) keys.party = k;
         else if (/№\s*док|^№$/.test(label)) keys.doc = k;
-        else if (/^оп\b|^опер/.test(label)) keys.op = k;
-        else if (/дебет/.test(label)) keys.debit = k;
-        else if (/кредит/.test(label)) keys.credit = k;
+        else if (/^[оo]п\b|[оo]пер/.test(label)) keys.op = k;
+        else if (/[дd][еe][бb][еe][тt]/.test(label)) keys.debit = k;
+        else if (/[кk][рr][еe][дd][иi][тt]/.test(label)) keys.credit = k;
         else if (/назначение/.test(label)) keys.purpose = k;
       }
       if (keys.debit && keys.credit && keys.party)
