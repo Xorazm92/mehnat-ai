@@ -1,25 +1,32 @@
-// BOSH KASSA — FAQAT "PUL QAYERDA TURIBDI" VA "PUL NIMAGA KETDI".
+// BOSH KASSA — "PUL QAYERDA TURIBDI", "PUL NIMAGA KETDI" VA
+// "QAYSI PUL QAYDI O'TDI".
 //
-// Ilgari bu sahifada uchta har xil moliyaviy savol bitta ekranga qo'yilgan edi:
-// kassalar qoldig'i, umumiy balans va 150+ firmaning oylik to'lov jadvali.
-// Natijada foydalanuvchi bir vaqtda uch xil "balans" va ikki xil firma
-// ro'yxatini ko'rar va "qaysi raqam haqiqiy?" degan savol tug'ilardi.
+// Sahifa tartibi buxgalterning kundalik ish tartibiga mos:
+//   1. Balans geroyi      — hozir qancha pul bor (umumiy manzara)
+//   2. Operatsiyalar jurnal — kundalik ISH joyi: barcha harakat bitta
+//      jadvalda, tez kiritish, eksport. Excelda hammasi bir varaqda
+//      bo'lgani uchun odamlar uni sevardi — shu tamoyil.
+//   3. Kassalar qoldig'i / Moddalar kesimi — oy yakuni hisobotlari,
+//      YIG'ILADIGAN: ularni har safar ko'rish shart emas va ochiq turganda
+//      asosiy ish joyini pastga surib yuborar edi ("bosh aylanishi"ning
+//      sabablaridan biri shu edi — uchta hisobot bitta ekranda stack bo'lib).
 //
-// Endi taqsimot aniq:
-//   /kassa            — kassalar qoldig'i + moddalar kesimi + umumiy balans
-//   /kassa/kirim      — tushumlar reyestri va moslashtirilmagan kirimlar
-//   /kassa/chiqim     — kanallar, xodim kartalari daftari, xarajat yozish
-//   /kassa/qarzdorlik — kim qarzdor + firmalar bo'yicha oylik to'lovlar
-//
-// OY URL DAN OLINADI (`?oy=2026-07`). Bungacha sahifa joriy oyga qotib
-// qolgan edi va o'tgan oy qoldig'ini ko'rish imkoni umuman yo'q edi.
+// Hisobotlar oyi URL dan olinadi (`?oy=2026-07`); jurnal esa o'z davr
+// tanlagichi bilan mustaqil ishlaydi.
 import { getAvailableBalance, getMonthBreakdown } from "@/lib/balance";
 import { getCashDeskReport, getCategoryBreakdown } from "@/server/kassaReport";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import {
+  KASSA_CATEGORIES_KEY,
+  resolveKassaCategories,
+} from "@/lib/kassaCategories";
 import { formatPeriodLabel, normalizePeriodKey, periodKeyOf } from "@/lib/periods";
 import CashDeskTable from "./CashDeskTable";
 import CategoryBreakdown from "./CategoryBreakdown";
 import PeriodPicker from "./PeriodPicker";
 import KassaClient from "./KassaClient";
+import JournalClient from "./JournalClient";
 
 export const metadata = { title: "Kassa" };
 
@@ -49,7 +56,15 @@ export default async function KassaPage({
     : periodKeyOf(new Date());
 
   const [y, m] = period.split("-").map(Number);
+  const session = await auth();
+  const userRole = (session?.user?.role as string) || "";
   const balance = await getAvailableBalance();
+
+  // Korxona lug'ati — jurnal tez kiritish formasi uchun.
+  const catRow = await prisma.systemSetting.findUnique({
+    where: { key: KASSA_CATEGORIES_KEY },
+  });
+  const cats = resolveKassaCategories(catRow?.value);
 
   const [cashDesk, categories, monthly] = await Promise.all([
     safe("Kassalar jadvali", getCashDeskReport(period)),
@@ -64,6 +79,8 @@ export default async function KassaPage({
         <h1 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
           Kassa
         </h1>
+        {/* Davr tanlagich FAQAT quyidagi oylik hisobotlarga tegishli —
+            jurnal o'z davri bilan mustaqil. */}
         <PeriodPicker period={period} />
       </div>
 
@@ -83,13 +100,33 @@ export default async function KassaPage({
         </div>
       )}
 
-      {cashDesk.data && <CashDeskTable report={cashDesk.data} />}
-      {categories.data && <CategoryBreakdown data={categories.data} />}
       <KassaClient
         balance={balance}
         monthly={monthly.data ?? undefined}
         periodLabel={formatPeriodLabel(period)}
       />
+
+      <JournalClient
+        userRole={userRole}
+        incomeCategories={cats.income}
+        expenseCategories={cats.expense}
+      />
+
+      {/* OY YAKUNI HISOBOTLARI — yig'ilgan. Kundalik ish jurnalda; bu ikkisi
+          oy oxirida solishtirish uchun. `<details>` — state'siz, seanslar
+          orasida React holatini buzmaydi va chop etishda ham ishlaydi. */}
+      <details>
+        <summary className="cursor-pointer select-none text-meta font-semibold px-3 py-2 rounded-xl transition-colors hover:bg-[var(--input-bg)]" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}>
+          Kassalar qoldig&apos;i va moddalar kesimi — {formatPeriodLabel(period)}{" "}
+          <span className="font-normal" style={{ color: "var(--text-muted)" }}>
+            (oy yakuni hisobotlari)
+          </span>
+        </summary>
+        <div className="mt-3 space-y-4">
+          {cashDesk.data && <CashDeskTable report={cashDesk.data} />}
+          {categories.data && <CategoryBreakdown data={categories.data} />}
+        </div>
+      </details>
     </div>
   );
 }
