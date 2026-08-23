@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Upload, Link2, EyeOff, Banknote, CreditCard, Wallet, Search, AlertTriangle, Plus } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { formatNum, formatUzDate } from "@/lib/format";
+import { groupDigits, ungroupDigits, todayKey, formatNum, formatUzDate } from "@/lib/format";
+import { Money } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import {
   previewStatement,
@@ -109,7 +110,9 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   const [dupWarning, setDupWarning] = useState<string | null>(null);
   const [manualAmount, setManualAmount] = useState("");
   const [manualNote, setManualNote] = useState("");
-  const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10));
+  // Toshkent kalendari — UTC `toISOString` kechki tunda KECCHA sanani
+  // berib qo'yardi (prod server UTC da yuradi).
+  const [manualDate, setManualDate] = useState(() => todayKey());
   // Tushum QAYSI kassaga kirgani — naqd uchun ham, plastik uchun ham.
   //
   // Ilgari faqat plastikda so'ralardi. Natijada naqd tushum kanalsiz yozilar
@@ -132,7 +135,8 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
 
   const submitManual = async (opts?: { force?: boolean }) => {
     if (!manualType) return;
-    const amount = Number(manualAmount.replace(/[^\d.]/g, ""));
+    // Kirishda probellar bilan guruhlangan ("1 500 000") — yechib olinadi.
+    const amount = Number(ungroupDigits(manualAmount));
     if (!Number.isFinite(amount) || amount <= 0) {
       setManualError("Summa musbat son bo'lishi kerak");
       return;
@@ -336,6 +340,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
             <button
               className="ml-auto icon-btn"
               title="Plastik tushum qo'shish"
+              aria-label="Plastik tushum qo'shish"
               onClick={() => { setManualType("plastik"); setManualError(null); }}
             >
               <Plus size={14} />
@@ -354,6 +359,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
             <button
               className="ml-auto icon-btn"
               title="Naqd tushum qo'shish"
+              aria-label="Naqd tushum qo'shish"
               onClick={() => { setManualType("naqd"); setManualError(null); }}
             >
               <Plus size={14} />
@@ -409,8 +415,8 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
                 className="w-full mt-1 px-3 py-2 rounded-lg text-meta text-right tabular-nums outline-none"
                 style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
                 value={manualAmount}
-                onChange={(e) => setManualAmount(e.target.value)}
-                placeholder="1000000"
+                onChange={(e) => setManualAmount(groupDigits(e.target.value))}
+                placeholder="10 000 000"
               />
             </label>
             <label className="block">
@@ -891,8 +897,8 @@ function UnmatchedCard({
             </div>
           )}
         </div>
-        <div className="text-lg font-semibold tabular-nums whitespace-nowrap" style={{ color: "var(--success)" }}>
-          +{formatNum(Number(tx.amount))}
+        <div className="text-lg font-semibold tabular-nums whitespace-nowrap">
+          <Money value={Number(tx.amount)} tone="in" showSign bold />
         </div>
       </div>
 

@@ -66,6 +66,11 @@ export interface IncomeRegisterTotals {
   count: number;
   /** Mijozga bog'lanmagan tushum — bu raqam katta bo'lsa ma'lumot sifati past. */
   anonymousTotal: number;
+  /**
+   * `limit` ga siqib tashlangan qatorlar. Ekranda ko'rsatiladi: aks holda
+   * ro'yxat JIM qisqardi va jami "hammasi shu" deb xato o'qilardi.
+   */
+  truncated: number;
 }
 
 const SOURCES = new Set(["bank", "plastik", "naqd"]);
@@ -93,7 +98,7 @@ export async function getIncomeRegister(filter: IncomeRegisterFilter = {}) {
   // o'sha pul reyestrdan JIM tushib qolardi va jami raqam kam chiqardi.
   // Firma filtri qo'yilganda esa faqat o'sha firmaniki qoldiriladi.
 
-  const [allocations, manual, channels] = await Promise.all([
+  const [allocations, manual, channels, allocCount, manualCount] = await Promise.all([
     prisma.paymentAllocation.findMany({
       where: {
         receivedAt: { gte: range.from, lt: range.to },
@@ -149,6 +154,31 @@ export async function getIncomeRegister(filter: IncomeRegisterFilter = {}) {
           take: limit,
         }),
     prisma.disbursementChannel.findMany({ select: { id: true, label: true, type: true } }),
+    // Kesilgan qatorlarni sanaymiz — ekranda "yana N ta" ko'rsatish uchun.
+    prisma.paymentAllocation.count({
+      where: {
+        receivedAt: { gte: range.from, lt: range.to },
+        ...(source ? { source } : {}),
+        ...(filter.channelId ? { channelId: filter.channelId } : {}),
+        payment: {
+          deletedAt: null,
+          ...(filter.companyId ? { companyId: filter.companyId } : {}),
+        },
+      },
+    }),
+    source === "bank"
+      ? Promise.resolve(0)
+      : prisma.kassaEntry.count({
+          where: {
+            type: "income",
+            deletedAt: null,
+            date: { gte: range.from, lt: range.to },
+            ...(filter.companyId ? { companyId: filter.companyId } : {}),
+            ...(filter.channelId ? { channelId: filter.channelId } : {}),
+            ...(source === "naqd" ? { category: "Naqd tushum" } : {}),
+            ...(source === "plastik" ? { category: "Plastik tushum" } : {}),
+          },
+        }),
   ]);
 
   // `KassaEntry.companyId` FK EMAS (kanal bilan bir xil qoida: firma
@@ -225,6 +255,8 @@ export async function getIncomeRegister(filter: IncomeRegisterFilter = {}) {
     bank: 0,
     count: rows.length,
     anonymousTotal: 0,
+    // Qidiruv (q) MIJOZDA ham kesadi — u hisobga kirgan kesilgan emas.
+    truncated: Math.max(0, allocCount + manualCount - rows.length),
   };
   for (const r of rows) {
     totals.total += r.amount;

@@ -7,7 +7,8 @@ import {
   CreditCard, Link2, Plus, Wand2, Snowflake, Play, AlertTriangle, ArrowDownRight, ArrowUpRight,
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { formatNum, formatUzDate } from "@/lib/format";
+import { groupDigits, ungroupDigits, todayKey, formatNum, formatUzDate } from "@/lib/format";
+import { Money } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { EXPENSE_CATEGORY_LABELS } from "@/lib/bank/classifyExpense";
 // Sof konstantalar moduli — `lib/transit.ts` orqali kelsa Prisma/`pg` mijoz
@@ -316,9 +317,8 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
                                 : "—"}
                             </td>
                             <td className="p-2 max-w-[320px] truncate">{e.description ?? "—"}</td>
-                            <td className="p-2 text-right tabular-nums font-semibold whitespace-nowrap"
-                                style={{ color: e.direction === "in" ? "var(--success)" : "var(--danger)" }}>
-                              {e.direction === "in" ? "+" : "−"}{formatNum(Number(e.amount))}
+                            <td className="p-2 text-right tabular-nums font-semibold whitespace-nowrap">
+                              <Money value={Number(e.amount)} tone={e.direction === "in" ? "in" : "out"} showSign bold />
                             </td>
                           </tr>
                         ))}
@@ -423,8 +423,8 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-lg font-semibold tabular-nums whitespace-nowrap" style={{ color: "var(--danger)" }}>
-                    −{formatNum(Number(t.amount))}
+                  <span className="text-lg font-semibold tabular-nums whitespace-nowrap">
+                    <Money value={-Math.abs(Number(t.amount))} tone="out" bold />
                   </span>
                   <select
                     className="px-2 py-1.5 rounded-lg text-meta outline-none"
@@ -528,13 +528,14 @@ function SpendForm({
   onSave: (p: { amount: number; date: string; category: string; description?: string }) => void;
 }) {
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  // Toshkent kalendari — UTC standart tunda kecha sanani berardi.
+  const [date, setDate] = useState(todayKey());
   const [category, setCategory] = useState<string>("ijara");
   const [description, setDescription] = useState("");
 
   const input = "w-full px-3 py-2 rounded-lg text-meta outline-none";
   const style = { background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" } as const;
-  const value = Number(amount) || 0;
+  const value = Number(ungroupDigits(amount)) || 0;
   const over = value > channel.balance;
 
   return (
@@ -550,7 +551,14 @@ function SpendForm({
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <label className="block">
           <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Summa</span>
-          <input type="number" className={input + " mt-1 text-right tabular-nums"} style={style} value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <input
+            inputMode="numeric"
+            className={input + " mt-1 text-right tabular-nums"}
+            style={style}
+            value={amount}
+            onChange={(e) => setAmount(groupDigits(e.target.value))}
+            placeholder="10 000 000"
+          />
         </label>
         <label className="block">
           <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Sana</span>

@@ -23,7 +23,9 @@
 import React, { useMemo, useState } from "react";
 import { formatNum } from "@/lib/format";
 import { Money } from "@/components/ui";
-import { Wallet, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { exportRowsToExcel, type ExportColumn } from "@/lib/exportTable";
+import { Wallet, AlertTriangle, Eye, EyeOff, Download } from "lucide-react";
 
 interface Row {
   channelId: string | null;
@@ -62,6 +64,18 @@ const sumOf = (rows: Row[]) => ({
   outflow: rows.reduce((s, r) => s + r.outflow, 0),
   closing: rows.reduce((s, r) => s + r.closing, 0),
 });
+
+/** Excel eksporti — buxgalter oy yakunida aynan shu jadvalni yuklab oladi. */
+const EXPORT_COLUMNS: ExportColumn<Row>[] = [
+  { key: "label", header: "Kassa", exportValue: (r) => r.label },
+  { key: "typeLabel", header: "Turi", exportValue: (r) => r.typeLabel },
+  { key: "detail", header: "Hisob/karta", exportValue: (r) => r.detail ?? "" },
+  { key: "opening", header: "Ochilish", exportValue: (r) => r.opening },
+  { key: "income", header: "Kirim", exportValue: (r) => r.income },
+  { key: "outflow", header: "Chiqim", exportValue: (r) => r.outflow },
+  { key: "closing", header: "Qoldiq", exportValue: (r) => r.closing },
+  { key: "transit", header: "Tranzit daftari", exportValue: (r) => r.transitBalance ?? "" },
+];
 
 export default function CashDeskTable({ report }: Props) {
   const { rows, totals } = report;
@@ -112,9 +126,26 @@ export default function CashDeskTable({ report }: Props) {
         </div>
         {/* JAMI QOLDIQ har doim HAMMA kanal bo'yicha — tab tanlovi uni
             o'zgartirmaydi, aks holda raqam balansga to'g'ri kelmasdi. */}
-        <span className="text-meta tabular-nums font-semibold" style={{ color: "var(--text)" }}>
-          Jami qoldiq (hamma kassa): {formatNum(totals.closing)} so&apos;m
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-meta tabular-nums font-semibold" style={{ color: "var(--text)" }}>
+            Jami qoldiq (hamma kassa): {formatNum(totals.closing)} so&apos;m
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={visible.length === 0}
+            onClick={() =>
+              exportRowsToExcel(
+                active.rows,
+                EXPORT_COLUMNS,
+                `kassalar-${report.period}-${active.key}`,
+                "Kassalar"
+              )
+            }
+          >
+            <Download size={13} /> Excel
+          </Button>
+        </div>
       </div>
 
       {report.unassigned !== 0 && (
@@ -257,17 +288,14 @@ export default function CashDeskTable({ report }: Props) {
                     >
                       <Money value={r.opening} tone="muted" dashIfZero />
                     </td>
-                    <td
-                      className="px-3 py-2 text-right tabular-nums"
-                      style={{ color: "var(--success)" }}
-                    >
-                      {r.income ? "+" + formatNum(r.income) : "—"}
+                    {/* PUL YO'NALISHI — `--accent-*` tokenlari (Money tone).
+                        `--danger/--success` holat ranglari; ularni bu yerdan
+                        olib tashlaganda qizil faqat xato ma'nosida qoladi. */}
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      <Money value={r.income} tone="in" showSign dashIfZero />
                     </td>
-                    <td
-                      className="px-3 py-2 text-right tabular-nums"
-                      style={{ color: "var(--danger)" }}
-                    >
-                      {r.outflow ? "−" + formatNum(r.outflow) : "—"}
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      <Money value={r.outflow} tone="out" showSign dashIfZero />
                     </td>
                     <td
                       className="px-3 py-2 text-right tabular-nums font-semibold"
@@ -288,19 +316,13 @@ export default function CashDeskTable({ report }: Props) {
                 {active.label} — jami
               </td>
               <td className="px-3 py-2 text-right tabular-nums" style={{ color: "var(--text-muted)" }}>
-                {formatNum(subtotal.opening)}
+                <Money value={subtotal.opening} tone="muted" dashIfZero />
               </td>
-              <td
-                className="px-3 py-2 text-right tabular-nums font-semibold"
-                style={{ color: "var(--success)" }}
-              >
-                +{formatNum(subtotal.income)}
+              <td className="px-3 py-2 text-right tabular-nums font-semibold">
+                <Money value={subtotal.income} tone="in" showSign dashIfZero bold />
               </td>
-              <td
-                className="px-3 py-2 text-right tabular-nums font-semibold"
-                style={{ color: "var(--danger)" }}
-              >
-                −{formatNum(subtotal.outflow)}
+              <td className="px-3 py-2 text-right tabular-nums font-semibold">
+                <Money value={subtotal.outflow} tone="out" showSign dashIfZero bold />
               </td>
               <td
                 className="px-3 py-2 text-right tabular-nums font-semibold"

@@ -18,6 +18,10 @@ import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { assertFundingSource } from "@/server/fundingSources";
+// SALARY_CATEGORY_RE — oylik toifasini aniqlashning YAGONA manbasi
+// (`lib/cashGate.ts`). Bu yerda nusxasi bo'lganda qoida ikki joyda
+ // turib qolardi va biri o'zgarganda ikkinchisi jimgina eskiqardi.
+import { SALARY_CATEGORY_RE } from "@/lib/cashGate";
 import { isFinanceRole } from "@/lib/permissions";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { serialize } from "@/lib/serialize";
@@ -40,10 +44,9 @@ export async function getKassaEntries(filters?: {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const role = session.user.role as string;
-  if (!["super_admin", "admin", "chief_accountant", "bank_manager"].includes(role)) {
-    throw new Error("Forbidden");
-  }
+  // Qo'lda ro'yxat emas — `isFinanceRole`. Ilgari shu ro'yxat shu yerda
+  // nusxalangan edi va yangi rol qo'shilganda faqat bittasi eslab qolinardi.
+  if (!isFinanceRole(session.user.role as string)) throw new Error("Forbidden");
 
   return serialize(
     await prisma.kassaEntry.findMany({
@@ -77,10 +80,7 @@ export async function getKassaEntries(filters?: {
  * (kartadan berilgan mehnat haqi) darvoza orqali o'tadi va u yerda ruxsat bor.
  */
 function assertNotSalary(type: string, category: string) {
-  if (
-    type === "expense" &&
-    /oylik|ish\s*haqi|mehnat\s*haqi|maosh|zarplata|зарплат|ойлик|иш\s*хак/i.test(category)
-  ) {
+  if (type === "expense" && SALARY_CATEGORY_RE.test(category)) {
     throw new Error(
       "Oylik kassa chiqimi sifatida yozilmaydi — u ikki marta hisobga kirardi. " +
         "Oylik to'lovi \"Oylik\" bo'limi (/payroll) orqali beriladi."

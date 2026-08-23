@@ -14,6 +14,7 @@
 import React, { useEffect, useState, useTransition, useMemo } from "react";
 import { Search, Download, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Money } from "@/components/ui";
 import { formatNum, formatUzDate } from "@/lib/format";
 import { friendlyError } from "@/lib/actionError";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/exportTable";
@@ -143,7 +144,8 @@ export default function IncomeRegister({ companies }: Props) {
   const stats = search.trim() ? shown : (totals ?? shown);
 
   const kpis: { label: string; value: number; color?: string }[] = [
-    { label: "Jami kirim", value: stats.total, color: "var(--success)" },
+    // PUL YO'NALISHI — `--accent-green` (`--success` holat rangi emas).
+    { label: "Jami kirim", value: stats.total, color: "var(--accent-green)" },
     { label: "Naqd", value: stats.naqd },
     { label: "Plastik", value: stats.plastik },
     { label: "Bank o'tkazmasi", value: stats.bank },
@@ -322,11 +324,8 @@ export default function IncomeRegister({ companies }: Props) {
                     </td>
                     <td className="p-2 max-w-[200px] truncate">{r.channelLabel ?? "—"}</td>
                     <td className="p-2">{r.docRef ?? "—"}</td>
-                    <td
-                      className="p-2 text-right tabular-nums font-semibold whitespace-nowrap"
-                      style={{ color: "var(--success)" }}
-                    >
-                      +{formatNum(r.amount)}
+                    <td className="p-2 text-right tabular-nums font-semibold whitespace-nowrap">
+                      <Money value={r.amount} tone="in" showSign bold />
                     </td>
                   </tr>
                 );
@@ -335,10 +334,21 @@ export default function IncomeRegister({ companies }: Props) {
             <tfoot>
               <tr style={{ background: "var(--input-bg)", borderTop: "2px solid var(--card-border)" }}>
                 <td className="p-2 font-semibold" colSpan={6}>Jami</td>
-                <td className="p-2 text-right tabular-nums font-bold" style={{ color: "var(--success)" }}>
-                  {formatNum(shown.total)}
+                <td className="p-2 text-right tabular-nums font-bold">
+                  <Money value={shown.total} tone="in" bold />
                 </td>
               </tr>
+              {/* Server `limit` ga kesgan qatorlar — aks holda ro'yxat
+                  "hammasi shu" degan yolg'on taassurot qoldirardi. */}
+              {(totals?.truncated ?? 0) > 0 && (
+                <tr style={{ background: "var(--input-bg)" }}>
+                  <td className="p-2 text-micro" colSpan={7} style={{ color: "var(--warning)" }}>
+                    Davr bo&apos;yicha jami {totals!.count + totals!.truncated} ta qator;{" "}
+                    {totals!.truncated} tasi ko&apos;rsatilmagan — davrni qisqartiring yoki
+                    firman tanlab toraytiring.
+                  </td>
+                </tr>
+              )}
             </tfoot>
           </table>
         </div>

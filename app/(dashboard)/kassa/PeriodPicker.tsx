@@ -9,11 +9,16 @@
 // Tanlov URL da (`?oy=2026-07`), state'da emas — shunda sahifa server
 // tomonda o'sha oy uchun qayta yig'iladi, havola ulashilsa boshqa odam
 // AYNAN o'sha oyni ko'radi, va orqaga tugmasi kutilgandek ishlaydi.
+//
+// OY GRIDI (`MonthPicker`) — strelkalar bilan 6 oy orqaga chiqish 6 klik
+// edi; buxgalter yopiq oylar orasida tez-tez sakraydi, grid bir klikda
+// yetkazadi. Strelkalar qoldi — qo'shni oyga o'tish eng ko'p ishlatilgan
+// harakat va u uchun ikki bosish maqbul.
 
 import React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
-import { formatPeriodLabel } from "@/lib/periods";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { MonthPicker } from "@/components/ui/MonthPicker";
 
 const shift = (key: string, by: number) => {
   const [y, m] = key.split("-").map(Number);
@@ -49,13 +54,7 @@ export default function PeriodPicker({ period }: { period: string }) {
         <ChevronLeft size={14} />
       </button>
 
-      <span
-        className="px-3 py-1.5 rounded-lg text-meta font-semibold flex items-center gap-1.5"
-        style={{ background: "var(--input-bg)", color: "var(--text)" }}
-      >
-        <CalendarDays size={13} style={{ color: "var(--text-muted)" }} />
-        {formatPeriodLabel(period)}
-      </span>
+      <MonthPicker selectedPeriod={period} onChange={go} />
 
       <button
         onClick={() => go(shift(period, 1))}

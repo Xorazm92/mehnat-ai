@@ -147,6 +147,17 @@ export interface KassaMovementInput {
   expenseAccount?: typeof ACCOUNTS.OPERATING_EXPENSE | typeof ACCOUNTS.SALARY_EXPENSE;
 }
 
+/**
+ * MEHNAT HAQI TOIFASINI ANIQLAYDIGAN YAGONA MANBA.
+ *
+ * Ilgari bu regexp `server/kassa.ts` va shu faylda ikki nusxa bo'lib, birida
+ * qoida o'zgarsa ikkinchisi jimgina eski qolardi. Har qanday yangi tekshiruv
+ * shu konstantadan olsin — kategoriyalar ro'yxati kengaysa bitta joyda
+ * kengayadi.
+ */
+export const SALARY_CATEGORY_RE =
+  /oylik|ish\s*haqi|mehnat\s*haqi|maosh|zarplata|зарплат|ойлик|иш\s*хак/i;
+
 export interface CashResult {
   id: string;
   transactionId: string | null;
@@ -183,7 +194,7 @@ export async function recordKassaMovement(
   if (
     input.type === "expense" &&
     expenseAccount === ACCOUNTS.OPERATING_EXPENSE &&
-    /oylik|ish\s*haqi|mehnat\s*haqi|maosh|zarplata|зарплат|ойлик|иш\s*хак/i.test(input.category)
+    SALARY_CATEGORY_RE.test(input.category)
   ) {
     throw new Error(
       `"${input.category}" mehnat haqiga o'xshaydi — operatsion xarajatga yozilmaydi. ` +

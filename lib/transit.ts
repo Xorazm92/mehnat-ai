@@ -22,7 +22,7 @@
 // Natijada har bir karta bo'yicha "qancha berildi / qancha sarflandi / qancha
 // qoldi" ko'rinadi, va tizimda "sarflanmagan" pul ham yo'qolmaydi.
 
-import { Prisma } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { recordKassaMovement, type CashActor } from "@/lib/cashGate";
 import { ACCOUNTS, postLedger, getCashByChannel } from "@/lib/ledger";
@@ -61,9 +61,12 @@ export interface ChannelBalance {
  * vaqt o'tib haqiqatdan uzoqlashadi va uni tiklash imkoni bo'lmaydi
  * (loyihada `Payment.amount` ham xuddi shu sababdan taqsimotlardan qayta
  * hisoblanadi).
+ *
+ * `Db | PrismaClient` — server komponent xom mijoz bilan, action tx ichida
+ * chaqiradi; ikkalasi ham cast'siz kirishi uchun ittifoq tip.
  */
 export async function getChannelBalances(
-  db: Db,
+  db: Db | PrismaClient,
   opts: { includeInactive?: boolean } = {}
 ): Promise<ChannelBalance[]> {
   const channels = await db.disbursementChannel.findMany({

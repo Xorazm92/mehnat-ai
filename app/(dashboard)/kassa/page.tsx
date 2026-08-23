@@ -23,6 +23,19 @@ import KassaClient from "./KassaClient";
 
 export const metadata = { title: "Kassa" };
 
+/**
+ * Hisobotni yutib yubormasdan o'qiyniki: xato bo'lsa SABABI ekranga chiqadi.
+ * Ilgari `.catch(() => null)` edi — jadval shunchaki g'oyib bo'lardi va
+ * buxgalter "ma'lumot yo'q" bilan "yuklanmadi" ni ajrata olmasdi.
+ */
+async function safe<T>(label: string, p: Promise<T>): Promise<{ data: T | null; error: string | null }> {
+  try {
+    return { data: await p, error: null };
+  } catch {
+    return { data: null, error: label };
+  }
+}
+
 export default async function KassaPage({
   searchParams,
 }: {
@@ -38,12 +51,12 @@ export default async function KassaPage({
   const [y, m] = period.split("-").map(Number);
   const balance = await getAvailableBalance();
 
-  // Hisobotlar xato bersa sahifa yiqilmasin: balans bloki baribir foydali.
   const [cashDesk, categories, monthly] = await Promise.all([
-    getCashDeskReport(period).catch(() => null),
-    getCategoryBreakdown(period).catch(() => null),
-    getMonthBreakdown(y, m).catch(() => null),
+    safe("Kassalar jadvali", getCashDeskReport(period)),
+    safe("Moddalar kesimi", getCategoryBreakdown(period)),
+    safe("Oylik kesim", getMonthBreakdown(y, m)),
   ]);
+  const failed = [cashDesk.error, categories.error, monthly.error].filter(Boolean) as string[];
 
   return (
     <div className="h-full p-4 md:p-6 space-y-4">
@@ -54,11 +67,27 @@ export default async function KassaPage({
         <PeriodPicker period={period} />
       </div>
 
-      {cashDesk && <CashDeskTable report={JSON.parse(JSON.stringify(cashDesk))} />}
-      {categories && <CategoryBreakdown data={JSON.parse(JSON.stringify(categories))} />}
+      {failed.length > 0 && (
+        <div
+          className="p-3 rounded-xl flex items-start gap-2 text-meta"
+          style={{ background: "var(--danger-bg)", border: "1px solid var(--danger)" }}
+          role="alert"
+        >
+          <span style={{ color: "var(--danger)" }} aria-hidden>
+            ⚠
+          </span>
+          <span style={{ color: "var(--text-secondary)" }}>
+            Hisobot yuklanmadi: <b>{failed.join(", ")}</b>. Sahifani yangilang;
+            takrorlansa tizim administratoriga murojaat qiling.
+          </span>
+        </div>
+      )}
+
+      {cashDesk.data && <CashDeskTable report={cashDesk.data} />}
+      {categories.data && <CategoryBreakdown data={categories.data} />}
       <KassaClient
-        balance={JSON.parse(JSON.stringify(balance))}
-        monthly={monthly ? JSON.parse(JSON.stringify(monthly)) : undefined}
+        balance={balance}
+        monthly={monthly.data ?? undefined}
         periodLabel={formatPeriodLabel(period)}
       />
     </div>

@@ -80,9 +80,9 @@ export async function getCashDeskReport(period?: string): Promise<CashDeskReport
     prisma.disbursementChannel.findMany({
       select: { id: true, type: true, label: true, cardMask: true, transitAccount: true, isActive: true },
     }),
-    getCashByChannel(prisma as never, key),
-    getCashByChannel(prisma as never, prevKey),
-    getChannelBalances(prisma as never, { includeInactive: true }),
+    getCashByChannel(prisma, key),
+    getCashByChannel(prisma, prevKey),
+    getChannelBalances(prisma, { includeInactive: true }),
   ]);
 
   const byId = new Map(channels.map((c) => [c.id, c]));

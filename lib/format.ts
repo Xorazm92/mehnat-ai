@@ -132,3 +132,18 @@ export function formatUzTime(input: DateInput): string {
   const t = wallClock(input);
   return t ? `${pad2(t.hour)}:${pad2(t.minute)}` : "—";
 }
+
+/**
+ * "YYYY-MM-DD" — Toshkent kalendari bo'yicha sana (`<input type="date">`
+ * standarti uchun).
+ *
+ * `new Date().toISOString().slice(0, 10)` EMAS: u UTC qaytaradi va prod
+ * server UTC da yurgani uchun Toshkentning 00:00–04:59 oralig'ida forma
+ * KECCHA sanasi bilan ochilardi — kassir diqqatsiz yozuvni noto'gi kunga
+ * kitardi. Bu helper formatUzDate bilan bir xil `Asia/Tashkent` devori
+ * soatidan o'qiydi, ya'ni ekrandagi sana bilan bir manba.
+ */
+export function todayKey(now: Date = new Date()): string {
+  const t = wallClock(now);
+  return t ? `${t.year}-${pad2(t.month)}-${pad2(t.day)}` : "";
+}
