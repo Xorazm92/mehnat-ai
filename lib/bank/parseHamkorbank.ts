@@ -123,6 +123,12 @@ export function parseHamkorbankWorkbook(workbook: Workbook): ParsedStatement {
     const dateText = cleanText(row[keys.date]);
     if (!dateText || !/^\d{2}\.\d{2}\.\d{4}/.test(dateText)) continue;
 
+    // Sana SOAT BILAN keladi ("13.08.2026 10:07:52") — toDate faqat
+    // dd.mm.yyyy oladi, shuning uchun birinchi 10 belgi kesiladi. Aks
+    // holda valueDate=null qaytib, yuklash 500 bilan yiqilardi.
+    const valueDate = toDate(dateText.slice(0, 10));
+    if (!valueDate) continue;
+
     const credit = toAmount(keys.credit ? row[keys.credit] : null);
     const debit = toAmount(keys.debit ? row[keys.debit] : null);
     if (credit === 0 && debit === 0) continue;
@@ -137,7 +143,7 @@ export function parseHamkorbankWorkbook(workbook: Workbook): ParsedStatement {
     const purpose = cleanText(keys.purpose ? row[keys.purpose] : null);
 
     transactions.push({
-      valueDate: toDate(dateText) as Date,
+      valueDate,
       docNumber: cleanText(keys.doc ? row[keys.doc] : null),
       opCode: cleanText(keys.op ? row[keys.op] : null),
       direction: credit > 0 ? "income" : "expense",
