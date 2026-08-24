@@ -214,8 +214,11 @@ export default function ChiqimKassaClient({
         </div>
       )}
 
-      {/* Umumiy holat — faqat tranzit kanallarni boshqaradiganlarga tegishli */}
-      {canManageChannels && (
+      {/* Umumiy holat — faqat "Xodim kartalari" tabida: qoldiq/kanal/bog'lanmagan
+          o'tkazma xuddi shu tabning mavzusi. Boshqa tablarda (Yopish kerak,
+          Xarajat) bu uchta karta mavzudan tashqari joy egallardi — ishchi
+          jadvalgacha yetish uchun ko'proq pastga aylantirish kerak bo'lardi. */}
+      {canManageChannels && tab === "kartalar" && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-4 rounded-xl" style={card}>
             <div className="text-meta" style={{ color: "var(--text-muted)" }}>Kartalarda turgan qoldiq</div>

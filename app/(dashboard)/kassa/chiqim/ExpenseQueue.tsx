@@ -19,7 +19,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, CreditCard, Building2, Layers } from "lucide-react";
+import { ArrowUpRight, CreditCard, Building2 } from "lucide-react";
 import { formatNum, formatUzDate } from "@/lib/format";
 import { Money, StatStrip, type StatItem } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
@@ -112,22 +112,11 @@ export default function ExpenseQueue({ queue }: Props) {
   };
 
   return (
+    // "Chiqim navbati" sarlavhali karta ATAYLAB olib tashlangan — bu blok
+    // "Yopish kerak" tabining ICHIDA turadi, tab yorlig'i allaqachon aynan
+    // shu ma'noni beradi ("Kassa → Chiqim → Yopish kerak → [bu jadval]").
+    // Ikkinchi sarlavha faqat vertikal joy egallardi.
     <div className="rounded-xl overflow-hidden" style={card}>
-      <div
-        className="px-3 py-2 flex items-center gap-2"
-        style={{ background: "var(--input-bg)", borderBottom: "1px solid var(--card-border)" }}
-      >
-        <Layers size={15} style={{ color: "var(--text-muted)" }} />
-        <div>
-          <h2 className="text-meta font-semibold" style={{ color: "var(--text)" }}>
-            Chiqim navbati
-          </h2>
-          <p className="text-micro" style={{ color: "var(--text-muted)" }}>
-            Vipiskadan kelgan har qator uch yakundan biri bilan yopiladi
-          </p>
-        </div>
-      </div>
-
       {/* Guruhlar — StatStrip ning bosiladigan varianti: har biri ham
           ko'rsatkich, ham filtr. Ilgari bu qo'lda yozilgan tugmalar edi. */}
       <StatStrip
@@ -142,7 +131,9 @@ export default function ExpenseQueue({ queue }: Props) {
         minWidth={150}
       />
 
-      <p className="px-3 py-2 text-micro" style={{ color: "var(--text-muted)" }}>
+      {/* Guruh izohi — StatStrip ustidan chiqadigan tooltip'ga o'xshab, faqat
+          matn sifatida bitta qatorda. Alohida katta paragraf edi, endi ixcham. */}
+      <p className="px-3 py-1.5 text-micro" style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--card-border)" }}>
         {meta.hint}
       </p>
 
