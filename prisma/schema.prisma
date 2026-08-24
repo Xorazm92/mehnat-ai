@@ -240,6 +240,7 @@ model Company {
   contractAssignments ContractAssignment[]
   credentials         ClientCredential[]
   payments            Payment[]
+  serviceTerms        CompanyServiceTerm[]
   reportProofs        ReportProof[]
   telegramGroups      TelegramGroup[]
   paymentReminders    PaymentReminder[]
@@ -503,6 +504,47 @@ model Payment {
   @@index([period])
   @@index([status])
   @@index([deletedAt])
+}
+
+/// Shartnoma xizmat summasi + bank/offset split — VERSIYALANGAN.
+///
+/// Company.contractAmount — FAQAT joriy qiymatning keshi (tezkor o'qish
+/// uchun). Haqiqiy manba shu jadval: o'tgan davr hisob-kitobi doim
+/// effectiveFrom/effectiveTo oralig'idan o'qiladi, Company.contractAmount
+/// dan EMAS — aks holda narx o'zgarganda eski oylar ham "yangi narx"
+/// bilan hisoblanib qolardi.
+///
+/// Yozuv IMMUTABLE: mavjud qator hech qachon UPDATE qilinmaydi (effectiveTo
+/// dan tashqari — u faqat KEYINGI versiya yaratilganda, o'sha versiyaning
+/// effectiveFrom'iga teng qilib yopiladi). Buni ta'minlash `lib/terms.ts`
+/// dagi `createServiceTerm` ning yagona vazifasi — to'g'ridan-to'g'ri
+/// `prisma.companyServiceTerm.create` chaqirilmaydi.
+model CompanyServiceTerm {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  totalAmount  Decimal @db.Decimal(14, 2)
+  /// Rasmiy bank hisobidan to'lanadigan qism.
+  bankAmount   Decimal @db.Decimal(14, 2)
+  /// Vzaimozachyot/ijara/boshqa hisobidan yopiladigan qism.
+  offsetAmount Decimal @db.Decimal(14, 2)
+  // CHECK (bankAmount + offsetAmount = totalAmount) — migratsiyada, Prisma
+  // schema darajasida ifodalanmaydi.
+
+  effectiveFrom DateTime // doim oy boshiga yumaloqlangan (YYYY-MM-01)
+  effectiveTo   DateTime? // keyingi versiya yaratilganda avtomatik to'ldiriladi
+
+  reason      String? // "narx ko'tarildi", "ijara qo'shildi" — audit uchun
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  // Oraliqlar kesishmasligi PostgreSQL EXCLUDE constraint bilan (btree_gist,
+  // migratsiyada) — @@unique([companyId, effectiveFrom]) buni yetarlicha
+  // to'smaydi: effectiveTo noto'g'ri yozilsa yoki gap qolsa, ikki versiya
+  // bitta davrga mos kelib qolishi (yoki term topilmay qolishi) mumkin.
+  @@index([companyId, effectiveFrom])
+  @@index([companyId, effectiveTo])
 }
 
 // =====================================================

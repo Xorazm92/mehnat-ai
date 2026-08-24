@@ -13,6 +13,10 @@ const base: CompanyFacts = {
   taxRegime: "vat",
   statsType: "kb1",
   activeServices: ["buxgalteriya", "payroll"],
+  hasLandTax: false,
+  hasWaterTax: false,
+  hasPropertyTax: false,
+  hasExciseTax: false,
 };
 const ref = new Date(Date.UTC(2026, 6, 1));
 

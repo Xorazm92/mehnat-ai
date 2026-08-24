@@ -76,6 +76,10 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
       accountantId: true,
       supervisorId: true,
       chiefAccountantId: true,
+      hasLandTax: true,
+      hasWaterTax: true,
+      hasPropertyTax: true,
+      hasExciseTax: true,
     },
   });
   const facts: Map<string, CompanyFacts> = new Map();
@@ -89,6 +93,10 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
       taxRegime: c.taxRegime,
       statsType: c.statsType,
       activeServices: c.activeServices,
+      hasLandTax: c.hasLandTax,
+      hasWaterTax: c.hasWaterTax,
+      hasPropertyTax: c.hasPropertyTax,
+      hasExciseTax: c.hasExciseTax,
     };
     facts.set(c.id, f);
     roleSnap.set(c.id, { accountantId: c.accountantId, backupId: c.supervisorId ?? c.chiefAccountantId });

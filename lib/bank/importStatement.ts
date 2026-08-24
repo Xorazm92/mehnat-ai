@@ -16,6 +16,8 @@
 import { Prisma } from "@prisma/client";
 import { periodKeyOf } from "@/lib/periods";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
+import { resolveServiceTerm } from "@/lib/terms";
+import { formatNum } from "@/lib/format";
 import { transactionHash } from "./parseStatement";
 import { extractContract } from "./extractContract";
 import { classifyExpense, type ExpenseCategory } from "./classifyExpense";
@@ -250,7 +252,7 @@ export interface AllocationInput {
   contractId?: string | null;
   amount: Prisma.Decimal | number;
   receivedAt: Date;
-  /** bank | plastik | naqd */
+  /** bank | plastik | naqd | offset (vzaimozachyot/ijara — kassaga tushmaydi) */
   source: string;
   /** `Payment.paymentMethod` — yangi qator yaratilganda yoziladi. */
   paymentMethod: string;
@@ -312,6 +314,26 @@ export async function applyAllocation(db: Db, input: AllocationInput): Promise<P
     select: { id: true },
   });
 
+  // OVER-ALLOCATION QO'RIQCHISI — "offset" (vzaimozachyot/ijara) shu davr
+  // uchun shartnomada belgilangan limitdan (CompanyServiceTerm.offsetAmount)
+  // OSHIB KETMASLIGI kerak, aks holda buxgalter istalgan summani "offset"
+  // deb yozib, real bank tushumini kamaytirib yuborishi mumkin.
+  if (input.source === "offset") {
+    const term = await resolveServiceTerm(input.companyId, input.receivedAt, db);
+    const cap = term ? Number(term.offsetAmount) : 0;
+    const existingOffset = await db.paymentAllocation.aggregate({
+      where: { paymentId: payment.id, source: "offset", NOT: { dedupKey: input.dedupKey } },
+      _sum: { amount: true },
+    });
+    const newOffsetTotal = Number(existingOffset._sum.amount ?? 0) + Number(amount);
+    if (newOffsetTotal > cap) {
+      throw new Error(
+        `Offset limiti oshib ketdi: shartnomada shu davr uchun ${formatNum(cap)} so'm ` +
+          `belgilangan, jami ${formatNum(newOffsetTotal)} so'm kiritilmoqda (${period})`
+      );
+    }
+  }
+
   const allocation = await db.paymentAllocation.upsert({
     where: { dedupKey: input.dedupKey },
     create: {
@@ -338,7 +360,16 @@ export async function applyAllocation(db: Db, input: AllocationInput): Promise<P
     where: { paymentId: payment.id },
     _sum: { amount: true },
   });
+  // paymentTotal — QARZ nuqtai nazaridan yig'indi (barcha manba, offset ham
+  // kiradi: mijoz uchun bu haqiqatan to'lov). cashTotal — KASSAGA HAQIQATDA
+  // tushgan qism (offset chiqarib tashlanadi) — faqat shu jurnalga yoziladi,
+  // aks holda vzaimozachyot pul kassa balansida "bor" bo'lib ko'rinardi.
+  const cashOnly = await db.paymentAllocation.aggregate({
+    where: { paymentId: payment.id, NOT: { source: "offset" } },
+    _sum: { amount: true },
+  });
   const paymentTotal = Number(total._sum.amount ?? 0);
+  const cashTotal = Number(cashOnly._sum.amount ?? 0);
 
   const company = await db.company.findUnique({
     where: { id: input.companyId },
@@ -359,11 +390,11 @@ export async function applyAllocation(db: Db, input: AllocationInput): Promise<P
     reason: "to'lov taqsimoti yangilandi",
   });
 
-  if ((status === "paid" || status === "partial") && paymentTotal > 0) {
+  if ((status === "paid" || status === "partial") && cashTotal > 0) {
     await postLedger(db, {
       legs: [
-        { accountId: ACCOUNTS.CASH, debit: paymentTotal, channelId: input.channelId ?? null },
-        { accountId: ACCOUNTS.CONTRACT_INCOME, credit: paymentTotal, subjectId: input.companyId },
+        { accountId: ACCOUNTS.CASH, debit: cashTotal, channelId: input.channelId ?? null },
+        { accountId: ACCOUNTS.CONTRACT_INCOME, credit: cashTotal, subjectId: input.companyId },
       ],
       period,
       sourceTable: "Payment",

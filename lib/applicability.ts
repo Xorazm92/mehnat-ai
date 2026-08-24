@@ -19,6 +19,10 @@ export interface CompanyFacts {
   taxRegime: string; // enum qiymati
   statsType: string | null;
   activeServices: string[];
+  hasLandTax: boolean;
+  hasWaterTax: boolean;
+  hasPropertyTax: boolean;
+  hasExciseTax: boolean;
 }
 
 export interface ApplicabilityCriterion {
@@ -79,6 +83,18 @@ function matchesCriterion(type: string, value: string, c: CompanyFacts): boolean
       // Faza A: Company'da bevosita xodim soni yo'q → "payroll" xizmati orqali
       // taxminiy. TODO Faza C/D: haqiqiy xodim biriktirilishiga bog'lash.
       return c.activeServices.includes("payroll") === (value === "true");
+    case "company_flag": {
+      // "hasLandTax:true" kabi — Company'dagi bitta boolean ustunga to'g'ridan-to'g'ri.
+      const [field, expected] = value.split(":");
+      const flags: Record<string, boolean> = {
+        hasLandTax: c.hasLandTax,
+        hasWaterTax: c.hasWaterTax,
+        hasPropertyTax: c.hasPropertyTax,
+        hasExciseTax: c.hasExciseTax,
+      };
+      if (!(field in flags)) return false; // noma'lum maydon → xavfsiz taraf
+      return String(flags[field]) === expected;
+    }
     default:
       return false; // noma'lum kriteriya → mos emas (xavfsiz taraf)
   }

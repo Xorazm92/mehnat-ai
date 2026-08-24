@@ -191,6 +191,10 @@ async function main(): Promise<void> {
       taxRegime: true,
       statsType: true,
       activeServices: true,
+      hasLandTax: true,
+      hasWaterTax: true,
+      hasPropertyTax: true,
+      hasExciseTax: true,
     },
   });
 
@@ -204,6 +208,10 @@ async function main(): Promise<void> {
       taxRegime: c.taxRegime,
       statsType: c.statsType,
       activeServices: c.activeServices,
+      hasLandTax: c.hasLandTax,
+      hasWaterTax: c.hasWaterTax,
+      hasPropertyTax: c.hasPropertyTax,
+      hasExciseTax: c.hasExciseTax,
     };
     facts.set(c.id, f);
     return isCompanyEligible(f, ref);

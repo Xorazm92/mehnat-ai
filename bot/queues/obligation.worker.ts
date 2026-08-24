@@ -2,6 +2,7 @@ import { Worker, type Job } from "bullmq";
 import { logJobFailure, logServerError } from "../../lib/logger";
 import { prisma } from "../../lib/prisma";
 import { runGenerationLocked } from "../../lib/obligationRun";
+import { generateMonthlyPayments } from "../../lib/paymentGeneration";
 import { sweepDeadlines } from "../../lib/obligationSweep";
 import { createRedisConnection } from "./connection";
 import { QUEUE, callbackSecret, hasTelegramToken } from "../config";
@@ -22,6 +23,21 @@ export function startObligationWorker(): Worker<ObligationJob> {
       if (job.data.kind === "generate") {
         const res = await runGenerationLocked(prisma, { catchUpMonths: 2 });
         console.log(`[obligation.worker] generate:`, res.skipped ? "skipped(locked)" : res.results?.map((r) => r.created));
+
+        // Majburiyat generatsiyasi bilan bir hodisada — mustaqil natija,
+        // xatosi obligation generatsiyasini to'xtatmasin.
+        try {
+          const paymentsRes = await generateMonthlyPayments(prisma);
+          console.log(
+            `[obligation.worker] payments:`,
+            `created=${paymentsRes.created} updated=${paymentsRes.updated} ` +
+              `skippedNoTerm=${paymentsRes.skippedNoTerm} skippedInProgress=${paymentsRes.skippedInProgress} ` +
+              `errors=${paymentsRes.errors.length}`
+          );
+        } catch (e) {
+          logServerError("obligation.worker.payments", e);
+        }
+
         return res;
       }
       // Telegram push faqat token bo'lsa (aks holda faqat in-app eslatma).

@@ -43,11 +43,20 @@ export async function getAvailableBalance(opts?: {
   db?: Db;
 }): Promise<BalanceBreakdown> {
   const db = opts?.db ?? prisma;
-  const [paidPayments, kassaIncome, kassaExpense, payouts, transitBalance] =
+  const [paidPaymentRows, kassaIncome, kassaExpense, payouts, transitBalance] =
     await Promise.all([
-      db.payment.aggregate({
+      // `Payment.amount` QARZ yig'indisi — "offset" (vzaimozachyot/ijara)
+      // ham kiradi, chunki mijoz nuqtai nazaridan bu ham to'lov. KASSA
+      // BALANSI esa faqat haqiqatda tushgan pulni ko'rsatishi kerak, shuning
+      // uchun har bir to'lov qatorida "offset" ulushi chiqarib tashlanadi.
+      //
+      // Allocation'i yo'q qatorlar (eski/qo'lda kiritilgan, applyAllocation
+      // dan oldingi davr yoki server/kassa.ts#upsertPayment orqali) — to'liq
+      // naqd deb hisoblanadi: ular ta'rifiga ko'ra "offset" bo'la olmaydi,
+      // chunki offset FAQAT applyAllocation orqali (source='offset') kiradi.
+      db.payment.findMany({
         where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { gte: KASSA_START_PERIOD } },
-        _sum: { amount: true },
+        select: { amount: true, allocations: { select: { source: true, amount: true } } },
       }),
       db.kassaEntry.aggregate({
         where: { type: "income", deletedAt: null, date: { gte: KASSA_START_DATE } },
@@ -71,7 +80,13 @@ export async function getAvailableBalance(opts?: {
       getTotalTransitBalance(db as Prisma.TransactionClient).catch(() => 0),
     ]);
 
-  const incomePayments = n(paidPayments._sum.amount);
+  const incomePayments = paidPaymentRows.reduce((sum, p) => {
+    if (p.allocations.length === 0) return sum + n(p.amount);
+    const cash = p.allocations
+      .filter((a) => a.source !== "offset")
+      .reduce((s, a) => s + n(a.amount), 0);
+    return sum + cash;
+  }, 0);
   const incomeKassa = n(kassaIncome._sum.amount);
   const outflowKassa = n(kassaExpense._sum.amount);
   const outflowPayroll = n(payouts._sum.amount);
