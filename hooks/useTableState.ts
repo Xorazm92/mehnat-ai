@@ -1,27 +1,37 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 /**
  * TABLE STATE — jadval holati URL'da yashaydi.
  *
- * Muammo: loyihada `useSearchParams` mijoz komponentlarida NOL marta ishlatilgan.
- * Ya'ni har bir filtr faqat React state'da, va hech bir ko'rinishni ulashib
- * bo'lmaydi. Nazoratchi "mana bu 12 ta firma kechikkan" deb buxgalterga
- * yuborolmaydi — har bir topshiriq skrinshot yoki og'zaki ko'rsatmaga aylanadi.
- * Brauzerning "orqaga" tugmasi ham ishlamaydi, sahifa yangilansa filtr yo'qoladi.
+ * Muammo (asl): loyihada `useSearchParams` mijoz komponentlarida NOL marta
+ * ishlatilgan. Ya'ni har bir filtr faqat React state'da, va hech bir
+ * ko'rinishni ulashib bo'lmaydi. Nazoratchi "mana bu 12 ta firma kechikkan"
+ * deb buxgalterga yuborolmaydi — har bir topshiriq skrinshot yoki og'zaki
+ * ko'rsatmaga aylanadi. Brauzerning "orqaga" tugmasi ham ishlamaydi, sahifa
+ * yangilansa filtr yo'qoladi.
  *
- * Bu hook holatni URL query'ga bog'laydi:
- *   /staff?q=alisher&sort=name&dir=asc&page=2&d=compact
+ * IKKINCHI MUAMMO (bu safar topilgan): URL'ni `router.replace` orqali
+ * yozish Next.js'da NAVIGATSIYA — har chaqiruv serverdan yangi RSC payload
+ * so'raydi (sahifa server komponent bo'lsa, DB so'rovlari QAYTA ishlaydi).
+ * Bu yerdagi jadvallarning HAMMASI qidiruv/saralash/sahifalashni mijoz
+ * tomonida (`useMemo` bilan) bajaradi — server hech qachon buni bilishi
+ * shart emas edi. Natijada har bosilgan harf (debounce'dan keyin ham)
+ * to'liq server round-trip'ni kutardi: 273 firmalik ro'yxat qayta so'ralib,
+ * qayta serializatsiya qilinib qaytardi — "sekin va sifatsiz" tuyulishining
+ * sababi shu, filtrlash mantig'i emas.
  *
- * `ns` (namespace) bir sahifada bir nechta jadval bo'lsa kalitlar to'qnashmasligi
- * uchun: `ns="exp"` → `exp_q`, `exp_sort`...
+ * Yechim: holatning yagona manbasi endi React state (URL emas). URL faqat
+ * ulashish uchun `history.replaceState` bilan "soya"da yangilanadi — bu
+ * hech qanday navigatsiya yoki server so'rovini qo'zg'atmaydi. Sahifa birinchi
+ * marta ochilganda boshlang'ich qiymatlar URL'dan o'qiladi (share/refresh
+ * ishlaydi), shundan keyin esa hamma narsa mijozda, darhol.
  *
- * Qidiruv ATAYLAB ikki qatlamli: `search` (input uchun, darhol) va
- * `debouncedSearch` (filtrlash uchun, 250ms). Loyihadagi qidiruvlarning
- * faqat BITTASI debounce qilingan edi — `OrganizationModule` har bosilgan
- * harfda 212 qatorni qayta filtrlab, qayta saralaydi.
+ * Qidiruv ikki qatlamli qoladi: `search` (input uchun, darhol) va
+ * `debouncedSearch` (filtrlash uchun, debounce'dan keyin) — lekin endi
+ * ikkalasi ham faqat React state, tarmoqqa bog'liq emas.
  */
 
 export type SortDir = "asc" | "desc";
@@ -48,11 +58,9 @@ export interface TableState {
   /**
    * Bir NECHTA filtrni BITTA yozuvda o'zgartirish.
    *
-   * MAJBURIY: `setFilter` ni ketma-ket chaqirib bo'lmaydi. Har chaqiruv URL'ni
-   * o'sha renderdagi `params` NUSXASIDAN qayta quradi, ya'ni ikkita chaqiruv
-   * bir xil eski nusxadan boshlanadi va ikkinchisi birinchisini bekor qiladi —
-   * natijada faqat OXIRGI o'zgarish saqlanadi. "Hammasini tozalash" aynan
-   * shu sababli bitta filtrni tozalab qo'yardi.
+   * MAJBURIY: `setFilter` ni ketma-ket chaqirib bo'lmaydi — bir renderda
+   * ikkinchi chaqiruv birinchisining state yangilanishini ko'rmasligi mumkin.
+   * "Hammasini tozalash" aynan shu sababli bitta filtrni tozalab qo'yardi.
    */
   setFilters: (patch: Record<string, string>) => void;
 
@@ -80,84 +88,99 @@ export function useTableState({
   defaultFilters = {},
   debounceMs = 250,
 }: UseTableStateOptions = {}): TableState {
-  const router = useRouter();
   const pathname = usePathname();
-  const params = useSearchParams();
+  // Faqat BOSHLANG'ICH qiymatlarni o'qish uchun — shundan keyin bu hook
+  // holatni o'zi boshqaradi va URL'ga faqat yozadi, undan o'qimaydi.
+  const initialParams = useSearchParams();
 
   const k = useCallback((key: string) => (ns ? `${ns}_${key}` : key), [ns]);
-
-  const search = params.get(k("q")) ?? "";
-  const sortKey = params.get(k("sort")) ?? defaultSortKey;
-  const sortDir = (params.get(k("dir")) as SortDir) ?? defaultSortDir;
-  const page = Math.max(1, Number(params.get(k("page")) ?? 1) || 1);
-  const density = (params.get(k("d")) as Density) ?? defaultDensity;
-
   const filterKeys = useMemo(() => Object.keys(defaultFilters), [defaultFilters]);
-  const filters = useMemo(() => {
+
+  const [search, setSearchState] = useState(() => initialParams.get(k("q")) ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [sortKey, setSortKey] = useState<string | null>(
+    () => initialParams.get(k("sort")) ?? defaultSortKey
+  );
+  const [sortDir, setSortDir] = useState<SortDir>(
+    () => (initialParams.get(k("dir")) as SortDir) ?? defaultSortDir
+  );
+  const [page, setPageState] = useState(
+    () => Math.max(1, Number(initialParams.get(k("page")) ?? 1) || 1)
+  );
+  const [density, setDensityState] = useState<Density>(
+    () => (initialParams.get(k("d")) as Density) ?? defaultDensity
+  );
+  const [filters, setFiltersState] = useState<Record<string, string>>(() => {
     const out: Record<string, string> = {};
-    for (const key of filterKeys) out[key] = params.get(k(key)) ?? defaultFilters[key];
+    for (const key of filterKeys) out[key] = initialParams.get(k(key)) ?? defaultFilters[key];
     return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params, filterKeys, k]);
+  });
 
   /**
-   * URL yozish. `replace` + `scroll: false` — har bosilgan harf tarixga yangi
-   * yozuv qo'shmasin va sahifa tepaga sakramasin.
+   * URL'ni "soya"da yangilash — `history.replaceState`, `router.replace` EMAS.
+   * Bu adres qatorini yangilaydi (ulashish uchun) lekin Next'ni navigatsiya
+   * deb hisoblamaydi: server so'rovi yo'q, sahifa qayta render bo'lmaydi.
    */
-  const write = useCallback(
+  const syncUrl = useCallback(
     (patch: Record<string, string | number | null>) => {
-      const next = new URLSearchParams(params.toString());
+      if (typeof window === "undefined") return;
+      const next = new URLSearchParams(window.location.search);
       for (const [key, value] of Object.entries(patch)) {
         const full = k(key);
         if (value === null || value === "") next.delete(full);
         else next.set(full, String(value));
       }
       const qs = next.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      const url = qs ? `${pathname}?${qs}` : pathname;
+      window.history.replaceState(window.history.state, "", url);
     },
-    [params, pathname, router, k]
+    [pathname, k]
   );
 
-  // ── Qidiruv: input darhol, filtrlash kechikib ────────────────
-  const [localSearch, setLocalSearch] = useState(search);
+  const setSearch = useCallback((v: string) => setSearchState(v), []);
 
-  /**
-   * URL tashqaridan o'zgarsa (orqaga tugmasi, ulashilgan havola) input matnini
-   * moslash. Bu ATAYLAB effekt EMAS: React 19 effekt ichida sinxron `setState`
-   * ni kaskadli render sababi deb belgilaydi. Rasmiy naqsh — render paytida
-   * oldingi qiymat bilan solishtirib to'g'rilash; React shu renderni darhol
-   * qayta ishga tushiradi va oraliq holat ekranga chiqmaydi.
-   */
-  const [prevSearch, setPrevSearch] = useState(search);
-  if (search !== prevSearch) {
-    setPrevSearch(search);
-    setLocalSearch(search);
-  }
-
-  const setSearch = useCallback((v: string) => setLocalSearch(v), []);
-
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (localSearch === search) return;
-    const id = setTimeout(() => write({ q: localSearch || null, page: null }), debounceMs);
-    return () => clearTimeout(id);
-  }, [localSearch, search, debounceMs, write]);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPageState(1);
+      syncUrl({ q: search || null, page: null });
+    }, debounceMs);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, debounceMs]);
 
   const toggleSort = useCallback(
     (key: string) => {
-      if (sortKey === key) {
-        write({ sort: key, dir: sortDir === "asc" ? "desc" : "asc" });
-      } else {
-        write({ sort: key, dir: "asc" });
-      }
+      setSortKey(prevKey => {
+        const nextDir: SortDir = prevKey === key && sortDir === "asc" ? "desc" : "asc";
+        setSortDir(nextDir);
+        syncUrl({ sort: key, dir: nextDir });
+        return key;
+      });
     },
-    [sortKey, sortDir, write]
+    [sortDir, syncUrl]
   );
 
-  const setPage = useCallback((p: number) => write({ page: p <= 1 ? null : p }), [write]);
-  const setDensity = useCallback(
-    (d: Density) => write({ d: d === defaultDensity ? null : d }),
-    [write, defaultDensity]
+  const setPage = useCallback(
+    (p: number) => {
+      setPageState(p);
+      syncUrl({ page: p <= 1 ? null : p });
+    },
+    [syncUrl]
   );
+
+  const setDensity = useCallback(
+    (d: Density) => {
+      setDensityState(d);
+      syncUrl({ d: d === defaultDensity ? null : d });
+    },
+    [syncUrl, defaultDensity]
+  );
+
   /** Standart qiymat URL'da saqlanmaydi — manzil keraksiz uzaymasin. */
   const normalize = useCallback(
     (key: string, value: string) => (value === defaultFilters[key] ? null : value),
@@ -165,25 +188,40 @@ export function useTableState({
   );
 
   const setFilter = useCallback(
-    (key: string, value: string) => write({ [key]: normalize(key, value), page: null }),
-    [write, normalize]
+    (key: string, value: string) => {
+      setFiltersState(prev => ({ ...prev, [key]: value }));
+      setPageState(1);
+      syncUrl({ [key]: normalize(key, value), page: null });
+    },
+    [syncUrl, normalize]
   );
 
   const setFilters = useCallback(
     (patch: Record<string, string>) => {
+      setFiltersState(prev => ({ ...prev, ...patch }));
+      setPageState(1);
       const out: Record<string, string | null> = { page: null };
       for (const [key, value] of Object.entries(patch)) out[key] = normalize(key, value);
-      write(out);
+      syncUrl(out);
     },
-    [write, normalize]
+    [syncUrl, normalize]
   );
 
   const reset = useCallback(() => {
-    const next = new URLSearchParams(params.toString());
+    setSearchState("");
+    setDebouncedSearch("");
+    setSortKey(defaultSortKey);
+    setSortDir(defaultSortDir);
+    setPageState(1);
+    setDensityState(defaultDensity);
+    setFiltersState({ ...defaultFilters });
+
+    if (typeof window === "undefined") return;
+    const next = new URLSearchParams(window.location.search);
     for (const key of ["q", "sort", "dir", "page", "d", ...filterKeys]) next.delete(k(key));
     const qs = next.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [params, pathname, router, k, filterKeys]);
+    window.history.replaceState(window.history.state, "", qs ? `${pathname}?${qs}` : pathname);
+  }, [pathname, k, filterKeys, defaultSortKey, defaultSortDir, defaultDensity, defaultFilters]);
 
   const isDirty =
     Boolean(search) ||
@@ -192,8 +230,8 @@ export function useTableState({
     filterKeys.some((key) => filters[key] !== defaultFilters[key]);
 
   return {
-    search: localSearch,
-    debouncedSearch: search,
+    search,
+    debouncedSearch,
     setSearch,
     sortKey,
     sortDir,
