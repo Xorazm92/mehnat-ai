@@ -76,6 +76,10 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
   const [date, setDate] = useState(todayKey());
   const [saveChannelId, setSaveChannelId] = useState("");
   const [saving, setSaving] = useState(false);
+  // Sana va izoh — ORTIQCHA maydonlar emas, lekin har safar ko'rinishi shart
+  // ham emas: sana standart bugun, izoh ixtiyoriy. Asosiy 4 ta maydon
+  // (tur/summa/toifa/kassa) darhol ko'rinadi, bularniki "Batafsil" ostida.
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const categoryOptions = addKind === "kirim" ? incomeCategories : expenseCategories;
 
@@ -361,28 +365,42 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
             <div className="w-52">
               <FundingSourceSelect value={saveChannelId} onChange={setSaveChannelId} className="w-full px-2 py-1.5 rounded-lg text-meta outline-none" />
             </div>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="px-2 py-1.5 rounded-lg text-meta outline-none"
-              style={inputStyle}
-            />
-            <input
-              placeholder="Izoh (ixtiyoriy)"
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") void saveNew(); }}
-              className="px-3 py-1.5 rounded-lg text-meta flex-1 min-w-[160px] outline-none"
-              style={inputStyle}
-            />
             <Button variant="primary" size="sm" disabled={saving} onClick={() => void saveNew()}>
               {saving ? "Yozilmoqda…" : "Saqlash"}
             </Button>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="text-micro font-semibold underline"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {showAdvanced ? "Sana/izohni yashirish" : "Sana yoki izoh qo'shish"}
+            </button>
             <Button variant="secondary" size="sm" onClick={() => setAddOpen(false)}>Yopish</Button>
           </div>
+
+          {showAdvanced && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="px-2 py-1.5 rounded-lg text-meta outline-none"
+                style={inputStyle}
+              />
+              <input
+                placeholder="Izoh (ixtiyoriy)"
+                value={desc}
+                onChange={(e) => setDesc(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void saveNew(); }}
+                className="px-3 py-1.5 rounded-lg text-meta flex-1 min-w-[220px] outline-none"
+                style={inputStyle}
+              />
+            </div>
+          )}
+
           <p className="text-micro" style={{ color: "var(--text-muted)" }}>
-            Saqlashdan keyin forma ochiq qoladi: summa bo&apos;shaydi, kassa/sana/toifa qoladi — ketma-ket kiritish uchun.
+            Sana standart — bugun. Saqlashdan keyin forma ochiq qoladi: summa bo&apos;shaydi, kassa/toifa qoladi — ketma-ket kiritish uchun.
             Mijozning shartnoma to&apos;lovini qo&apos;shish{" "}
             <a href="/kassa/kirim" className="underline" style={{ color: "var(--accent-blue)" }}>/kassa/kirim</a>{" "}
             da — u qarzni kamaytiradi.

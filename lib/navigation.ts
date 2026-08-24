@@ -57,7 +57,13 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/kassa/kirim",   view: "kassa_income",  label: "Kirim kassa",      icon: Banknote,        group: "moliya",  parent: "/kassa", keywords: "vipiska bank kirim tushum vypiska plastik" },
   { href: "/kassa/chiqim",  view: "kassa_expense", label: "Chiqim kassa",     icon: CreditCard,      group: "moliya",  parent: "/kassa", keywords: "rasxod chiqim tranzit karta xodim kanal" },
   { href: "/kassa/qarzdorlik", view: "kassa_debt",  label: "Qarzdorlik",       icon: HandCoins,       group: "moliya",  parent: "/kassa", keywords: "qarz debitor 1c zadolzhennost" },
-  { href: "/expenses",      view: "expenses",      label: "Xarajatlar",       icon: Receipt,         group: "moliya",  keywords: "chiqim xarajat rasxod" },
+  // `/expenses` `Kassa → Chiqim`ning "Xarajat" tabiga birlashtirildi (ikkalasi
+  // bir xil `KassaEntry` jadvaliga yozardi). Bu yorliq faqat `kassa_expense`
+  // YO'Q, `expenses`i BOR rollarga (Nazoratchi, Bosh buxgalter) kerak — ular
+  // "Chiqim kassa" yorlig'ini (u `kassa_expense` talab qiladi) ko'rmaydi.
+  // Ikkala ruxsat ham bor rolda (Admin, Bank-klient) ikkala yorliq ham
+  // ko'rinadi va bir joyga olib boradi — kichik ortiqcha, lekin xato emas.
+  { href: "/kassa/chiqim?tab=xarajat", view: "expenses", label: "Xarajatlar", icon: Receipt, group: "moliya", parent: "/kassa", keywords: "chiqim xarajat rasxod" },
   { href: "/payroll",       view: "payroll",       label: "Oylik",            icon: CreditCard,      group: "moliya",  keywords: "maosh zarplata avans" },
   { href: "/attendance",    view: "attendance",    label: "Davomat",          icon: Calendar,        group: "boshqa",  keywords: "kelish ketish tabel" },
   { href: "/notifications", view: "notifications", label: "Xabarlar",         icon: Bell,            group: "boshqa",  keywords: "bildirishnoma xabar" },

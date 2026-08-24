@@ -25,6 +25,10 @@ import {
 import { friendlyError } from "@/lib/actionError";
 import ExpenseQueue, { type ExpenseQueueData } from "./ExpenseQueue";
 import { Tabs, type TabItem } from "@/components/ui";
+import ExpenseModule from "@/components/ExpenseModule";
+import type { Expense, BalanceBreakdown } from "@/types";
+import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
+import { usePrompt } from "@/components/ui/ConfirmDialog";
 
 interface Channel {
   id: string;
@@ -72,6 +76,26 @@ interface Props {
     total: number;
     count: number;
   };
+  /**
+   * `KassaEntry(expense)` to'liq ro'yxati — avvalgi mustaqil `/expenses`
+   * sahifasi. Xuddi shu jadvalga "Yopish kerak → Xarajat" navbati ham
+   * yozadi (`postExpenseFromBankTransaction`) — ikkalasi bir xil ma'lumotni
+   * ikki joyda ko'rsatgani "qayerga borishni bilmayman" chalkashligini
+   * kuchaytirardi, endi bitta tab.
+   */
+  expenses: Expense[];
+  expenseBalance?: BalanceBreakdown;
+  expenseCategories?: string[];
+  userRole: string;
+  /**
+   * `kassa_expense` ruxsati bormi (tranzit kanallarni boshqarish). Yo'q
+   * bo'lsa (masalan Nazoratchi, Bosh buxgalter — ular xarajatni
+   * tasdiqlaydi, lekin kartalarni boshqarmaydi) faqat "Xarajat" tabi
+   * ko'rinadi, qolganlari yashiriladi — RBAC saqlanadi, joylashuv o'zgaradi.
+   */
+  canManageChannels: boolean;
+  /** Eski `/expenses` havolasidan `?tab=xarajat` bilan kelinganda. */
+  initialTab?: "navbat" | "kartalar" | "xojalik" | "xarajat";
 }
 
 const card: React.CSSProperties = {
@@ -82,14 +106,26 @@ const card: React.CSSProperties = {
 /** Kartadan qilinadigan odatiy xarajatlar. */
 const SPEND_CATEGORIES = ["ijara", "aloqa", "ovqat", "soliq", "bank_komissiya", "boshqa"] as const;
 
-export default function ChiqimKassaClient({ overview, unlinked, employees, household, queue }: Props) {
+export default function ChiqimKassaClient({
+  overview, unlinked, employees, household, queue,
+  expenses, expenseBalance, expenseCategories, userRole, canManageChannels, initialTab,
+}: Props) {
   const router = useRouter();
+  const prompt = usePrompt();
 
   // TABLAR. Sahifada oltita blok bir vertikalda edi: 66 ta karta ro'yxati,
   // chiqim navbati, 15 oylik xo'jalik tarixi va 70 ta bog'lanmagan
   // o'tkazma. Kundalik ish — navbat — eng pastda qolib ketardi.
-  type TabKey = "navbat" | "kartalar" | "xojalik";
-  const [tab, setTab] = useState<TabKey>("navbat");
+  //
+  // "xarajat" — avvalgi mustaqil `/expenses` sahifasi shu yerga ko'chdi
+  // (bir xil `KassaEntry` jadvaliga yoziladigan ikki ekran birlashtirildi).
+  // `canManageChannels=false` bo'lgan foydalanuvchi (Nazoratchi, Bosh
+  // buxgalter) uchun bu YAGONA tab — qolganlari (Navbat/Kartalar/Xo'jalik)
+  // ularning RBAC doirasidan tashqarida.
+  type TabKey = "navbat" | "kartalar" | "xojalik" | "xarajat";
+  const [tab, setTab] = useState<TabKey>(
+    initialTab ?? (canManageChannels ? "navbat" : "xarajat")
+  );
   // Toifalash navbati: qaysi qator ustida ish ketyapti va xato matni.
 
   // Kassaga hali yozilmaganlar — yozilgani ro'yxatdan chiqadi.
@@ -140,30 +176,34 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-semibold" style={{ color: "var(--text)" }}>
-            Chiqim kassa — tranzit kanallar
+            {canManageChannels ? "Chiqim kassa" : "Xarajatlar"}
           </h1>
           <p className="text-meta" style={{ color: "var(--text-muted)" }}>
-            Xodim kartalari orqali o&apos;tadigan pul: qancha berildi, qancha sarflandi, qancha qoldi
+            {canManageChannels
+              ? "Xodim kartalari orqali o'tadigan pul va kassa xarajatlari"
+              : "Kassa xarajatlarini ko'rish va tasdiqlash"}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="md"
-            disabled={busy}
-            onClick={() =>
-              run(
-                () => autoCreateChannelsFromStatements(),
-                "Vipiskadan kanallar aniqlandi"
-              )
-            }
-          >
-            <Wand2 size={15} /> Vipiskadan aniqlash
-          </Button>
-          <Button variant="primary" size="md" disabled={busy} onClick={() => setShowNew(true)}>
-            <Plus size={15} /> Yangi kanal
-          </Button>
-        </div>
+        {canManageChannels && (
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="md"
+              disabled={busy}
+              onClick={() =>
+                run(
+                  () => autoCreateChannelsFromStatements(),
+                  "Vipiskadan kanallar aniqlandi"
+                )
+              }
+            >
+              <Wand2 size={15} /> Vipiskadan aniqlash
+            </Button>
+            <Button variant="primary" size="md" disabled={busy} onClick={() => setShowNew(true)}>
+              <Plus size={15} /> Yangi kanal
+            </Button>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -174,39 +214,47 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
         </div>
       )}
 
-      {/* Umumiy holat */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-4 rounded-xl" style={card}>
-          <div className="text-meta" style={{ color: "var(--text-muted)" }}>Kartalarda turgan qoldiq</div>
-          <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: totalBalance < 0 ? "var(--danger)" : "var(--text)" }}>
-            {formatNum(totalBalance)} <span className="text-meta">so&apos;m</span>
+      {/* Umumiy holat — faqat tranzit kanallarni boshqaradiganlarga tegishli */}
+      {canManageChannels && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-4 rounded-xl" style={card}>
+            <div className="text-meta" style={{ color: "var(--text-muted)" }}>Kartalarda turgan qoldiq</div>
+            <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: totalBalance < 0 ? "var(--danger)" : "var(--text)" }}>
+              {formatNum(totalBalance)} <span className="text-meta">so&apos;m</span>
+            </div>
+            <div className="text-micro" style={{ color: "var(--text-muted)" }}>hali sarflanmagan</div>
           </div>
-          <div className="text-micro" style={{ color: "var(--text-muted)" }}>hali sarflanmagan</div>
-        </div>
-        <div className="p-4 rounded-xl" style={card}>
-          <div className="text-meta" style={{ color: "var(--text-muted)" }}>Faol kanallar</div>
-          <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>{active.length}</div>
-          <div className="text-micro" style={{ color: "var(--text-muted)" }}>{frozen.length} ta muzlatilgan</div>
-        </div>
-        <div className="p-4 rounded-xl" style={card}>
-          <div className="text-meta" style={{ color: "var(--text-muted)" }}>Bog&apos;lanmagan o&apos;tkazma</div>
-          <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: unlinkedCount > 0 ? "var(--warning)" : "var(--text)" }}>
-            {unlinkedCount}
+          <div className="p-4 rounded-xl" style={card}>
+            <div className="text-meta" style={{ color: "var(--text-muted)" }}>Faol kanallar</div>
+            <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>{active.length}</div>
+            <div className="text-micro" style={{ color: "var(--text-muted)" }}>{frozen.length} ta muzlatilgan</div>
           </div>
-          <div className="text-micro" style={{ color: "var(--text-muted)" }}>qaysi kartaga tushgani noma&apos;lum</div>
+          <div className="p-4 rounded-xl" style={card}>
+            <div className="text-meta" style={{ color: "var(--text-muted)" }}>Bog&apos;lanmagan o&apos;tkazma</div>
+            <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: unlinkedCount > 0 ? "var(--warning)" : "var(--text)" }}>
+              {unlinkedCount}
+            </div>
+            <div className="text-micro" style={{ color: "var(--text-muted)" }}>qaysi kartaga tushgani noma&apos;lum</div>
+          </div>
         </div>
-      </div>
+      )}
 
-      <Tabs
-        items={[
-          { id: "navbat", label: "Navbat", hint: "Vipiskadan kelgan chiqimni yopish", count: queue.rows.length || undefined },
-          { id: "kartalar", label: "Kartalar", hint: "Xodim kartalari va bog'lanmagan o'tkazmalar", count: unlinked.length || undefined },
-          { id: "xojalik", label: "Xo'jalik", hint: "Ovqat, taksi, non — kunlik xarajatlar" },
-        ] as TabItem<TabKey>[]}
-        value={tab}
-        onChange={setTab}
-        ariaLabel="Chiqim kassa bo'limlari"
-      />
+      {/* `canManageChannels=false` bo'lganda tab almashtirgichning o'zi
+          yashiriladi — bitta tab ko'rsatish uchun tanlov taqdim etish
+          keraksiz interfeys shovqini bo'lardi. */}
+      {canManageChannels && (
+        <Tabs
+          items={[
+            { id: "navbat", label: "Yopish kerak", hint: "Vipiskadan kelgan chiqimni toifalab yopish", count: queue.rows.length || undefined },
+            { id: "kartalar", label: "Xodim kartalari", hint: "Kartalar qoldig'i va bog'lanmagan o'tkazmalar", count: unlinked.length || undefined },
+            { id: "xojalik", label: "Xo'jalik xarajati", hint: "Ovqat, taksi, non — kunlik xarajatlar" },
+            { id: "xarajat", label: "Xarajat", hint: "Kassa xarajatlari ro'yxati va tasdiq oqimi" },
+          ] as TabItem<TabKey>[]}
+          value={tab}
+          onChange={setTab}
+          ariaLabel="Chiqim kassa bo'limlari"
+        />
+      )}
 
       {/* Yangi kanal */}
       {showNew && (
@@ -396,6 +444,56 @@ export default function ChiqimKassaClient({ overview, unlinked, employees, house
       )}
 
       </>)}
+
+      {tab === "xarajat" && (
+        // Avvalgi mustaqil `/expenses` sahifasi — o'zgarishsiz ko'chirildi
+        // (props/callback bir xil, faqat joylashuv o'zgardi).
+        <ExpenseModule
+          expenses={expenses}
+          lang="uz"
+          userRole={userRole}
+          balance={expenseBalance}
+          categories={expenseCategories}
+          onSaveExpense={async (expense: Partial<Expense>) => {
+            const data = {
+              amount: Number(expense.amount || 0),
+              date: new Date(expense.date as string),
+              category: expense.category as string,
+              description: expense.description,
+              channelId: expense.channelId || undefined,
+            };
+            if (!data.channelId) {
+              toast.error("Pul manbaini tanlang — qaysi schyot yoki plastikdan chiqdi");
+              throw new Error("channelId required");
+            }
+            try {
+              if (expense.id) await updateExpense(expense.id, data);
+              else await createExpense(data);
+              router.refresh();
+            } catch (e) {
+              toast.error(friendlyError(e));
+              throw e; // modal ochiq qolishi uchun xatoni yuqoriga qaytaramiz
+            }
+          }}
+          onDeleteExpense={async (id: string) => { await deleteExpense(id); router.refresh(); }}
+          onApproveExpense={async (id: string) => {
+            try { await approveExpense(id); router.refresh(); }
+            catch (e) { toast.error(friendlyError(e)); }
+          }}
+          onRejectExpense={async (id: string) => {
+            const reason = await prompt({
+              title: "Xarajat rad etilsinmi?",
+              reasonLabel: "Rad etish sababi",
+              reasonPlaceholder: "Nima uchun rad etilyapti?",
+              confirmLabel: "Rad etish",
+              tone: "danger",
+            });
+            if (!reason) return;
+            try { await rejectExpense(id, reason); router.refresh(); }
+            catch (e) { toast.error(friendlyError(e)); }
+          }}
+        />
+      )}
 
       {tab === "kartalar" && (<>
       {/* Bog'lanmagan karta o'tkazmalari */}

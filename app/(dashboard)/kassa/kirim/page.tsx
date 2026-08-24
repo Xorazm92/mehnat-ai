@@ -4,6 +4,7 @@ import { currentUserViews } from "@/server/rbac";
 import { getBankAccountsOverview, getUnmatchedIncome, getNonBankIncome } from "@/server/bankImport";
 import { prisma } from "@/lib/prisma";
 import KirimKassaClient from "./KirimKassaClient";
+import KassaSectionNav from "@/components/KassaSectionNav";
 
 export const metadata = { title: "Kirim kassa" };
 
@@ -43,6 +44,9 @@ export default async function KirimKassaPage() {
 
   return (
     <div className="h-full">
+      <div className="px-4 md:px-6 pt-4">
+        <KassaSectionNav views={views} />
+      </div>
       <KirimKassaClient
         accounts={JSON.parse(JSON.stringify(accounts))}
         unmatched={JSON.parse(JSON.stringify(unmatched))}

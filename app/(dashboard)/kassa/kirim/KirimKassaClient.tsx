@@ -92,6 +92,15 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   const [tab, setTab] = useState<TabKey>("reyestr");
   useAutoRefresh();
 
+  // `IncomeRegister` o'z ma'lumotini MUSTAQIL o'qiydi (server action, props
+  // orqali emas) — shuning uchun `router.refresh()` uni yangilamaydi: yangi
+  // tushum yozilgach yuqoridagi kartochkalar (server prop) yangilanadi,
+  // pastdagi reyestr esa ESKI holatda qolib, ikkita raqam bir sahifada
+  // ziddiyatga kirardi. `refreshTick` — mutatsiyadan keyin oshadigan
+  // hisoblagich; `IncomeRegister` uni effekt qaramligiga qo'shib qayta so'raydi.
+  const [refreshTick, setRefreshTick] = useState(0);
+  const bumpRegister = () => setRefreshTick((v) => v + 1);
+
   const fileInput = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<StatementPreview | null>(null);
   /** Serverdan kelgan tushunarli xato — prod'da toast matni umumiy bo'lib qoladi. */
@@ -197,6 +206,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
       });
       resetManual();
       router.refresh();
+      bumpRegister();
     } catch (e) {
       setManualError(friendlyError(e) || "Yozib bo'lmadi");
     } finally {
@@ -306,6 +316,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
       }
       reset();
       router.refresh();
+      bumpRegister();
     } catch (e) {
       setUploadError(friendlyError(e) || "Yuklashda xatolik");
     } finally {
@@ -418,9 +429,9 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
 
       <Tabs
         items={[
-          { id: "reyestr", label: "Reyestr", hint: "Barcha tushum: bank, plastik, naqd" },
+          { id: "reyestr", label: "Barcha tushum", hint: "Bank, plastik va naqd — bitta ro'yxatda" },
           { id: "hisoblar", label: "Firma hisoblari", hint: "O'z firmalarimiz bo'yicha bank kirimi" },
-          { id: "navbat", label: "Navbat", hint: "Moslashtirilmagan kirimlar", count: totalUnmatched || undefined },
+          { id: "navbat", label: "Bog'lash kerak", hint: "Qaysi firmadan ekani hali aniqlanmagan kirimlar", count: totalUnmatched || undefined },
         ] as TabItem<TabKey>[]}
         value={tab}
         onChange={setTab}
@@ -802,7 +813,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
       {/* Kirim reyestri — barcha tushum (bank ham) bitta jadvalda, sana
           oralig'i bilan. Bu blok ilgari faqat "Plastik va naqd tushumlari"
           edi: bank tushumi ko'rinmasdi va sana filtri yo'q edi. */}
-      <IncomeRegister companies={companies} />
+      <IncomeRegister companies={companies} refreshKey={refreshTick} />
 
       </>)}
 
@@ -840,7 +851,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
                 key={tx.id}
                 tx={tx}
                 companies={companies}
-                onDone={() => router.refresh()}
+                onDone={() => { router.refresh(); bumpRegister(); }}
               />
             ))}
           </div>

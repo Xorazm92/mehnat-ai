@@ -26,6 +26,13 @@ type Totals = Awaited<ReturnType<typeof getIncomeRegister>>["totals"];
 
 interface Props {
   companies: { id: string; name: string; inn: string }[];
+  /**
+   * Bu jadval o'z ma'lumotini mustaqil so'raydi (props orqali emas) —
+   * shuning uchun ota komponentdagi `router.refresh()` uni yangilamaydi.
+   * Mutatsiyadan keyin ota shu qiymatni oshiradi, effekt qaramligiga
+   * qo'shilgani uchun jadval qayta so'raydi.
+   */
+  refreshKey?: number;
 }
 
 const card: React.CSSProperties = {
@@ -75,7 +82,7 @@ const columns: ExportColumn<Row>[] = [
   { key: "note", header: "Izoh", exportValue: (r) => r.note ?? "" },
 ];
 
-export default function IncomeRegister({ companies }: Props) {
+export default function IncomeRegister({ companies, refreshKey }: Props) {
   const [preset, setPreset] = useState<RangePreset>("month_to_date");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
@@ -112,7 +119,7 @@ export default function IncomeRegister({ companies }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [preset, customFrom, customTo, companyId, source]);
+  }, [preset, customFrom, customTo, companyId, source, refreshKey]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();

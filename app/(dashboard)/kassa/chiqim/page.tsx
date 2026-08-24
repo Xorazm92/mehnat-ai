@@ -4,45 +4,90 @@ import { currentUserViews } from "@/server/rbac";
 import { prisma } from "@/lib/prisma";
 import { getTransitOverview, getUnlinkedCardTransfers, getHouseholdExpenses } from "@/server/transit";
 import { getExpenseQueue } from "@/server/bankImport";
+import { getExpenses } from "@/server/kassa";
+import { getAvailableBalance } from "@/lib/balance";
+import { KASSA_CATEGORIES_KEY, resolveKassaCategories } from "@/lib/kassaCategories";
 import ChiqimKassaClient from "./ChiqimKassaClient";
+import KassaSectionNav from "@/components/KassaSectionNav";
 
 export const metadata = { title: "Chiqim kassa" };
 
-export default async function ChiqimKassaPage() {
+export default async function ChiqimKassaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   const session = await auth();
   if (!session) redirect("/login?expired=1");
 
-  // Darvoza `kassa_expense` ko'rinishi orqali — proxy bilan AYNAN bir manba
-  // (server/rbac.ts → currentUserViews), ya'ni admin RBAC editoridan
-  // o'zgartirilsa bu sahifa ham darhol unga bo'ysunadi.
-  //
-  // Ilgari bu yerda qattiq `isAdminRole` turardi ("rasxodni faqat man
-  // qilaman"). Qoida 2026-08-18 da o'zgardi — kassani kundalik yurituvchi
-  // xodim chiqim tomonini ham yozadi; server action'lar o'z tekshiruvini
-  // saqlaydi (server/transit.ts requireKassa / requireAdmin).
+  // Darvoza IKKI ko'rinishdan BIRI bilan ochiladi — proxy bilan AYNAN bir
+  // manba (server/rbac.ts → currentUserViews):
+  //   `kassa_expense` — tranzit kanallarni kundalik yurituvchi (to'liq sahifa)
+  //   `expenses`      — faqat xarajat tasdig'i (masalan Nazoratchi, Bosh
+  //                     buxgalter — ular tranzit kartalarni BOSHQARMAYDI,
+  //                     lekin xarajatni ko'rish/tasdiqlash huquqi bor edi
+  //                     va ilgari buning uchun ALOHIDA `/expenses` sahifasi
+  //                     bor edi. `/expenses` va shu yerdagi "Yopish kerak →
+  //                     Xarajat" navbati AYNAN BIR jadvalga (`KassaEntry`)
+  //                     yozar edi — ikki joyda bir xil ma'lumot ko'rsatish
+  //                     "qayerga borishni bilmayman" chalkashligini kuchaytirardi.
+  //                     Endi bitta joy: shu sahifaning "Xarajat" tabi.
   const views = await currentUserViews();
-  if (!views.includes("kassa_expense")) redirect("/cabinet");
+  const canManageChannels = views.includes("kassa_expense");
+  const canViewExpenses = views.includes("expenses");
+  if (!canManageChannels && !canViewExpenses) redirect("/cabinet");
 
-  const [overview, unlinked, household, queue, employees] = await Promise.all([
-    getTransitOverview(),
-    getUnlinkedCardTransfers(),
-    getHouseholdExpenses(),
-    getExpenseQueue(),
-    prisma.user.findMany({
-      where: { isActive: true },
-      select: { id: true, fullName: true, role: true },
-      orderBy: { fullName: "asc" },
-    }),
+  const [overview, unlinked, household, queue, employees, expenses, balance, catRow] = await Promise.all([
+    canManageChannels ? getTransitOverview() : Promise.resolve({ channels: [], totalBalance: 0, unlinkedCount: 0 }),
+    canManageChannels ? getUnlinkedCardTransfers() : Promise.resolve([]),
+    canManageChannels ? getHouseholdExpenses() : Promise.resolve(undefined),
+    canManageChannels ? getExpenseQueue() : Promise.resolve({ rows: [], truncated: 0 }),
+    canManageChannels
+      ? prisma.user.findMany({
+          where: { isActive: true },
+          select: { id: true, fullName: true, role: true },
+          orderBy: { fullName: "asc" },
+        })
+      : Promise.resolve([]),
+    getExpenses(),
+    getAvailableBalance(),
+    prisma.systemSetting.findUnique({ where: { key: KASSA_CATEGORIES_KEY } }),
   ]);
+
+  const expenseCategories = resolveKassaCategories(catRow?.value).expense;
+  const mappedExpenses = expenses.map((e) => ({
+    id: e.id,
+    amount: Number(e.amount),
+    date: e.date.toISOString(),
+    category: e.category,
+    description: e.description || "",
+    createdAt: e.createdAt.toISOString(),
+    status: (e as { status?: string }).status || "approved",
+    rejectedReason: (e as { rejectedReason?: string | null }).rejectedReason ?? null,
+  }));
 
   return (
     <div className="h-full">
+      <div className="px-4 md:px-6 pt-4">
+        <KassaSectionNav views={views} />
+      </div>
       <ChiqimKassaClient
         overview={JSON.parse(JSON.stringify(overview))}
         unlinked={JSON.parse(JSON.stringify(unlinked))}
-        household={JSON.parse(JSON.stringify(household))}
+        household={household ? JSON.parse(JSON.stringify(household)) : undefined}
         queue={JSON.parse(JSON.stringify(queue))}
         employees={JSON.parse(JSON.stringify(employees))}
+        expenses={mappedExpenses}
+        expenseBalance={JSON.parse(JSON.stringify(balance))}
+        expenseCategories={expenseCategories}
+        userRole={(session.user.role as string) || ""}
+        canManageChannels={canManageChannels}
+        initialTab={
+          tab === "navbat" || tab === "kartalar" || tab === "xojalik" || tab === "xarajat"
+            ? tab
+            : undefined
+        }
       />
     </div>
   );
