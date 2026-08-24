@@ -439,8 +439,9 @@ function assertNewCompanyComplete(
 
   const inn = typeof data.inn === "string" ? data.inn.trim() : "";
   if (!inn) throw new Error("INN kiritilishi shart");
-  if (!/^\d{9}$/.test(inn)) {
-    throw new Error("INN 9 ta raqamdan iborat bo'lishi kerak");
+  // YTT JSHSHIR (14 xona) bilan ro'yxatdan o'tadi, yuridik shaxs INN (9 xona) bilan.
+  if (!/^\d{9}$/.test(inn) && !/^\d{14}$/.test(inn)) {
+    throw new Error("INN 9 ta yoki JSHSHIR 14 ta raqamdan iborat bo'lishi kerak");
   }
 
   const hasAccountant = (assignments ?? []).some(

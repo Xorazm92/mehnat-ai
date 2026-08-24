@@ -5,7 +5,7 @@ import { z } from "zod";
 // =====================================================
 export const companySchema = z.object({
   name: z.string().min(1, "Firma nomi kiritilishi shart"),
-  inn: z.string().regex(/^\d{9}$/, "INN 9 ta raqamdan iborat bo'lishi kerak").optional().or(z.literal("")),
+  inn: z.string().regex(/^\d{9}$|^\d{14}$/, "INN 9 ta yoki JSHSHIR 14 ta raqamdan iborat bo'lishi kerak").optional().or(z.literal("")),
   brandName: z.string().nullable().optional(),
   directorName: z.string().nullable().optional(),
   directorPhone: z.string().nullable().optional(),

@@ -179,7 +179,10 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
             const inn = (formData.inn || '').trim();
             if (!inn) errs.push('INN kiritilishi shart');
             else if (!isEdit || innTouched) {
-                if (!/^\d{9}$/.test(inn)) errs.push("INN 9 ta raqamdan iborat bo'lishi kerak");
+                // YTT JSHSHIR (14 xona) bilan ro'yxatdan o'tadi, yuridik shaxs INN (9 xona) bilan.
+                if (!/^\d{9}$/.test(inn) && !/^\d{14}$/.test(inn)) {
+                    errs.push("INN 9 ta yoki JSHSHIR 14 ta raqamdan iborat bo'lishi kerak");
+                }
             }
         }
         if (step === 3 && !isEdit) {
@@ -286,7 +289,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>INN (9 ta raqam) *</label>
+                                <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>INN (9) yoki JSHSHIR (14) *</label>
                                 <input
                                     className="erp-input font-mono"
                                     placeholder="123456789"
