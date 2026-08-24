@@ -19,6 +19,7 @@ import {
 } from "@/server/bankImport";
 import type { StatementPreview } from "@/lib/bank/types";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
+import { getServiceTermInfo } from "@/server/companies";
 import IncomeRegister from "./IncomeRegister";
 import { Tabs, type TabItem } from "@/components/ui";
 import { friendlyError } from "@/lib/actionError";
@@ -109,7 +110,11 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
 
   // Qo'lda kirim: naqd va plastik pul vipiskada ko'rinmaydi, uni odam
   // kiritadi. Backend (createKassaEntry) bor edi, ekran yo'q edi.
-  const [manualType, setManualType] = useState<"naqd" | "plastik" | null>(null);
+  //
+  // "offset" — vzaimozachyot/ijara: pul HECH QAYERGA tushmaydi (kanal
+  // so'ralmaydi), lekin mijozning qarzini yopadi. CompanyServiceTerm.offsetAmount
+  // dan belgilangan oylik limitdan oshirib bo'lmaydi (server tekshiradi).
+  const [manualType, setManualType] = useState<"naqd" | "plastik" | "offset" | null>(null);
   // KIMDAN tushdi. Bu maydon yo'q edi va aynan shu sababli qo'lda kiritilgan
   // naqd to'lov mijozning qarzini kamaytirmasdi — yozuv hech kimga
   // bog'lanmagan `KassaEntry` bo'lib qolardi.
@@ -131,6 +136,28 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   const [manualChannelId, setManualChannelId] = useState("");
   const [manualBusy, setManualBusy] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
+
+  // Offset tanlanganda — shu firma uchun shu oy qancha offset limiti
+  // qolganini ko'rsatamiz (server baribir tekshiradi, bu faqat oldindan
+  // ogohlantirish — kassir summani kiritishdan oldin bilib olsin).
+  const [offsetCap, setOffsetCap] = useState<{ cap: number; used: number } | null>(null);
+  useEffect(() => {
+    if (manualType !== "offset" || !manualCompanyId) {
+      setOffsetCap(null);
+      return;
+    }
+    let cancelled = false;
+    getServiceTermInfo(manualCompanyId)
+      .then((info: any) => {
+        if (cancelled) return;
+        setOffsetCap({
+          cap: Number(info.current?.offsetAmount ?? 0),
+          used: Number(info.usedOffsetThisPeriod ?? 0),
+        });
+      })
+      .catch(() => { if (!cancelled) setOffsetCap(null); });
+    return () => { cancelled = true; };
+  }, [manualType, manualCompanyId]);
 
   // Tushum formasi ochilganda ko'rinadigan joyga suring — ilgari u sahifa
   // o'rtasida paydo bo'lib, foydalanuvchi uni qidirib topishi kerak edi.
@@ -158,10 +185,17 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
       setManualError("Summa musbat son bo'lishi kerak");
       return;
     }
-    // MANBA IKKALASIDA HAM MAJBURIY: pul qaysi kassaga tushganini bilmasak,
-    // o'sha kassaning qoldig'i hech qachon to'g'ri chiqmaydi va kassalar
-    // hisobotini qurib bo'lmaydi.
-    if (!manualChannelId) {
+    if (manualType === "offset") {
+      // Offset pul hech qayerga tushmaydi — kanal emas, FIRMA majburiy
+      // (aks holda "kimning qarzi yopilyapti" degan savolga javob yo'q).
+      if (!manualCompanyId) {
+        setManualError("Offset faqat firma tanlanganda kiritiladi");
+        return;
+      }
+    } else if (!manualChannelId) {
+      // MANBA IKKALASIDA HAM MAJBURIY: pul qaysi kassaga tushganini bilmasak,
+      // o'sha kassaning qoldig'i hech qachon to'g'ri chiqmaydi va kassalar
+      // hisobotini qurib bo'lmaydi.
       setManualError(
         manualType === "plastik"
           ? "Qaysi plastikka tushganini tanlang"
@@ -197,7 +231,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
       await recordManualReceipt({
         companyId: manualCompanyId || null,
         contractId: manualContractId || null,
-        channelId: manualChannelId,
+        channelId: manualType === "offset" ? null : manualChannelId,
         source: manualType,
         amount,
         receivedAt,
@@ -346,6 +380,14 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           >
             <Plus size={15} /> Tushum qo&apos;shish
           </Button>
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => { setManualType("offset"); setManualError(null); }}
+            title="Vzaimozachyot/ijara — pul kassaga tushmaydi, faqat qarzni yopadi"
+          >
+            <Plus size={15} /> Offset
+          </Button>
           <input
             ref={fileInput}
             type="file"
@@ -443,7 +485,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
         <div ref={formRef} className="p-4 rounded-xl space-y-3" style={{ ...card, borderColor: "var(--accent-blue)" }}>
           <div className="flex items-center justify-between">
             <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
-              {manualType === "naqd" ? "Naqd tushum" : "Plastik tushum"} qo&apos;shish
+              {manualType === "naqd" ? "Naqd tushum" : manualType === "plastik" ? "Plastik tushum" : "Offset (vzaimozachyot)"} qo&apos;shish
             </h2>
             <Button variant="secondary" size="sm" onClick={resetManual}>Yopish</Button>
           </div>
@@ -498,7 +540,11 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
                   setDupWarning(null);
                 }}
               >
-                <option value="">Nomsiz tushum (firmaga bog'lanmagan)</option>
+                {manualType === "offset" ? (
+                  <option value="">Firmani tanlang</option>
+                ) : (
+                  <option value="">Nomsiz tushum (firmaga bog'lanmagan)</option>
+                )}
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} — {c.inn}
@@ -538,25 +584,44 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
               />
             </label>
           </div>
-          <label className="block">
-            <span className="text-meta" style={{ color: "var(--text-secondary)" }}>
-              {manualType === "plastik" ? "Qaysi plastikka tushdi" : "Qaysi kassaga tushdi"}{" "}
-              <span style={{ color: "var(--danger)" }}>*</span>
-            </span>
-            <FundingSourceSelect
-              value={manualChannelId}
-              onChange={setManualChannelId}
-              className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
-            />
-          </label>
-          {manualCompanyId ? (
-            <p className="text-micro" style={{ color: "var(--text-muted)" }}>
-              Bu to&apos;lov tanlangan firmaning qarzini kamaytiradi.
-            </p>
+          {manualType === "offset" ? (
+            <>
+              <p className="text-micro" style={{ color: "var(--text-muted)" }}>
+                Offset — pul HECH QAYERGA tushmaydi (kanal so&apos;ralmaydi), faqat tanlangan firmaning
+                qarzini yopadi. Kassa balansiga ta&apos;sir qilmaydi.
+              </p>
+              {manualCompanyId && offsetCap && (
+                <p className="text-micro" style={{ color: offsetCap.used >= offsetCap.cap ? "var(--danger)" : "var(--text-muted)" }}>
+                  Shu oy uchun offset limiti: {formatNum(offsetCap.cap)} so&apos;m,
+                  ishlatilgan: {formatNum(offsetCap.used)} so&apos;m,
+                  qoldi: {formatNum(Math.max(0, offsetCap.cap - offsetCap.used))} so&apos;m.
+                  {offsetCap.cap === 0 && " (Bu firmada offset split belgilanmagan — \"Narxni o'zgartirish\" orqali sozlang.)"}
+                </p>
+              )}
+            </>
           ) : (
-            <p className="text-micro" style={{ color: "var(--warning, var(--text-muted))" }}>
-              Firma tanlanmagan — tushum kassaga kiradi, lekin hech kimning qarzini kamaytirmaydi.
-            </p>
+            <>
+              <label className="block">
+                <span className="text-meta" style={{ color: "var(--text-secondary)" }}>
+                  {manualType === "plastik" ? "Qaysi plastikka tushdi" : "Qaysi kassaga tushdi"}{" "}
+                  <span style={{ color: "var(--danger)" }}>*</span>
+                </span>
+                <FundingSourceSelect
+                  value={manualChannelId}
+                  onChange={setManualChannelId}
+                  className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
+                />
+              </label>
+              {manualCompanyId ? (
+                <p className="text-micro" style={{ color: "var(--text-muted)" }}>
+                  Bu to&apos;lov tanlangan firmaning qarzini kamaytiradi.
+                </p>
+              ) : (
+                <p className="text-micro" style={{ color: "var(--warning, var(--text-muted))" }}>
+                  Firma tanlanmagan — tushum kassaga kiradi, lekin hech kimning qarzini kamaytirmaydi.
+                </p>
+              )}
+            </>
           )}
           {dupWarning ? (
             <div

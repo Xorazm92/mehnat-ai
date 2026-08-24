@@ -979,8 +979,9 @@ export interface ManualReceiptInput {
   /** Bo'sh bo'lsa — nomsiz tushum (hech kimning qarzini kamaytirmaydi). */
   companyId?: string | null;
   contractId?: string | null;
-  channelId: string;
-  /** naqd | plastik | bank */
+  /** naqd/plastik/bank uchun majburiy — pul qaysi kanalga tushdi. "offset" uchun keraksiz. */
+  channelId?: string | null;
+  /** naqd | plastik | bank | offset (vzaimozachyot/ijara — kassaga tushmaydi) */
   source: string;
   amount: number;
   receivedAt: Date;
@@ -990,6 +991,8 @@ export interface ManualReceiptInput {
 }
 
 const MANUAL_SOURCES = new Set(["naqd", "plastik", "bank"]);
+/** offset — firma majburiy, kanal esa ma'nosiz (pul hech qayerga tushmaydi). */
+const OFFSET_SOURCE = "offset";
 
 /**
  * Bir xil tushum allaqachon kiritilganmi — YUMSHOQ ogohlantirish uchun.
@@ -1042,14 +1045,24 @@ export async function checkDuplicateReceipt(input: {
 export async function recordManualReceipt(input: ManualReceiptInput) {
   const { userId } = await requireStatementRole();
 
-  if (!MANUAL_SOURCES.has(input.source)) {
-    throw new Error("To'lov turi noto'g'ri: naqd, plastik yoki bank bo'lishi kerak");
+  const isOffset = input.source === OFFSET_SOURCE;
+  if (!MANUAL_SOURCES.has(input.source) && !isOffset) {
+    throw new Error("To'lov turi noto'g'ri: naqd, plastik, bank yoki offset bo'lishi kerak");
   }
   const amount = Number(input.amount);
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("Summa musbat bo'lishi kerak");
   }
-  await assertFundingSource(input.channelId);
+  // Offset pul hech qayerga tushmaydi — kanal tanlashning ma'nosi yo'q,
+  // shuning uchun tekshirilmaydi (aks holda naqd/bank kabi kanal talab qilinardi).
+  if (isOffset) {
+    if (!input.companyId) {
+      throw new Error("Offset (vzaimozachyot) faqat firmaga bog'liq holda kiritiladi");
+    }
+  } else {
+    if (!input.channelId) throw new Error("Pul manbai (kanal) tanlanishi shart");
+    await assertFundingSource(input.channelId);
+  }
   await assertPeriodOpen(prisma, input.receivedAt, "kassa kirimi");
 
   // Nomsiz tushum — mijozga bog'lanmagan, qarzga ta'sir qilmaydi.
@@ -1099,10 +1112,10 @@ export async function recordManualReceipt(input: ManualReceiptInput) {
     amount,
     receivedAt: input.receivedAt,
     source: input.source,
-    paymentMethod: input.source === "bank" ? "schyot" : input.source,
+    paymentMethod: input.source === "bank" ? "schyot" : isOffset ? "boshqa" : input.source,
     dedupKey: manualDedupKey({ ...input, amount }),
     externalRef: input.docRef?.trim() || null,
-    channelId: input.channelId,
+    channelId: isOffset ? null : (input.channelId ?? null),
     createdBy: userId,
   });
 

@@ -21,6 +21,8 @@ import { notifyOneCBaseNeeded } from "@/lib/oneCBase";
 import { telegramQueueDispatcher } from "@/lib/notifyDispatch";
 import { logServerError } from "@/lib/logger";
 import { normalizeTaxRegime } from "@/lib/taxRegimes";
+import { createServiceTerm, resolveServiceTerm } from "@/lib/terms";
+import { periodKeyOf } from "@/lib/periods";
 
 // Shartnoma/pul maydonlari — o'zgarishi auditga yoziladi va faqat senior tahrirlaydi.
 const MONEY_FIELDS = [
@@ -497,6 +499,27 @@ export async function createCompany(companyData: Record<string, unknown>, assign
     newData: { name: result.name, inn: result.inn },
   });
 
+  // Dastlabki CompanyServiceTerm — split TO'LIQ bankka (offset=0), chunki
+  // wizard'da split so'ralmaydi. Buni yaratmasak, oylik Payment generatsiyasi
+  // (lib/paymentGeneration.ts) bu firma uchun "term topilmadi" deb o'tkazib
+  // yuboradi — yangi firma egasiz Payment'siz qolib ketardi.
+  const totalAmount = Number(result.contractAmount ?? 0);
+  if (totalAmount > 0) {
+    try {
+      await createServiceTerm({
+        companyId: result.id,
+        totalAmount,
+        bankAmount: totalAmount,
+        offsetAmount: 0,
+        effectiveFrom: result.contractDate ?? new Date(),
+        reason: "boshlang'ich (firma yaratilganda)",
+        createdById: session.user.id,
+      });
+    } catch (err) {
+      logServerError("companies.createServiceTerm", err, { companyId: result.id });
+    }
+  }
+
   // 1C baza ochish xabarnomasi — sayt + Telegram. Yiqilsa firma yaratilgani
   // bekor qilinmaydi: xabar yordamchi, firma esa asosiy natija.
   try {
@@ -640,6 +663,69 @@ export async function deleteCompany(id: string) {
   });
   updateTag("companies");
   return serialize(result);
+}
+
+/**
+ * Firmaning JORIY shartnoma summasi + split holatini o'qiydi — "Narxni
+ * o'zgartirish" ekranini oldindan to'ldirish va offset limitini ko'rsatish
+ * uchun. `Company.contractAmount` emas, `CompanyServiceTerm`dan — chunki
+ * shu ekran aynan o'sha yozuvni tahrirlaydi.
+ */
+export async function getServiceTermInfo(companyId: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  const { id: userId, role } = { id: session.user.id, role: session.user.role as string };
+  await assertCompanyPermission(prisma, { id: userId, role }, companyId, "company:read");
+
+  const current = await resolveServiceTerm(companyId, new Date());
+  // Offset limiti OYLIK (applyAllocation shu davr Payment'i bo'yicha
+  // tekshiradi — lib/bank/importStatement.ts), shuning uchun bu yerda ham
+  // faqat JORIY davr hisoblanadi, term boshlangandan buyon jamlanmaydi.
+  const currentPeriod = periodKeyOf(new Date());
+  const usedOffset = current
+    ? await prisma.paymentAllocation.aggregate({
+        where: { source: "offset", payment: { companyId, period: currentPeriod } },
+        _sum: { amount: true },
+      })
+    : null;
+
+  return serialize({
+    current,
+    currentPeriod,
+    usedOffsetThisPeriod: Number(usedOffset?._sum.amount ?? 0),
+  });
+}
+
+/**
+ * Shartnoma summasini VERSIYALAB o'zgartiradi (narx o'zgarishi/split).
+ * To'g'ridan-to'g'ri `updateCompany({contractAmount})` chaqirilmaydi —
+ * u eski oylar hisob-kitobini ham "yangilab" qo'yardi (lib/terms.ts ga q.).
+ */
+export async function updateServiceTerm(input: {
+  companyId: string;
+  totalAmount: number;
+  bankAmount: number;
+  offsetAmount: number;
+  effectiveFrom: string | Date;
+  reason?: string;
+}) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  const { id: userId, role } = { id: session.user.id, role: session.user.role as string };
+  await assertCompanyPermission(prisma, { id: userId, role }, input.companyId, "company:update");
+
+  const created = await createServiceTerm({
+    companyId: input.companyId,
+    totalAmount: input.totalAmount,
+    bankAmount: input.bankAmount,
+    offsetAmount: input.offsetAmount,
+    effectiveFrom: new Date(input.effectiveFrom),
+    reason: input.reason,
+    createdById: userId,
+  });
+
+  updateTag("companies");
+  return serialize(created);
 }
 
 export async function getCompanyStats() {

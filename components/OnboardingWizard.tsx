@@ -4,6 +4,8 @@ import { Company, Staff, TaxType, ServerInfo } from '@/types';
 import { ChevronRight, ChevronLeft, Check, X, Building2, Server, Calculator, Users } from 'lucide-react';
 import { groupDigits, ungroupDigits } from '@/lib/format';
 import { Button } from "@/components/ui/Button";
+import { updateServiceTerm, getServiceTermInfo } from "@/server/companies";
+import { friendlyError } from "@/lib/actionError";
 import {
     ASSIGNMENT_ROLES,
     ASSIGNMENT_ROLE_LABELS,
@@ -171,6 +173,89 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
      */
     const isEdit = Boolean(initialData?.id);
     const innTouched = (formData.inn || '') !== (initialData?.inn || '');
+
+    /**
+     * "Narxni o'zgartirish (split bilan)" — mustaqil panel, YANGI firmada
+     * ko'rsatilmaydi (u avtomatik to'liq-bank term bilan yaratiladi,
+     * server/companies.ts#createCompany).
+     *
+     * `formData.contractAmount` ni to'g'ridan-to'g'ri tahrirlash (yuqoridagi
+     * "Shartnoma Summasi" maydoni) ESKI oylarni ham "yangilab" qo'yardi —
+     * bu panel `updateServiceTerm` orqali VERSIYALAB yozadi (lib/terms.ts).
+     */
+    const [termOpen, setTermOpen] = useState(false);
+    const [termLoading, setTermLoading] = useState(false);
+    const [termInfo, setTermInfo] = useState<{ current: any; usedOffsetThisPeriod: number } | null>(null);
+    const [termTotal, setTermTotal] = useState('');
+    const [termBank, setTermBank] = useState('');
+    const [termOffset, setTermOffset] = useState('');
+    const [termFrom, setTermFrom] = useState(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    });
+    const [termReason, setTermReason] = useState('');
+    const [termBusy, setTermBusy] = useState(false);
+    const [termError, setTermError] = useState<string | null>(null);
+    const [termSuccess, setTermSuccess] = useState(false);
+
+    const companyId = initialData?.id;
+
+    const openTermPanel = async () => {
+        setTermOpen(true);
+        setTermSuccess(false);
+        setTermError(null);
+        if (!companyId) return;
+        setTermLoading(true);
+        try {
+            const info = await getServiceTermInfo(companyId);
+            setTermInfo(info as any);
+            const cur = (info as any).current;
+            if (cur) {
+                setTermTotal(String(cur.totalAmount));
+                setTermBank(String(cur.bankAmount));
+                setTermOffset(String(cur.offsetAmount));
+            }
+        } catch (e) {
+            setTermError(friendlyError(e, "Joriy holatni o'qib bo'lmadi"));
+        } finally {
+            setTermLoading(false);
+        }
+    };
+
+    const submitTerm = async () => {
+        if (!companyId) return;
+        const total = Number(termTotal);
+        const bank = Number(termBank);
+        const offset = Number(termOffset);
+        if (!Number.isFinite(total) || total <= 0) {
+            setTermError('Umumiy summa musbat son bo\'lishi kerak');
+            return;
+        }
+        if (Math.round((bank + offset) * 100) !== Math.round(total * 100)) {
+            setTermError('Bank + Offset yig\'indisi umumiy summaga teng bo\'lishi kerak');
+            return;
+        }
+        setTermBusy(true);
+        setTermError(null);
+        try {
+            await updateServiceTerm({
+                companyId,
+                totalAmount: total,
+                bankAmount: bank,
+                offsetAmount: offset,
+                effectiveFrom: termFrom,
+                reason: termReason.trim() || undefined,
+            });
+            setTermSuccess(true);
+            setTermReason('');
+            const info = await getServiceTermInfo(companyId);
+            setTermInfo(info as any);
+        } catch (e) {
+            setTermError(friendlyError(e, "Saqlab bo'lmadi"));
+        } finally {
+            setTermBusy(false);
+        }
+    };
 
     const stepErrors = (step: number): string[] => {
         const errs: string[] = [];
@@ -390,6 +475,95 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 />
                             </div>
                         </div>
+
+                        {isEdit && companyId && (
+                            <div className="rounded-xl p-4 space-y-3" style={{ border: '1px solid var(--card-border)', background: 'var(--input-bg)' }}>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="text-body font-semibold" style={{ color: 'var(--text)' }}>Narxni o&apos;zgartirish (split bilan)</div>
+                                        <p className="text-2xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                            Yuqoridagi &quot;Shartnoma Summasi&quot; faqat ekranda ko&apos;rinadi — real
+                                            o&apos;zgarish shu panel orqali, yangi VERSIYA sifatida yoziladi.
+                                            Eski oylar eski summada qoladi.
+                                        </p>
+                                    </div>
+                                    {!termOpen && (
+                                        <Button variant="secondary" size="sm" onClick={openTermPanel}>Ochish</Button>
+                                    )}
+                                </div>
+                                {termOpen && (
+                                    termLoading ? (
+                                        <p className="text-meta" style={{ color: 'var(--text-muted)' }}>Yuklanmoqda…</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {termInfo?.current && (
+                                                <p className="text-2xs" style={{ color: 'var(--text-muted)' }}>
+                                                    Joriy: {groupDigits(termInfo.current.totalAmount)} so&apos;m
+                                                    (bank {groupDigits(termInfo.current.bankAmount)} + offset {groupDigits(termInfo.current.offsetAmount)}),
+                                                    amal qiladi: {String(termInfo.current.effectiveFrom).slice(0, 10)} dan.
+                                                    Shu oy offsetdan ishlatilgan: {groupDigits(termInfo.usedOffsetThisPeriod)} so&apos;m.
+                                                </p>
+                                            )}
+                                            {termError && <p className="text-meta" style={{ color: 'var(--danger)' }}>{termError}</p>}
+                                            {termSuccess && <p className="text-meta" style={{ color: 'var(--success, #16a34a)' }}>Yangi versiya saqlandi.</p>}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <label className="block">
+                                                    <span className="text-micro" style={fieldLabelStyle}>Umumiy summa</span>
+                                                    <input
+                                                        type="text" inputMode="numeric"
+                                                        className="erp-input tabular-nums"
+                                                        value={groupDigits(termTotal)}
+                                                        onChange={e => setTermTotal(ungroupDigits(e.target.value))}
+                                                    />
+                                                </label>
+                                                <label className="block">
+                                                    <span className="text-micro" style={fieldLabelStyle}>Amal qiladi (oy)</span>
+                                                    <input
+                                                        type="date"
+                                                        className="erp-input"
+                                                        value={termFrom}
+                                                        onChange={e => setTermFrom(e.target.value)}
+                                                    />
+                                                </label>
+                                                <label className="block">
+                                                    <span className="text-micro" style={fieldLabelStyle}>Bank qismi</span>
+                                                    <input
+                                                        type="text" inputMode="numeric"
+                                                        className="erp-input tabular-nums"
+                                                        value={groupDigits(termBank)}
+                                                        onChange={e => setTermBank(ungroupDigits(e.target.value))}
+                                                    />
+                                                </label>
+                                                <label className="block">
+                                                    <span className="text-micro" style={fieldLabelStyle}>Offset (vzaimozachyot/ijara) qismi</span>
+                                                    <input
+                                                        type="text" inputMode="numeric"
+                                                        className="erp-input tabular-nums"
+                                                        value={groupDigits(termOffset)}
+                                                        onChange={e => setTermOffset(ungroupDigits(e.target.value))}
+                                                    />
+                                                </label>
+                                                <label className="block sm:col-span-2">
+                                                    <span className="text-micro" style={fieldLabelStyle}>Sabab (ixtiyoriy)</span>
+                                                    <input
+                                                        className="erp-input"
+                                                        placeholder="masalan: narx ko'tarildi, ijara qo'shildi"
+                                                        value={termReason}
+                                                        onChange={e => setTermReason(e.target.value)}
+                                                    />
+                                                </label>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button variant="primary" size="sm" disabled={termBusy} onClick={submitTerm}>
+                                                    {termBusy ? 'Saqlanmoqda…' : 'Yangi versiya sifatida saqlash'}
+                                                </Button>
+                                                <Button variant="secondary" size="sm" onClick={() => setTermOpen(false)}>Yopish</Button>
+                                            </div>
+                                        </div>
+                                    )
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 
