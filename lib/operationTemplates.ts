@@ -210,6 +210,22 @@ export const OPERATION_TEMPLATES: OperationTemplate[] = [
         assignedRole: 'accountant',
         deadlineDay: 15,
         frequency: 'monthly'
+    },
+    {
+        key: 'jismoniy_ijara',
+        nameUz: 'Jismoniy Shaxslarni Ijara Hisoboti va To\'lovi',
+        nameRu: 'Отчет и оплата аренды у физлиц',
+        assignedRole: 'accountant',
+        deadlineDay: 15,
+        frequency: 'monthly'
+    },
+    {
+        key: 'stat_1_nnt',
+        nameUz: '1-NNT Statistika Hisoboti',
+        nameRu: 'Статотчет 1-ННТ',
+        assignedRole: 'accountant',
+        deadlineDay: 25,
+        frequency: 'yearly'
     }
 ];
 
@@ -279,6 +295,8 @@ export const FIELD_TO_DB_COLUMN: Record<OperationFieldKey, string> = {
     kom_gaz: 'komGaz',
     kom_svet: 'komSvet',
     ekologiya: 'ekologiya',
+    jismoniy_ijara: 'jismoniyIjara',
+    stat_1_nnt: 'stat1Nnt',
 };
 
 /** Prisma MonthlyReport (camelCase) yozuvini OperationEntry (snake_case) shakliga o'giradi. */

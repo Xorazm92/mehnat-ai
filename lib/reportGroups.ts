@@ -62,6 +62,7 @@ export const COLUMN_CATEGORY: Record<OperationFieldKey, ReportCategory> = {
   nedro_soligi: "SOLIQ",
   norezident_foyda: "SOLIQ",
   norezident_nds: "SOLIQ",
+  jismoniy_ijara: "SOLIQ",
 
   // ═══ STATISTIKA — davlat statistika hisobotlari ═══
   statistika: "STATISTIKA",
@@ -84,6 +85,7 @@ export const COLUMN_CATEGORY: Record<OperationFieldKey, ReportCategory> = {
   stat_1_tib: "STATISTIKA",
   stat_1_turizm: "STATISTIKA",
   stat_4_moliya: "STATISTIKA",
+  stat_1_nnt: "STATISTIKA",
 
   // ═══ MAXSUS — moliyaviy hisobotlar + IT Park + kommunal ═══
   // DIQQAT: bu kategoriya hozir ikki xil narsani birlashtirgan (moliyaviy

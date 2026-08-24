@@ -33,6 +33,7 @@ const LEGACY_REGIMES = ["turnover", "fixed", "yatt", "income"] as const;
 // ustiga alohida tanlanadi.
 export const TAX_REGIMES = [
   "vat",
+  "simplified_vat",
   "turnover_percent",
   "turnover_fixed",
   "yatt_fixed",
@@ -48,7 +49,7 @@ export type TaxRegimeCode = (typeof TAX_REGIMES)[number];
  * chizadi: har bir kategoriya bitta karta, ba'zilarida ichki
  * sub-variantlar (radio) bor.
  */
-export type TaxCategoryId = "vat" | "turnover" | "yatt" | "nonresident";
+export type TaxCategoryId = "vat" | "simplified_vat" | "turnover" | "yatt" | "nonresident";
 
 export interface TaxSubOption {
   code: TaxRegimeCode;
@@ -71,6 +72,12 @@ export const TAX_CATEGORIES: TaxCategory[] = [
     label: "Umumbelgilangan soliq rejimi",
     hint: "QQS to'lovchi (NDS 12%) — yillik aylanma >1 mlrd yoki ixtiyoriy QQS",
     code: "vat",
+  },
+  {
+    id: "simplified_vat",
+    label: "Soddalashtirilgan QQS to'lovchi",
+    hint: "Oborotdan 6% QQS to'lanadi — foyda solig'i to'lanmaydi",
+    code: "simplified_vat",
   },
   {
     id: "turnover",
@@ -127,6 +134,7 @@ export const TAX_CATEGORIES: TaxCategory[] = [
  */
 export const TAX_REGIME_LABEL: Record<TaxRegimeCode, string> = {
   vat: "NDS",
+  simplified_vat: "Soddalashtirilgan QQS",
   turnover_percent: "Aylanma (foiz)",
   turnover_fixed: "Aylanma (qat'iy)",
   yatt_fixed: "YaTT (qat'iy)",
@@ -143,6 +151,7 @@ export const TAX_REGIME_LABEL: Record<TaxRegimeCode, string> = {
 /** Tanlagichdagi bir qatorlik tushuntirish. */
 export const TAX_REGIME_HINT: Record<TaxRegimeCode, string> = {
   vat: "QQS to'lovchi — QQS deklaratsiyasi oylik",
+  simplified_vat: "Oborotdan 6% QQS — foyda solig'i yo'q, QQS deklaratsiyasi oylik",
   turnover_percent: "Aylanma soliq (foiz, baza 4%) — choraklik hisobot",
   turnover_fixed: "Aylanma soliq (qat'iy summa) — choraklik hisobot",
   yatt_fixed: "YaTT, qat'iy daromad solig'i (aylanma <100 mln)",
@@ -158,6 +167,7 @@ export const TAX_REGIME_HINT: Record<TaxRegimeCode, string> = {
 /** Matritsadagi qisqa belgi (jadval ustuni tor). */
 export const TAX_REGIME_SHORT: Record<TaxRegimeCode, string> = {
   vat: "NDS",
+  simplified_vat: "QQS 6%",
   turnover_percent: "AYLANMA %",
   turnover_fixed: "AYLANMA QAT'IY",
   yatt_fixed: "YATT QAT'IY",
@@ -194,6 +204,8 @@ export function taxRegimeCategory(regime: TaxRegimeCode): TaxCategoryId {
   switch (regime) {
     case "vat":
       return "vat";
+    case "simplified_vat":
+      return "simplified_vat";
     case "turnover":
     case "turnover_percent":
     case "turnover_fixed":
@@ -220,7 +232,7 @@ export function taxRegimeCategory(regime: TaxRegimeCode): TaxCategoryId {
  * majburiyatlarini, YaTT-aylanma esa `turnover` majburiyatlarini oladi.
  */
 export function taxRegimeEngineBucket(regime: TaxRegimeCode): "vat" | "turnover" | "other" {
-  if (regime === "vat" || regime === "yatt_vat") return "vat";
+  if (regime === "vat" || regime === "yatt_vat" || regime === "simplified_vat") return "vat";
   if (
     regime === "turnover" ||
     regime === "turnover_percent" ||

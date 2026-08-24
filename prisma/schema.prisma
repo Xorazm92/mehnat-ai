@@ -22,6 +22,7 @@ enum UserRole {
 
 enum TaxRegime {
   vat
+  simplified_vat
   turnover
   fixed // DEPRECATED: eski qiymat, endi `turnover_fixed`/`yatt_fixed` ishlatiladi
   yatt // DEPRECATED: eski umumiy YaTT, endi `yatt_fixed`/`yatt_turnover`/`yatt_vat`
@@ -380,6 +381,10 @@ model MonthlyReport {
   komGaz            String?
   komSvet           String?
   ekologiya         String?
+  /// Jismoniy shaxslardan ijaraga olingan mulk uchun hisobot va soliq to'lovi (OYLIK).
+  jismoniyIjara     String?
+  /// 1-NNT — yillik statistika hisoboti (aholi bandligi).
+  stat1Nnt          String?
 
   comment   String?
   updatedAt DateTime @updatedAt

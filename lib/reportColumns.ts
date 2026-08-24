@@ -28,6 +28,7 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   { key: "debitor_kreditor", label: "Deb/Kred", short: "DK", group: "Oylik" },
   { key: "foyda_va_zarar", label: "Foyda/Zarar", short: "FZ", group: "Oylik" },
   { key: "tovar_ostatka", label: "Tovar Ost.", short: "TO", group: "Oylik" },
+  { key: "jismoniy_ijara", label: "Jism. Ijara", short: "JI", group: "Oylik" },
 
   // ═══ SOLIQLAR (Umumiy) ═══
   { key: "yer_soligi", label: "Yer Solig'i", short: "YS", group: "Soliqlar" },
@@ -74,6 +75,7 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   { key: "stat_1_tib", label: "1-tib (aholi)", short: "1TB", group: "Statistika" },
   { key: "stat_1_turizm", label: "1-turizm", short: "1TR", group: "Statistika" },
   { key: "stat_4_moliya", label: "4-moliya", short: "4ML", group: "Statistika" },
+  { key: "stat_1_nnt", label: "1-nnt", short: "1NT", group: "Statistika" },
 
   // ═══ IT PARK ═══
   { key: "itpark_oylik", label: "IT Park Oylik", short: "ITO", group: "IT Park" },
