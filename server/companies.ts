@@ -459,7 +459,7 @@ export async function createCompany(companyData: Record<string, unknown>, assign
   if (!session) throw new Error("Unauthorized");
 
   const role = session.user.role as string;
-  if (!isAdminRole(role)) throw new Error("Forbidden");
+  if (!isAdminRole(role) && role !== "chief_accountant") throw new Error("Forbidden");
 
   const data = sanitizeCompanyData(companyData);
   assertNewCompanyComplete(data, assignments);

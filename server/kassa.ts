@@ -552,8 +552,23 @@ export async function upsertPayment(data: {
 
   const existing = await prisma.payment.findUnique({
     where: { companyId_period: { companyId, period } },
-    select: { id: true, amount: true, status: true, deletedAt: true },
+    select: { id: true, amount: true, status: true, deletedAt: true, _count: { select: { allocations: true } } },
   });
+
+  // BU YO'L `PaymentAllocation`NI BILMAYDI: summani to'g'ridan-to'g'ri
+  // yozadi. Agar davr allaqachon bank/plastik/naqd taqsimotidan yig'ilgan
+  // bo'lsa, bu yerdan qo'lda tuzatish keyingi importda `applyAllocation`
+  // tomonidan (taqsimotlar yig'indisiga) jimgina qayta yozilib ketardi —
+  // buxgalterning tuzatishi iz qoldirmay yo'qolardi. To'g'ri yo'l: shu
+  // davr uchun yangi tushumni `/kassa/kirim` dagi "Tushum qo'shish" orqali
+  // (`recordManualReceipt` → `applyAllocation`) kiritish.
+  if (existing && existing._count.allocations > 0) {
+    throw new Error(
+      "Bu davr uchun to'lov allaqachon taqsimotlardan (bank/plastik/naqd) yig'ilgan — " +
+        "bu yerdan summani qo'lda o'zgartirib bo'lmaydi, keyingi import uni ustidan yozadi. " +
+        "Yangi tushumni \"/kassa/kirim\" dagi \"Tushum qo'shish\" orqali kiriting."
+    );
+  }
 
   const result = await prisma.$transaction(async (tx) => {
     const row = await tx.payment.upsert({

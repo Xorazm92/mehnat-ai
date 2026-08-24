@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth";
@@ -13,6 +14,13 @@ import { getRoleViewOverrides } from "@/server/rbac";
 import { getMyContexts, getRoleContext } from "@/server/roleContext";
 import { getMyRoles } from "@/server/activeRole";
 import { effectiveViewsForRole, type CompanyRelation, type UserRole } from "@/lib/permissions";
+
+// Butun boshqaruv paneli autentifikatsiya ortida — moliyaviy va shaxsiy
+// ma'lumot qidiruv botlariga ko'rinmasligi kerak. Har bir sahifada alohida
+// takrorlash o'rniga shu yerda bitta joyda yopiladi.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function DashboardLayout({
   children,

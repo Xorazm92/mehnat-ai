@@ -189,14 +189,17 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
   };
 
   const onDelete = async (row: JournalRow) => {
-    const ok = await confirm({
+    // Sabab majburiy — `rejectExpense` bilan bir xil audit standarti:
+    // moliyaviy yozuv o'chirilganda "nega" har doim yozilib qolishi kerak.
+    const reason = await prompt({
       title: "Yozuv o'chirilsinmi?",
       description: `${formatUzDate(row.date)} · ${formatNum(row.amount)} so'm. Jurnal izi teskari yozuv bilan nolga tushadi.`,
+      reasonLabel: "O'chirish sababi",
       confirmLabel: "O'chirish",
       tone: "danger",
     });
-    if (!ok) return;
-    try { await deleteKassaEntry(row.id); load(); router.refresh(); }
+    if (!reason) return;
+    try { await deleteKassaEntry(row.id, reason); load(); router.refresh(); }
     catch (e) { toast.error(friendlyError(e)); }
   };
 
