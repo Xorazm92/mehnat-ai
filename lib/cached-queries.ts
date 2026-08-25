@@ -118,9 +118,9 @@ const _getCachedOwnFirms = unstable_cache(
 export const getCachedOwnFirms = cache(async () => _getCachedOwnFirms());
 
 const _getCachedArchivedCompanies = unstable_cache(
-  async (userId: string, role: string) => {
+  async (userId: string, role: string, context?: string) => {
     return prisma.company.findMany({
-      where: { isActive: false, ...scopeFor(userId, role) },
+      where: { isActive: false, ...scopeFor(userId, role, context) },
       include: COMPANY_INCLUDE,
       orderBy: { name: "asc" },
     });
@@ -136,10 +136,14 @@ const _getCachedArchivedCompanies = unstable_cache(
  * kengaytirish arxivdagi firmalarni matritsa, kassa, oylik va hujjatlar
  * ekranlariga ham olib kirardi. Shuning uchun arxiv alohida so'rov bilan olinadi.
  * Arxiv ham portfelga cheklanadi va faqat senior rollarga ko'rsatiladi.
+ *
+ * `context` yuqoridagi faol ro'yxat bilan bir xil parametr — aks holda "Faol"
+ * tab kontekstga qarab toraysayu, "Arxiv" tab kengroq (butun portfel) qolib
+ * ketardi va ikkovi bir xil filtr ostida mos kelmagan sonlar ko'rsatardi.
  */
 export const getCachedArchivedCompanies = cache(
-  async (userId: string, role: string) =>
-    isSeniorRole(role) ? _getCachedArchivedCompanies(userId, role) : []
+  async (userId: string, role: string, context?: string) =>
+    isSeniorRole(role) ? _getCachedArchivedCompanies(userId, role, context) : []
 );
 
 // ─────────────────────────────────────────────

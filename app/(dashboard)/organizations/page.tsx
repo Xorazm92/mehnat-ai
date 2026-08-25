@@ -68,7 +68,7 @@ export default async function OrganizationsPage() {
 
   const [companies, archivedCompanies, staff, operations, tariffPreset, ownFirms] = await Promise.all([
     getCachedCompanies(userId, userRole, roleContext),
-    getCachedArchivedCompanies(userId, userRole),
+    getCachedArchivedCompanies(userId, userRole, roleContext),
     getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
     getCachedTariffPreset(),
