@@ -448,27 +448,55 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     emptyIcon={<Search size={36} />}
                     emptyTitle="Xarajat topilmadi"
                     emptyDescription={table.isDirty ? "Qidiruv yoki filtrni o'zgartirib ko'ring." : undefined}
-                    bulkActions={onDeleteExpense ? (ids) => (
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                const total = ids.reduce((sum, id) => sum + (Number(expenses.find(e => e.id === id)?.amount) || 0), 0);
-                                const ok = await confirm({
-                                    title: `${ids.length} ta xarajat o'chirilsinmi?`,
-                                    description: `Jami ${formatNum(total)} so'm. Balansga ta'sir qiladi va ortga qaytarilmaydi.`,
-                                    confirmLabel: "O'chirish",
-                                    tone: 'danger',
-                                });
-                                if (!ok) return;
-                                for (const id of ids) await onDeleteExpense(id);
-                                setSelectedIds(new Set());
-                            }}
-                            className="text-meta font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg"
-                            style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}
-                        >
-                            O&apos;chirish
-                        </button>
-                    ) : undefined}
+                    bulkActions={(onDeleteExpense || onApproveExpense) ? (ids) => {
+                        // Faqat "kutilmoqda" VA shu foydalanuvchi tasdiqlay oladigan
+                        // summadagi qatorlar — checkbox har narsani belgilashi mumkin,
+                        // lekin tugma huquqdan tashqarisini jimgina o'tkazib yubormaydi.
+                        const approvableIds = onApproveExpense
+                            ? ids.filter((id) => {
+                                const e = expenses.find((x) => x.id === id);
+                                return e && e.status === 'pending' && canApproveExpense(userRole, Number(e.amount));
+                            })
+                            : [];
+                        return (
+                            <>
+                                {onApproveExpense && approvableIds.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            for (const id of approvableIds) await onApproveExpense(id);
+                                            setSelectedIds(new Set());
+                                        }}
+                                        className="text-meta font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg"
+                                        style={{ background: 'var(--success-bg)', color: 'var(--success)' }}
+                                    >
+                                        Tasdiqlash ({approvableIds.length})
+                                    </button>
+                                )}
+                                {onDeleteExpense && (
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            const total = ids.reduce((sum, id) => sum + (Number(expenses.find(e => e.id === id)?.amount) || 0), 0);
+                                            const ok = await confirm({
+                                                title: `${ids.length} ta xarajat o'chirilsinmi?`,
+                                                description: `Jami ${formatNum(total)} so'm. Balansga ta'sir qiladi va ortga qaytarilmaydi.`,
+                                                confirmLabel: "O'chirish",
+                                                tone: 'danger',
+                                            });
+                                            if (!ok) return;
+                                            for (const id of ids) await onDeleteExpense(id);
+                                            setSelectedIds(new Set());
+                                        }}
+                                        className="text-meta font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg"
+                                        style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}
+                                    >
+                                        O&apos;chirish
+                                    </button>
+                                )}
+                            </>
+                        );
+                    } : undefined}
                 />
             )}            {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in">
