@@ -50,7 +50,7 @@ interface AdminCabinetProps {
     activeCompanies: number;
     unreadNotifs: number;
     pendingKpi: number;
-    kpiCompletionPercent?: number;
+    kpiCompletionPercent?: number | null;
     payrollFund?: number;
   };
   balance?: BalanceBreakdown;
@@ -58,14 +58,7 @@ interface AdminCabinetProps {
   deadlines?: { overdueCount: number; dueSoonCount: number; upcoming: DeadlineRow[] };
 }
 
-const roleLabelsMap: Record<string, string> = {
-  super_admin: "Superadmin",
-  admin: "Admin",
-  chief_accountant: "Bosh Buxgalter",
-  supervisor: "Nazoratchi",
-  accountant: "Buxgalter",
-  bank_manager: "Bank-Klient",
-};
+// Lavozim yorliqlari — `lib/permissions.ROLE_LABELS` yagona manba.
 
 const roleColors: Record<string, string> = {
   super_admin: "var(--danger)",
@@ -127,7 +120,14 @@ export function AdminCabinet({
           icon={<Building2 size={15} />} href="/organizations"
         />
         <KpiCard
-          label="KPI bajarilishi" value={`${systemHealth.kpiCompletionPercent ?? 0}%`} tone="success" emphasize
+          label="KPI bajarilishi"
+          value={systemHealth.kpiCompletionPercent === null || systemHealth.kpiCompletionPercent === undefined
+            ? "—"
+            : `${systemHealth.kpiCompletionPercent}%`}
+          hint={systemHealth.kpiCompletionPercent === null || systemHealth.kpiCompletionPercent === undefined
+            ? "Bu oy uchun baholangan KPI yo'q"
+            : undefined}
+          tone="success" emphasize
           icon={<TrendingUp size={15} />} href="/kpi"
         />
         <KpiCard
@@ -169,7 +169,7 @@ export function AdminCabinet({
                   <div className="flex items-center gap-2 w-36 flex-shrink-0">
                     <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
                     <span className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
-                      {roleLabelsMap[stat.role] || stat.role}
+                      {ROLE_LABELS[stat.role as UserRole] || stat.role}
                     </span>
                   </div>
                   <div className="flex-1 rounded-full h-2" style={{ background: "var(--input-bg)" }}>

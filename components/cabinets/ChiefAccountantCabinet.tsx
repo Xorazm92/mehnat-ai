@@ -76,11 +76,7 @@ export function ChiefAccountantCabinet({
   const firstName = userName.split(" ")[0];
   const monthLabel = formatUzMonthYear(`${currentMonth}-01`);
 
-  const roleLabels: Record<string, string> = {
-    accountant: "Buxgalter",
-    bank_manager: "Bank-Klient",
-    supervisor: "Nazoratchi",
-  };
+  // Lavozim yorliqlari — `lib/permissions.ROLE_LABELS` yagona manba.
 
   return (
     <div className="space-y-6">
@@ -168,7 +164,7 @@ export function ChiefAccountantCabinet({
                           {member.fullName}
                         </p>
                         <span className="text-micro px-1.5 py-0.5 rounded-lg" style={{ background: "var(--input-bg)", color: "var(--text-secondary)", border: "1px solid var(--card-border)" }}>
-                          {roleLabels[member.role] || member.role}
+                          {ROLE_LABELS[member.role as UserRole] || member.role}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">

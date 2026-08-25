@@ -734,7 +734,11 @@ export async function getAdminCabinetData() {
   // "Bajarilishi" = musbat (green/coeff>0) baholar ulushi
   const scored = kpiAgg.filter((p) => p.selectedOption !== "yellow" && p.selectedOption !== null);
   const positive = kpiAgg.filter((p) => Number(p.calculatedScore) > 0).length;
-  const kpiCompletionPercent = scored.length > 0 ? Math.round((positive / scored.length) * 100) : 0;
+  // Baholangan yozuv umuman bo'lmasa, bu "0 foiz bajarildi" DEGANI EMAS —
+  // bu "hali baholanmagan" degani. Ilgari ikkalasi ham 0 qaytarardi va
+  // boshqaruv paneli jamoani nolga urgan qilib ko'rsatardi. Endi ma'lumot
+  // yo'qligi `null` bilan ajratiladi va ekranda "—" chiziladi.
+  const kpiCompletionPercent = scored.length > 0 ? Math.round((positive / scored.length) * 100) : null;
 
   // Oylik fondi = firmalar bo'yicha rol ulushlari yig'indisi (baza)
   const n = (v: unknown) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };

@@ -13,6 +13,7 @@ import {
 } from '@/server/payroll';
 import { getPayouts, createPayout } from '@/server/payouts';
 import { groupDigits, ungroupDigits, submitOnCtrlEnter, formatNum } from '@/lib/format';
+import { ROLE_LABELS, type UserRole } from '@/lib/permissions';
 import { adjustmentMagnitude } from '@/lib/adjustments';
 import { computeObligation } from '@/lib/payrollObligation';
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
@@ -305,7 +306,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                     <div className="min-w-0">
                         <p className="text-body font-semibold leading-none truncate" style={{ color: "var(--text-primary)" }}>{r.employeeName}</p>
                         <p className="text-micro mt-0.5 leading-none" style={{ color: "var(--text-muted)" }}>
-                            {ROLE_LABELS[r.employeeRole] || r.employeeRole}
+                            {ROLE_LABELS[r.employeeRole as UserRole] || r.employeeRole}
                             <span className="ml-1.5 opacity-60">• {r.companyCount} firma</span>
                         </p>
                     </div>
@@ -450,11 +451,9 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
         }
     };
 
-    const ROLE_LABELS: Record<string, string> = {
-        super_admin: "Super Admin", admin: "Admin",
-        chief_accountant: "Bosh Buxgalter", supervisor: "Nazoratchi",
-        accountant: "Buxgalter", bank_manager: "Bank Menejer",
-    };
+    // Lavozim yorliqlari `lib/permissions` dan — bu yerda nusxa saqlanmaydi.
+    // Nusxa "Bank Menejer" deb yozardi, kanonik manba esa "Bank-Klient":
+    // bitta rol ikki ekranda ikki xil nomlanardi.
 
     // Tasdiqlash faqat admin/superadminga — server ham shuni talab qiladi
     // (approvePayrollAdjustment), bu yerda faqat tugmani yashiramiz.
@@ -531,7 +530,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                             <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ background: `hsl(${(s.employeeName.charCodeAt(0) * 37) % 360}, 60%, 50%)` }}>{s.employeeName.charAt(0)}</div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-body font-bold leading-none truncate" style={{ color: "var(--text-primary)" }}>{s.employeeName}</p>
-                                <p className="text-micro mt-1 leading-none truncate" style={{ color: "var(--text-muted)" }}>{ROLE_LABELS[s.employeeRole] || s.employeeRole} • {s.companyCount} firma</p>
+                                <p className="text-micro mt-1 leading-none truncate" style={{ color: "var(--text-muted)" }}>{ROLE_LABELS[s.employeeRole as UserRole] || s.employeeRole} • {s.companyCount} firma</p>
                             </div>
                             <div className="text-right shrink-0">
                                 <p className="text-2xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Jami</p>

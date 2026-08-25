@@ -13,6 +13,15 @@ import { TableToolbar } from "@/components/ui/TableToolbar";
 import { exportToExcel } from "@/lib/exportExcel";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
+import { ROLE_LABELS, ASSIGNMENT_ROLE_LABELS, type UserRole, type AssignmentRole } from "@/lib/permissions";
+
+// LAVOZIM YORLIG'I — bitta manba. Ilgari `s.role` / `b.role` to'g'ridan-to'g'ri
+// chizilardi va ekranda `accountant`, `bank_manager` kabi baza enum'lari
+// ko'rinardi (Excel eksportida ham). Endi ikkala shkalaning ham o'zbekcha
+// nomi `lib/permissions` dan olinadi; noma'lum qiymat bo'lsa xom qiymat
+// qaytadi, ya'ni hech narsa yo'qolmaydi.
+const userRoleLabel = (r: string) => ROLE_LABELS[r as UserRole] ?? r;
+const assignmentRoleLabel = (r: string) => ASSIGNMENT_ROLE_LABELS[r as AssignmentRole] ?? ROLE_LABELS[r as UserRole] ?? r;
 
 interface Props {
     staff: Staff[];
@@ -195,7 +204,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
         exportToExcel(
             rows.map(({ s, draft, isApproved }) => ({
                 'Xodim': s.name,
-                'Lavozim': s.role,
+                'Lavozim': userRoleLabel(s.role),
                 'Asosiy': Math.round(draft.baseSalary),
                 'Bonus': Math.round(draft.kpiBonus),
                 'Jarima': Math.round(draft.kpiPenalty),
@@ -296,7 +305,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-body leading-none" style={{ color: "var(--text-primary)" }}>{s.name}</h4>
-                                        <p className="text-micro mt-0.5 font-medium" style={{ color: "var(--text-muted)" }}>{s.role}</p>
+                                        <p className="text-micro mt-0.5 font-medium" style={{ color: "var(--text-muted)" }}>{userRoleLabel(s.role)}</p>
                                     </div>
                                 </div>
                                 <div>
@@ -403,7 +412,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                         </div>
                                         <div>
                                             <p className="font-bold text-body leading-none" style={{ color: "var(--text-primary)" }}>{s.name}</p>
-                                            <p className="text-micro mt-0.5 font-medium" style={{ color: "var(--text-muted)" }}>{s.role}</p>
+                                            <p className="text-micro mt-0.5 font-medium" style={{ color: "var(--text-muted)" }}>{userRoleLabel(s.role)}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -533,7 +542,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                                     <tr key={i} style={{ borderBottom: "1px solid var(--table-border)" }} className="row-hover">
                                                         <td className="px-3 py-2 font-bold text-meta uppercase" style={{ color: "var(--text-primary)" }}>{b.companyName}</td>
                                                         <td className="px-3 py-2 text-center" style={{ borderLeft: "1px solid var(--table-border)" }}>
-                                                            <span className="text-micro font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{b.role}</span>
+                                                            <span className="text-micro font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{assignmentRoleLabel(b.role)}</span>
                                                         </td>
                                                         <td className="px-3 py-2 text-right text-meta tabular-nums" style={{ color: "var(--text-secondary)", borderLeft: "1px solid var(--table-border)" }}>{formatNum(b.contractAmount)}</td>
                                                         <td className="px-3 py-2 text-right font-bold tabular-nums" style={{ color: "var(--text-primary)", borderLeft: "1px solid var(--table-border)" }}>{formatNum(b.baseAmount)}</td>
@@ -554,7 +563,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                                 <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "var(--success-bg)", borderBottom: "1px solid var(--success-border)" }}>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>{b.companyName}</span>
-                                                        <span className="text-micro font-bold uppercase" style={{ color: "var(--text-muted)" }}>({b.role})</span>
+                                                        <span className="text-micro font-bold uppercase" style={{ color: "var(--text-muted)" }}>({assignmentRoleLabel(b.role)})</span>
                                                     </div>
                                                     <span className="font-bold tabular-nums text-xs" style={{ color: "var(--success)" }}>+{formatNum(b.kpiBonus)}</span>
                                                 </div>
@@ -583,7 +592,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                                 <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "var(--danger-bg)", borderBottom: "1px solid var(--danger-border)" }}>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>{b.companyName}</span>
-                                                        <span className="text-micro font-bold uppercase" style={{ color: "var(--text-muted)" }}>({b.role})</span>
+                                                        <span className="text-micro font-bold uppercase" style={{ color: "var(--text-muted)" }}>({assignmentRoleLabel(b.role)})</span>
                                                     </div>
                                                     <span className="font-bold tabular-nums text-xs" style={{ color: "var(--danger)" }}>-{formatNum(b.kpiPenalty)}</span>
                                                 </div>

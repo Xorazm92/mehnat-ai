@@ -144,16 +144,35 @@ export default function BalanceOverview({
         </div>
       )}
 
-      {b.transitBalance !== undefined && b.transitBalance > 0 && (
-        <div className="mb-4 p-3 rounded-xl flex items-center justify-between text-xs" style={{ background: "var(--accent-bg, rgba(59, 130, 246, 0.08))", border: "1px solid var(--accent-border, rgba(59, 130, 246, 0.2))" }}>
+      {/* QOIDA: umumiy balans musbat bo'lsa ham, uning NAQD qismi manfiy
+          bo'lishi mumkin (pul kartalarda tranzitda turadi). Jismonan manfiy
+          kassa bo'lmaydi — bu ma'lumot xatosi yoki hisobga olinmagan
+          o'tkazma. Ilgari bu holat tinch ko'k satrda oddiy matn sifatida
+          chizilardi va e'tibordan chetda qolardi. Endi satr o'zi ogohlantirish
+          rangiga o'tadi va nima qilish kerakligini aytadi. */}
+      {b.transitBalance !== undefined && b.transitBalance > 0 && (() => {
+        const cashOnHand = b.balance - b.transitBalance;
+        const cashNegative = cashOnHand < 0;
+        return (
+        <div className="mb-4 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs"
+          style={cashNegative
+            ? { background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }
+            : { background: "var(--accent-bg, rgba(59, 130, 246, 0.08))", border: "1px solid var(--accent-border, rgba(59, 130, 246, 0.2))" }}>
           <span style={{ color: "var(--text-secondary)" }}>
-            Joylashuvi: <strong style={{ color: "var(--text-primary)" }}>Kassada: {som(b.balance - b.transitBalance)} so&apos;m</strong>
+            {cashNegative && <AlertTriangle size={13} className="inline mr-1.5 -mt-0.5" style={{ color: "var(--warning)" }} />}
+            Joylashuvi: <strong style={{ color: cashNegative ? "var(--warning)" : "var(--text-primary)" }}>Kassada: {som(cashOnHand)} so&apos;m</strong>
+            {cashNegative && (
+              <span className="ml-2" style={{ color: "var(--warning)" }}>
+                — naqd qoldiq manfiy bo&apos;lishi mumkin emas; tranzit o&apos;tkazmalarini solishtiring
+              </span>
+            )}
           </span>
           <span className="font-bold" style={{ color: "var(--accent-color, #3b82f6)" }}>
             Kartalarda (Tranzit): {som(b.transitBalance)} so&apos;m
           </span>
         </div>
-      )}
+        );
+      })()}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
