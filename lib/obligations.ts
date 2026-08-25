@@ -221,3 +221,35 @@ export async function generateObligations(db: Db, opts: GenerateOptions = {}): P
 
   return res;
 }
+
+// ─────────────────────────────────────────────
+// MAJBURIYAT TURKUMI — ekran yorlig'i
+// ─────────────────────────────────────────────
+//
+// `DeadlineTemplate.obligationType` — sxemada ERKIN satr ("erkin turkum"),
+// ya'ni yangi qiymat migratsiyasiz qo'shilishi mumkin. Shuning uchun bu
+// yerda qat'iy `Record<Enum, string>` emas, fallback'li funksiya:
+// noma'lum qiymat ham o'qiladigan ko'rinishda chiqadi, `internal_task`
+// bo'lib qolmaydi.
+//
+// Auditdagi holat: Ishlar ro'yxatida har bir qator ostida xom qiymat
+// (`internal_task`, `tax_declaration`) chizilardi — 30 qatorli ekranda
+// 30 marta. Buxgalter uchun bu na ma'lumot, na tushunarli.
+
+const OBLIGATION_TYPE_LABELS: Record<string, string> = {
+  tax_declaration: "Soliq hisoboti",
+  tax_payment: "Soliq to'lovi",
+  financial_statement: "Moliyaviy hisobot",
+  statistics: "Statistika",
+  internal_task: "Ichki ish",
+};
+
+/** Turkum uchun o'zbekcha yorliq; noma'lum qiymat chiroyli ko'rinishga keltiriladi. */
+export function obligationTypeLabel(type: string | null | undefined): string {
+  if (!type) return "—";
+  const known = OBLIGATION_TYPE_LABELS[type];
+  if (known) return known;
+  // "some_new_kind" → "Some new kind" — hech bo'lmaganda o'qiladi.
+  const pretty = type.replace(/_/g, " ").trim();
+  return pretty.charAt(0).toUpperCase() + pretty.slice(1);
+}

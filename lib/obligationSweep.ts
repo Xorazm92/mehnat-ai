@@ -14,6 +14,7 @@
 import { Prisma } from "@prisma/client";
 import { logServerError } from "@/lib/logger";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
+import { formatUzDate } from "@/lib/format";
 import {
   escalate,
   escalationDedupKey,
@@ -201,7 +202,17 @@ export async function sweepDeadlines(
                   userId: o.responsibleUserId,
                   type: "obligation_reminder",
                   title: reminderTitle(m.key),
-                  message: `Majburiyat ${o.periodKey} — muddat ${o.dueAt.toISOString().slice(0, 10)}`,
+                  // NIMA UCHUN NOMLAR: ilgari bu yerda faqat davr va ISO sana
+                  // bo'lardi — "Majburiyat 2026-M07 — muddat 2026-08-25".
+                  // Buxgalterda bir kunda o'nlab shunday xabar to'planardi va
+                  // ularning BIRORTASI qaysi firma, qaysi ish haqidaligini
+                  // aytmasdi: bilish uchun har birini ochish kerak edi.
+                  // Telegram matni (quyida) allaqachon to'g'ri yozilgan —
+                  // ish nomi va firma bilan. Ilova ichidagi xabar undan
+                  // ortda qolgan edi; ikkalasi ham bir xil ma'lumotdan
+                  // quriladi, chunki `template` va `company` yuqoridagi
+                  // so'rovda allaqachon tanlangan.
+                  message: `${o.template?.name ?? "Majburiyat"} — ${o.company.name} · ${o.periodKey} · muddat ${formatUzDate(o.dueAt)}`,
                   link: `/deadlines?obligation=${o.id}`,
                 },
               });

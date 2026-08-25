@@ -10,6 +10,7 @@
 // esa o'z manbasiga yozadi.
 
 import { useMemo, useState, useTransition } from "react";
+import { obligationTypeLabel } from "@/lib/obligations";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ObligationStatus, DelayReason, TaskStatus, TaskPriority } from "@prisma/client";
@@ -462,7 +463,7 @@ function ObligationTr({
           {r.templateName}
         </div>
         <div className="text-meta" style={{ color: "var(--text-muted)" }}>
-          {r.obligationType}
+          {obligationTypeLabel(r.obligationType)}
           {r.taskCount > 0 && ` · ${r.taskCount} vazifa biriktirilgan`}
         </div>
       </td>
