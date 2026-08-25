@@ -421,3 +421,53 @@ const _getCachedTariffPreset = unstable_cache(
 export const getCachedTariffPreset = cache(async (): Promise<TariffPreset> => {
   return _getCachedTariffPreset();
 });
+
+// ─────────────────────────────────────────────
+// OYLIK FONDI
+// ─────────────────────────────────────────────
+//
+// NEGA KESH: bu qiymat 282 ta firmaning to'rtta rol ulushini QO'SHIB
+// chiqadi — ya'ni har bir boshqaruv paneli ochilishida butun firma jadvali
+// to'qqizta ustun bilan o'qilib, JS'da aylanib chiqilardi. O'lchov: kesh
+// sovuq bo'lganda boshqaruv paneli javobi 12 soniyagacha cho'zilardi.
+//
+// Qiymat FAQAT firma yozuvi o'zgarganda o'zgaradi (shartnoma summasi yoki
+// rol foizi), shuning uchun `companies` tegi yetarli: firma tahrirlanganda
+// `updateTag("companies")` allaqachon chaqiriladi.
+
+const _getCachedPayrollFund = unstable_cache(
+  async () => {
+    const companies = await prisma.company.findMany({
+      where: { isActive: true },
+      select: {
+        contractAmount: true,
+        accountantPerc: true, accountantSum: true,
+        bankClientPerc: true, bankClientSum: true,
+        chiefAccountantPerc: true, chiefAccountantSum: true,
+        supervisorPerc: true, supervisorSum: true,
+      },
+    });
+
+    const n = (v: unknown) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
+    // Ulush: qat'iy summa berilgan bo'lsa o'sha, aks holda shartnomadan foiz.
+    const share = (contract: number, perc: unknown, sum: unknown) =>
+      n(sum) > 0 ? n(sum) : (contract * n(perc)) / 100;
+
+    let fund = 0;
+    for (const c of companies) {
+      const contract = n(c.contractAmount);
+      fund += share(contract, c.accountantPerc, c.accountantSum)
+        + share(contract, c.bankClientPerc, c.bankClientSum)
+        + share(contract, c.chiefAccountantPerc, c.chiefAccountantSum)
+        + share(contract, c.supervisorPerc, c.supervisorSum);
+    }
+    return Math.round(fund);
+  },
+  ["payroll-fund"],
+  { tags: ["companies"], revalidate: 300 }
+);
+
+/** Joriy oylik fondi (barcha faol firmalar bo'yicha rol ulushlari yig'indisi). */
+export const getCachedPayrollFund = cache(async (): Promise<number> => {
+  return _getCachedPayrollFund();
+});

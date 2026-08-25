@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getCachedPayrollFund } from "@/lib/cached-queries";
 import { isSeniorRole } from "@/lib/permissions";
 import { getAvailableBalance } from "@/lib/balance";
 import { adjustmentMagnitude } from "@/lib/adjustments";
@@ -677,7 +678,46 @@ export async function getAdminCabinetData() {
   const role = session.user.role as string;
   if (!isSeniorRole(role)) throw new Error("Forbidden");
 
-  const [userStats, companyStats, recentAudit, systemHealth] = await Promise.all([
+  // ─── DAVRLAR — so'rovdan OLDIN hisoblanadi ────────────────
+  // Bu qiymatlar hech qanday so'rovga bog'liq emas, shuning uchun ular
+  // birinchi to'lqindan keyin emas, oldin hisoblanadi va quyidagi YAGONA
+  // `Promise.all` ga kiradi.
+  const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
+
+  const months: string[] = [];
+  const base = new Date();
+  base.setDate(1);
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  const rangeStart = new Date(base.getFullYear(), base.getMonth() - 5, 1);
+  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const n = (v: unknown) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
+
+  // ─── BITTA TO'LQIN ────────────────────────────────────────
+  // Ilgari bu yerda UCHTA ketma-ket `await Promise.all` bor edi: ikkinchisi
+  // birinchisini, uchinchisi ikkinchisini kutardi — garchi ularning HECH
+  // BIRI oldingisining natijasini ishlatmasa ham. Ya'ni kutish vaqti bir
+  // birining ustiga qo'shilardi. O'lchov: kesh sovuq bo'lganda boshqaruv
+  // paneli 12 soniyagacha javob bermasdi.
+  //
+  // Oylik fondi endi bu yerda hisoblanmaydi — u 282 firmani JS'da aylanib
+  // chiqardi. Endi `getCachedPayrollFund()` (5 daqiqalik kesh, `companies`
+  // tegi bilan bekor qilinadi).
+  const [
+    userStats,
+    companyStats,
+    recentAudit,
+    systemHealth,
+    kpiAgg,
+    payrollFund,
+    paidPayments,
+    kassaEntries,
+    expenses,
+    payoutsOut,
+    availableBalance,
+  ] = await Promise.all([
     // Foydalanuvchi statistikasi rollar bo'yicha
     prisma.user.groupBy({
       by: ["role"],
@@ -707,63 +747,17 @@ export async function getAdminCabinetData() {
       prisma.notification.count({ where: { isRead: false } }),
       prisma.monthlyPerformance.count({ where: { status: "submitted" } }),
     ]),
-  ]);
 
-  const [activeUsers, activeCompanies, unreadNotifs, pendingKpi] = systemHealth;
-
-  // ─── KPI bajarilishi % va Oylik fondi (joriy oy) ──────────
-  const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
-
-  const [kpiAgg, companiesForFund] = await Promise.all([
+    // KPI baholari (joriy oy)
     prisma.monthlyPerformance.findMany({
       where: { month: currentMonth, status: { in: ["approved", "submitted"] } },
       select: { selectedOption: true, calculatedScore: true },
     }),
-    prisma.company.findMany({
-      where: { isActive: true },
-      select: {
-        contractAmount: true,
-        accountantPerc: true, accountantSum: true,
-        bankClientPerc: true, bankClientSum: true,
-        chiefAccountantPerc: true, chiefAccountantSum: true,
-        supervisorPerc: true, supervisorSum: true,
-      },
-    }),
-  ]);
 
-  // "Bajarilishi" = musbat (green/coeff>0) baholar ulushi
-  const scored = kpiAgg.filter((p) => p.selectedOption !== "yellow" && p.selectedOption !== null);
-  const positive = kpiAgg.filter((p) => Number(p.calculatedScore) > 0).length;
-  // Baholangan yozuv umuman bo'lmasa, bu "0 foiz bajarildi" DEGANI EMAS —
-  // bu "hali baholanmagan" degani. Ilgari ikkalasi ham 0 qaytarardi va
-  // boshqaruv paneli jamoani nolga urgan qilib ko'rsatardi. Endi ma'lumot
-  // yo'qligi `null` bilan ajratiladi va ekranda "—" chiziladi.
-  const kpiCompletionPercent = scored.length > 0 ? Math.round((positive / scored.length) * 100) : null;
+    // Oylik fondi — keshdan
+    getCachedPayrollFund(),
 
-  // Oylik fondi = firmalar bo'yicha rol ulushlari yig'indisi (baza)
-  const n = (v: unknown) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
-  const share = (contract: number, perc: unknown, sum: unknown) => (n(sum) > 0 ? n(sum) : (contract * n(perc)) / 100);
-  let payrollFund = 0;
-  for (const c of companiesForFund) {
-    const contract = n(c.contractAmount);
-    payrollFund += share(contract, c.accountantPerc, c.accountantSum)
-      + share(contract, c.bankClientPerc, c.bankClientSum)
-      + share(contract, c.chiefAccountantPerc, c.chiefAccountantSum)
-      + share(contract, c.supervisorPerc, c.supervisorSum);
-  }
-
-  // ─── Pul oqimi (so'nggi 6 oy: kirim vs chiqim) ────────────
-  const months: string[] = [];
-  const base = new Date();
-  base.setDate(1);
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
-    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-  }
-  const rangeStart = new Date(base.getFullYear(), base.getMonth() - 5, 1);
-  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-
-  const [paidPayments, kassaEntries, expenses, payoutsOut, availableBalance] = await Promise.all([
+    // Pul oqimi (so'nggi 6 oy)
     prisma.payment.groupBy({ by: ["period"], where: { status: "paid", deletedAt: null, period: { in: months } }, _sum: { amount: true } }),
     prisma.kassaEntry.findMany({ where: { date: { gte: rangeStart }, deletedAt: null }, select: { type: true, amount: true, date: true } }),
     // Faqat TASDIQLANGAN xarajatlar chiqim sifatida sanaladi (pending/rejected emas)
@@ -773,6 +767,17 @@ export async function getAdminCabinetData() {
     // Yagona joriy balans (butun tizim bo'yicha)
     getAvailableBalance(),
   ]);
+
+  const [activeUsers, activeCompanies, unreadNotifs, pendingKpi] = systemHealth;
+
+  // "Bajarilishi" = musbat (green/coeff>0) baholar ulushi.
+  // Baholangan yozuv umuman bo'lmasa, bu "0 foiz bajarildi" DEGANI EMAS —
+  // bu "hali baholanmagan" degani. Ilgari ikkalasi ham 0 qaytardi va
+  // boshqaruv paneli jamoani nolga urgan qilib ko'rsatardi. Endi ma'lumot
+  // yo'qligi `null` bilan ajratiladi va ekranda "—" chiziladi.
+  const scored = kpiAgg.filter((p) => p.selectedOption !== "yellow" && p.selectedOption !== null);
+  const positive = kpiAgg.filter((p) => Number(p.calculatedScore) > 0).length;
+  const kpiCompletionPercent = scored.length > 0 ? Math.round((positive / scored.length) * 100) : null;
 
   const income: Record<string, number> = {};
   const outflow: Record<string, number> = {};
@@ -800,7 +805,7 @@ export async function getAdminCabinetData() {
       unreadNotifs,
       pendingKpi,
       kpiCompletionPercent,
-      payrollFund: Math.round(payrollFund),
+      payrollFund,
     },
     balance: availableBalance,
     monthlyCashFlow,

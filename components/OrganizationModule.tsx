@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useModalA11y } from '@/hooks/useModalA11y';
 import { useViewMode } from '@/hooks/useViewMode';
 import { Company, Staff, TaxType, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
@@ -65,6 +66,33 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<Partial<Company>>({});
+
+  // SEHRGAR OYNASI — a11y xulqi.
+  //
+  // Bu oyna `fixed inset-0` bilan qo'lda yozilgan va uning HECH QANDAY dialog
+  // semantikasi yo'q edi: DOM'da `role="dialog"` topilmasdi, ya'ni ekran
+  // o'quvchi uni oyna deb e'lon qilmasdi; fokus tuzog'i bo'lmagani uchun Tab
+  // foydalanuvchini oyna ORTIDAGI sahifaga olib chiqib ketardi va u yerdan
+  // klaviatura bilan qaytib bo'lmasdi; Escape ham ishlamasdi.
+  //
+  // Tartib o'zgarmaydi — `OnboardingWizard` o'z to'liq kengligini saqlaydi.
+  // O'zgargani faqat XULQ: `useModalA11y` fokusni tuzoqqa oladi, Escape'ni
+  // eshitadi, scroll'ni qulflaydi va yopilganda fokusni "Yangi qo'shish"
+  // tugmasiga qaytaradi.
+  const closeWizard = useCallback(() => {
+    if (isSaving) return;
+    setIsAdding(false);
+    setEditingId(null);
+    setForm({});
+    setEditingAssignments(undefined);
+  }, [isSaving]);
+
+  const wizardRef = useModalA11y<HTMLDivElement>({
+    open: isAdding,
+    onClose: closeWizard,
+    // Saqlash ketayotganda Escape yopmasin — yarim yozilgan firma qolib ketadi.
+    dismissable: !isSaving,
+  });
   // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
   // Ilgari 'table' deb atalardi — endi qolgan ekranlar bilan bir xil nom.
   const [viewMode, setViewMode] = useViewMode('firmalar');
@@ -592,8 +620,25 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
       <div className="space-y-4">
         {isAdding && (
-          <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 sm:p-8 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="relative w-full max-w-4xl my-auto rounded-xl shadow-2xl overflow-hidden" style={{ background: 'var(--bg-primary)', border: '1px solid var(--card-border)' }}>
+          <div
+            // `Modal` bu yerda ishlatilmaydi: u o'z sarlavhasi va `px-5 py-4`
+            // ichki bo'shlig'ini qo'shadi, `OnboardingWizard` esa to'liq
+            // kenglikdagi o'z qadam-sarlavhasini chizadi. Shu sababdan tartib
+            // qo'lda qoladi, XULQ esa `useModalA11y` dan olinadi — bu hook
+            // aynan shu holat uchun yozilgan (uning izohiga qarang).
+            // eslint-disable-next-line no-restricted-syntax
+            className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 sm:p-8 bg-black/60 backdrop-blur-sm animate-fade-in"
+            onMouseDown={(e) => { if (e.target === e.currentTarget) closeWizard(); }}
+          >
+            <div
+              ref={wizardRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={editingId ? "Firmani tahrirlash" : "Yangi firma qo'shish"}
+              tabIndex={-1}
+              className="relative w-full max-w-4xl my-auto rounded-xl shadow-2xl overflow-hidden outline-none"
+              style={{ background: 'var(--bg-primary)', border: '1px solid var(--card-border)' }}
+            >
               <OnboardingWizard
                 staff={staff}
                 initialData={form}
@@ -602,13 +647,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 internalContractors={internalContractors}
                 internalParties={internalParties}
                 onSave={handleSave}
-                onCancel={() => {
-                  if (isSaving) return;
-                  setIsAdding(false);
-                  setEditingId(null);
-                  setForm({});
-                  setEditingAssignments(undefined);
-                }}
+                onCancel={closeWizard}
               />
               {isSaving && (
                 <div className="absolute inset-0 z-[110] flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--bg-primary) 60%, transparent)' }}>

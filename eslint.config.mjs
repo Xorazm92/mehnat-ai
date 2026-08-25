@@ -41,6 +41,43 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-explicit-any": "warn",
     },
   },
+  {
+    // ─────────────────────────────────────────────────────────────
+    // DIZAYN TIZIMI DARVOZASI
+    //
+    // Auditda topilgan holat: `components/ui/Modal.tsx` fokus tuzog'i,
+    // Escape, scroll qulfi va `role="dialog"` bilan yozilgan — lekin u
+    // ATIGI 2 faylda ishlatilardi, qo'lda yozilgan `fixed inset-0`
+    // oynalar esa 25 faylda, 28 marta. Ularning 18 tasida Escape ham
+    // ishlamasdi.
+    //
+    // Sabab intizomda: hech narsa 29-oynani qo'lda yozishga to'sqinlik
+    // qilmasdi. Bu qoida aynan shuni to'xtatadi — endi yangi dialog
+    // yozish `<Modal>` ni ishlatishdan QIYINROQ.
+    //
+    // Mavjud 28 ta oyna hali ko'chirilmagan, shuning uchun qoida hozircha
+    // "warn": u yangi holatlarni ko'rsatadi, lekin CI ni to'xtatmaydi.
+    // Migratsiya tugagach — "error" ga o'tkazing.
+    // ─────────────────────────────────────────────────────────────
+    files: ["app/**/*.{tsx,jsx}", "components/**/*.{tsx,jsx}"],
+    ignores: ["components/ui/**"],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "JSXAttribute[name.name='className'] > Literal[value=/fixed\\s+inset-0/]",
+          message:
+            "Qo'lda yozilgan dialog qatlami. `components/ui/Modal` dan foydalaning; o'z tartibini saqlashi kerak bo'lgan panel uchun `hooks/useModalA11y` (fokus tuzog'i + Escape + role=\"dialog\").",
+        },
+        {
+          selector:
+            "JSXAttribute[name.name='className'] > JSXExpressionContainer TemplateElement[value.raw=/fixed\\s+inset-0/]",
+          message:
+            "Qo'lda yozilgan dialog qatlami. `components/ui/Modal` dan foydalaning; o'z tartibini saqlashi kerak bo'lgan panel uchun `hooks/useModalA11y` (fokus tuzog'i + Escape + role=\"dialog\").",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
