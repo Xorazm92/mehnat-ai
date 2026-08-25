@@ -210,6 +210,63 @@ const TEMPLATES: TplSeed[] = [
     applicability: [{ criteriaType: "service_key", criteriaValue: "stat_4_moliya" }],
   },
 
+  // Telegram'da (Buxgalter Mirabbos) so'ralgan qo'shimcha statistika
+  // hisobotlari — 2026-08-24. Har biri `service_key` bilan chegaralangan:
+  // faqat admin shu ustunni yoqqan firmada majburiyat tug'iladi.
+  {
+    code: "STAT_1_HISOBOT_MAZMUNI",
+    name: "1-hisobot mazmuni (so'rovnoma)",
+    obligationType: "statistics",
+    periodicity: "annual",
+    anchorType: "fixed_day_of_month",
+    dueMonth: 7,
+    dueDay: 1,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "service_key", criteriaValue: "stat_1_hisobot_mazmuni" }],
+  },
+  {
+    code: "STAT_4_QX",
+    name: "4-qx (tashkilot, qishloq xo'jaligi)",
+    obligationType: "statistics",
+    periodicity: "quarterly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 5,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "service_key", criteriaValue: "stat_4_qx" }],
+  },
+  {
+    code: "STAT_1_QX",
+    name: "1-qx (tashkilot, qishloq xo'jaligi, yillik)",
+    obligationType: "statistics",
+    periodicity: "annual",
+    anchorType: "fixed_day_of_month",
+    dueMonth: 4,
+    dueDay: 10,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "service_key", criteriaValue: "stat_1_qx" }],
+  },
+  {
+    code: "STAT_1_FX",
+    name: "1-fx (fermer xo'jaligi, yillik)",
+    obligationType: "statistics",
+    periodicity: "annual",
+    anchorType: "fixed_day_of_month",
+    dueMonth: 3,
+    dueDay: 10,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "service_key", criteriaValue: "stat_1_fx" }],
+  },
+  {
+    code: "STAT_4_FX",
+    name: "4-fx (fermer xo'jaligi)",
+    obligationType: "statistics",
+    periodicity: "quarterly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 5,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "service_key", criteriaValue: "stat_4_fx" }],
+  },
+
   // ASRO Reglament ichki oylik takrorlanuvchi vazifalari.
   //
   // ANCHOR TANLOVI — diqqat: `fixed_day_of_month` davrdan KEYINGI oyning N-kuniga

@@ -76,6 +76,11 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   { key: "stat_1_turizm", label: "1-turizm", short: "1TR", group: "Statistika" },
   { key: "stat_4_moliya", label: "4-moliya", short: "4ML", group: "Statistika" },
   { key: "stat_1_nnt", label: "1-nnt", short: "1NT", group: "Statistika" },
+  { key: "stat_1_hisobot_mazmuni", label: "1-hisobot (mazmun so'rovnomasi)", short: "1HM", group: "Statistika" },
+  { key: "stat_4_qx", label: "4-qx (qishloq x.)", short: "4QX", group: "Statistika" },
+  { key: "stat_1_qx", label: "1-qx (qishloq x., yillik)", short: "1QX", group: "Statistika" },
+  { key: "stat_1_fx", label: "1-fx (fermer x., yillik)", short: "1FX", group: "Statistika" },
+  { key: "stat_4_fx", label: "4-fx (fermer x.)", short: "4FX", group: "Statistika" },
 
   // ═══ IT PARK ═══
   { key: "itpark_oylik", label: "IT Park Oylik", short: "ITO", group: "IT Park" },

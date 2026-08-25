@@ -363,6 +363,19 @@ model MonthlyReport {
   /// 4-moliya — choraklik. Muddat CHORAK ICHIDA (18-mart/iyun/sentabr/dekabr),
   /// shuning uchun shabloni `period_end_month_day` ankoridan foydalanadi.
   stat4Moliya      String?
+  /// Davlat statistika hisobotlari shakllarining mazmuni — yillik so'rovnoma.
+  /// Muddat: 1-iyulgacha.
+  stat1HisobotMazmuni String?
+  /// 4-qx (tashkilot) — qishloq xo'jaligi faoliyati, CHORAKLIK. Muddat:
+  /// hisobot davridan keyingi oyning 5-sanasidan kechiktirmay.
+  stat4Qx             String?
+  /// 1-qx (tashkilot) — qishloq xo'jaligi faoliyati, YILLIK. Muddat: 10-aprel.
+  stat1Qx              String?
+  /// 1-fx — fermer xo'jaligi faoliyati, YILLIK. Muddat: 10-mart.
+  stat1Fx              String?
+  /// 4-fx — fermer xo'jaligi faoliyati, CHORAKLIK. Muddat: hisobot davridan
+  /// keyingi oyning 5-sanasidan kechiktirmay.
+  stat4Fx              String?
 
   // Qo'shimcha soliqlar / IT Park / Komunalka
   aksizSoligi       String?

@@ -278,7 +278,8 @@ export type OperationFieldKey = 'didox' | 'xatlar' | 'avtokameral' | 'my_mehnat'
   'stat_1_invest' | 'stat_1_ih' | 'stat_1_energiya' | 'stat_1_korxona' | 'stat_1_korxona_tif' | 'stat_1_moliya' | 'stat_1_akt' | 'stat_1_tib' | 'stat_1_turizm' | 'stat_4_moliya' |
   'aksiz_soligi' | 'nedro_soligi' | 'norezident_foyda' | 'norezident_nds' |
   'qqs_tolov' | 'aylanma_tolov' | 'aylanma_qqs_tolov' | 'daromad_soliq_tolov' | 'inps_tolov' | 'foyda_soliq_tolov' |
-  'jismoniy_ijara' | 'stat_1_nnt';
+  'jismoniy_ijara' | 'stat_1_nnt' |
+  'stat_1_hisobot_mazmuni' | 'stat_4_qx' | 'stat_1_qx' | 'stat_1_fx' | 'stat_4_fx';
 
 export type TaskStatus = 'new' | 'submitted' | 'pending_review' |
   'approved' | 'rejected' | 'overdue' | 'not_required' | 'blocked';
