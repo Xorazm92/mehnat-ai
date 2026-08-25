@@ -13,7 +13,7 @@
 //
 // Hisobotlar oyi URL dan olinadi (`?oy=2026-07`); jurnal esa o'z davr
 // tanlagichi bilan mustaqil ishlaydi.
-import { getAvailableBalance, getMonthBreakdown } from "@/lib/balance";
+import { getAvailableBalance, getMonthBreakdown, getWeeklyMovement } from "@/lib/balance";
 import { getCashDeskReport, getCategoryBreakdown } from "@/server/kassaReport";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -29,6 +29,8 @@ import PeriodPicker from "./PeriodPicker";
 import KassaClient from "./KassaClient";
 import JournalClient from "./JournalClient";
 import KassaSectionNav from "@/components/KassaSectionNav";
+import WeeklyFlowChart from "./WeeklyFlowChart";
+import QuickActions from "./QuickActions";
 
 export const metadata = { title: "Kassa" };
 
@@ -68,10 +70,11 @@ export default async function KassaPage({
   });
   const cats = resolveKassaCategories(catRow?.value);
 
-  const [cashDesk, categories, monthly] = await Promise.all([
+  const [cashDesk, categories, monthly, weekly] = await Promise.all([
     safe("Kassalar jadvali", getCashDeskReport(period)),
     safe("Moddalar kesimi", getCategoryBreakdown(period)),
     safe("Oylik kesim", getMonthBreakdown(y, m)),
+    safe("Haftalik dinamika", getWeeklyMovement(5)),
   ]);
   const failed = [cashDesk.error, categories.error, monthly.error].filter(Boolean) as string[];
 
@@ -111,6 +114,15 @@ export default async function KassaPage({
         monthly={monthly.data ?? undefined}
         periodLabel={formatPeriodLabel(period)}
       />
+
+      {/* Grafik + tezkor amallar — "5 soniyada holatni tushunish" uchun
+          raqamlardan tashqari vizual va harakatga chorlovchi qatlam. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          {weekly.data && <WeeklyFlowChart weeks={weekly.data} />}
+        </div>
+        <QuickActions />
+      </div>
 
       <JournalClient
         userRole={userRole}

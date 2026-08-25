@@ -263,6 +263,54 @@ export async function getDayMovement(
   };
 }
 
+/**
+ * Oxirgi N haftaning kirim/chiqim harakati — Dashboard grafigi uchun.
+ *
+ * `getDayMovement` bilan bir xil sabab: `Payment.paymentDate` bo'yicha
+ * (oylik `period` emas), aks holda bir oylik to'lov faqat bitta haftaga
+ * tushib qolib, qolgan haftalar soxta nolga chiqardi.
+ */
+export async function getWeeklyMovement(
+  weeks = 5,
+  db: MovementDb = prisma
+): Promise<{ weekStart: string; income: number; outflow: number }[]> {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Joriy kun bilan tugaydigan N ta 7-kunlik oyna — oy chegarasidan mustaqil.
+  const ranges = Array.from({ length: weeks }, (_, i) => {
+    const to = new Date(todayStart.getTime() - (weeks - 1 - i) * 7 * 86_400_000 + 86_400_000);
+    const from = new Date(to.getTime() - 7 * 86_400_000);
+    return { from, to };
+  });
+
+  const results = await Promise.all(
+    ranges.map(async ({ from, to }) => {
+      const dateWhere = { gte: from, lt: to };
+      const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
+        db.payment.aggregate({
+          where: { status: { in: ["paid", "partial"] }, deletedAt: null, paymentDate: dateWhere },
+          _sum: { amount: true },
+        }),
+        db.kassaEntry.aggregate({
+          where: { type: "income", deletedAt: null, date: dateWhere },
+          _sum: { amount: true },
+        }),
+        db.kassaEntry.aggregate({
+          where: { type: "expense", status: "approved", deletedAt: null, date: dateWhere },
+          _sum: { amount: true },
+        }),
+        db.payout.aggregate({ where: { deletedAt: null, paidAt: dateWhere }, _sum: { amount: true } }),
+      ]);
+      return {
+        weekStart: from.toISOString(),
+        income: n(payments._sum.amount) + n(kassaIn._sum.amount),
+        outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
+      };
+    })
+  );
+  return results;
+}
+
 /** Oy boshigacha bo'lgan butun tarix harakati (birinchi oy yopilishida ochilish qoldig'i). */
 export async function getMovementBeforeMonth(
   year: number,

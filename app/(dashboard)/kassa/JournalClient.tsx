@@ -13,7 +13,7 @@
 // 10 ta xarajat kiritish uchun har safar formani ochib-yopish shart emas.
 
 import React, { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowDownRight, ArrowUpRight, Download, Plus, Search, Trash2,
@@ -51,6 +51,7 @@ interface Props {
 
 export default function JournalClient({ userRole, incomeCategories, expenseCategories }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const confirm = useConfirm();
   const prompt = usePrompt();
 
@@ -68,8 +69,12 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
   const [pending, startTransition] = useTransition();
 
   // ── Tez kiritish holati ────────────────────────────────────────────────
-  const [addOpen, setAddOpen] = useState(false);
-  const [addKind, setAddKind] = useState<"kirim" | "chiqim">("chiqim");
+  // `?add=kirim|chiqim` — Dashboard "Tezkor amallar"dan kelganda forma
+  // avtomatik ochiladi va turi to'g'ri o'rnatiladi (yana bir marta
+  // "Yozuv qo'shish" tugmasini qidirish shart bo'lmasin).
+  const addParam = searchParams.get("add");
+  const [addOpen, setAddOpen] = useState(addParam === "kirim" || addParam === "chiqim");
+  const [addKind, setAddKind] = useState<"kirim" | "chiqim">(addParam === "kirim" ? "kirim" : "chiqim");
   const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("");
   const [desc, setDesc] = useState("");
