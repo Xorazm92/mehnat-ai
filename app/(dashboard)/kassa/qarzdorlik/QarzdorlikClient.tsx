@@ -113,7 +113,7 @@ const card = { background: "var(--card-bg)", border: "1px solid var(--card-borde
 const AGING_STAGES = [
   { key: "normal", label: "1-10 kun", hint: "Operatsion", max: 10, color: "var(--text-muted)" },
   { key: "warning", label: "11-30 kun", hint: "Ogohlantirish", max: 30, color: "var(--warning)" },
-  { key: "suspension", label: "31-60 kun", hint: "To'xtatish xavfi", max: 60, color: "var(--accent-orange, #f97316)" },
+  { key: "suspension", label: "31-60 kun", hint: "To'xtatish xavfi", max: 60, color: "var(--warning)" },
   { key: "critical", label: "60+ kun", hint: "Kritik / sud", max: Infinity, color: "var(--danger)" },
 ] as const;
 

@@ -64,7 +64,7 @@ export default function MultiRoleSwitcher({ roles, active }: Props) {
           style={{
             background: "var(--card-bg)",
             border: "1px solid var(--card-border)",
-            boxShadow: "var(--shadow-lg, 0 8px 24px rgba(0,0,0,.18))",
+            boxShadow: "var(--shadow-overlay)",
           }}
           role="menu"
         >

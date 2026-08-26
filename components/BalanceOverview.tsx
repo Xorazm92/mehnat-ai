@@ -157,7 +157,7 @@ export default function BalanceOverview({
         <div className="mb-4 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs"
           style={cashNegative
             ? { background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }
-            : { background: "var(--accent-bg, rgba(59, 130, 246, 0.08))", border: "1px solid var(--accent-border, rgba(59, 130, 246, 0.2))" }}>
+            : { background: "var(--accent-blue-light)", border: "1px solid var(--info-border, var(--card-border))" }}>
           <span style={{ color: "var(--text-secondary)" }}>
             {cashNegative && <AlertTriangle size={13} className="inline mr-1.5 -mt-0.5" style={{ color: "var(--warning)" }} />}
             Joylashuvi: <strong style={{ color: cashNegative ? "var(--warning)" : "var(--text-primary)" }}>Kassada: {som(cashOnHand)} so&apos;m</strong>
@@ -167,7 +167,7 @@ export default function BalanceOverview({
               </span>
             )}
           </span>
-          <span className="font-bold" style={{ color: "var(--accent-color, #3b82f6)" }}>
+          <span className="font-bold" style={{ color: "var(--accent-blue)" }}>
             Kartalarda (Tranzit): {som(b.transitBalance)} so&apos;m
           </span>
         </div>

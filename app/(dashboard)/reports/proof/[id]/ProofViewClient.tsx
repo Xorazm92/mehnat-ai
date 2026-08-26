@@ -96,7 +96,7 @@ export default function ProofViewClient({ proof: initialProof, canReview }: Prop
   const imageUrl = `/api/proofs/${proof.id}/image`;
 
   return (
-    <div className="flex flex-col h-full bg-[var(--background)] p-4 md:p-6 overflow-y-auto space-y-6">
+    <div className="flex flex-col h-full bg-[var(--bg-primary)] p-4 md:p-6 overflow-y-auto space-y-6">
       {/* ── Top Bar ── */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">

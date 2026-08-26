@@ -121,7 +121,7 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
                 className="px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider"
                 style={{
                   background: perf.source === "system" ? "rgba(99, 102, 241, 0.15)" : perf.source === "supervisor" ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
-                  color: perf.source === "system" ? "#6366f1" : perf.source === "supervisor" ? "#f59e0b" : "#10b981",
+                  color: perf.source === "system" ? "var(--accent-indigo)" : perf.source === "supervisor" ? "var(--warning)" : "var(--success)",
                   border: `1px solid ${perf.source === "system" ? "rgba(99, 102, 241, 0.3)" : perf.source === "supervisor" ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)"}`,
                 }}
               >

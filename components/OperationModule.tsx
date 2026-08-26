@@ -1809,7 +1809,7 @@ const OperationModule: React.FC<Props> = ({
 
   // ── Render ───────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-[var(--background)]">
+    <div className="flex flex-col h-full bg-[var(--bg-primary)]">
       {/* ── Header ──────────────────────────────────────────── */}
       <div className="flex-shrink-0 z-10 border-b transition-all duration-300 py-3 px-6 dashboard-card !rounded-none !border-x-0 !border-t-0 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

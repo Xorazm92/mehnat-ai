@@ -60,7 +60,7 @@ export default function RoleContextSwitcher({ options, current }: Props) {
       {open && (
         <div
           className="absolute right-0 mt-1 w-64 rounded-xl overflow-hidden z-50"
-          style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--shadow-lg, 0 8px 24px rgba(0,0,0,.18))" }}
+          style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "var(--shadow-overlay)" }}
         >
           {options.map((o) => (
             <button

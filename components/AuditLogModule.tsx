@@ -64,7 +64,7 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
     );
 
     return (
-        <div className="space-y-6 animate-fade-in p-6 bg-[var(--background)] min-h-dvh">
+        <div className="space-y-6 animate-fade-in p-6 bg-[var(--bg-primary)] min-h-dvh">
             {/* Header */}
             <div className="dashboard-card p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[var(--primary)] to-[var(--accent-blue-hover)]"></div>
