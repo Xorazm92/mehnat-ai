@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getCachedPayrollFund } from "@/lib/cached-queries";
 import { isSeniorRole } from "@/lib/permissions";
-import { getAvailableBalance } from "@/lib/balance";
+import { getAvailableBalance, cashFromPaymentRows } from "@/lib/balance";
 import { adjustmentMagnitude } from "@/lib/adjustments";
 import { serialize } from "@/lib/serialize";
 import { companyScopeWhere, companyRelations, type Actor } from "@/lib/access";
@@ -758,7 +758,22 @@ export async function getAdminCabinetData() {
     getCachedPayrollFund(),
 
     // Pul oqimi (so'nggi 6 oy)
-    prisma.payment.groupBy({ by: ["period"], where: { status: "paid", deletedAt: null, period: { in: months } }, _sum: { amount: true } }),
+    //
+    // `groupBy(_sum.amount)` EMAS: `Payment.amount` — yopilgan QARZ, unga
+    // "offset" (vzaimozachyot, ijara bilan hisob-kitob) ham kiradi, lekin
+    // kassaga bunday to'lovdan pul tushmaydi. Shu sahifaning O'ZIDA,
+    // grafikning tepasida turgan balans kartochkasi esa offsetni chiqarib
+    // hisoblaydi (`lib/balance.ts` → `cashFromPaymentRows`). Ya'ni bir
+    // ekranda ikkita "kirim" ta'rifi yonma-yon turardi va raqamlar
+    // yarashmasdi. Endi ikkalasi ham bitta qoidadan.
+    //
+    // Status ham to'g'rilandi: balans "paid" VA "partial" ni sanaydi,
+    // grafik esa faqat "paid" ni — qisman to'langan oy grafikda past
+    // ko'rinardi.
+    prisma.payment.findMany({
+      where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { in: months } },
+      select: { period: true, amount: true, allocations: { select: { source: true, amount: true } } },
+    }),
     prisma.kassaEntry.findMany({ where: { date: { gte: rangeStart }, deletedAt: null }, select: { type: true, amount: true, date: true } }),
     // Faqat TASDIQLANGAN xarajatlar chiqim sifatida sanaladi (pending/rejected emas)
     prisma.kassaEntry.findMany({ where: { type: "expense", date: { gte: rangeStart }, status: "approved", deletedAt: null }, select: { amount: true, date: true } }),
@@ -782,7 +797,10 @@ export async function getAdminCabinetData() {
   const income: Record<string, number> = {};
   const outflow: Record<string, number> = {};
   for (const m of months) { income[m] = 0; outflow[m] = 0; }
-  for (const p of paidPayments) income[p.period] = (income[p.period] ?? 0) + n(p._sum.amount);
+  for (const p of paidPayments) {
+    if (!(p.period in income)) continue;
+    income[p.period] += cashFromPaymentRows([p]);
+  }
   for (const k of kassaEntries) {
     const m = monthKey(k.date);
     if (!(m in income)) continue;

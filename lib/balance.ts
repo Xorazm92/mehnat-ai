@@ -16,6 +16,7 @@ import { formatNum } from "@/lib/format";
 import type { BalanceBreakdown } from "@/types";
 import { getTotalTransitBalance } from "@/lib/transit";
 import { KASSA_START_DATE, KASSA_START_PERIOD } from "@/lib/constants";
+import { cashFromPaymentRows } from "@/lib/paymentCash";
 
 /**
  * Balansni tranzaksiya ICHIDA o'qish uchun. Chaqiruvchi `tx` bersa, o'qish
@@ -31,6 +32,11 @@ const n = (v: unknown) => {
   const x = Number(v);
   return Number.isFinite(x) ? x : 0;
 };
+
+// Naqd ulush qoidasi — sof, bazasiz modulda (`lib/paymentCash.ts`), chunki
+// u `lib/**/*.spec.ts` bilan sinaladi. Bu yerdan re-export qilinadi:
+// mavjud chaqiruvchilar (`server/cabinet.ts`) o'zgarmasin.
+export { cashFromPaymentRows } from "@/lib/paymentCash";
 
 /**
  * Butun tizim bo'yicha joriy mavjud mablag'ni hisoblaydi.
@@ -80,13 +86,7 @@ export async function getAvailableBalance(opts?: {
       getTotalTransitBalance(db as Prisma.TransactionClient).catch(() => 0),
     ]);
 
-  const incomePayments = paidPaymentRows.reduce((sum, p) => {
-    if (p.allocations.length === 0) return sum + n(p.amount);
-    const cash = p.allocations
-      .filter((a) => a.source !== "offset")
-      .reduce((s, a) => s + n(a.amount), 0);
-    return sum + cash;
-  }, 0);
+  const incomePayments = cashFromPaymentRows(paidPaymentRows);
   const incomeKassa = n(kassaIncome._sum.amount);
   const outflowKassa = n(kassaExpense._sum.amount);
   const outflowPayroll = n(payouts._sum.amount);
@@ -181,9 +181,14 @@ export async function getMonthBreakdown(
   const dateWhere = { gte: new Date(year, month - 1, 1), lt: new Date(year, month, 1) };
 
   const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
-    db.payment.aggregate({
+    // `aggregate(_sum.amount)` EMAS: u offsetni ham naqd deb sanaydi va
+    // `getAvailableBalance` bilan ziddiyat beradi (yuqoridagi
+    // `cashFromPaymentRows` izohiga qarang). Bitta oyda ko'pi bilan
+    // firmalar soniga teng qator bo'ladi, ya'ni `findMany` narxi sezilarli
+    // emas — ziddiyatning narxi esa foydalanuvchining ishonchi.
+    db.payment.findMany({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: key },
-      _sum: { amount: true },
+      select: { amount: true, allocations: { select: { source: true, amount: true } } },
     }),
     db.kassaEntry.aggregate({
       where: { type: "income", deletedAt: null, date: dateWhere },
@@ -196,7 +201,7 @@ export async function getMonthBreakdown(
     db.payout.aggregate({ where: { deletedAt: null, paidAt: dateWhere }, _sum: { amount: true } }),
   ]);
 
-  const incomePayments = n(payments._sum.amount);
+  const incomePayments = cashFromPaymentRows(payments);
   const incomeKassa = n(kassaIn._sum.amount);
   const outflowKassa = n(kassaOut._sum.amount);
   const outflowPayroll = n(payouts._sum.amount);
