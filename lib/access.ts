@@ -52,13 +52,54 @@ export interface CompanySlots {
  * firmalari ham, bank-klientning buxgalteriya firmalari ham shu birlashmaga tushadi.
  */
 /** Kontekst tanlanganda faqat SHU mas'uliyat bo'yicha filtrlanadi. */
+/**
+ * `ContractAssignment.role` — oddiy String, tarixan bir nechta imlo bilan
+ * yozilgan (`server/companies.ts#ALIASES_FOR_ROLE` bilan bir xil ro'yxat).
+ * Kontekst bo'yicha TORAYTIRISHDA aynan shu rolni bilish shart — "all"
+ * bucket'idagi kabi "har qanday biriktiruv = meniki" ishlamaydi, aks holda
+ * "Buxgalter" konteksti "Bank-klient" firmalarini ham qo'shib yuborardi.
+ */
+const ASSIGNMENT_ROLE_ALIASES: Record<CompanyRelation, string[]> = {
+  accountant: ["accountant"],
+  supervisor: ["supervisor", "controller"],
+  chief_accountant: ["chief_accountant", "chief"],
+  bank_manager: ["bank_manager", "bank_client"],
+};
+
+/**
+ * Kontekst bo'yicha torayishda FAQAT `Company.*Id` ustuniga qarash yetarli
+ * emas: ba'zi biriktiruvlar (Ruslan — 10 ta "accountant" yozuvi) faqat
+ * `ContractAssignment`da qayd etilgan, `Company.accountantId` sloti hech
+ * qachon sinxronlanmagan (3 joydan biri unutilgan — CONTEXT.md). Shuning
+ * uchun bu yerda ham "all" bucket'i kabi ikkalasi OR bilan qo'shiladi —
+ * faqat rolga QARAB filtrlanadi (aliaslar bilan).
+ */
 const RELATION_FILTER: Record<CompanyRelation, (id: string) => Prisma.CompanyWhereInput> = {
-  accountant: (id) => ({ accountantId: id }),
-  supervisor: (id) => ({ supervisorId: id }),
-  chief_accountant: (id) => ({
-    OR: [{ chiefAccountantId: id }, { departmentRef: { chiefAccountantId: id } }],
+  accountant: (id) => ({
+    OR: [
+      { accountantId: id },
+      { contractAssignments: { some: { userId: id, isActive: true, role: { in: ASSIGNMENT_ROLE_ALIASES.accountant } } } },
+    ],
   }),
-  bank_manager: (id) => ({ bankClientId: id }),
+  supervisor: (id) => ({
+    OR: [
+      { supervisorId: id },
+      { contractAssignments: { some: { userId: id, isActive: true, role: { in: ASSIGNMENT_ROLE_ALIASES.supervisor } } } },
+    ],
+  }),
+  chief_accountant: (id) => ({
+    OR: [
+      { chiefAccountantId: id },
+      { departmentRef: { chiefAccountantId: id } },
+      { contractAssignments: { some: { userId: id, isActive: true, role: { in: ASSIGNMENT_ROLE_ALIASES.chief_accountant } } } },
+    ],
+  }),
+  bank_manager: (id) => ({
+    OR: [
+      { bankClientId: id },
+      { contractAssignments: { some: { userId: id, isActive: true, role: { in: ASSIGNMENT_ROLE_ALIASES.bank_manager } } } },
+    ],
+  }),
 };
 
 export function companyScopeWhere(actor: Actor): Prisma.CompanyWhereInput {
