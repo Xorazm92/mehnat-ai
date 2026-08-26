@@ -1,8 +1,11 @@
 
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { MONTHS_UZ, toYearMonthKey, formatPeriodLabel, isFuturePeriod } from '../../lib/periods';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface MonthPickerProps {
     selectedPeriod: string;
@@ -13,6 +16,7 @@ interface MonthPickerProps {
 export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChange, className }) => {
     const [isOpen, setIsOpen] = useState(false);
     const triggerRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
     /** Yilni ikkala formatdan ham ishonchli ajratadi ("2026-08" va "2026 Avgust"). */
@@ -63,6 +67,21 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
     }, [isOpen]);
 
     /**
+     * KLAVIATURA VA FOKUS — umumiy hook orqali.
+     *
+     * Ilgari bu popover to'liq ekranli fon chizardi (ya'ni ortidagi hech
+     * narsaga bosib bo'lmasdi), lekin klaviatura uchun u umuman mavjud
+     * emas edi: Escape yopmasdi, fokus ichkariga ko'chmasdi va Tab bosilsa
+     * fon ORTIDAGI tugmalarga o'tib ketardi — ekran o'quvchi foydalanuvchi
+     * ko'rinmaydigan sahifada adashib qolardi.
+     *
+     * `useModalA11y` aynan shuni beradi: fokus tuzog'i, Escape va yopilganda
+     * fokusni tugmaga qaytarish. Shu sabab quyidagi `aria-modal="true"` endi
+     * ROST — fokus haqiqatan ham qamalgan.
+     */
+    const panelRef = useModalA11y<HTMLDivElement>({ open: isOpen, onClose: () => setIsOpen(false) });
+
+    /**
      * KANONIK "YYYY-MM" chiqaradi.
      *
      * Ilgari bu yer `"2026 Sentyabr"` matnini chiqarardi, holbuki komponent
@@ -81,6 +100,10 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
     return (
         <div className={`inline-block ${className}`} ref={triggerRef}>
             <button
+                ref={buttonRef}
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={isOpen}
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
                 className="flex items-center gap-2 px-3 py-1.5 c1-input text-body font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-sunken)] dark:hover:bg-[var(--surface-2)] transition-colors"
             >
@@ -90,7 +113,7 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
             </button>
 
             {isOpen && createPortal(
-                <div className="fixed inset-0 z-[110]">
+                <div className="fixed inset-0" style={{ zIndex: 'var(--z-popover, 200)' }}>
                     {/* Minimal backdrop for closing */}
                     <div
                         className="absolute inset-0 bg-[color-mix(in_srgb,var(--surface-2)_40%,transparent)]"
@@ -99,7 +122,12 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
 
                     {/* Industrial Popover content */}
                     <div
-                        className="absolute bg-[var(--card-bg)] p-5 w-[280px] rounded-lg shadow-2xl border border-[var(--rule)] dark:border-[var(--rule-strong)] animate-fade-in"
+                        ref={panelRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Oy tanlash"
+                        tabIndex={-1}
+                        className="absolute outline-none bg-[var(--card-bg)] p-5 w-[280px] rounded-lg shadow-2xl border border-[var(--rule)] dark:border-[var(--rule-strong)] animate-fade-in"
                         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
                         style={{
                             top: coords.top + 4,
@@ -110,6 +138,8 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
                         <div className="relative z-10">
                             <div className="flex items-center justify-between mb-5 pb-2 border-b border-[var(--rule)] dark:border-[var(--rule-strong)]">
                                 <button
+                                    type="button"
+                                    aria-label="Oldingi yil"
                                     onClick={(e) => { e.stopPropagation(); setViewYear(y => y - 1); }}
                                     className="p-1.5 hover:bg-[var(--card-bg)] dark:hover:bg-[var(--surface-2)] rounded-lg border border-transparent hover:border-[var(--rule)] dark:hover:border-[var(--rule-strong)] transition-all text-[var(--text-muted)] hover:text-[var(--brand)]"
                                 >
@@ -117,6 +147,8 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
                                 </button>
                                 <span className="text-sm font-semibold text-[var(--text-primary)] dark:text-white">{viewYear}</span>
                                 <button
+                                    type="button"
+                                    aria-label="Keyingi yil"
                                     onClick={(e) => { e.stopPropagation(); setViewYear(y => y + 1); }}
                                     className="p-1.5 hover:bg-[var(--card-bg)] dark:hover:bg-[var(--surface-2)] rounded-lg border border-transparent hover:border-[var(--rule)] dark:hover:border-[var(--rule-strong)] transition-all text-[var(--text-muted)] hover:text-[var(--brand)]"
                                 >
@@ -138,7 +170,8 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({ selectedPeriod, onChan
                                         <button
                                             key={month}
                                             disabled={future}
-                                            title={future ? 'Kelajak oy — hisobot topshirib bo\'lmaydi' : undefined}
+                                            type="button"
+                                            aria-label={future ? `${month} — kelajak oy, tanlab bo'lmaydi` : `${month} ${viewYear}`}
                                             onClick={(e) => { e.stopPropagation(); if (!future) handleMonthSelect(monthIdx); }}
                                             className={`py-2 px-1 rounded-lg text-micro font-bold uppercase tracking-wider transition-all border ${isSelected
                                                 ? 'bg-[var(--brand)] text-white border-[var(--brand-deep)] shadow-sm'

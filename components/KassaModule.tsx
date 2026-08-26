@@ -14,6 +14,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { useTableState } from "@/hooks/useTableState";
+import { MonthPicker } from './ui/MonthPicker';
 
 interface KassaModuleProps {
     companies: Company[];
@@ -302,15 +303,8 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <div className="relative group min-w-[200px]">
-                    <input
-                        type="month"
-                        value={selectedPeriod}
-                        onChange={(e) => setSelectedPeriod(e.target.value)}
-                        className="w-full rounded-xl px-4 py-3 pr-12 text-xs font-bold outline-none transition-all appearance-none focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20 cursor-pointer"
-                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--accent-blue)' }}
-                    />
-                    <Clock className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" size={18} style={{ color: 'var(--text-muted)' }} />
+                <div className="min-w-[200px] flex items-center">
+                    <MonthPicker selectedPeriod={selectedPeriod} onChange={setSelectedPeriod} />
                 </div>
                 <div className="flex items-center justify-end">
                     <TableToolbar view={viewMode} onViewChange={setViewMode} />

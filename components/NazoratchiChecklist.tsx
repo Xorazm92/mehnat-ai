@@ -16,6 +16,7 @@ import { usePrompt } from "@/components/ui/ConfirmDialog";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
+import { MonthPicker } from './ui/MonthPicker';
 
 interface Props {
     companies: Company[];
@@ -259,12 +260,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                 view={viewMode}
                                 onViewChange={setViewMode}
                                 month={
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Oy' : 'Месяц'}</span>
-                                        <input type="month" value={month} onChange={e => setMonth(e.target.value)}
-                                            className="rounded-lg px-3 py-2 text-body font-bold outline-none cursor-pointer"
-                                            style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--accent-blue)' }} />
-                                    </div>
+                                    <MonthPicker selectedPeriod={month} onChange={setMonth} />
                                 }
                             />
                         </div>

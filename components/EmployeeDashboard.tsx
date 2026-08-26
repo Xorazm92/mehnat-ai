@@ -9,6 +9,7 @@ import { getKpiRules, getMonthlyPerformance, upsertPerformance } from '@/server/
 import { getPayrollAdjustments } from '@/server/payroll';
 import { formatUzDate, formatNum } from '@/lib/format';
 import KpiEntryCard from './kpi/KpiEntryCard';
+import { MonthPicker } from './ui/MonthPicker';
 
 interface Props {
     currentUserId: string;
@@ -325,14 +326,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                             {t.kpiDesc}
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 bg-[var(--bg-sunken)] dark:bg-[var(--surface)] px-3 py-1.5 rounded-lg border border-[var(--rule)]">
-                        <input
-                            type="month"
-                            value={month}
-                            onChange={e => setMonth(e.target.value)}
-                            className="bg-transparent border-none font-bold text-sm text-[var(--text-secondary)] focus:ring-0 cursor-pointer p-0"
-                        />
-                    </div>
+                    <MonthPicker selectedPeriod={month} onChange={setMonth} />
                 </div>
 
                 {myCompanies.length === 0 ? (

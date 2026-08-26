@@ -22,6 +22,7 @@ import { useTableState } from "@/hooks/useTableState";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
+import { MonthPicker } from "./ui/MonthPicker";
 
 interface Props {
     staff: Staff[];
@@ -482,16 +483,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-3 items-center">
-                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg"
-                        style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)" }}>
-                        <span className="text-meta font-semibold" style={{ color: "var(--text-muted)" }}>Oy:</span>
-                        <input
-                            type="month" value={month}
-                            onChange={e => setMonth(e.target.value)}
-                            className="bg-transparent border-none outline-none font-bold text-body cursor-pointer"
-                            style={{ color: "var(--accent-blue)" }}
-                        />
-                    </div>
+                    <MonthPicker selectedPeriod={month} onChange={setMonth} />
                     <div className="px-5 py-2.5 rounded-xl" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
                         <p className="text-micro font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--success)" }}>Jami to&apos;lov</p>
                         <p className="text-lg font-semibold tabular-nums leading-none" style={{ color: "var(--success)" }}>

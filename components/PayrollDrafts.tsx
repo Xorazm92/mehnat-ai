@@ -14,6 +14,7 @@ import { exportToExcel } from "@/lib/exportExcel";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
 import { ROLE_LABELS, ASSIGNMENT_ROLE_LABELS, type UserRole, type AssignmentRole } from "@/lib/permissions";
+import { MonthPicker } from "./ui/MonthPicker";
 
 // LAVOZIM YORLIG'I — bitta manba. Ilgari `s.role` / `b.role` to'g'ridan-to'g'ri
 // chizilardi va ekranda `accountant`, `bank_manager` kabi baza enum'lari
@@ -247,17 +248,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                         view={viewMode}
                         onViewChange={setViewMode}
                         month={
-                            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg"
-                                style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)" }}>
-                                <span className="text-meta font-semibold" style={{ color: "var(--text-muted)" }}>Oy:</span>
-                                <input
-                                    type="month"
-                                    value={month}
-                                    onChange={(e) => setMonth(e.target.value)}
-                                    className="bg-transparent border-none outline-none font-bold text-body cursor-pointer"
-                                    style={{ color: "var(--accent-blue)" }}
-                                />
-                            </div>
+                            <MonthPicker selectedPeriod={month} onChange={setMonth} />
                         }
                         onExport={handleExport}
                         filterCount={statusFilter !== 'all' ? 1 : 0}

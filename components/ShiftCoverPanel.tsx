@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { formatNum } from "@/lib/format";
 import { assignShiftCover, getShiftCovers, applyCoverTransfers } from "@/server/shiftCover";
 import { friendlyError } from "@/lib/actionError";
+import { MonthPicker } from "./ui/MonthPicker";
 
 interface CoverRow {
   id: string;
@@ -115,13 +116,7 @@ const ShiftCoverPanel: React.FC<Props> = ({ staff, canEdit }) => {
           </h3>
         </div>
         <div className="flex items-center gap-2">
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="rounded-lg px-3 py-2 text-body font-bold outline-none cursor-pointer"
-            style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--accent-blue)" }}
-          />
+          <MonthPicker selectedPeriod={month} onChange={setMonth} />
           {canEdit && (
             <Button variant="secondary" size="sm" disabled={busy || rows.length === 0} onClick={runTransfers}>
               Pulni o&apos;tkazish

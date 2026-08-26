@@ -8,6 +8,7 @@ import { MONTHS_UZ } from "@/lib/periods";
 import { formatNum } from "@/lib/format";
 import { KPI_CATEGORY_UZ } from "@/lib/kpiLabels";
 import { SkeletonTable } from "@/components/ui/Skeleton";
+import { MonthPicker } from "./ui/MonthPicker";
 
 interface Props { lang: Language; hideBonus?: boolean; }
 
@@ -80,9 +81,7 @@ const KpiLeaderboard: React.FC<Props> = ({ lang, hideBonus = false }) => {
             <p className="text-meta mt-1 font-medium" style={{ color: "var(--text-muted)" }}>{s?.total ?? 0} xodim baholandi · o&apos;rtacha {s?.avgBall ?? 0} ball</p>
           </div>
         </div>
-        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)}
-          className="rounded-lg px-3 py-2 text-body font-bold outline-none cursor-pointer"
-          style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--accent-blue)" }} />
+        <MonthPicker selectedPeriod={month} onChange={setMonth} />
       </div>
 
       {/* Stat cards */}
