@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import { ModalLayer } from "@/components/ui/ModalLayer";
 import { useViewMode } from '@/hooks/useViewMode';
 import { Language, Company } from '@/types';
 import { translations } from '@/lib/translations';
@@ -198,7 +199,7 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
             </div>
 
             {isModalOpen && canEdit && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                <ModalLayer open={isModalOpen && canEdit} onClose={() => setIsModalOpen(false)} label="Yangi hujjat">
                     <div className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0">
                         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
                         <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
@@ -243,7 +244,7 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
                             </div>
                         </form>
                     </div>
-                </div>
+                </ModalLayer>
             )}
         </div>
     );

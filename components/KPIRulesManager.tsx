@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
+import { ModalLayer } from "@/components/ui/ModalLayer";
 import { KPIRule, KpiRuleOption, Language, KPIRoleType } from '@/types';
 import { Settings, Edit3, Trash2, X, Shield, Landmark, Calculator, Plus } from 'lucide-react';
 import { getKpiRules, createKpiRule, updateKpiRule, deleteKpiRule } from '@/server/kpi';
@@ -257,7 +258,7 @@ const KPIRulesManager: React.FC<Props> = () => {
 
             {/* Edit modal */}
             {editingRule && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }} onClick={() => setEditingRule(null)}>
+                <ModalLayer open={editingRule} onClose={() => setEditingRule(null)} label="KPI qoidasi">
                     <div className="w-full max-w-2xl rounded-xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col"
                         style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: '0 25px 60px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}
                         onKeyDown={submitOnCtrlEnter(handleSave)}>
@@ -333,7 +334,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                             <Button variant="primary" size="md" onClick={handleSave} className="flex-1">Saqlash</Button>
                         </div>
                     </div>
-                </div>
+                </ModalLayer>
             )}
         </div>
     );

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { ModalLayer } from "@/components/ui/ModalLayer";
 import { Plus, Pencil, Power, X, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
@@ -86,7 +87,7 @@ export function AdminDepartments({ departments, chiefs, busy, onCreate, onUpdate
       </div>
 
       {form && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setForm(null)}>
+        <ModalLayer open={form} onClose={() => setForm(null)} label="Bo'lim">
           <div className="w-full max-w-md rounded-xl p-5" style={card} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{form.id ? "Bo'limni tahrirlash" : "Yangi bo'lim"}</h3>
@@ -110,7 +111,7 @@ export function AdminDepartments({ departments, chiefs, busy, onCreate, onUpdate
               <Button variant="primary" size="md" onClick={submit} disabled={busy || !form.name.trim()}>Saqlash</Button>
             </div>
           </div>
-        </div>
+        </ModalLayer>
       )}
     </div>
   );

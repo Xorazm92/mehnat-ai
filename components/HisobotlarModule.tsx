@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
+import { ModalLayer } from "@/components/ui/ModalLayer";
 import { Company, Staff, Language } from "@/types";
 import { FileText, Plus, X, Calendar, ShieldCheck, Download, Trash2, PenLine, Send, CheckCircle2 } from "lucide-react";
 import { getFinancialReports, getReportDeadlines, createFinancialReport, setReportStatus, deleteFinancialReport } from "@/server/reports";
@@ -230,7 +231,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff, userRole }) => {
 
       {/* Viewer modal */}
       {viewing && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }} onClick={() => setViewing(null)}>
+        <ModalLayer open={viewing} onClose={() => setViewing(null)} label="Hisobot">
           <div className="w-full max-w-xl rounded-xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }} onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 flex items-start justify-between" style={{ borderBottom: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
               <div>
@@ -285,12 +286,12 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff, userRole }) => {
               </div>
             )}
           </div>
-        </div>
+        </ModalLayer>
       )}
 
       {/* Create modal */}
       {creating && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }} onClick={() => setCreating(false)}>
+        <ModalLayer open={creating} onClose={() => setCreating(false)} label="Yangi hisobot">
           <div className="w-full max-w-md rounded-xl overflow-hidden animate-scale-in" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }} onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
               <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Yangi hisobot · shablondan</h3>
@@ -327,7 +328,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff, userRole }) => {
               <Button variant="primary" size="md" onClick={submitCreate} className="flex-1">Yaratish</Button>
             </div>
           </div>
-        </div>
+        </ModalLayer>
       )}
     </div>
   );

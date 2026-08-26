@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
+import { ModalLayer } from "@/components/ui/ModalLayer";
 import { Staff, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance, KPIRule, CompanyKPIRule } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
 import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2, SlidersHorizontal, Users, Briefcase, TrendingUp, AlertTriangle, Clock, Trash2 } from 'lucide-react';
@@ -675,9 +676,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
 
             {/* Adjustment Modal */}
             {editingAdj && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
-                    style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-                    onClick={() => setEditingAdj(null)}>
+                <ModalLayer open={editingAdj} onClose={() => setEditingAdj(null)} label="Oylik tuzatmasi">
                     <div className="w-full max-w-md rounded-xl overflow-hidden animate-scale-in"
                         style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}
                         onClick={e => e.stopPropagation()}
@@ -722,7 +721,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                             </Button>
                         </div>
                     </div>
-                </div>
+                </ModalLayer>
             )}
         </div>
     );

@@ -6,6 +6,7 @@
 // super_admin bilan qo'riqlangan — bu UI faqat qulaylik qatlami.
 
 import React, { useState } from "react";
+import { ModalLayer } from "@/components/ui/ModalLayer";
 import { CalendarCheck2, Lock, LockOpen, RefreshCw, Printer, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { getMonthClosingBoard, validateMonth, closeMonth, reopenMonth } from "@/server/monthClosing";
 import { formatNum } from "@/lib/format";
@@ -287,7 +288,7 @@ export default function MonthClosingClient({
 
       {/* Reopen modal */}
       {reopenTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+        <ModalLayer open={reopenTarget} onClose={() => setReopenTarget(null)} label="Oyni qayta ochish">
           <div className="rounded-xl p-5 w-[420px] max-w-[92vw]" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
             <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
               {reopenTarget.period} oyini qayta ochish
@@ -310,7 +311,7 @@ export default function MonthClosingClient({
               </button>
             </div>
           </div>
-        </div>
+        </ModalLayer>
       )}
     </div>
   );

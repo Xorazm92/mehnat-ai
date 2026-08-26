@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { ModalLayer } from "@/components/ui/ModalLayer";
 import { useViewMode } from '@/hooks/useViewMode';
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -519,7 +520,7 @@ function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
       )}
 
       {selectedCompany && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in" onClick={() => setSelectedCompany(null)}>
+        <ModalLayer open={selectedCompany} onClose={() => setSelectedCompany(null)} label="Firma kartochkasi">
           <div className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0" onClick={(e) => e.stopPropagation()}>
             <div className="absolute top-0 left-0 right-0 h-1" style={{ background: "var(--accent-blue)" }}></div>
             <div className="px-6 py-5 flex justify-between items-start" style={{ borderBottom: "1px solid var(--card-border)" }}>
@@ -578,7 +579,7 @@ function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
               </div>
             </div>
           </div>
-        </div>
+        </ModalLayer>
       )}
     </div>
   );
