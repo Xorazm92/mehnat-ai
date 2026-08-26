@@ -8,7 +8,7 @@ import { ROLE_LABELS, ROLE_COLORS, type UserRole } from '@/lib/permissions';
 import { generateMemorablePassword } from '@/lib/passwordUtils';
 import StaffDrawer from './StaffDrawer';
 import {
-  UserPlus, Phone, Briefcase, Trash2, Edit3, X, Check, Search, Filter,
+  UserPlus, UserX, Phone, Briefcase, Edit3, X, Check, Search, Filter,
   ShieldCheck, Mail, IdCard, GraduationCap, CalendarDays, Building, KeyRound, Loader2,
   Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
@@ -29,6 +29,12 @@ interface Props {
   onDelete: (id: string) => Promise<void>;
   onResetPassword?: (id: string, newPassword: string) => Promise<void>;
   onStaffSelect?: (s: Staff) => void;
+  /**
+   * Xodim QO'SHISH va FAOLSIZLANTIRISH mumkinmi.
+   * Server sharti: `["super_admin", "admin"]` (server/users.ts).
+   * Berilmasa `true` — mavjud chaqiruvlar buzilmasin.
+   */
+  canManageStaff?: boolean;
 }
 
 const ROLE_OPTIONS: UserRole[] = [
@@ -41,7 +47,7 @@ const STATUS_META: Record<string, { label: string; dot: string; c: string; bg: s
   sick: { label: 'Betob', dot: 'bg-[var(--warning)]', c: 'var(--warning)', bg: 'rgba(245,158,11,.12)' },
 };
 
-const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete, onResetPassword }) => {
+const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete, onResetPassword, canManageStaff = true }) => {
   const confirm = useConfirm();
   const t = translations[lang];
   const [isAdding, setIsAdding] = useState(false);
@@ -147,9 +153,15 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
             </div>
             <div className="min-w-0">
               <div className="text-body font-bold truncate" style={{ color: 'var(--text)' }}>{person.name}</div>
-              <div className="text-micro font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                {person.pinfl ? `JSHSHIR: ${person.pinfl}` : person.id.slice(0, 8)}
-              </div>
+              {/* JSHSHIR bo'lmasa — HECH NARSA. Ilgari bu yerda ichki
+                  identifikatorning sakkiz belgisi (`657913b3`) chizilardi:
+                  foydalanuvchi uchun ma'nosiz, lekin ism ostidagi eng
+                  qimmatli qatorni egallab turardi. */}
+              {person.pinfl && (
+                <div className="text-micro font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  JSHSHIR: {person.pinfl}
+                </div>
+              )}
             </div>
           </div>
         );
@@ -217,18 +229,25 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="icon-btn-sm rounded-lg" style={{ color: 'var(--accent-blue)' }} aria-label={`${person.name} — tahrirlash`}>
             <Edit3 size={15} />
           </button>
-          <button
-            onClick={async (e) => {
-              e.stopPropagation();
-              if (await confirm({ title: `${person.name} faolsizlantirilsinmi?`, description: "Xodim tizimga kira olmaydi. Yozuvlari saqlanib qoladi.", confirmLabel: "Faolsizlantirish", tone: 'danger' })) onDelete(person.id);
-            }}
-            className="icon-btn-sm rounded-lg" style={{ color: 'var(--danger)' }} aria-label={`${person.name} — faolsizlantirish`}>
-            <Trash2 size={15} />
-          </button>
+          {/* IKONKA AMALGA MOS BO'LSIN. Bu tugma xodimni O'CHIRMAYDI —
+              faolsizlantiradi ("Yozuvlari saqlanib qoladi" deb tasdiq
+              oynasining o'zi aytadi). Axlat qutisi esa "ma'lumot yo'q
+              qilinadi" degan va'da beradi: ikonka amaldan qattiqroq
+              gapiradi va foydalanuvchini keraksiz ikkilanishga soladi. */}
+          {canManageStaff && (
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (await confirm({ title: `${person.name} faolsizlantirilsinmi?`, description: "Xodim tizimga kira olmaydi. Yozuvlari saqlanib qoladi.", confirmLabel: "Faolsizlantirish", tone: 'danger' })) onDelete(person.id);
+              }}
+              className="icon-btn-sm rounded-lg" style={{ color: 'var(--danger)' }} aria-label={`${person.name} — faolsizlantirish`}>
+              <UserX size={15} />
+            </button>
+          )}
         </div>
       ),
     },
-  ], [companyCountById, confirm, onDelete]);
+  ], [companyCountById, confirm, onDelete, canManageStaff]);
 
   const handleSave = async () => {
     if (!form.name || !form.role) {
@@ -303,10 +322,12 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
             </p>
           </div>
         </div>
-        <Button variant="primary" size="md" onClick={openAdd} className="whitespace-nowrap">
-          <UserPlus size={16} />
-          {t.addStaff}
-        </Button>
+        {canManageStaff && (
+          <Button variant="primary" size="md" onClick={openAdd} className="whitespace-nowrap">
+            <UserPlus size={16} />
+            {t.addStaff}
+          </Button>
+        )}
       </div>
 
       {/* Search + Filters */}
@@ -551,9 +572,11 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
                 <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="icon-btn-sm" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title="Tahrirlash">
                   <Edit3 size={15} />
                 </button>
-                <button onClick={async (e) => { e.stopPropagation(); if (await confirm({ title: `${person.name} faolsizlantirilsinmi?`, description: "Xodim tizimga kira olmaydi. Yozuvlari saqlanib qoladi.", confirmLabel: "Faolsizlantirish", tone: 'danger' })) onDelete(person.id); }} className="icon-btn-sm" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title="O'chirish">
-                  <Trash2 size={15} />
+                {canManageStaff && (
+                <button onClick={async (e) => { e.stopPropagation(); if (await confirm({ title: `${person.name} faolsizlantirilsinmi?`, description: "Xodim tizimga kira olmaydi. Yozuvlari saqlanib qoladi.", confirmLabel: "Faolsizlantirish", tone: 'danger' })) onDelete(person.id); }} className="icon-btn-sm" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} aria-label={`${person.name} — faolsizlantirish`}>
+                  <UserX size={15} />
                 </button>
+                )}
               </div>
             </div>
           );
@@ -657,10 +680,10 @@ function PasswordInput({ value, onChange, show, onToggle, onGenerate, placeholde
         value={value}
         onChange={e => onChange(e.target.value)}
       />
-      <button type="button" onClick={onToggle} className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg transition-all" style={btn} title={show ? 'Yashirish' : "Ko'rsatish"}>
+      <button type="button" onClick={onToggle} aria-label="Parolni ko'rsatish yoki yashirish" className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg transition-all" style={btn} title={show ? 'Yashirish' : "Ko'rsatish"}>
         {show ? <EyeOff size={15} /> : <Eye size={15} />}
       </button>
-      <button type="button" onClick={onGenerate} className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg transition-all" style={btn} title="Parol yaratish">
+      <button type="button" onClick={onGenerate} aria-label="Yangi parol yaratish" className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg transition-all" style={btn} title="Parol yaratish">
         <RefreshCw size={15} />
       </button>
     </div>

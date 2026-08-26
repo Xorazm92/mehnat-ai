@@ -267,6 +267,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                 {canEdit && onSyncEjurnal && (
                     <button
                         onClick={handleSyncEjurnal}
+                        aria-label="E-jurnaldan davomatni yuklash"
                         disabled={isSyncing}
                         className="font-bold px-5 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap hover:shadow-md disabled:opacity-50"
                         style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--accent-blue)' }}

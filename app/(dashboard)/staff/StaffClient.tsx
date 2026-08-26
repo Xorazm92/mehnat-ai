@@ -12,9 +12,19 @@ interface Props {
   staff: Staff[];
   companies: Company[];
   operations: OperationEntry[];
+  userRole: string;
 }
 
-export default function StaffClient({ staff, companies, operations }: Props) {
+export default function StaffClient({ staff, companies, operations, userRole }: Props) {
+  // RUXSAT — server bilan AYNAN bir shart.
+  //
+  //   createUser      → ["super_admin", "admin"]
+  //   deactivateUser  → ["super_admin", "admin"]
+  //
+  // Ilgari bu tugmalar hammaga ko'rinardi: nazoratchi "Xodim qo'shish" va
+  // qatorda faolsizlantirish ikonkasini ko'rardi, server esa rad etardi.
+  // Foydalanuvchi buni faqat BOSGANDAN keyin bilardi.
+  const canManageStaff = isAdminRole(userRole);
   const router = useRouter();
   useAutoRefresh();
   const [, setSelectedStaff] = useState<Staff | null>(null);
@@ -65,6 +75,7 @@ export default function StaffClient({ staff, companies, operations }: Props) {
 
   return (
     <StaffModule
+      canManageStaff={canManageStaff}
       staff={staff}
       companies={companies}
       operations={operations}

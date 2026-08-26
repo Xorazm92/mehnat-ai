@@ -215,6 +215,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
           </button>
           <button
             onClick={handleDownload}
+            aria-label="Rasmni yuklab olish"
             className="p-2 rounded-xl text-white bg-white/10 hover:bg-white/20 transition-all border border-white/10"
             title="Yuklab olish"
           >
@@ -222,6 +223,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
           </button>
           <button
             onClick={onClose}
+            aria-label="Yopish"
             className="p-2 rounded-xl text-white bg-white/20 hover:bg-red-600 transition-all border border-white/10 ml-2"
             title="Yopish (Esc)"
           >
@@ -263,6 +265,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
         <div className="flex items-center gap-1 sm:gap-3 px-4 py-2 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/15 shadow-2xl text-white">
           <button
             onClick={zoomOut}
+            aria-label="Kichraytirish"
             disabled={scale <= 0.5}
             className="p-2 rounded-xl hover:bg-white/15 disabled:opacity-30 transition-all"
             title="Kichiklashtirish (-)"
@@ -312,6 +315,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 
           <button
             onClick={rotateRight}
+            aria-label="O'ngga burish"
             className="p-2 rounded-xl hover:bg-white/15 transition-all"
             title="90° Burish"
           >
@@ -322,6 +326,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 
           <button
             onClick={toggleFullScreen}
+            aria-label="To'liq ekran"
             className="p-2 rounded-xl hover:bg-white/15 transition-all"
             title={isFullScreen ? "Kichik rejim" : "To'liq ekran"}
           >

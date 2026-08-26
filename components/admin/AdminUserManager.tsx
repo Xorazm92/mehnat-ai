@@ -292,7 +292,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       <div className="w-full max-w-md rounded-xl p-5" style={card} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{title}</h3>
-          <button onClick={onClose} className="icon-btn-sm" style={{ color: "var(--text-muted)" }}><X size={16} /></button>
+          <button onClick={onClose} aria-label="Yopish" className="icon-btn-sm" style={{ color: "var(--text-muted)" }}><X size={16} /></button>
         </div>
         {children}
       </div>

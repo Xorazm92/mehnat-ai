@@ -26,6 +26,7 @@ export default async function StaffPage() {
   return (
     <div className="h-full">
       <StaffClient
+        userRole={userRole}
         staff={JSON.parse(JSON.stringify(mappedStaff))}
         companies={JSON.parse(JSON.stringify(companies))}
         operations={JSON.parse(JSON.stringify(operations))}
