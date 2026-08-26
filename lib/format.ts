@@ -121,10 +121,19 @@ export function formatUzMonthYear(input: DateInput): string {
   return t ? `${UZ_MONTHS_LONG[t.month - 1]}, ${t.year}` : "—";
 }
 
-/** "16/07/2026" — all-numeric date. */
+/**
+ * "16.07.2026" — raqamli sana.
+ *
+ * NUQTA, chiziq emas. Auditda bitta ekranda uchta format yonma-yon uchradi:
+ * `14/08/2026` (bu funksiya), `mm/dd/yyyy` (brauzerning tug'ma maydoni) va
+ * `5-avgust, 2026` (formatUzDate). Chiziqli shakl amerikacha `oo/kk/yyyy`
+ * bilan bir xil ko'rinadi va `05/08/2026` ni ikki xil o'qish mumkin —
+ * moliyaviy tizimda bu xato kiritish manbai. Nuqta bu chalkashlikni
+ * yo'q qiladi va o'zbek/rus yozuv an'anasiga mos keladi.
+ */
 export function formatUzDateNumeric(input: DateInput): string {
   const t = wallClock(input);
-  return t ? `${pad2(t.day)}/${pad2(t.month)}/${t.year}` : "—";
+  return t ? `${pad2(t.day)}.${pad2(t.month)}.${t.year}` : "—";
 }
 
 /** "11:42" — time only. */

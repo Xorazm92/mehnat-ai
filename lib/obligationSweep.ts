@@ -172,7 +172,27 @@ export async function sweepDeadlines(
       res.markedOverdue++;
     }
 
-    for (const m of milestonesFor(daysUntil)) {
+    // BIR MAJBURIYAT — BIR XABAR.
+    //
+    // `milestonesFor` yetib kelgan BARCHA bosqichlarni qaytaradi (D-5, D-3,
+    // D-1, due, overdue) — bu ataylab: sweep bir kun ishlamay qolsa, keyingi
+    // yurishda o'tkazib yuborilgan bosqichlar ham dedup daftariga yoziladi va
+    // eskalatsiya zanjiri uzilmaydi.
+    //
+    // Ammo FOYDALANUVCHI uchun bu bitta ish bo'yicha bir vaqtda 3-5 ta bir
+    // xil xabar degani edi. Jonli tekshiruvda buxgalterda 30 ta majburiyat
+    // uchun 49 ta o'qilmagan xabar bor edi — 05:01 da ikkita, 05:00 da
+    // ikkita, 06:00 da uchta. Xabarlar soni ishning o'zidan ko'p.
+    //
+    // Yechim: daftar va zanjir har bir bosqich uchun avvalgidek yuritiladi,
+    // KO'RINADIGAN xabar esa faqat eng og'ir bosqich uchun yaratiladi.
+    // `milestonesFor` tartibi yumshoqdan qattiqqa, shuning uchun oxirgisi —
+    // eng og'iri.
+    const reached = milestonesFor(daysUntil);
+    const loudest = reached.length > 0 ? reached[reached.length - 1] : null;
+
+    for (const m of reached) {
+      const isLoudest = loudest != null && m.key === loudest.key;
       const dedupKey = `obligation:${o.id}:reminder:${m.key}`;
       const existingInApp = await db.notificationDelivery.findUnique({
         where: { channel_dedupKey: { channel: "inapp", dedupKey } },
@@ -195,7 +215,8 @@ export async function sweepDeadlines(
           });
           res.remindersCreated++;
           // In-app xabar — best-effort (delivery ledger'i vakolatli).
-          if (o.responsibleUserId) {
+          // `isLoudest`: shu yurishda faqat eng og'ir bosqich ko'rinadi.
+          if (o.responsibleUserId && isLoudest) {
             try {
               await db.notification.create({
                 data: {

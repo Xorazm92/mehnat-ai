@@ -103,10 +103,23 @@ const KpiLeaderboard: React.FC<Props> = ({ lang, hideBonus = false }) => {
             <span>#</span><span>Xodim</span><span>Bajarilish</span><span className="text-center">Ball</span>{!hideBonus && <span className="text-right">Bonus</span>}
           </div>
           <div className="max-h-[520px] overflow-y-auto">
+            {/* Skelet FAQAT yuklanish uchun. Ilgari bo'sh ro'yxat ham skelet
+                chizardi — sarlavha "0 xodim baholandi" desa ham, jadval
+                o'rnida kulrang qatorlar abadiy pulsatsiya qilardi va
+                foydalanuvchi "yuklanyapti" bilan "ma'lumot yo'q" ni ajrata
+                olmasdi. Bu boshqaruv panelidagi "KPI 0%" xatosining o'sha
+                oilasidan: ma'lumot yo'qligi natija sifatida ko'rsatilgan. */}
             {loading ? (
               <SkeletonTable rows={5} cols={3} />
             ) : (data?.leaderboard.length ?? 0) === 0 ? (
-              <SkeletonTable rows={5} cols={3} />
+              <div className="px-5 py-12 text-center">
+                <p className="text-body font-semibold" style={{ color: "var(--text-secondary)" }}>
+                  Bu oy uchun baholangan xodim yo&apos;q
+                </p>
+                <p className="text-micro mt-1.5" style={{ color: "var(--text-muted)" }}>
+                  KPI kiritilgach reyting shu yerda paydo bo&apos;ladi
+                </p>
+              </div>
             ) : (
               data!.leaderboard.map((r, i) => {
                 const d = DARAJA[r.daraja];

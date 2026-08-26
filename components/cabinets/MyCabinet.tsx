@@ -32,6 +32,10 @@ import KpiLeaderboard from "@/components/KpiLeaderboard";
 import { updateUser, changePassword } from "@/server/users";
 import { ROLE_LABELS, ROLE_COLORS, isSeniorRole, type UserRole } from "@/lib/permissions";
 import { formatUzMonthYear, formatUzDateNumeric, formatUzTime, formatNum } from "@/lib/format";
+// Soliq rejimi yorlig'i — kanonik manba. Ilgari bu yerda uch shoxli
+// ternary bor edi va u `vat` ni qamramasdi: ekranda xom "VAT" chiqardi,
+// boshqa hamma ekranda esa "NDS". Bitta tushuncha, ikki qisqartma.
+import { TAX_REGIME_SHORT, normalizeTaxRegime } from "@/lib/taxRegimes";
 import { kpiCategoryLabel, adjustmentTypeLabel } from "@/lib/kpiLabels";
 import RiskBadge from "@/components/RiskBadge";
 import { Button } from "@/components/ui/Button";
@@ -462,7 +466,7 @@ function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-micro font-bold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: "var(--text-secondary)", background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
-                    {c.taxRegime === 'turnover' ? 'Aylanma' : c.taxRegime === 'fixed' ? 'Belgilangan' : c.taxRegime === 'nds_profit' ? 'QQS' : c.taxRegime}
+                    {TAX_REGIME_SHORT[normalizeTaxRegime(c.taxRegime)]}
                   </span>
                   <span className="text-micro font-semibold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: roleC, background: `${roleC}1a`, border: `1px solid ${roleC}40` }}>
                     {ROLE_LABELS[c.myRole as UserRole] || c.myRole}
@@ -495,7 +499,7 @@ function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
                     <td className="px-5 py-3 font-mono text-meta font-bold" style={{ color: "var(--text-secondary)" }}>{c.inn}</td>
                     <td className="px-5 py-3">
                       <span className="text-micro font-bold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: "var(--text-secondary)", background: "var(--input-bg)", border: "1px solid var(--card-border)" }}>
-                        {c.taxRegime === 'turnover' ? 'Aylanma' : c.taxRegime === 'fixed' ? 'Belgilangan' : c.taxRegime === 'nds_profit' ? 'QQS' : c.taxRegime}
+                        {TAX_REGIME_SHORT[normalizeTaxRegime(c.taxRegime)]}
                       </span>
                     </td>
                     <td className="px-5 py-3">
@@ -533,7 +537,7 @@ function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
               <div className="space-y-4">
                 <h4 className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Umumiy ma&apos;lumotlar</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  <InfoRow icon={Building2} label="Soliq rejimi" value={selectedCompany.taxRegime === 'turnover' ? 'Aylanma' : selectedCompany.taxRegime === 'fixed' ? 'Belgilangan' : selectedCompany.taxRegime === 'nds_profit' ? 'QQS' : selectedCompany.taxRegime} />
+                  <InfoRow icon={Building2} label="Soliq rejimi" value={TAX_REGIME_SHORT[normalizeTaxRegime(selectedCompany.taxRegime)]} />
                   <InfoRow icon={ShieldCheck} label="Xavf darajasi" value={selectedCompany.riskLevel === 'high' ? 'Yuqori' : selectedCompany.riskLevel === 'medium' ? 'O\'rta' : 'Past'} />
                   {selectedCompany.directorName && <InfoRow icon={UserIcon} label="Direktor" value={selectedCompany.directorName} />}
                   {selectedCompany.directorPhone && <InfoRow icon={Mail} label="Telefon" value={selectedCompany.directorPhone} />}

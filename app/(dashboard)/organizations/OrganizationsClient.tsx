@@ -9,6 +9,7 @@ import { createCompany, updateCompany, deleteCompany } from "@/server/companies"
 import { getCurrentPeriodKey } from "@/lib/periods";
 import { Company, Staff, OperationEntry } from "@/types";
 import type { TariffPreset } from "@/lib/tariffPresets";
+import { isAdminRole } from "@/lib/permissions";
 
 interface Props {
   companies: Company[];
@@ -25,7 +26,21 @@ interface Props {
   internalParties?: { id: string; label: string; type: string; employee?: { fullName: string } | null }[];
 }
 
-export default function OrganizationsClient({ companies, staff, operations, tariffPreset, internalContractors, internalParties }: Props) {
+export default function OrganizationsClient({ companies, staff, operations, userRole, tariffPreset, internalContractors, internalParties }: Props) {
+  // RUXSAT — server bilan AYNAN bir xil shart.
+  //
+  // `userRole` bu komponentga allaqachon kelardi, lekin destructuring'da
+  // tashlab yuborilgan va pastga uzatilmagan edi. Natijada buxgalter ham
+  // "Yangi qo'shish" tugmasini va qatorda o'chirish ikonkasini ko'rardi:
+  // server rad etadi, lekin foydalanuvchi buni faqat BOSGANDAN keyin
+  // biladi. Shartlar `server/companies.ts` dagi darvozalardan ko'chirildi,
+  // ya'ni ikkalasi bir manbadan emas, lekin BIR XIL — ular ajralib
+  // ketmasligi uchun quyidagi izoh qoldiriladi.
+  //
+  //   createCompany  → isAdminRole(role) || role === "chief_accountant"
+  //   deleteCompany  → isAdminRole(role)
+  const canCreate = isAdminRole(userRole) || userRole === "chief_accountant";
+  const canDelete = isAdminRole(userRole);
   const router = useRouter();
   useAutoRefresh();
   const [selectedPeriod, setSelectedPeriod] = useState<string>(getCurrentPeriodKey());
@@ -73,6 +88,8 @@ export default function OrganizationsClient({ companies, staff, operations, tari
         onPeriodChange={setSelectedPeriod}
         onSave={handleSave}
         onDelete={handleDelete}
+        canCreate={canCreate}
+        canDelete={canDelete}
         onCompanySelect={setSelectedCompany}
       />
       <CompanyDrawer

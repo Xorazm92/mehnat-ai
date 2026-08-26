@@ -37,9 +37,17 @@ interface Props {
    * Mijoz 10 ta firmamizdan biri bilan shartnoma tuzmagan holat uchun.
    */
   internalParties?: { id: string; label: string; type: string; employee?: { fullName: string } | null }[];
+  /**
+   * Firma YARATISH mumkinmi (server: admin yoki bosh buxgalter).
+   * Berilmasa `true` — mavjud chaqiruvlar buzilmasin; yangi chaqiruvlar
+   * uni ochiq-oydin uzatadi.
+   */
+  canCreate?: boolean;
+  /** Firma O'CHIRISH mumkinmi (server: faqat admin). */
+  canDelete?: boolean;
 }
 
-const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect, tariffPreset, internalContractors, internalParties }) => {
+const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect, tariffPreset, internalContractors, internalParties, canCreate = true, canDelete = true }) => {
   const confirm = useConfirm();
   const t = translations[lang];
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -298,7 +306,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
           <button onClick={() => onCompanySelect(c)} className="icon-btn-sm rounded-lg" style={{ color: 'var(--accent-blue)' }} aria-label={`${c.name} — batafsil`}><Eye size={13} /></button>
           <button onClick={() => startEdit(c)} className="icon-btn-sm rounded-lg" style={{ color: 'var(--accent-blue)' }} aria-label={`${c.name} — tahrirlash`}><Edit3 size={13} /></button>
-          <button onClick={() => handleDelete(c.id, c.name)} className="icon-btn-sm rounded-lg" style={{ color: 'var(--danger)' }} aria-label={`${c.name} — o'chirish`}><Trash2 size={13} /></button>
+          {canDelete && (
+            <button onClick={() => handleDelete(c.id, c.name)} className="icon-btn-sm rounded-lg" style={{ color: 'var(--danger)' }} aria-label={`${c.name} — o'chirish`}><Trash2 size={13} /></button>
+          )}
         </div>
       ),
     },
@@ -533,6 +543,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             </button>
           </div>
 
+          {canCreate && (
           <button
             onClick={() => { setIsAdding(true); setForm({ id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString(), isActive: true }); }}
             className="ai-button-glow flex items-center gap-2"
@@ -540,6 +551,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             <Plus size={16} />
             <span className="uppercase tracking-widest text-meta">{t.addCompany}</span>
           </button>
+          )}
         </div>
       </div>
 
@@ -741,7 +753,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
                     <div className="flex items-center gap-1 ml-2">
                       <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="icon-btn-sm transition-all icon-btn-accent" style={{ color: 'var(--accent-blue)' }}><Edit3 size={15} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="icon-btn-sm transition-all icon-btn-danger" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
+                      {canDelete && (
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }} className="icon-btn-sm transition-all icon-btn-danger" style={{ color: 'var(--danger)' }} aria-label={`${c.name} — o'chirish`}><Trash2 size={15} /></button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -769,7 +783,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               emptyIcon={<LayoutGrid size={36} />}
               emptyTitle={t.noData}
               emptyDescription={table.isDirty ? "Qidiruv yoki filtrni o'zgartirib ko'ring." : undefined}
-              bulkActions={(ids) => (
+              bulkActions={canDelete ? (ids) => (
                 <button
                   type="button"
                   onClick={async () => {
@@ -789,7 +803,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 >
                   O&apos;chirish
                 </button>
-              )}
+              ) : undefined}
             />
           </div>
         )}
