@@ -46,6 +46,11 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
     defaultFilters: {
       active: 'true', tax: 'all', status: 'all', emp: 'all',
       risk: 'all', server: 'all', itpark: 'all', kpi: 'all',
+      // 'exclude' — standart, mijozlar ro'yxati (avvalgi xatti-harakat).
+      // 'only'    — "Ichki firmalar": ASRO'ning o'z yuridik shaxslari,
+      // ularga ham buxgalter/bank-klient biriktiriladi va ish shu yerda
+      // bajariladi (aks holda biriktirilgan xodim ishini topa olmasdi).
+      own: 'exclude',
     },
   });
   const search = table.search;
@@ -80,6 +85,8 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const setFilterItPark = (v: string) => table.setFilter('itpark', v);
   const filterKpi = table.filters.kpi;
   const setFilterKpi = (v: string) => table.setFilter('kpi', v);
+  const filterOwn = table.filters.own;
+  const setFilterOwn = (v: string) => table.setFilter('own', v);
   const [showFilters, setShowFilters] = useState(false);
 
   const itemsPerPage = 100;
@@ -145,9 +152,16 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         // KPI filter
         const matchesKpi = filterKpi === 'all' || (filterKpi === 'yes' ? c.kpiEnabled : !c.kpiEnabled);
 
-        return matchesSearch && matchesActive && matchesTax && matchesStatus && matchesEmployee && matchesRisk && matchesServer && matchesItPark && matchesKpi;
+        // Ichki firma / mijoz. Standart ('exclude') — ASRO'ning o'z yuridik
+        // shaxslari mijozlar ro'yxatida ko'rinmaydi (moliyaviy qoida:
+        // isOwnFirm o'z-firma-ajratmasi). "Ichki firmalar" tabida esa
+        // FAQAT ular ko'rinadi, boshqa hech qanday filtr (Faol/Arxiv/soliq)
+        // qo'llanmaydi — ular sanoq jihatidan kam va alohida mantiqqa ega emas.
+        const matchesOwn = filterOwn === 'only' ? Boolean(c.isOwnFirm) : !c.isOwnFirm;
+
+        return matchesSearch && matchesActive && matchesTax && matchesStatus && matchesEmployee && matchesRisk && matchesServer && matchesItPark && matchesKpi && matchesOwn;
       });
-  }, [companies, table.debouncedSearch, filterActive, filterTaxType, filterStatus, filterEmployee, filterRisk, filterServer, filterItPark, filterKpi, opByCompany]);
+  }, [companies, table.debouncedSearch, filterActive, filterTaxType, filterStatus, filterEmployee, filterRisk, filterServer, filterItPark, filterKpi, filterOwn, opByCompany]);
 
   // Kartochka ko'rinishi uchun sahifalash (jadvalni DataTable o'zi sahifalaydi).
   const paginated = useMemo(
@@ -423,6 +437,21 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               </button>
             ))}
           </div>
+
+          {/* ICHKI FIRMALAR — mijozlar ro'yxatidan alohida, chunki ASRO'ning
+              o'z yuridik shaxslari qarzdorlik/payrollga aralashmasligi kerak
+              (isOwnFirm ajratmasi). Lekin ularga ham buxgalter/bank-klient
+              biriktiriladi va ish bajarilishi shart — shu tugma shu ishga yo'l. */}
+          <button
+            onClick={() => setFilterOwn(filterOwn === 'only' ? 'exclude' : 'only')}
+            className="px-3 py-1.5 rounded-lg transition-all text-meta font-bold uppercase tracking-widest"
+            style={filterOwn === 'only'
+              ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)' }
+              : { background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
+            title="ASRO'ning o'z yuridik shaxslari — mijoz emas"
+          >
+            Ichki firmalar
+          </button>
 
           <div className="flex p-1 rounded-lg transition-colors" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
             <button

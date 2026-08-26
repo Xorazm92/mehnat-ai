@@ -6,6 +6,7 @@ import {
   getCachedOperations,
   getCachedTariffPreset,
   getCachedOwnFirms,
+  getCachedOwnFirmCompanies,
 } from "@/lib/cached-queries";
 import { getRoleContext } from "@/server/roleContext";
 import OrganizationsClient from "./OrganizationsClient";
@@ -66,9 +67,13 @@ export default async function OrganizationsPage() {
   // torayadi (lib/roleContext.ts). Bu HUQUQ emas, ko'rinish filtri.
   const roleContext = await getRoleContext().catch(() => "all" as const);
 
-  const [companies, archivedCompanies, staff, operations, tariffPreset, ownFirms] = await Promise.all([
+  const [companies, archivedCompanies, ownFirmCompanies, staff, operations, tariffPreset, ownFirms] = await Promise.all([
     getCachedCompanies(userId, userRole, roleContext),
     getCachedArchivedCompanies(userId, userRole, roleContext),
+    // "Ichki firmalar" tabi — biriktirilgan xodim (yoki admin) o'z firma
+    // uchun ham buxgalteriya ishini shu sahifadan bajara olishi uchun
+    // (lib/cached-queries.ts#getCachedOwnFirmCompanies izohiga q.).
+    getCachedOwnFirmCompanies(userId, userRole, roleContext),
     getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
     getCachedTariffPreset(),
@@ -82,7 +87,7 @@ export default async function OrganizationsPage() {
     status: u.status || undefined,
   }));
 
-  const mappedCompanies = [...companies, ...archivedCompanies].map(mapCompany);
+  const mappedCompanies = [...companies, ...archivedCompanies, ...ownFirmCompanies].map(mapCompany);
 
   return (
     <div className="h-full">

@@ -117,10 +117,44 @@ const _getCachedOwnFirms = unstable_cache(
 
 export const getCachedOwnFirms = cache(async () => _getCachedOwnFirms());
 
+/**
+ * O'Z FIRMALARIMIZ — TO'LIQ qator, "Firmalar" sahifasidagi "Ichki firmalar"
+ * tabi uchun (yuqoridagi `getCachedOwnFirms` faqat {id,name} — dropdown uchun).
+ *
+ * NEGA KERAK BO'LDI: o'z firmalarga ham buxgalter/bank-klient biriktiriladi
+ * (masalan Ruslan — 10 ta o'z firmaning buxgalteri) va ular uchun ham
+ * majburiyat/matritsa fonda yaratiladi (`lib/obligations.ts` isOwnFirm'ni
+ * tekshirmaydi), lekin `getCachedCompanies` ularni ATAYLAB chiqarib
+ * tashlagani uchun biriktirilgan xodim ishini qayerda bajarishni topa
+ * olmasdi. Portfelga (companyScopeWhere) baribir cheklanadi — faqat admin
+ * yoki shu firmaga biriktirilgan xodim ko'radi, `isSeniorRole` bilan
+ * CHEKLANMAYDI (aks holda Ruslan kabi senior bo'lmagan xodim o'ziga
+ * biriktirilgan ishni ham ko'ra olmasdi).
+ */
+const _getCachedOwnFirmCompanies = unstable_cache(
+  async (userId: string, role: string, context?: string) => {
+    return prisma.company.findMany({
+      where: { isOwnFirm: true, ...scopeFor(userId, role, context) },
+      include: COMPANY_INCLUDE,
+      orderBy: { name: "asc" },
+    });
+  },
+  ["own-firms-scoped"],
+  { tags: ["companies"], revalidate: 300 }
+);
+
+export const getCachedOwnFirmCompanies = cache(
+  async (userId: string, role: string, context?: string) =>
+    _getCachedOwnFirmCompanies(userId, role, context)
+);
+
 const _getCachedArchivedCompanies = unstable_cache(
   async (userId: string, role: string, context?: string) => {
     return prisma.company.findMany({
-      where: { isActive: false, ...scopeFor(userId, role, context) },
+      // isOwnFirm: false — o'z firmalar (arxivlangan bo'lsa ham) "Ichki
+      // firmalar" tabida (getCachedOwnFirmCompanies) ko'rinadi, bu yerda
+      // takrorlanmasin.
+      where: { isActive: false, isOwnFirm: false, ...scopeFor(userId, role, context) },
       include: COMPANY_INCLUDE,
       orderBy: { name: "asc" },
     });

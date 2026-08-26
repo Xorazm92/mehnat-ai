@@ -174,6 +174,8 @@ export interface Company {
   contractAmount?: number;
   originalIndex?: number; // From JSON "№"
   isActive?: boolean;
+  /** ASRO'ning O'Z yuridik shaxsi — mijoz emas. "Ichki firmalar" tabida ko'rinadi. */
+  isOwnFirm?: boolean;
   createdAt: string;
 
   // Optional/Extended fields
