@@ -79,62 +79,71 @@ export interface GroupStyle {
   border: string;
 }
 
+// Guruh ranglari TOKENLARDAN (`app/globals.css` → `--matrix-*`).
+//
+// Ilgari bu yerda Tailwind palitrasidan qattiq hex qiymatlar turardi
+// (#3b82f6, #10b981, #f59e0b …), matn rangi esa tokenlardan olinardi:
+// bitta sarlavhada FON bir ko'k, MATN boshqa ko'k bo'lardi. Qorong'u
+// temada qattiq ranglar umuman aylanmasdi. Yana: "Soliq H/T" va
+// "Komunalka" ikkalasi ham sariq edi va yonma-yon turganda farqlanmasdi.
+//
+// Endi fon ham, chegara ham, matn ham BITTA manbadan.
 const GROUP_STYLE_MAP: Record<string, GroupStyle> = {
   "Oylik": {
-    headerBg: "color-mix(in srgb, #3b82f6 18%, var(--surface-2))",
-    subHeaderBg: "color-mix(in srgb, #3b82f6 10%, var(--surface-2))",
-    cellBg: "color-mix(in srgb, #3b82f6 3.5%, transparent)",
-    text: "var(--accent-blue)",
-    border: "color-mix(in srgb, #3b82f6 45%, transparent)",
+    headerBg: "color-mix(in srgb, var(--matrix-oylik) 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, var(--matrix-oylik) 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, var(--matrix-oylik) 3.5%, transparent)",
+    text: "var(--matrix-oylik)",
+    border: "color-mix(in srgb, var(--matrix-oylik) 45%, transparent)",
   },
   "Soliqlar": {
-    headerBg: "color-mix(in srgb, #10b981 18%, var(--surface-2))",
-    subHeaderBg: "color-mix(in srgb, #10b981 10%, var(--surface-2))",
-    cellBg: "color-mix(in srgb, #10b981 3.5%, transparent)",
-    text: "var(--success)",
-    border: "color-mix(in srgb, #10b981 45%, transparent)",
+    headerBg: "color-mix(in srgb, var(--matrix-soliq) 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, var(--matrix-soliq) 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, var(--matrix-soliq) 3.5%, transparent)",
+    text: "var(--matrix-soliq)",
+    border: "color-mix(in srgb, var(--matrix-soliq) 45%, transparent)",
   },
   "Soliq H/T": {
-    headerBg: "color-mix(in srgb, #f59e0b 22%, var(--surface-2))",
-    subHeaderBg: "color-mix(in srgb, #f59e0b 12%, var(--surface-2))",
-    cellBg: "color-mix(in srgb, #f59e0b 4.5%, transparent)",
-    text: "var(--warning)",
-    border: "color-mix(in srgb, #f59e0b 50%, transparent)",
+    headerBg: "color-mix(in srgb, var(--matrix-soliq-ht) 22%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, var(--matrix-soliq-ht) 12%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, var(--matrix-soliq-ht) 4.5%, transparent)",
+    text: "var(--matrix-soliq-ht)",
+    border: "color-mix(in srgb, var(--matrix-soliq-ht) 50%, transparent)",
   },
   "Yillik": {
-    headerBg: "color-mix(in srgb, #8b5cf6 18%, var(--surface-2))",
-    subHeaderBg: "color-mix(in srgb, #8b5cf6 10%, var(--surface-2))",
-    cellBg: "color-mix(in srgb, #8b5cf6 3.5%, transparent)",
-    text: "var(--accent-purple)",
-    border: "color-mix(in srgb, #8b5cf6 45%, transparent)",
+    headerBg: "color-mix(in srgb, var(--matrix-yillik) 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, var(--matrix-yillik) 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, var(--matrix-yillik) 3.5%, transparent)",
+    text: "var(--matrix-yillik)",
+    border: "color-mix(in srgb, var(--matrix-yillik) 45%, transparent)",
   },
   "Statistika": {
-    headerBg: "color-mix(in srgb, #ec4899 18%, var(--surface-2))",
-    subHeaderBg: "color-mix(in srgb, #ec4899 10%, var(--surface-2))",
-    cellBg: "color-mix(in srgb, #ec4899 3.5%, transparent)",
-    text: "var(--danger)",
-    border: "color-mix(in srgb, #ec4899 45%, transparent)",
+    headerBg: "color-mix(in srgb, var(--matrix-statistika) 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, var(--matrix-statistika) 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, var(--matrix-statistika) 3.5%, transparent)",
+    text: "var(--matrix-statistika)",
+    border: "color-mix(in srgb, var(--matrix-statistika) 45%, transparent)",
   },
   "IT Park": {
-    headerBg: "color-mix(in srgb, #06b6d4 18%, var(--surface-2))",
-    subHeaderBg: "color-mix(in srgb, #06b6d4 10%, var(--surface-2))",
-    cellBg: "color-mix(in srgb, #06b6d4 3.5%, transparent)",
-    text: "var(--info)",
-    border: "color-mix(in srgb, #06b6d4 45%, transparent)",
+    headerBg: "color-mix(in srgb, var(--matrix-itpark) 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, var(--matrix-itpark) 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, var(--matrix-itpark) 3.5%, transparent)",
+    text: "var(--matrix-itpark)",
+    border: "color-mix(in srgb, var(--matrix-itpark) 45%, transparent)",
   },
   "Komunalka": {
-    headerBg: "color-mix(in srgb, #eab308 18%, var(--surface-2))",
-    subHeaderBg: "color-mix(in srgb, #eab308 10%, var(--surface-2))",
-    cellBg: "color-mix(in srgb, #eab308 3.5%, transparent)",
-    text: "var(--warning)",
-    border: "color-mix(in srgb, #eab308 45%, transparent)",
+    headerBg: "color-mix(in srgb, var(--matrix-komunal) 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, var(--matrix-komunal) 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, var(--matrix-komunal) 3.5%, transparent)",
+    text: "var(--matrix-komunal)",
+    border: "color-mix(in srgb, var(--matrix-komunal) 45%, transparent)",
   },
   "Maxsus": {
-    headerBg: "color-mix(in srgb, #6366f1 18%, var(--surface-2))",
-    subHeaderBg: "color-mix(in srgb, #6366f1 10%, var(--surface-2))",
-    cellBg: "color-mix(in srgb, #6366f1 3.5%, transparent)",
-    text: "var(--accent-indigo)",
-    border: "color-mix(in srgb, #6366f1 45%, transparent)",
+    headerBg: "color-mix(in srgb, var(--matrix-maxsus) 18%, var(--surface-2))",
+    subHeaderBg: "color-mix(in srgb, var(--matrix-maxsus) 10%, var(--surface-2))",
+    cellBg: "color-mix(in srgb, var(--matrix-maxsus) 3.5%, transparent)",
+    text: "var(--matrix-maxsus)",
+    border: "color-mix(in srgb, var(--matrix-maxsus) 45%, transparent)",
   },
 };
 

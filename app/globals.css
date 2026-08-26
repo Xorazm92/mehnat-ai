@@ -200,6 +200,30 @@
   --warning-bg: #FAF2E4;
   --warning-border: rgba(143, 90, 12, 0.25);
   --info: #0F66AE;
+
+  /* ─── Amallar matritsasi — guruh ranglari ───────────────────────────
+     Matritsada sakkizta operatsiya guruhi bor va har biriga o'z tusi
+     kerak: bitta ekranda 58 ustun, guruh chegarasi FAQAT rang bilan
+     o'qiladi.
+
+     Ilgari bu ranglar `OperationModule.tsx` ichida qattiq yozilgan edi
+     (Tailwind palitrasidan: #3b82f6, #10b981, #f59e0b …) va matn rangi
+     esa tokenlardan olinardi. Ya'ni bitta sarlavhada FON bir ko'k, MATN
+     boshqa ko'k bo'lardi; qorong'u temada esa qattiq ranglar umuman
+     mos kelmasdi, chunki ular tema bilan aylanmaydi.
+
+     Endi ikkalasi ham shu yerdan. Sakkizta tus ataylab bir-biridan
+     ajralib turadi — "Soliq H/T" va "Komunalka" ilgari ikkalasi ham
+     sariq edi va yonma-yon turganda farqlanmasdi. */
+  --matrix-oylik: #0F66AE;        /* azure — brend bilan bir oila */
+  --matrix-soliq: #177C55;        /* yashil */
+  --matrix-soliq-ht: #8F5A0C;     /* amber */
+  --matrix-yillik: #6941C0;       /* binafsha */
+  --matrix-statistika: #C43A31;   /* qizil */
+  --matrix-itpark: #0E7490;       /* moviy — azure'dan farqlanadi */
+  --matrix-komunal: #7A6A00;      /* zaytun — amber bilan chalkashmasin */
+  --matrix-maxsus: #3D48C0;       /* indigo */
+
   --info-bg: #EAF1F9;
   --info-border: rgba(15, 102, 174, 0.25);
 
@@ -339,6 +363,20 @@
   --warning-bg: rgba(214, 166, 78, 0.13);
   --warning-border: rgba(214, 166, 78, 0.28);
   --info: #4FA3E3;
+
+  /* ─── Amallar matritsasi — guruh ranglari (qorong'u) ───────────────
+     Och temadagi qiymatlarning qorong'u juftliklari: to'q fonda o'qilishi
+     uchun yorug'roq va kamroq to'yingan. Izoh uchun `:root` blokiga
+     qarang. */
+  --matrix-oylik: #4FA3E3;
+  --matrix-soliq: #3FB985;
+  --matrix-soliq-ht: #D6A64E;
+  --matrix-yillik: #A88DEC;
+  --matrix-statistika: #E37F76;
+  --matrix-itpark: #4FC3D9;
+  --matrix-komunal: #AEC93B;
+  --matrix-maxsus: #8890E8;
+
   --info-bg: rgba(79, 163, 227, 0.13);
   --info-border: rgba(79, 163, 227, 0.28);
 
