@@ -131,7 +131,7 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
                                 </div>
                             </div>
                             {!n.isRead && (
-                                <button onClick={() => markOne(n.id)} className="icon-btn-sm shrink-0 transition-all" style={{ color: 'var(--success)' }} title={lang === 'uz' ? "O'qildi" : 'Прочитано'}>
+                                <button onClick={() => markOne(n.id)} className="icon-btn-sm shrink-0 transition-all" style={{ color: 'var(--success)' }} title={lang === 'uz' ? "O'qildi" : 'Прочитано'} aria-label={lang === 'uz' ? "O'qildi" : 'Прочитано'}>
                                     <Check size={16} />
                                 </button>
                             )}

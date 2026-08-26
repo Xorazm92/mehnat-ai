@@ -13,6 +13,7 @@ import { formatNum } from "@/lib/format";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/actionError";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 interface ChecklistItem {
   key: string;
@@ -221,13 +222,17 @@ export default function MonthClosingClient({
                         </button>
                       )}
                       {isSuperAdmin && m.status !== "LOCKED" && m.status !== "CLOSING" && (
-                        <button onClick={() => handleClose(m)}
-                          disabled={busy !== null || m.status !== "READY_TO_CLOSE"}
-                          title={m.status !== "READY_TO_CLOSE" ? "Avval checklist yashil bo'lishi kerak (Tekshirish)" : "Oyni yopish"}
-                          className="px-2.5 py-1.5 rounded-lg text-meta font-bold inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
-                          style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
-                          <Lock size={11} /> Yopish
-                        </button>
+                        <Tooltip
+                          label={m.status !== "READY_TO_CLOSE" ? "Avval checklist yashil bo'lishi kerak (Tekshirish)" : "Oyni yopish"}
+                          wrapDisabled={m.status !== "READY_TO_CLOSE"}
+                        >
+                          <button onClick={() => handleClose(m)}
+                            disabled={busy !== null || m.status !== "READY_TO_CLOSE"}
+                            className="px-2.5 py-1.5 rounded-lg text-meta font-bold inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
+                            <Lock size={11} /> Yopish
+                          </button>
+                        </Tooltip>
                       )}
                       {isSuperAdmin && m.status === "LOCKED" && (
                         <button onClick={() => { setReopenTarget(m); setReopenReason(""); }} disabled={busy !== null}

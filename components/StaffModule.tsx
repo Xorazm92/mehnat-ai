@@ -572,7 +572,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
                 </div>
               </div>
               <div className="flex flex-col gap-1.5 shrink-0">
-                <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="icon-btn-sm" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title="Tahrirlash">
+                <button onClick={(e) => { e.stopPropagation(); openEdit(person); }} className="icon-btn-sm" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title="Tahrirlash" aria-label="Tahrirlash">
                   <Edit3 size={15} />
                 </button>
                 {canManageStaff && (

@@ -66,9 +66,9 @@ export function AdminDepartments({ departments, chiefs, busy, onCreate, onUpdate
                 <Building2 size={17} />
               </div>
               <div className="flex items-center gap-1">
-                <button title="Tahrirlash" onClick={() => setForm({ id: d.id, name: d.name, chiefAccountantId: d.chiefAccountantId })} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--accent-blue)" }}><Pencil size={13} /></button>
+                <button title="Tahrirlash" aria-label="Tahrirlash" onClick={() => setForm({ id: d.id, name: d.name, chiefAccountantId: d.chiefAccountantId })} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--accent-blue)" }}><Pencil size={13} /></button>
                 {d.isActive && (
-                  <button title="Faolsizlantirish" onClick={() => onDeactivate(d.id)} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--danger)" }}><Power size={13} /></button>
+                  <button title="Faolsizlantirish" aria-label="Faolsizlantirish" onClick={() => onDeactivate(d.id)} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--danger)" }}><Power size={13} /></button>
                 )}
               </div>
             </div>

@@ -225,7 +225,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                                             <p className="text-meta font-bold tabular-nums" style={{ color: 'var(--danger)' }}>{rule.maxPenalty ?? 0}%</p>
                                         </div>
                                         <button onClick={() => setEditingRule(rule)} className="p-2 rounded-lg transition-colors"
-                                            style={{ color: 'var(--text-muted)', border: '1px solid var(--card-border)' }} title="Tahrirlash">
+                                            style={{ color: 'var(--text-muted)', border: '1px solid var(--card-border)' }} title="Tahrirlash" aria-label="Tahrirlash">
                                             <Edit3 size={13} />
                                         </button>
                                     </div>

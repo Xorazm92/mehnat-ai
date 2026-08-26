@@ -165,7 +165,7 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                             <a href={d.filePath} target="_blank" rel="noopener noreferrer" className="w-9 h-9 flex items-center justify-center rounded-lg" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title={lang === 'uz' ? 'Ochish' : 'Открыть'}><ExternalLink size={15} /></a>
-                            {canEdit && <button onClick={() => handleDelete(d.id)} className="icon-btn-sm" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title={t.delete}><Trash2 size={15} /></button>}
+                            {canEdit && <button onClick={() => handleDelete(d.id)} className="icon-btn-sm" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title={t.delete} aria-label={t.delete}><Trash2 size={15} /></button>}
                         </div>
                     </div>
                 ))}

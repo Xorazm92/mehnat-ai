@@ -173,8 +173,8 @@ export function AdminUserManager({
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-1.5">
-                      <button title="Tahrirlash" onClick={() => openEdit(u)} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--accent-blue)" }}><Pencil size={14} /></button>
-                      <button title="Parolni tiklash" onClick={() => { setPwTarget(u); setPwValue(""); }} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--warning)" }}><KeyRound size={14} /></button>
+                      <button title="Tahrirlash" aria-label="Tahrirlash" onClick={() => openEdit(u)} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--accent-blue)" }}><Pencil size={14} /></button>
+                      <button title="Parolni tiklash" aria-label="Parolni tiklash" onClick={() => { setPwTarget(u); setPwValue(""); }} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: "var(--warning)" }}><KeyRound size={14} /></button>
                       <button title={u.isActive ? "Faolsizlantirish" : "Faollashtirish"} onClick={() => onToggleActive(u)} disabled={busy} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: u.isActive ? "var(--danger)" : "var(--success)" }}>
                         {u.isActive ? <UserX size={14} /> : <UserCheck size={14} />}
                       </button>

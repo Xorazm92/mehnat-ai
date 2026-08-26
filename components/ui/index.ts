@@ -27,3 +27,4 @@ export { DateField, displayDate, type DateFieldProps } from "./DateField";
 export { MoneyField } from "./MoneyField";
 export { PageHeader } from "./PageHeader";
 export { KpiCard } from "./KpiCard";
+export { Tooltip, type TooltipProps } from "./Tooltip";

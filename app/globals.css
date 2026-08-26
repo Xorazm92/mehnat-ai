@@ -194,6 +194,11 @@
   --success-bg: #ECF6F0;
   --success-border: rgba(23, 124, 85, 0.25);
   --danger: #C43A31;
+  /* Tooltip — sahifa fonining TESKARISI. Tooltip qatlam ustida turadi va
+     u yerda kontrast qanchalik yuqori bo'lsa, o'qish shuncha tez. */
+  --tooltip-bg: #262C34;
+  --tooltip-text: #F6F6F8;
+  --tooltip-border: rgba(255, 255, 255, 0.12);
   --danger-bg: #FBEDEB;
   --danger-border: rgba(196, 58, 49, 0.25);
   --warning: #8F5A0C;
@@ -357,6 +362,12 @@
   --success-bg: rgba(63, 185, 133, 0.13);
   --success-border: rgba(63, 185, 133, 0.28);
   --danger: #E37F76;
+  /* Qorong'u temada tooltip fonini ochroq olamiz: #262C34 sahifa foni
+     (#0F1116) ustida deyarli ajralmaydi va tooltip "suzib yurgan" emas,
+     sahifaning bir qismi bo'lib ko'rinadi. */
+  --tooltip-bg: #333B47;
+  --tooltip-text: #F2F5F8;
+  --tooltip-border: rgba(255, 255, 255, 0.18);
   --danger-bg: rgba(227, 127, 118, 0.13);
   --danger-border: rgba(227, 127, 118, 0.28);
   --warning: #D6A64E;

@@ -317,7 +317,7 @@ function CredentialsSection({ person, onResetPassword }: { person: Staff; onRese
               <label className="text-micro font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Yangi parol</label>
               <div className="flex items-center gap-2">
                 <input value={pw} onChange={(e) => setPw(e.target.value)} className="erp-input font-mono tracking-wider" placeholder="Kamida 6 ta belgi" />
-                <button onClick={() => setPw(genPw())} className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }} title="Yangi parol taklif qilish">
+                <button onClick={() => setPw(genPw())} className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg" style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }} title="Yangi parol taklif qilish" aria-label="Yangi parol taklif qilish">
                   <RefreshCw size={15} />
                 </button>
               </div>

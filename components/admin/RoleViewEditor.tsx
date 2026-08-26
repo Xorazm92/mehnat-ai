@@ -94,7 +94,8 @@ export default function RoleViewEditor({ initial }: { initial: RoleViewMatrix })
                             cursor: locked ? "not-allowed" : "pointer",
                             opacity: locked ? 0.7 : 1,
                           }}
-                          title={locked ? "Superadmin doim ko'radi" : on ? "Ko'radi — bosib o'chiring" : "Ko'rmaydi — bosib yoqing"}
+                          aria-label={locked ? "Superadmin doim ko'radi" : on ? "Ko'radi — bosib o'chiring" : "Ko'rmaydi — bosib yoqing"}
+                          aria-pressed={locked ? undefined : on}
                         >
                           {on && <Check size={14} style={{ color: "var(--success)" }} />}
                         </button>

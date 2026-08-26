@@ -302,8 +302,8 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                             </div>
                             {canEdit && (
                                 <div className="flex flex-col gap-1.5 shrink-0">
-                                    <button onClick={() => openEdit(r)} className="icon-btn-sm" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title={t.edit}><Edit3 size={15} /></button>
-                                    <button onClick={() => handleDelete(r.id)} className="icon-btn-sm" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title={t.delete}><Trash2 size={15} /></button>
+                                    <button onClick={() => openEdit(r)} className="icon-btn-sm" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-light)' }} title={t.edit} aria-label={t.edit}><Edit3 size={15} /></button>
+                                    <button onClick={() => handleDelete(r.id)} className="icon-btn-sm" style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} title={t.delete} aria-label={t.delete}><Trash2 size={15} /></button>
                                 </div>
                             )}
                         </div>

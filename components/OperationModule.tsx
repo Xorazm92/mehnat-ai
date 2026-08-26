@@ -56,6 +56,7 @@ import { COL_KEY_TO_TEMPLATE_CODES } from '@/lib/reportTemplateMap';
 import { companyRelations, type CompanyRelation } from '@/lib/access';
 import { useDismissable } from '@/hooks/useDismissable';
 import { Button } from "@/components/ui/Button";
+import { Tooltip } from './ui/Tooltip';
 // ── Report Column Definitions ──────────────────────────────────
 // Ustunlar ta'rifi endi lib/reportColumns.ts da (BASE_REPORT_COLUMNS) — yagona manba.
 // Amaldagi (config qo'llangan) ro'yxat `reportColumns` prop orqali keladi;
@@ -661,7 +662,9 @@ const OperationRow = React.memo<{
             <React.Fragment key={col.key}>
               <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: '1px solid var(--border)', background: serviceDisabled ? 'var(--bg-sunken)' : `color-mix(in srgb, var(--success) 6%, ${st.cellBg})` }}>
                 {serviceDisabled ? (
-                  <span className="text-micro" style={{ color: 'var(--text-3)' }} title={blockReason ?? undefined}>—</span>
+                  <Tooltip label={blockReason ?? undefined} wrapDisabled>
+                    <span className="text-micro" style={{ color: 'var(--text-3)' }} aria-label={blockReason ? `Yopiq: ${blockReason}` : undefined}>—</span>
+                  </Tooltip>
                 ) : (
                   <StatusCell
                     value={String(row[col.key] || '')}
@@ -678,7 +681,9 @@ const OperationRow = React.memo<{
               </td>
               <td className="px-0.5 py-0.5 text-center h-8" style={{ borderRight: borderRightStyle, background: payDisabled ? 'var(--bg-sunken)' : `color-mix(in srgb, var(--warning) 6%, ${st.cellBg})` }}>
                 {payDisabled ? (
-                  <span className="text-micro" style={{ color: 'var(--text-3)' }} title={payBlockReason ?? undefined}>—</span>
+                  <Tooltip label={payBlockReason ?? undefined} wrapDisabled>
+                    <span className="text-micro" style={{ color: 'var(--text-3)' }} aria-label={payBlockReason ? `Yopiq: ${payBlockReason}` : undefined}>—</span>
+                  </Tooltip>
                 ) : (
                   <StatusCell
                     value={String(row[payKey] || '')}
@@ -700,7 +705,9 @@ const OperationRow = React.memo<{
         return (
           <td key={col.key} className="px-0.5 py-0.5 text-center h-8 transition-colors group-hover:opacity-90" style={{ borderRight: borderRightStyle, background: serviceDisabled ? 'var(--surface-2)' : st.cellBg }}>
             {serviceDisabled ? (
-              <span className="text-micro" style={{ color: 'var(--text-3)' }} title={blockReason ?? undefined}>—</span>
+              <Tooltip label={blockReason ?? undefined} wrapDisabled>
+                    <span className="text-micro" style={{ color: 'var(--text-3)' }} aria-label={blockReason ? `Yopiq: ${blockReason}` : undefined}>—</span>
+                  </Tooltip>
             ) : (
               <StatusCell
                 value={String(row[col.key] || '')}

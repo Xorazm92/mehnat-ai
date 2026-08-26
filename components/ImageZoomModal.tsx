@@ -297,7 +297,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
             onClick={zoomIn}
             disabled={scale >= 8}
             className="p-2 rounded-xl hover:bg-white/15 disabled:opacity-30 transition-all"
-            title="Kattalashtirish (+)"
+            title="Kattalashtirish (+)" aria-label="Kattalashtirish (+)"
           >
             <ZoomIn size={18} />
           </button>

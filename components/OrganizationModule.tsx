@@ -501,7 +501,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'shadow-sm' : ''}`}
               style={viewMode === 'grid' ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--card-border)' } : { color: 'var(--text-secondary)', border: '1px solid transparent' }}
-              title={t.gridView}
+              title={t.gridView} aria-label={t.gridView}
             >
               <LayoutGrid size={15} />
             </button>
@@ -509,7 +509,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               onClick={() => setViewMode('list')}
               className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'shadow-sm' : ''}`}
               style={viewMode === 'list' ? { background: 'var(--card-bg)', color: 'var(--accent-blue)', border: '1px solid var(--card-border)' } : { color: 'var(--text-secondary)', border: '1px solid transparent' }}
-              title={t.tableView}
+              title={t.tableView} aria-label={t.tableView}
             >
               <List size={15} />
             </button>
@@ -528,7 +528,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               onClick={handleExport}
               className="w-9 h-9 flex items-center justify-center rounded-lg transition-all icon-btn-accent"
               style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
-              title="Excelga eksport"
+              title="Excelga eksport" aria-label="Excelga eksport"
             >
               <Download size={16} />
             </button>
@@ -537,7 +537,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               onClick={() => setShowFilters(!showFilters)}
               className="w-9 h-9 flex items-center justify-center rounded-lg transition-all icon-btn-accent"
               style={showFilters ? { background: 'var(--accent-blue-light)', border: '1px solid var(--accent-blue)', color: 'var(--accent-blue)' } : { background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
-              title="Filtrlar"
+              title="Filtrlar" aria-label="Filtrlar"
             >
               <Filter size={16} />
             </button>

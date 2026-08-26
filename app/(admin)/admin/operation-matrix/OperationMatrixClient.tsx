@@ -115,8 +115,8 @@ export default function OperationMatrixClient({ initialRows }: { initialRows: Op
               }}
             >
               <div className="flex flex-col shrink-0">
-                <button onClick={() => move(i, -1)} disabled={i === 0 || busy} className="disabled:opacity-30" style={{ color: "var(--text-muted)" }} title="Yuqoriga"><ChevronUp size={14} /></button>
-                <button onClick={() => move(i, 1)} disabled={i === rows.length - 1 || busy} className="disabled:opacity-30" style={{ color: "var(--text-muted)" }} title="Pastga"><ChevronDown size={14} /></button>
+                <button onClick={() => move(i, -1)} disabled={i === 0 || busy} className="disabled:opacity-30" style={{ color: "var(--text-muted)" }} title="Yuqoriga" aria-label="Yuqoriga"><ChevronUp size={14} /></button>
+                <button onClick={() => move(i, 1)} disabled={i === rows.length - 1 || busy} className="disabled:opacity-30" style={{ color: "var(--text-muted)" }} title="Pastga" aria-label="Pastga"><ChevronDown size={14} /></button>
               </div>
               <GripVertical size={14} className="shrink-0" style={{ color: "var(--text-muted)", opacity: 0.4 }} />
               <span className="text-micro font-bold tabular-nums w-6 text-center shrink-0" style={{ color: "var(--text-muted)" }}>{i + 1}</span>

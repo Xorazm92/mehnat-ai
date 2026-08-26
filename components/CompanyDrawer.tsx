@@ -1388,14 +1388,14 @@ function ContractsPanel({ companyId, initial }: { companyId: string; initial: Co
                 <span className="text-body font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text)' }}>
                   {k.amount != null ? `${formatNum(k.amount)} so'm` : '—'}
                 </span>
-                <button onClick={() => openEdit(k)} title="Tahrirlash" style={{ color: 'var(--text-muted)' }}>
+                <button onClick={() => openEdit(k)} title="Tahrirlash" aria-label="Tahrirlash" style={{ color: 'var(--text-muted)' }}>
                   <Pencil size={14} />
                 </button>
                 {k.isActive !== false && (
                   <button
                     onClick={() => deactivate(k)}
                     disabled={busy}
-                    title="Nofaol qilish (o'chirilmaydi — to'lovlar tarixi saqlanadi)"
+                    title="Nofaol qilish (o'chirilmaydi — to'lovlar tarixi saqlanadi)" aria-label="Nofaol qilish (o'chirilmaydi — to'lovlar tarixi saqlanadi)"
                     style={{ color: 'var(--text-muted)' }}
                   >
                     <Trash2 size={14} />
