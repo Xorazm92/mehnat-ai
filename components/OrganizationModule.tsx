@@ -780,6 +780,11 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               selected={selectedIds}
               onSelectedChange={setSelectedIds}
               onRowClick={c => onCompanySelect(c)}
+              rowLabel={c => `${c.name} — kartochkani ochish`}
+              // Bir xil qiymatli ustunlar (masalan bitta buxgalterda bitta
+              // nazoratchi yoki bitta 1C serveri) jadvalda 50 marta emas,
+              // tepada bir marta ko'rinadi.
+              collapseConstantColumns
               emptyIcon={<LayoutGrid size={36} />}
               emptyTitle={t.noData}
               emptyDescription={table.isDirty ? "Qidiruv yoki filtrni o'zgartirib ko'ring." : undefined}

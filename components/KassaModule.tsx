@@ -366,6 +366,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                         pageSize={50}
                         onPageChange={table.setPage}
                         onRowClick={item => openPayment(item)}
+                        rowLabel={item => `${item.name} — to'lov kartochkasi`}
                         emptyIcon={<Wallet size={36} />}
                         emptyTitle="To'lov ma'lumoti yo'q"
                     />

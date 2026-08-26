@@ -78,6 +78,42 @@ export interface DataTableProps<T> {
   /** Ekran o'quvchilar uchun jadval tavsifi */
   caption: string;
   className?: string;
+
+  /**
+   * Qator uchun ekran o'quvchi o'qiydigan nom.
+   *
+   * `onRowClick` berilgan qator endi klaviatura bilan ham ochiladi
+   * (Enter/Space) va `role="button"` oladi. Tugmaning nomi bo'lishi kerak —
+   * aks holda ekran o'quvchi butun qator matnini o'qiydi. Berilmasa
+   * umumiy "Qatorni ochish" ishlatiladi.
+   */
+  rowLabel?: (row: T) => string;
+
+  /**
+   * BARCHA qatorlarda bir xil qiymatga ega ustunlarni jadvaldan olib,
+   * tepada bitta chipga chiqaradi.
+   *
+   * Nima uchun: buxgalterda bitta firma bor va "Ishlar" ro'yxatidagi 30
+   * qatorning birinchi — eng keng — ustuni 30 marta "Raya MCHJ" deb
+   * takrorlanardi. O'lchov: olti ustundan faqat bittasi ma'lumot tashiydi.
+   * Takrorlanish shovqin emas, ekranning eng qimmatli joyini egallaydi.
+   *
+   * Faqat `sortValue` yoki `exportValue` bergan ustunlar taqqoslanadi —
+   * React tugunini solishtirib bo'lmaydi. Yopishtirilgan (`sticky`) ustun
+   * hech qachon yig'ilmaydi: u odatda identifikator.
+   */
+  collapseConstantColumns?: boolean;
+
+  /**
+   * Tor ekran uchun kartochka ko'rinishi.
+   *
+   * Berilsa, `md` dan pastda jadval o'rniga kartochkalar chiziladi.
+   * Auditdagi holat: jadval bo'lgan 22 ekrandan 21 tasida mobil muqobil
+   * yo'q edi — telefonda foydalanuvchi gorizontal aylantiriladigan
+   * jadval olardi. Qobiq (pastki navigatsiya, off-canvas menyu) tayyor,
+   * yetishmagani aynan shu qatlam.
+   */
+  mobileCard?: (row: T) => React.ReactNode;
 }
 
 export function DataTable<T>({
@@ -101,12 +137,35 @@ export function DataTable<T>({
   emptyIcon,
   caption,
   className = "",
+  rowLabel,
+  collapseConstantColumns = false,
+  mobileCard,
 }: DataTableProps<T>) {
   const selectable = Boolean(selected && onSelectedChange);
 
   // Yashirilgan ustunlar bir marta chiqarib tashlanadi — quyida hamma joy
   // (sarlavha, kataklar, colSpan) shu ro'yxatdan foydalanadi.
-  const cols = useMemo(() => columns.filter((c) => !c.hidden), [columns]);
+  const allCols = useMemo(() => columns.filter((c) => !c.hidden), [columns]);
+
+  // Barcha qatorlarda bir xil qiymatli ustunlar — jadvaldan chiqarilib,
+  // tepada bitta qatorga yig'iladi.
+  const constantCols = useMemo(() => {
+    if (!collapseConstantColumns || rows.length < 2) return [];
+    return allCols.filter((c) => {
+      if (c.sticky) return false;
+      const read = c.sortValue ?? c.exportValue;
+      if (!read) return false;
+      const first = read(rows[0]);
+      if (first === null || first === undefined || first === "") return false;
+      return rows.every((r) => read(r) === first);
+    });
+  }, [collapseConstantColumns, rows, allCols]);
+
+  const constantKeys = useMemo(() => new Set(constantCols.map((c) => c.key)), [constantCols]);
+  const cols = useMemo(
+    () => (constantKeys.size ? allCols.filter((c) => !constantKeys.has(c.key)) : allCols),
+    [allCols, constantKeys]
+  );
 
   const sorted = useMemo(() => {
     const col = cols.find((c) => c.key === sortKey);
@@ -160,7 +219,62 @@ export function DataTable<T>({
 
   return (
     <div className={`relative ${className}`}>
-      <div className="dashboard-card !p-0 overflow-hidden">
+      {/* Barcha qatorda bir xil bo'lgan ustunlar — jadvalda 30 marta emas,
+          shu yerda bir marta. */}
+      {constantCols.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-2 px-1">
+          {constantCols.map((c) => {
+            const read = c.sortValue ?? c.exportValue!;
+            return (
+              <span key={c.key} className="inline-flex items-baseline gap-1.5">
+                <span
+                  className="text-micro font-bold uppercase tracking-widest"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {c.header}
+                </span>
+                <span className="text-body font-semibold" style={{ color: "var(--text-primary)" }}>
+                  {String(read(rows[0]) ?? "—")}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tor ekran — kartochkalar. `mobileCard` berilmasa hech narsa
+          o'zgarmaydi: jadval avvalgidek gorizontal aylantiriladi. */}
+      {mobileCard && visible.length > 0 && (
+        <div className="md:hidden flex flex-col gap-2">
+          {visible.map((row) => {
+            const id = rowKey(row);
+            return (
+              <div
+                key={id}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
+                tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? "button" : undefined}
+                aria-label={onRowClick ? (rowLabel ? rowLabel(row) : "Qatorni ochish") : undefined}
+                className="dashboard-card !p-0 overflow-hidden"
+              >
+                {mobileCard(row)}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className={`dashboard-card !p-0 overflow-hidden ${mobileCard ? "hidden md:block" : ""}`}>
         <div className="overflow-x-auto">
           <table className="erp-table w-full text-left" data-density={density}>
             <caption className="sr-only">{caption}</caption>
@@ -223,7 +337,28 @@ export function DataTable<T>({
                 return (
                   <tr
                     key={id}
+                    // Bosiladigan qator KLAVIATURA bilan ham ochilishi kerak.
+                    // Auditda 37 joyda `onClick` interaktiv bo'lmagan elementga
+                    // osilgan edi: sichqoncha bilan ishlaydi, Tab + Enter bilan
+                    // yo'q. Jadval qatorini bosib firma kartasini ochish — bu
+                    // mahsulotning asosiy harakati, va u klaviaturada mavjud
+                    // emasdi. Primitivda tuzatilsa, unga ko'chgan har bir
+                    // jadval tekinga tuzaladi.
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    onKeyDown={
+                      onRowClick
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              // Space sahifani surib yubormasin.
+                              e.preventDefault();
+                              onRowClick(row);
+                            }
+                          }
+                        : undefined
+                    }
+                    tabIndex={onRowClick ? 0 : undefined}
+                    role={onRowClick ? "button" : undefined}
+                    aria-label={onRowClick ? (rowLabel ? rowLabel(row) : "Qatorni ochish") : undefined}
                     className={onRowClick ? "cursor-pointer" : undefined}
                     style={isSelected ? { background: "var(--brand-ghost)" } : undefined}
                   >

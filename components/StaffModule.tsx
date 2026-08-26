@@ -584,6 +584,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           selected={selectedIds}
           onSelectedChange={setSelectedIds}
           onRowClick={person => setSelected(person)}
+          rowLabel={person => `${person.name} — kartochkani ochish`}
           emptyIcon={<Search size={36} />}
           emptyTitle="Xodim topilmadi"
           emptyDescription={table.isDirty ? "Qidiruv yoki filtrni o'zgartirib ko'ring." : undefined}
