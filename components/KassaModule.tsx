@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import { useModalA11y } from '@/hooks/useModalA11y';
 import { useViewMode } from '@/hooks/useViewMode';
 import { Company, Payment, PaymentStatus, Language } from '@/types';
 import { translations } from '@/lib/translations';
@@ -41,6 +42,17 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
     const [viewMode, setViewMode] = useViewMode('kassa');
     const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // DIALOG XULQI — fokus tuzog'i, Escape, scroll qulfi, fokusni qaytarish.
+    //
+    // Bu oyna `fixed inset-0` bilan qo'lda yozilgan va DOM'da `role="dialog"`
+    // umuman yo'q edi: ekran o'quvchi uni oyna deb e'lon qilmasdi, Tab esa
+    // foydalanuvchini oyna ORTIDAGI sahifaga olib chiqib ketardi va u yerdan
+    // klaviatura bilan qaytib bo'lmasdi. Tartib o'zgarmaydi — faqat xulq.
+    const modalRef = useModalA11y<HTMLDivElement>({
+        open: isModalOpen,
+        onClose: () => setIsModalOpen(false),
+    });
     const [editingPayment, setEditingPayment] = useState<Partial<Payment> | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -380,8 +392,24 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
             </div>
 
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in">
-                    <div className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0">
+                <div
+                    // `Modal` bu yerda ishlatilmaydi: u o'z sarlavhasi va ichki
+                    // bo'shlig'ini qo'shadi, bu oyna esa o'z yuqori rangli
+                    // chizig'i va tartibiga ega. Shu sababdan tartib qo'lda
+                    // qoladi, XULQ esa `useModalA11y` dan olinadi — hook aynan
+                    // shu holat uchun yozilgan.
+                    // eslint-disable-next-line no-restricted-syntax
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+                    onMouseDown={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
+                >
+                    <div
+                        ref={modalRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="To'lov oynasi"
+                        tabIndex={-1}
+                        className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0 outline-none"
+                    >
                         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
                         <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
                             <div>
