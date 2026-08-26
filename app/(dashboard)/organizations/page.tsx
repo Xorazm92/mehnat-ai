@@ -6,6 +6,7 @@ import {
   getCachedOperations,
   getCachedTariffPreset,
   getCachedOwnFirms,
+  getCachedInternalParties,
   getCachedOwnFirmCompanies,
 } from "@/lib/cached-queries";
 import { getRoleContext } from "@/server/roleContext";
@@ -28,6 +29,9 @@ function mapCompany(c: any) {
     // Ekran `internalContractor` (nom) kutadi, bazada esa ID turadi.
     internalContractorId: c.internalContractorId ?? null,
     internalContractor: c.internalContractorFirm?.name ?? null,
+    // Og'zaki shartnoma tomoni — firma o'rniga plastik/naqd kanali.
+    internalChannelId: c.internalChannelId ?? null,
+    internalChannelLabel: c.internalChannel?.label ?? null,
     supervisorName: c.supervisor?.fullName ?? null,
     chiefAccountantName: c.chiefAccountant?.fullName ?? null,
     bankClientName: c.bankClient?.fullName ?? c.bankClientName ?? null,
@@ -67,7 +71,7 @@ export default async function OrganizationsPage() {
   // torayadi (lib/roleContext.ts). Bu HUQUQ emas, ko'rinish filtri.
   const roleContext = await getRoleContext().catch(() => "all" as const);
 
-  const [companies, archivedCompanies, ownFirmCompanies, staff, operations, tariffPreset, ownFirms] = await Promise.all([
+  const [companies, archivedCompanies, ownFirmCompanies, staff, operations, tariffPreset, ownFirms, internalParties] = await Promise.all([
     getCachedCompanies(userId, userRole, roleContext),
     getCachedArchivedCompanies(userId, userRole, roleContext),
     // "Ichki firmalar" tabi — biriktirilgan xodim (yoki admin) o'z firma
@@ -77,8 +81,10 @@ export default async function OrganizationsPage() {
     getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
     getCachedTariffPreset(),
-    // "Ichki shartnoma tomoni" tanlagichi — bazadagi o'z firmalarimiz.
+    // "Ichki shartnoma tomoni" tanlagichi — o'z firmalarimiz va og'zaki
+    // shartnoma tomonlari (plastik/naqd kanallari).
     getCachedOwnFirms(),
+    getCachedInternalParties(),
   ]);
 
   const mappedStaff = staff.map(u => ({
@@ -98,6 +104,7 @@ export default async function OrganizationsPage() {
         userRole={userRole}
         tariffPreset={tariffPreset}
         internalContractors={ownFirms}
+        internalParties={JSON.parse(JSON.stringify(internalParties))}
       />
     </div>
   );

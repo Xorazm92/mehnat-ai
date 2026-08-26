@@ -223,8 +223,17 @@ model Company {
   internalContractorFirm Company?  @relation("InternalContractor", fields: [internalContractorId], references: [id], onDelete: SetNull)
   /// Teskari tomon — shu o'z firmamiz nomidan tuzilgan mijoz shartnomalari.
   internalContractorFor  Company[] @relation("InternalContractor")
-  notes                  String?
-  isActive               Boolean   @default(true)
+
+  /// OG'ZAKI SHARTNOMA TOMONI — mijoz 10 ta firmamizdan biri bilan emas,
+  /// og'zaki kelishuv asosida ishlaydi va plastikka o'tkazadi yoki naqd
+  /// to'laydi. Bunda tomon firma emas, PUL TUSHADIGAN KANAL bo'ladi.
+  ///
+  /// `internalContractorId` bilan BIRGA to'ldirilmaydi (CHECK migratsiyada):
+  /// shartnomaning tomoni bitta — yo firma, yo kanal.
+  internalChannelId String?
+  internalChannel   DisbursementChannel? @relation("InternalPartyChannel", fields: [internalChannelId], references: [id], onDelete: SetNull)
+  notes             String?
+  isActive          Boolean              @default(true)
 
   // ASRO'ning O'Z yuridik shaxsi (mijoz emas). Mijozlar to'lovi aynan shu
   // firmalarning bank hisobiga tushadi, shuning uchun ular Company jadvalida
@@ -1895,8 +1904,10 @@ model DisbursementChannel {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  entries TransitEntry[]
-  cards   ChannelCard[]
+  entries          TransitEntry[]
+  cards            ChannelCard[]
+  /// Og'zaki shartnoma tomoni sifatida shu kanal ko'rsatilgan mijozlar.
+  internalPartyFor Company[]      @relation("InternalPartyChannel")
 
   @@unique([type, cardMask])
   @@index([isActive])

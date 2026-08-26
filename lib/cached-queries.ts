@@ -41,6 +41,8 @@ const COMPANY_INCLUDE = {
   // "Ichki shartnoma tomoni" — shartnoma qaysi O'Z firmamiz nomidan tuzilgan.
   // ID saqlanadi, ekranga esa NOM chiqadi, shuning uchun relation kerak.
   internalContractorFirm: { select: { id: true, name: true } },
+  // Og'zaki shartnoma tomoni — plastik/naqd kanali (firma o'rniga).
+  internalChannel: { select: { id: true, label: true, type: true } },
   supervisor: { select: { id: true, fullName: true } },
   chiefAccountant: { select: { id: true, fullName: true } },
   bankClient: { select: { id: true, fullName: true } },
@@ -116,6 +118,34 @@ const _getCachedOwnFirms = unstable_cache(
 );
 
 export const getCachedOwnFirms = cache(async () => _getCachedOwnFirms());
+
+/**
+ * OG'ZAKI SHARTNOMA TOMONLARI — "Ichki shartnoma tomoni" tanlagichida
+ * firmalar yonida turadigan plastik/naqd kanallari.
+ *
+ * MAS'UL ODAM BIRIKTIRILGANI shart: `cash` turida "Arendaga", "Ruslan
+ * grandga" kabi ichki chiqim kassalari ham bor — ular mijoz bilan
+ * shartnomaning tomoni bo'la olmaydi. Egasi bor kanal esa aynan javobgar
+ * shaxsni bildiradi (plastik — ta'sischi, naqd — pulni qabul qiladigan
+ * xodim), shuning uchun filtr shu.
+ */
+const _getCachedInternalParties = unstable_cache(
+  async () => {
+    return prisma.disbursementChannel.findMany({
+      where: {
+        isActive: true,
+        type: { in: ["plastik", "cash"] },
+        employeeId: { not: null },
+      },
+      select: { id: true, label: true, type: true, employee: { select: { fullName: true } } },
+      orderBy: [{ type: "asc" }, { label: "asc" }],
+    });
+  },
+  ["internal-parties"],
+  { tags: ["companies"], revalidate: 300 }
+);
+
+export const getCachedInternalParties = cache(async () => _getCachedInternalParties());
 
 /**
  * O'Z FIRMALARIMIZ — TO'LIQ qator, "Firmalar" sahifasidagi "Ichki firmalar"

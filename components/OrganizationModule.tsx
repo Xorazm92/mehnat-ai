@@ -31,9 +31,14 @@ interface Props {
   tariffPreset?: TariffPreset;
   /** "Ichki shartnoma tomoni" variantlari — bazadagi o'z firmalarimiz. */
   internalContractors?: { id: string; name: string }[];
+  /**
+   * Og'zaki shartnoma tomonlari — plastik/naqd kanallari (mas'ul odami bilan).
+   * Mijoz 10 ta firmamizdan biri bilan shartnoma tuzmagan holat uchun.
+   */
+  internalParties?: { id: string; label: string; type: string; employee?: { fullName: string } | null }[];
 }
 
-const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect, tariffPreset, internalContractors }) => {
+const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedPeriod, operations, onPeriodChange, onSave, onDelete, onCompanySelect, tariffPreset, internalContractors, internalParties }) => {
   const confirm = useConfirm();
   const t = translations[lang];
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -595,6 +600,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 initialAssignments={editingAssignments}
                 tariffPreset={tariffPreset}
                 internalContractors={internalContractors}
+                internalParties={internalParties}
                 onSave={handleSave}
                 onCancel={() => {
                   if (isSaving) return;

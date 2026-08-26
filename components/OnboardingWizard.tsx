@@ -34,6 +34,12 @@ interface Props {
      * bo'lmagan "Plastik" bor edi.
      */
     internalContractors?: { id: string; name: string }[];
+  /**
+   * Og'zaki shartnoma tomonlari — plastik/naqd kanallari (mas'ul odami bilan).
+   * Mijoz 10 ta firmamizdan biri bilan shartnoma tuzmagan holat uchun.
+   */
+  internalParties?: { id: string; label: string; type: string; employee?: { fullName: string } | null }[];
+
     onSave: (company: Partial<Company>, assignments: any[]) => void;
     onCancel: () => void;
 }
@@ -56,7 +62,7 @@ const SERVICE_GROUPS = serviceGroups();
 
 const fieldLabelStyle: React.CSSProperties = { color: 'var(--text-muted)' };
 
-const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignments, tariffPreset, internalContractors, onSave, onCancel }) => {
+const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignments, tariffPreset, internalContractors, internalParties, onSave, onCancel }) => {
     const [currentStep, setCurrentStep] = useState(0);
     /**
      * Xatolar DARHOL emas, urinishdan KEYIN ko'rsatiladi.
@@ -104,6 +110,34 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
         }
         return list;
     }, [internalContractors, formData.internalContractorId, formData.internalContractor]);
+
+    /**
+     * Og'zaki shartnoma tomonlari — plastik/naqd kanallari.
+     *
+     * Tanlagich BITTA, chunki tomon ham bitta: `firma:<id>` yoki
+     * `kanal:<id>`. Ikkita alohida tanlagich bo'lganda ikkalasini ham
+     * to'ldirish mumkin bo'lardi, DB esa CHECK bilan buni rad etardi —
+     * foydalanuvchi sababini tushunmaydigan xato.
+     */
+    const partyOptions = React.useMemo(() => {
+        const list = (internalParties ?? []).map(p => ({
+            id: p.id,
+            // Kanal nomi ("Plastik", "Cash (seyf)") o'zi javobgarni aytmaydi —
+            // pul kimga tushishini ko'rsatish uchun odam ismi yoniga qo'yiladi.
+            label: p.employee?.fullName ? `${p.label} — ${p.employee.fullName}` : p.label,
+        }));
+        const id = formData.internalChannelId;
+        if (id && !list.some(o => o.id === id)) {
+            list.push({ id, label: formData.internalChannelLabel || 'Arxivdagi kanal' });
+        }
+        return list;
+    }, [internalParties, formData.internalChannelId, formData.internalChannelLabel]);
+
+    const partyValue = formData.internalChannelId
+        ? `kanal:${formData.internalChannelId}`
+        : formData.internalContractorId
+            ? `firma:${formData.internalContractorId}`
+            : '';
 
     // Har bir o'rinda HAMMA xodim chiqadi — odatdagi lavozim ro'yxat boshida.
     // Bitta odam bir firmada nazoratchi, boshqasida buxgalter bo'ladi, shuning
@@ -462,26 +496,45 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                 <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Ichki Shartnoma Tomoni</label>
                                 <select
                                     className="erp-input"
-                                    value={formData.internalContractorId || ''}
+                                    value={partyValue}
                                     onChange={e => {
                                         // Bazaga ID yoziladi (firma nomi o'zgarsa bog'lanish
                                         // uzilmasin), nom esa faqat ekran uchun yonida yuriydi.
-                                        const id = e.target.value;
+                                        const [kind, id] = e.target.value.split(':');
                                         setFormData({
                                             ...formData,
-                                            internalContractorId: id || undefined,
-                                            internalContractor: contractorOptions.find(o => o.id === id)?.name,
+                                            internalContractorId: kind === 'firma' ? id : undefined,
+                                            internalContractor: kind === 'firma'
+                                                ? contractorOptions.find(o => o.id === id)?.name
+                                                : undefined,
+                                            internalChannelId: kind === 'kanal' ? id : undefined,
+                                            internalChannelLabel: kind === 'kanal'
+                                                ? partyOptions.find(o => o.id === id)?.label
+                                                : undefined,
                                         });
                                     }}
                                 >
                                     <option value="">Tanlanmagan</option>
-                                    {contractorOptions.map(o => (
-                                        <option key={o.id} value={o.id}>{o.name}</option>
-                                    ))}
+                                    <optgroup label="Yozma shartnoma — o'z firmamiz">
+                                        {contractorOptions.map(o => (
+                                            <option key={o.id} value={`firma:${o.id}`}>{o.name}</option>
+                                        ))}
+                                    </optgroup>
+                                    <optgroup label="Og'zaki shartnoma — plastik/naqd">
+                                        {partyOptions.map(o => (
+                                            <option key={o.id} value={`kanal:${o.id}`}>{o.label}</option>
+                                        ))}
+                                    </optgroup>
                                 </select>
                                 {contractorOptions.length === 0 && (
                                     <p className="text-2xs ml-1" style={{ color: 'var(--text-muted)' }}>
                                         O&apos;z firmalar ro&apos;yxati bo&apos;sh — bazada `isOwnFirm` belgilangan firma yo&apos;q.
+                                    </p>
+                                )}
+                                {partyOptions.length === 0 && (
+                                    <p className="text-2xs ml-1" style={{ color: 'var(--text-muted)' }}>
+                                        Og&apos;zaki shartnoma tomoni yo&apos;q — kassa kanallarida plastik/naqd
+                                        kanaliga mas&apos;ul xodim biriktirilmagan.
                                     </p>
                                 )}
                             </div>

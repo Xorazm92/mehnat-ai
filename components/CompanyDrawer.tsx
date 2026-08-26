@@ -813,13 +813,20 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
           {activeTab === 'shartnoma' && (
             <div className="space-y-6 animate-fade-in px-2">
               <div className="grid grid-cols-2 gap-4">
-                {company.internalContractor && (
+                {/* Tomon ikki xil bo'ladi: o'z firmamiz (yozma shartnoma) yoki
+                    plastik/naqd kanali (og'zaki kelishuv). Ikkalasi bir vaqtda
+                    to'ldirilmaydi — DB'da CHECK. */}
+                {(company.internalContractor || company.internalChannelLabel) && (
                   <div className="col-span-2 dashboard-card p-5 !shadow-sm flex items-center justify-between" style={{ background: 'var(--accent-blue-light)' }}>
                     <div>
-                      <p className="text-micro font-bold uppercase tracking-widest mb-1.5 opacity-70" style={{ color: 'var(--accent-blue)' }}>Ichki Pudratchi (Ijrochi)</p>
+                      <p className="text-micro font-bold uppercase tracking-widest mb-1.5 opacity-70" style={{ color: 'var(--accent-blue)' }}>
+                        {company.internalContractor ? 'Ichki Pudratchi (Ijrochi)' : "Og'zaki shartnoma tomoni"}
+                      </p>
                       <div className="flex items-center gap-3">
                         <Building2 size={16} style={{ color: 'var(--accent-blue)' }} />
-                        <p className="text-sm font-semibold tracking-tight" style={{ color: 'var(--text)' }}>{company.internalContractor}</p>
+                        <p className="text-sm font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
+                          {company.internalContractor || company.internalChannelLabel}
+                        </p>
                       </div>
                     </div>
                   </div>

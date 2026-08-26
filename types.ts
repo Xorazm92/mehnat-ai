@@ -208,6 +208,10 @@ export interface Company {
   serviceScope?: string[];
   isInternalContractor?: boolean; // New: Flag for "Ichki firma"
   internalContractorId?: string; // New: Link to "Ichki firma"
+  /** Og'zaki shartnoma tomoni — DisbursementChannel.id (plastik/naqd). */
+  internalChannelId?: string;
+  /** Faqat ekran uchun: yuqoridagi kanalning nomi. */
+  internalChannelLabel?: string;
 
   // Tab 1: PASPORT
   brandName?: string;

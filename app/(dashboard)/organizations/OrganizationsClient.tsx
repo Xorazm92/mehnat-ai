@@ -18,9 +18,14 @@ interface Props {
   tariffPreset: TariffPreset;
   /** "Ichki shartnoma tomoni" variantlari — bazadagi o'z firmalarimiz. */
   internalContractors: { id: string; name: string }[];
+  /**
+   * Og'zaki shartnoma tomonlari — plastik/naqd kanallari (mas'ul odami bilan).
+   * Mijoz 10 ta firmamizdan biri bilan shartnoma tuzmagan holat uchun.
+   */
+  internalParties?: { id: string; label: string; type: string; employee?: { fullName: string } | null }[];
 }
 
-export default function OrganizationsClient({ companies, staff, operations, tariffPreset, internalContractors }: Props) {
+export default function OrganizationsClient({ companies, staff, operations, tariffPreset, internalContractors, internalParties }: Props) {
   const router = useRouter();
   useAutoRefresh();
   const [selectedPeriod, setSelectedPeriod] = useState<string>(getCurrentPeriodKey());
@@ -63,6 +68,7 @@ export default function OrganizationsClient({ companies, staff, operations, tari
         lang="uz"
         tariffPreset={tariffPreset}
         internalContractors={internalContractors}
+        internalParties={internalParties}
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
         onSave={handleSave}

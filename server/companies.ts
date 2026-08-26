@@ -315,6 +315,15 @@ function sanitizeCompanyData(raw: Record<string, unknown>) {
     const v = raw.internalContractorId;
     data.internalContractorId = v ? String(v) : null;
   }
+  // Og'zaki shartnoma tomoni — plastik/naqd kanali. Firma bilan BIRGA
+  // yozilmaydi (DB'da CHECK bor): tanlagich bittasini bersa, ikkinchisi shu
+  // yerda tozalanadi — aks holda eski tanlov qolib, DB xatosi chiqardi.
+  if (raw.internalChannelId !== undefined) {
+    const v = raw.internalChannelId;
+    data.internalChannelId = v ? String(v) : null;
+    if (data.internalChannelId) data.internalContractorId = null;
+  }
+  if (data.internalContractorId) data.internalChannelId = null;
   if (raw.isActive !== undefined) data.isActive = Boolean(raw.isActive);
 
   if (raw.contractAmount !== undefined) data.contractAmount = raw.contractAmount !== null ? Number(raw.contractAmount) : null;
