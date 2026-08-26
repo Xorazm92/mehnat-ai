@@ -58,8 +58,12 @@ function findTxHeader(
         else if (/[кk][рr][еe][дd][иi][тt]/.test(label)) keys.credit = k;
         else if (/назначение/.test(label)) keys.purpose = k;
       }
-      if (keys.debit && keys.credit && keys.party)
-        return { rows: rows.slice(i + 1), keys };
+      // DIQQAT: bu yerda ilgari shart yozilgan, so'ng darhol AYNAN o'sha
+      // qiymatni qaytaradigan ikkinchi qator qo'yilgan edi — ya'ni shart
+      // o'lik kod bo'lib, hech narsani filtrlamas edi. Shart ataylab
+      // olib tashlandi: ustun nomlari to'liq tanilmasa ham topilgan
+      // sarlavha qatoridan foydalanish (avvalgi haqiqiy xulq) saqlanadi,
+      // lekin endi buni kod ham shunday DEYDI.
       return { rows: rows.slice(i + 1), keys };
     }
   }

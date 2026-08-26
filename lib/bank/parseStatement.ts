@@ -45,13 +45,6 @@ export function parseWorkbook(workbook: Workbook): ParsedStatement {
   const sheets = Object.entries(workbook);
   if (sheets.length === 0) throw new BankStatementParseError("Faylda sahifa yo'q");
 
-  // Hamkorbank eksporti KO'P SAHIFALI: sarlavha bitta sahifada, tranzaksiya
-  // jadvali boshqasida — sahifa-ma-sheet loop uni hech qachon to'liq o'qiy
-  // olmasdi. Shuning uchun u avval, butun kitob darajasida aniqlanadi.
-  if (looksLikeHamkorbank(workbook)) {
-    return withSanityChecks(parseHamkorbankWorkbook(workbook));
-  }
-
   const errors: string[] = [];
   for (const [name, rows] of sheets) {
     let parsed: ParsedStatement;
@@ -81,6 +74,35 @@ export function parseWorkbook(workbook: Workbook): ParsedStatement {
     }
 
     return withSanityChecks(parsed);
+  }
+
+  // ── ZAXIRA: Hamkorbank ko'p sahifali eksporti ────────────────────────
+  //
+  // Bu eksportda sarlavha bitta sahifada, tranzaksiya jadvali boshqasida —
+  // sahifa-ma-sahifa loop uni to'liq o'qiy olmaydi, shuning uchun butun
+  // kitob darajasidagi alohida parser kerak.
+  //
+  // MUHIM — U ZAXIRA, BIRINCHI EMAS. Ilgari bu tekshiruv loopdan OLDIN
+  // turardi, `looksLikeHamkorbank` esa faqat "Оборот Дебет" + "Оборот
+  // Кредит" sarlavhasini qidiradi. Ammo bu ikki so'z ODDIY bitta sahifali
+  // "Сведения о работе счета" vipiskasida ham bor. Natijada har bir oddiy
+  // Hamkorbank vipiskasi ko'p sahifali parserga yo'naltirilardi, u esa
+  // sarlavhani boshqa sahifadan qidirib topolmay
+  //     "Hamkorbank jadvalida tranzaksiya topilmadi"
+  // deb tashlardi — ya'ni ENG KENG TARQALGAN vipiska formati umuman
+  // import qilinmasdi. `parseStatement.spec.ts` buni ushlab turgan edi
+  // (`parseWorkbook` testi qizil), lekin `parseStatementRows` to'g'ridan
+  // chaqirilgani uchun qolgan testlar yashil bo'lib, xato e'tibordan
+  // chetda qolgan.
+  //
+  // Endi tartib to'g'ri: avval sinalgan sahifa parserlari, ular hech
+  // narsa bera olmasa — kitob darajasidagi zaxira.
+  if (looksLikeHamkorbank(workbook)) {
+    try {
+      return withSanityChecks(parseHamkorbankWorkbook(workbook));
+    } catch (e) {
+      errors.push(`Hamkorbank (ko'p sahifali): ${(e as Error).message}`);
+    }
   }
 
   throw new BankStatementParseError(

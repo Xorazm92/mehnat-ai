@@ -191,6 +191,19 @@ describe("parseWorkbook", () => {
     expect(parseWorkbook({ "CBreport21": svedeniyaRows }).format).toBe("svedeniya");
   });
 
+  it("Hamkorbank sarlavhali bitta sahifali vipiskani svedeniya deb o'qiydi", () => {
+    // REGRESSIYA. "Оборот Дебет" va "Оборот Кредит" — Hamkorbank ko'p
+    // sahifali eksportining belgisi DEB o'ylangan edi, ammo ular ODDIY
+    // bitta sahifali "Сведения о работе счета" da ham bor. Ko'p sahifali
+    // parser loopdan oldin turgani uchun har bir oddiy vipiska o'sha
+    // parserga tushib "tranzaksiya topilmadi" xatosi bilan rad etilardi.
+    // Ya'ni eng ko'p ishlatiladigan format umuman import qilinmasdi.
+    const parsed = parseWorkbook({ "00083 / HAMKORBANK": svedeniyaRows });
+    expect(parsed.format).toBe("svedeniya");
+    expect(parsed.transactions).toHaveLength(2);
+    expect(parsed.accountNumber).toBe("20208000905169375001");
+  });
+
   it("tanilmagan faylni JIM YUTMAYDI", () => {
     // Bo'sh natija qaytarish eng yomoni bo'lardi: foydalanuvchi faylni bo'sh
     // deb o'ylaydi, aslida format tanilmagan bo'ladi.
