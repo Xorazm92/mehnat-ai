@@ -137,27 +137,53 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   const [manualBusy, setManualBusy] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
 
-  // Offset tanlanganda — shu firma uchun shu oy qancha offset limiti
+  // Firma tanlanganda — shu oy uchun shartnomada belgilangan qism qancha
   // qolganini ko'rsatamiz (server baribir tekshiradi, bu faqat oldindan
   // ogohlantirish — kassir summani kiritishdan oldin bilib olsin).
-  const [offsetCap, setOffsetCap] = useState<{ cap: number; used: number } | null>(null);
+  //
+  // Plastik/naqdda cap = 0 "limit belgilanmagan" degani (shartnoma hali
+  // eski, ikki qismli split bilan yozilgan) — server ham bunda to'smaydi,
+  // shuning uchun bu yerda ham ogohlantirish ko'rsatilmaydi.
+  const [sourceCap, setSourceCap] = useState<{ cap: number; used: number } | null>(null);
   useEffect(() => {
-    if (manualType !== "offset" || !manualCompanyId) {
-      setOffsetCap(null);
+    if (!manualType || !manualCompanyId) {
+      setSourceCap(null);
       return;
     }
+    const type = manualType;
     let cancelled = false;
     getServiceTermInfo(manualCompanyId)
       .then((info: any) => {
         if (cancelled) return;
-        setOffsetCap({
-          cap: Number(info.current?.offsetAmount ?? 0),
-          used: Number(info.usedOffsetThisPeriod ?? 0),
-        });
+        const cap = Number(
+          type === "offset"
+            ? (info.current?.offsetAmount ?? 0)
+            : type === "plastik"
+              ? (info.current?.plastikAmount ?? 0)
+              : (info.current?.naqdAmount ?? 0)
+        );
+        const used = Number(
+          type === "offset"
+            ? (info.usedOffsetThisPeriod ?? 0)
+            : type === "plastik"
+              ? (info.usedPlastikThisPeriod ?? 0)
+              : (info.usedNaqdThisPeriod ?? 0)
+        );
+        setSourceCap(type !== "offset" && cap === 0 ? null : { cap, used });
       })
-      .catch(() => { if (!cancelled) setOffsetCap(null); });
+      .catch(() => { if (!cancelled) setSourceCap(null); });
     return () => { cancelled = true; };
   }, [manualType, manualCompanyId]);
+
+  const capLabel = manualType === "offset" ? "offset" : manualType === "plastik" ? "plastik" : "naqd";
+  const capNotice = manualCompanyId && sourceCap && (
+    <p className="text-micro" style={{ color: sourceCap.used >= sourceCap.cap ? "var(--danger)" : "var(--text-muted)" }}>
+      Shu oy uchun {capLabel} limiti: {formatNum(sourceCap.cap)} so&apos;m,
+      ishlatilgan: {formatNum(sourceCap.used)} so&apos;m,
+      qoldi: {formatNum(Math.max(0, sourceCap.cap - sourceCap.used))} so&apos;m.
+      {sourceCap.cap === 0 && " (Bu firmada offset split belgilanmagan — \"Narxni o'zgartirish\" orqali sozlang.)"}
+    </p>
+  );
 
   // Tushum formasi ochilganda ko'rinadigan joyga suring — ilgari u sahifa
   // o'rtasida paydo bo'lib, foydalanuvchi uni qidirib topishi kerak edi.
@@ -590,17 +616,11 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
                 Offset — pul HECH QAYERGA tushmaydi (kanal so&apos;ralmaydi), faqat tanlangan firmaning
                 qarzini yopadi. Kassa balansiga ta&apos;sir qilmaydi.
               </p>
-              {manualCompanyId && offsetCap && (
-                <p className="text-micro" style={{ color: offsetCap.used >= offsetCap.cap ? "var(--danger)" : "var(--text-muted)" }}>
-                  Shu oy uchun offset limiti: {formatNum(offsetCap.cap)} so&apos;m,
-                  ishlatilgan: {formatNum(offsetCap.used)} so&apos;m,
-                  qoldi: {formatNum(Math.max(0, offsetCap.cap - offsetCap.used))} so&apos;m.
-                  {offsetCap.cap === 0 && " (Bu firmada offset split belgilanmagan — \"Narxni o'zgartirish\" orqali sozlang.)"}
-                </p>
-              )}
+              {capNotice}
             </>
           ) : (
             <>
+              {capNotice}
               <label className="block">
                 <span className="text-meta" style={{ color: "var(--text-secondary)" }}>
                   {manualType === "plastik" ? "Qaysi plastikka tushdi" : "Qaysi kassaga tushdi"}{" "}

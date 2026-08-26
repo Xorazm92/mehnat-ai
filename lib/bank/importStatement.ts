@@ -314,23 +314,38 @@ export async function applyAllocation(db: Db, input: AllocationInput): Promise<P
     select: { id: true },
   });
 
-  // OVER-ALLOCATION QO'RIQCHISI — "offset" (vzaimozachyot/ijara) shu davr
-  // uchun shartnomada belgilangan limitdan (CompanyServiceTerm.offsetAmount)
-  // OSHIB KETMASLIGI kerak, aks holda buxgalter istalgan summani "offset"
-  // deb yozib, real bank tushumini kamaytirib yuborishi mumkin.
-  if (input.source === "offset") {
+  // OVER-ALLOCATION QO'RIQCHISI — bank bo'lmagan tushum shu davr uchun
+  // shartnomada belgilangan qismdan OSHIB KETMASLIGI kerak, aks holda
+  // buxgalter istalgan summani "offset" deb yozib, real bank tushumini
+  // kamaytirib yuborishi mumkin.
+  //
+  // NOL ikki xil o'qiladi: offsetda nol = "ruxsat etilmaydi" (limit boshidan
+  // bor edi), plastik/naqdda nol = "limit belgilanmagan" — bu ustunlar
+  // keyin qo'shildi va backfill barcha eski shartnomalarni nolga qo'ygan,
+  // qat'iy o'qilsa bugungi har bir plastik/naqd tushumi to'silib qolardi.
+  const CAP_FIELD: Record<string, "offsetAmount" | "plastikAmount" | "naqdAmount"> = {
+    offset: "offsetAmount",
+    plastik: "plastikAmount",
+    naqd: "naqdAmount",
+  };
+  const capField = CAP_FIELD[input.source];
+  if (capField) {
     const term = await resolveServiceTerm(input.companyId, input.receivedAt, db);
-    const cap = term ? Number(term.offsetAmount) : 0;
-    const existingOffset = await db.paymentAllocation.aggregate({
-      where: { paymentId: payment.id, source: "offset", NOT: { dedupKey: input.dedupKey } },
-      _sum: { amount: true },
-    });
-    const newOffsetTotal = Number(existingOffset._sum.amount ?? 0) + Number(amount);
-    if (newOffsetTotal > cap) {
-      throw new Error(
-        `Offset limiti oshib ketdi: shartnomada shu davr uchun ${formatNum(cap)} so'm ` +
-          `belgilangan, jami ${formatNum(newOffsetTotal)} so'm kiritilmoqda (${period})`
-      );
+    const cap = term ? Number(term[capField]) : 0;
+    const enforced = input.source === "offset" || cap > 0;
+    if (enforced) {
+      const existing = await db.paymentAllocation.aggregate({
+        where: { paymentId: payment.id, source: input.source, NOT: { dedupKey: input.dedupKey } },
+        _sum: { amount: true },
+      });
+      const newTotal = Number(existing._sum.amount ?? 0) + Number(amount);
+      if (newTotal > cap) {
+        throw new Error(
+          `${input.source === "offset" ? "Offset" : input.source === "plastik" ? "Plastik" : "Naqd"} ` +
+            `limiti oshib ketdi: shartnomada shu davr uchun ${formatNum(cap)} so'm ` +
+            `belgilangan, jami ${formatNum(newTotal)} so'm kiritilmoqda (${period})`
+        );
+      }
     }
   }
 

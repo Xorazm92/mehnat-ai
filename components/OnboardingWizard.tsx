@@ -183,11 +183,30 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
      * "Shartnoma Summasi" maydoni) ESKI oylarni ham "yangilab" qo'yardi —
      * bu panel `updateServiceTerm` orqali VERSIYALAB yozadi (lib/terms.ts).
      */
+    /**
+     * YANGI firmaning dastlabki split'i. Tahrirlashda ishlatilmaydi — u yerda
+     * split VERSIYALANIB o'zgaradi (pastdagi panel). Bu uchta son Company
+     * ustuni emas, `createCompany` ularni xom ko'rinishda o'qib dastlabki
+     * CompanyServiceTerm ga uzatadi; bank qismi qoldiqdan hisoblanadi.
+     */
+    const [newPlastik, setNewPlastik] = useState('');
+    const [newNaqd, setNewNaqd] = useState('');
+    const [newOffset, setNewOffset] = useState('');
+    const newTotal = Number(formData.contractAmount || 0);
+    const newBank = newTotal - (Number(newPlastik) || 0) - (Number(newNaqd) || 0) - (Number(newOffset) || 0);
+
     const [termOpen, setTermOpen] = useState(false);
     const [termLoading, setTermLoading] = useState(false);
-    const [termInfo, setTermInfo] = useState<{ current: any; usedOffsetThisPeriod: number } | null>(null);
+    const [termInfo, setTermInfo] = useState<{
+        current: any;
+        usedOffsetThisPeriod: number;
+        usedPlastikThisPeriod: number;
+        usedNaqdThisPeriod: number;
+    } | null>(null);
     const [termTotal, setTermTotal] = useState('');
     const [termBank, setTermBank] = useState('');
+    const [termPlastik, setTermPlastik] = useState('');
+    const [termNaqd, setTermNaqd] = useState('');
     const [termOffset, setTermOffset] = useState('');
     const [termFrom, setTermFrom] = useState(() => {
         const d = new Date();
@@ -213,6 +232,8 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
             if (cur) {
                 setTermTotal(String(cur.totalAmount));
                 setTermBank(String(cur.bankAmount));
+                setTermPlastik(String(cur.plastikAmount ?? 0));
+                setTermNaqd(String(cur.naqdAmount ?? 0));
                 setTermOffset(String(cur.offsetAmount));
             }
         } catch (e) {
@@ -226,13 +247,15 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
         if (!companyId) return;
         const total = Number(termTotal);
         const bank = Number(termBank);
+        const plastik = Number(termPlastik) || 0;
+        const naqd = Number(termNaqd) || 0;
         const offset = Number(termOffset);
         if (!Number.isFinite(total) || total <= 0) {
             setTermError('Umumiy summa musbat son bo\'lishi kerak');
             return;
         }
-        if (Math.round((bank + offset) * 100) !== Math.round(total * 100)) {
-            setTermError('Bank + Offset yig\'indisi umumiy summaga teng bo\'lishi kerak');
+        if (Math.round((bank + plastik + naqd + offset) * 100) !== Math.round(total * 100)) {
+            setTermError('Bank + Plastik + Naqd + Offset yig\'indisi umumiy summaga teng bo\'lishi kerak');
             return;
         }
         setTermBusy(true);
@@ -242,6 +265,8 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                 companyId,
                 totalAmount: total,
                 bankAmount: bank,
+                plastikAmount: plastik,
+                naqdAmount: naqd,
                 offsetAmount: offset,
                 effectiveFrom: termFrom,
                 reason: termReason.trim() || undefined,
@@ -263,6 +288,9 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
             if (!(formData.name || '').trim()) errs.push('Firma nomi kiritilishi shart');
             const inn = (formData.inn || '').trim();
             if (!inn) errs.push('INN kiritilishi shart');
+            if (!isEdit && newBank < 0) {
+                errs.push("Plastik + Naqd + Offset yig'indisi shartnoma summasidan oshib ketdi");
+            }
             else if (!isEdit || innTouched) {
                 // YTT JSHSHIR (14 xona) bilan ro'yxatdan o'tadi, yuridik shaxs INN (9 xona) bilan.
                 if (!/^\d{9}$/.test(inn) && !/^\d{14}$/.test(inn)) {
@@ -314,7 +342,17 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
             if (firstBad >= 0 && firstBad !== currentStep) setCurrentStep(firstBad);
             return;
         }
-        onSave(formData, assignments);
+        onSave(
+            isEdit
+                ? formData
+                : ({
+                    ...formData,
+                    splitPlastik: Number(newPlastik) || 0,
+                    splitNaqd: Number(newNaqd) || 0,
+                    splitOffset: Number(newOffset) || 0,
+                } as Partial<Company>),
+            assignments
+        );
     };
 
     return (
@@ -456,6 +494,51 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     onChange={e => setFormData({ ...formData, contractAmount: Number(ungroupDigits(e.target.value)) })}
                                 />
                             </div>
+                            {!isEdit && (
+                                <>
+                                    <div className="space-y-1.5">
+                                        <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shundan: Plastik</label>
+                                        <input
+                                            type="text" inputMode="numeric"
+                                            className="erp-input tabular-nums"
+                                            value={groupDigits(newPlastik)}
+                                            onChange={e => setNewPlastik(ungroupDigits(e.target.value))}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shundan: Naqd</label>
+                                        <input
+                                            type="text" inputMode="numeric"
+                                            className="erp-input tabular-nums"
+                                            value={groupDigits(newNaqd)}
+                                            onChange={e => setNewNaqd(ungroupDigits(e.target.value))}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shundan: Offset (vzaimozachyot/ijara)</label>
+                                        <input
+                                            type="text" inputMode="numeric"
+                                            className="erp-input tabular-nums"
+                                            value={groupDigits(newOffset)}
+                                            onChange={e => setNewOffset(ungroupDigits(e.target.value))}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Qolgani: Bank</label>
+                                        <div
+                                            className="erp-input tabular-nums flex items-center"
+                                            style={{ color: newBank < 0 ? 'var(--danger)' : 'var(--text-muted)' }}
+                                        >
+                                            {groupDigits(newBank)} so&apos;m
+                                        </div>
+                                        {newBank < 0 && (
+                                            <p className="text-2xs ml-1" style={{ color: 'var(--danger)' }}>
+                                                Yig&apos;indi shartnoma summasidan oshib ketdi.
+                                            </p>
+                                        )}
+                                    </div>
+                                </>
+                            )}
                             <div className="space-y-1.5">
                                 <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shartnoma №</label>
                                 <input
@@ -499,9 +582,14 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                             {termInfo?.current && (
                                                 <p className="text-2xs" style={{ color: 'var(--text-muted)' }}>
                                                     Joriy: {groupDigits(termInfo.current.totalAmount)} so&apos;m
-                                                    (bank {groupDigits(termInfo.current.bankAmount)} + offset {groupDigits(termInfo.current.offsetAmount)}),
+                                                    (bank {groupDigits(termInfo.current.bankAmount)}
+                                                    + plastik {groupDigits(termInfo.current.plastikAmount ?? 0)}
+                                                    + naqd {groupDigits(termInfo.current.naqdAmount ?? 0)}
+                                                    + offset {groupDigits(termInfo.current.offsetAmount)}),
                                                     amal qiladi: {String(termInfo.current.effectiveFrom).slice(0, 10)} dan.
-                                                    Shu oy offsetdan ishlatilgan: {groupDigits(termInfo.usedOffsetThisPeriod)} so&apos;m.
+                                                    Shu oy ishlatilgan: plastik {groupDigits(termInfo.usedPlastikThisPeriod ?? 0)},
+                                                    naqd {groupDigits(termInfo.usedNaqdThisPeriod ?? 0)},
+                                                    offset {groupDigits(termInfo.usedOffsetThisPeriod)} so&apos;m.
                                                 </p>
                                             )}
                                             {termError && <p className="text-meta" style={{ color: 'var(--danger)' }}>{termError}</p>}
@@ -532,6 +620,24 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                                         className="erp-input tabular-nums"
                                                         value={groupDigits(termBank)}
                                                         onChange={e => setTermBank(ungroupDigits(e.target.value))}
+                                                    />
+                                                </label>
+                                                <label className="block">
+                                                    <span className="text-micro" style={fieldLabelStyle}>Plastik qismi</span>
+                                                    <input
+                                                        type="text" inputMode="numeric"
+                                                        className="erp-input tabular-nums"
+                                                        value={groupDigits(termPlastik)}
+                                                        onChange={e => setTermPlastik(ungroupDigits(e.target.value))}
+                                                    />
+                                                </label>
+                                                <label className="block">
+                                                    <span className="text-micro" style={fieldLabelStyle}>Naqd qismi</span>
+                                                    <input
+                                                        type="text" inputMode="numeric"
+                                                        className="erp-input tabular-nums"
+                                                        value={groupDigits(termNaqd)}
+                                                        onChange={e => setTermNaqd(ungroupDigits(e.target.value))}
                                                     />
                                                 </label>
                                                 <label className="block">

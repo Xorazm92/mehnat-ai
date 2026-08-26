@@ -252,6 +252,7 @@ model Company {
   ownFirmAccounts     BankAccount[]         @relation("OwnFirmAccounts")
   ownFirmChannels     DisbursementChannel[] @relation("ChannelOwnFirm")
   bankTransactions    BankTransaction[]
+  aliases             CompanyAlias[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -265,7 +266,6 @@ model Company {
   @@index([isOwnFirm])
   @@index([debtNextContactAt])
   @@index([internalContractorId])
-  aliases           CompanyAlias[]
 }
 
 // =====================================================
@@ -337,32 +337,32 @@ model MonthlyReport {
   suvSoligi           String?
 
   // Statistika 2026
-  stat12Invest     String?
-  stat12Moliya     String?
-  stat12Korxona    String?
-  stat12Narx       String?
-  stat4Invest      String?
-  stat4Mehnat      String?
-  stat4KorxonaMiz  String?
-  stat4KbQurSavXiz String?
-  stat4KbSanoat    String?
-  stat1Invest      String?
-  stat1Ih          String?
-  stat1Energiya    String?
-  stat1Korxona     String?
-  stat1KorxonaTif  String?
-  stat1Moliya      String?
-  stat1Akt         String?
+  stat12Invest        String?
+  stat12Moliya        String?
+  stat12Korxona       String?
+  stat12Narx          String?
+  stat4Invest         String?
+  stat4Mehnat         String?
+  stat4KorxonaMiz     String?
+  stat4KbQurSavXiz    String?
+  stat4KbSanoat       String?
+  stat1Invest         String?
+  stat1Ih             String?
+  stat1Energiya       String?
+  stat1Korxona        String?
+  stat1KorxonaTif     String?
+  stat1Moliya         String?
+  stat1Akt            String?
   /// 1-tib (aholi) — yillik.
-  stat1Tib         String?
+  stat1Tib            String?
   /// 1-turizm — yillik. Tashrif buyuruvchilarga xizmat ko'rsatish va
   /// joylashtirish hisoboti: sayyohlik-ekskursiya va jamoaviy joylashtirish
   /// xizmatini ko'rsatuvchi yuridik shaxslar (kichik korxona va
   /// mikrofirmalardan tashqari), zarur holatlarda alohida bo'linmalari.
-  stat1Turizm      String?
+  stat1Turizm         String?
   /// 4-moliya — choraklik. Muddat CHORAK ICHIDA (18-mart/iyun/sentabr/dekabr),
   /// shuning uchun shabloni `period_end_month_day` ankoridan foydalanadi.
-  stat4Moliya      String?
+  stat4Moliya         String?
   /// Davlat statistika hisobotlari shakllarining mazmuni — yillik so'rovnoma.
   /// Muddat: 1-iyulgacha.
   stat1HisobotMazmuni String?
@@ -370,12 +370,12 @@ model MonthlyReport {
   /// hisobot davridan keyingi oyning 5-sanasidan kechiktirmay.
   stat4Qx             String?
   /// 1-qx (tashkilot) — qishloq xo'jaligi faoliyati, YILLIK. Muddat: 10-aprel.
-  stat1Qx              String?
+  stat1Qx             String?
   /// 1-fx — fermer xo'jaligi faoliyati, YILLIK. Muddat: 10-mart.
-  stat1Fx              String?
+  stat1Fx             String?
   /// 4-fx — fermer xo'jaligi faoliyati, CHORAKLIK. Muddat: hisobot davridan
   /// keyingi oyning 5-sanasidan kechiktirmay.
-  stat4Fx              String?
+  stat4Fx             String?
 
   // Qo'shimcha soliqlar / IT Park / Komunalka
   aksizSoligi       String?
@@ -537,13 +537,22 @@ model CompanyServiceTerm {
   companyId String
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  totalAmount  Decimal @db.Decimal(14, 2)
+  totalAmount   Decimal @db.Decimal(14, 2)
   /// Rasmiy bank hisobidan to'lanadigan qism.
-  bankAmount   Decimal @db.Decimal(14, 2)
+  bankAmount    Decimal @db.Decimal(14, 2)
+  /// Plastik kartaga tushadigan qism.
+  plastikAmount Decimal @default(0) @db.Decimal(14, 2)
+  /// Naqd kassaga tushadigan qism.
+  naqdAmount    Decimal @default(0) @db.Decimal(14, 2)
   /// Vzaimozachyot/ijara/boshqa hisobidan yopiladigan qism.
-  offsetAmount Decimal @db.Decimal(14, 2)
-  // CHECK (bankAmount + offsetAmount = totalAmount) — migratsiyada, Prisma
-  // schema darajasida ifodalanmaydi.
+  offsetAmount  Decimal @db.Decimal(14, 2)
+  // CHECK (bank + plastik + naqd + offset = totalAmount) — migratsiyada,
+  // Prisma schema darajasida ifodalanmaydi.
+  //
+  // plastik/naqd da NOL = "limit belgilanmagan" (eski, ikki qismli
+  // qatorlardan qolgan holat), offsetda esa nol = "offset ruxsat etilmaydi".
+  // Farq ataylab: offset limiti boshidan mavjud edi, plastik/naqd esa
+  // keyin qo'shildi va backfill ularni nolga qo'ygan.
 
   effectiveFrom DateTime // doim oy boshiga yumaloqlangan (YYYY-MM-01)
   effectiveTo   DateTime? // keyingi versiya yaratilganda avtomatik to'ldiriladi

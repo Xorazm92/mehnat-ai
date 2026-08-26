@@ -499,18 +499,26 @@ export async function createCompany(companyData: Record<string, unknown>, assign
     newData: { name: result.name, inn: result.inn },
   });
 
-  // Dastlabki CompanyServiceTerm — split TO'LIQ bankka (offset=0), chunki
-  // wizard'da split so'ralmaydi. Buni yaratmasak, oylik Payment generatsiyasi
+  // Dastlabki CompanyServiceTerm. Buni yaratmasak, oylik Payment generatsiyasi
   // (lib/paymentGeneration.ts) bu firma uchun "term topilmadi" deb o'tkazib
   // yuboradi — yangi firma egasiz Payment'siz qolib ketardi.
+  //
+  // Split wizard'dan XOM ko'rinishda o'qiladi (`sanitizeCompanyData` dan
+  // emas): bu uchta son Company jadvalining ustuni emas, faqat dastlabki
+  // versiyaning kirish qiymati. Ko'rsatilmasa — hammasi bankka, eski xulq.
   const totalAmount = Number(result.contractAmount ?? 0);
   if (totalAmount > 0) {
+    const splitPlastik = Number(companyData.splitPlastik ?? 0) || 0;
+    const splitNaqd = Number(companyData.splitNaqd ?? 0) || 0;
+    const splitOffset = Number(companyData.splitOffset ?? 0) || 0;
     try {
       await createServiceTerm({
         companyId: result.id,
         totalAmount,
-        bankAmount: totalAmount,
-        offsetAmount: 0,
+        bankAmount: totalAmount - splitPlastik - splitNaqd - splitOffset,
+        plastikAmount: splitPlastik,
+        naqdAmount: splitNaqd,
+        offsetAmount: splitOffset,
         effectiveFrom: result.contractDate ?? new Date(),
         reason: "boshlang'ich (firma yaratilganda)",
         createdById: session.user.id,
@@ -682,17 +690,25 @@ export async function getServiceTermInfo(companyId: string) {
   // tekshiradi — lib/bank/importStatement.ts), shuning uchun bu yerda ham
   // faqat JORIY davr hisoblanadi, term boshlangandan buyon jamlanmaydi.
   const currentPeriod = periodKeyOf(new Date());
-  const usedOffset = current
-    ? await prisma.paymentAllocation.aggregate({
-        where: { source: "offset", payment: { companyId, period: currentPeriod } },
+  const used = current
+    ? await prisma.paymentAllocation.groupBy({
+        by: ["source"],
+        where: {
+          source: { in: ["offset", "plastik", "naqd"] },
+          payment: { companyId, period: currentPeriod },
+        },
         _sum: { amount: true },
       })
-    : null;
+    : [];
+  const usedBy = (src: string) =>
+    Number(used.find((u) => u.source === src)?._sum.amount ?? 0);
 
   return serialize({
     current,
     currentPeriod,
-    usedOffsetThisPeriod: Number(usedOffset?._sum.amount ?? 0),
+    usedOffsetThisPeriod: usedBy("offset"),
+    usedPlastikThisPeriod: usedBy("plastik"),
+    usedNaqdThisPeriod: usedBy("naqd"),
   });
 }
 
@@ -705,6 +721,8 @@ export async function updateServiceTerm(input: {
   companyId: string;
   totalAmount: number;
   bankAmount: number;
+  plastikAmount?: number;
+  naqdAmount?: number;
   offsetAmount: number;
   effectiveFrom: string | Date;
   reason?: string;
@@ -718,6 +736,8 @@ export async function updateServiceTerm(input: {
     companyId: input.companyId,
     totalAmount: input.totalAmount,
     bankAmount: input.bankAmount,
+    plastikAmount: input.plastikAmount ?? 0,
+    naqdAmount: input.naqdAmount ?? 0,
     offsetAmount: input.offsetAmount,
     effectiveFrom: new Date(input.effectiveFrom),
     reason: input.reason,

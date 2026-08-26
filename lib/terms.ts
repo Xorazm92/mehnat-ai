@@ -1,6 +1,7 @@
 // lib/terms.ts
 // =====================================================
 // COMPANY SERVICE TERM — versiyalangan shartnoma summasi + split
+// (bank / plastik / naqd / offset)
 // =====================================================
 // Yagona yo'l: CompanyServiceTerm ga to'g'ridan-to'g'ri `create`/`update`
 // chaqirilmaydi, faqat shu fayl orqali. Sabab — ikkita invariant DB
@@ -20,6 +21,8 @@ export interface ServiceTermInput {
   companyId: string;
   totalAmount: number;
   bankAmount: number;
+  plastikAmount?: number;
+  naqdAmount?: number;
   offsetAmount: number;
   /** Amal qilish boshlanadigan oy — kun qismi tashlanadi (oy boshiga yumaloqlanadi). */
   effectiveFrom: Date;
@@ -64,11 +67,13 @@ export async function resolveServiceTerm(companyId: string, at: Date, db: Db = p
 export async function createServiceTerm(input: ServiceTermInput) {
   const total = round2(input.totalAmount);
   const bank = round2(input.bankAmount);
+  const plastik = round2(input.plastikAmount ?? 0);
+  const naqd = round2(input.naqdAmount ?? 0);
   const offset = round2(input.offsetAmount);
-  if (round2(bank + offset) !== total) {
-    throw new Error("Bank + Offset summasi umumiy summaga teng bo'lishi kerak");
+  if (round2(bank + plastik + naqd + offset) !== total) {
+    throw new Error("Bank + Plastik + Naqd + Offset summasi umumiy summaga teng bo'lishi kerak");
   }
-  if (total < 0 || bank < 0 || offset < 0) {
+  if (total < 0 || bank < 0 || plastik < 0 || naqd < 0 || offset < 0) {
     throw new Error("Summalar manfiy bo'lolmaydi");
   }
   const effectiveFrom = roundToMonthStart(input.effectiveFrom);
@@ -97,6 +102,8 @@ export async function createServiceTerm(input: ServiceTermInput) {
           companyId: input.companyId,
           totalAmount: total,
           bankAmount: bank,
+          plastikAmount: plastik,
+          naqdAmount: naqd,
           offsetAmount: offset,
           effectiveFrom,
           reason: input.reason,
@@ -118,6 +125,8 @@ export async function createServiceTerm(input: ServiceTermInput) {
         newData: {
           totalAmount: total,
           bankAmount: bank,
+          plastikAmount: plastik,
+          naqdAmount: naqd,
           offsetAmount: offset,
           effectiveFrom: effectiveFrom.toISOString(),
         },
