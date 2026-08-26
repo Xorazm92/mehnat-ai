@@ -3,7 +3,7 @@
 //
 // Bu "bugun topshirish kerakmi" DEGANI EMAS (u majburiyat dvigatelining ishi,
 // davrga bog'liq). Bu — "bu firma bunday hisobotni UMUMAN topshiradimi".
-// Ikkalasi boshqa savol: aylanma soliq choraklik, ya'ni oraliq oylarda
+// Ikkalasi boshqa savol: foyda solig'i choraklik, ya'ni oraliq oylarda
 // "bugun kerak emas", lekin ustun baribir shu firmaniki.
 //
 // Hozircha yagona qoida — soliq rejimi. QQS va aylanma bir-birini istisno

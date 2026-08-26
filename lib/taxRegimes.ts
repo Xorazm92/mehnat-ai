@@ -15,12 +15,16 @@
 // Eski (deprecated) qiymatlar — bazada va eski yozuvlarda hali uchraydi.
 // UI'da endi TANLAB BO'LMAYDI (TAX_CATEGORIES ularni ro'yxatga olmaydi),
 // lekin normalizatsiya va ko'rsatish uchun har doim qo'llab-quvvatlanadi.
-const LEGACY_REGIMES = ["turnover", "fixed", "yatt", "income"] as const;
+//
+// `turnover_percent` / `turnover_fixed` ham SHU RO'YXATDA: "foiz stavkasi" va
+// "qat'iy summa" degan ikki shakl amalda YO'Q — aylanmadan olinadigan soliq
+// bitta rejim. Ular tanlagichdan olib tashlandi, eski yozuvlar esa
+// `normalizeTaxRegime` orqali `turnover` ga keltiriladi.
+const LEGACY_REGIMES = ["fixed", "yatt", "income", "turnover_percent", "turnover_fixed"] as const;
 
 // Joriy (tanlanadigan) qiymatlar — real O'zbekiston soliq taksonomiyasi:
 //   1. vat               — Umumbelgilangan rejim, QQS to'lovchi (aylanma >1 mlrd yoki ixtiyoriy)
-//   2. turnover_percent  — Aylanmadan soliq, foiz stavkasida (baza 4%)
-//   2. turnover_fixed    — Aylanmadan soliq, qat'iy belgilangan summada (20-30 mln/yil)
+//   2. turnover          — Aylanmadan olinadigan soliq (soddalashtirilgan)
 //   4. yatt_fixed        — YaTT, qat'iy belgilangan daromad solig'i (aylanma <100 mln)
 //   4. yatt_turnover     — YaTT, aylanmadan soliq (100 mln - 1 mlrd)
 //   4. yatt_vat          — YaTT, umumbelgilangan/QQS (aylanma >1 mlrd)
@@ -34,8 +38,7 @@ const LEGACY_REGIMES = ["turnover", "fixed", "yatt", "income"] as const;
 export const TAX_REGIMES = [
   "vat",
   "simplified_vat",
-  "turnover_percent",
-  "turnover_fixed",
+  "turnover",
   "yatt_fixed",
   "yatt_turnover",
   "yatt_vat",
@@ -82,19 +85,8 @@ export const TAX_CATEGORIES: TaxCategory[] = [
   {
     id: "turnover",
     label: "Aylanmadan olinadigan soliq",
-    hint: "Soddalashtirilgan rejim — ikki to'lov shaklidan biri tanlanadi",
-    subOptions: [
-      {
-        code: "turnover_percent",
-        label: "Foiz stavkasida",
-        hint: "Baza stavka 4% — oylik aylanmadan hisoblanadi",
-      },
-      {
-        code: "turnover_fixed",
-        label: "Qat'iy belgilangan summada",
-        hint: "Yiliga 20-30 mln so'm — aylanma hajmiga qarab",
-      },
-    ],
+    hint: "Soddalashtirilgan rejim — aylanmadan hisoblanadi",
+    code: "turnover",
   },
   {
     id: "yatt",
@@ -135,14 +127,14 @@ export const TAX_CATEGORIES: TaxCategory[] = [
 export const TAX_REGIME_LABEL: Record<TaxRegimeCode, string> = {
   vat: "NDS",
   simplified_vat: "Soddalashtirilgan QQS",
-  turnover_percent: "Aylanma (foiz)",
-  turnover_fixed: "Aylanma (qat'iy)",
+  turnover: "Aylanmadan soliq",
   yatt_fixed: "YaTT (qat'iy)",
   yatt_turnover: "YaTT (aylanma)",
   yatt_vat: "YaTT (QQS)",
   nonresident: "Norezident",
   // Eski qiymatlar — faqat ko'rsatish uchun.
-  turnover: "Aylanmadan soliq",
+  turnover_percent: "Aylanmadan soliq",
+  turnover_fixed: "Aylanmadan soliq",
   fixed: "Qat'iy soliq",
   yatt: "YaTT",
   income: "Daromad solig'i",
@@ -152,13 +144,13 @@ export const TAX_REGIME_LABEL: Record<TaxRegimeCode, string> = {
 export const TAX_REGIME_HINT: Record<TaxRegimeCode, string> = {
   vat: "QQS to'lovchi — QQS deklaratsiyasi oylik",
   simplified_vat: "Oborotdan 6% QQS — foyda solig'i yo'q, QQS deklaratsiyasi oylik",
-  turnover_percent: "Aylanma soliq (foiz, baza 4%) — choraklik hisobot",
-  turnover_fixed: "Aylanma soliq (qat'iy summa) — choraklik hisobot",
+  turnover: "Aylanmadan olinadigan soliq — oylik hisobot",
   yatt_fixed: "YaTT, qat'iy daromad solig'i (aylanma <100 mln)",
   yatt_turnover: "YaTT, aylanma soliq (100 mln - 1 mlrd)",
   yatt_vat: "YaTT, umumbelgilangan/QQS (aylanma >1 mlrd)",
   nonresident: "Xorijiy kompaniya filiali — alohida tartib",
-  turnover: "Aylanma soliq — choraklik hisobot",
+  turnover_percent: "Aylanmadan olinadigan soliq — oylik hisobot",
+  turnover_fixed: "Aylanmadan olinadigan soliq — oylik hisobot",
   fixed: "Qat'iy belgilangan soliq",
   yatt: "Yakka tartibdagi tadbirkor",
   income: "Daromad solig'i to'lovchi",
@@ -168,13 +160,13 @@ export const TAX_REGIME_HINT: Record<TaxRegimeCode, string> = {
 export const TAX_REGIME_SHORT: Record<TaxRegimeCode, string> = {
   vat: "NDS",
   simplified_vat: "QQS 6%",
-  turnover_percent: "AYLANMA %",
-  turnover_fixed: "AYLANMA QAT'IY",
+  turnover: "AYLANMA",
   yatt_fixed: "YATT QAT'IY",
   yatt_turnover: "YATT AYLANMA",
   yatt_vat: "YATT QQS",
   nonresident: "NOREZIDENT",
-  turnover: "AYLANMA",
+  turnover_percent: "AYLANMA",
+  turnover_fixed: "AYLANMA",
   fixed: "QAT'IY",
   yatt: "YATT",
   income: "DAROMAD",
@@ -191,6 +183,9 @@ const CODES = new Set<string>(TAX_REGIMES);
 export function normalizeTaxRegime(value: unknown): TaxRegimeCode {
   const v = String(value ?? "").trim().toLowerCase();
   if (v === "nds_profit" || v === "nds" || v === "vat") return "vat";
+  // "Foiz stavkasida" / "Qat'iy summada" degan aylanma shakllari yo'q —
+  // eski yozuvlar bitta `turnover` rejimiga keladi.
+  if (v === "turnover_percent" || v === "turnover_fixed") return "turnover";
   return CODES.has(v) ? (v as TaxRegimeCode) : "vat";
 }
 

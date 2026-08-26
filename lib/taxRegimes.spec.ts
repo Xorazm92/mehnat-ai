@@ -9,8 +9,20 @@ import {
 } from "./taxRegimes";
 
 describe("normalizeTaxRegime", () => {
+  // "Foiz stavkasida" / "Qat'iy summada" aylanma shakllari amalda yo'q —
+  // ular ATAYLAB `turnover` ga yig'iladi, shuning uchun o'zgarmaslik qoidasidan
+  // chetda qoladi.
+  const COLLAPSED = ["turnover_percent", "turnover_fixed"];
+
   it("kanonik kodlarni o'zgartirmaydi", () => {
-    for (const code of TAX_REGIMES) expect(normalizeTaxRegime(code)).toBe(code);
+    for (const code of TAX_REGIMES) {
+      if (COLLAPSED.includes(code)) continue;
+      expect(normalizeTaxRegime(code)).toBe(code);
+    }
+  });
+
+  it("mavjud bo'lmagan aylanma shakllari bitta rejimga yig'iladi", () => {
+    for (const code of COLLAPSED) expect(normalizeTaxRegime(code)).toBe("turnover");
   });
 
   it("eski mijoz kalitini tushunadi", () => {

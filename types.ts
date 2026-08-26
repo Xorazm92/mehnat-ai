@@ -285,7 +285,21 @@ export type OperationFieldKey = 'didox' | 'xatlar' | 'avtokameral' | 'my_mehnat'
   'aksiz_soligi' | 'nedro_soligi' | 'norezident_foyda' | 'norezident_nds' |
   'qqs_tolov' | 'aylanma_tolov' | 'aylanma_qqs_tolov' | 'daromad_soliq_tolov' | 'inps_tolov' | 'foyda_soliq_tolov' |
   'jismoniy_ijara' | 'stat_1_nnt' |
-  'stat_1_hisobot_mazmuni' | 'stat_4_qx' | 'stat_1_qx' | 'stat_1_fx' | 'stat_4_fx' | 'stat_1_fan';
+  'stat_1_hisobot_mazmuni' | 'stat_4_qx' | 'stat_1_qx' | 'stat_1_fx' | 'stat_4_fx' | 'stat_1_fan' |
+  'dividend_soligi' | 'dividend_soligi_tolov' |
+  'aksiz_soligi_tolov' |
+  'nedro_soligi_tolov' |
+  'norezident_foyda_tolov' |
+  'norezident_nds_tolov' |
+  'mol_mulk_soligi_tolov' |
+  'yer_soligi_tolov' |
+  'suv_soligi_tolov' |
+  'jismoniy_ijara_tolov' |
+  'bonak_tolov' |
+  'foyda_avans_hisobot' |
+  'mol_mulk_yillik' |
+  'yer_yillik' |
+  'suv_yillik';
 
 export type TaskStatus = 'new' | 'submitted' | 'pending_review' |
   'approved' | 'rejected' | 'overdue' | 'not_required' | 'blocked';

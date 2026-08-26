@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ALL_SERVICE_KEYS, SERVICE_LABELS, serviceGroups } from '@/lib/reportColumns';
+import { ALL_SERVICE_KEYS, SERVICE_LABELS, serviceGroups, serviceFullLabel } from '@/lib/reportColumns';
 import { createPortal } from 'react-dom';
 import {
   getCompanyContracts,
@@ -985,7 +985,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           <div className="absolute inset-0 rounded-lg pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" style={{ background: 'var(--accent-blue)' }}></div>
                           <Check size={12} className="absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none z-10" />
                         </div>
-                        <span className={`text-micro font-bold uppercase tracking-tight transition-colors`} style={{ color: isActive ? 'var(--text)' : 'var(--text-muted)' }}>
+                        {/* To'lov yarmining yorlig'i — byudjet kodi ("#46"),
+                            to'liq nomi tooltip'da. */}
+                        <span className={`text-micro font-bold uppercase tracking-tight transition-colors`} style={{ color: isActive ? 'var(--text)' : 'var(--text-muted)' }} title={service.key.endsWith('_tolov') ? serviceFullLabel(service.key) : undefined}>
                           {service.label}
                         </span>
                       </label>

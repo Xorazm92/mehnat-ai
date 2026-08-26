@@ -49,6 +49,25 @@ export const COL_KEY_TO_TEMPLATE_CODES: Record<string, string[]> = {
   daromad_soliq_tolov: ["DAROMAD_TOLOV"],
   inps_tolov: ["INPS_TOLOV"],
   foyda_soliq_tolov: ["FOYDA_TOLOV"],
+  dividend_soligi: ["DIVIDEND_DECL"],
+  dividend_soligi_tolov: ["DIVIDEND_TOLOV"],
+  // Reestrdagi qolgan soliqlarning to'lov yarmi. Shablonlari hali SEED
+  // QILINMAGAN (muddat kuni tasdiqlanmagan) — xarita tayyor turadi, shablon
+  // qo'shilishi bilan "Ishlar" ro'yxatiga o'zidan chiqadi. Xuddi shu holat
+  // YER_SOLIQ / SUV_SOLIQ / MOL_MULK_SOLIQ / BONAK da ham bor.
+  aksiz_soligi_tolov: ["AKSIZ_TOLOV"],
+  nedro_soligi_tolov: ["NEDRO_TOLOV"],
+  norezident_foyda_tolov: ["NOREZ_FOYDA_TOLOV"],
+  norezident_nds_tolov: ["NOREZ_NDS_TOLOV"],
+  mol_mulk_soligi_tolov: ["MOL_MULK_TOLOV"],
+  yer_soligi_tolov: ["YER_TOLOV"],
+  suv_soligi_tolov: ["SUV_TOLOV"],
+  jismoniy_ijara_tolov: ["JISM_IJARA_TOLOV"],
+  bonak_tolov: ["BONAK_TOLOV"],
+  foyda_avans_hisobot: ["FOYDA_AVANS"],
+  mol_mulk_yillik: ["MOL_MULK_YILLIK"],
+  yer_yillik: ["YER_YILLIK"],
+  suv_yillik: ["SUV_YILLIK"],
   yer_soligi: ["YER_SOLIQ"],
   suv_soligi: ["SUV_SOLIQ"],
   mol_mulk_soligi: ["MOL_MULK_SOLIQ"],

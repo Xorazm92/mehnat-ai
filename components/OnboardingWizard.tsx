@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ALL_SERVICE_KEYS as ALL_SERVICE_KEYS_SRC, SERVICE_LABELS as SERVICE_LABELS_SRC, serviceGroups } from '@/lib/reportColumns';
+import { ALL_SERVICE_KEYS as ALL_SERVICE_KEYS_SRC, SERVICE_LABELS as SERVICE_LABELS_SRC, serviceGroups, serviceFullLabel } from '@/lib/reportColumns';
 import { Company, Staff, TaxType, ServerInfo } from '@/types';
 import { ChevronRight, ChevronLeft, Check, X, Building2, Server, Calculator, Users } from 'lucide-react';
 import { groupDigits, ungroupDigits } from '@/lib/format';
@@ -816,7 +816,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                  * IKKI BOSQICHLI TANLAGICH: avval rejim TOIFASI (TAX_CATEGORIES),
                                  * so'ng — agar toifa ichida sub-variantlar bo'lsa (Aylanmadan
                                  * soliq: foiz/qat'iy; YaTT: qat'iy/aylanma/QQS) — ICHKI radio.
-                                 * Bazaga har doim BARG kod yoziladi (masalan `turnover_fixed`),
+                                 * Bazaga har doim BARG kod yoziladi (masalan `yatt_fixed`),
                                  * toifa o'zi saqlanmaydi — `taxRegimeCategory()` uni bargdan
                                  * qayta hisoblaydi, shu bilan tanlov har doim izchil qoladi.
                                  */}
@@ -947,7 +947,10 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                                                     setFormData({ ...formData, activeServices: newServices });
                                                                 }}
                                                             />
-                                                            <span className="text-micro font-bold uppercase tracking-tight truncate" style={{ color: 'var(--text-secondary)' }}>{SERVICE_LABELS[key] || key}</span>
+                                                            {/* To'lov kaliti yorlig'i "#46" — nomi yonidagi hisobot
+                                                                katagida turibdi, kod esa topshiriqnoma uchun kerak.
+                                                                To'liq nomi tooltip'da qoladi. */}
+                                                            <span className="text-micro font-bold uppercase tracking-tight truncate" style={{ color: 'var(--text-secondary)' }} title={key.endsWith('_tolov') ? serviceFullLabel(key) : undefined}>{SERVICE_LABELS[key] || key}</span>
                                                         </label>
                                                     );
                                                 })}

@@ -303,6 +303,21 @@ export const FIELD_TO_DB_COLUMN: Record<OperationFieldKey, string> = {
     ekologiya: 'ekologiya',
     jismoniy_ijara: 'jismoniyIjara',
     stat_1_nnt: 'stat1Nnt',
+    dividend_soligi: 'dividendSoligi',
+    dividend_soligi_tolov: 'dividendSoligiTolov',
+    aksiz_soligi_tolov: 'aksizSoligiTolov',
+    nedro_soligi_tolov: 'nedroSoligiTolov',
+    norezident_foyda_tolov: 'norezidentFoydaTolov',
+    norezident_nds_tolov: 'norezidentNdsTolov',
+    mol_mulk_soligi_tolov: 'molMulkSoligiTolov',
+    yer_soligi_tolov: 'yerSoligiTolov',
+    suv_soligi_tolov: 'suvSoligiTolov',
+    jismoniy_ijara_tolov: 'jismoniyIjaraTolov',
+    bonak_tolov: 'bonakTolov',
+    foyda_avans_hisobot: 'foydaAvansHisobot',
+    mol_mulk_yillik: 'molMulkYillik',
+    yer_yillik: 'yerYillik',
+    suv_yillik: 'suvYillik',
 };
 
 /** Prisma MonthlyReport (camelCase) yozuvini OperationEntry (snake_case) shakliga o'giradi. */

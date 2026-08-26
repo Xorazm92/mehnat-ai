@@ -49,8 +49,8 @@ const yesNo = (b: boolean | null | undefined): string => (b ? "ha" : "yo'q");
 const REGIME_LABEL: Record<string, string> = {
   vat: "QQS to'lovchi",
   turnover: "Aylanma soliq",
-  turnover_percent: "Aylanma (foiz)",
-  turnover_fixed: "Aylanma (qat'iy)",
+  turnover_percent: "Aylanmadan soliq",
+  turnover_fixed: "Aylanmadan soliq",
   fixed: "Qat'iy soliq",
   yatt_vat: "YaTT — QQS",
   yatt_turnover: "YaTT — aylanma",

@@ -16,44 +16,67 @@ export interface ReportColumn {
 
 // isSplit ustunlarda _tolov (payKey) juftligi bor.
 export const BASE_REPORT_COLUMNS: ReportColumn[] = [
-  // ═══ OYLIK ═══
-  { key: "didox", label: "Didox", short: "DD", group: "Oylik" },
-  { key: "xatlar", label: "Xatlar", short: "XT", group: "Oylik" },
-  { key: "avtokameral", label: "Avtokameral", short: "AK", group: "Oylik" },
-  { key: "my_mehnat", label: "My Mehnat", short: "MM", group: "Oylik" },
-  { key: "one_c", label: "1C", short: "1C", group: "Oylik" },
-  { key: "pul_oqimlari", label: "Pul Oqimlari", short: "PO", group: "Oylik" },
-  { key: "chiqadigan_soliqlar", label: "Chiq. Soliqlar", short: "CS", group: "Oylik" },
-  { key: "hisoblangan_oylik", label: "His. Oylik", short: "HO", group: "Oylik" },
-  { key: "debitor_kreditor", label: "Deb/Kred", short: "DK", group: "Oylik" },
-  { key: "foyda_va_zarar", label: "Foyda/Zarar", short: "FZ", group: "Oylik" },
-  { key: "tovar_ostatka", label: "Tovar Ost.", short: "TO", group: "Oylik" },
-  { key: "jismoniy_ijara", label: "Jism. Ijara", short: "JI", group: "Oylik" },
+  // ═══ OYLIK ISH (ichki reglament — soliq emas) ═══
+  { key: "didox", label: "Didox", short: "DD", group: "Oylik ish" },
+  { key: "xatlar", label: "Xatlar", short: "XT", group: "Oylik ish" },
+  { key: "avtokameral", label: "Avtokameral", short: "AK", group: "Oylik ish" },
+  { key: "my_mehnat", label: "My Mehnat", short: "MM", group: "Oylik ish" },
+  { key: "one_c", label: "1C", short: "1C", group: "Oylik ish" },
+  { key: "pul_oqimlari", label: "Pul Oqimlari", short: "PO", group: "Oylik ish" },
+  { key: "chiqadigan_soliqlar", label: "Chiq. Soliqlar", short: "CS", group: "Oylik ish" },
+  { key: "hisoblangan_oylik", label: "His. Oylik", short: "HO", group: "Oylik ish" },
+  { key: "debitor_kreditor", label: "Deb/Kred", short: "DK", group: "Oylik ish" },
+  { key: "foyda_va_zarar", label: "Foyda/Zarar", short: "FZ", group: "Oylik ish" },
+  { key: "tovar_ostatka", label: "Tovar Ost.", short: "TO", group: "Oylik ish" },
 
-  // ═══ SOLIQLAR (Umumiy) ═══
-  { key: "yer_soligi", label: "Yer Solig'i", short: "YS", group: "Soliqlar" },
-  { key: "mol_mulk_soligi", label: "Mol-mulk Sol.", short: "MS", group: "Soliqlar" },
-  { key: "suv_soligi", label: "Suv Solig'i", short: "SS", group: "Soliqlar" },
-  { key: "bonak", label: "Bo'nak", short: "BN", group: "Soliqlar" },
-  { key: "aksiz_soligi", label: "AKSIZ", short: "AX", group: "Soliqlar" },
-  { key: "nedro_soligi", label: "NEDRO", short: "ND", group: "Soliqlar" },
-  { key: "norezident_foyda", label: "Nor. Foyda", short: "NF", group: "Soliqlar" },
-  { key: "norezident_nds", label: "Nor. NDS", short: "NN", group: "Soliqlar" },
+  // ═══ SOLIQ — REESTR BO'YICHA (davriylik + to'lov kodi) ═══
+  //
+  // Manba: docs/SOLIQ_TOLOV_KODLARI.md — buxgalteriya bo'limi bergan reestr.
+  // Ikki qoida shundan keladi:
+  //   1) GURUH = DAVRIYLIK (oylik / kvartal / yillik), texnik belgi emas.
+  //      Buxgalter "shu oy nima topshiriladi" deb ishlaydi.
+  //   2) BYUDJET KODI BOR HAR BIR SOLIQ — hisobot + to'lov JUFTLIGI.
+  //      Ilgari aksiz, nedro, norezidentlar, yer/suv/mol-mulk, jism. ijara va
+  //      bo'nak yakka katak edi: hisobot topshirilgani belgilanardi, PUL
+  //      to'langani esa hech qayerda kuzatilmasdi.
 
-  // ═══ SOLIQLAR (Hisobot + To'lov) ═══
-  // "Aylanma/QQS" IKKIGA BO'LINDI. Ular bitta katakda turolmaydi: QQS oylik
-  // (20-kun, faqat QQS to'lovchilarda), aylanma soliq esa choraklik (15-kun,
-  // faqat aylanma rejimida). Majburiyat dvigatelida ular allaqachon alohida
-  // shablon edi (QQS_DECL / AYLANMA_SOLIQ) — matritsa ulardan orqada qolgan edi.
-  { key: "qqs", label: "QQS Hisobot", short: "QQh", group: "Soliq H/T", isSplit: true, payKey: "qqs_tolov", payShort: "QQt" },
-  { key: "aylanma", label: "Aylanma Hisobot", short: "AYh", group: "Soliq H/T", isSplit: true, payKey: "aylanma_tolov", payShort: "AYt" },
-  { key: "daromad_soliq", label: "DS Hisobot", short: "DSh", group: "Soliq H/T", isSplit: true, payKey: "daromad_soliq_tolov", payShort: "DSt" },
-  { key: "inps", label: "INPS Hisobot", short: "INh", group: "Soliq H/T", isSplit: true, payKey: "inps_tolov", payShort: "INt" },
-  { key: "foyda_soliq", label: "FS Hisobot", short: "FSh", group: "Soliq H/T", isSplit: true, payKey: "foyda_soliq_tolov", payShort: "FSt" },
+  // ── OYLIK SOLIQ (reestr 1-bo'lim) ────────────────────────────
+  { key: "qqs", label: "QQS Hisobot", short: "QQh", group: "Oylik soliq", isSplit: true, payKey: "qqs_tolov", payShort: "QQt" },
+  { key: "daromad_soliq", label: "DS Hisobot", short: "DSh", group: "Oylik soliq", isSplit: true, payKey: "daromad_soliq_tolov", payShort: "DSt" },
+  // Aylanma soliq OYLIK (reestr 1-bo'lim, 3-qator). Shabloni ham oylikka
+  // keltirildi — matritsa va "Ishlar" bir xil taqvimni aytishi shart.
+  { key: "aylanma", label: "Aylanma Hisobot", short: "AYh", group: "Oylik soliq", isSplit: true, payKey: "aylanma_tolov", payShort: "AYt" },
+  { key: "inps", label: "INPS Hisobot", short: "INh", group: "Oylik soliq", isSplit: true, payKey: "inps_tolov", payShort: "INt" },
+  { key: "aksiz_soligi", label: "Aksiz Hisobot", short: "AXh", group: "Oylik soliq", isSplit: true, payKey: "aksiz_soligi_tolov", payShort: "AXt" },
+  { key: "nedro_soligi", label: "Nedro Hisobot", short: "NDh", group: "Oylik soliq", isSplit: true, payKey: "nedro_soligi_tolov", payShort: "NDt" },
+  { key: "norezident_foyda", label: "Nor. Foyda Hisobot", short: "NFh", group: "Oylik soliq", isSplit: true, payKey: "norezident_foyda_tolov", payShort: "NFt" },
+  { key: "norezident_nds", label: "Nor. NDS Hisobot", short: "NNh", group: "Oylik soliq", isSplit: true, payKey: "norezident_nds_tolov", payShort: "NNt" },
+  // Mol-mulk / yer / suv — OYLIK avans: ma'lumotnoma + avans to'lovi.
+  // Yillik yakuniy hisob-kitobi alohida ustun (pastda, "Yillik hisobot").
+  { key: "mol_mulk_soligi", label: "Mol-mulk Sol.", short: "MSh", group: "Oylik soliq", isSplit: true, payKey: "mol_mulk_soligi_tolov", payShort: "MSt" },
+  { key: "yer_soligi", label: "Yer Solig'i", short: "YSh", group: "Oylik soliq", isSplit: true, payKey: "yer_soligi_tolov", payShort: "YSt" },
+  { key: "suv_soligi", label: "Suv Solig'i", short: "SSh", group: "Oylik soliq", isSplit: true, payKey: "suv_soligi_tolov", payShort: "SSt" },
+  { key: "jismoniy_ijara", label: "Jism. Ijara", short: "JIh", group: "Oylik soliq", isSplit: true, payKey: "jismoniy_ijara_tolov", payShort: "JIt" },
+  { key: "dividend_soligi", label: "Dividend Hisobot", short: "DVh", group: "Oylik soliq", isSplit: true, payKey: "dividend_soligi_tolov", payShort: "DVt" },
+  // Bo'nak — foyda solig'i bo'yicha OYLIK avans (reestr 1-bo'lim, 14-qator).
+  // Uning CHORAKLIK ma'lumotnomasi alohida ustun: `foyda_avans_hisobot`.
+  { key: "bonak", label: "Bo'nak (foyda avansi)", short: "BNh", group: "Oylik soliq", isSplit: true, payKey: "bonak_tolov", payShort: "BNt" },
 
-  // ═══ YILLIK ═══
-  { key: "moliyaviy_natija", label: "Mol. Natija", short: "MN", group: "Yillik" },
-  { key: "buxgalteriya_balansi", label: "Bux. Balansi", short: "BB", group: "Yillik" },
+  // ── KVARTAL SOLIQ (reestr 2-bo'lim) ──────────────────────────
+  { key: "foyda_soliq", label: "FS Hisobot", short: "FSh", group: "Kvartal soliq", isSplit: true, payKey: "foyda_soliq_tolov", payShort: "FSt" },
+  // Keyingi chorak uchun bo'nak ma'lumotnomasi — TO'LOVI YO'Q (pul oylik
+  // "Bo'nak" katagi orqali chiqadi), shuning uchun yagona katak va kodsiz.
+  { key: "foyda_avans_hisobot", label: "Foyda avans hisoboti", short: "FAv", group: "Kvartal soliq" },
+
+  // ── YILLIK HISOBOT (reestr 3-bo'lim) ─────────────────────────
+  { key: "buxgalteriya_balansi", label: "Bux. Balansi (1-shakl)", short: "BB", group: "Yillik hisobot" },
+  { key: "moliyaviy_natija", label: "Mol. Natija (2-shakl)", short: "MN", group: "Yillik hisobot" },
+  // Yillik YAKUNIY hisob-kitoblar — oylik avans katagidan ayri: avans to'lab
+  // borilgan-u, yil oxiridagi hisob-kitob topshirilmagan holat eng ko'p
+  // uchraydigani va bitta katakda u ko'rinmasdi.
+  { key: "mol_mulk_yillik", label: "Mol-mulk (yillik)", short: "MSy", group: "Yillik hisobot" },
+  { key: "yer_yillik", label: "Yer solig'i (yillik)", short: "YSy", group: "Yillik hisobot" },
+  { key: "suv_yillik", label: "Suv solig'i (yillik)", short: "SSy", group: "Yillik hisobot" },
 
   // ═══ STATISTIKA ═══
   { key: "stat_12_invest", label: "12-invest", short: "12I", group: "Statistika" },
@@ -95,6 +118,39 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   // ═══ MAXSUS ═══
   { key: "ekologiya", label: "Ekologiya", short: "EK", group: "Maxsus" },
 ];
+
+// ── DAVLAT BYUDJETI TO'LOV KODLARI ───────────────────────────────
+//
+// NEGA SHU YERDA: buxgalter to'lov topshiriqnomasini to'ldirayotganda kodni
+// tashqi qog'ozdan qidirardi va adashganda pul boshqa soliq turiga tushib
+// ketardi (qaytarish — soliq organi orqali, haftalar). Kod ustun kalitiga
+// bog'landi, chunki matritsadagi "to'lov" yarmi aynan shu to'lovni bildiradi.
+//
+// Manba: soliq_hisobotlari_va_kodlari.md (byudjet daromadlari klassifikatori).
+// Kod O'ZGARSA shu yer yangilanadi — UI hech qayerda kodni qo'lda yozmaydi.
+export const TAX_PAYMENT_CODES: Record<string, string> = {
+  qqs: "1",
+  daromad_soliq: "46",
+  aylanma: "100",
+  inps: "101",
+  aksiz_soligi: "43",
+  nedro_soligi: "50",
+  norezident_foyda: "137",
+  norezident_nds: "29",
+  mol_mulk_soligi: "44",
+  yer_soligi: "53",
+  suv_soligi: "52",
+  jismoniy_ijara: "186",
+  dividend_soligi: "138",
+  // Foyda solig'i: yillik/choraklik hisobot ham, oylik bo'nak ham bitta kodga.
+  foyda_soliq: "32",
+  bonak: "32",
+};
+
+/** Ustun (yoki uning to'lov yarmi) uchun byudjet to'lov kodi. */
+export function paymentCodeFor(key: string): string | undefined {
+  return TAX_PAYMENT_CODES[key] ?? TAX_PAYMENT_CODES[key.replace(/_tolov$/, "")];
+}
 
 // Admin editor jadval qatori (barcha baza ustunlari + joriy sozlama)
 export interface OperationColumnRow {
@@ -184,16 +240,32 @@ export function serviceGroups(): { group: string; keys: string[] }[] {
 }
 
 /** Xizmat kaliti → qisqa nom. */
+//
+// TO'LOV YARMI — FAQAT BYUDJET KODI ("#1", "#46").
+// "QQS — to'lov" degan matn hech qanday yangi ma'lumot bermasdi: u hisobot
+// katagining yonida turadi va nomi allaqachon o'sha yerda yozilgan. Kod esa
+// buxgalterga to'lov topshiriqnomasini to'ldirishda aynan kerak bo'lgan yagona
+// raqam. Kodi yo'q to'lov (bo'lsa) eski matnli nomiga qaytadi.
 export const SERVICE_LABELS: Record<string, string> = Object.fromEntries(
-  BASE_REPORT_COLUMNS.flatMap((c) =>
-    c.payKey
-      ? [
-          [c.key, c.label] as [string, string],
-          [c.payKey, `${c.label.replace(/ Hisobot$/, "")} — to'lov`] as [string, string],
-        ]
-      : [[c.key, c.label] as [string, string]],
-  ),
+  BASE_REPORT_COLUMNS.flatMap((c) => {
+    if (!c.payKey) return [[c.key, c.label] as [string, string]];
+    const code = TAX_PAYMENT_CODES[c.key];
+    const payLabel = code ? `#${code}` : `${c.label.replace(/ Hisobot$/, "")} — to'lov`;
+    return [
+      [c.key, c.label] as [string, string],
+      [c.payKey, payLabel] as [string, string],
+    ];
+  }),
 );
+
+/** To'lov yarmining to'liq nomi — tooltip/aria uchun ("QQS to'lovi (#1)"). */
+export function serviceFullLabel(key: string): string {
+  const col = BASE_REPORT_COLUMNS.find((c) => c.payKey === key);
+  if (!col) return SERVICE_LABELS[key] ?? key;
+  const name = col.label.replace(/ Hisobot$/, "");
+  const code = TAX_PAYMENT_CODES[col.key];
+  return code ? `${name} to'lovi (byudjet kodi ${code})` : `${name} to'lovi`;
+}
 
 /**
  * Ustun shu firmada YOQILGANMI.

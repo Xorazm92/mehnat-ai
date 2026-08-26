@@ -34,8 +34,9 @@ import {
   type MatrixFilters,
 } from '@/lib/matrixFilters';
 import { pendingCellKey, readRowCells, reconcilePendingCells } from '@/lib/matrixRows';
+import { normalizeTaxRegime } from '@/lib/taxRegimes';
 import { columnAppliesToRegime, regimeBlockReason } from '@/lib/reportApplicability';
-import { serviceEnabled } from '@/lib/reportColumns';
+import { serviceEnabled, paymentCodeFor } from '@/lib/reportColumns';
 import {
   addToTally,
   classifyCell,
@@ -90,28 +91,32 @@ export interface GroupStyle {
 //
 // Endi fon ham, chegara ham, matn ham BITTA manbadan.
 const GROUP_STYLE_MAP: Record<string, GroupStyle> = {
-  "Oylik": {
+  // Guruh nomlari davriylikka ko'chdi ("Oylik" → "Oylik ish",
+  // "Soliqlar"/"Soliq H/T" → "Oylik soliq"/"Kvartal soliq"). Eski kalitlar ham
+  // qoldirilgan: admin `group` override bilan eski nomni yozib qo'ygan
+  // bo'lsa, ustun rangsiz kulrangga tushib qolmasin.
+  "Oylik ish": {
     headerBg: "color-mix(in srgb, var(--matrix-oylik) 18%, var(--surface-2))",
     subHeaderBg: "color-mix(in srgb, var(--matrix-oylik) 10%, var(--surface-2))",
     cellBg: "color-mix(in srgb, var(--matrix-oylik) 3.5%, transparent)",
     text: "var(--matrix-oylik)",
     border: "color-mix(in srgb, var(--matrix-oylik) 45%, transparent)",
   },
-  "Soliqlar": {
+  "Oylik soliq": {
     headerBg: "color-mix(in srgb, var(--matrix-soliq) 18%, var(--surface-2))",
     subHeaderBg: "color-mix(in srgb, var(--matrix-soliq) 10%, var(--surface-2))",
     cellBg: "color-mix(in srgb, var(--matrix-soliq) 3.5%, transparent)",
     text: "var(--matrix-soliq)",
     border: "color-mix(in srgb, var(--matrix-soliq) 45%, transparent)",
   },
-  "Soliq H/T": {
+  "Kvartal soliq": {
     headerBg: "color-mix(in srgb, var(--matrix-soliq-ht) 22%, var(--surface-2))",
     subHeaderBg: "color-mix(in srgb, var(--matrix-soliq-ht) 12%, var(--surface-2))",
     cellBg: "color-mix(in srgb, var(--matrix-soliq-ht) 4.5%, transparent)",
     text: "var(--matrix-soliq-ht)",
     border: "color-mix(in srgb, var(--matrix-soliq-ht) 50%, transparent)",
   },
-  "Yillik": {
+  "Yillik hisobot": {
     headerBg: "color-mix(in srgb, var(--matrix-yillik) 18%, var(--surface-2))",
     subHeaderBg: "color-mix(in srgb, var(--matrix-yillik) 10%, var(--surface-2))",
     cellBg: "color-mix(in srgb, var(--matrix-yillik) 3.5%, transparent)",
@@ -147,6 +152,12 @@ const GROUP_STYLE_MAP: Record<string, GroupStyle> = {
     border: "color-mix(in srgb, var(--matrix-maxsus) 45%, transparent)",
   },
 };
+
+// Eski guruh nomlari — admin sozlamasidagi `group` override uchun taqlid.
+GROUP_STYLE_MAP["Oylik"] = GROUP_STYLE_MAP["Oylik ish"];
+GROUP_STYLE_MAP["Soliqlar"] = GROUP_STYLE_MAP["Oylik soliq"];
+GROUP_STYLE_MAP["Soliq H/T"] = GROUP_STYLE_MAP["Kvartal soliq"];
+GROUP_STYLE_MAP["Yillik"] = GROUP_STYLE_MAP["Yillik hisobot"];
 
 const getGroupStyle = (groupName: string): GroupStyle => {
   return GROUP_STYLE_MAP[groupName] ?? {
@@ -1089,7 +1100,11 @@ const OperationModule: React.FC<Props> = ({
         supervisor: nameOf(c.supervisor, comp.supervisorName),
         chief: nameOf(c.chiefAccountant, comp.chiefAccountantName),
         bank: nameOf(c.bankClient, comp.bankClientName),
-        regime: c.taxRegime || '',
+        // Rejim NORMALIZATSIYA qilinadi: bazada `turnover_percent` /
+        // `turnover_fixed` kabi endi mavjud bo'lmagan shakllar yotibdi va
+        // ular filtr ro'yxatida "Aylanma (foiz)", "Aylanma (qat'iy)" bo'lib
+        // alohida qatorlar yaratardi — foydalanuvchi uchun uch xil "aylanma".
+        regime: c.taxRegime ? normalizeTaxRegime(c.taxRegime) : '',
         department: c.departmentRef?.name || comp.department || '',
         director: c.directorName || '',
         taxType: comp.taxType || '',
@@ -2126,6 +2141,10 @@ const OperationModule: React.FC<Props> = ({
             <span className="text-micro font-bold px-1.5 py-0.5 rounded-lg uppercase tracking-tighter" style={{ background: tint('var(--warning)', 12), color: 'var(--warning)', border: `1px solid ${tint('var(--warning)', 24)}` }}>To&apos;l</span>
             <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{t.paymentLegend}</span>
           </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-micro font-bold px-1.5 py-0.5 rounded-lg tracking-tighter" style={{ background: tint('var(--warning)', 12), color: 'var(--warning)', border: `1px solid ${tint('var(--warning)', 24)}` }}>#100</span>
+            <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Byudjet to&apos;lov kodi</span>
+          </div>
         </div>
       </div>
 
@@ -2217,6 +2236,8 @@ const OperationModule: React.FC<Props> = ({
                   const isEdge = groupEdges.has(col.key);
                   const borderRightStyle = isEdge ? `2px solid ${st.border}` : '1px solid var(--border)';
 
+                  const payCode = paymentCodeFor(col.key);
+
                   if ((col as any).isSplit) {
                     return (
                       <React.Fragment key={col.key}>
@@ -2231,10 +2252,13 @@ const OperationModule: React.FC<Props> = ({
                         <th
                           className="sticky top-[28px] px-0.5 py-2 text-center w-10 cursor-help"
                           style={{ background: `color-mix(in srgb, var(--warning) 12%, ${st.subHeaderBg})`, borderBottom: `2px solid ${st.border}`, borderRight: borderRightStyle }}
-                          title={`${col.label} to'lov`}
+                          title={payCode ? `${col.label} to'lov \u2014 byudjet kodi ${payCode}` : `${col.label} to'lov`}
                         >
                           <span className="text-micro font-bold tracking-widest" style={{ color: 'var(--warning)' }}>{(col as any).payShort}</span>
-                          <div className="text-2xs font-bold uppercase tracking-tighter" style={{ color: 'var(--warning)', opacity: 0.85 }}>To&apos;l</div>
+                          {/* To'lov topshiriqnomasiga yoziladigan byudjet kodi.
+                              Buxgalter uni tashqi ro'yxatdan qidirardi; kod
+                              adashsa pul boshqa soliqqa tushib ketardi. */}
+                          <div className="text-2xs font-bold uppercase tracking-tighter" style={{ color: 'var(--warning)', opacity: 0.85 }}>{payCode ? `#${payCode}` : "To'l"}</div>
                         </th>
                       </React.Fragment>
                     );
@@ -2248,7 +2272,7 @@ const OperationModule: React.FC<Props> = ({
                         borderBottom: `2px solid ${st.border}`,
                         borderRight: borderRightStyle,
                       }}
-                      title={`${col.label} (${col.group})` + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
+                      title={`${col.label} (${col.group})` + (payCode ? ` \u2014 byudjet kodi ${payCode}` : '') + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
                       onContextMenu={(e) => {
                         if (userRole === 'super_admin' || userRole === 'admin') {
                           e.preventDefault();

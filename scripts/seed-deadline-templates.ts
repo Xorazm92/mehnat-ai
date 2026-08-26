@@ -90,7 +90,7 @@ const TEMPLATES: TplSeed[] = [
     code: "AYLANMA_SOLIQ",
     name: "Aylanma soliq",
     obligationType: "tax_declaration",
-    periodicity: "quarterly",
+    periodicity: "monthly",
     anchorType: "fixed_day_of_month",
     dueDay: 15,
     applicability: [{ criteriaType: "tax_regime", criteriaValue: "turnover" }],
@@ -113,12 +113,11 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "FOYDA_YILLIK",
-    name: "Foyda solig'i (yillik)",
+    name: "Foyda solig'i hisoboti (choraklik)",
     obligationType: "tax_declaration",
-    periodicity: "annual",
+    periodicity: "quarterly",
     anchorType: "fixed_day_of_month",
-    dueMonth: 3,
-    dueDay: 1,
+    dueDay: 20,
   },
   {
     code: "MOLIYAVIY_YILLIK",
@@ -157,7 +156,7 @@ const TEMPLATES: TplSeed[] = [
     code: "AYLANMA_TOLOV",
     name: "Aylanma soliq to'lovi",
     obligationType: "tax_payment",
-    periodicity: "quarterly",
+    periodicity: "monthly",
     anchorType: "fixed_day_of_month",
     dueDay: 15,
     effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
@@ -183,12 +182,46 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "FOYDA_TOLOV",
-    name: "Foyda solig'i to'lovi (yillik)",
+    name: "Foyda solig'i to'lovi (choraklik)",
     obligationType: "tax_payment",
-    periodicity: "annual",
+    periodicity: "quarterly",
     anchorType: "fixed_day_of_month",
-    dueMonth: 3,
-    dueDay: 1,
+    dueDay: 20,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+  },
+  // Dividend solig'i (byudjet kodi 138) — soliq agenti sifatida ushlab
+  // qolinadi, shuning uchun FAQAT ta'sischiga taqsimot qilgan firmada
+  // ma'noga ega: `service_key` bilan chegaralanadi, aks holda 279 firmaning
+  // hammasida har oy bo'sh majburiyat tug'ilardi.
+  {
+    code: "DIVIDEND_DECL",
+    name: "Dividend solig'i hisoboti",
+    obligationType: "tax_declaration",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 20,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "service_key", criteriaValue: "dividend_soligi" }],
+  },
+  {
+    code: "DIVIDEND_TOLOV",
+    name: "Dividend solig'i to'lovi",
+    obligationType: "tax_payment",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 20,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "service_key", criteriaValue: "dividend_soligi" }],
+  },
+  // Keyingi chorak uchun bo'nak ma'lumotnomasi — to'lovi yo'q (pul oylik
+  // "Bo'nak" katagi orqali chiqadi), shuning uchun faqat deklaratsiya.
+  {
+    code: "FOYDA_AVANS",
+    name: "Foyda solig'i avans (bo'nak) ma'lumotnomasi",
+    obligationType: "tax_declaration",
+    periodicity: "quarterly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 20,
     effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
   },
   // ── STATISTIKA ───────────────────────────────────────────────

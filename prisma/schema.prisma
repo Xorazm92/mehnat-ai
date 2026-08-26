@@ -411,6 +411,30 @@ model MonthlyReport {
   ekologiya         String?
   /// Jismoniy shaxslardan ijaraga olingan mulk uchun hisobot va soliq to'lovi (OYLIK).
   jismoniyIjara     String?
+  /// Dividend solig'i — hisobot va to'lov (byudjet kodi 138). Ta'sischiga
+  /// taqsimot bo'lgan oyda paydo bo'ladi, shuning uchun boshqa oylarda bo'sh.
+  dividendSoligi      String?
+  dividendSoligiTolov String?
+  /// Reestrdagi byudjet kodi bor HAR BIR soliqning to'lov yarmi. Ilgari bu
+  /// soliqlar yakka katak edi — hisobot topshirilgani ko'rinardi, pul
+  /// to'langani esa yo'q.
+  aksizSoligiTolov      String?
+  nedroSoligiTolov      String?
+  norezidentFoydaTolov  String?
+  norezidentNdsTolov    String?
+  molMulkSoligiTolov    String?
+  yerSoligiTolov        String?
+  suvSoligiTolov        String?
+  jismoniyIjaraTolov    String?
+  bonakTolov            String?
+  /// Keyingi chorak uchun foyda solig'i bo'nak ma'lumotnomasi (CHORAKLIK,
+  /// to'lovsiz — pul oylik `bonak` katagi orqali chiqadi).
+  foydaAvansHisobot     String?
+  /// Mol-mulk / yer / suv soliqlarining YILLIK yakuniy hisob-kitobi — oylik
+  /// avans katagidan ayri.
+  molMulkYillik         String?
+  yerYillik             String?
+  suvYillik             String?
   /// 1-NNT — yillik statistika hisoboti (aholi bandligi).
   stat1Nnt          String?
 

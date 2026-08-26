@@ -36,7 +36,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
   {
     title: "ASRO Tizimi — Hisobotlar va Amallar Matritsasi ranglari",
     category: "SYSTEM",
-    content: "Har oy boshida har bir firmaga avtomatik soliq va oylik hisobotlari biriktiriladi. Matritsada guruhlar rangli tonlar bilan ajratilgan: Oylik (ko'k), Soliqlar (yashil), Soliq H/T (amber/oltin), Yillik (binafsha), Statistika (pushti), IT Park (sian), Komunalka (sariq), Maxsus (indigo). Vertikal qalin chiziqlar guruhlar chegarasini ko'rsatadi."
+    content: "Har oy boshida har bir firmaga avtomatik soliq va oylik hisobotlari biriktiriladi. Matritsa guruhlari DAVRIYLIK bo'yicha: Oylik ish (ko'k), Oylik soliq (yashil), Kvartal soliq — foyda solig'i va bo'nak ma'lumotnomasi (amber/oltin), Yillik hisobot (binafsha), Statistika (pushti), IT Park (sian), Komunalka (sariq), Maxsus (indigo). Soliq to'lovi katagi byudjet kodi bilan belgilanadi (#1 QQS, #46 daromad solig'i, #100 aylanma, #101 INPS, #32 foyda, #138 dividend). Vertikal qalin chiziqlar guruhlar chegarasini ko'rsatadi."
   },
   {
     title: "ASRO Tizimi — KPI va Adolatli KPI",
@@ -88,7 +88,7 @@ QOIDALAR:
   • Rentabellik: Tushum (paid Payment) − Mehnat tannarxi (TimeEntry × stavka). Mijozlar marjasini va qarzdorlikni tahlil qiladi.
   • Oylik berish: 1) Oylik Xomcho't avto-hisoblanadi. 2) Admin/Bosh buxgalter '$ TASDIQLASH' tugmasi bilan majburiyatni tasdiqlaydi. 3) Kassa admini 'Payout' orqali real pul beradi (kassa kamayadi). 4) Avanslar chegiriladi.
   • Kassa / Xarajatlar: Xarajatlar fakt bo'yicha kiradi. Oddiy buxgalter uchun kassa yetmasa bloklanadi, Admin minus balans (overdraft) bera oladi. Qizil banner va audit log nazorat qiladi.
-  • Hisobotlar matritsasi: Oy boshida avto-biriktiriladi. Rangli guruhlar: Oylik (ko'k), Soliqlar (yashil), Soliq H/T (amber), Yillik (binafsha), Statistika (pushti), IT Park (sian), Komunalka (sariq), Maxsus (indigo).
+  • Hisobotlar matritsasi: Oy boshida avto-biriktiriladi. Guruhlar davriylik bo'yicha: Oylik ish (ko'k), Oylik soliq (yashil), Kvartal soliq (amber), Yillik hisobot (binafsha), Statistika (pushti), IT Park (sian), Komunalka (sariq), Maxsus (indigo).
   • KPI: Bajargan vazifalar, hisobot muddatlari va davomat bo'yicha avto-bonus va jarimalar.
 - ASRO tizimidagi JONLI real ma'lumotlarni (foydalanuvchining shaxsiy oylik summasi, joriy kassa qoldig'i raqami) SEN JONLI KO'RMAYSAN. Shuning uchun foydalanuvchiga tizim modulini va mantiqni tushuntirib, tegishli bo'limga yo'naltir.
 - Kerak bo'lsa, tushunarli ro'yxatlar va qadamlar shaklida javob ber. Ortiqcha muqaddima yozma.
@@ -125,7 +125,7 @@ export function heuristicReply(userText: string): string {
   } else if (t.includes("kpi")) {
     body = "KPI ballari bajarilgan vazifalar va hisobot muddatlariga qarab avto-hisoblanadi. Nazoratchi tasdiqlasa, bonus/jarima bo'lib oylik xomcho'tiga o'tadi.";
   } else if (t.includes("hisobot") || t.includes("muddat") || t.includes("rang")) {
-    body = "Hisobotlar amallar matritsasida guruhlar rang bilan ajratilgan (Oylik - ko'k, Soliq - yashil, Soliq H/T - amber, Yillik - binafsha, Statistika - pushti, IT Park - sian va b.). Muddati o'tgan hisobotlar maxsus belgilanadi.";
+    body = "Hisobotlar amallar matritsasida guruhlar davriylik va rang bilan ajratilgan (Oylik ish - ko'k, Oylik soliq - yashil, Kvartal soliq - amber, Yillik hisobot - binafsha, Statistika - pushti, IT Park - sian va b.). Muddati o'tgan hisobotlar maxsus belgilanadi.";
   } else if (t.includes("bhms") || t.includes("standart")) {
     body = "BHMS — Buxgalteriya Hisobi Milliy Standartlari (1–24). Qaysi standart kerakligini ayting (masalan, BHMS 4 — tovar-moddiy zaxiralar), batafsil tushuntiraman.";
   } else {
