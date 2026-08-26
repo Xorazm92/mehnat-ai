@@ -81,6 +81,7 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   { key: "stat_1_qx", label: "1-qx (qishloq x., yillik)", short: "1QX", group: "Statistika" },
   { key: "stat_1_fx", label: "1-fx (fermer x., yillik)", short: "1FX", group: "Statistika" },
   { key: "stat_4_fx", label: "4-fx (fermer x.)", short: "4FX", group: "Statistika" },
+  { key: "stat_1_fan", label: "1-fan (ilmiy-tadqiqot, yillik)", short: "1FN", group: "Statistika" },
 
   // ═══ IT PARK ═══
   { key: "itpark_oylik", label: "IT Park Oylik", short: "ITO", group: "IT Park" },

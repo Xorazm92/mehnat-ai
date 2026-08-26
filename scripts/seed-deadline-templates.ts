@@ -266,6 +266,17 @@ const TEMPLATES: TplSeed[] = [
     effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
     applicability: [{ criteriaType: "service_key", criteriaValue: "stat_4_fx" }],
   },
+  {
+    code: "STAT_1_FAN",
+    name: "1-fan (ilmiy-tadqiqot, yillik)",
+    obligationType: "statistics",
+    periodicity: "annual",
+    anchorType: "fixed_day_of_month",
+    dueMonth: 4,
+    dueDay: 8,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+    applicability: [{ criteriaType: "service_key", criteriaValue: "stat_1_fan" }],
+  },
 
   // ASRO Reglament ichki oylik takrorlanuvchi vazifalari.
   //

@@ -284,6 +284,7 @@ export const FIELD_TO_DB_COLUMN: Record<OperationFieldKey, string> = {
     stat_1_qx: 'stat1Qx',
     stat_1_fx: 'stat1Fx',
     stat_4_fx: 'stat4Fx',
+    stat_1_fan: 'stat1Fan',
     aksiz_soligi: 'aksizSoligi',
     nedro_soligi: 'nedroSoligi',
     norezident_foyda: 'norezidentFoyda',

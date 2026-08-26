@@ -386,6 +386,10 @@ model MonthlyReport {
   /// 4-fx — fermer xo'jaligi faoliyati, CHORAKLIK. Muddat: hisobot davridan
   /// keyingi oyning 5-sanasidan kechiktirmay.
   stat4Fx             String?
+  /// 1-fan — ilmiy tadqiqot va tajriba-konstruktorlik ishlanmalarni
+  /// bajarilishi hamda oliy toifali ilmiy va ilmiy-pedagogik kadrlarni
+  /// tayyorlash to'g'risida, YILLIK. Muddat: 8-aprel.
+  stat1Fan            String?
 
   // Qo'shimcha soliqlar / IT Park / Komunalka
   aksizSoligi       String?

@@ -91,6 +91,7 @@ export const COLUMN_CATEGORY: Record<OperationFieldKey, ReportCategory> = {
   stat_1_qx: "STATISTIKA",
   stat_1_fx: "STATISTIKA",
   stat_4_fx: "STATISTIKA",
+  stat_1_fan: "STATISTIKA",
 
   // ═══ MAXSUS — moliyaviy hisobotlar + IT Park + kommunal ═══
   // DIQQAT: bu kategoriya hozir ikki xil narsani birlashtirgan (moliyaviy
