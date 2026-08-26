@@ -2,10 +2,12 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import {
   getCachedCompanies,
+  getCachedOwnFirmCompanies,
   getCachedUsers,
   getCachedOperations,
   getCachedObligationCoverage,
 } from "@/lib/cached-queries";
+import { getRoleContext } from "@/server/roleContext";
 import { getEffectiveReportColumns } from "@/server/report-columns";
 import { getCurrentPeriodKey, normalizePeriodKey, toObligationMonthKey } from "@/lib/periods";
 import { readTabParam } from "@/lib/tabs";
@@ -48,8 +50,17 @@ export default async function ReportsPage({
   // shart"), shuning uchun u davrga bog'liq va davr o'zgarganda qayta olinadi.
   const obligationMonthKey = toObligationMonthKey(initialPeriod) ?? "";
 
-  const [companies, staff, operations, reportColumns, obligationCoverage] = await Promise.all([
-    getCachedCompanies(userId, userRole),
+  // Matritsa MIJOZ/ICHKI FIRMA ajratmasini bilmasligi kerak: bu ish kuzatuv
+  // ekrani ("kim nima topshirishi shart"), moliyaviy hisobot emas. ASRO'ning
+  // o'z firmalariga ham buxgalter biriktiriladi va ular uchun ham majburiyat
+  // yaratiladi (getCachedObligationCoverage isOwnFirm'ni tekshirmaydi) —
+  // `getCachedCompanies` ularni chiqarib tashlagani uchun biriktirilgan
+  // xodim ularning katagini belgilay olmasdi.
+  const roleContext = await getRoleContext().catch(() => "all" as const);
+
+  const [companies, ownFirmCompanies, staff, operations, reportColumns, obligationCoverage] = await Promise.all([
+    getCachedCompanies(userId, userRole, roleContext),
+    getCachedOwnFirmCompanies(userId, userRole, roleContext),
     getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
     getEffectiveReportColumns(),
@@ -64,10 +75,12 @@ export default async function ReportsPage({
     status: u.status || undefined,
   }));
 
+  const allCompanies = [...companies, ...ownFirmCompanies];
+
   return (
     <div className="h-full">
       <ReportsClient
-        companies={JSON.parse(JSON.stringify(companies))}
+        companies={JSON.parse(JSON.stringify(allCompanies))}
         staff={JSON.parse(JSON.stringify(mappedStaff))}
         operations={JSON.parse(JSON.stringify(operations))}
         userRole={userRole}
