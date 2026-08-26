@@ -240,7 +240,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
       },
     },
     {
-      key: 'inn', header: t.inn, width: '110px',
+      key: 'inn', header: t.inn, width: '110px', mobile: 'meta',
       sortValue: c => c.inn,
       cell: c => <span className="font-mono text-meta font-bold" style={{ color: 'var(--text-secondary)' }}>{c.inn}</span>,
     },
@@ -258,7 +258,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
       },
     },
     {
-      key: 'taxType', header: 'REJIM', align: 'center', width: '110px',
+      key: 'taxType', header: 'REJIM', align: 'center', width: '110px', mobile: 'status',
       sortValue: c => c.taxType ?? '',
       cell: c => (
         <span className="c1-badge" style={{

@@ -127,7 +127,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
             ),
         },
         {
-            key: 'inn', header: t.inn, width: '120px',
+            key: 'inn', header: t.inn, width: '120px', mobile: 'meta',
             sortValue: item => item.inn,
             cell: item => <span className="font-mono text-meta font-bold" style={{ color: 'var(--text-secondary)' }}>{item.inn}</span>,
         },
@@ -142,7 +142,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
             ),
         },
         {
-            key: 'status', header: t.status, align: 'center', width: '140px',
+            key: 'status', header: t.status, align: 'center', width: '140px', mobile: 'status',
             sortValue: item => item.payment?.status ?? 'KUTILMOQDA',
             cell: item => item.payment ? (
                 <span className="c1-badge inline-flex items-center gap-1.5" style={{

@@ -1424,3 +1424,35 @@ input[type="radio"] {
 .kpi-positive-bg { background: var(--success-bg); border: 1px solid var(--success-border); }
 .kpi-negative-bg { background: var(--danger-bg);  border: 1px solid var(--danger-border); }
 .kpi-neutral-bg  { background: var(--bg-sunken);  border: 1px solid var(--rule); }
+
+/* ─────────────────────────────────────────────────────────────────────
+   MOBIL KARTOCHKA — jadval kataklarini qayta ishlatish
+
+   `DataTable` telefonda kartochka chizadi va kataklarni USTUN
+   ta'riflaridan oladi — shunda jadval va kartochka bir manbadan
+   oziqlanadi. Lekin katak jadval uchun yozilgan: unda `truncate` va
+   `max-w-[210px]` bor.
+
+   Jadvalda bu to'g'ri — ustun kengligi qat'iy. Kartochkada esa u
+   ma'lumotni QIRQADI: telefonda qator to'liq kenglikda va matn bemalol
+   o'ralishi mumkin, uch nuqta esa foydalanuvchiga hech narsa bermaydi
+   (`title` ni sensorli ekranda ochib bo'lmaydi). Firma nomi
+   "RAHMATJON-HALOL-MAR…" bo'lib qolardi.
+
+   Shuning uchun kartochka ichida qirqish bekor qilinadi. `:where()`
+   ishlatiladi — u og'irlik qo'shmaydi, ya'ni katak o'zi ataylab boshqa
+   qiymat bersa u ustun turadi.
+   ───────────────────────────────────────────────────────────────────── */
+.mobile-card-cell :where(.truncate) {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+.mobile-card-cell :where([class*="max-w-["]) {
+  max-width: none;
+}
+/* Jadvalda o'ngga tekislangan raqam kartochkada chapga qaytadi:
+   kartochkada tekislanadigan qo'shni ustun yo'q. */
+.mobile-card-cell :where(.text-right) {
+  text-align: left;
+}

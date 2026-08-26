@@ -163,7 +163,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
             cell: r => <span className="text-body font-bold tracking-tight" style={{ color: 'var(--text)' }}>{r.userName}</span>,
         },
         {
-            key: 'status', header: t.status, width: '140px',
+            key: 'status', header: t.status, width: '140px', mobile: 'status',
             sortValue: r => r.status ?? '',
             cell: r => {
                 const meta = STATUS_META[r.status] || STATUS_META.present;
@@ -175,13 +175,13 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
             },
         },
         {
-            key: 'in', header: 'Kelish', align: 'center', width: '110px',
+            key: 'in', header: 'Kelish', align: 'center', width: '110px', numeric: true,
             sortValue: r => r.checkIn ?? '',
             exportValue: r => fmtTime(r.checkIn),
             cell: r => <span className="text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtTime(r.checkIn)}</span>,
         },
         {
-            key: 'out', header: 'Ketish', align: 'center', width: '110px',
+            key: 'out', header: 'Ketish', align: 'center', width: '110px', numeric: true,
             sortValue: r => r.checkOut ?? '',
             exportValue: r => fmtTime(r.checkOut),
             cell: r => <span className="text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtTime(r.checkOut)}</span>,

@@ -90,7 +90,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
 
     const expenseColumns = useMemo<DataColumn<Expense>[]>(() => [
         {
-            key: 'date', header: 'Sana', width: '120px',
+            key: 'date', header: 'Sana', width: '120px', mobile: 'meta',
             sortValue: e => e.date ?? '',
             exportValue: e => fmtDate(e.date),
             cell: e => <span className="text-meta font-bold font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtDate(e.date)}</span>,
@@ -101,7 +101,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
             cell: e => <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>{e.category}</span>,
         },
         {
-            key: 'description', header: 'Izoh',
+            key: 'description', header: 'Izoh', mobile: 'title',
             sortValue: e => e.description ?? '',
             cell: e => <span className="text-body font-bold truncate max-w-[300px] inline-block align-middle" style={{ color: 'var(--text)' }}>{e.description || '—'}</span>,
         },
@@ -121,7 +121,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
             ),
         },
         {
-            key: 'status', header: 'Holat', width: '130px',
+            key: 'status', header: 'Holat', width: '130px', mobile: 'status',
             sortValue: e => e.status ?? 'approved',
             cell: e => {
                 const st = EXP_STATUS[e.status || 'approved'] || EXP_STATUS.approved;

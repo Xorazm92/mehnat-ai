@@ -341,7 +341,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
             cell: r => <span className="font-bold" style={{ color: "var(--warning)" }}>{formatNum(Math.abs(r.totalReceived))}</span>,
         },
         {
-            key: 'total', header: 'Jami maosh', numeric: true,
+            key: 'total', header: 'Jami maosh', numeric: true, mobile: 'status',
             sortValue: r => r.totalSalary,
             cell: r => <span className="text-sm font-semibold" style={{ color: "var(--accent-indigo)" }}>{formatNum(r.totalSalary)}</span>,
         },

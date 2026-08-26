@@ -86,7 +86,7 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
             ),
         },
         {
-            key: 'company', header: "Firma", width: '220px',
+            key: 'company', header: "Firma", width: '220px', mobile: 'meta',
             sortValue: d => d.companyName ?? '',
             cell: d => <span className="text-xs font-bold tracking-tight" style={{ color: 'var(--text-secondary)' }}>{d.companyName}</span>,
         },

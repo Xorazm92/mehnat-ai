@@ -172,6 +172,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       key: 'role',
       header: 'Lavozim',
       align: 'center',
+      mobile: 'meta',
       sortValue: p => ROLE_LABELS[p.role as UserRole] || p.role,
       cell: (person) => {
         const roleColor = ROLE_COLORS[person.role as UserRole] || 'var(--text-muted)';
@@ -212,6 +213,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       key: 'status',
       header: 'Holat',
       align: 'center',
+      mobile: 'status',
       sortValue: p => STATUS_META[p.status || 'active']?.label ?? '',
       cell: (person) => {
         const sm = STATUS_META[person.status || 'active'] || STATUS_META.active;

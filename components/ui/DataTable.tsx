@@ -5,6 +5,8 @@ import { ArrowUp, ArrowDown, ChevronsUpDown, ChevronLeft, ChevronRight, X } from
 import type { Density, SortDir } from "@/hooks/useTableState";
 import { EmptyState } from "./EmptyState";
 import { SkeletonTable } from "./Skeleton";
+import { MobileRowCard, type MobileField } from "./MobileRowCard";
+import { buildMobileLayout, type MobileRole } from "@/lib/mobileCardLayout";
 
 /**
  * DATA TABLE — jadval platformasi.
@@ -46,6 +48,22 @@ export interface DataColumn<T> {
    */
   hidden?: boolean;
   headerClassName?: string;
+
+  /**
+   * Mobil kartochkadagi o'rni.
+   *
+   *   "title"   — kartochkaning sarlavhasi (yorliqsiz, eng katta shrift)
+   *   "meta"    — sarlavha ostidagi ikkinchi darajali satr
+   *   "status"  — o'ng yuqoridagi nishon
+   *   "actions" — pastdagi amallar qatori
+   *   "hide"    — telefonda umuman ko'rsatilmaydi
+   *   "wide"    — yorliqli maydon, butun kenglikni egallaydi
+   *
+   * Berilmasa: `sticky` ustun sarlavha, `key === "actions"` amallar,
+   * qolganlari oddiy yorliqli maydon bo'ladi. Ya'ni ko'p jadval hech
+   * narsa yozmasdan ham to'g'ri kartochka oladi.
+   */
+  mobile?: MobileRole;
 }
 
 export interface DataTableProps<T> {
@@ -107,13 +125,23 @@ export interface DataTableProps<T> {
   /**
    * Tor ekran uchun kartochka ko'rinishi.
    *
-   * Berilsa, `md` dan pastda jadval o'rniga kartochkalar chiziladi.
-   * Auditdagi holat: jadval bo'lgan 22 ekrandan 21 tasida mobil muqobil
-   * yo'q edi — telefonda foydalanuvchi gorizontal aylantiriladigan
-   * jadval olardi. Qobiq (pastki navigatsiya, off-canvas menyu) tayyor,
-   * yetishmagani aynan shu qatlam.
+   * ODATDA KERAK EMAS. Berilmasa, kartochka USTUN TA'RIFLARIDAN o'zi
+   * yasaladi (`MobileRowCard`) — sarlavha, nishon va yorliqli maydonlar.
+   *
+   * Nima uchun avtomatik. Auditdagi holat: jadval bo'lgan 22 ekrandan
+   * 21 tasida mobil muqobil yo'q edi. `mobileCard` sloti qo'shilgan edi,
+   * lekin slot — bu faqat TESHIK: har bir ekran o'z kartochkasini noldan
+   * yozishi kerak bo'lardi. Sakkiz ekran sakkizta kartochka yozsa, biz
+   * jadval muammosini aynan takrorlagan bo'lardik (26 jadval — 26 xil
+   * implementatsiya). Kartochka ustunlardan kelib chiqsa, jadval va
+   * kartochka BIR MANBADAN oziqlanadi va ajralib keta olmaydi.
+   *
+   * Bu yerga funksiya berilsa — u ustunlardan ustun turadi.
    */
   mobileCard?: (row: T) => React.ReactNode;
+
+  /** Avtomatik kartochkani o'chirish (jadval telefonda ham jadval qoladi). */
+  disableMobileCards?: boolean;
 }
 
 export function DataTable<T>({
@@ -140,6 +168,7 @@ export function DataTable<T>({
   rowLabel,
   collapseConstantColumns = false,
   mobileCard,
+  disableMobileCards = false,
 }: DataTableProps<T>) {
   const selectable = Boolean(selected && onSelectedChange);
 
@@ -193,6 +222,39 @@ export function DataTable<T>({
   const pageIds = visible.map(rowKey);
   const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selected?.has(id));
 
+  /**
+   * MOBIL KARTOCHKA — ustunlardan avtomatik.
+   *
+   * Ustun `mobile` maslahatini bermasa oqilona taxmin qilinadi: yopishqoq
+   * ustun (odatda identifikator) sarlavha bo'ladi, `actions` kaliti amal
+   * qatoriga tushadi, qolganlari yorliqli maydon. Yig'ilgan (`constant`)
+   * ustunlar kartochkada ham ko'rsatilmaydi — ular baribir har qatorda
+   * bir xil.
+   */
+  const renderCard = useMemo(() => {
+    if (mobileCard) return mobileCard;
+    if (disableMobileCards || allCols.length === 0) return null;
+
+    // Rol taqsimoti sof funksiya — `lib/mobileCardLayout.ts` da, o'z testi
+    // bilan. Bu yerda faqat chizish qoladi.
+    const layout = buildMobileLayout(allCols, constantKeys);
+
+    return (row: T) => (
+      <MobileRowCard
+        title={layout.title ? layout.title.cell(row) : null}
+        meta={layout.meta ? layout.meta.cell(row) : undefined}
+        status={layout.status ? layout.status.cell(row) : undefined}
+        chevron={Boolean(onRowClick)}
+        fields={layout.fields.map<MobileField>(({ column, wide }) => ({
+          label: column.header,
+          value: column.cell(row),
+          wide,
+        }))}
+        actions={layout.actions ? layout.actions.cell(row) : undefined}
+      />
+    );
+  }, [mobileCard, disableMobileCards, allCols, constantKeys, onRowClick]);
+
   const toggleAll = () => {
     if (!selected || !onSelectedChange) return;
     const next = new Set(selected);
@@ -242,9 +304,8 @@ export function DataTable<T>({
         </div>
       )}
 
-      {/* Tor ekran — kartochkalar. `mobileCard` berilmasa hech narsa
-          o'zgarmaydi: jadval avvalgidek gorizontal aylantiriladi. */}
-      {mobileCard && visible.length > 0 && (
+      {/* Tor ekran — kartochkalar. */}
+      {renderCard && visible.length > 0 && (
         <div className="md:hidden flex flex-col gap-2">
           {visible.map((row) => {
             const id = rowKey(row);
@@ -267,14 +328,14 @@ export function DataTable<T>({
                 aria-label={onRowClick ? (rowLabel ? rowLabel(row) : "Qatorni ochish") : undefined}
                 className="dashboard-card !p-0 overflow-hidden"
               >
-                {mobileCard(row)}
+                {renderCard(row)}
               </div>
             );
           })}
         </div>
       )}
 
-      <div className={`dashboard-card !p-0 overflow-hidden ${mobileCard ? "hidden md:block" : ""}`}>
+      <div className={`dashboard-card !p-0 overflow-hidden ${renderCard ? "hidden md:block" : ""}`}>
         <div className="overflow-x-auto">
           <table className="erp-table w-full text-left" data-density={density}>
             <caption className="sr-only">{caption}</caption>

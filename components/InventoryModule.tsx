@@ -127,12 +127,12 @@ const InventoryModule: React.FC<Props> = ({ items, staff, lang, onSave, onDelete
             ),
         },
         {
-            key: 'serial', header: 'Seriya raqami', width: '160px',
+            key: 'serial', header: 'Seriya raqami', width: '160px', mobile: 'meta',
             sortValue: it => it.serialNumber ?? '',
             cell: it => <span className="text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--text-secondary)' }}>{it.serialNumber || '—'}</span>,
         },
         {
-            key: 'status', header: t.status, width: '150px',
+            key: 'status', header: t.status, width: '150px', mobile: 'status',
             sortValue: it => it.status ?? '',
             cell: it => {
                 const meta = STATUS_META[it.status] || STATUS_META.available;
