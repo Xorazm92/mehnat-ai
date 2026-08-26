@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { useTableState } from "@/hooks/useTableState";
 import { friendlyError } from "@/lib/actionError";
+import { DateField } from './ui/DateField';
 
 export interface AttendanceRecord {
     id: string;
@@ -244,13 +245,12 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
             {/* Controls */}
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative">
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2" size={18} style={{ color: 'var(--text-muted)' }} />
-                    <input
-                        type="date"
+                    <DateField
+                        className="w-auto"
                         value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="rounded-xl py-3 pl-12 pr-4 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
-                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
+                        onChange={setSelectedDate}
+                        inputClassName="rounded-xl py-3 px-4 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
+                        inputStyle={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                     />
                 </div>
                 <div className="flex-1 relative">
@@ -374,9 +374,9 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
-                                    <input type="date" value={form.date} onChange={(e) => setForm(f => ({ ...f, date: e.target.value }))} required
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }} />
+                                    <DateField value={form.date} onChange={(v) => setForm(f => ({ ...f, date: v }))} required
+                                        inputClassName="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none tracking-tight"
+                                        inputStyle={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }} />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.status}</label>

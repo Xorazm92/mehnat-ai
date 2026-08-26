@@ -23,6 +23,7 @@ import { getServiceTermInfo } from "@/server/companies";
 import IncomeRegister from "./IncomeRegister";
 import { Tabs, type TabItem } from "@/components/ui";
 import { friendlyError } from "@/lib/actionError";
+import { DateField } from "@/components/ui/DateField";
 
 interface AccountRow {
   id: string;
@@ -521,12 +522,12 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <label className="block">
               <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Sana</span>
-              <input
-                type="date"
-                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
-                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+              <DateField
+                className="mt-1"
+                inputClassName="w-full px-3 py-2 rounded-lg text-meta outline-none"
+                inputStyle={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
                 value={manualDate}
-                onChange={(e) => setManualDate(e.target.value)}
+                onChange={setManualDate}
               />
             </label>
             <label className="block">

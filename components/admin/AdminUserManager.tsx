@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import { Plus, Search, Pencil, KeyRound, UserCheck, UserX, X } from "lucide-react";
 import { ROLES, ROLE_LABELS, type UserRole } from "@/lib/permissions";
 import { Button } from "@/components/ui/Button";
+import { DateField } from "../ui/DateField";
 
 export interface AdminUser {
   id: string;
@@ -234,10 +235,10 @@ export function AdminUserManager({
                 </select>
               </Field>
               <Field label="Tug'ilgan sana">
-                <input type="date" className={inputCls} style={inputStyle} value={form.birthDate || ""} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
+                <DateField inputClassName={inputCls} inputStyle={inputStyle} value={form.birthDate || ""} onChange={(v) => setForm({ ...form, birthDate: v })} />
               </Field>
               <Field label="Ishga kirgan sana">
-                <input type="date" className={inputCls} style={inputStyle} value={form.hiredAt || ""} onChange={(e) => setForm({ ...form, hiredAt: e.target.value })} />
+                <DateField inputClassName={inputCls} inputStyle={inputStyle} value={form.hiredAt || ""} onChange={(v) => setForm({ ...form, hiredAt: v })} />
               </Field>
             </div>
             <Field label="Holati">

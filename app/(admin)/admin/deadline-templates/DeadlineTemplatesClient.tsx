@@ -14,6 +14,7 @@ import {
 } from "@/server/deadlineTemplates";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
+import { DateField } from "@/components/ui/DateField";
 
 interface Applicability {
   id: string;
@@ -176,10 +177,10 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
             </select>
           </label>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Kuchga kirish
-            <input className={input} style={inputStyle} type="date" value={f.effectiveFrom} onChange={(e) => setF({ ...f, effectiveFrom: e.target.value })} />
+            <DateField inputClassName={input} inputStyle={inputStyle} value={f.effectiveFrom} onChange={(v) => setF({ ...f, effectiveFrom: v })} />
           </label>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Tugash (ixt.)
-            <input className={input} style={inputStyle} type="date" value={f.effectiveTo} onChange={(e) => setF({ ...f, effectiveTo: e.target.value })} />
+            <DateField inputClassName={input} inputStyle={inputStyle} value={f.effectiveTo} onChange={(v) => setF({ ...f, effectiveTo: v })} />
           </label>
           <div className="col-span-2 md:col-span-3">
             <Button variant="success" size="md" disabled={pending} onClick={submitCreate}>

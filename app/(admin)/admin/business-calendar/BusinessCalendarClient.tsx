@@ -6,6 +6,7 @@ import { formatUzDate } from "@/lib/format";
 import { getCalendarDays, upsertCalendarDay, deleteCalendarDay } from "@/server/businessCalendar";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
+import { DateField } from "@/components/ui/DateField";
 
 interface Day {
   id: string;
@@ -93,7 +94,7 @@ export default function BusinessCalendarClient({ initial, initialYear }: { initi
 
       <div className="rounded-xl border p-4 flex flex-wrap items-end gap-3" style={{ borderColor: "var(--border, var(--rule))" }}>
         <label className="text-xs" style={{ color: "var(--text-muted)" }}>Sana
-          <input type="date" className="block px-2.5 py-1.5 rounded-lg border text-sm" style={inputStyle} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          <DateField inputClassName="block px-2.5 py-1.5 rounded-lg border text-sm" inputStyle={inputStyle} value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
         </label>
         <label className="text-xs" style={{ color: "var(--text-muted)" }}>Turi
           <select className="block px-2.5 py-1.5 rounded-lg border text-sm" style={inputStyle} value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as keyof typeof KINDS })}>

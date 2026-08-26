@@ -33,6 +33,7 @@ import { getKassaJournal } from "@/server/kassaJournal";
 import {
   createKassaEntry, deleteKassaEntry, approveExpense, rejectExpense,
 } from "@/server/kassa";
+import { DateField } from "@/components/ui/DateField";
 
 const PRESETS: RangePreset[] = ["month_to_date", "last_month", "today", "yesterday", "this_week", "year_to_date", "custom"];
 
@@ -271,9 +272,9 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
           ))}
           {preset === "custom" && (
             <>
-              <input type="date" className="px-2 py-1 rounded-lg text-micro outline-none" style={inputStyle} value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+              <DateField className="w-auto" inputClassName="px-2 py-1 rounded-lg text-micro outline-none" inputStyle={inputStyle} value={customFrom} onChange={setCustomFrom} />
               <span className="text-micro" style={{ color: "var(--text-muted)" }}>—</span>
-              <input type="date" className="px-2 py-1 rounded-lg text-micro outline-none" style={inputStyle} value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+              <DateField className="w-auto" inputClassName="px-2 py-1 rounded-lg text-micro outline-none" inputStyle={inputStyle} value={customTo} onChange={setCustomTo} />
             </>
           )}
           <div className="flex items-center gap-1.5 ml-auto">
@@ -386,12 +387,12 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
 
           {showAdvanced && (
             <div className="flex items-center gap-2 flex-wrap">
-              <input
-                type="date"
+              <DateField
+                className="w-auto"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="px-2 py-1.5 rounded-lg text-meta outline-none"
-                style={inputStyle}
+                onChange={setDate}
+                inputClassName="px-2 py-1.5 rounded-lg text-meta outline-none"
+                inputStyle={inputStyle}
               />
               <input
                 placeholder="Izoh (ixtiyoriy)"

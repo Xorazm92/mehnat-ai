@@ -60,7 +60,16 @@ export interface DateFieldProps {
   /** ISO chegaralari — tug'ma tanlagichga ham beriladi */
   min?: string;
   max?: string;
+  /** O'rab turuvchi elementga */
   className?: string;
+  /**
+   * Kiritish maydonining uslubi. Sukut bo'yicha `erp-input` — loyihaning
+   * yagona kiritish uslubi. Beshta fayl o'zining `const input = "px-2.5 …"`
+   * ini yozgan (deyarli aynan shu narsa), shuning uchun ular ham shu
+   * yerdan o'tishi mumkin — lekin majburiy emas.
+   */
+  inputClassName?: string;
+  inputStyle?: React.CSSProperties;
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
   "aria-required"?: boolean;
@@ -76,6 +85,8 @@ export function DateField({
   min,
   max,
   className = "",
+  inputClassName = "erp-input",
+  inputStyle,
   ...aria
 }: DateFieldProps) {
   const [text, setText] = useState(() => isoToUz(value));
@@ -95,7 +106,10 @@ export function DateField({
   };
 
   return (
-    <div className={`relative flex items-center ${className}`}>
+    /* Kenglik: sukut bo'yicha to'liq — chunki 20 ta qo'llanishning 18 tasi
+       forma maydoni. Qatorga tiqiladigan ixcham holat (davr oralig'i) uchun
+       chaqiruvchi `className="w-auto"` beradi. */
+    <div className={`relative flex items-center w-full min-w-0 ${className}`}>
       <input
         id={id}
         name={name}
@@ -114,8 +128,8 @@ export function DateField({
         aria-invalid={invalid || aria["aria-invalid"] || undefined}
         aria-describedby={aria["aria-describedby"]}
         aria-required={aria["aria-required"] ?? required}
-        className="erp-input w-full pr-10 tabular-nums"
-        style={invalid ? { borderColor: "var(--danger)" } : undefined}
+        className={`${inputClassName} w-full pr-10 tabular-nums`}
+        style={invalid ? { ...inputStyle, borderColor: "var(--danger)" } : inputStyle}
       />
 
       {/* Tug'ma tanlagich — ko'rinmas, lekin kalendar ikonkasi orqali ochiladi.

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
+import { DateField } from "./ui/DateField";
 
 interface Props { companies: Company[]; staff: Staff[]; lang: Language; userRole?: string; }
 
@@ -315,7 +316,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff, userRole }) => {
                 <div><label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: "var(--text-muted)" }}>Davr</label>
                   <input className="erp-input font-bold" value={form.period} onChange={(e) => setForm({ ...form, period: e.target.value })} placeholder="2026-H1" /></div>
                 <div><label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: "var(--text-muted)" }}>Muddat</label>
-                  <input type="date" className="erp-input font-bold" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></div>
+                  <DateField inputClassName="erp-input font-bold" value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} /></div>
               </div>
               <div><label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: "var(--text-muted)" }}>Mas&apos;ul</label>
                 <select className="erp-input font-bold" value={form.assignedTo} onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}>

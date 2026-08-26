@@ -20,6 +20,7 @@ import {
     taxRegimeCategory,
     type TaxRegimeCode,
 } from '@/lib/taxRegimes';
+import { DateField } from "./ui/DateField";
 
 interface Props {
     staff: Staff[];
@@ -603,11 +604,9 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Shartnoma Sanasi</label>
-                                <input
-                                    type="date"
-                                    className="erp-input"
+                                <DateField
                                     value={formData.contractDate || ''}
-                                    onChange={e => setFormData({ ...formData, contractDate: e.target.value })}
+                                    onChange={v => setFormData({ ...formData, contractDate: v })}
                                 />
                             </div>
                         </div>
@@ -659,12 +658,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                                 </label>
                                                 <label className="block">
                                                     <span className="text-micro" style={fieldLabelStyle}>Amal qiladi (oy)</span>
-                                                    <input
-                                                        type="date"
-                                                        className="erp-input"
-                                                        value={termFrom}
-                                                        onChange={e => setTermFrom(e.target.value)}
-                                                    />
+                                                    <DateField value={termFrom} onChange={setTermFrom} />
                                                 </label>
                                                 <label className="block">
                                                     <span className="text-micro" style={fieldLabelStyle}>Bank qismi</span>

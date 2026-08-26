@@ -25,6 +25,7 @@ import { WORK_TAB_IDS, type WorkTab } from "@/lib/workTabs";
 import { CalendarClock, Inbox, UserCheck, AlarmClock, CheckSquare, Users } from "lucide-react";
 import BulkAssignModal from "@/components/BulkAssignModal";
 import { friendlyError } from "@/lib/actionError";
+import { DateField } from "@/components/ui/DateField";
 
 export interface ObligationRow {
   kind: "obligation";
@@ -335,7 +336,7 @@ export default function WorkInboxClient({
             </select>
           </label>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Muddat
-            <input type="date" className={input} style={inputStyle} value={f.dueAt} onChange={(e) => setF({ ...f, dueAt: e.target.value })} />
+            <DateField inputClassName={input} inputStyle={inputStyle} value={f.dueAt} onChange={(v) => setF({ ...f, dueAt: v })} />
             {f.obligationId && !f.dueAt && (
               <span className="block text-micro" style={{ color: "var(--text-muted)" }}>bo&apos;sh qolsa — majburiyat muddati</span>
             )}

@@ -29,6 +29,7 @@ import ExpenseModule from "@/components/ExpenseModule";
 import type { Expense, BalanceBreakdown } from "@/types";
 import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
 import { usePrompt } from "@/components/ui/ConfirmDialog";
+import { DateField } from "@/components/ui/DateField";
 
 interface Channel {
   id: string;
@@ -663,7 +664,7 @@ function SpendForm({
         </label>
         <label className="block">
           <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Sana</span>
-          <input type="date" className={input + " mt-1"} style={style} value={date} onChange={(e) => setDate(e.target.value)} />
+          <DateField className="mt-1" inputClassName={input} inputStyle={style} value={date} onChange={setDate} />
         </label>
         <label className="block">
           <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Toifa</span>

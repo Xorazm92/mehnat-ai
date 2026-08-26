@@ -20,6 +20,7 @@ import { friendlyError } from "@/lib/actionError";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/exportTable";
 import { RANGE_LABELS, type RangePreset } from "@/lib/dateRange";
 import { getIncomeRegister } from "@/server/incomeRegister";
+import { DateField } from "@/components/ui/DateField";
 
 type Row = Awaited<ReturnType<typeof getIncomeRegister>>["rows"][number];
 type Totals = Awaited<ReturnType<typeof getIncomeRegister>>["totals"];
@@ -196,20 +197,20 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
 
       {preset === "custom" && (
         <div className="flex items-center gap-2 flex-wrap">
-          <input
-            type="date"
-            className="px-3 py-1.5 rounded-lg text-meta outline-none"
-            style={inputStyle}
+          <DateField
+            className="w-auto"
+            inputClassName="px-3 py-1.5 rounded-lg text-meta outline-none"
+            inputStyle={inputStyle}
             value={customFrom}
-            onChange={(e) => setCustomFrom(e.target.value)}
+            onChange={setCustomFrom}
           />
           <span className="text-meta" style={{ color: "var(--text-muted)" }}>—</span>
-          <input
-            type="date"
-            className="px-3 py-1.5 rounded-lg text-meta outline-none"
-            style={inputStyle}
+          <DateField
+            className="w-auto"
+            inputClassName="px-3 py-1.5 rounded-lg text-meta outline-none"
+            inputStyle={inputStyle}
             value={customTo}
-            onChange={(e) => setCustomTo(e.target.value)}
+            onChange={setCustomTo}
           />
         </div>
       )}

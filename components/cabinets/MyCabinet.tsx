@@ -41,6 +41,7 @@ import { kpiCategoryLabel, adjustmentTypeLabel } from "@/lib/kpiLabels";
 import RiskBadge from "@/components/RiskBadge";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
+import { DateField } from "../ui/DateField";
 
 // ─── Tiplar ────────────────────────────────────────────────
 interface Profile {
@@ -361,7 +362,7 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
             </select>
           </FormField>
           <FormField label="Tug'ilgan sana">
-            <input type="date" className="erp-input" value={form.birthDate} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
+            <DateField value={form.birthDate} onChange={(v) => setForm({ ...form, birthDate: v })} />
           </FormField>
           <FormField label="Ma'lumoti">
             <select className="erp-input" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })}>

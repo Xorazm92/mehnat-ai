@@ -16,6 +16,7 @@ import { formatNum } from "@/lib/format";
 import { assignShiftCover, getShiftCovers, applyCoverTransfers } from "@/server/shiftCover";
 import { friendlyError } from "@/lib/actionError";
 import { MonthPicker } from "./ui/MonthPicker";
+import { DateField } from "./ui/DateField";
 
 interface CoverRow {
   id: string;
@@ -132,12 +133,11 @@ const ShiftCoverPanel: React.FC<Props> = ({ staff, canEdit }) => {
 
       {canEdit && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-          <input
-            type="date"
+          <DateField
             value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-            className="rounded-lg px-3 py-2 text-xs font-bold outline-none"
-            style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }}
+            onChange={(v) => setForm({ ...form, date: v })}
+            inputClassName="rounded-lg px-3 py-2 text-xs font-bold outline-none"
+            inputStyle={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }}
           />
           <select
             value={form.absentUserId}

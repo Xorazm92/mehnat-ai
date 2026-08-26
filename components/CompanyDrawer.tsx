@@ -54,6 +54,7 @@ import {
   type AssignmentRole,
 } from '@/lib/permissions';
 import { friendlyError } from "@/lib/actionError";
+import { DateField } from './ui/DateField';
 
 interface DrawerProps {
   company: Company | null;
@@ -1314,12 +1315,12 @@ function ContractsPanel({ companyId, initial }: { companyId: string; initial: Co
             </label>
             <label className="block">
               <span className="text-micro" style={{ color: 'var(--text-muted)' }}>Sana</span>
-              <input
-                type="date"
-                className="w-full mt-1 px-2 py-1.5 rounded text-meta outline-none"
-                style={inputStyle}
+              <DateField
+                className="mt-1"
+                inputClassName="w-full px-2 py-1.5 rounded text-meta outline-none"
+                inputStyle={inputStyle}
                 value={signedAt}
-                onChange={e => setSignedAt(e.target.value)}
+                onChange={setSignedAt}
               />
             </label>
             <label className="block">

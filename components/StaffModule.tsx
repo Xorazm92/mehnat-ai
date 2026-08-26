@@ -19,6 +19,7 @@ import { useTableState } from '@/hooks/useTableState';
 import { exportRowsToCsv, exportRowsToExcel } from '@/lib/exportTable';
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
+import { DateField } from "./ui/DateField";
 
 interface Props {
   staff: Staff[];
@@ -447,7 +448,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
               </select>
             </Field>
             <Field label="Tug'ilgan sana" icon={CalendarDays}>
-              <input type="date" className="erp-input" value={form.birthDate ? String(form.birthDate).slice(0, 10) : ''} onChange={e => set('birthDate', e.target.value)} />
+              <DateField value={form.birthDate ? String(form.birthDate).slice(0, 10) : ''} onChange={v => set('birthDate', v)} />
             </Field>
             <Field label="Ma'lumoti" icon={GraduationCap}>
               <select className="erp-input" value={form.education || ''} onChange={e => set('education', e.target.value)}>
@@ -509,7 +510,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           {/* 3. ISH SHARTI */}
           <FormSection icon={CalendarDays} title="Ish sharti">
             <Field label="Ishga kirgan sana" icon={CalendarDays}>
-              <input type="date" className="erp-input" value={form.hiredAt ? String(form.hiredAt).slice(0, 10) : ''} onChange={e => set('hiredAt', e.target.value)} />
+              <DateField value={form.hiredAt ? String(form.hiredAt).slice(0, 10) : ''} onChange={v => set('hiredAt', v)} />
             </Field>
             <Field label="Holati">
               <select className="erp-input" value={form.status || 'active'} onChange={e => set('status', e.target.value)}>

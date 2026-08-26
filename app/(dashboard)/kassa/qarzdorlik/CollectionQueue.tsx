@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { formatNum, formatUzDate } from "@/lib/format";
 import { friendlyError } from "@/lib/actionError";
 import { setDebtContact } from "@/server/debt";
+import { DateField } from "@/components/ui/DateField";
 
 interface QueueRow {
   companyId: string;
@@ -164,12 +165,12 @@ export default function CollectionQueue({ rows, totals }: Props) {
                       <span className="text-micro" style={{ color: "var(--text-muted)" }}>
                         Keyingi suhbat (bo&apos;sh qoldirilsa — 7 kundan keyin)
                       </span>
-                      <input
-                        type="date"
-                        className="w-full mt-1 px-2 py-1.5 rounded text-meta outline-none"
-                        style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                      <DateField
+                        className="mt-1"
+                        inputClassName="w-full px-2 py-1.5 rounded text-meta outline-none"
+                        inputStyle={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
                         value={nextAt}
-                        onChange={(e) => setNextAt(e.target.value)}
+                        onChange={setNextAt}
                       />
                     </label>
                     <label className="block">

@@ -20,6 +20,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 import { periodKeyOf } from '@/lib/periods';
+import { DateField } from './ui/DateField';
 
 const EXP_STATUS: Record<string, { label: string; fg: string; bg: string; bd: string }> = {
     approved: { label: 'Tasdiqlangan', fg: 'var(--success)', bg: 'var(--success-bg)', bd: 'var(--success-border)' },
@@ -558,12 +559,11 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
-                                    <input
-                                        type="date"
+                                    <DateField
                                         value={editingExpense?.date || ''}
-                                        onChange={(e) => setEditingExpense(prev => ({ ...prev, date: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--danger)' }}
+                                        onChange={(v) => setEditingExpense(prev => ({ ...prev, date: v }))}
+                                        inputClassName="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
+                                        inputStyle={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--danger)' }}
                                         required
                                     />
                                 </div>

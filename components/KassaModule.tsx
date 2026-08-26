@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { useTableState } from "@/hooks/useTableState";
 import { MonthPicker } from './ui/MonthPicker';
+import { DateField } from './ui/DateField';
 
 interface KassaModuleProps {
     companies: Company[];
@@ -432,12 +433,11 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
-                                    <input
-                                        type="date"
+                                    <DateField
                                         value={editingPayment?.paymentDate || ''}
-                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, paymentDate: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--accent-blue)' }}
+                                        onChange={(v) => setEditingPayment(prev => ({ ...prev, paymentDate: v }))}
+                                        inputClassName="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 tracking-tight"
+                                        inputStyle={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--accent-blue)' }}
                                         required
                                     />
                                 </div>

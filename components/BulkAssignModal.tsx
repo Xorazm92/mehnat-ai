@@ -10,6 +10,7 @@ import { friendlyError } from "@/lib/actionError";
 import { previewBulkRecipients, sendBulkAssignment, type BulkAudience, type BulkRecipient } from "@/server/bulkAssign";
 import type { CompanyRelation } from "@/lib/permissions";
 import type { TaskPriority } from "@prisma/client";
+import { DateField } from "./ui/DateField";
 
 /**
  * OMMAVIY TOPSHIRIQ OYNASI.
@@ -223,7 +224,7 @@ export default function BulkAssignModal({ open, onClose, onSent }: {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className={label} style={labelStyle}>Muddat</span>
-                <input type="date" className={input} style={inputStyle} value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+                <DateField inputClassName={input} inputStyle={inputStyle} value={dueAt} onChange={setDueAt} />
               </div>
               <div>
                 <span className={label} style={labelStyle}>Muhimlik</span>
