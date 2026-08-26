@@ -87,7 +87,7 @@ export function AdminDepartments({ departments, chiefs, busy, onCreate, onUpdate
       </div>
 
       {form && (
-        <ModalLayer open={form} onClose={() => setForm(null)} label="Bo'lim">
+        <ModalLayer open={!!form} onClose={() => setForm(null)} label="Bo'lim">
           <div className="w-full max-w-md rounded-xl p-5" style={card} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{form.id ? "Bo'limni tahrirlash" : "Yangi bo'lim"}</h3>

@@ -232,7 +232,7 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff, userRole }) => {
 
       {/* Viewer modal */}
       {viewing && (
-        <ModalLayer open={viewing} onClose={() => setViewing(null)} label="Hisobot">
+        <ModalLayer open={!!viewing} onClose={() => setViewing(null)} label="Hisobot">
           <div className="w-full max-w-xl rounded-xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }} onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 flex items-start justify-between" style={{ borderBottom: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>
               <div>

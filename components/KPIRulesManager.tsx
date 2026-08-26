@@ -258,7 +258,7 @@ const KPIRulesManager: React.FC<Props> = () => {
 
             {/* Edit modal */}
             {editingRule && (
-                <ModalLayer open={editingRule} onClose={() => setEditingRule(null)} label="KPI qoidasi">
+                <ModalLayer open={!!editingRule} onClose={() => setEditingRule(null)} label="KPI qoidasi">
                     <div className="w-full max-w-2xl rounded-xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col"
                         style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: '0 25px 60px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}
                         onKeyDown={submitOnCtrlEnter(handleSave)}>

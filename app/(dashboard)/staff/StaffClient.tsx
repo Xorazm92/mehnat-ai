@@ -6,7 +6,7 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import StaffModule from "@/components/StaffModule";
 import { createUser, updateUser, deactivateUser, resetUserPassword } from "@/server/users";
 import { Staff, Company, OperationEntry } from "@/types";
-import type { UserRole } from "@/lib/permissions";
+import { isAdminRole, type UserRole } from "@/lib/permissions";
 
 interface Props {
   staff: Staff[];

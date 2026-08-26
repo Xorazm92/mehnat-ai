@@ -122,6 +122,14 @@ export const REFERENCE_TABLES: string[] = [
   // tozalashda o'chsa, keyingi vipiskani bog'laydigan joy qolmasdi.
   "bankAccount",
   "contract",
+  // Shartnoma summasi versiyalangan (`effectiveFrom` bilan) — bu narx
+  // kelishuvi, pul harakati emas. Tozalashda o'chsa, yangi davrda har bir
+  // firmaning summasi va bank/plastik/naqd taqsimoti qo'lda qayta
+  // kiritilishi kerak bo'lardi.
+  "companyServiceTerm",
+  // 1C va vipiskadagi xom nomlarni firmaga bog'laydigan lug'at. Qo'lda
+  // yig'iladi; o'chsa keyingi importda o'sha nomlar yana tanilmay qoladi.
+  "companyAlias",
   "disbursementChannel",
   // Kartalar kanalning (odamning) atributi — kim qaysi karta bilan ishlashi
   // qo'lda yig'ilgan ma'lumot. Tozalashda o'chsa, keyingi vipiskadagi karta

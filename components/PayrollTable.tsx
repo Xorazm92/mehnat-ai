@@ -677,7 +677,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
 
             {/* Adjustment Modal */}
             {editingAdj && (
-                <ModalLayer open={editingAdj} onClose={() => setEditingAdj(null)} label="Oylik tuzatmasi">
+                <ModalLayer open={!!editingAdj} onClose={() => setEditingAdj(null)} label="Oylik tuzatmasi">
                     <div className="w-full max-w-md rounded-xl overflow-hidden animate-scale-in"
                         style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}
                         onClick={e => e.stopPropagation()}

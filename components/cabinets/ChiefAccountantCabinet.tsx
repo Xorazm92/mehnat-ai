@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { formatUzMonthYear, formatNum } from "@/lib/format";
+import { ROLE_LABELS, type UserRole } from "@/lib/permissions";
 import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { KpiCard } from "@/components/ui/KpiCard";

@@ -293,7 +293,7 @@ export default function MonthClosingClient({
 
       {/* Reopen modal */}
       {reopenTarget && (
-        <ModalLayer open={reopenTarget} onClose={() => setReopenTarget(null)} label="Oyni qayta ochish">
+        <ModalLayer open={!!reopenTarget} onClose={() => setReopenTarget(null)} label="Oyni qayta ochish">
           <div className="rounded-xl p-5 w-[420px] max-w-[92vw]" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
             <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
               {reopenTarget.period} oyini qayta ochish
