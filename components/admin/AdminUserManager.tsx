@@ -5,6 +5,7 @@ import { Plus, Search, Pencil, KeyRound, UserCheck, UserX, X } from "lucide-reac
 import { ROLES, ROLE_LABELS, type UserRole } from "@/lib/permissions";
 import { Button } from "@/components/ui/Button";
 import { DateField } from "../ui/DateField";
+import { ModalLayer } from "../ui/ModalLayer";
 
 export interface AdminUser {
   id: string;
@@ -287,17 +288,24 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+/**
+ * Bu fayldagi barcha dialoglar (xodim yaratish, tahrirlash, parol tiklash)
+ * shu bitta o'rovchidan o'tadi, shuning uchun xulq bir joyda hal qilinadi.
+ * Ilgari bu qatlam qo'lda yozilgan edi: `role="dialog"` yo'q, Escape yo'q,
+ * fokus tuzog'i yo'q — Tab bosilsa ortidagi ko'rinmaydigan sahifaga
+ * o'tib ketardi.
+ */
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl p-5" style={card} onClick={(e) => e.stopPropagation()}>
+    <ModalLayer open onClose={onClose} label={title}>
+      <div className="w-full max-w-md rounded-xl p-5" style={card}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{title}</h3>
           <button onClick={onClose} aria-label="Yopish" className="icon-btn-sm" style={{ color: "var(--text-muted)" }}><X size={16} /></button>
         </div>
         {children}
       </div>
-    </div>
+    </ModalLayer>
   );
 }
 

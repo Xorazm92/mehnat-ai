@@ -24,6 +24,9 @@ export function AdminSidebar({ userRole }: { userRole: string }) {
     {/* Mobil backdrop */}
     {open && (
       <div
+        // Dialog EMAS: mobil yon menyu qorayishi.
+        // Izoh uchun `DashboardSidebar` ga qarang.
+        // eslint-disable-next-line no-restricted-syntax
         className="fixed inset-0 md:hidden"
         style={{ background: "rgba(6,10,15,0.55)", zIndex: "var(--z-backdrop)" }}
         onClick={() => setOpen(false)}

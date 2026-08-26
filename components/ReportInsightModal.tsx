@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Check, ChevronDown, Copy, Search, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { useDismissable } from "@/hooks/useDismissable";
@@ -17,6 +16,7 @@ import {
   type InsightSourceRow,
 } from "@/lib/reportInsight";
 import type { CellStatus } from "@/lib/reportStatus";
+import { ModalLayer } from "./ui/ModalLayer";
 
 /**
  * HISOBOT TAHLILI.
@@ -369,16 +369,9 @@ export default function ReportInsightModal({ open, onClose, period, columns, row
   const overall = insight.overall;
   const tone = toneOf(overall.percent);
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[300] flex items-start justify-center p-4 sm:p-8 overflow-y-auto"
-      style={{ background: "color-mix(in srgb, #000 55%, transparent)" }}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+  return (
+    <ModalLayer open onClose={onClose} label="Hisobot tahlili" align="start">
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Hisobot tahlili"
         className="w-full max-w-3xl rounded-2xl layer-overlay flex flex-col my-auto"
         style={{ background: "var(--surface)", border: "1px solid var(--rule-strong)" }}
       >
@@ -542,7 +535,6 @@ export default function ReportInsightModal({ open, onClose, period, columns, row
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+    </ModalLayer>
   );
 }

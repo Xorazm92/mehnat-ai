@@ -253,7 +253,13 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
   return createPortal(
     <>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity" onClick={onClose}></div>
+      {/* Qatlam qo'lda, lekin XULQ primitivda: panel `useModalA11y` bilan
+          o'ralgan (fokus tuzog'i + Escape + fokusni qaytarish). */}
+      <div
+        // eslint-disable-next-line no-restricted-syntax
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity"
+        onClick={onClose}
+      />
       <div
         ref={panelRef}
         role="dialog"

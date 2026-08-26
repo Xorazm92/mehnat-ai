@@ -462,6 +462,9 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
       {/* IZOH OYNASI — matn katakka chizilmaydi, shuning uchun bosilganda
           shu yerda to'liq ko'rinadi. Qator balandligi o'zgarmaydi. */}
       {noteOpen && createPortal(
+        // Dialog EMAS: izoh popover'i. Escape, tashqi bosish va fokusni
+        // qaytarish yuqoridagi `useEffect` da allaqachon bor ("M9" izohi).
+        // eslint-disable-next-line no-restricted-syntax
         <div className="fixed inset-0 z-[120]" onClick={() => setNoteOpen(false)}>
           <div className="absolute inset-0" style={{ background: 'color-mix(in srgb, var(--surface-2) 45%, transparent)' }} />
           <div

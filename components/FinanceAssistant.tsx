@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Sparkles, X, Send, Bot, User as UserIcon, Loader2 } from "lucide-react";
 import { askFinanceAssistant } from "@/server/assistant";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 interface Msg { role: "user" | "assistant"; content: string }
 
@@ -20,6 +21,10 @@ const SUGGESTIONS = [
 export default function FinanceAssistant() {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
+  // Yon panel — fokus tuzog'i, Escape va yopilganda fokusni tugmaga qaytarish.
+  // Ilgari panel ekranni to'sardi, lekin Tab bosilsa ortidagi ko'rinmaydigan
+  // sahifaga o'tib ketardi.
+  const panelRef = useModalA11y<HTMLDivElement>({ open, onClose: () => setOpen(false) });
   const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: WELCOME }]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -69,9 +74,19 @@ export default function FinanceAssistant() {
 
       {open && mounted && createPortal(
         <>
-          <div className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          {/* Qatlam qo'lda, xulq primitivda: panel `useModalA11y` bilan. */}
           <div
-            className="fixed right-0 top-0 h-full w-full max-w-[420px] z-[200] flex flex-col shadow-2xl animate-in slide-in-from-right duration-300"
+            // eslint-disable-next-line no-restricted-syntax
+            className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Moliya yordamchisi"
+            tabIndex={-1}
+            className="fixed right-0 top-0 h-full w-full max-w-[420px] z-[200] flex flex-col shadow-2xl outline-none animate-in slide-in-from-right duration-300"
             style={{ background: "var(--card-bg)", borderLeft: "1px solid var(--card-border)" }}
           >
             {/* Header */}

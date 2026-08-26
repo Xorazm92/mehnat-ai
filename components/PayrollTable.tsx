@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
 import { MonthPicker } from "./ui/MonthPicker";
+import { useDismissable } from "@/hooks/useDismissable";
 
 interface Props {
     staff: Staff[];
@@ -57,6 +58,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
     const [busyAdj, setBusyAdj] = useState<string | null>(null);
     const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
     const [colPanelOpen, setColPanelOpen] = useState(false);
+    const colPanelRef = useDismissable<HTMLDivElement>(colPanelOpen, () => setColPanelOpen(false));
     useEffect(() => {
         try { const s = localStorage.getItem('payroll-hidden-cols'); if (s) setHiddenCols(new Set(JSON.parse(s) as string[])); } catch { /* ignore */ }
     }, []);
@@ -561,15 +563,23 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
             {/* Table (desktop) */}
             {/* Column visibility toggle (desktop salary table) */}
             <div className="hidden md:flex justify-end mb-2">
-                <div className="relative">
+                {/* Ustunlar ochilmasi — dialog EMAS, menyu. Ilgari uni faqat
+                    shaffof `fixed inset-0` backdrop yopardi: Escape ishlamasdi
+                    va backdrop z-index'ga bog'liq bo'lgani uchun boshqa
+                    ochilma bilan bir vaqtda ochiq qolishi mumkin edi.
+                    `useDismissable` hujjat darajasida tinglaydi — Escape ham,
+                    tashqi bosish ham ishlaydi, va bir vaqtda faqat bitta
+                    ochilma ochiq turadi. */}
+                <div className="relative" ref={colPanelRef}>
                     <button onClick={() => setColPanelOpen(o => !o)}
+                        type="button"
+                        aria-haspopup="true"
+                        aria-expanded={colPanelOpen}
                         className="font-bold px-4 py-2 rounded-xl text-meta flex items-center gap-2 uppercase tracking-widest"
                         style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}>
                         <SlidersHorizontal size={14} /> Ustunlar{hiddenCols.size > 0 ? ` (${hiddenCols.size})` : ''}
                     </button>
                     {colPanelOpen && (
-                        <>
-                            <div className="fixed inset-0 z-[100]" onClick={() => setColPanelOpen(false)} />
                             <div className="absolute right-0 mt-2 z-[100] w-56 rounded-xl p-3 shadow-2xl" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-meta font-bold uppercase tracking-widest" style={{ color: "var(--text-secondary)" }}>Ustunlar</span>
@@ -582,7 +592,6 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                                     </label>
                                 ))}
                             </div>
-                        </>
                     )}
                 </div>
             </div>

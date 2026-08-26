@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { X, Info } from "lucide-react";
+import { ModalLayer } from "./ui/ModalLayer";
 
 // ─────────────────────────────────────────────────────────────
 // Bosiladigan "risk darajasi" yorlig'i + izohlagich oyna.
@@ -111,16 +111,11 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
         <Info size={compact ? 10 : 12} style={{ opacity: 0.7 }} />
       </button>
 
-      {open && createPortal(
-        <div
-          className="fixed inset-0 z-[110] flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.55)" }}
-          onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
-        >
+      {open && (
+        <ModalLayer open onClose={() => setOpen(false)} label={`Risk darajasi: ${meta.label}`}>
           <div
             className="w-full max-w-md max-h-[90vh] overflow-auto rounded-xl shadow-2xl"
             style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}
-            onMouseDown={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--card-border)" }}>
@@ -182,8 +177,7 @@ const RiskBadge: React.FC<Props> = ({ riskLevel, companyStatus, companyName, com
               </p>
             </div>
           </div>
-        </div>,
-        document.body
+        </ModalLayer>
       )}
     </>
   );

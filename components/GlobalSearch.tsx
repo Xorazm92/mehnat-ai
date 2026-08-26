@@ -242,6 +242,8 @@ export default function GlobalSearch({
       {open &&
         createPortal(
           <div
+            // Panel `useModalA11y` bilan o'ralgan (role/aria-modal/panelRef quyida).
+            // eslint-disable-next-line no-restricted-syntax
             className="fixed inset-0 flex items-start justify-center p-4 pt-[12vh] animate-fade-in"
             style={{ zIndex: "var(--z-popover, 200)", background: "rgba(6,10,15,0.55)", backdropFilter: "blur(4px)" }}
             onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}

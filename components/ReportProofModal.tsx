@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { X, Upload, Clipboard, Check, Ban, Loader2, ImageIcon, Clock, ZoomIn, ExternalLink } from "lucide-react";
 import { compressImageFile, compressDataUrl } from "@/lib/imageCompress";
@@ -9,6 +8,7 @@ import { saveReportProof, getReportProof, reviewReportProof } from "@/server/pro
 import { formatUzDateNumeric, formatUzTime } from "@/lib/format";
 import { ImageZoomModal } from "@/components/ImageZoomModal";
 import { Button } from "@/components/ui/Button";
+import { ModalLayer } from "./ui/ModalLayer";
 
 interface ProofFull {
   id: string;
@@ -230,13 +230,9 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
     return <span className="text-micro font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1" style={{ background: "color-mix(in srgb, var(--info) 15%, transparent)", color: "var(--info)" }}><Clock size={11} /> Kutilmoqda</span>;
   };
 
-  return createPortal(
+  return (
     <>
-    <div
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.55)" }}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <ModalLayer open onClose={onClose} label="Hisobot dalili">
       <div
         className="w-full max-w-lg max-h-[90vh] overflow-auto rounded-xl shadow-2xl"
         style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}
@@ -497,7 +493,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
           )}
         </div>
       </div>
-    </div>
+    </ModalLayer>
 
     {/* ── Interaktiv to'liq ekran kattalashtirish (Zoom, Pan, Rotate, New Tab) ── */}
     {lightbox && proof && (
@@ -518,8 +514,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
         onClose={() => setUploadZoom(false)}
       />
     )}
-    </>,
-    document.body
+    </>
   );
 };
 

@@ -46,6 +46,11 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
     {/* Mobil backdrop */}
     {open && (
       <div
+        // Bu dialog EMAS: mobil yon menyuning qorayishi. Panelning o'zi
+        // <aside> va u DESKTOPDA ham doimiy ko'rinadi, shuning uchun unga
+        // fokus tuzog'ini qo'yish desktop navigatsiyasini buzardi. Escape va
+        // kenglik o'zgarishi `MobileNavContext` da hal qilingan.
+        // eslint-disable-next-line no-restricted-syntax
         className="fixed inset-0 md:hidden"
         style={{ background: "rgba(6,10,15,0.55)", zIndex: "var(--z-backdrop)" }}
         onClick={() => setOpen(false)}

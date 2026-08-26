@@ -55,15 +55,24 @@ const eslintConfig = defineConfig([
     // qilmasdi. Bu qoida aynan shuni to'xtatadi — endi yangi dialog
     // yozish `<Modal>` ni ishlatishdan QIYINROQ.
     //
-    // Mavjud 28 ta oyna hali ko'chirilmagan, shuning uchun qoida hozircha
-    // "warn": u yangi holatlarni ko'rsatadi, lekin CI ni to'xtatmaydi.
-    // Migratsiya tugagach — "error" ga o'tkazing.
+    // MIGRATSIYA TUGADI. Boshlanishida 28 ta qo'lda yozilgan oyna bor edi;
+    // hammasi yo `ModalLayer`/`Modal` ga ko'chirildi, yo `useModalA11y`
+    // oldi, yo dialog EMASLIGI izohlangan holda istisno qilindi (mobil
+    // menyu qorayishi, popover). Ya'ni qoida endi bitta ham eski holatni
+    // ko'rsatmaydi va har bir yangi ogohlantirish HAQIQIY yangi holat.
+    //
+    // Shuning uchun "warn" dan "error" ga o'tkazildi: aks holda qoida
+    // shovqinga aylanadi va yangi dialog yana jimgina qo'shiladi.
+    //
+    // Istisno kerak bo'lsa — `eslint-disable-next-line` ni ATRIBUT
+    // pozitsiyasiga qo'ying. JSX BOLALARI orasida `//` izoh emas, MATN:
+    // u ekranda ko'rinib qoladi.
     // ─────────────────────────────────────────────────────────────
     files: ["app/**/*.{tsx,jsx}", "components/**/*.{tsx,jsx}"],
     ignores: ["components/ui/**"],
     rules: {
       "no-restricted-syntax": [
-        "warn",
+        "error",
         {
           selector: "JSXAttribute[name.name='className'] > Literal[value=/fixed\\s+inset-0/]",
           message:

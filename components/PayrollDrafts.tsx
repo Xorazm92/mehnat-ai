@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
 import { ROLE_LABELS, ASSIGNMENT_ROLE_LABELS, type UserRole, type AssignmentRole } from "@/lib/permissions";
 import { MonthPicker } from "./ui/MonthPicker";
+import { ModalLayer } from "./ui/ModalLayer";
 
 // LAVOZIM YORLIG'I — bitta manba. Ilgari `s.role` / `b.role` to'g'ridan-to'g'ri
 // chizilardi va ekranda `accountant`, `bank_manager` kabi baza enum'lari
@@ -467,13 +468,10 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
 
             {/* ── Detail Modal ── */}
             {detailModal && modalData && (
-                <>
-                    <div className="fixed inset-0 z-[200]" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }} onClick={() => setDetailModal(null)}></div>
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <ModalLayer open onClose={() => setDetailModal(null)} label={`${detailModal.employeeName} — oylik tafsiloti`}>
                         <div
                             className="w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-in"
                             style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}
-                            onClick={e => e.stopPropagation()}
                         >
                             {/* Modal Header */}
                             <div className="px-5 py-4 flex justify-between items-start"
@@ -630,8 +628,7 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                 </Button>
                             </div>
                         </div>
-                    </div>
-                </>
+                </ModalLayer>
             )}
         </div>
     );

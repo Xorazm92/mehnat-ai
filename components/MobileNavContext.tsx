@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 interface Ctx {
   /** Mobil sidebar ochiq/yopiq (slide-in). */
@@ -54,6 +54,37 @@ export function MobileNavProvider({
 }) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsedState] = useState(initialCollapsed);
+
+  /**
+   * MOBIL PANEL VA KLAVIATURA.
+   *
+   * Ochilgan mobil panel butun ekranni to'sadi, lekin uni yopishning
+   * yagona yo'li qorayish maydoniga BOSISH edi — Escape hech qanday
+   * ta'sir qilmasdi. Ikkala panelda ham (`DashboardSidebar`,
+   * `AdminSidebar`) bir xil edi, shuning uchun tuzatish shu yerda:
+   * bitta joyda, ikkalasi uchun.
+   *
+   * Ikkinchi holat: panel ochiq turib oyna DESKTOP kengligiga o'tsa,
+   * panel `md:translate-x-0` bilan baribir ko'rinadi, lekin ortidagi
+   * qorayish ham qolib ketardi — foydalanuvchi sahifaga bosa olmasdi
+   * va sababi ko'rinmasdi. Kenglik o'zgarganda holat tozalanadi.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onWide = () => {
+      if (mq.matches) setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    mq.addEventListener("change", onWide);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      mq.removeEventListener("change", onWide);
+    };
+  }, [open]);
 
   const setCollapsed = useCallback((v: boolean) => {
     setCollapsedState(v);

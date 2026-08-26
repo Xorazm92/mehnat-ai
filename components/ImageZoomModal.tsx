@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useModalA11y } from "@/hooks/useModalA11y";
 import { createPortal } from "react-dom";
 import {
   X,
@@ -40,7 +41,17 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  /**
+   * Bu oyna butun ekranni to'sadi, lekin dialog EMAS edi: `role` yo'q,
+   * fokus tuzog'i yo'q — Tab bosilsa ortidagi ko'rinmaydigan sahifaga
+   * o'tib ketardi va ekran o'quvchi foydalanuvchi rasm ochilganini ham
+   * bilmasdi.
+   *
+   * `useModalA11y` ning ref'i konteynerning O'ZIGA qo'yiladi: u shu bilan
+   * birga to'liq ekran (`requestFullscreen`) va o'lcham hisobi uchun ham
+   * kerak, ya'ni ikkita ref shart emas.
+   */
+  const containerRef = useModalA11y<HTMLDivElement>({ open: true, onClose });
   const imgRef = useRef<HTMLImageElement>(null);
 
   // Reset viewport state
@@ -70,9 +81,8 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      } else if (e.key === "+" || e.key === "=") {
+      // Escape `useModalA11y` da — bu yerda takrorlanmaydi.
+      if (e.key === "+" || e.key === "=") {
         zoomIn();
       } else if (e.key === "-") {
         zoomOut();
@@ -91,7 +101,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, zoomIn, zoomOut, resetZoom]);
+  }, [zoomIn, zoomOut, resetZoom]);
 
   // Mouse wheel zoom inside viewport
   const handleWheel = useCallback(
@@ -185,7 +195,13 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
   return createPortal(
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[300] flex flex-col justify-between bg-black/90 backdrop-blur-md select-none animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Rasm: ${title}`}
+      tabIndex={-1}
+      // Konteynerning o'zi dialog: `useModalA11y` ref'i, role va aria yuqorida.
+      // eslint-disable-next-line no-restricted-syntax
+      className="fixed inset-0 z-[300] flex flex-col justify-between bg-black/90 backdrop-blur-md select-none outline-none animate-in fade-in duration-200"
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
