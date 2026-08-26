@@ -4,7 +4,6 @@ import {
   Users,
   Building2,
   AlertTriangle,
-  CheckCircle2,
   Clock,
   ChevronRight,
   ShieldCheck,
@@ -14,6 +13,7 @@ import { formatUzMonthYear } from "@/lib/format";
 import Link from "next/link";
 import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
 import { KpiCard } from "@/components/ui/KpiCard";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 interface SupervisedCompany {
   id: string;
@@ -77,6 +77,18 @@ export function SupervisorCabinet({
 
   return (
     <div className="space-y-6">
+      {/* SARLAVHA — ilgari bu ekran umuman sarlavhasiz ochilardi.
+          `firstName` va `monthLabel` yuqorida HISOBLANARDI, lekin hech
+          qayerda chizilmasdi: ikkita o'lik o'zgaruvchi. Xuddi shu xato
+          `ChiefAccountantCabinet` da topilib tuzatilgan (u yerdagi izohga
+          qarang), lekin qo'shni fayl e'tibordan chetda qolgan — nazoratchi
+          ekranni ochganda qaysi davr ko'rsatilayotganini bilmasdi. */}
+      <PageHeader
+        icon={<ShieldCheck size={20} />}
+        title={`Xush kelibsiz, ${firstName}`}
+        description={`Nazoratchi kabineti — ${monthLabel}`}
+      />
+
       {/* Stats */}
       {/* Ko'rsatkichlar — har biri filtri qo'yilgan ro'yxatga olib boradi.
           Avval plitkalar bosilmasdi: "12 ta yuqori risk" ni ko'rgan nazoratchi
@@ -236,8 +248,15 @@ export function SupervisorCabinet({
             <div className="max-h-52 overflow-y-auto">
               {pendingKpi.length === 0 ? (
                 <div className="p-6 text-center" style={{ color: "var(--text-muted)" }}>
-                  <CheckCircle2 size={28} className="mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">Barcha KPI tasdiqlangan</p>
+                  {/* "Barcha KPI tasdiqlangan" DEB BO'LMAYDI: bu ro'yxat faqat
+                      TASDIQ KUTAYOTGANLARNI biladi. Umuman KPI kiritilmagan oyda
+                      ham u bo'sh bo'ladi va ekran yashil belgi bilan "hammasi
+                      bajarilgan" deb ko'rsatardi — nazoratchi uchun bu ish
+                      boshlanmaganini bajarilgan deb o'qish demakdir.
+                      (Xuddi shu oila: boshqaruv panelidagi "KPI bajarilishi 0%".)
+                      Yangi matn ikkala holatda ham ROST. */}
+                  <Clock size={28} className="mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Tasdiqlash kutayotgan KPI yo&apos;q</p>
                 </div>
               ) : (
                 pendingKpi.map((item) => (

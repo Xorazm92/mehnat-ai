@@ -13,7 +13,7 @@ import {
 import { parseRelations } from "@/lib/userRelations";
 // Manzil → ekran xaritasi YAGONA manbada: `Breadcrumbs` ham shu javobga
 // tayanadi, aks holda UI ocholmaydigan havolani taklif qilardi.
-import { pathToView } from "@/lib/routeViews";
+import { pathToViews } from "@/lib/routeViews";
 import { getPrisma } from "@/lib/prisma";
 
 // Himoyalangan yo'llar
@@ -75,10 +75,12 @@ async function isAllowed(
   role: string,
   relations: readonly CompanyRelation[]
 ): Promise<boolean> {
-  const view = pathToView(path);
-  if (!view) return true; // moslik topilmasa to'sib qo'ymaymiz
+  // Ba'zi sahifalar ikki ko'rinishdan BIRI bilan ochiladi (`lib/routeViews.ts`
+  // dagi `pathToViews` izohiga qarang) — shuning uchun bitta emas, ro'yxat.
+  const views = pathToViews(path);
+  if (views.length === 0) return true; // moslik topilmasa to'sib qo'ymaymiz
   const overrides = await getRoleViewOverridesCached();
-  return canSeeViewWith(role as UserRole, view, overrides, relations);
+  return views.some((v) => canSeeViewWith(role as UserRole, v, overrides, relations));
 }
 
 export async function proxy(req: NextRequest) {

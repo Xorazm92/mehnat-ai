@@ -4,7 +4,6 @@ import {
   Users,
   Building2,
   TrendingUp,
-  CheckCircle2,
   Clock,
   Award,
   DollarSign,
@@ -205,8 +204,13 @@ export function ChiefAccountantCabinet({
             <div className="max-h-52 overflow-y-auto">
               {pendingApprovals.length === 0 ? (
                 <div className="p-6 text-center text-text-secondary">
-                  <CheckCircle2 size={28} className="mx-auto mb-2 text-[color-mix(in_srgb,var(--success)_30%,transparent)]" />
-                  <p className="text-sm">Barcha KPI tasdiqlangan</p>
+                  {/* "Barcha KPI tasdiqlangan" DEB BO'LMAYDI: bu ro'yxat faqat
+                      TASDIQ KUTAYOTGANLARNI biladi. Umuman KPI kiritilmagan oyda
+                      ham u bo'sh bo'ladi va ekran yashil belgi bilan "hammasi
+                      bajarilgan" deb ko'rsatardi — ish boshlanmaganini bajarilgan
+                      deb o'qish demakdir. Yangi matn ikkala holatda ham ROST. */}
+                  <Clock size={28} className="mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Tasdiqlash kutayotgan KPI yo&apos;q</p>
                 </div>
               ) : (
                 pendingApprovals.map((item) => (

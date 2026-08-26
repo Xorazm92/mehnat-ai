@@ -42,3 +42,31 @@ export function pathToView(path: string): AppView | null {
   if (path.startsWith("/telegram-app/dashboard")) return "dashboard";
   return null;
 }
+
+/**
+ * MANZIL → RUXSAT BERUVCHI KO'RINISHLAR.
+ *
+ * Ba'zi sahifalar IKKI ko'rinishdan BIRI bilan ochiladi va sahifaning
+ * O'ZI shunday yozilgan. Aniq holat — `/kassa/chiqim`:
+ *
+ *   `kassa_expense` → to'liq sahifa (tranzit kanallar, navbat, kartalar)
+ *   `expenses`      → faqat "Xarajat" tabi (Nazoratchi, Bosh buxgalter)
+ *
+ * Sahifa buni allaqachon to'g'ri bajaradi: `canManageChannels` bo'lmasa
+ * kanal so'rovlari umuman yurmaydi va tab almashtirgichning o'zi
+ * yashiriladi. Menyu ham ataylab shu manzilga `view: "expenses"` bilan
+ * bog'langan.
+ *
+ * Yagona yetishmagan bo'g'in — proxy edi: u ko'rinishni MANZILDAN qayta
+ * hisoblab, faqat `kassa_expense` ni talab qilardi. Natijada nazoratchi
+ * menyudagi "Xarajatlar" bandini bosganda har safar 403 olardi —
+ * jonli tekshiruvda aynan shunday bo'ldi.
+ *
+ * Bu yerda ruxsat KENGAYTIRILMAYDI: sahifa allaqachon `expenses` ni
+ * qabul qiladi, proxy endi u bilan kelishadi.
+ */
+export function pathToViews(path: string): AppView[] {
+  if (path.startsWith("/kassa/chiqim")) return ["kassa_expense", "expenses"];
+  const view = pathToView(path);
+  return view ? [view] : [];
+}

@@ -367,9 +367,36 @@ export async function getDebtStatement(input?: {
   openingAsOf?: Date;
   closingAsOf?: Date;
 }): Promise<DebtStatement> {
-  await requireSenior();
+  const actor = await requireSenior();
+
+  // FIRMA QAMROVI — bu funksiyada YO'Q edi.
+  //
+  // Qo'shnilari (`getDebtComparison`, `getDebtors`, `getCollectionQueue`)
+  // portfelga cheklangan va yuqorida buning sababi izohlangan: bosh
+  // buxgalter va nazoratchiga "view_all_companies" ataylab berilmagan.
+  // `getDebtStatement` esa faqat `requireSenior()` bilan cheklanardi va
+  // butun bazani o'qirdi. Jonli tekshiruvda BITTA firmaga mas'ul
+  // nazoratchi hisob-kitob varaqasida 224 mijozning qarzini — jami
+  // 1,29 mlrd so'mni — ko'rdi.
+  //
+  // `DebtSnapshot.companyId` mavjud (moslashmagan qatorlar uchun `null`),
+  // shuning uchun qamrovni qo'shnilar bilan bir xil usulda qo'yamiz.
+  // `null` companyId — moslashmagan qator; u qamrovli foydalanuvchiga
+  // ko'rinmaydi, chunki uning kimga tegishli ekani noma'lum.
+  const isAdmin = isAdminRole(actor.role);
+  const scopedIds = isAdmin
+    ? null
+    : (
+        await prisma.company.findMany({
+          where: companyScopeWhere({ id: actor.userId, role: actor.role }),
+          select: { id: true },
+        })
+      ).map((c) => c.id);
+
+  const scopeWhere = scopedIds ? { companyId: { in: scopedIds } } : {};
 
   const dateRows = await prisma.debtSnapshot.findMany({
+    where: scopeWhere,
     distinct: ["asOf"],
     select: { asOf: true },
     orderBy: { asOf: "desc" },
@@ -399,7 +426,7 @@ export async function getDebtStatement(input?: {
       const keysByDate = new Map<number, Set<string>>();
       for (const d of dateRows) {
         const rows = await prisma.debtSnapshot.findMany({
-          where: { asOf: d.asOf },
+          where: { asOf: d.asOf, ...scopeWhere },
           select: { rawCustomer: true, rawContract: true, ownFirmName: true },
         });
         keysByDate.set(d.asOf.getTime(), new Set(rows.map(keyOf)));
@@ -440,7 +467,7 @@ export async function getDebtStatement(input?: {
 
   const [closing, opening] = await Promise.all([
     prisma.debtSnapshot.findMany({
-      where: { asOf: closingAsOf },
+      where: { asOf: closingAsOf, ...scopeWhere },
       select: {
         companyId: true, rawCustomer: true, rawContract: true,
         ownFirmName: true, debt: true, advance: true,
@@ -449,7 +476,7 @@ export async function getDebtStatement(input?: {
     }),
     openingAsOf
       ? prisma.debtSnapshot.findMany({
-          where: { asOf: openingAsOf },
+          where: { asOf: openingAsOf, ...scopeWhere },
           select: { companyId: true, rawCustomer: true, rawContract: true, ownFirmName: true, debt: true, advance: true },
         })
       : Promise.resolve([]),
