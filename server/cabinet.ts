@@ -7,13 +7,73 @@ import { isSeniorRole } from "@/lib/permissions";
 import { getAvailableBalance, cashFromPaymentRows } from "@/lib/balance";
 import { adjustmentMagnitude } from "@/lib/adjustments";
 import { serialize } from "@/lib/serialize";
-import { companyScopeWhere, companyRelations, type Actor } from "@/lib/access";
+import { companyScopeWhere, companyRelations, type Actor, type CompanyRelation } from "@/lib/access";
 import { mapMonthlyReportToOperationEntry, FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
-import type { ObligationStatus } from "@prisma/client";
+import type { ObligationStatus, Prisma } from "@prisma/client";
 
 // ─────────────────────────────────────────────
 // Umumiy yordamchilar — dashboardlar bo'ylab bir xil semantika
 // ─────────────────────────────────────────────
+
+/**
+ * Bitta MAS'ULIYAT bo'yicha firma filtri — `Company` sloti YOKI "Jamoa" tabidagi
+ * `ContractAssignment`. `lib/access.ts` dagi `companyScopeWhere` bilan aynan bir
+ * xil manba: kabinetlar ilgari faqat slotga qarardi, ya'ni biriktiruv Jamoa
+ * tabidan qilingan firma kabinetdan tushib qolardi.
+ */
+const relationWhere = (userId: string, relation: CompanyRelation): Prisma.CompanyWhereInput =>
+  companyScopeWhere({ id: userId, role: relation, context: relation });
+
+/**
+ * Berilgan firmalar to'plamida ayni MAS'ULIYATNI bajaradigan xodimlar id'lari.
+ *
+ * LAVOZIM bo'yicha EMAS, BIRIKTIRUV bo'yicha. Sabab bazadagi haqiqiy holat:
+ * Ruslanning lavozimi `bank_manager`, lekin 10 ta firmada BUXGALTER. Nazoratchi
+ * kabinetidagi "buxgalterlarim" ro'yxati `role: "accountant"` bilan qurilgani
+ * uchun u ro'yxatga umuman tushmasdi — nazoratchi ham, bosh buxgalter ham
+ * uning buxgalterlik ishini o'z kabinetidan ko'ra va tekshira olmasdi.
+ * Xuddi shu sabab teskari tomonga ham ishlaydi (buxgalter lavozimidagi odam
+ * ayrim firmalarda bank-klient).
+ */
+async function teamMemberIds(
+  companyWhere: Prisma.CompanyWhereInput,
+  relations: CompanyRelation[]
+): Promise<string[]> {
+  const wantSlots = new Set(relations);
+  const wantRoles = relations.flatMap((r) => ASSIGNMENT_ALIASES[r]);
+
+  const rows = await prisma.company.findMany({
+    where: companyWhere,
+    select: {
+      accountantId: true,
+      supervisorId: true,
+      chiefAccountantId: true,
+      bankClientId: true,
+      contractAssignments: {
+        where: { isActive: true, role: { in: wantRoles } },
+        select: { userId: true },
+      },
+    },
+  });
+
+  const ids = new Set<string>();
+  for (const c of rows) {
+    if (wantSlots.has("accountant") && c.accountantId) ids.add(c.accountantId);
+    if (wantSlots.has("supervisor") && c.supervisorId) ids.add(c.supervisorId);
+    if (wantSlots.has("chief_accountant") && c.chiefAccountantId) ids.add(c.chiefAccountantId);
+    if (wantSlots.has("bank_manager") && c.bankClientId) ids.add(c.bankClientId);
+    for (const a of c.contractAssignments) ids.add(a.userId);
+  }
+  return [...ids];
+}
+
+/** `ContractAssignment.role` tarixan bir nechta imlo bilan yozilgan. */
+const ASSIGNMENT_ALIASES: Record<CompanyRelation, string[]> = {
+  accountant: ["accountant"],
+  supervisor: ["supervisor", "controller"],
+  chief_accountant: ["chief_accountant", "chief"],
+  bank_manager: ["bank_manager", "bank_client"],
+};
 
 // Majburiyat "yopilmagan" statuslari (accepted/cancelled tashqarida).
 const OBLIGATION_NOT_DONE: ObligationStatus[] = [
@@ -164,17 +224,10 @@ export async function getMyCabinet() {
       },
     }),
 
-    // Xodim istalgan rol bilan biriktirilgan firmalar
+    // Xodim istalgan mas'uliyat bilan biriktirilgan firmalar — slot ham,
+    // "Jamoa" tabidagi biriktiruv ham (lib/access.ts bilan yagona manba).
     prisma.company.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          { accountantId: userId },
-          { chiefAccountantId: userId },
-          { supervisorId: userId },
-          { bankClientId: userId },
-        ],
-      },
+      where: { isActive: true, ...companyScopeWhere({ id: userId, role: "employee" }) },
       select: {
         id: true,
         name: true,
@@ -198,6 +251,8 @@ export async function getMyCabinet() {
         supervisorSum: true,
         bankClientPerc: true,
         bankClientSum: true,
+        departmentRef: { select: { chiefAccountantId: true } },
+        contractAssignments: { where: { isActive: true }, select: { userId: true, role: true } },
       },
       orderBy: { name: "asc" },
     }),
@@ -283,9 +338,9 @@ export async function getAccountantCabinetData() {
   const currentMonth = new Date().toISOString().slice(0, 7); // joriy oy "YYYY-MM"
 
   const [companies, recentPerformance, adjustments] = await Promise.all([
-    // O'ziga biriktirilgan firmalar
+    // O'ziga biriktirilgan firmalar — slot yoki "Jamoa" tabidagi biriktiruv
     prisma.company.findMany({
-      where: { accountantId: userId, isActive: true },
+      where: { isActive: true, ...relationWhere(userId, "accountant") },
       select: {
         id: true,
         name: true,
@@ -484,10 +539,14 @@ export async function getSupervisorCabinetData() {
   const userId = session.user.id;
   const currentMonth = new Date().toISOString().slice(0, 7);
 
+  const supervisedWhere = { isActive: true, ...relationWhere(userId, "supervisor") };
+  // "Buxgalterlarim" — LAVOZIM emas, BIRIKTIRUV bo'yicha (izohi `teamMemberIds` da).
+  const accountantIds = await teamMemberIds(supervisedWhere, ["accountant"]);
+
   const [supervisedCompanies, accountants, pendingKpi, riskStats] = await Promise.all([
     // Nazorat ostidagi firmalar
     prisma.company.findMany({
-      where: { supervisorId: userId, isActive: true },
+      where: supervisedWhere,
       select: {
         id: true,
         name: true,
@@ -501,13 +560,7 @@ export async function getSupervisorCabinetData() {
 
     // Buxgalterlar ro'yxati (supervisor nazorat qiladigan)
     prisma.user.findMany({
-      where: {
-        role: "accountant",
-        isActive: true,
-        assignedCompanies: {
-          some: { supervisorId: userId },
-        },
-      },
+      where: { id: { in: accountantIds }, isActive: true },
       select: {
         id: true,
         fullName: true,
@@ -527,9 +580,7 @@ export async function getSupervisorCabinetData() {
       where: {
         status: "submitted",
         month: { startsWith: currentMonth },
-        employee: {
-          assignedCompanies: { some: { supervisorId: userId } },
-        },
+        employeeId: { in: accountantIds },
       },
       include: {
         employee: { select: { fullName: true, avatarColor: true } },
@@ -542,7 +593,7 @@ export async function getSupervisorCabinetData() {
     // Risk statistikasi
     prisma.company.groupBy({
       by: ["riskLevel"],
-      where: { supervisorId: userId, isActive: true },
+      where: supervisedWhere,
       _count: true,
     }),
   ]);
@@ -560,12 +611,9 @@ export async function getSupervisorCabinetData() {
 // ─────────────────────────────────────────────
 // BOSH BUXGALTER KABINETI uchun ma'lumotlar
 // ─────────────────────────────────────────────
-// Bosh buxgalter firmaga TO'G'RIDAN-TO'G'RI (chiefAccountantId) yoki
-// DEPARTAMENT orqali biriktirilgan bo'lishi mumkin — lib/access.ts scope'i
-// ikkalasini ham hisobga oladi, kabinet esa faqat birinchisini ko'rardi.
-const chiefCompanyWhere = (userId: string) => ({
-  OR: [{ chiefAccountantId: userId }, { departmentRef: { chiefAccountantId: userId } }],
-});
+// Bosh buxgalter firmaga to'g'ridan-to'g'ri, DEPARTAMENT orqali yoki "Jamoa"
+// tabidagi biriktiruv orqali bog'lanadi — uchalasi ham `relationWhere` da.
+// (Ilgari bu yerda faqat birinchi ikkitasini biladigan lokal filtr turardi.)
 
 export async function getChiefAccountantCabinetData() {
   const session = await auth();
@@ -574,10 +622,14 @@ export async function getChiefAccountantCabinetData() {
   const userId = session.user.id;
   const currentMonth = new Date().toISOString().slice(0, 7);
 
+  const chiefWhere = { isActive: true, ...relationWhere(userId, "chief_accountant") };
+  // Jamoa — LAVOZIM emas, BIRIKTIRUV bo'yicha (izohi `teamMemberIds` da).
+  const memberIds = await teamMemberIds(chiefWhere, ["accountant", "bank_manager"]);
+
   const [chiefCompanies, teamMembers, pendingApprovals, payrollSummary] = await Promise.all([
     // Bosh buxgalter sifatida biriktirilgan firmalar
     prisma.company.findMany({
-      where: { isActive: true, ...chiefCompanyWhere(userId) },
+      where: chiefWhere,
       select: {
         id: true,
         name: true,
@@ -593,11 +645,7 @@ export async function getChiefAccountantCabinetData() {
 
     // Jamoa a'zolari (buxgalterlar + bank-klientlar)
     prisma.user.findMany({
-      where: {
-        role: { in: ["accountant", "bank_manager"] },
-        isActive: true,
-        assignedCompanies: { some: chiefCompanyWhere(userId) },
-      },
+      where: { id: { in: memberIds }, isActive: true },
       select: {
         id: true,
         fullName: true,
@@ -619,9 +667,7 @@ export async function getChiefAccountantCabinetData() {
       where: {
         status: "submitted",
         month: { startsWith: currentMonth },
-        employee: {
-          assignedCompanies: { some: chiefCompanyWhere(userId) },
-        },
+        employeeId: { in: memberIds },
       },
       include: {
         employee: { select: { fullName: true, avatarColor: true, role: true } },
@@ -637,9 +683,7 @@ export async function getChiefAccountantCabinetData() {
         month: { startsWith: currentMonth },
         isApproved: false,
         deletedAt: null,
-        employee: {
-          assignedCompanies: { some: chiefCompanyWhere(userId) },
-        },
+        employeeId: { in: memberIds },
       },
       include: {
         employee: { select: { fullName: true, role: true } },

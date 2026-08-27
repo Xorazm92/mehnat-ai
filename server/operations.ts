@@ -91,6 +91,8 @@ export async function upsertMonthlyReport(
       chiefAccountantId: true,
       bankClientId: true,
       departmentRef: { select: { chiefAccountantId: true } },
+      // Mas'uliyat slotdan YOKI "Jamoa" biriktiruvidan kelishi mumkin.
+      contractAssignments: { where: { isActive: true }, select: { userId: true, role: true } },
     },
   });
   if (!company) throw new Error("Company not found");

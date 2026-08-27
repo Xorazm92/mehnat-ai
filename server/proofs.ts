@@ -292,6 +292,8 @@ export async function reviewReportProof(input: {
       chiefAccountantId: true,
       bankClientId: true,
       departmentRef: { select: { chiefAccountantId: true } },
+      // Mas'uliyat slotdan YOKI "Jamoa" biriktiruvidan kelishi mumkin.
+      contractAssignments: { where: { isActive: true }, select: { userId: true, role: true } },
     },
   });
   if (!reviewCompany) throw new Error("Firma topilmadi");

@@ -334,9 +334,10 @@ export const VIEWS_BY_RELATION: Record<CompanyRelation, AppView[]> = {
   accountant: ["reports", "deadlines", "tasks"],
   supervisor: ["reports", "deadlines", "tasks", "kpi"],
   chief_accountant: ["reports", "deadlines", "tasks", "kpi"],
-  // Biriktiruv bo'yicha: firmada bank-klient slotida turgan odam (roli boshqa
-  // bo'lsa ham) o'sha firmaning kartochkasini ochib login/parolini kirita olsin.
-  bank_manager: ["cabinet_bank", "kassa_income", "organizations"],
+  // "organizations" bu yerda ATAYLAB YO'Q: u boshqaruv ekrani va biriktiruv
+  // orqali berilmaydi (yuqoridagi izoh + lib/viewsByRelation.spec.ts). Bank
+  // lavozimidagi odam uni LAVOZIMI orqali oladi.
+  bank_manager: ["cabinet_bank", "kassa_income"],
 };
 
 export const effectiveViewsForRole = (

@@ -49,6 +49,13 @@ const COMPANY_INCLUDE = {
   // chiefAccountantId — klientda `companyRelations` uchun: bosh buxgalter
   // firmaga departament orqali ham biriktirilgan bo'lishi mumkin.
   departmentRef: { select: { id: true, name: true, chiefAccountantId: true } },
+  // "Jamoa" tabidagi biriktiruvlar — klientdagi `companyRelations` slot bilan
+  // biriktiruv ajralib ketgan firmada ham to'g'ri javob bersin (matritsa
+  // menyusi). Server tomondagi majburlash baribir alohida tekshiradi.
+  contractAssignments: {
+    where: { isActive: true },
+    select: { userId: true, role: true },
+  },
   // Shartnomalar firma kartochkasida ko'rinishi kerak. Eski
   // `Company.contractNumber` bitta ustun — u 213 firmadan atigi 2 tasida
   // to'ldirilgan va bitta mijozda bir nechta shartnoma bo'lishini

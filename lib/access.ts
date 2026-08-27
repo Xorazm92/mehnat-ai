@@ -12,7 +12,12 @@
 // boshqasida buxgalter, uchinchisida bank-klient bo'lishi mumkin (bazadagi
 // haqiqiy holat), va uchalasi ham uning portfeliga kiradi.
 import type { Prisma } from "@prisma/client";
-import { isAdminRole, isSeniorRole, type CompanyRelation } from "@/lib/permissions";
+import {
+  isAdminRole,
+  isSeniorRole,
+  normalizeAssignmentRole,
+  type CompanyRelation,
+} from "@/lib/permissions";
 
 // `CompanyRelation` endi `lib/permissions.ts` da yashaydi: sahifa darvozasi
 // (`effectiveViewsForRole`) ham shu turga tayanadi, permissions esa access'dan
@@ -43,6 +48,16 @@ export interface CompanySlots {
   bankClientId?: string | null;
   /** Bosh buxgalter firmaga to'g'ridan-to'g'ri emas, departament orqali biriktirilishi mumkin. */
   departmentRef?: { chiefAccountantId?: string | null } | null;
+  /**
+   * "Jamoa" tabidagi FAOL biriktiruvlar.
+   *
+   * Firma ro'yxati (`companyScopeWhere`) buni allaqachon qamrardi, mas'uliyat
+   * hisobi esa faqat `Company.*Id` slotlariga qarardi. Ikkisi ajralib ketganda
+   * (biriktirish 3 joydan biri unutilib qilinsa — CONTEXT.md) firma ro'yxatda
+   * KO'RINARDI, lekin nazoratchi u yerda TASDIQLAY olmasdi: "ko'raman, lekin
+   * tekshira olmayman" shikoyati aynan shu. Berilmasa — eski xulq.
+   */
+  contractAssignments?: { userId: string; role: string; isActive?: boolean }[] | null;
 }
 
 /**
@@ -139,6 +154,16 @@ export function companyRelations(company: CompanySlots, userId: string): Set<Com
     rels.add("chief_accountant");
   }
   if (company.bankClientId === userId) rels.add("bank_manager");
+
+  // Slot bilan biriktiruv ajralib ketgan holat (yuqoridagi izoh).
+  for (const a of company.contractAssignments ?? []) {
+    if (a.userId !== userId) continue;
+    if (a.isActive === false) continue;
+    // `AssignmentRole` nazoratchini "controller" deb ataydi, `CompanyRelation` —
+    // "supervisor"; qolgan uchtasi bir xil nomlanadi.
+    const rel = normalizeAssignmentRole(a.role);
+    if (rel) rels.add(rel === "controller" ? "supervisor" : rel);
+  }
   return rels;
 }
 
