@@ -545,7 +545,26 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
           {canCreate && (
           <button
-            onClick={() => { setIsAdding(true); setForm({ id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString(), isActive: true }); }}
+            /**
+             * YANGI FIRMA — TOZA VARAQ, `id` SIZ.
+             *
+             * Ilgari bu yerda `id: Math.random()...` bilan SOXTA id qo'yilardi va
+             * u butun oqimni buzardi: sehrgar `isEdit = Boolean(initialData.id)`
+             * deb o'ylab, YANGI firma uchun majburiy tekshiruvlarni (buxgalter,
+             * INN/JSHSHIR formati, plastik/naqd taqsimoti) O'TKAZIB YUBORARDI.
+             * Server esa id ro'yxatda yo'qligi uchun yaratish yo'liga tushib,
+             * "Buxgalter tanlanishi shart" deb 500 qaytarardi — foydalanuvchi
+             * uchun sababsiz "server xatosi".
+             *
+             * `editingId` va `editingAssignments` ham tozalanadi: aks holda oldin
+             * tahrirlangan firmaning jamoasi yangi firmaga meros qolardi.
+             */
+            onClick={() => {
+              setEditingId(null);
+              setEditingAssignments(undefined);
+              setForm({ createdAt: new Date().toISOString(), isActive: true });
+              setIsAdding(true);
+            }}
             className="ai-button-glow flex items-center gap-2"
           >
             <Plus size={16} />
