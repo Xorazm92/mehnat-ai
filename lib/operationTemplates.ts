@@ -320,6 +320,8 @@ export const FIELD_TO_DB_COLUMN: Record<OperationFieldKey, string> = {
     suv_yillik: 'suvYillik',
     mol_mulk_malumotnoma: 'molMulkMalumotnoma',
     suv_malumotnoma: 'suvMalumotnoma',
+    ijtimoiy_soliq: 'ijtimoiySoliq',
+    ijtimoiy_soliq_tolov: 'ijtimoiySoliqTolov',
 };
 
 /** Prisma MonthlyReport (camelCase) yozuvini OperationEntry (snake_case) shakliga o'giradi. */

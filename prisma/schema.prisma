@@ -439,6 +439,9 @@ model MonthlyReport {
   /// ma'lumotnoma — yil oxiridagi yakuniy hisob-kitobdan ayri.
   molMulkMalumotnoma    String?
   suvMalumotnoma        String?
+  /// Ijtimoiy soliq — INPS'dan ayri hisobot va to'lov (byudjet kodi 36).
+  ijtimoiySoliq         String?
+  ijtimoiySoliqTolov    String?
   /// 1-NNT — yillik statistika hisoboti (aholi bandligi).
   stat1Nnt          String?
 

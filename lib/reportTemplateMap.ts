@@ -24,6 +24,7 @@ export const COL_KEY_TO_TEMPLATE_CODES: Record<string, string[]> = {
 
   // ── Soliq deklaratsiyalari ───────────────────────────────
   inps: ["INPS_IJTIMOIY"],
+  ijtimoiy_soliq: ["IJTIMOIY_SOLIQ"],
   daromad_soliq: ["DAROMAD_AGENT"],
   // Har ustun O'Z shabloniga. Ilgari bitta ustun ikkalasini ko'targani uchun
   // maxraj "QQS to'lovchilar + aylanma rejimidagilar" bo'lib, foiz ikki xil
@@ -48,6 +49,7 @@ export const COL_KEY_TO_TEMPLATE_CODES: Record<string, string[]> = {
   aylanma_tolov: ["AYLANMA_TOLOV"],
   daromad_soliq_tolov: ["DAROMAD_TOLOV"],
   inps_tolov: ["INPS_TOLOV"],
+  ijtimoiy_soliq_tolov: ["IJTIMOIY_TOLOV"],
   foyda_soliq_tolov: ["FOYDA_TOLOV"],
   dividend_soligi: ["DIVIDEND_DECL"],
   dividend_soligi_tolov: ["DIVIDEND_TOLOV"],

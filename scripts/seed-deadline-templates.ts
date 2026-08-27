@@ -213,6 +213,26 @@ const TEMPLATES: TplSeed[] = [
     effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
     applicability: [{ criteriaType: "service_key", criteriaValue: "dividend_soligi" }],
   },
+  // Ijtimoiy soliq — INPS bilan bir muddatda (15-kun), lekin ayri hisobot va
+  // ayri byudjet kodi (36).
+  {
+    code: "IJTIMOIY_SOLIQ",
+    name: "Ijtimoiy soliq hisoboti",
+    obligationType: "tax_declaration",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 15,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+  },
+  {
+    code: "IJTIMOIY_TOLOV",
+    name: "Ijtimoiy soliq to'lovi",
+    obligationType: "tax_payment",
+    periodicity: "monthly",
+    anchorType: "fixed_day_of_month",
+    dueDay: 15,
+    effectiveFrom: PAYMENTS_EFFECTIVE_FROM,
+  },
   // Keyingi chorak uchun bo'nak ma'lumotnomasi — to'lovi yo'q (pul oylik
   // "Bo'nak" katagi orqali chiqadi), shuning uchun faqat deklaratsiya.
   {
