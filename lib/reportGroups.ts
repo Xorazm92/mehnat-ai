@@ -80,8 +80,6 @@ export const COLUMN_CATEGORY: Record<OperationFieldKey, ReportCategory> = {
   suv_yillik: "SOLIQ",
   mol_mulk_malumotnoma: "SOLIQ",
   suv_malumotnoma: "SOLIQ",
-  ijtimoiy_soliq: "SOLIQ",
-  ijtimoiy_soliq_tolov: "SOLIQ",
 
   // ═══ STATISTIKA — davlat statistika hisobotlari ═══
   statistika: "STATISTIKA",

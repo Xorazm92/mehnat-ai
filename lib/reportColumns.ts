@@ -55,10 +55,6 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   // keltirildi — matritsa va "Ishlar" bir xil taqvimni aytishi shart.
   { key: "aylanma", label: "Aylanma Hisobot", short: "AYh", group: "Oylik soliq", isSplit: true, payKey: "aylanma_tolov", payShort: "AYt" },
   { key: "inps", label: "INPS Hisobot", short: "INh", group: "Oylik soliq", isSplit: true, payKey: "inps_tolov", payShort: "INt" },
-  // Ijtimoiy soliq — INPS'dan AYRI: alohida hisobot va alohida byudjet kodi
-  // (36). Ilgari faqat INPS (101) ustuni bor edi va ijtimoiy soliqning to'lov
-  // kodi matritsada hech qayerda ko'rinmasdi.
-  { key: "ijtimoiy_soliq", label: "Ijtimoiy Soliq Hisobot", short: "IJh", group: "Oylik soliq", isSplit: true, payKey: "ijtimoiy_soliq_tolov", payShort: "IJt" },
   { key: "aksiz_soligi", label: "Aksiz Hisobot", short: "AXh", group: "Oylik soliq", isSplit: true, payKey: "aksiz_soligi_tolov", payShort: "AXt" },
   { key: "nedro_soligi", label: "Nedro Hisobot", short: "NDh", group: "Oylik soliq", isSplit: true, payKey: "nedro_soligi_tolov", payShort: "NDt" },
   { key: "norezident_foyda", label: "Nor. Foyda Hisobot", short: "NFh", group: "Oylik soliq", isSplit: true, payKey: "norezident_foyda_tolov", payShort: "NFt" },
@@ -146,10 +142,11 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
 // Kod O'ZGARSA shu yer yangilanadi — UI hech qayerda kodni qo'lda yozmaydi.
 export const TAX_PAYMENT_CODES: Record<string, string> = {
   qqs: "1",
-  daromad_soliq: "46",
+  // Daromad solig'i va ijtimoiy soliq BITTA to'lovda o'tadi — ikkala kod ham
+  // topshiriqnomada yoziladi, shuning uchun yorliqda ikkalasi turadi.
+  daromad_soliq: "46,36",
   aylanma: "100",
   inps: "101",
-  ijtimoiy_soliq: "36",
   aksiz_soligi: "43",
   nedro_soligi: "50",
   norezident_foyda: "137",

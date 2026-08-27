@@ -82,10 +82,9 @@ Manba bitta — `TAX_PAYMENT_CODES` (`lib/reportColumns.ts`).
 | Ustun kaliti | Nom | Guruh | Kod |
 | :--- | :--- | :--- | :---: |
 | `qqs` | QQS Hisobot / to'lov | Oylik soliq | 1 |
-| `daromad_soliq` | DS Hisobot / to'lov | Oylik soliq | 46 |
+| `daromad_soliq` | DS Hisobot / to'lov | Oylik soliq | 46,36 |
 | `aylanma` | Aylanma Hisobot / to'lov | Oylik soliq | 100 |
 | `inps` | INPS Hisobot / to'lov | Oylik soliq | 101 |
-| `ijtimoiy_soliq` | Ijtimoiy soliq Hisobot / to'lov | Oylik soliq | 36 |
 | `aksiz_soligi` | Aksiz Hisobot / to'lov | Oylik soliq | 43 |
 | `nedro_soligi` | Nedro Hisobot / to'lov | Oylik soliq | 50 |
 | `norezident_foyda` | Nor. Foyda Hisobot / to'lov | Oylik soliq | 137 |
