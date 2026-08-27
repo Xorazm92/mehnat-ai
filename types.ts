@@ -299,7 +299,8 @@ export type OperationFieldKey = 'didox' | 'xatlar' | 'avtokameral' | 'my_mehnat'
   'foyda_avans_hisobot' |
   'mol_mulk_yillik' |
   'yer_yillik' |
-  'suv_yillik';
+  'suv_yillik' |
+  'mol_mulk_malumotnoma' | 'suv_malumotnoma';
 
 export type TaskStatus = 'new' | 'submitted' | 'pending_review' |
   'approved' | 'rejected' | 'overdue' | 'not_required' | 'blocked';

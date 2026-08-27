@@ -987,7 +987,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         </div>
                         {/* To'lov yarmining yorlig'i — byudjet kodi ("#46"),
                             to'liq nomi tooltip'da. */}
-                        <span className={`text-micro font-bold uppercase tracking-tight transition-colors`} style={{ color: isActive ? 'var(--text)' : 'var(--text-muted)' }} title={service.key.endsWith('_tolov') ? serviceFullLabel(service.key) : undefined}>
+                        <span className={`text-micro font-bold uppercase tracking-tight transition-colors`} style={{ color: isActive ? 'var(--text)' : 'var(--text-muted)' }} title={(service.key.endsWith('_tolov') || service.label.startsWith('#')) ? serviceFullLabel(service.key) : undefined}>
                           {service.label}
                         </span>
                       </label>

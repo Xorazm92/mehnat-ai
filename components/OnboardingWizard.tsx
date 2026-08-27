@@ -950,7 +950,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                                             {/* To'lov kaliti yorlig'i "#46" — nomi yonidagi hisobot
                                                                 katagida turibdi, kod esa topshiriqnoma uchun kerak.
                                                                 To'liq nomi tooltip'da qoladi. */}
-                                                            <span className="text-micro font-bold uppercase tracking-tight truncate" style={{ color: 'var(--text-secondary)' }} title={key.endsWith('_tolov') ? serviceFullLabel(key) : undefined}>{SERVICE_LABELS[key] || key}</span>
+                                                            <span className="text-micro font-bold uppercase tracking-tight truncate" style={{ color: 'var(--text-secondary)' }} title={(key.endsWith('_tolov') || SERVICE_LABELS[key]?.startsWith('#')) ? serviceFullLabel(key) : undefined}>{SERVICE_LABELS[key] || key}</span>
                                                         </label>
                                                     );
                                                 })}

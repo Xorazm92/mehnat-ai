@@ -435,6 +435,10 @@ model MonthlyReport {
   molMulkYillik         String?
   yerYillik             String?
   suvYillik             String?
+  /// Mol-mulk / suv soliqlari bo'yicha yil BOSHIDA topshiriladigan
+  /// ma'lumotnoma — yil oxiridagi yakuniy hisob-kitobdan ayri.
+  molMulkMalumotnoma    String?
+  suvMalumotnoma        String?
   /// 1-NNT — yillik statistika hisoboti (aholi bandligi).
   stat1Nnt          String?
 

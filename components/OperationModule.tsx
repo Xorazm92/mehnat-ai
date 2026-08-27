@@ -36,7 +36,7 @@ import {
 import { pendingCellKey, readRowCells, reconcilePendingCells } from '@/lib/matrixRows';
 import { normalizeTaxRegime } from '@/lib/taxRegimes';
 import { columnAppliesToRegime, regimeBlockReason } from '@/lib/reportApplicability';
-import { serviceEnabled, paymentCodeFor } from '@/lib/reportColumns';
+import { serviceEnabled, paymentCodeFor, serviceFullLabel } from '@/lib/reportColumns';
 import {
   addToTally,
   classifyCell,
@@ -2272,7 +2272,7 @@ const OperationModule: React.FC<Props> = ({
                         borderBottom: `2px solid ${st.border}`,
                         borderRight: borderRightStyle,
                       }}
-                      title={`${col.label} (${col.group})` + (payCode ? ` \u2014 byudjet kodi ${payCode}` : '') + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
+                      title={((col as any).isPaymentOnly ? serviceFullLabel(col.key) : `${col.label} (${col.group})` + (payCode ? ` \u2014 byudjet kodi ${payCode}` : '')) + (userRole === 'super_admin' ? ' (o\'ng tugma = tozalash)' : '')}
                       onContextMenu={(e) => {
                         if (userRole === 'super_admin' || userRole === 'admin') {
                           e.preventDefault();
@@ -2280,8 +2280,10 @@ const OperationModule: React.FC<Props> = ({
                         }
                       }}
                     >
-                      <span className="text-micro font-extrabold uppercase tracking-wider transition-colors" style={{ color: st.text }}>
-                        {col.short}
+                      {/* Faqat-to'lov ustuni (mol-mulk / yer / suv avansi) —
+                          yorlig'i kod, rangi to'lov rangi: u hisobot emas. */}
+                      <span className="text-micro font-extrabold uppercase tracking-wider transition-colors" style={{ color: (col as any).isPaymentOnly ? 'var(--warning)' : st.text }}>
+                        {(col as any).isPaymentOnly ? `#${payCode}` : col.short}
                       </span>
                     </th>
                   );

@@ -63,7 +63,13 @@ Quyida rasmdagi yozuvlar asosida tayyorlangan oylik, kvartal va yillik soliq his
 Reestrda kodi bor qator = pul harakati bor degani, shuning uchun har biri
 matritsada IKKI katak: hisobot (yashil) va to'lov (amber, `#kod`).
 To'lov yarmi qo'shilgan ustunlar: Aksiz, Nedro, Nor. foyda, Nor. NDS,
-Mol-mulk, Yer, Suv, Jism. ijara, Bo'nak, Dividend. Ilgari ular yakka katak
+Jism. ijara, Bo'nak, Dividend.
+
+**Mol-mulk / yer / suv — istisno: FAQAT to'lov.** Oyiga ular bo'yicha hech
+qanday hisobot topshirilmaydi, faqat avans to'lanadi. Shuning uchun matritsada
+bitta katak va uning yorlig'i so'z emas, kod: `#44`, `#53`, `#52` (amber
+rangda, to'lov degani). Hisoboti yillik: yil boshida **ma'lumotnoma**, yil
+oxirida **yakuniy hisob-kitob** — ikkalasi "Yillik hisobot" guruhida. Ilgari ular yakka katak
 edi — hisobot topshirilgani ko'rinardi, pul to'langani esa hech qayerda
 kuzatilmasdi.
 
@@ -83,9 +89,9 @@ Manba bitta — `TAX_PAYMENT_CODES` (`lib/reportColumns.ts`).
 | `nedro_soligi` | Nedro Hisobot / to'lov | Oylik soliq | 50 |
 | `norezident_foyda` | Nor. Foyda Hisobot / to'lov | Oylik soliq | 137 |
 | `norezident_nds` | Nor. NDS Hisobot / to'lov | Oylik soliq | 29 |
-| `mol_mulk_soligi` | Mol-mulk (oylik avans) / to'lov | Oylik soliq | 44 |
-| `yer_soligi` | Yer solig'i (oylik avans) / to'lov | Oylik soliq | 53 |
-| `suv_soligi` | Suv solig'i (oylik avans) / to'lov | Oylik soliq | 52 |
+| `mol_mulk_soligi` | `#44` — FAQAT to'lov | Oylik soliq | 44 |
+| `yer_soligi` | `#53` — FAQAT to'lov | Oylik soliq | 53 |
+| `suv_soligi` | `#52` — FAQAT to'lov | Oylik soliq | 52 |
 | `jismoniy_ijara` | Jism. ijara / to'lov | Oylik soliq | 186 |
 | `dividend_soligi` | Dividend Hisobot / to'lov | Oylik soliq | 138 |
 | `bonak` | Bo'nak (foyda avansi) / to'lov | Oylik soliq | 32 |
@@ -93,7 +99,9 @@ Manba bitta — `TAX_PAYMENT_CODES` (`lib/reportColumns.ts`).
 | `foyda_avans_hisobot` | Foyda avans hisoboti | Kvartal soliq | — |
 | `buxgalteriya_balansi` | Bux. balansi (1-shakl) | Yillik hisobot | — |
 | `moliyaviy_natija` | Mol. natija (2-shakl) | Yillik hisobot | — |
-| `mol_mulk_yillik` | Mol-mulk (yillik) | Yillik hisobot | — |
+| `mol_mulk_malumotnoma` | Mol-mulk ma'lumotnomasi (yil boshi) | Yillik hisobot | — |
+| `suv_malumotnoma` | Suv solig'i ma'lumotnomasi (yil boshi) | Yillik hisobot | — |
+| `mol_mulk_yillik` | Mol-mulk yakuniy hisob-kitob (yil oxiri) | Yillik hisobot | — |
 | `yer_yillik` | Yer solig'i (yillik) | Yillik hisobot | — |
 | `suv_yillik` | Suv solig'i (yillik) | Yillik hisobot | — |
 

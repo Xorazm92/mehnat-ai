@@ -12,6 +12,14 @@ export interface ReportColumn {
   isSplit?: boolean;
   payKey?: string;
   payShort?: string;
+  /**
+   * FAQAT TO'LOV ustuni — hisobot yarmi yo'q.
+   *
+   * Mol-mulk / yer / suv soliqlarida oyiga hech qanday hisobot topshirilmaydi,
+   * faqat avans TO'LANADI (hisoboti — yillik: ma'lumotnoma va yakuniy
+   * hisob-kitob). Shuning uchun ularning yorlig'i so'z emas, byudjet kodi.
+   */
+  isPaymentOnly?: boolean;
 }
 
 // isSplit ustunlarda _tolov (payKey) juftligi bor.
@@ -53,9 +61,9 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   { key: "norezident_nds", label: "Nor. NDS Hisobot", short: "NNh", group: "Oylik soliq", isSplit: true, payKey: "norezident_nds_tolov", payShort: "NNt" },
   // Mol-mulk / yer / suv — OYLIK avans: ma'lumotnoma + avans to'lovi.
   // Yillik yakuniy hisob-kitobi alohida ustun (pastda, "Yillik hisobot").
-  { key: "mol_mulk_soligi", label: "Mol-mulk Sol.", short: "MSh", group: "Oylik soliq", isSplit: true, payKey: "mol_mulk_soligi_tolov", payShort: "MSt" },
-  { key: "yer_soligi", label: "Yer Solig'i", short: "YSh", group: "Oylik soliq", isSplit: true, payKey: "yer_soligi_tolov", payShort: "YSt" },
-  { key: "suv_soligi", label: "Suv Solig'i", short: "SSh", group: "Oylik soliq", isSplit: true, payKey: "suv_soligi_tolov", payShort: "SSt" },
+  { key: "mol_mulk_soligi", label: "#44", short: "44", group: "Oylik soliq", isPaymentOnly: true },
+  { key: "yer_soligi", label: "#53", short: "53", group: "Oylik soliq", isPaymentOnly: true },
+  { key: "suv_soligi", label: "#52", short: "52", group: "Oylik soliq", isPaymentOnly: true },
   { key: "jismoniy_ijara", label: "Jism. Ijara", short: "JIh", group: "Oylik soliq", isSplit: true, payKey: "jismoniy_ijara_tolov", payShort: "JIt" },
   { key: "dividend_soligi", label: "Dividend Hisobot", short: "DVh", group: "Oylik soliq", isSplit: true, payKey: "dividend_soligi_tolov", payShort: "DVt" },
   // Bo'nak — foyda solig'i bo'yicha OYLIK avans (reestr 1-bo'lim, 14-qator).
@@ -74,6 +82,10 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   // Yillik YAKUNIY hisob-kitoblar — oylik avans katagidan ayri: avans to'lab
   // borilgan-u, yil oxiridagi hisob-kitob topshirilmagan holat eng ko'p
   // uchraydigani va bitta katakda u ko'rinmasdi.
+  // Mol-mulk va suv soliqlarida yil BOSHIDA ma'lumotnoma, yil OXIRIDA yakuniy
+  // hisob-kitob (raschyot) topshiriladi — ikki ayri ish, ikki katak.
+  { key: "mol_mulk_malumotnoma", label: "Mol-mulk ma'lumotnomasi", short: "MSm", group: "Yillik hisobot" },
+  { key: "suv_malumotnoma", label: "Suv solig'i ma'lumotnomasi", short: "SSm", group: "Yillik hisobot" },
   { key: "mol_mulk_yillik", label: "Mol-mulk (yillik)", short: "MSy", group: "Yillik hisobot" },
   { key: "yer_yillik", label: "Yer solig'i (yillik)", short: "YSy", group: "Yillik hisobot" },
   { key: "suv_yillik", label: "Suv solig'i (yillik)", short: "SSy", group: "Yillik hisobot" },
@@ -258,8 +270,17 @@ export const SERVICE_LABELS: Record<string, string> = Object.fromEntries(
   }),
 );
 
+/** Faqat-to'lov ustunlarining to'liq nomi — yorlig'ida kod turadi. */
+export const PAYMENT_ONLY_NAMES: Record<string, string> = {
+  mol_mulk_soligi: "Mol-mulk solig'i avans to'lovi",
+  yer_soligi: "Yer solig'i avans to'lovi",
+  suv_soligi: "Suv solig'i avans to'lovi",
+};
+
 /** To'lov yarmining to'liq nomi — tooltip/aria uchun ("QQS to'lovi (#1)"). */
 export function serviceFullLabel(key: string): string {
+  const only = BASE_REPORT_COLUMNS.find((c) => c.isPaymentOnly && c.key === key);
+  if (only) return `${PAYMENT_ONLY_NAMES[key] ?? key} (byudjet kodi ${TAX_PAYMENT_CODES[key]})`;
   const col = BASE_REPORT_COLUMNS.find((c) => c.payKey === key);
   if (!col) return SERVICE_LABELS[key] ?? key;
   const name = col.label.replace(/ Hisobot$/, "");
