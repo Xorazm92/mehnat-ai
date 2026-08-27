@@ -37,7 +37,8 @@ import {
   History,
 } from 'lucide-react';
 import { getKpiRules, getCompanyKpiRules, upsertCompanyKpiRule } from '@/server/kpi';
-import { getClientCredentials, createClientCredential, deleteClientCredential, setPrimaryCredential } from '@/server/credentials';
+import { getClientCredentials, createClientCredential, deleteClientCredential, setPrimaryCredential, setServiceCredential } from '@/server/credentials';
+import { PRIMARY_SERVICE, BANK_SERVICE } from '@/lib/credentials';
 import { formatUzDate, formatUzDateTime, formatNum } from '@/lib/format';
 import { kpiCategoryLabel } from '@/lib/kpiLabels';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -79,6 +80,14 @@ const SERVICE_ROWS: { key: string; label: string }[] = serviceGroups().flatMap((
   g.keys.map((key) => ({ key, label: SERVICE_LABELS[key] || key })),
 );
 
+// Vault'dagi texnik nomlar ekranda odam o'qiydigan yorliq bilan chiqadi.
+// Xizmat nomi ixtiyoriy matn bo'lishi mumkin, shuning uchun mos kelmasa
+// xomligicha ko'rsatiladi.
+const SERVICE_TITLES: Record<string, string> = {
+  soliq: 'Soliq.uz',
+  bank_client: 'Bank-Klient',
+};
+
 const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, onSave }) => {
   // Dialog semantikasi + fokus tuzog'i + Escape (avval hech biri yo'q edi:
   // klaviatura bilan bu paneldan chiqib bo'lmasdi).
@@ -100,6 +109,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
   const [newCred, setNewCred] = useState({ serviceName: '', loginId: '', password: '', notes: '' });
   const [tempLogin, setTempLogin] = useState(company?.login || '');
   const [tempPassword, setTempPassword] = useState(company?.password || '');
+  const [isEditingBankLogin, setIsEditingBankLogin] = useState(false);
+  const [tempBankLogin, setTempBankLogin] = useState(company?.bankClientLogin || '');
+  const [tempBankPassword, setTempBankPassword] = useState(company?.bankClientPassword || '');
   const [kpiRules, setKpiRules] = useState<any[]>([]);
   const [companyKpiRules, setCompanyKpiRules] = useState<any[]>([]);
   const [isSavingKpi, setIsSavingKpi] = useState<string | null>(null); // ruleId of saving item
@@ -113,6 +125,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
     if (company) {
       setTempLogin(company.login || '');
       setTempPassword(company.password || '');
+      setTempBankLogin(company.bankClientLogin || '');
+      setTempBankPassword(company.bankClientPassword || '');
+      setIsEditingBankLogin(false);
       setAssignmentsError(null);
       (async () => {
         try {
@@ -523,6 +538,88 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
               </div>
 
+              {/* Bank-Klient — wizarddagi maydonlar bilan BIR XIL manba (vault).
+                  Ilgari u faqat `Company` ustunlarida yotardi va bu tabda umuman
+                  ko'rinmasdi, ya'ni kiritilgan parol "yo'qolib qolgandek" edi. */}
+              <div className="bg-[var(--card-bg)] p-4 rounded-lg border border-[var(--card-border)] shadow-sm transition-colors">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Building2 size={12} className="text-[var(--text-muted)]" />
+                    <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Bank-Klient</h4>
+                  </div>
+                  {isEditingBankLogin ? (
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => {
+                          setIsEditingBankLogin(false);
+                          setTempBankLogin(company.bankClientLogin || '');
+                          setTempBankPassword(company.bankClientPassword || '');
+                        }}
+                        className="px-2.5 py-1 text-micro font-bold text-[var(--text-muted)] uppercase rounded-lg border border-[var(--card-border)] hover:bg-[var(--bg-hover)] transition-all"
+                      >
+                        Bekor qilish
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await setServiceCredential(company.id, BANK_SERVICE, tempBankLogin, tempBankPassword);
+                            onSave?.({ ...company, bankClientLogin: tempBankLogin, bankClientPassword: tempBankPassword });
+                          } catch (e) {
+                            console.warn('[CompanyDrawer] setServiceCredential(bank) failed:', e);
+                          }
+                          setIsEditingBankLogin(false);
+                        }}
+                        className="px-2.5 py-1 bg-[var(--success)] hover:opacity-90 text-white text-micro font-bold uppercase rounded-lg border border-[var(--success-border)] transition-all shadow-sm"
+                      >
+                        Saqlash
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setIsEditingBankLogin(true)}
+                      className="px-2.5 py-1 bg-[var(--input-bg)] hover:bg-[var(--bg-hover)] text-micro font-bold text-[var(--text-secondary)] uppercase rounded-lg border border-[var(--card-border)] transition-all hover:text-[var(--accent-blue)]"
+                    >
+                      Tahrirlash
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">Login</p>
+                    {isEditingBankLogin ? (
+                      <input
+                        type="text"
+                        className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] font-mono text-meta outline-none focus:border-[var(--accent-blue)] transition-colors"
+                        value={tempBankLogin}
+                        onChange={(e) => setTempBankLogin(e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-meta font-mono font-bold text-[var(--text)] bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] transition-colors">{company.bankClientLogin || '—'}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">Parol</p>
+                    {isEditingBankLogin ? (
+                      <input
+                        type="text"
+                        className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] font-mono text-meta outline-none focus:border-[var(--accent-blue)] transition-colors"
+                        value={tempBankPassword}
+                        onChange={(e) => setTempBankPassword(e.target.value)}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-between bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] transition-colors">
+                        <p className="text-meta font-mono font-bold text-[var(--text)] tracking-widest leading-none">
+                          {showPasswords['bank'] ? company.bankClientPassword || '—' : '••••••••'}
+                        </p>
+                        <button onClick={() => setShowPasswords(prev => ({ ...prev, bank: !prev.bank }))} className="text-[var(--text-muted)] hover:text-[var(--accent-blue)] transition-all">
+                          {showPasswords['bank'] ? <EyeOff size={12} /> : <Eye size={12} />}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] shadow-sm overflow-hidden transition-colors">
                 <div className="bg-[var(--input-bg)] px-3 py-2 flex items-center justify-between border-b border-[var(--card-border)]">
                   <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Qo&apos;shimcha Kirish Ma&apos;lumotlari</h4>
@@ -604,12 +701,14 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 )}
 
                 <div className="divide-y divide-[var(--card-border)]">
-                  {credentials.map((cred) => (
+                  {credentials
+                    .filter((cred) => cred.serviceName !== PRIMARY_SERVICE && cred.serviceName !== BANK_SERVICE)
+                    .map((cred) => (
                     <div key={cred.id} className="p-3 hover:bg-[var(--bg-hover)] transition-colors relative group/cred">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">
                           <Key size={10} className="text-[var(--text-muted)]" />
-                          <p className="text-micro font-bold text-[var(--text)] uppercase tracking-tight">{cred.serviceName}</p>
+                          <p className="text-micro font-bold text-[var(--text)] uppercase tracking-tight">{SERVICE_TITLES[cred.serviceName] ?? cred.serviceName}</p>
                         </div>
                         <button
                           onClick={async () => {

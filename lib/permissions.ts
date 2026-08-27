@@ -198,9 +198,16 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
   // xarajati qilingan. Haqiqiy ruxsat qatlami boshqa joyda va o'zgarmadi —
   // xarajat tasdig'i summaga qarab (`lib/expenseApproval.ts`), kanalni
   // muzlatish faqat adminda (`server/transit.ts setChannelActive`).
+  //
+  // "Firmalar" (organizations) — bank-klient o'zi yuritadigan firmaning
+  // bank-klient login/parolini KIRITISHI kerak, u esa firma kartochkasining
+  // "Loginlar" tabida yashaydi. Ro'yxat baribir PORTFELGA cheklangan
+  // (lib/access.ts companyScopeWhere), yaratish/o'chirish tugmalari esa faqat
+  // senior rolda ochiq — ya'ni bu ko'rish yuzasi, huquq kengaytmasi emas.
   [ROLES.BANK_MANAGER]: [
     "cabinet",
     "cabinet_bank",
+    "organizations",
     "kassa",
     "kassa_income",
     "kassa_expense",
@@ -327,7 +334,9 @@ export const VIEWS_BY_RELATION: Record<CompanyRelation, AppView[]> = {
   accountant: ["reports", "deadlines", "tasks"],
   supervisor: ["reports", "deadlines", "tasks", "kpi"],
   chief_accountant: ["reports", "deadlines", "tasks", "kpi"],
-  bank_manager: ["cabinet_bank", "kassa_income"],
+  // Biriktiruv bo'yicha: firmada bank-klient slotida turgan odam (roli boshqa
+  // bo'lsa ham) o'sha firmaning kartochkasini ochib login/parolini kirita olsin.
+  bank_manager: ["cabinet_bank", "kassa_income", "organizations"],
 };
 
 export const effectiveViewsForRole = (

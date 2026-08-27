@@ -95,10 +95,23 @@ export async function createClientCredential(data: {
  * bo'lishi mumkin), shuning uchun eng oxirgi qatorni yangilaymiz.
  */
 export async function setPrimaryCredential(companyId: string, login: string, password: string) {
+  return setServiceCredential(companyId, PRIMARY_SERVICE, login, password);
+}
+
+/**
+ * Ixtiyoriy xizmat uchun credential upsert (soliq, bank_client, ...).
+ * `setPrimaryCredential` shuning ustidagi nom — soliq uchun.
+ */
+export async function setServiceCredential(
+  companyId: string,
+  serviceName: string,
+  login: string,
+  password: string
+) {
   const session = await assertCompanyAccess(companyId);
 
   const existing = await prisma.clientCredential.findFirst({
-    where: { companyId, serviceName: PRIMARY_SERVICE },
+    where: { companyId, serviceName },
     orderBy: { updatedAt: "desc" },
     select: { id: true },
   });
@@ -112,7 +125,7 @@ export async function setPrimaryCredential(companyId: string, login: string, pas
   const row = existing
     ? await prisma.clientCredential.update({ where: { id: existing.id }, data })
     : await prisma.clientCredential.create({
-        data: { companyId, serviceName: PRIMARY_SERVICE, notes: null, ...data },
+        data: { companyId, serviceName, notes: null, ...data },
       });
 
   return serialize({ ...row, encryptedPassword: password ?? "" });

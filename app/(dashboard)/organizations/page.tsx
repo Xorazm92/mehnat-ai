@@ -10,6 +10,7 @@ import {
   getCachedOwnFirmCompanies,
 } from "@/lib/cached-queries";
 import { getRoleContext } from "@/server/roleContext";
+import { hydrateBankCredentials } from "@/lib/companyCredentials";
 import OrganizationsClient from "./OrganizationsClient";
 
 export const metadata = { title: "Firmalar" };
@@ -93,7 +94,15 @@ export default async function OrganizationsPage() {
     status: u.status || undefined,
   }));
 
-  const mappedCompanies = [...companies, ...archivedCompanies, ...ownFirmCompanies].map(mapCompany);
+  // Bank-klient login/parol cache'langan so'rovda emas — u shifrlangan
+  // vault'da yotadi va faqat huquqi bor foydalanuvchiga ochiladi
+  // (lib/companyCredentials.ts).
+  const withBank = await hydrateBankCredentials(
+    [...companies, ...archivedCompanies, ...ownFirmCompanies] as any[],
+    userId,
+    userRole
+  );
+  const mappedCompanies = withBank.map(mapCompany);
 
   return (
     <div className="h-full">

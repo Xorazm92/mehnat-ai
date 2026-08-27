@@ -16,7 +16,8 @@ import { updateTag } from "next/cache";
 import type { TaxRegime, StatsType } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
 import { decryptSecret } from "@/lib/crypto";
-import { PRIMARY_SERVICE } from "@/lib/credentials";
+import { PRIMARY_SERVICE, BANK_SERVICE } from "@/lib/credentials";
+import { setServiceCredential } from "@/server/credentials";
 import { notifyOneCBaseNeeded } from "@/lib/oneCBase";
 import { telegramQueueDispatcher } from "@/lib/notifyDispatch";
 import { logServerError } from "@/lib/logger";
@@ -384,8 +385,9 @@ function sanitizeCompanyData(raw: Record<string, unknown>) {
   if (raw.supervisorId !== undefined) data.supervisorId = raw.supervisorId ? String(raw.supervisorId) : null;
   if (raw.chiefAccountantId !== undefined) data.chiefAccountantId = raw.chiefAccountantId ? String(raw.chiefAccountantId) : null;
   if (raw.bankClientId !== undefined) data.bankClientId = raw.bankClientId ? String(raw.bankClientId) : null;
-  if (raw.bankClientLogin !== undefined) data.bankClientLogin = raw.bankClientLogin ? String(raw.bankClientLogin) : null;
-  if (raw.bankClientPassword !== undefined) data.bankClientPassword = raw.bankClientPassword ? String(raw.bankClientPassword) : null;
+  // DIQQAT: `bankClientLogin` / `bankClientPassword` bu yerda ATAYLAB
+  // e'tiborsiz qoldiriladi — `login`/`password` bilan bir xil sabab bo'yicha.
+  // Yangi qiymat shifrlangan vault'ga yoziladi (`persistBankCredential`).
   if (raw.departmentId !== undefined) data.departmentId = raw.departmentId ? String(raw.departmentId) : null;
 
   return data;
@@ -463,6 +465,27 @@ function assertNewCompanyComplete(
       "Buxgalter tanlanishi shart — firma egasiz qolmasligi kerak " +
         "(Jamoa qadamidagi \"Buxgalter\" qatori)."
     );
+  }
+}
+
+/**
+ * Wizard'dagi "Bank-Klient Login/Parol" ni vault'ga yozadi.
+ *
+ * Ilgari bu ikki maydon `Company` ustunlariga tushardi, firma kartochkasidagi
+ * "Loginlar" tabi esa faqat vault'ni ko'rsatadi — natijada saqlangan parol
+ * qaytib ochilganda YO'Q bo'lib ko'rinardi. Endi manba bitta.
+ *
+ * Yiqilsa firma saqlangani bekor qilinmaydi: parol yordamchi ma'lumot.
+ */
+async function persistBankCredential(companyId: string, raw: Record<string, unknown>) {
+  if (raw.bankClientLogin === undefined && raw.bankClientPassword === undefined) return;
+  const login = raw.bankClientLogin ? String(raw.bankClientLogin) : "";
+  const password = raw.bankClientPassword ? String(raw.bankClientPassword) : "";
+  if (!login && !password) return;
+  try {
+    await setServiceCredential(companyId, BANK_SERVICE, login, password);
+  } catch (err) {
+    logServerError("companies.persistBankCredential", err, { companyId });
   }
 }
 
@@ -554,6 +577,8 @@ export async function createCompany(companyData: Record<string, unknown>, assign
   } catch (err) {
     logServerError("companies.notifyOneCBase", err, { companyId: result.id });
   }
+
+  await persistBankCredential(result.id, companyData);
 
   updateTag("companies");
   return serialize(result);
@@ -662,6 +687,8 @@ export async function updateCompany(
       },
     });
   }
+
+  await persistBankCredential(id, companyData);
 
   updateTag("companies");
   return serialize(result);
