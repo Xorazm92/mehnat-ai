@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import CompanyServicesPanel from '@/components/CompanyServicesPanel';
+import CompanyDocumentsPanel from '@/components/CompanyDocumentsPanel';
 import { ALL_SERVICE_KEYS, SERVICE_LABELS, serviceGroups, serviceFullLabel } from '@/lib/reportColumns';
 import { createPortal } from 'react-dom';
 import {
@@ -35,6 +37,7 @@ import {
   Loader2,
   Phone,
   History,
+  FolderOpen,
 } from 'lucide-react';
 import { getKpiRules, getCompanyKpiRules, upsertCompanyKpiRule } from '@/server/kpi';
 import { getClientCredentials, createClientCredential, deleteClientCredential, setPrimaryCredential, setServiceCredential } from '@/server/credentials';
@@ -49,6 +52,7 @@ import { Button } from "@/components/ui/Button";
 import { Tabs, TabPanel, type TabItem } from "@/components/ui/Tabs";
 import RecordTimeline from "@/components/RecordTimeline";
 import {
+  ASSIGNMENT_ROLES,
   ASSIGNMENT_ROLE_LABELS,
   normalizeAssignmentRole,
   sortStaffForAssignmentRole,
@@ -68,7 +72,7 @@ interface DrawerProps {
   onSave?: (company: Company, assignments?: any[]) => void;
 }
 
-type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xizmatlar' | 'kpi' | 'tarix';
+type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xizmatlar' | 'hujjatlar' | 'kpi' | 'tarix';
 
 /**
  * Xizmat katakchalari — barcha matritsa ustunlari, guruh tartibida.
@@ -262,6 +266,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
     { id: 'jamoa', label: 'Jamoa', icon: Users },
     { id: 'shartnoma', label: 'Shartnoma', icon: DollarSign },
     { id: 'xizmatlar', label: 'Xizmatlar', icon: Check },
+    { id: 'hujjatlar', label: 'Hujjatlar', icon: FolderOpen },
     { id: 'kpi', label: 'KPI', icon: Calculator },
     { id: 'tarix', label: 'Tarix', icon: History },
   ];
@@ -889,6 +894,36 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         </div>
                       );
                     })}
+
+                    {/* O'RIN QO'SHISH. Tahrir oynasi faqat MAVJUD qatorlarni
+                        chizadi, ya'ni firmaga hali biriktirilmagan rolni
+                        (masalan savdo menejerini) qo'shishning yo'li yo'q edi:
+                        u faqat yangi firma ochish sehrgarida ko'rinardi. */}
+                    {(() => {
+                      const missing = ASSIGNMENT_ROLES.filter(
+                        (r) => !editAssignments.some((a: any) => normalizeAssignmentRole(a.role) === r)
+                      );
+                      if (missing.length === 0) return null;
+                      return (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {missing.map((r) => (
+                            <button
+                              key={r}
+                              type="button"
+                              onClick={() =>
+                                setEditAssignments((prev) => [
+                                  ...prev,
+                                  { role: r, userId: '', salaryType: 'percent', salaryValue: 0 },
+                                ])
+                              }
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-dashed border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] text-micro font-bold uppercase tracking-widest transition-all hover:text-[var(--accent-blue)] hover:border-[var(--accent-blue)]"
+                            >
+                              + {ASSIGNMENT_ROLE_LABELS[r]}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -1023,6 +1058,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
           {activeTab === 'xizmatlar' && (
             <div className="space-y-6 animate-fade-in px-2">
+              {company.id && <CompanyServicesPanel companyId={company.id} />}
               <div className="dashboard-card p-5 !shadow-sm">
                 <div className="flex items-center justify-between mb-5 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
                   <div className="flex items-center gap-3">
@@ -1095,6 +1131,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === 'hujjatlar' && company.id && (
+            <CompanyDocumentsPanel companyId={company.id} />
           )}
 
           {activeTab === 'kpi' && (

@@ -22,7 +22,7 @@ import { recordKassaMovement, runCashTx } from "@/lib/cashGate";
 import { ACCOUNTS } from "@/lib/ledger";
 import { parseWorkbook, transactionHash } from "@/lib/bank/parseStatement";
 import { parsePlastik } from "@/lib/bank/parsePlastik";
-import { looksLikeHtml, readHtmlTables } from "@/lib/bank/readHtmlTables";
+import { readWorkbook } from "@/lib/bank/readWorkbook";
 import { extractContract } from "@/lib/bank/extractContract";
 import { EXPENSE_CATEGORY_LABELS, isPostableExpense, type ExpenseCategory } from "@/lib/bank/classifyExpense";
 import {
@@ -417,31 +417,6 @@ export async function ignoreExpenseTransaction(input: {
  * — natija sifatida qaytariladi.
  */
 export type UploadOutcome<T> = { ok: true; data: T } | { ok: false; error: string };
-
-async function readWorkbook(file: File): Promise<Workbook> {
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  // ".xls" HAR DOIM ham Excel emas. Bank Klient-Bank tizimlari vipiskani
-  // HTML jadval qilib berib, unga .xls kengaytmasini qo'yadi. Bunday faylni
-  // `xlsx` ga bersak, u sanani MM.DD deb o'qib kun bilan oyni almashtiradi
-  // (05.08.2026 → 8-may) va bu XATO JIM O'TADI. Shuning uchun HTML alohida,
-  // xom matn sifatida o'qiladi.
-  if (looksLikeHtml(buffer)) {
-    const workbook = readHtmlTables(buffer);
-    if (Object.keys(workbook).length === 0) {
-      throw new Error("HTML faylda jadval topilmadi");
-    }
-    return workbook;
-  }
-
-  const XLSX = await import("xlsx");
-  const wb = XLSX.read(buffer, { type: "buffer", cellDates: false, codepage: 1251 });
-  const workbook: Workbook = {};
-  for (const name of wb.SheetNames) {
-    workbook[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: null });
-  }
-  return workbook;
-}
 
 /**
  * Tanilmagan fayl tarkibini xulosa qilib beradi.

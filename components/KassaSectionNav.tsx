@@ -14,7 +14,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Wallet, Banknote, CreditCard, HandCoins, type LucideIcon } from "lucide-react";
+import { Wallet, Banknote, CreditCard, HandCoins, Scale, type LucideIcon } from "lucide-react";
 
 interface Section {
   href: string;
@@ -31,6 +31,7 @@ const SECTIONS: Section[] = [
   { href: "/kassa/kirim", label: "Kirim", shortLabel: "Kirim", icon: Banknote, view: "kassa_income" },
   { href: "/kassa/chiqim", label: "Chiqim", shortLabel: "Chiqim", icon: CreditCard, view: "kassa_expense" },
   { href: "/kassa/qarzdorlik", label: "Qarzdorlik", shortLabel: "Qarzdor.", icon: HandCoins, view: "kassa_debt" },
+  { href: "/kassa/sverka", label: "Kassa–bank sverka", shortLabel: "Sverka", icon: Scale, view: "kassa_sverka" },
 ];
 
 export default function KassaSectionNav({ views }: { views: string[] }) {

@@ -46,6 +46,8 @@ const LABELS: Record<string, string> = {
   departments: "Bo'limlar",
   "deadline-templates": "Muddat shablonlari",
   "business-calendar": "Ish kalendari",
+  "services": "Xizmat katalogi",
+  "invoices": "Schyot-fakturalar",
   "month-closing": "Oy yopilishi",
   "operation-matrix": "Amallar matritsasi",
   audit: "Audit",

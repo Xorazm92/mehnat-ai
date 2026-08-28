@@ -12,7 +12,9 @@ import { ACCOUNTS, postLedger } from "@/lib/ledger";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { adjustmentMagnitude } from "@/lib/adjustments";
 import { serialize } from "@/lib/serialize";
-import { calculateEmployeeSalary } from "@/lib/kpiLogic";
+import { calculateEmployeeSalary, type CompanyAssignment } from "@/lib/kpiLogic";
+import { getCollectedByCompany, readPayrollBasis } from "@/lib/payrollCollected";
+import type { PayrollBasis } from "@/lib/payrollBasis";
 import { mapMonthlyReportToOperationEntry } from "@/lib/operationTemplates";
 import type { Company, CompanyKPIRule, KPIRule, MonthlyPerformance, Staff } from "@/types";
 
@@ -254,6 +256,53 @@ export async function deletePayrollAdjustment(id: string, reason?: string) {
 }
 
 /**
+ * Oylik ekranlari uchun baza konteksti: rejim + shu oydagi tushum.
+ *
+ * NEGA alohida action: qoralama jadvali brauzerda hisoblanadi, tasdiq esa
+ * serverda. Ikkalasi bir xil kirish ma'lumotini olmasa, rahbar ekranda bir
+ * summani ko'rib, boshqasini tasdiqlagan bo'lardi.
+ */
+export async function getPayrollBasisContext(month: string): Promise<{
+  basis: PayrollBasis;
+  collectedByCompany: Record<string, number>;
+  assignmentsByCompany: Record<string, CompanyAssignment[]>;
+}> {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const [basis, assignments] = await Promise.all([
+    readPayrollBasis(),
+    prisma.contractAssignment.findMany({
+      where: { isActive: true, company: { isActive: true } },
+      select: {
+        companyId: true,
+        userId: true,
+        role: true,
+        salaryType: true,
+        salaryValue: true,
+        user: { select: { fullName: true } },
+      },
+    }),
+  ]);
+
+  const collectedByCompany =
+    basis === "cash" ? await getCollectedByCompany(month.slice(0, 7)) : {};
+
+  const assignmentsByCompany: Record<string, CompanyAssignment[]> = {};
+  for (const a of assignments) {
+    (assignmentsByCompany[a.companyId] ??= []).push({
+      userId: a.userId,
+      userName: a.user?.fullName ?? undefined,
+      role: a.role,
+      salaryType: a.salaryType,
+      salaryValue: Number(a.salaryValue ?? 0),
+    });
+  }
+
+  return { basis, collectedByCompany, assignmentsByCompany };
+}
+
+/**
  * Load what the salary calculation needs and run it. Deliberately assembles the
  * same inputs the payroll screen renders from, and calls the same pure function,
  * so the figure a Supervisor approves is the figure that gets written.
@@ -265,7 +314,7 @@ async function computeEmployeeSalary(employeeId: string, month: string) {
   });
   if (!employee) throw new Error("Xodim topilmadi");
 
-  const [companies, reports, performances, rules, overrides] = await Promise.all([
+  const [companies, reports, performances, rules, overrides, basis, assignments] = await Promise.all([
     prisma.company.findMany({
       where: {
         OR: [
@@ -273,6 +322,10 @@ async function computeEmployeeSalary(employeeId: string, month: string) {
           { bankClientId: employeeId },
           { supervisorId: employeeId },
           { chiefAccountantId: employeeId },
+          // Ustunlarga sig'maydigan rollar ('chief', 'controller') faqat shu
+          // shart orqali topiladi — busiz o'sha xodimning firmasi oylik
+          // hisobiga UMUMAN kirmasdi.
+          { contractAssignments: { some: { userId: employeeId, isActive: true } } },
         ],
       },
     }),
@@ -287,6 +340,7 @@ async function computeEmployeeSalary(employeeId: string, month: string) {
             { bankClientId: employeeId },
             { supervisorId: employeeId },
             { chiefAccountantId: employeeId },
+            { contractAssignments: { some: { userId: employeeId, isActive: true } } },
           ],
         },
       },
@@ -296,7 +350,45 @@ async function computeEmployeeSalary(employeeId: string, month: string) {
     }),
     prisma.kpiRule.findMany({ where: { isActive: true } }),
     prisma.companyKpiRule.findMany({ where: { isActive: true } }),
+    readPayrollBasis(),
+    // Ulush manbai — biriktiruv jadvali (qarang lib/kpiLogic.ts
+    // SalaryBasisOptions.assignments). Xodim biriktirilgan HAR firma
+    // olinadi, `Company.*Id` ustunlariga qaramasdan: prodda 'chief' va
+    // 'controller' rollari ustunlarga sig'maydi.
+    prisma.contractAssignment.findMany({
+      where: {
+        isActive: true,
+        // Faqat SHU xodim biriktirilgan firmalar — global ro'yxat 941 qator
+        // bo'lib, har bir xodim hisobida qayta o'qilardi.
+        company: { contractAssignments: { some: { userId: employeeId, isActive: true } } },
+      },
+      select: {
+        companyId: true,
+        userId: true,
+        role: true,
+        salaryType: true,
+        salaryValue: true,
+        user: { select: { fullName: true } },
+      },
+    }),
   ]);
+
+  const assignmentsByCompany: Record<string, CompanyAssignment[]> = {};
+  for (const a of assignments) {
+    (assignmentsByCompany[a.companyId] ??= []).push({
+      userId: a.userId,
+      userName: a.user?.fullName ?? undefined,
+      role: a.role,
+      salaryType: a.salaryType,
+      salaryValue: Number(a.salaryValue ?? 0),
+    });
+  }
+
+  // Tushum faqat 'cash' rejimida kerak — 'accrual' da so'rov ham qilinmaydi.
+  const collectedByCompany =
+    basis === "cash"
+      ? await getCollectedByCompany(month.slice(0, 7), prisma, companies.map((c) => c.id))
+      : undefined;
 
   const draft = calculateEmployeeSalary({
     employee: { id: employee.id, name: employee.fullName, role: employee.role } as Staff,
@@ -306,9 +398,12 @@ async function computeEmployeeSalary(employeeId: string, month: string) {
     rules: serialize(rules) as unknown as KPIRule[],
     overrides: serialize(overrides) as unknown as CompanyKPIRule[],
     month: month.slice(0, 7),
+    basis,
+    collectedByCompany,
+    assignmentsByCompany,
   });
 
-  return { ...draft, employeeName: employee.fullName };
+  return { ...draft, employeeName: employee.fullName, basis };
 }
 
 // Oylik (baza + KPI bonus/jarima) hisoblangan summani tasdiqlash — natija

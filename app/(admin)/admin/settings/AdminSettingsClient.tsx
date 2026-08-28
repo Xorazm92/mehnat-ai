@@ -14,6 +14,12 @@ import {
   type UserRole,
 } from "@/lib/permissions";
 import { STANDARD_TARIFF, resolveTariffPreset, type TariffPreset } from "@/lib/tariffPresets";
+import {
+  PAYROLL_BASIS_DEFAULT,
+  PAYROLL_BASIS_LABELS,
+  isPayrollBasis,
+  type PayrollBasis,
+} from "@/lib/payrollBasis";
 
 interface Settings {
   appName: string;
@@ -21,6 +27,7 @@ interface Settings {
   features: Record<string, boolean>;
   tariffPresetStandard?: TariffPreset;
   oneCBaseOpeners?: string[];
+  payrollBasis?: PayrollBasis;
 }
 
 interface StaffOption {
@@ -58,6 +65,9 @@ export default function AdminSettingsClient({
     resolveTariffPreset(settings.tariffPresetStandard)
   );
   const [oneCOpeners, setOneCOpeners] = useState<string[]>(settings.oneCBaseOpeners ?? []);
+  const [payrollBasis, setPayrollBasis] = useState<PayrollBasis>(
+    isPayrollBasis(settings.payrollBasis) ? settings.payrollBasis : PAYROLL_BASIS_DEFAULT
+  );
   const [busy, setBusy] = useState(false);
 
   const tariffTotal = ASSIGNMENT_ROLES.reduce((sum, r) => sum + (Number(tariff[r]) || 0), 0);
@@ -77,6 +87,7 @@ export default function AdminSettingsClient({
       await upsertSystemSetting("features", features);
       await upsertSystemSetting("tariffPresetStandard", tariff);
       await upsertSystemSetting("oneCBaseOpeners", oneCOpeners);
+      await upsertSystemSetting("payrollBasis", payrollBasis);
       toast.success("Sozlamalar saqlandi");
       router.refresh();
     } catch (e) {
@@ -102,6 +113,27 @@ export default function AdminSettingsClient({
         <label className="block">
           <span className="text-meta font-semibold" style={{ color: "var(--text-secondary)" }}>Yangi foydalanuvchi uchun standart parol</span>
           <input className={inputCls + " mt-1"} style={inputStyle} value={defaultPw} onChange={(e) => setDefaultPw(e.target.value)} />
+        </label>
+      </div>
+
+      <div className="p-5 rounded-xl space-y-3" style={card}>
+        <div className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Oylik bazasi</div>
+        <p className="text-meta" style={{ color: "var(--text-muted)" }}>
+          Xodim ulushi va KPI bonusi qaysi summadan hisoblanadi. &laquo;Tushum&raquo; rejimida
+          mijoz to&apos;lamagan oy uchun gonorar hisoblanmaydi — to&apos;lovning qancha qismi
+          tushgan bo&apos;lsa, ulush ham shuncha bo&apos;ladi.
+        </p>
+        <label className="block">
+          <span className="text-meta font-semibold" style={{ color: "var(--text-secondary)" }}>Hisoblash bazasi</span>
+          <select
+            className={inputCls + " mt-1"}
+            style={inputStyle}
+            value={payrollBasis}
+            onChange={(e) => setPayrollBasis(e.target.value as PayrollBasis)}
+          >
+            <option value="accrual">{PAYROLL_BASIS_LABELS.accrual}</option>
+            <option value="cash">{PAYROLL_BASIS_LABELS.cash}</option>
+          </select>
         </label>
       </div>
 

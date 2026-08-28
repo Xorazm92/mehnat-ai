@@ -11,6 +11,7 @@ import {
   Boxes,
   FileSignature,
   Landmark,
+  Package,
   Receipt,
   CheckSquare,
   CalendarCheck2,
@@ -64,6 +65,8 @@ export const ADMIN_MODULES: AdminModule[] = [
   { id: "audit", labelUz: "Audit jurnali", icon: ScrollText, href: "/admin/audit", group: "tizim", status: "ready", requiredCapability: "view_audit_logs", descUz: "Tizimdagi o'zgarishlar tarixi" },
   { id: "operation_matrix", labelUz: "Amallar matritsasi", icon: FileText, href: "/admin/operation-matrix", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Hisobot ustunlarini yoqish/o'chirish, tartiblash, nomlash" },
   { id: "deadline_templates", labelUz: "Muddat shablonlari", icon: CalendarClock, href: "/admin/deadline-templates", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Soliq muddat shablonlari — versiyalash, lifecycle, applicability" },
+  { id: "invoices", labelUz: "Schyot-fakturalar", icon: Receipt, href: "/admin/invoices", group: "moliya", status: "ready", requiredCapability: "manage_system", descUz: "Oylik schyot yozish, chop etish, bekor qilish" },
+  { id: "services", labelUz: "Xizmat katalogi", icon: Package, href: "/admin/services", group: "moliya", status: "ready", requiredCapability: "manage_system", descUz: "Sotiladigan xizmatlar, narxi va xizmat kesimida daromad" },
   { id: "business_calendar", labelUz: "Biznes kalendar", icon: CalendarDays, href: "/admin/business-calendar", group: "tizim", status: "ready", requiredCapability: "manage_system", descUz: "Ish/dam olish/bayram kunlari — muddat surish uchun" },
 
   // NOTE: Moliya sahifalari (Firmalar, Kassa, Hisobotlar, Oylik, KPI, Hujjatlar)
@@ -77,7 +80,6 @@ export const ADMIN_MODULES: AdminModule[] = [
   { id: "integration_didox", labelUz: "Didox", icon: FileSignature, href: "/admin/m/integration_didox", group: "integratsiya", status: "soon", featureFlag: "integration_didox", descUz: "Didox EHF integratsiyasi" },
   { id: "integration_soliq", labelUz: "Soliq.uz", icon: Landmark, href: "/admin/m/integration_soliq", group: "integratsiya", status: "soon", featureFlag: "integration_soliq", descUz: "Soliq.uz integratsiyasi" },
   { id: "integration_mysoliq", labelUz: "My.soliq", icon: Landmark, href: "/admin/m/integration_mysoliq", group: "integratsiya", status: "soon", featureFlag: "integration_mysoliq", descUz: "My.soliq integratsiyasi" },
-  { id: "invoices", labelUz: "Hisob-fakturalar", icon: Receipt, href: "/admin/m/invoices", group: "integratsiya", status: "soon", featureFlag: "invoices", descUz: "Hisob-faktura moduli" },
   { id: "contracts", labelUz: "Shartnomalar", icon: FileSignature, href: "/admin/m/contracts", group: "integratsiya", status: "soon", descUz: "Shartnoma shabloni va imzolash" },
 ];
 

@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, Building2, Users, FileText, Wallet, Receipt, CreditCard, Calendar, TrendingUp, Bell, ScrollText, UserCircle, Banknote, HandCoins, CalendarClock, ShieldCheck,
   Grid3x3, Trophy, CheckSquare, Settings, User, AlarmClock, Calculator, History, Lock, type LucideIcon,
+  Scale,
 } from "lucide-react";
 import type { AppView } from "@/lib/permissions";
 import { KPI_CONFIG_ROLES, KPI_REVIEW_ROLES } from "@/lib/kpiTabs";
@@ -57,6 +58,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/kassa/kirim",   view: "kassa_income",  label: "Kirim kassa",      icon: Banknote,        group: "moliya",  parent: "/kassa", keywords: "vipiska bank kirim tushum vypiska plastik" },
   { href: "/kassa/chiqim",  view: "kassa_expense", label: "Chiqim kassa",     icon: CreditCard,      group: "moliya",  parent: "/kassa", keywords: "rasxod chiqim tranzit karta xodim kanal" },
   { href: "/kassa/qarzdorlik", view: "kassa_debt",  label: "Qarzdorlik",       icon: HandCoins,       group: "moliya",  parent: "/kassa", keywords: "qarz debitor 1c zadolzhennost" },
+  { href: "/kassa/sverka",  view: "kassa_sverka",  label: "Kassa–bank sverka", icon: Scale,       group: "moliya",  parent: "/kassa", keywords: "sverka kassa apparat terminal ekvayring pos fiskal chek" },
   // `/expenses` `Kassa → Chiqim`ning "Xarajat" tabiga birlashtirildi (ikkalasi
   // bir xil `KassaEntry` jadvaliga yozardi). Bu yorliq faqat `kassa_expense`
   // YO'Q, `expenses`i BOR rollarga (Nazoratchi, Bosh buxgalter) kerak — ular

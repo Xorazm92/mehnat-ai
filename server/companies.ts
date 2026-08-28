@@ -57,13 +57,22 @@ const ALIASES_FOR_ROLE: Record<AssignmentRole, string[]> = {
   chief_accountant: ["chief_accountant", "chief"],
   controller: ["controller", "supervisor"],
   bank_manager: ["bank_manager", "bank_client"],
+  sales_manager: ["sales_manager", "sales", "savdo"],
 };
 
-/** Har bir rol uchun `Company` dagi ustunlar — fan-out bitta joydan boshqariladi. */
-const ROLE_COLUMNS: Record<
+/**
+ * Rol uchun `Company` dagi kesh ustunlari — fan-out bitta joydan boshqariladi.
+ *
+ * `sales_manager` da ustun YO'Q va bo'lmaydi ham: savdo ulushi keyin
+ * qo'shildi va unga to'rtta ustunli sxemaga yana bitta juftlik qo'shish
+ * o'sha qotib qolgan tuzilmani yana bir pog'ona uzaytirardi. Uning ulushi
+ * FAQAT `ContractAssignment` da yashaydi — oylik endi shu jadvaldan o'qiydi
+ * (lib/kpiLogic.ts). Shuning uchun `Partial`.
+ */
+const ROLE_COLUMNS: Partial<Record<
   AssignmentRole,
   { id: string; perc: string; sum: string }
-> = {
+>> = {
   accountant: { id: "accountantId", perc: "accountantPerc", sum: "accountantSum" },
   chief_accountant: { id: "chiefAccountantId", perc: "chiefAccountantPerc", sum: "chiefAccountantSum" },
   controller: { id: "supervisorId", perc: "supervisorPerc", sum: "supervisorSum" },
@@ -132,6 +141,9 @@ function applyAssignmentsToCompanyData(
 ): void {
   for (const asgn of assignments) {
     const col = ROLE_COLUMNS[asgn.role];
+    // Ustuni yo'q rol (savdo) — biriktiruv jadvalida saqlanadi, keshga
+    // yozilmaydi. Sukut bilan o'tkazib yuborish TO'G'RI: bu yo'qotish emas.
+    if (!col) continue;
     data[col.id] = asgn.userId;
     if (asgn.salaryType === "percent") {
       data[col.perc] = asgn.salaryValue;
@@ -602,6 +614,21 @@ export async function updateCompany(
 
   const data = sanitizeCompanyData(companyData);
 
+  // SHARTNOMA SUMMASI USTUNGA TO'G'RIDAN-TO'G'RI YOZILMAYDI.
+  //
+  // `Company.contractAmount` — faqat KESH; haqiqiy manba versiyalangan
+  // `CompanyServiceTerm` (qarang lib/terms.ts). Kartochkadan kelgan yangi
+  // summa ustunga yozilsa, kesh bilan manba jimgina ajralib ketardi: oylik
+  // Payment eski termdan, KPI esa yangi keshdan hisoblanib, ikki ekran ikki
+  // xil raqam ko'rsatardi. Shuning uchun bu yerda ustundan olib tashlanadi
+  // va pastda `createServiceTerm` orqali yangi versiya ochiladi — u keshni
+  // o'zi yangilaydi.
+  const requestedContractAmount =
+    data.contractAmount !== undefined && data.contractAmount !== null
+      ? Number(data.contractAmount)
+      : null;
+  delete data.contractAmount;
+
   // Buxgalter o'z firmasining OPERATSION maydonlarini tahrirlaydi, lekin pul
   // maydonlarini (shartnoma summasi, ulush foizlari/summalari) va shtat
   // biriktiruvlarini emas — aks holda o'z maoshi bazasini o'zi ko'tara olardi.
@@ -686,6 +713,40 @@ export async function updateCompany(
           : {}),
       },
     });
+  }
+
+  // Summa haqiqatan o'zgargan bo'lsa — yangi versiya. Joriy oy boshidan
+  // kuchga kiradi: o'tgan oylarning hisob-kitobi tegilmasligi kerak.
+  if (
+    requestedContractAmount !== null &&
+    isSeniorRole(role) &&
+    requestedContractAmount !== Number(company.contractAmount ?? 0)
+  ) {
+    try {
+      const term = await resolveServiceTerm(id, new Date());
+      const oldTotal = Number(term?.totalAmount ?? 0);
+      const delta = requestedContractAmount - oldTotal;
+      await createServiceTerm({
+        companyId: id,
+        totalAmount: requestedContractAmount,
+        // Split saqlanadi, farq bank qismiga tushadi — foydalanuvchi
+        // kartochkada faqat YIG'MA summani o'zgartirdi, taqsimot haqida
+        // hech narsa demadi. Batafsil taqsimot "Narxni o'zgartirish"
+        // ekranida (`updateServiceTerm`).
+        bankAmount: Math.max(0, Number(term?.bankAmount ?? requestedContractAmount) + delta),
+        plastikAmount: Number(term?.plastikAmount ?? 0),
+        naqdAmount: Number(term?.naqdAmount ?? 0),
+        offsetAmount: Number(term?.offsetAmount ?? 0),
+        effectiveFrom: new Date(),
+        reason: "summa kartochkadan o'zgartirildi",
+        createdById: userId,
+      });
+    } catch (err) {
+      logServerError("companies.updateContractAmount", err, { companyId: id });
+      throw new Error(
+        "Shartnoma summasini o'zgartirib bo'lmadi. «Narxni o'zgartirish» ekranidan urinib ko'ring."
+      );
+    }
   }
 
   await persistBankCredential(id, companyData);

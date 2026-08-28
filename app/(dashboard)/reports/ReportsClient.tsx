@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import OperationModule from "@/components/OperationModule";
 import HisobotlarModule from "@/components/HisobotlarModule";
 import { upsertMonthlyReport } from "@/server/operations";
+import { getPeriodPaymentStatus } from "@/server/invoices";
 import { Company, Staff, OperationEntry } from "@/types";
 import type { ReportColumn } from "@/lib/reportColumns";
 import { FileText, Grid3x3 } from "lucide-react";
@@ -72,6 +73,27 @@ export default function ReportsClient({
   // mumkin. Ilgari oy faqat komponent ichida yashardi va havola har doim
   // JORIY oyni ochardi.
   const [selectedPeriod, setSelectedPeriod] = useUrlParam("period", initialPeriod);
+
+  // Matritsaning "To'lov" ustuni. Davr bilan birga yangilanadi; xato bo'lsa
+  // ustun jimgina bo'sh qoladi — pul ma'lumoti yetib kelmagani matritsadagi
+  // ish yuzasini bloklab qo'ymasligi kerak.
+  const [paymentByCompany, setPaymentByCompany] = useState<
+    Record<string, { expected: number; collected: number }> | undefined
+  >(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPeriodPaymentStatus(selectedPeriod)
+      .then((r) => {
+        if (!cancelled) setPaymentByCompany(r);
+      })
+      .catch(() => {
+        if (!cancelled) setPaymentByCompany(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPeriod]);
   // Skrinshot havolasi (`?company=&col=`) har doim matritsani ochadi — u
   // havolaning butun maqsadi.
   const [tab, setTab] = useTabParam<ReportsTabId>(
@@ -129,6 +151,7 @@ export default function ReportsClient({
             focusProof={hasFocus ? { companyId: focusCompany as string, colKey: focusCol as string } : null}
             reportColumns={reportColumns}
             obligationCoverage={obligationCoverage}
+            paymentByCompany={paymentByCompany}
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
             onCompanySelect={() => {}}

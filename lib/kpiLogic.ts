@@ -2,6 +2,65 @@
 import { Company, OperationEntry, ContractRole, MonthlyPerformance, KPIRule, Staff, CompanyKPIRule, CompanyBreakdown } from '@/types';
 import { capKpiPercent } from '@/lib/kpiScoring';
 import { periodsEqual } from '@/lib/periods';
+import { formatNum } from '@/lib/format';
+import {
+    PAYROLL_BASIS_DEFAULT,
+    resolveSalaryBasis,
+    type PayrollBasis,
+} from '@/lib/payrollBasis';
+
+/**
+ * Oylik bazasi. `collected` — shu firma shu davrda haqiqatda to'lagan summa;
+ * 'cash' rejimida ulush ham, KPI bonusi ham shundan hisoblanadi.
+ * Berilmasa 'accrual' — eski (shartnomaga asoslangan) xatti-harakat.
+ */
+export interface SalaryBasisOptions {
+    basis?: PayrollBasis;
+    collected?: number;
+    /**
+     * Shu firmadagi FAOL biriktiruvlar (`ContractAssignment`).
+     *
+     * Berilsa — ulush manbai SHU, `Company.accountantPerc/...Sum` ustunlari
+     * emas. Nega muhim: ustunlar to'rtta rolga QOTIRILGAN, biriktiruv
+     * jadvalida esa `role` erkin matn. Prodda allaqachon `chief` va
+     * `controller` rollarida odamlar bor va ular oylikda UMUMAN
+     * ko'rinmasdi — ularning ulushi hech qaysi ustunga sig'masdi.
+     *
+     * Berilmasa eski (ustunli) yo'l ishlaydi — orqaga moslik uchun.
+     */
+    assignments?: CompanyAssignment[];
+}
+
+/** `ContractAssignment` ning oylik uchun kerakli qismi. */
+export interface CompanyAssignment {
+    userId: string;
+    userName?: string;
+    /** Xom qiymat: 'accountant' | 'chief' | 'chief_accountant' | 'controller' | 'supervisor' | 'bank_manager' | … */
+    role: string;
+    /** 'percent' | 'fixed' */
+    salaryType: string;
+    salaryValue: number;
+}
+
+/**
+ * Biriktiruv rolini oylik roliga keltirish.
+ *
+ * `null` — noma'lum rol: u hisoblanadi, lekin KPI bonusi konverti NOL
+ * bo'ladi (qarang `capKpiPercent` chaqirig'i). Aks holda reglamentda
+ * yozilmagan yangi rol cheksiz bonus konvertini olib qolardi.
+ */
+const assignmentRoleToSalaryRole = (role: string): SalaryResult['role'] | null => {
+    switch (role) {
+        case 'accountant': return 'accountant';
+        case 'bank_manager':
+        case 'bank_client': return 'bank_manager';
+        case 'chief':
+        case 'chief_accountant': return 'chief_accountant';
+        case 'controller':
+        case 'supervisor': return 'supervisor';
+        default: return null;
+    }
+};
 
 export interface SalaryResult {
     role: ContractRole | 'chief_accountant' | 'supervisor';
@@ -94,7 +153,8 @@ export const calculateCompanySalaries = (
     company: Company,
     operation?: OperationEntry,
     performances: MonthlyPerformance[] = [],
-    rules: KPIRule[] = []
+    rules: KPIRule[] = [],
+    opts: SalaryBasisOptions = {}
 ): SalaryResult[] => {
     const results: SalaryResult[] = [];
     // Prisma Decimal fields can arrive as strings across the RSC/JSON boundary —
@@ -104,6 +164,10 @@ export const calculateCompanySalaries = (
         return Number.isFinite(n) ? n : 0;
     };
     const contract = toNum((operation as any)?.contract_amount ?? company.contractAmount ?? (company as any).contract_amount ?? 0);
+
+    const basisMode: PayrollBasis = opts.basis ?? PAYROLL_BASIS_DEFAULT;
+    const basis = resolveSalaryBasis({ basis: basisMode, contract, collected: opts.collected });
+    const basisLabel = basisMode === 'cash' ? 'Tushum' : 'Shartnoma';
 
     // ATAYLAB dedup QILINMAYDI: (month, companyId, employeeId, ruleId) DB darajasida
     // unique (prisma/schema.prisma), ya'ni dublikat bo'lishi mumkin emas. Bu yerda
@@ -121,7 +185,9 @@ export const calculateCompanySalaries = (
         staffId?: string,
         staffName?: string,
         percRaw?: number,
-        sumRaw?: number
+        sumRaw?: number,
+        /** false — reglamentda yozilmagan rol: KPI bonus konverti nol. */
+        knownRole = true
     ) => {
         const perc = toNum(percRaw);
         const sum = toNum(sumRaw);
@@ -131,12 +197,21 @@ export const calculateCompanySalaries = (
         const details: string[] = [];
 
         if (sum) {
-            base = sum;
-            details.push(`Fixed Sum: ${base.toLocaleString()}`);
+            // Qat'iy summa ham tushumga bog'lanadi (collectionRatio) — aks holda
+            // bitta firmada foizli xodim to'lovga bog'liq, qat'iy summali xodim
+            // bog'liq bo'lmay qolardi.
+            base = sum * basis.collectionRatio;
+            details.push(
+                basis.collectionRatio === 1
+                    ? `Qat'iy summa: ${formatNum(sum)}`
+                    : `Qat'iy summa: ${formatNum(sum)} × ${(basis.collectionRatio * 100).toFixed(1)}%`
+            );
         } else if (perc) {
-            base = (contract * perc) / 100;
-            details.push(`Contract: ${contract.toLocaleString()} * ${perc}%`);
+            base = (basis.basisAmount * perc) / 100;
+            details.push(`${basisLabel}: ${formatNum(basis.basisAmount)} × ${perc}%`);
         }
+
+        if (basis.note) details.push(basis.note);
 
         if (base === 0 && !staffId) return;
 
@@ -149,8 +224,12 @@ export const calculateCompanySalaries = (
         // 1) KPI from monthly performance records (v2: options-based score)
         if (staffId) {
             const myRolePerf = companyPerf.filter(p => p.employeeId === staffId);
-            const typedRole =
-                role === 'accountant'
+            // Noma'lum rol `chief_accountant` konvertini oladi — u NOL
+            // (KPI_SALARY_CONFIG), ya'ni bonus berilmaydi. Xom rolni
+            // o'tkazish `capKpiPercent` ga Infinity qaytarardi.
+            const typedRole = !knownRole
+                ? 'chief_accountant'
+                : role === 'accountant'
                     ? 'accountant'
                     : role === 'bank_manager'
                         ? 'bank_client'
@@ -206,13 +285,10 @@ export const calculateCompanySalaries = (
                 if (typeof status === 'string') {
                     const multiplier = getReportStatusMultiplier(status);
 
-                    // Priority: Performance Override -> Global Rule (which might be overridden per-company in performace list, 
-                    // but for automation we usually don't have performance records yet unless it's handled like manual tasks.
-                    // Wait, automation rules are linked to OperationEntry fields. 
-                    // Let's check if there's a company-specific override in the performance list or a separate override table.
-                    // The calculateCompanySalaries in PayrollDrafts/Table only gets rules via fetchKPIRules.
-                    // We need to ensure rules passed here are already merged with company overrides.
-
+                    // `rules` bu yerga KELISHIDAN OLDIN firma bo'yicha
+                    // override'lar bilan birlashtirilgan bo'lishi shart
+                    // (`calculateEmployeeSalary` shuni qiladi) — bu funksiya
+                    // override jadvalini o'zi o'qimaydi.
                     const weight = multiplier === 1 ? (rule.rewardPercent || 0) : (rule.penaltyPercent || 0);
                     const score = multiplier * Math.abs(weight);
 
@@ -232,9 +308,10 @@ export const calculateCompanySalaries = (
             }
         }
 
-        // Calculation: Salary = Base + (Contract * KPI% / 100)
-        // This ensures KPI depends on total contract value, not the person's share.
-        const kpiBonus = (contract * sumPercent) / 100;
+        // Salary = Base + (Baza * KPI% / 100). KPI foizi xodimning ulushidan
+        // emas, firmaning butun summasidan olinadi — 'cash' rejimida esa
+        // to'langan qismidan.
+        const kpiBonus = (basis.basisAmount * sumPercent) / 100;
         const rawAmount = base + kpiBonus;
         const finalAmount = Math.max(0, rawAmount);
 
@@ -248,11 +325,32 @@ export const calculateCompanySalaries = (
             rawAmount,
             details: [
                 ...details,
-                `KPI Bonus: ${kpiBonus.toLocaleString()} so'm (${sumPercent.toFixed(2)}% of Contract)`
+                `KPI bonus: ${formatNum(kpiBonus)} so'm (${basisLabel}ning ${sumPercent.toFixed(2)}% i)`
             ]
         });
     };
 
+    // BIRIKTIRUV YO'LI (afzal): ulush `ContractAssignment` dan o'qiladi,
+    // ya'ni to'rtta ustunga sig'maydigan rollar ham oylikka tushadi.
+    const assignments = opts.assignments;
+    if (assignments && assignments.length > 0) {
+        for (const a of assignments) {
+            const mapped = assignmentRoleToSalaryRole(a.role);
+            const value = toNum(a.salaryValue);
+            const isPercent = a.salaryType !== 'fixed';
+            calculateForRole(
+                mapped ?? (a.role as SalaryResult['role']),
+                a.userId,
+                a.userName,
+                isPercent ? value : undefined,
+                isPercent ? undefined : value,
+                mapped !== null
+            );
+        }
+        return results;
+    }
+
+    // ESKI YO'L — biriktiruv berilmagan chaqiruvlar uchun (orqaga moslik).
     // accountant
     calculateForRole('accountant', company.accountantId, company.accountantName, company.accountantPerc, company.accountantSum);
 
@@ -304,6 +402,9 @@ export const calculateEmployeeSalary = ({
     rules,
     overrides,
     month,
+    basis = PAYROLL_BASIS_DEFAULT,
+    collectedByCompany,
+    assignmentsByCompany,
 }: {
     employee: Staff;
     companies: Company[];
@@ -312,6 +413,15 @@ export const calculateEmployeeSalary = ({
     rules: KPIRule[];
     overrides: CompanyKPIRule[];
     month: string;
+    /** Oylik bazasi rejimi (`SystemSetting.payrollBasis`). */
+    basis?: PayrollBasis;
+    /** companyId → shu davrda tushgan summa. 'cash' rejimida MAJBURIY. */
+    collectedByCompany?: Record<string, number>;
+    /**
+     * companyId → shu firmadagi faol biriktiruvlar. Berilsa ulush shundan
+     * o'qiladi (`SalaryBasisOptions.assignments` izohiga qarang).
+     */
+    assignmentsByCompany?: Record<string, CompanyAssignment[]>;
 }): EmployeeSalaryDraft => {
     const nameLower = employee.name.trim().toLowerCase();
 
@@ -357,7 +467,12 @@ export const calculateEmployeeSalary = ({
             (!c.bankClientId && c.bankClientName?.trim().toLowerCase() === nameLower) ||
             (!c.supervisorId && c.supervisorName?.trim().toLowerCase() === nameLower);
         const byOperation = staffInOps.get(c.id)?.has(employee.id) ?? false;
-        if (byId || byName || byOperation) mine.add(c);
+        // Biriktiruv jadvalidagi rol ustunlarga sig'masligi mumkin ('chief',
+        // 'controller') — u holda `byId` yolg'on chiqadi va firma umuman
+        // hisobga olinmasdi.
+        const byAssignment =
+            assignmentsByCompany?.[c.id]?.some((a) => a.userId === employee.id) ?? false;
+        if (byId || byName || byOperation || byAssignment) mine.add(c);
     });
 
     let baseSalary = 0;
@@ -367,6 +482,7 @@ export const calculateEmployeeSalary = ({
     const companyBreakdowns: CompanyBreakdown[] = [];
 
     mine.forEach(c => {
+        const collected = collectedByCompany?.[c.id] ?? 0;
         const op = opsByCompany.get(c.id);
         const perf = perfsByCompany.get(c.id) || [];
         const cOverrides = overridesByCompany.get(c.id) || [];
@@ -378,7 +494,11 @@ export const calculateEmployeeSalary = ({
                 : r;
         });
 
-        calculateCompanySalaries(c, op, perf, mergedRules)
+        calculateCompanySalaries(c, op, perf, mergedRules, {
+            basis,
+            collected,
+            assignments: assignmentsByCompany?.[c.id],
+        })
             .filter(r => r.staffId === employee.id || r.staffName?.trim().toLowerCase() === nameLower)
             .forEach(res => {
                 const bonus = res.finalAmount > res.baseAmount ? res.finalAmount - res.baseAmount : 0;
@@ -395,10 +515,15 @@ export const calculateEmployeeSalary = ({
                 kpiPenalty += penalty;
                 rawTotal += res.rawAmount;
 
+                const contractAmount = Number(
+                    (op as { contract_amount?: number } | undefined)?.contract_amount ?? c.contractAmount ?? 0
+                );
                 companyBreakdowns.push({
                     companyId: c.id,
                     companyName: c.name,
-                    contractAmount: Number((op as { contract_amount?: number } | undefined)?.contract_amount ?? c.contractAmount ?? 0),
+                    contractAmount,
+                    basisAmount: basis === 'cash' ? Math.min(collected, contractAmount || collected) : contractAmount,
+                    collectedAmount: collected,
                     role: res.role,
                     baseAmount: res.baseAmount,
                     kpiBonus: bonus,

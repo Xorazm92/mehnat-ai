@@ -6,21 +6,28 @@
 // tugmasi shu to'rt qiymatni bir bosishda to'ldiradi.
 //
 // DIQQAT: "standart" `salaryType` sifatida SAQLANMAYDI — u faqat preset.
-// Sabab: lib/kpiLogic.ts oylikni hisoblashda `salaryType` ni umuman o'qimaydi,
-// u `Company.*Sum > 0` bo'lsa fiks, aks holda `Company.*Perc` deb qaraydi.
-// Yangi `salaryType` qiymati kiritilsa payroll uni ko'rmay jim nolga aylantirardi.
-// Shuning uchun preset to'rtala qatorni `percent` ga o'tkazib, qiymat yozadi.
+// `lib/kpiLogic.ts` endi biriktiruvning `salaryType` ini O'QIYDI ('fixed'
+// bo'lmasa foiz deb qaraydi), shuning uchun preset qatorlarni `percent` ga
+// o'tkazib qiymat yozadi. (Ilgari payroll `salaryType` ni umuman ko'rmasdi
+// va notanish qiymat jim nolga aylanardi — shu sabab bu qoida saqlanadi.)
 
 import type { AssignmentRole } from "@/lib/permissions";
 
 export type TariffPreset = Record<AssignmentRole, number>;
 
-/** Standart taqsimot — shartnoma summasidan foizda. Jami 37%. */
+/**
+ * Standart taqsimot — shartnoma summasidan foizda. Jami 37%.
+ *
+ * `sales_manager` NOL: savdo ulushi har shartnomada kelishiladi va hamma
+ * firmada ham bo'lmaydi. Nol qo'yilgani "o'rin bor, lekin standart emas"
+ * degani — presetni bosgan odam uni bilib turib to'ldiradi.
+ */
 export const STANDARD_TARIFF: TariffPreset = {
   accountant: 20,
   chief_accountant: 7,
   controller: 5,
   bank_manager: 5,
+  sales_manager: 0,
 };
 
 /** SystemSetting kaliti — admin sozlamalaridan ustidan yozish uchun. */

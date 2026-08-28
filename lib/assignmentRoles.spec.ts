@@ -85,18 +85,24 @@ describe("staffFitsAssignmentRole", () => {
   it("har bir biriktirish roli o'zining odatdagi lavozimini o'tkazadi", () => {
     for (const role of ASSIGNMENT_ROLES) {
       const userRole = ASSIGNMENT_ROLE_TO_USER_ROLE[role];
+      // `sales_manager` da "odatdagi lavozim" ATAYLAB yo'q — uni istalgan
+      // lavozimdagi xodim egallaydi (lib/permissions.ts izohi).
+      if (!userRole) continue;
       expect(staffFitsAssignmentRole(userRole, role)).toBe(true);
     }
   });
 });
 
 describe("resolveTariffPreset", () => {
-  it("kelishilgan standart taqsimot: 20 / 7 / 5 / 5", () => {
+  it("kelishilgan standart taqsimot: 20 / 7 / 5 / 5, savdo nol", () => {
+    // Savdo o'rni keyin qo'shildi va standart taqsimotga KIRMAYDI — jami
+    // 37% o'zgarishsiz qoladi (lib/tariffPresets.ts izohi).
     expect(STANDARD_TARIFF).toEqual({
       accountant: 20,
       chief_accountant: 7,
       controller: 5,
       bank_manager: 5,
+      sales_manager: 0,
     });
   });
 
@@ -118,6 +124,7 @@ describe("resolveTariffPreset", () => {
       chief_accountant: 10,
       controller: 4,
       bank_manager: 3,
+      sales_manager: 0,
     });
   });
 

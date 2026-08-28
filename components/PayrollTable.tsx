@@ -13,6 +13,9 @@ import {
     deletePayrollAdjustment,
 } from '@/server/payroll';
 import { getPayouts, createPayout } from '@/server/payouts';
+import { getPayrollBasisContext } from '@/server/payroll';
+import { PAYROLL_BASIS_DEFAULT, type PayrollBasis } from '@/lib/payrollBasis';
+import type { CompanyAssignment } from '@/lib/kpiLogic';
 import { groupDigits, ungroupDigits, submitOnCtrlEnter, formatNum } from '@/lib/format';
 import { ROLE_LABELS, type UserRole } from '@/lib/permissions';
 import { adjustmentMagnitude } from '@/lib/adjustments';
@@ -52,6 +55,9 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
     const [performanceList, setPerformanceList] = useState<MonthlyPerformance[]>([]);
     const [kpiRules, setKpiRules] = useState<KPIRule[]>([]);
     const [companyOverrides, setCompanyOverrides] = useState<CompanyKPIRule[]>([]);
+    const [basis, setBasis] = useState<PayrollBasis>(PAYROLL_BASIS_DEFAULT);
+    const [collectedByCompany, setCollectedByCompany] = useState<Record<string, number>>({});
+    const [assignmentsByCompany, setAssignmentsByCompany] = useState<Record<string, CompanyAssignment[]>>({});
     // Per-user column show/hide for the salary table, saved in this browser.
     const [isLoading, setIsLoading] = useState(true);
     // Tasdiqlash/o'chirish jarayonidagi tuzatma — ikki marta bosishning oldini oladi.
@@ -80,12 +86,17 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
         // eng yomon holat, chunki raqamlar ishonchli ko'rinadi.
         setIsLoading(true);
         try {
-            const [adj, perf, rules, payouts] = await Promise.all([
+            const [adj, perf, rules, payouts, basisCtx] = await Promise.all([
                 getPayrollAdjustments(month + '-01'),
                 getMonthlyPerformance(month + '-01'),
                 getKpiRules(),
-                getPayouts({ month })
+                getPayouts({ month }),
+                getPayrollBasisContext(month)
             ]);
+
+            setBasis(basisCtx.basis);
+            setCollectedByCompany(basisCtx.collectedByCompany);
+            setAssignmentsByCompany(basisCtx.assignmentsByCompany);
 
             setAdjustmentsList((adj as any[]).map(a => ({
                 ...a,
@@ -223,7 +234,11 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                     return r;
                 });
 
-                const results = calculateCompanySalaries(c, op, perf, mergedRules);
+                const results = calculateCompanySalaries(c, op, perf, mergedRules, {
+                    basis,
+                    collected: collectedByCompany[c.id] ?? 0,
+                    assignments: assignmentsByCompany[c.id],
+                });
 
                 results.filter(r =>
                     r.staffId === s.id || (r.staffName && r.staffName.trim().toLowerCase() === sNameLower)
@@ -293,7 +308,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                 performanceDetails: []
             } as any;
         }).filter(s => s.companyCount > 0);
-    }, [staff, companies, operations, month, adjustmentsList, performanceList, kpiRules, companyOverrides]);
+    }, [staff, companies, operations, month, adjustmentsList, performanceList, kpiRules, companyOverrides, basis, collectedByCompany, assignmentsByCompany]);
 
     type PayrollRow = (typeof summaries)[number];
 

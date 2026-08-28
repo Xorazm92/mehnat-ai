@@ -6,7 +6,9 @@ import { type KpiEntryInput } from '@/lib/kpiScoring';
 import { translations } from '@/lib/translations';
 import { Wallet, TrendingUp, AlertCircle, Award, TrendingDown, Activity } from 'lucide-react';
 import { getKpiRules, getMonthlyPerformance, upsertPerformance } from '@/server/kpi';
-import { getPayrollAdjustments } from '@/server/payroll';
+import { getPayrollAdjustments, getPayrollBasisContext } from '@/server/payroll';
+import { PAYROLL_BASIS_DEFAULT, type PayrollBasis } from '@/lib/payrollBasis';
+import type { CompanyAssignment } from '@/lib/kpiLogic';
 import { formatUzDate, formatNum } from '@/lib/format';
 import KpiEntryCard from './kpi/KpiEntryCard';
 import { MonthPicker } from './ui/MonthPicker';
@@ -25,6 +27,9 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
     const [adjustments, setAdjustments] = useState<PayrollAdjustment[]>([]);
     const [loading, setLoading] = useState(true);
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+    const [basis, setBasis] = useState<PayrollBasis>(PAYROLL_BASIS_DEFAULT);
+    const [collectedByCompany, setCollectedByCompany] = useState<Record<string, number>>({});
+    const [assignmentsByCompany, setAssignmentsByCompany] = useState<Record<string, CompanyAssignment[]>>({});
 
     const summary = useMemo(() => {
         const checkMonth = month;
@@ -32,16 +37,24 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
         let totalKpiBonus = 0;
         let totalKpiPenalty = 0;
 
+        // Ustunlarga sig'maydigan rollar ('chief', 'controller') faqat
+        // biriktiruv orqali topiladi — busiz o'sha xodim o'z kabinetida
+        // firmasini umuman ko'rmasdi.
         const myCompanies = companies.filter(c =>
             c.accountantId === currentUserId ||
             c.bankClientId === currentUserId ||
             c.supervisorId === currentUserId ||
-            c.chiefAccountantId === currentUserId
+            c.chiefAccountantId === currentUserId ||
+            (assignmentsByCompany[c.id] ?? []).some(a => a.userId === currentUserId)
         );
 
         myCompanies.forEach(c => {
             const op = operations.find(o => o.companyId === c.id && o.period === checkMonth);
-            const results = calculateCompanySalaries(c, op, performances);
+            const results = calculateCompanySalaries(c, op, performances, [], {
+                basis,
+                collected: collectedByCompany[c.id] ?? 0,
+                assignments: assignmentsByCompany[c.id],
+            });
 
             results.filter(r => r.staffId === currentUserId).forEach(res => {
                 totalBase += res.baseAmount;
@@ -70,7 +83,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
             totalSalary: totalBase - totalKpiPenalty + totalKpiBonus + myAdj,
             performanceDetails: []
         } as EmployeeSalarySummary;
-    }, [currentUserId, companies, operations, month, performances, adjustments]);
+    }, [currentUserId, companies, operations, month, performances, adjustments, basis, collectedByCompany, assignmentsByCompany]);
 
     useEffect(() => {
         loadData();
@@ -79,11 +92,15 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
     const loadData = async () => {
         setLoading(true);
         try {
-            const [rulesData, perfData, adjData] = await Promise.all([
+            const [rulesData, perfData, adjData, basisCtx] = await Promise.all([
                 getKpiRules(),
                 getMonthlyPerformance(`${month}-01`, currentUserId),
-                getPayrollAdjustments(`${month}-01`, currentUserId)
+                getPayrollAdjustments(`${month}-01`, currentUserId),
+                getPayrollBasisContext(month)
             ]);
+            setBasis(basisCtx.basis);
+            setCollectedByCompany(basisCtx.collectedByCompany);
+            setAssignmentsByCompany(basisCtx.assignmentsByCompany);
             setRules(
                 (rulesData as any[]).filter(
                     r =>

@@ -24,6 +24,7 @@ export type AppView =
   | "kassa_income"
   | "kassa_expense"
   | "kassa_debt"
+  | "kassa_sverka"
   | "expenses"
   | "cabinet"
   | "cabinet_bank"
@@ -137,6 +138,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "kassa_income",
     "kassa_expense",
     "kassa_debt",
+    "kassa_sverka",
     "expenses",
     "cabinet",
     "payroll",
@@ -212,6 +214,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
     "kassa_income",
     "kassa_expense",
     "kassa_debt",
+    "kassa_sverka",
     "expenses",
     "notifications",
     "settings",
@@ -261,6 +264,7 @@ export const ALL_VIEWS: AppView[] = [
   "kassa_income",
   "kassa_expense",
   "kassa_debt",
+  "kassa_sverka",
   "expenses",
   "cabinet",
   "cabinet_bank",
@@ -284,6 +288,7 @@ export const VIEW_LABELS: Record<AppView, string> = {
   kassa_income: "Kirim kassa",
   kassa_expense: "Chiqim kassa",
   kassa_debt: "Qarzdorlik",
+  kassa_sverka: "Kassa–bank sverka",
   expenses: "Xarajatlar",
   cabinet: "Kabinet",
   cabinet_bank: "Bank kabineti",
@@ -431,12 +436,20 @@ export const getHomeRoute = (role: string): string => {
 // Shu sababli KANONIK qiymat bittaga keltirildi va hamma joyda
 // `normalizeAssignmentRole` orqali o'tkaziladi.
 
-/** Firmaga biriktiriladigan to'rt rol — kanonik imlo. */
+/**
+ * Firmaga biriktiriladigan rollar — kanonik imlo.
+ *
+ * `sales_manager` KEYIN qo'shildi: shartnomani olib kelgan odamning ulushi
+ * (odatda 7%) hech qaysi rolga sig'masdi va qo'lda, oylikdan tashqarida
+ * hisoblanardi. U alohida LAVOZIM emas — istalgan lavozimdagi xodim shu
+ * o'rinni egallashi mumkin (qarang `staffFitsAssignmentRole`).
+ */
 export const ASSIGNMENT_ROLES = [
   "accountant",
   "chief_accountant",
   "controller",
   "bank_manager",
+  "sales_manager",
 ] as const;
 
 export type AssignmentRole = (typeof ASSIGNMENT_ROLES)[number];
@@ -455,6 +468,10 @@ export const normalizeAssignmentRole = (role: string): AssignmentRole | null => 
     case "bank_manager":
     case "bank_client":
       return "bank_manager";
+    case "sales_manager":
+    case "sales":
+    case "savdo":
+      return "sales_manager";
     default:
       return null;
   }
@@ -467,7 +484,9 @@ export const normalizeAssignmentRole = (role: string): AssignmentRole | null => 
  * `staffFitsAssignmentRole`) — u faqat standart tarif preseti va hisobotlarda
  * "kim odatda bu ishni qiladi" ma'nosida qoladi.
  */
-export const ASSIGNMENT_ROLE_TO_USER_ROLE: Record<AssignmentRole, UserRole> = {
+// `sales_manager` ATAYLAB yo'q: savdo o'rnining "odatdagi lavozimi" yo'q —
+// uni buxgalter ham, rahbar ham egallaydi. `Partial` shuning uchun.
+export const ASSIGNMENT_ROLE_TO_USER_ROLE: Partial<Record<AssignmentRole, UserRole>> = {
   accountant: ROLES.ACCOUNTANT,
   chief_accountant: ROLES.CHIEF_ACCOUNTANT,
   controller: ROLES.SUPERVISOR,
@@ -480,6 +499,7 @@ export const ASSIGNMENT_ROLE_LABELS: Record<AssignmentRole, string> = {
   chief_accountant: "Bosh buxgalter",
   controller: "Nazoratchi",
   bank_manager: "Bank klient",
+  sales_manager: "Savdo menejeri",
 };
 
 /**

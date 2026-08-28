@@ -162,7 +162,13 @@ export function companyRelations(company: CompanySlots, userId: string): Set<Com
     // `AssignmentRole` nazoratchini "controller" deb ataydi, `CompanyRelation` —
     // "supervisor"; qolgan uchtasi bir xil nomlanadi.
     const rel = normalizeAssignmentRole(a.role);
-    if (rel) rels.add(rel === "controller" ? "supervisor" : rel);
+    if (!rel) continue;
+    // SAVDO EKRAN OCHMAYDI. `sales_manager` — komissiya o'rni, ish roli
+    // emas: shartnomani olib kelgan odamga mijozning hisobotlari va
+    // loginlarini ochish uchun alohida qaror kerak. Ulushi oylikda
+    // hisoblanadi, huquqi esa lavozimidan keladi.
+    if (rel === "sales_manager") continue;
+    rels.add(rel === "controller" ? "supervisor" : rel);
   }
   return rels;
 }

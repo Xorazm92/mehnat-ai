@@ -108,6 +108,7 @@ model User {
   bankClientCompanies Company[]             @relation("BankClientCompanies")
   chiefDepartments    Department[]          @relation("DepartmentChief")
   statementImports    BankStatementImport[]
+  fiscalReportImports FiscalReportImport[]
   payoutChannels      DisbursementChannel[] @relation("ChannelEmployee")
 
   @@index([email])
@@ -244,24 +245,28 @@ model Company {
   updatedAt DateTime @updatedAt
 
   // Relations
-  monthlyReports      MonthlyReport[]
-  financialReports    FinancialReport[]
-  contractAssignments ContractAssignment[]
-  credentials         ClientCredential[]
-  payments            Payment[]
-  serviceTerms        CompanyServiceTerm[]
-  reportProofs        ReportProof[]
-  telegramGroups      TelegramGroup[]
-  paymentReminders    PaymentReminder[]
-  obligations         Obligation[]
-  tasks               Task[]
-  debtSnapshots       DebtSnapshot[]
-  contracts           Contract[]            @relation("ClientContracts")
-  ownFirmContracts    Contract[]            @relation("OwnFirmContracts")
-  ownFirmAccounts     BankAccount[]         @relation("OwnFirmAccounts")
-  ownFirmChannels     DisbursementChannel[] @relation("ChannelOwnFirm")
-  bankTransactions    BankTransaction[]
-  aliases             CompanyAlias[]
+  monthlyReports       MonthlyReport[]
+  financialReports     FinancialReport[]
+  contractAssignments  ContractAssignment[]
+  credentials          ClientCredential[]
+  payments             Payment[]
+  serviceTerms         CompanyServiceTerm[]
+  companyServices      CompanyService[]
+  documents            Document[]
+  invoices             Invoice[]
+  reportProofs         ReportProof[]
+  telegramGroups       TelegramGroup[]
+  paymentReminders     PaymentReminder[]
+  obligations          Obligation[]
+  tasks                Task[]
+  debtSnapshots        DebtSnapshot[]
+  contracts            Contract[]            @relation("ClientContracts")
+  ownFirmContracts     Contract[]            @relation("OwnFirmContracts")
+  ownFirmAccounts      BankAccount[]         @relation("OwnFirmAccounts")
+  ownFirmFiscalDevices FiscalDevice[]        @relation("OwnFirmFiscalDevices")
+  ownFirmChannels      DisbursementChannel[] @relation("ChannelOwnFirm")
+  bankTransactions     BankTransaction[]
+  aliases              CompanyAlias[]
 
   @@index([accountantId])
   @@index([supervisorId])
@@ -392,58 +397,58 @@ model MonthlyReport {
   stat1Fan            String?
 
   // Qo'shimcha soliqlar / IT Park / Komunalka
-  aksizSoligi       String?
-  nedroSoligi       String?
-  norezidentFoyda   String?
-  norezidentNds     String?
+  aksizSoligi          String?
+  nedroSoligi          String?
+  norezidentFoyda      String?
+  norezidentNds        String?
   /// DEPRECATED — yuqoridagi `aylanmaQqs` ning to'lov juftligi.
-  aylanmaQqsTolov   String?
-  qqsTolov          String?
-  aylanmaTolov      String?
-  daromadSoliqTolov String?
-  inpsTolov         String?
-  foydaSoliqTolov   String?
-  itparkOylik       String?
-  itparkChorak      String?
-  komSuv            String?
-  komGaz            String?
-  komSvet           String?
-  ekologiya         String?
+  aylanmaQqsTolov      String?
+  qqsTolov             String?
+  aylanmaTolov         String?
+  daromadSoliqTolov    String?
+  inpsTolov            String?
+  foydaSoliqTolov      String?
+  itparkOylik          String?
+  itparkChorak         String?
+  komSuv               String?
+  komGaz               String?
+  komSvet              String?
+  ekologiya            String?
   /// Jismoniy shaxslardan ijaraga olingan mulk uchun hisobot va soliq to'lovi (OYLIK).
-  jismoniyIjara     String?
+  jismoniyIjara        String?
   /// Dividend solig'i — hisobot va to'lov (byudjet kodi 138). Ta'sischiga
   /// taqsimot bo'lgan oyda paydo bo'ladi, shuning uchun boshqa oylarda bo'sh.
-  dividendSoligi      String?
-  dividendSoligiTolov String?
+  dividendSoligi       String?
+  dividendSoligiTolov  String?
   /// Reestrdagi byudjet kodi bor HAR BIR soliqning to'lov yarmi. Ilgari bu
   /// soliqlar yakka katak edi — hisobot topshirilgani ko'rinardi, pul
   /// to'langani esa yo'q.
-  aksizSoligiTolov      String?
-  nedroSoligiTolov      String?
-  norezidentFoydaTolov  String?
-  norezidentNdsTolov    String?
-  molMulkSoligiTolov    String?
-  yerSoligiTolov        String?
-  suvSoligiTolov        String?
-  jismoniyIjaraTolov    String?
-  bonakTolov            String?
+  aksizSoligiTolov     String?
+  nedroSoligiTolov     String?
+  norezidentFoydaTolov String?
+  norezidentNdsTolov   String?
+  molMulkSoligiTolov   String?
+  yerSoligiTolov       String?
+  suvSoligiTolov       String?
+  jismoniyIjaraTolov   String?
+  bonakTolov           String?
   /// Keyingi chorak uchun foyda solig'i bo'nak ma'lumotnomasi (CHORAKLIK,
   /// to'lovsiz — pul oylik `bonak` katagi orqali chiqadi).
-  foydaAvansHisobot     String?
+  foydaAvansHisobot    String?
   /// Mol-mulk / yer / suv soliqlarining YILLIK yakuniy hisob-kitobi — oylik
   /// avans katagidan ayri.
-  molMulkYillik         String?
-  yerYillik             String?
-  suvYillik             String?
+  molMulkYillik        String?
+  yerYillik            String?
+  suvYillik            String?
   /// Mol-mulk / suv soliqlari bo'yicha yil BOSHIDA topshiriladigan
   /// ma'lumotnoma — yil oxiridagi yakuniy hisob-kitobdan ayri.
-  molMulkMalumotnoma    String?
-  suvMalumotnoma        String?
+  molMulkMalumotnoma   String?
+  suvMalumotnoma       String?
   /// Ijtimoiy soliq — INPS'dan ayri hisobot va to'lov (byudjet kodi 36).
-  ijtimoiySoliq         String?
-  ijtimoiySoliqTolov    String?
+  ijtimoiySoliq        String?
+  ijtimoiySoliqTolov   String?
   /// 1-NNT — yillik statistika hisoboti (aholi bandligi).
-  stat1Nnt          String?
+  stat1Nnt             String?
 
   comment   String?
   updatedAt DateTime @updatedAt
@@ -562,6 +567,194 @@ model Payment {
   @@index([period])
   @@index([status])
   @@index([deletedAt])
+}
+
+// =====================================================
+// SCHYOT-FAKTURA (ichki)
+// =====================================================
+//
+// NEGA DIDOX'SIZ. Billing shu paytgacha faqat RAQAM darajasida edi: oylik
+// `Payment` qatori "qancha kutilyapti" ni bilardi, lekin mijozga beriladigan
+// HUJJAT — raqami, sanasi, xizmat satrlari bilan — hech qayerda yo'q edi va
+// har oy Excel'da qo'lda yasalardi. Didox integratsiyasi kelganda bu jadval
+// o'sha yerga jo'natiladigan tayyor manba bo'ladi; kelmasa ham hujjat bor.
+//
+// TO'LOV HOLATI BU YERDA SAQLANMAYDI. Mijoz qancha to'lagani —
+// `PaymentAllocation` ning ishi (qarang lib/payrollCollected.ts). Schyotga
+// ikkinchi "paid" bayrog'i qo'yilsa, ikkalasi ajralib ketardi va qaysi biri
+// haqiqat ekani noma'lum bo'lib qolardi. `status` faqat HUJJATNING o'z
+// hayoti: qoralama → berilgan → bekor qilingan.
+model Invoice {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// "2026-0042" — yil ichida ketma-ket. Hujjatning yuzidagi raqam.
+  number String @unique
+  /// Qaysi oy uchun ("2026-08") — `Payment.period` bilan bir xil kalit.
+  period String
+
+  issuedAt DateTime  @default(now())
+  dueAt    DateTime?
+
+  /// draft | issued | cancelled
+  status   String  @default("draft")
+  currency String  @default("UZS")
+  total    Decimal @db.Decimal(14, 2)
+  note     String?
+
+  cancelReason String?
+
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lines InvoiceLine[]
+
+  // Bir firmaga bir oy uchun bitta schyot. Qayta yaratish o'rniga
+  // mavjudini bekor qilib, yangisini ochish kerak — aks holda mijozda
+  // bir oyga ikkita raqamli hujjat paydo bo'lardi.
+  @@unique([companyId, period])
+  @@index([status])
+  @@index([period])
+}
+
+/// Schyot satri. `serviceId` — katalogga havola; hujjat berilgandan keyin
+/// katalogdagi nom o'zgarsa ham satrdagi `description` va `unitPrice`
+/// O'ZGARMAYDI: berilgan hujjat immutable bo'lishi kerak.
+model InvoiceLine {
+  id        String  @id @default(uuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  serviceId   String?
+  description String
+  qty         Int     @default(1)
+  unitPrice   Decimal @db.Decimal(14, 2)
+  amount      Decimal @db.Decimal(14, 2)
+  sortOrder   Int     @default(0)
+
+  @@index([invoiceId])
+}
+
+// =====================================================
+// FIRMA HUJJATLARI ARXIVI
+// =====================================================
+//
+// TARIX: `Document` modeli 2026-08 konsolidatsiyasida ATAYLAB olib
+// tashlangan edi (ADR-0009: "modul o'z jadvalini haqlashi kerak") — ortida
+// ishlaydigan yuklash/ko'rish mantiqi yo'q, faqat bo'sh ekran bor edi.
+// Endi qaytarilmoqda, chunki bu safar mantiq bor: yuklash, huquq tekshiruvi
+// va yuklab olish yo'li (`/api/documents/[id]/file`) birga keladi.
+//
+// SAQLASH USULI — `ReportProof` bilan BIR XIL: fayl base64 holida bazada.
+// Alohida obyekt-saqlash qatlami yo'q, `pg_dump` zaxirasi hujjatni ham
+// qamrab oladi va yo'qolgan fayl muammosi umuman tug'ilmaydi. Narxi —
+// baza hajmi, shuning uchun server 5 MB chegara qo'yadi.
+model Document {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// shartnoma | akt | litsenziya | guvohnoma | pasport | boshqa
+  docType String  @default("boshqa")
+  title   String
+  note    String?
+
+  fileData String  @db.Text // data:<mime>;base64,...
+  fileName String
+  fileType String
+  fileSize Int     @default(0)
+
+  /// Hujjat sanasi (imzolangan/berilgan) va amal qilish muddati.
+  /// `expiresAt` bo'lsa muddati yaqinlashganda ogohlantirish ko'rsatiladi —
+  /// litsenziya/guvohnomaning eskirib qolishi real muammo.
+  issuedAt  DateTime?
+  expiresAt DateTime?
+
+  uploadedById   String?
+  uploadedByName String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  /// Moliyaviy bo'lmasa ham yumshoq o'chiriladi: shartnoma skani xato bilan
+  /// o'chirilsa uni qaytarib bo'lmasdi.
+  deletedAt DateTime?
+  deletedBy String?
+
+  @@index([companyId, deletedAt])
+  @@index([docType])
+  @@index([expiresAt])
+}
+
+// =====================================================
+// XIZMAT KATALOGI — SOTILADIGAN xizmatlar va ularning narxi
+// =====================================================
+//
+// DIQQAT — `Company.activeServices` BILAN ADASHTIRMANG. U matritsa
+// USTUNLARINING ro'yxati ("QQS hisobot", "QQS to'lov") ya'ni "shu firmada
+// qaysi katak to'ldiriladi" degan savolga javob beradi va narxi yo'q.
+// Bu yerdagi katalog esa TIJORAT tomoni: mijoz nima uchun pul to'laydi
+// (buxgalteriya xizmati, audit, kadrlar hisobi, hisobot topshirish).
+// Ikkalasi ataylab alohida: bitta "buxgalteriya xizmati" o'ndan ortiq
+// matritsa ustunini o'z ichiga oladi, va aksincha — bepul topshiriladigan
+// hisobot ham bor.
+//
+// NEGA KERAK: narx ilgari faqat YIG'MA holda (`CompanyServiceTerm.totalAmount`)
+// saqlanardi, ya'ni "qaysi xizmat qancha daromad keltiryapti" degan savolga
+// baza javob bera olmasdi va schyot-fakturaning satrlarini yozadigan joy
+// yo'q edi.
+model Service {
+  id          String  @id @default(uuid())
+  /// Barqaror kalit: "buxgalteriya", "audit", "kadrlar". Hujjatlarga yoziladi.
+  key         String  @unique
+  name        String
+  description String?
+
+  /// Tavsiya etilgan narx. Firma bo'yicha `CompanyService.price` ustun turadi.
+  defaultPrice Decimal? @db.Decimal(14, 2)
+  /// monthly | quarterly | yearly | one_time
+  periodicity  String   @default("monthly")
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyServices CompanyService[]
+
+  @@index([isActive, sortOrder])
+}
+
+/// Firma ↔ xizmat: shu mijoz qaysi xizmatni qancha narxda oladi.
+///
+/// `price` NULL bo'lsa `Service.defaultPrice` amal qiladi — shunda katalog
+/// narxi ko'tarilganda uni har bir firmada qo'lda yangilash shart emas.
+/// Yakka kelishuvli firmalarda esa narx shu yerda qotiriladi.
+model CompanyService {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  price Decimal? @db.Decimal(14, 2)
+  /// Miqdor (masalan 3 ta xodim uchun kadrlar hisobi). Odatda 1.
+  qty   Int      @default(1)
+
+  isActive  Boolean   @default(true)
+  startedAt DateTime?
+  endedAt   DateTime?
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, serviceId])
+  @@index([companyId, isActive])
+  @@index([serviceId])
 }
 
 /// Shartnoma xizmat summasi + bank/offset split — VERSIYALANGAN.
@@ -1659,6 +1852,7 @@ model BankAccount {
 
   imports      BankStatementImport[]
   transactions BankTransaction[]
+  posTerminals PosTerminal[]
 
   @@index([ownerCompanyId])
   @@index([inn])
@@ -2015,4 +2209,180 @@ model TransitEntry {
 
   @@index([channelId, date])
   @@index([direction])
+}
+
+// =====================================================
+// KASSA APPARATI ↔ BANK SVERKASI
+// =====================================================
+//
+// Savdo nuqtasida mijoz karta bilan to'laydi. Bitta to'lov IKKI joyda iz
+// qoldiradi: fiskal kassa apparatida (chek) va bankda (ekvayring tushumi).
+// Ular hech qachon avtomatik solishtirilmagan — buxgalter Excelda qo'lda
+// qilardi va aynan shu yerda kamomad yashiringan bo'ladi.
+//
+// NEGA BankTransaction yetmaydi. Vipiskadagi qator — bu HISOB-KITOB
+// (settlement): bank bir necha kunlik savdoni bitta o'tkazmaga jamlaydi,
+// komissiyani ushlab qoladi va sanani "Детали платежа" ichida yozadi.
+// Solishtirish uchun o'sha ichki sana, terminal va yalpi summa kerak —
+// shuning uchun PosSettlement alohida, hosila qatlam.
+
+/// Fiskal kassa apparati (fiskal modul). Chek shu qurilmada uriladi.
+model FiscalDevice {
+  id       String @id @default(uuid())
+  /// Fiskal modul raqami — "VG343420023218", "YZ231006002560".
+  fmNumber String @unique
+  /// Ekranda ko'rinadigan nom ("2-savdo nuqtasi, kassa 1").
+  label    String
+  /// Egasining STIR'i — bitta STIR ostida o'nlab apparat bo'lishi mumkin.
+  inn      String
+
+  /// Hisob egasi — isOwnFirm = true bo'lgan Company.
+  ownerCompanyId String?
+  ownerCompany   Company? @relation("OwnFirmFiscalDevices", fields: [ownerCompanyId], references: [id], onDelete: SetNull)
+
+  /// Savdo nuqtasi kaliti — apparat va terminalni bitta obyektga bog'laydi.
+  /// Bo'sh bo'lsa sverka firma darajasida qilinadi (ko'p holatda shunday).
+  siteKey String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dailyReports FiscalDailyReport[]
+
+  @@index([inn])
+  @@index([ownerCompanyId])
+  @@index([siteKey])
+}
+
+/// Bitta yuklangan kunlik hisobot fayli (audit izi).
+model FiscalReportImport {
+  id             String   @id @default(uuid())
+  fileName       String
+  periodFrom     DateTime
+  periodTo       DateTime
+  rowsParsed     Int      @default(0)
+  rowsInserted   Int      @default(0)
+  rowsUpdated    Int      @default(0)
+  /// Faylda uchragan, lekin bazada ro'yxatdan o'tmagan FM raqamlari.
+  unknownDevices String?  @db.Text
+  importedBy     String?
+  user           User?    @relation(fields: [importedBy], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+
+  reports FiscalDailyReport[]
+
+  @@index([createdAt])
+}
+
+/// Kassa apparatining BIR KUNLIK yakuni ("Кунлик ҳисобот" faylidan).
+///
+/// Kun bo'yicha yagona: qayta yuklashda qator ko'paymaydi, yangilanadi —
+/// buxgalter kun yopilgach hisobotni qayta olishi odatiy hol.
+model FiscalDailyReport {
+  id       String       @id @default(uuid())
+  deviceId String
+  device   FiscalDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  /// Savdo kuni (kun aniqligida, Asia/Tashkent).
+  date DateTime
+
+  /// "Сумма (нақд пул)" — naqd tushum.
+  cashAmount     Decimal @db.Decimal(14, 2)
+  /// "Сумма (тўлов терминали)" — KARTA tushumi. Sverka aynan shu ustun bilan.
+  cardAmount     Decimal @db.Decimal(14, 2)
+  /// "Жами сумма ҚҚС билан".
+  totalAmount    Decimal @db.Decimal(14, 2)
+  /// "Қайтарилган" — qaytarilgan cheklar summasi.
+  returnedAmount Decimal @default(0) @db.Decimal(14, 2)
+  /// "Чеклар сони".
+  receiptCount   Int     @default(0)
+
+  importId String?
+  import   FiscalReportImport? @relation(fields: [importId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([deviceId, date])
+  @@index([date])
+}
+
+/// Bank tomonidagi ekvayring terminali / to'lov kanali.
+///
+/// Kod vipiskadan avtomatik ajratiladi ("UZCARD 775002", "HUMO 0111955M",
+/// "CLICK 30406"). Yangi kod uchrasa qator o'zi yaratiladi va `inScope`
+/// FALSE bo'ladi — hisobga qo'shishni odam qaror qiladi.
+///
+/// NEGA `inScope` kerak. Bitta hisobvaraqqa bir nechta savdo liniyasi
+/// tushadi (masalan alohida EPOS qurilmasi yoki onlayn to'lov tizimi).
+/// Ularni kassa apparatlariga qo'shib yuborish sverkani mutlaqo buzadi —
+/// shuning uchun doiraga kirish AYNAN shu bayroq bilan boshqariladi.
+model PosTerminal {
+  id      String  @id @default(uuid())
+  /// Vipiskadan ajratilgan barqaror kod.
+  code    String  @unique
+  /// Kanal: uzcard | humo | humo_epos | multicard | payme | click | paynet | other
+  channel String
+  /// Ekrandagi nom; bo'sh bo'lsa `code` ko'rsatiladi.
+  label   String?
+
+  accountId String?
+  account   BankAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  /// Savdo nuqtasi kaliti — FiscalDevice.siteKey bilan juftlashadi.
+  siteKey String?
+
+  /// Kassa apparatlari bilan solishtiriladigan doiraga kiradimi.
+  inScope   Boolean @default(false)
+  /// NEGA doiradan chiqarilgan — ekranda shu matn ko'rsatiladi.
+  scopeNote String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  settlements PosSettlement[]
+
+  @@index([channel])
+  @@index([inScope])
+  @@index([siteKey])
+}
+
+/// Vipiskadagi bitta ekvayring tushumidan ajratilgan sverka qatori.
+///
+/// HOSILA yozuv: manbai — BankTransaction, uni qayta hisoblash mumkin.
+/// Shuning uchun `transactionId` yagona va qayta ajratishda `upsert` qilinadi.
+model PosSettlement {
+  id            String @id @default(uuid())
+  transactionId String @unique
+
+  accountId  String
+  terminalId String
+  terminal   PosTerminal @relation(fields: [terminalId], references: [id], onDelete: Cascade)
+
+  /// Savdo sanasi — "Детали платежа" ichidagi sana.
+  opDate     DateTime
+  /// `detail` — sana to'lov tafsilotidan; `document` — tafsilotda sana yo'q,
+  /// hujjat sanasidan olindi (UZCARD shunday). Ekranda ajratib ko'rsatiladi.
+  dateSource String   @default("detail")
+  /// Bank hujjatining sanasi — kechikishni ko'rsatish uchun.
+  docDate    DateTime
+
+  /// Hisobvaraqqa AMALDA tushgan summa (vipiskadagi kredit).
+  factAmount       Decimal @db.Decimal(14, 2)
+  /// Komissiya ushlanishidan OLDINGI yalpi summa (tafsilot matnidan).
+  grossAmount      Decimal @db.Decimal(14, 2)
+  /// Ushlab qolingan komissiya (gross − fact).
+  commissionAmount Decimal @default(0) @db.Decimal(14, 2)
+
+  /// Bekor qilingan (Отмена/сторно) operatsiya — yig'indiga KIRMAYDI.
+  isReversal Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([opDate])
+  @@index([terminalId, opDate])
+  @@index([accountId, opDate])
 }

@@ -6,7 +6,9 @@ import { Staff, Company, Language, EmployeeSalarySummary, OperationEntry, Monthl
 import { calculateEmployeeSalary } from '@/lib/kpiLogic';
 import { DollarSign, CheckCircle2, AlertCircle, FileText, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
-import { getPayrollAdjustments, approveEmployeeSalary } from '@/server/payroll';
+import { getPayrollAdjustments, approveEmployeeSalary, getPayrollBasisContext } from '@/server/payroll';
+import { PAYROLL_BASIS_DEFAULT, PAYROLL_BASIS_LABELS, type PayrollBasis } from '@/lib/payrollBasis';
+import type { CompanyAssignment } from '@/lib/kpiLogic';
 import { toast } from 'sonner';
 import { formatNum } from "@/lib/format";
 import { TableToolbar } from "@/components/ui/TableToolbar";
@@ -60,11 +62,23 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
     // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
     const [viewMode, setViewMode] = useViewMode('oylik-qoralama');
     const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'approved'>('all');
+    // Oylik bazasi serverdan keladi — ekran va tasdiq bir xil kirish bilan
+    // hisoblasin (qarang server/payroll.ts getPayrollBasisContext).
+    const [basis, setBasis] = useState<PayrollBasis>(PAYROLL_BASIS_DEFAULT);
+    const [collectedByCompany, setCollectedByCompany] = useState<Record<string, number>>({});
+    const [assignmentsByCompany, setAssignmentsByCompany] = useState<Record<string, CompanyAssignment[]>>({});
 
+    // 7% ham oylik bazasiga ergashadi: 'cash' rejimida to'lanmagan shartnoma
+    // ustidan komissiya ko'rsatish qolgan jadval bilan zid natija berardi.
     const superAdminCommission = useMemo(() => {
-        const totalTurnover = companies.filter(c => c.isActive).reduce((acc, c) => acc + Number(c.contractAmount || 0), 0);
+        const totalTurnover = companies.filter(c => c.isActive).reduce((acc, c) => {
+            const contract = Number(c.contractAmount || 0);
+            if (basis !== 'cash') return acc + contract;
+            const collected = Number(collectedByCompany[c.id] || 0);
+            return acc + (contract > 0 ? Math.min(collected, contract) : collected);
+        }, 0);
         return totalTurnover * 0.07;
-    }, [companies]);
+    }, [companies, basis, collectedByCompany]);
 
     // Calculate drafts with per-company breakdowns
     // The aggregation lives in lib/kpiLogic so the server can run the exact same
@@ -81,6 +95,9 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                 rules: kpiRules,
                 overrides: companyOverrides,
                 month,
+                basis,
+                collectedByCompany,
+                assignmentsByCompany,
             });
 
             results[s.id] = {
@@ -99,16 +116,21 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
             };
         });
         return results;
-    }, [staff, companies, operations, month, performanceList, kpiRules, companyOverrides]);
+    }, [staff, companies, operations, month, performanceList, kpiRules, companyOverrides, basis, collectedByCompany, assignmentsByCompany]);
 
     const loadPerformance = async () => {
         setLoading(true);
         try {
-            const [perf, rules, adjustments] = await Promise.all([
+            const [perf, rules, adjustments, basisCtx] = await Promise.all([
                 getMonthlyPerformance(`${month}-01`),
                 getKpiRules(),
-                getPayrollAdjustments(month)
+                getPayrollAdjustments(month),
+                getPayrollBasisContext(month)
             ]);
+
+            setBasis(basisCtx.basis);
+            setCollectedByCompany(basisCtx.collectedByCompany);
+            setAssignmentsByCompany(basisCtx.assignmentsByCompany);
 
             // Map server data to component types
             setPerformanceList((perf as any[]).map(p => ({
@@ -238,6 +260,11 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 items-center">
+                    <div className="px-3 py-2 rounded-xl flex flex-col items-start min-w-[140px]"
+                        style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                        <p className="text-micro font-bold uppercase tracking-widest mb-1" style={{ color: "var(--text-muted)" }}>Oylik bazasi</p>
+                        <p className="text-sm font-semibold leading-none" style={{ color: "var(--text)" }}>{PAYROLL_BASIS_LABELS[basis]}</p>
+                    </div>
                     {userRole === 'admin' && (
                         <div className="px-3 py-2 rounded-xl flex flex-col items-start min-w-[140px]"
                             style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>

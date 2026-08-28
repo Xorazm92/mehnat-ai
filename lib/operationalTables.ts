@@ -57,6 +57,17 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "notification", why: "ilova ichidagi xabarlar", refillsWhenLive: true },
   { model: "paymentReminder", why: "to'lov eslatmalari tarixi" },
 
+  // Schyot-faktura: mijozga berilgan hujjat, ya'ni davrga bog'langan pul
+  // yozuvi. Satr avval o'chadi (kaskadga tayanmasdan — tartib ochiq tursin).
+  { model: "invoiceLine", why: "schyot satrlari" },
+  { model: "invoice", why: "schyot-fakturalar (har oy qayta yoziladi)" },
+
+  // Fiskal / POS: kunlik savdo va bank hisob-kitobi — sof operatsion qatlam.
+  // Qurilma va terminalning O'ZI spravochnikda qoladi (pastda).
+  { model: "posSettlement", why: "POS hisob-kitoblari (vipiskadan)" },
+  { model: "fiscalDailyReport", why: "fiskal kunlik savdo hisoboti" },
+  { model: "fiscalReportImport", why: "fiskal hisobot import jurnali" },
+
   // Moliya: ledger va davr
   { model: "ledgerEntry", why: "ikki tomonlama yozuvlar" },
   { model: "financialSnapshot", why: "oy yopish suratlari" },
@@ -101,8 +112,9 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
 
 /**
  * Tozalashdan keyin ham turishi kerak bo'lgan jadvallar. `Document` ataylab
- * shu yerda: unda fayl emas, havola saqlanadi (`filePath` — URL yoki ilova
- * ichidagi yo'l), ya'ni u firma kartotekasining bir qismi.
+ * shu yerda: shartnoma skani, litsenziya va guvohnoma firma kartotekasining
+ * bir qismi — davr ma'lumoti emas. Tozalashda o'chsa, qayta tiklashning
+ * iloji yo'q (fayl faqat shu yerda turadi).
  */
 export const REFERENCE_TABLES: string[] = [
   "user",
@@ -135,6 +147,17 @@ export const REFERENCE_TABLES: string[] = [
   // qo'lda yig'ilgan ma'lumot. Tozalashda o'chsa, keyingi vipiskadagi karta
   // o'tkazmasini kimga bog'lashni tizim bilmay qolardi.
   "channelCard",
+  // Sotiladigan xizmatlar katalogi va uning firma bo'yicha narxi — narx
+  // kelishuvi, pul harakati emas (`companyServiceTerm` bilan bir mantiq).
+  "service",
+  "companyService",
+  // Firma hujjatlari arxivi — yuqoridagi izohga qarang.
+  "document",
+  // Fiskal apparat va POS terminal — jismoniy qurilmalar ro'yxati. Savdo
+  // ma'lumoti operatsion (yuqorida), qurilmaning o'zi esa kartotekaning
+  // bir qismi: o'chsa keyingi importda kod hech kimga bog'lanmay qolardi.
+  "fiscalDevice",
+  "posTerminal",
 ];
 
 /**

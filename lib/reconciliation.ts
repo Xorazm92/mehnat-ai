@@ -310,6 +310,213 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
         : undefined,
   });
 
+  // ── Xizmat narxlari va shartnoma summasi ─────────────────────────────
+  //
+  // `CompanyServiceTerm.totalAmount` — hisob-kitobning YAGONA manbai (undan
+  // oylik Payment generatsiya qilinadi). Xizmat katalogi esa o'sha summaning
+  // NIMADAN iboratligini yozadi. Ikkalasi ajralib ketsa, mijozga bir summa
+  // yozilib, ichida boshqa summalik xizmat turgan bo'ladi — bu farq schyot
+  // yozilganda yuzaga chiqadi, shuning uchun oldindan ko'rsatiladi.
+  const serviceRows = await db.$queryRaw<{ company_id: string; svc: number; term: number }[]>`
+    SELECT cs."companyId" AS company_id,
+           sum(COALESCE(cs.price, s."defaultPrice", 0) * cs.qty)::float8 AS svc,
+           t."totalAmount"::float8 AS term
+      FROM "CompanyService" cs
+      JOIN "Service" s ON s.id = cs."serviceId"
+      JOIN "Company" c ON c.id = cs."companyId"
+      JOIN LATERAL (
+             SELECT "totalAmount" FROM "CompanyServiceTerm" st
+              WHERE st."companyId" = cs."companyId" AND st."effectiveTo" IS NULL
+              ORDER BY st."effectiveFrom" DESC LIMIT 1
+           ) t ON true
+     WHERE cs."isActive" AND c."isActive" AND NOT c."isOwnFirm"
+     GROUP BY cs."companyId", t."totalAmount"`;
+
+  // 1000 so'mgacha farq yaxlitlash — xato deb ko'rsatish shovqin bo'lardi.
+  const drift = serviceRows.filter((r) => Math.abs(n(r.svc) - n(r.term)) > 1000);
+  const driftTotal = drift.reduce((sum, r) => sum + Math.abs(n(r.svc) - n(r.term)), 0);
+
+  checks.push({
+    key: "service-catalog-sum",
+    title: "Xizmat narxlari shartnoma summasiga teng",
+    status: serviceRows.length === 0 ? "ok" : drift.length === 0 ? "ok" : "warn",
+    value: driftTotal,
+    detail:
+      serviceRows.length === 0
+        ? "Hali bironta firmaga tijorat xizmati biriktirilmagan"
+        : drift.length === 0
+          ? `${serviceRows.length} firmada xizmatlar yig'indisi shartnoma summasiga mos`
+          : `${drift.length} firmada xizmatlar yig'indisi shartnoma summasidan farq qiladi`,
+    action: drift.length > 0 ? "Firma kartochkasidagi «Tijorat xizmatlari» narxlarini tekshiring" : undefined,
+  });
+
+  // ── 1C shartnoma summasi va ASRO shartnoma summasi ────────────────────
+  //
+  // `Contract.amount` — 1C reestridan kelgan oylik summa, `CompanyServiceTerm`
+  // esa ASRO ning o'z narxi. Ular MAJBUR emas bir xil bo'lishi (1C kechikib
+  // yangilanadi), lekin uzoq turgan farq odatda narx ko'tarilganda faqat
+  // bitta joyda yangilanganini bildiradi — va o'shanda vipiskadagi to'lov
+  // "ortiqcha"/"kam" bo'lib ko'rinadi.
+  const contractRows = await db.$queryRaw<{ company_id: string; c1: number; term: number }[]>`
+    SELECT k."companyId" AS company_id,
+           sum(k.amount)::float8 AS c1,
+           t."totalAmount"::float8 AS term
+      FROM "Contract" k
+      JOIN "Company" c ON c.id = k."companyId"
+      JOIN LATERAL (
+             SELECT "totalAmount" FROM "CompanyServiceTerm" st
+              WHERE st."companyId" = k."companyId" AND st."effectiveTo" IS NULL
+              ORDER BY st."effectiveFrom" DESC LIMIT 1
+           ) t ON true
+     WHERE k."isActive" AND k.amount IS NOT NULL
+       AND c."isActive" AND NOT c."isOwnFirm"
+     GROUP BY k."companyId", t."totalAmount"`;
+
+  const c1Drift = contractRows.filter((r) => Math.abs(n(r.c1) - n(r.term)) > 1000);
+  const c1DriftTotal = c1Drift.reduce((sum, r) => sum + Math.abs(n(r.c1) - n(r.term)), 0);
+
+  checks.push({
+    key: "contract-term-sum",
+    title: "1C shartnoma summasi ASRO narxiga teng",
+    status: contractRows.length === 0 || c1Drift.length === 0 ? "ok" : "warn",
+    value: c1DriftTotal,
+    detail:
+      contractRows.length === 0
+        ? "1C reestridan summali shartnoma yuklanmagan"
+        : c1Drift.length === 0
+          ? `${contractRows.length} firmada 1C summasi ASRO narxiga mos`
+          : `${c1Drift.length} firmada 1C summasi ASRO narxidan farq qiladi`,
+    action:
+      c1Drift.length > 0
+        ? "Narx qaysi tomonda o'zgargan — firma kartochkasidagi summani yoki 1C reestrini yangilang"
+        : undefined,
+  });
+
+  // ── Shablon qamrovi: activeServices bo'shligi ─────────────────────────
+  //
+  // 17 ta muddat shabloni `criteriaType = 'service_key'` bilan darvozalangan,
+  // ya'ni ular faqat `Company.activeServices` da o'sha kalit turgan firmaga
+  // majburiyat yaratadi. Prodda esa 259 faol mijozdan deyarli hech birida bu
+  // maydon to'ldirilmagan — natijada ekologiya, statistika, yer/suv solig'i
+  // shablonlari JIMGINA hech kimga tegmaydi.
+  //
+  // BU YERDA AVTOMATIK TUZATILMAYDI. "Bo'sh = hammasi yoqilgan" deb talqin
+  // qilish (matritsa `serviceEnabled` aynan shunday qiladi) 259 ta firmaga
+  // ekologiya va yer solig'i majburiyatini tarqatib yuborardi — ularning
+  // ko'pchiligida bu hisobotlar umuman yo'q. To'g'ri yo'l — firma
+  // kartochkasida xizmatlarni belgilash; bu tekshiruv esa bo'shliq
+  // ko'rinmay qolmasligi uchun.
+  const svcCoverage = await db.$queryRaw<{ total: number; filled: number }[]>`
+    SELECT count(*)::int AS total,
+           count(*) FILTER (WHERE array_length("activeServices", 1) > 0)::int AS filled
+      FROM "Company"
+     WHERE "isActive" AND NOT "isOwnFirm"`;
+
+  const cov = svcCoverage[0] ?? { total: 0, filled: 0 };
+  const missing = n(cov.total) - n(cov.filled);
+
+  checks.push({
+    key: "active-services-coverage",
+    title: "Firmalarda xizmat kalitlari belgilangan",
+    status: missing === 0 ? "ok" : missing > n(cov.total) / 2 ? "error" : "warn",
+    value: missing,
+    detail:
+      missing === 0
+        ? `${cov.total} ta faol firmada xizmat kalitlari to'ldirilgan`
+        : `${missing} ta faol firmada "Xizmatlar" belgilanmagan — ularga ` +
+          `xizmatga bog'liq muddat shablonlari (ekologiya, statistika, yer/suv solig'i) tegmaydi`,
+    action:
+      missing > 0
+        ? "Firma kartochkasi → Xizmatlar tabida kerakli kataklarni belgilang"
+        : undefined,
+  });
+
+  // ── Eslatma yetib bormaydigan qarzdorlar ──────────────────────────────
+  //
+  // `runBillingReminders` Telegram guruhi yo'q firmani `skippedNoGroup` deb
+  // sanaydi va o'tib ketadi. O'sha son cron chiqishida qoladi, ya'ni
+  // eslatmasiz qolgan qarzdor JIMGINA yo'qoladi: qarz turadi, mijoz esa
+  // hech qanday xabar olmaydi. SMS kanali yo'q ekan, hech bo'lmasa
+  // ro'yxatning o'zi ko'rinib tursin.
+  const silentDebtors = await db.$queryRaw<{ cnt: number; amount: number }[]>`
+    SELECT count(*)::int AS cnt,
+           COALESCE(sum(GREATEST(t."totalAmount" - COALESCE(a.paid, 0), 0)), 0)::float8 AS amount
+      FROM "Company" c
+      JOIN LATERAL (
+             SELECT "totalAmount" FROM "CompanyServiceTerm" st
+              WHERE st."companyId" = c.id AND st."effectiveTo" IS NULL
+              ORDER BY st."effectiveFrom" DESC LIMIT 1
+           ) t ON true
+      LEFT JOIN LATERAL (
+             SELECT sum(pa.amount) AS paid
+               FROM "Payment" p
+               JOIN "PaymentAllocation" pa ON pa."paymentId" = p.id
+              WHERE p."companyId" = c.id AND p."deletedAt" IS NULL
+                AND p.period = to_char(CURRENT_DATE, 'YYYY-MM')
+           ) a ON true
+     WHERE c."isActive" AND NOT c."isOwnFirm"
+       AND t."totalAmount" - COALESCE(a.paid, 0) > 0
+       AND NOT EXISTS (SELECT 1 FROM "TelegramGroup" g WHERE g."companyId" = c.id)`;
+
+  const silent = silentDebtors[0] ?? { cnt: 0, amount: 0 };
+
+  checks.push({
+    key: "reminders-unreachable",
+    title: "Qarzdorlarning hammasiga eslatma yetadi",
+    status: n(silent.cnt) === 0 ? "ok" : "warn",
+    value: n(silent.amount),
+    detail:
+      n(silent.cnt) === 0
+        ? "Joriy oyda qarzi bor har bir firmaning Telegram guruhi bor"
+        : `${silent.cnt} ta qarzdor firmada Telegram guruhi yo'q — ularga avtomatik ` +
+          `eslatma BORMAYDI (jami qarz shu firmalarda)`,
+    action:
+      n(silent.cnt) > 0
+        ? "Firma guruhini botga ulang (/bind) yoki bu mijozlarga qo'lda bog'laning"
+        : undefined,
+  });
+
+  // ── Slot ustunlari va biriktiruv jadvali ──────────────────────────────
+  //
+  // `Company.accountantId/...Perc` — KESH; haqiqiy manba `ContractAssignment`
+  // (oylik endi shundan o'qiydi, qarang lib/kpiLogic.ts). Ikkalasi ajralib
+  // ketsa ekranda bir raqam, oylikda boshqasi chiqadi — va bu farq hech
+  // qayerda ko'rinmasdi.
+  const slotDrift = await db.$queryRaw<{ cnt: number }[]>`
+    SELECT count(*)::int AS cnt
+      FROM "Company" c
+      JOIN "ContractAssignment" a ON a."companyId" = c.id AND a."isActive"
+     WHERE c."isActive" AND NOT c."isOwnFirm"
+       AND (
+         (a.role IN ('accountant')
+            AND (c."accountantId" IS DISTINCT FROM a."userId"
+                 OR COALESCE(c."accountantPerc", c."accountantSum", 0) <> a."salaryValue"))
+      OR (a.role IN ('chief', 'chief_accountant')
+            AND (c."chiefAccountantId" IS DISTINCT FROM a."userId"
+                 OR COALESCE(c."chiefAccountantPerc", c."chiefAccountantSum", 0) <> a."salaryValue"))
+      OR (a.role IN ('controller', 'supervisor')
+            AND (c."supervisorId" IS DISTINCT FROM a."userId"
+                 OR COALESCE(c."supervisorPerc", c."supervisorSum", 0) <> a."salaryValue"))
+      OR (a.role IN ('bank_manager', 'bank_client')
+            AND (c."bankClientId" IS DISTINCT FROM a."userId"
+                 OR COALESCE(c."bankClientPerc", c."bankClientSum", 0) <> a."salaryValue"))
+       )`;
+
+  const drifted = n(slotDrift[0]?.cnt);
+
+  checks.push({
+    key: "assignment-slot-drift",
+    title: "Biriktiruv jadvali firma ustunlariga mos",
+    status: drifted === 0 ? "ok" : "warn",
+    value: drifted,
+    detail:
+      drifted === 0
+        ? "Har bir biriktiruv firma kartochkasidagi qiymat bilan bir xil"
+        : `${drifted} o'rinda biriktiruv qiymati firma ustunidan farq qiladi — ` +
+          `oylik BIRIKTIRUV bo'yicha hisoblanadi, kartochkada esa eski raqam ko'rinadi`,
+    action: drifted > 0 ? "Firma kartochkasi → Jamoa tabini ochib qayta saqlang" : undefined,
+  });
+
   return checks;
 }
 

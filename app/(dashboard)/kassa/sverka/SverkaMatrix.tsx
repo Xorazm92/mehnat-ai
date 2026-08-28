@@ -1,0 +1,190 @@
+"use client";
+
+// KUNMA-KUN SVERKA MATRITSASI.
+//
+// Ustunlar DINAMIK (har apparat va har terminal — alohida ustun), shuning
+// uchun `DataTable` emas, o'z jadvali: `DataTable` bir xil shakldagi qator
+// ro'yxati uchun, bu yerda esa ustunlar ma'lumotdan hosil bo'ladi.
+//
+// Har terminal uchun IKKI ustun beriladi — FAKT va BRUTTO. Faqat faktni
+// ko'rsatish har kuni komissiya hajmida soxta "kamomad" chizardi; faqat
+// bruttoni ko'rsatish esa "hisobga qancha tushdi" savolini javobsiz
+// qoldirardi. Buxgalterga ikkalasi ham kerak.
+
+import React from "react";
+import { Money } from "@/components/ui";
+import { formatUzDate } from "@/lib/format";
+import { AlertTriangle } from "lucide-react";
+
+export interface MatrixDay {
+  date: string;
+  byDevice: Record<string, number>;
+  kassaCard: number;
+  byTerminal: Record<string, { fact: number; gross: number; commission: number }>;
+  bankFact: number;
+  bankGross: number;
+  commission: number;
+  diff: number;
+  diffFact: number;
+  approximateDate: boolean;
+}
+
+interface Props {
+  days: MatrixDay[];
+  devices: { id: string; label: string }[];
+  terminals: { id: string; code: string; label: string | null }[];
+  totals: { kassaCard: number; bankFact: number; bankGross: number; commission: number; diff: number; diffFact: number };
+}
+
+const cell = "px-2 py-1.5 whitespace-nowrap text-right tabular-nums";
+const head = "px-2 py-2 text-micro font-semibold uppercase tracking-wide whitespace-nowrap";
+
+export default function SverkaMatrix({ days, devices, terminals, totals }: Props) {
+  if (days.length === 0) {
+    return (
+      <p className="text-meta py-8 text-center" style={{ color: "var(--text-secondary)" }}>
+        Bu davr uchun ma'lumot yo'q. Kassa hisobotini yuklang va vipiskadan tushumni ajrating.
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid var(--card-border)" }}>
+      <table className="w-full text-meta border-collapse">
+        <thead style={{ background: "var(--input-bg)" }}>
+          <tr style={{ color: "var(--text-secondary)" }}>
+            <th className={`${head} text-left sticky left-0 z-10`} style={{ background: "var(--input-bg)" }}>
+              Sana
+            </th>
+            {devices.map((d) => (
+              <th key={d.id} className={`${head} text-right`} title={d.label}>
+                {d.label}
+              </th>
+            ))}
+            <th className={`${head} text-right`} style={{ color: "var(--accent-blue)" }}>
+              Jami kassa
+            </th>
+            {terminals.map((t) => (
+              <th key={t.id} colSpan={2} className={`${head} text-center`} style={{ borderLeft: "1px solid var(--card-border)" }}>
+                {t.label || t.code}
+              </th>
+            ))}
+            <th className={`${head} text-right`}>Bank fakt</th>
+            <th className={`${head} text-right`}>Bank brutto</th>
+            <th className={`${head} text-right`}>Komissiya</th>
+            <th className={`${head} text-right`} style={{ color: "var(--accent-blue)" }}>
+              Farq
+            </th>
+          </tr>
+          {terminals.length > 0 && (
+            <tr style={{ color: "var(--text-secondary)" }}>
+              <th className={head} />
+              {devices.map((d) => (
+                <th key={d.id} className={head} />
+              ))}
+              <th className={head} />
+              {terminals.map((t) => (
+                <React.Fragment key={t.id}>
+                  <th className={`${head} text-right`} style={{ borderLeft: "1px solid var(--card-border)" }}>
+                    fakt
+                  </th>
+                  <th className={`${head} text-right`}>brutto</th>
+                </React.Fragment>
+              ))}
+              <th className={head} />
+              <th className={head} />
+              <th className={head} />
+              <th className={head} />
+            </tr>
+          )}
+        </thead>
+        <tbody>
+          {days.map((d) => (
+            <tr key={d.date} style={{ borderTop: "1px solid var(--card-border)" }}>
+              <td className="px-2 py-1.5 whitespace-nowrap sticky left-0 z-10" style={{ background: "var(--card-bg)" }}>
+                <span className="inline-flex items-center gap-1">
+                  {formatUzDate(d.date)}
+                  {/* Sanasi tafsilotda YO'Q tushum shu kunga hujjat sanasi
+                      bo'yicha tushgan — kunlik farq shartli, buni yashirmaymiz. */}
+                  {d.approximateDate && (
+                    <AlertTriangle size={12} style={{ color: "var(--accent-amber, #d97706)" }} aria-label="Sana hujjatdan olingan" />
+                  )}
+                </span>
+              </td>
+              {devices.map((dev) => (
+                <td key={dev.id} className={cell}>
+                  <Money value={d.byDevice[dev.id] ?? 0} dashIfZero tone="muted" />
+                </td>
+              ))}
+              <td className={cell}>
+                <Money value={d.kassaCard} dashIfZero bold />
+              </td>
+              {terminals.map((t) => {
+                const v = d.byTerminal[t.id];
+                return (
+                  <React.Fragment key={t.id}>
+                    <td className={cell} style={{ borderLeft: "1px solid var(--card-border)" }}>
+                      <Money value={v?.fact ?? 0} dashIfZero tone="muted" />
+                    </td>
+                    <td className={cell}>
+                      <Money value={v?.gross ?? 0} dashIfZero tone="muted" />
+                    </td>
+                  </React.Fragment>
+                );
+              })}
+              <td className={cell}>
+                <Money value={d.bankFact} dashIfZero />
+              </td>
+              <td className={cell}>
+                <Money value={d.bankGross} dashIfZero bold />
+              </td>
+              <td className={cell}>
+                <Money value={d.commission} dashIfZero tone="muted" />
+              </td>
+              <td className={cell}>
+                <Money value={d.diff} dashIfZero bold showSign tone={d.diff > 0 ? "out" : "in"} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr style={{ borderTop: "2px solid var(--text-primary)", background: "var(--input-bg)" }}>
+            <td className="px-2 py-2 font-semibold sticky left-0 z-10" style={{ background: "var(--input-bg)" }}>
+              Jami
+            </td>
+            {devices.map((dev) => (
+              <td key={dev.id} className={`${cell} font-semibold`}>
+                <Money value={days.reduce((s, d) => s + (d.byDevice[dev.id] ?? 0), 0)} dashIfZero />
+              </td>
+            ))}
+            <td className={`${cell} font-semibold`}>
+              <Money value={totals.kassaCard} bold />
+            </td>
+            {terminals.map((t) => (
+              <React.Fragment key={t.id}>
+                <td className={`${cell} font-semibold`} style={{ borderLeft: "1px solid var(--card-border)" }}>
+                  <Money value={days.reduce((s, d) => s + (d.byTerminal[t.id]?.fact ?? 0), 0)} dashIfZero />
+                </td>
+                <td className={`${cell} font-semibold`}>
+                  <Money value={days.reduce((s, d) => s + (d.byTerminal[t.id]?.gross ?? 0), 0)} dashIfZero />
+                </td>
+              </React.Fragment>
+            ))}
+            <td className={`${cell} font-semibold`}>
+              <Money value={totals.bankFact} />
+            </td>
+            <td className={`${cell} font-semibold`}>
+              <Money value={totals.bankGross} bold />
+            </td>
+            <td className={`${cell} font-semibold`}>
+              <Money value={totals.commission} />
+            </td>
+            <td className={`${cell} font-semibold`}>
+              <Money value={totals.diff} bold showSign tone={totals.diff > 0 ? "out" : "in"} />
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}

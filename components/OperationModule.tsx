@@ -9,6 +9,7 @@ import { MonthPicker } from './ui/MonthPicker';
 import { useConfirm } from './ui/ConfirmDialog';
 import { useTableState } from '@/hooks/useTableState';
 import { periodsEqual } from '@/lib/periods';
+import { formatNum } from '@/lib/format';
 import { toast } from 'sonner';
 import { upsertMonthlyReport, clearColumnForPeriod } from '@/server/operations';
 import { createNotification } from '@/server/audit';
@@ -598,6 +599,26 @@ const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOnly, use
   );
 }, (prev, next) => prev.value === next.value && prev.readOnly === next.readOnly && prev.proofStatus === next.proofStatus && prev.proofMine === next.proofMine && prev.relations === next.relations);
 
+/**
+ * To'lov katagining rangi — PUL YO'NALISHI emas, YOPILGANLIK darajasi:
+ * qizil = bir tiyin kelmagan, sariq = qisman, yashil = yopilgan.
+ * Kutilgan summa nol bo'lsa (shartnoma summasi kiritilmagan) rang berilmaydi —
+ * "to'lanmagan" deb ko'rsatish yolg'on bo'lardi.
+ */
+function paymentCellBg(p?: { expected: number; collected: number }): string {
+  if (!p || p.expected <= 0) return 'var(--surface)';
+  if (p.collected <= 0) return 'color-mix(in srgb, var(--danger) 8%, var(--surface))';
+  if (p.collected + 1 < p.expected) return 'color-mix(in srgb, var(--warning) 8%, var(--surface))';
+  return 'color-mix(in srgb, var(--success) 8%, var(--surface))';
+}
+
+function paymentCellColor(p?: { expected: number; collected: number }): string {
+  if (!p || p.expected <= 0) return 'var(--text-3)';
+  if (p.collected <= 0) return 'var(--danger)';
+  if (p.collected + 1 < p.expected) return 'var(--warning)';
+  return 'var(--success)';
+}
+
 // ── Memoized Table Row ─────────────────────────────────────────
 const OperationRow = React.memo<{
   row: ReportRow;
@@ -606,12 +627,14 @@ const OperationRow = React.memo<{
   userRole: string;
   relations: CompanyRelation[];
   activeServices: string[];
+  payment?: { expected: number; collected: number };
+  showPayment: boolean;
   proofMeta: Map<string, ProofMeta>;
   onCellUpdate: (companyId: string, colKey: string, newValue: string) => void;
   onCompanySelect: (companyId: string) => void;
   onRequestSubmit: (companyId: string, colKey: string) => void;
   onViewProof: (companyId: string, colKey: string) => void;
-}>(({ row, idx, visibleColumns, userRole, relations, activeServices, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
+}>(({ row, idx, visibleColumns, userRole, relations, activeServices, payment, showPayment, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
   /**
    * Xizmat yoqilganmi. To'lov yarmi HISOBOT yarmidan meros oladi — uning o'z
    * katakchasi hech qaysi sozlash ekranida yo'q (lib/reportColumns.ts).
@@ -659,6 +682,18 @@ const OperationRow = React.memo<{
           {row.accountant || '—'}
         </div>
       </td>
+      {showPayment && (
+        <td className="px-1.5 py-1.5 text-right whitespace-nowrap" style={{ borderRight: '2px solid var(--border)', background: paymentCellBg(payment) }}>
+          <div className="text-micro font-bold tabular-nums" style={{ color: paymentCellColor(payment) }}>
+            {payment ? formatNum(payment.collected) : '—'}
+          </div>
+          {payment && payment.expected > 0 && (
+            <div className="text-2xs tabular-nums" style={{ color: 'var(--text-3)' }}>
+              / {formatNum(payment.expected)}
+            </div>
+          )}
+        </td>
+      )}
       {visibleColumns.map(col => {
         const isReadOnly = !row.companyId || !canEditMatrix(userRole, relations);
         // Xizmat o'chirilgan YOKI bu hisobot firma rejimiga tegishli emas.
@@ -765,6 +800,18 @@ interface Props {
    * QILINISHI. Foizning maxraji shundan chiqadi.
    */
   obligationCoverage?: { companyId: string; code: string }[];
+  /**
+   * companyId → shu davrda kutilgan va tushgan pul.
+   *
+   * Berilmasa TO'LOV ustuni umuman chizilmaydi — matritsa admin ekranida ham
+   * ochiladi va u yerda pul konteksti yo'q.
+   *
+   * NEGA MATRITSADA: "xizmat topshirildimi" va "puli keldimi" ikki alohida
+   * ekranda turardi, holbuki savol bitta — shu firma bilan shu oy yopildimi.
+   * Buxgalter kechikkan hisobotni ko'rib, uning to'lanmagan firma ekanini
+   * bilishi uchun ikkinchi ekranga o'tishi kerak edi.
+   */
+  paymentByCompany?: Record<string, { expected: number; collected: number }>;
 }
 
 interface ReportRow {
@@ -809,8 +856,10 @@ const OperationModule: React.FC<Props> = ({
   userName,
   focusProof,
   reportColumns,
-  obligationCoverage
+  obligationCoverage,
+  paymentByCompany
 }) => {
+  const showPayment = !!paymentByCompany;
   // Amaldagi ustunlar: admin config qo'llangan ro'yxat yoki baza.
   // useMemo — barqaror referens (faqat prop o'zgarganda yangilanadi).
   const REPORT_COLUMNS = useMemo<ReportColumn[]>(() => reportColumns ?? BASE_REPORT_COLUMNS, [reportColumns]);
@@ -2203,6 +2252,16 @@ const OperationModule: React.FC<Props> = ({
                 <th colSpan={4} className="sticky top-0 left-0 z-[100] px-3 py-1.5 text-left text-micro font-semibold uppercase tracking-widest w-[408px] min-w-[408px]" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)', color: 'var(--text-3)' }}>
                   {t.firmTable}
                 </th>
+                {showPayment && (
+                  <th
+                    rowSpan={2}
+                    className="sticky top-0 px-1.5 py-1.5 text-center text-micro font-extrabold uppercase tracking-wider w-24 min-w-[96px]"
+                    style={{ background: 'var(--surface-2)', color: 'var(--text-2)', borderBottom: '2px solid var(--border)', borderRight: '2px solid var(--border)' }}
+                    title="Shu davrda tushgan pul / kutilgan summa"
+                  >
+                    To&apos;lov
+                  </th>
+                )}
                 {headerBands.map((band, i) => {
                   const st = getGroupStyle(band.name);
                   const isLastBand = i === headerBands.length - 1;
@@ -2306,6 +2365,8 @@ const OperationModule: React.FC<Props> = ({
                     userRole={userRole}
                     relations={(row.companyId && relationsByCompany.get(row.companyId)) || EMPTY_RELATIONS}
                     activeServices={row.activeServices}
+                    payment={row.companyId ? paymentByCompany?.[row.companyId] : undefined}
+                    showPayment={showPayment}
                     proofMeta={proofMeta}
                     onCellUpdate={handleCellUpdate}
                     onCompanySelect={handleCompanySelect}
