@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getCachedCompanies, getCachedUsers, getCachedOperations } from "@/lib/cached-queries";
+import {
+  getCachedCompanies,
+  getCachedOwnFirmCompanies,
+  getCachedUsers,
+  getCachedOperations,
+} from "@/lib/cached-queries";
 import { isSeniorRole } from "@/lib/permissions";
 import { getEffectiveViewsForRole } from "@/server/rbac";
 import { readTabParam } from "@/lib/tabs";
@@ -25,14 +30,23 @@ export default async function KpiPage({
   // to the client (no Date rendered in the browser → no hydration mismatch).
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  const [companies, staff, operations, views] = await Promise.all([
+  // O'Z FIRMALAR HAM: ASROning 10 ta firmasiga ham buxgalter biriktiriladi
+  // (Ruslan — o'sha 10 tasining buxgalteri) va ular uchun ham matritsa/majburiyat
+  // yuritiladi. `getCachedCompanies` o'z firmalarni ataylab chiqarib tashlagani
+  // uchun bu ekranda ularning ishi HECH KIMGA ko'rinmasdi: nazoratchi ham, bosh
+  // buxgalter ham Ruslanning ko'rsatkichlarini bo'sh ko'rardi. Portfelga baribir
+  // cheklangan (`getCachedOwnFirmCompanies` → companyScopeWhere).
+  const [clientCompanies, ownFirmCompanies, staff, operations, views] = await Promise.all([
     getCachedCompanies(userId, userRole),
+    getCachedOwnFirmCompanies(userId, userRole),
     getCachedUsers(userId, userRole),
     getCachedOperations(userId, userRole),
     // "Oylik hisob-kitobi" havolasi faqat o'sha sahifani ko'ra oladigan rolga
     // chiziladi — admin RBAC editoridagi override ham hisobga olinadi.
     getEffectiveViewsForRole(userRole).catch(() => [] as string[]),
   ]);
+
+  const companies = [...clientCompanies, ...ownFirmCompanies];
 
   const mappedStaff = staff.map(u => ({
     ...u,
