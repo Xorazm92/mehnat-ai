@@ -17,6 +17,7 @@ import { useTableState } from '@/hooks/useTableState';
 import type { TariffPreset } from '@/lib/tariffPresets';
 import { hiddenMatchOnly, matchesCompanySearch } from '@/lib/companySearch';
 import { TAX_REGIME_SHORT, normalizeTaxRegime } from '@/lib/taxRegimes';
+import { friendlyError } from '@/lib/actionError';
 
 interface Props {
   companies: Company[];
@@ -418,7 +419,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         toast.success(editingId ? 'Firma tahrirlandi' : 'Yangi firma qo\'shildi');
       } catch (error: any) {
         console.error('[OrganizationModule] handleSave error:', error);
-        toast.error(error.message || 'Saqlashda xatolik yuz berdi');
+        toast.error(friendlyError(error, "Saqlashda xatolik yuz berdi. Qaytadan kiring yoki ruxsatni tekshiring."));
       } finally {
         console.log('[OrganizationModule] handleSave finally - setting isSaving to false');
         setIsSaving(false);

@@ -18,7 +18,7 @@ import { serialize } from "@/lib/serialize";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { updateTag } from "next/cache";
 
-export const DOCUMENT_TYPES = [
+const DOCUMENT_TYPES = [
   "shartnoma",
   "akt",
   "litsenziya",
