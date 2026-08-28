@@ -23,13 +23,21 @@
 //     `--rollback --receipt <fayl>` o'sha tranzaksiyalarni TESKARILAYDI
 //     (jismonan o'chirmaydi — jurnal append-only);
 //   * idempotent: `postLedger` manba bo'yicha ochiq netto bo'lsa rad etadi,
-//     ya'ni ikkinchi marta yurgizish dublikat yozmaydi.
+//     ya'ni ikkinchi marta yurgizish dublikat yozmaydi;
+//   * KELAJAK DAVRGA yozmaydi. Prodda 39 ta `obed:` (tushlik) qatori
+//     Excel importidan 2026-12 sanasi bilan tushgan — bugun esa 2026-08.
+//     Ularni jurnalga qo'ysak, hali sarflanmagan pul sarflangan bo'lib
+//     qoladi va dekabr qoldig'i noto'g'ri chiqadi. Bu MA'LUMOT xatosi
+//     (manba Excel'dagi sana), backfill uni yashirmasligi kerak — shuning
+//     uchun chetlanadi va alohida sanab ko'rsatiladi. Chegarani bilib
+//     turib surish uchun `--until YYYY-MM`.
 //
 // ISHLATISH:
 //   npx tsx scripts/backfill-ledger.ts                 # dry-run hisoboti
 //   npx tsx scripts/backfill-ledger.ts --json          # mashina formati
 //   npx tsx scripts/backfill-ledger.ts --apply         # yozadi + kvitansiya
 //   npx tsx scripts/backfill-ledger.ts --rollback --receipt .recovery/x.json
+//   npx tsx scripts/backfill-ledger.ts --until 2026-09     # chegarani surish
 
 import "./load-env";
 import { prisma } from "@/lib/prisma";
@@ -46,6 +54,11 @@ const JSON_OUT = process.argv.includes("--json");
 const ROLLBACK = process.argv.includes("--rollback");
 const receiptArg = process.argv.indexOf("--receipt");
 const RECEIPT_PATH = receiptArg >= 0 ? process.argv[receiptArg + 1] : null;
+const untilArg = process.argv.indexOf("--until");
+const UNTIL_PERIOD =
+  untilArg >= 0 && /^\d{4}-\d{2}$/.test(process.argv[untilArg + 1] ?? "")
+    ? process.argv[untilArg + 1]
+    : periodKeyOf(new Date());
 
 
 
@@ -220,7 +233,9 @@ async function main(): Promise<void> {
   const [candidates, locked] = await Promise.all([collect(), lockedPeriods()]);
 
   const blocked = candidates.filter((c) => locked.has(c.period));
-  const writable = candidates.filter((c) => !locked.has(c.period));
+  // Davr kaliti "YYYY-MM" — leksik solishtirish xronologik solishtirishga teng.
+  const future = candidates.filter((c) => !locked.has(c.period) && c.period > UNTIL_PERIOD);
+  const writable = candidates.filter((c) => !locked.has(c.period) && c.period <= UNTIL_PERIOD);
 
   const byTable = new Map<string, { count: number; total: number }>();
   for (const c of candidates) {
@@ -240,6 +255,8 @@ async function main(): Promise<void> {
           candidates: candidates.length,
           writable: writable.length,
           blockedByLockedPeriod: blocked.length,
+          skippedFuturePeriod: future.length,
+          until: UNTIL_PERIOD,
           byTable: Object.fromEntries(byTable),
           byPeriod: Object.fromEntries([...byPeriod].sort()),
         },
@@ -263,8 +280,18 @@ async function main(): Promise<void> {
       }
       console.log(
         `\n  Yozish mumkin : ${writable.length} ta` +
-          `\n  Bloklangan    : ${blocked.length} ta (yopiq davr)`
+          `\n  Bloklangan    : ${blocked.length} ta (yopiq davr)` +
+          `\n  Kelajak davr  : ${future.length} ta (${UNTIL_PERIOD} dan keyin — yozilmaydi)`
       );
+      if (future.length > 0) {
+        const futureTotal = future.reduce((s, c) => s + c.amount, 0);
+        console.log(
+          `\n  ⚠ ${future.length} ta qator KELAJAK davrga tegishli (${som(futureTotal)} so'm).\n` +
+            "    Bu backfill muammosi emas — MANBA sanasi noto'g'ri (odatda Excel\n" +
+            "    importidagi yil). Avval o'sha qatorlarning sanasini tuzating, keyin\n" +
+            "    shu skriptni qayta yurgizing. Bilib turib yozish uchun: --until <davr>"
+        );
+      }
     }
   }
 
