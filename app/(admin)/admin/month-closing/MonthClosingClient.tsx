@@ -128,7 +128,7 @@ export default function MonthClosingClient({
       toast.success(`${yearState.year} yili yopildi`);
       await reload(yearState.year);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(friendlyError(e));
     } finally {
       setBusy(null);
     }
