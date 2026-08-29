@@ -11,7 +11,7 @@ import {
   type RoleViewOverrides,
   type UserRole,
   type AppView,
-} from "@/lib/permissions";
+} from "@/lib/platform/permissions";
 import { updateTag } from "next/cache";
 import { serialize } from "@/lib/serialize";
 

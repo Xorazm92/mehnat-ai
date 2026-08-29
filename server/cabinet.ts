@@ -3,11 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getCachedPayrollFund } from "@/lib/cached-queries";
-import { isSeniorRole } from "@/lib/permissions";
+import { isSeniorRole } from "@/lib/platform/permissions";
 import { getAvailableBalance, cashFromPaymentRows } from "@/lib/balance";
 import { adjustmentMagnitude } from "@/lib/adjustments";
 import { serialize } from "@/lib/serialize";
-import { companyScopeWhere, companyRelations, type Actor, type CompanyRelation } from "@/lib/access";
+import { companyScopeWhere, companyRelations, type Actor, type CompanyRelation } from "@/lib/platform/access";
 import { mapMonthlyReportToOperationEntry, FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
 import type { ObligationStatus, Prisma } from "@prisma/client";
 

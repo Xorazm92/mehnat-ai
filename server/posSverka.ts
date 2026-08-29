@@ -17,7 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { requireStatementRole } from "@/server/guards";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/serialize";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { readWorkbook } from "@/lib/bank/readWorkbook";
 import type { Workbook } from "@/lib/bank/types";
 import { classifySettlement, defaultInScope, settlementSign, CHANNEL_LABELS } from "@/lib/pos/classifySettlement";

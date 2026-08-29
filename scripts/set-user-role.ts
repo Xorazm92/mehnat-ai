@@ -18,7 +18,7 @@
 
 import "./load-env";
 import { prisma } from "@/lib/prisma";
-import { ROLE_LABELS, ALLOWED_VIEWS, type UserRole } from "@/lib/permissions";
+import { ROLE_LABELS, ALLOWED_VIEWS, type UserRole } from "@/lib/platform/permissions";
 
 const arg = (flag: string): string | null => {
   const i = process.argv.indexOf(flag);

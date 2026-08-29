@@ -6,7 +6,7 @@ import {
   VIEWS_BY_RELATION,
   type AppView,
   type CompanyRelation,
-} from "./permissions";
+} from "./platform/permissions";
 
 /**
  * BIRIKTIRUV BERADIGAN EKRANLAR.

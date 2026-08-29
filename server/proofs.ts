@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { companyScopeWhere, companyRelations, assertCompanyPermission } from "@/lib/access";
+import { companyScopeWhere, companyRelations, assertCompanyPermission } from "@/lib/platform/access";
 import { isCompanyReviewer } from "@/lib/reportPermissions";
 import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";

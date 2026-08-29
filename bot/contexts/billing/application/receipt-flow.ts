@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { recordAuditLog } from "../../../../lib/auditTrail";
+import { recordAuditLog } from "../../../../lib/platform/auditTrail";
 import { encodeCallback } from "../../interaction/domain/callback-token";
 import { ACTION } from "../../interaction/domain/actions";
 import { cbButton, inlineKeyboard, urlButton } from "../../../telegram/keyboard";

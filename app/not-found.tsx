@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FileQuestion } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { getHomeRoute } from "@/lib/permissions";
+import { getHomeRoute } from "@/lib/platform/permissions";
 
 export const metadata = { title: "Sahifa topilmadi" };
 

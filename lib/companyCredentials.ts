@@ -8,7 +8,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { decryptSecret } from "@/lib/crypto";
-import { isAdminRole } from "@/lib/permissions";
+import { isAdminRole } from "@/lib/platform/permissions";
 import { BANK_SERVICE } from "@/lib/credentials";
 
 interface BankCredentialCarrier {

@@ -9,7 +9,7 @@ import { createCompany, updateCompany, deleteCompany } from "@/server/companies"
 import { getCurrentPeriodKey } from "@/lib/periods";
 import { Company, Staff, OperationEntry } from "@/types";
 import type { TariffPreset } from "@/lib/tariffPresets";
-import { isAdminRole } from "@/lib/permissions";
+import { isAdminRole } from "@/lib/platform/permissions";
 
 interface Props {
   companies: Company[];

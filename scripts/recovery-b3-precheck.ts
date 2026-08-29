@@ -20,8 +20,8 @@
  */
 import "./load-env";
 import { prisma } from "@/lib/prisma";
-import { periodWindowFor, computeDueAt, makeWorkdayPredicate, dateKey } from "@/lib/deadlines";
-import { isCompanyEligible, templateApplies, type CompanyFacts } from "@/lib/applicability";
+import { periodWindowFor, computeDueAt, makeWorkdayPredicate, dateKey } from "@/lib/engines/obligation/deadlines";
+import { isCompanyEligible, templateApplies, type CompanyFacts } from "@/lib/engines/obligation/applicability";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);

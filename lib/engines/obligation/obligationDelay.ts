@@ -9,8 +9,8 @@
 // Ruxsat: assertCompanyPermission (lib/access.ts) — rol gate + OBYEKT-scope,
 // ya'ni payload'dagi id almashtirilsa ham boshqa kompaniyaga o'tib bo'lmaydi.
 import type { Prisma, DelayReason } from "@prisma/client";
-import { assertCompanyPermission, type Actor } from "@/lib/access";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { assertCompanyPermission, type Actor } from "@/lib/platform/access";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 
 type Db = Prisma.TransactionClient;
 

@@ -13,7 +13,7 @@ import { getCachedUnreadCount } from "@/lib/cached-queries";
 import { getRoleViewOverrides } from "@/server/rbac";
 import { getMyContexts, getRoleContext } from "@/server/roleContext";
 import { getMyRoles } from "@/server/activeRole";
-import { effectiveViewsForRole, type CompanyRelation, type UserRole } from "@/lib/permissions";
+import { effectiveViewsForRole, type CompanyRelation, type UserRole } from "@/lib/platform/permissions";
 
 // Butun boshqaruv paneli autentifikatsiya ortida — moliyaviy va shaxsiy
 // ma'lumot qidiruv botlariga ko'rinmasligi kerak. Har bir sahifada alohida

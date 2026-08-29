@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Plus, Search, Pencil, KeyRound, UserCheck, UserX, X } from "lucide-react";
-import { ROLES, ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { ROLES, ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import { Button } from "@/components/ui/Button";
 import { DateField } from "../ui/DateField";
 import { ModalLayer } from "../ui/ModalLayer";

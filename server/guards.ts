@@ -15,7 +15,7 @@
 // "sessiyani ol, predikatni qo'lla, xato tashla" qismi.
 
 import { auth } from "@/lib/auth";
-import { isAdminRole, isFinanceRole, isSeniorRole } from "@/lib/permissions";
+import { isAdminRole, isFinanceRole, isSeniorRole } from "@/lib/platform/permissions";
 
 export interface Actor {
   userId: string;

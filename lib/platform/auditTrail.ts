@@ -4,7 +4,7 @@
 // zaharlashi mumkin edi. Bu modul faqat server kodidan chaqiriladi.
 import { prisma } from "@/lib/prisma";
 import type { AuditAction, Prisma } from "@prisma/client";
-import { logServerError } from "@/lib/logger";
+import { logServerError } from "@/lib/platform/logger";
 import { clientIpFromHeaders } from "@/lib/rateLimit";
 
 /**

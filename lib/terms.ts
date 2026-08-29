@@ -13,7 +13,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { serializable } from "@/lib/tx";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 

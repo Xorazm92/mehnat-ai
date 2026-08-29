@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
-import { canSeeView, type UserRole, type AppView } from "@/lib/permissions";
+import { canSeeView, type UserRole, type AppView } from "@/lib/platform/permissions";
 import { NAV_ITEMS, MOBILE_NAV_ORDER, MOBILE_NAV_SHORT_LABELS } from "@/lib/navigation";
 import { useMobileNav } from "@/components/MobileNavContext";
 

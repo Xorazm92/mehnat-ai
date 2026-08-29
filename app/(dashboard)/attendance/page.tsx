@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { getCachedUsers } from "@/lib/cached-queries";
 import { getAttendance } from "@/server/attendance";
-import { isSeniorRole } from "@/lib/permissions";
+import { isSeniorRole } from "@/lib/platform/permissions";
 import AttendanceClient from "./AttendanceClient";
 
 export const metadata = { title: "Davomat" };

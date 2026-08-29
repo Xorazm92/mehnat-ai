@@ -9,7 +9,7 @@ import {
   type CompanyRelation,
   type RoleViewOverrides,
   type UserRole,
-} from "@/lib/permissions";
+} from "@/lib/platform/permissions";
 import { parseRelations } from "@/lib/userRelations";
 // Manzil → ekran xaritasi YAGONA manbada: `Breadcrumbs` ham shu javobga
 // tayanadi, aks holda UI ocholmaydigan havolani taklif qilardi.

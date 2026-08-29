@@ -12,14 +12,14 @@
 // kiritilmaganini bildiradi. Shuning uchun farqi katta qatorlar TEPADA.
 
 import { prisma } from "@/lib/prisma";
-import { isAdminRole } from "@/lib/permissions";
+import { isAdminRole } from "@/lib/platform/permissions";
 import { requireSenior } from "@/server/guards";
-import { companyScopeWhere } from "@/lib/access";
+import { companyScopeWhere } from "@/lib/platform/access";
 import { serialize } from "@/lib/serialize";
 import { computeContractDebt, listDebtors, periodKeyOf } from "@/lib/debt";
 import { contractNumberOf } from "@/lib/debtReport";
 import { runReconciliation } from "@/lib/reconciliation";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { revalidatePath } from "next/cache";
 
 

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { logServerError } from "@/lib/logger";
+import { logServerError } from "@/lib/platform/logger";
 import { timingSafeEqual } from "node:crypto";
 import { config } from "@/bot/config";
 import { enqueueTelegramUpdate } from "@/bot/queues/message.queue";

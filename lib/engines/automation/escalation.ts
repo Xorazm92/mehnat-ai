@@ -18,7 +18,7 @@
 // Notification esa har doim yoziladi: bot lichkaga yoza olmasligi mumkin
 // (xodim /start bosmagan), in-app kanal — ishonchli zaxira.
 import { Prisma } from "@prisma/client";
-import { logServerError } from "@/lib/logger";
+import { logServerError } from "@/lib/platform/logger";
 
 type Db = Prisma.TransactionClient;
 

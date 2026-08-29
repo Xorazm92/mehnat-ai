@@ -9,8 +9,8 @@
 // Bitta odam bir firmada nazoratchi, boshqasida buxgalter bo'lishi mumkin
 // (bazadagi haqiqiy holat) — shuning uchun har bir funksiya `relations` oladi.
 
-import { isAdminRole } from "@/lib/permissions";
-import type { CompanyRelation } from "@/lib/access";
+import { isAdminRole } from "@/lib/platform/permissions";
+import type { CompanyRelation } from "@/lib/platform/access";
 
 /** Katakning maxsus (matn bo'lmagan) qiymatlari. */
 export const CELL_APPROVED = "+";

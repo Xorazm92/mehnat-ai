@@ -17,7 +17,7 @@
 import "./load-env";
 import { Redis } from "ioredis";
 import { prisma } from "@/lib/prisma";
-import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
+import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
 import { LEDGER_DRIFT_TOLERANCE } from "@/lib/ledger";
 
 const JSON_MODE = process.argv.includes("--json");

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { isCompanyReviewer } from "./reportPermissions";
-import { isReviewerOn } from "./access";
-import type { CompanyRelation } from "./permissions";
+import { isReviewerOn } from "./platform/access";
+import type { CompanyRelation } from "./platform/permissions";
 
 /**
  * MIJOZ VA SERVER BIR XIL JAVOB BERSIN.

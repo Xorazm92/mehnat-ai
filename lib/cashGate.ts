@@ -30,7 +30,7 @@ import { assertSufficientFunds, getChannelCashBalance } from "@/lib/balance";
 import { ACCOUNTS, postLedger, reverseLedger, type LedgerLeg } from "@/lib/ledger";
 import { periodKeyOf } from "@/lib/periods";
 import { formatNum } from "@/lib/format";
-import { isAdminRole } from "@/lib/permissions";
+import { isAdminRole } from "@/lib/platform/permissions";
 
 type Db = Prisma.TransactionClient;
 

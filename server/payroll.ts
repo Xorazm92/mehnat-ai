@@ -3,13 +3,13 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
-import { staffScopeFilter } from "@/lib/access";
+import { isSeniorRole } from "@/lib/platform/permissions";
+import { staffScopeFilter } from "@/lib/platform/access";
 import { assertSufficientFunds } from "@/lib/balance";
 import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger } from "@/lib/ledger";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { adjustmentMagnitude } from "@/lib/adjustments";
 import { serialize } from "@/lib/serialize";
 import { calculateEmployeeSalary, type CompanyAssignment } from "@/lib/kpiLogic";

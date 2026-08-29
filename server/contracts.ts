@@ -19,7 +19,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireKassa } from "@/server/guards";
 import { serialize } from "@/lib/serialize";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 

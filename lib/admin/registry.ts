@@ -24,7 +24,7 @@ import {
   hasPermission,
   type Capability,
   type UserRole,
-} from "@/lib/permissions";
+} from "@/lib/platform/permissions";
 
 export type AdminModuleGroup = "tizim" | "moliya" | "integratsiya";
 

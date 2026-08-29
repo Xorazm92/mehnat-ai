@@ -8,8 +8,8 @@
 // (payload companyId almashtirilsa ham scope'dan o'tmaydi).
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { recordAuditLog } from "@/lib/auditTrail";
-import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/access";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
+import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/platform/access";
 import {
   canTransition,
   permissionForTransition,

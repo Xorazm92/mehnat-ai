@@ -6,7 +6,7 @@ import {
   ADMIN_GROUP_LABELS,
   type AdminModuleGroup,
 } from "@/lib/admin/registry";
-import { ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 
 interface AuditRow {
   id: string;

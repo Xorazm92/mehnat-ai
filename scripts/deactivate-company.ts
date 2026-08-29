@@ -21,7 +21,7 @@
  */
 import "./load-env";
 import { prisma } from "@/lib/prisma";
-import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
+import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
 
 /** `companyStatus` — nima uchun arxivlangani (dedupe-companies.ts uslubi). */
 const DEFAULT_REASON = "archived_left";

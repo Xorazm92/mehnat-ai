@@ -19,7 +19,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isFinanceRole } from "@/lib/permissions";
+import { isFinanceRole } from "@/lib/platform/permissions";
 import {
   CHANNEL_TYPES,
   CHANNEL_TYPE_ORDER,

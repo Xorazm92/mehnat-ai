@@ -8,7 +8,7 @@
 // tasdiqlagandan keyin tushadi (ADR-0001).
 
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
+import { isSeniorRole } from "@/lib/platform/permissions";
 import { toPerformanceMonth } from "@/lib/periods";
 import { evaluateObligationEvidence, evaluateAttendanceEvidence } from "@/lib/kpiEvidence";
 import { projectResponseKpiToPerformance } from "@/server/botKpiProjection";

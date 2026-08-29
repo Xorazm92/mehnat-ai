@@ -29,7 +29,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
+import { isSeniorRole } from "@/lib/platform/permissions";
 import { PERIOD_STATUS, WRITABLE_STATUSES } from "@/lib/periodLock";
 import {
   monthKey,
@@ -43,7 +43,7 @@ import {
 } from "@/lib/monthClose";
 import { getTrialBalance } from "@/lib/ledger";
 import { computeSnapshotChecksum, verifySnapshotChecksum } from "@/lib/snapshot";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { serialize } from "@/lib/serialize";
 
 const STALE_CLOSING_MS = 10 * 60_000;

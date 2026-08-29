@@ -6,7 +6,7 @@ import {
   ROLE_PERMISSIONS,
   type UserRole,
   type Capability,
-} from "@/lib/permissions";
+} from "@/lib/platform/permissions";
 
 const CAP_LABELS: Record<Capability, string> = {
   view_all_companies: "Barcha firmalar",

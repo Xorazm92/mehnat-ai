@@ -27,7 +27,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { phoneKey, formatPhone } from "@/lib/phone";
 import { nameCandidates, scoreMatch } from "@/lib/nameMatch";
-import type { UserRole } from "@/lib/permissions";
+import type { UserRole } from "@/lib/platform/permissions";
 
 /** Ikkinchi guruh bo'limi. `Department.name` unique — qayta ishga tushirish xavfsiz. */
 const FINCO2 = "FinCo 2";

@@ -11,7 +11,7 @@ import {
     ASSIGNMENT_ROLE_LABELS,
     sortStaffForAssignmentRole,
     type AssignmentRole,
-} from '@/lib/permissions';
+} from '@/lib/platform/permissions';
 import { STANDARD_TARIFF, type TariffPreset } from '@/lib/tariffPresets';
 import {
     TAX_CATEGORIES,

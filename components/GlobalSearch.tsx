@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Search, Command, Building2, Users, Loader2, CornerDownLeft, X } from "lucide-react";
 import { globalSearch, type SearchResults } from "@/server/search";
-import { ROLE_LABELS, canSeeView, type UserRole, type AppView } from "@/lib/permissions";
+import { ROLE_LABELS, canSeeView, type UserRole, type AppView } from "@/lib/platform/permissions";
 import { NAV_ITEMS, NAV_SECTIONS } from "@/lib/navigation";
 import { useModalA11y } from "@/hooks/useModalA11y";
 

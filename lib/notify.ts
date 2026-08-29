@@ -20,7 +20,7 @@
 // takrorlanmaydi.
 
 import { Prisma } from "@prisma/client";
-import { logServerError } from "@/lib/logger";
+import { logServerError } from "@/lib/platform/logger";
 
 type Db = Prisma.TransactionClient;
 

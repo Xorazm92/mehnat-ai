@@ -1,5 +1,5 @@
 import { Worker, type Job } from "bullmq";
-import { logJobFailure, logServerError } from "../../lib/logger";
+import { logJobFailure, logServerError } from "../../lib/platform/logger";
 import {
   evaluateObligationEvidence,
   evaluateAttendanceEvidence,

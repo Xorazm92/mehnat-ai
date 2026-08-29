@@ -5,7 +5,7 @@ import {
   ASSIGNMENT_ROLE_TO_USER_ROLE,
   normalizeAssignmentRole,
   staffFitsAssignmentRole,
-} from "@/lib/permissions";
+} from "@/lib/platform/permissions";
 import { STANDARD_TARIFF, resolveTariffPreset } from "@/lib/tariffPresets";
 
 describe("normalizeAssignmentRole", () => {

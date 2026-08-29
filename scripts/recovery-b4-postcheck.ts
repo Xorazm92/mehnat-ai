@@ -10,7 +10,7 @@
 import "./load-env";
 import { readFileSync } from "node:fs";
 import { prisma } from "@/lib/prisma";
-import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
+import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
 import { B4_CRITERIA, readFinancialBaseline, type FinancialBaseline } from "./recovery-b4-preview";
 
 interface Baseline {

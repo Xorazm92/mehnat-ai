@@ -3,8 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
-import { isAdminRole, isSeniorRole } from "@/lib/permissions";
-import { companyScopeWhere, assertCompanyPermission } from "@/lib/access";
+import { isAdminRole, isSeniorRole } from "@/lib/platform/permissions";
+import { companyScopeWhere, assertCompanyPermission } from "@/lib/platform/access";
 
 // Ofis kassasi va xarajatlari FIRMAGA bog'lanmagan (KassaEntry.companyId
 // ixtiyoriy, Expense'da umuman yo'q) — shuning uchun portfel filtri bu yerda
@@ -22,8 +22,8 @@ import { assertFundingSource } from "@/server/fundingSources";
 // (`lib/cashGate.ts`). Bu yerda nusxasi bo'lganda qoida ikki joyda
  // turib qolardi va biri o'zgarganda ikkinchisi jimgina eskiqardi.
 import { SALARY_CATEGORY_RE } from "@/lib/cashGate";
-import { isFinanceRole } from "@/lib/permissions";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { isFinanceRole } from "@/lib/platform/permissions";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { serialize } from "@/lib/serialize";
 import { periodKeyOf } from "@/lib/periods";
 

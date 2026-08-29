@@ -15,11 +15,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole, type CompanyRelation } from "@/lib/permissions";
-import { companyScopeWhere } from "@/lib/access";
+import { isSeniorRole, type CompanyRelation } from "@/lib/platform/permissions";
+import { companyScopeWhere } from "@/lib/platform/access";
 import { notifyUsers } from "@/lib/notify";
 import { telegramQueueDispatcher } from "@/lib/notifyDispatch";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { serialize } from "@/lib/serialize";
 import { updateTag } from "next/cache";
 import type { TaskPriority } from "@prisma/client";

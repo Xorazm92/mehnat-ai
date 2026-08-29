@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { assertCompanyPermission } from "@/lib/access";
+import { assertCompanyPermission } from "@/lib/platform/access";
 import { serialize } from "@/lib/serialize";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { PRIMARY_SERVICE } from "@/lib/credentials";

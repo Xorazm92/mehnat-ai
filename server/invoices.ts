@@ -11,10 +11,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
+import { isSeniorRole } from "@/lib/platform/permissions";
 import { serialize } from "@/lib/serialize";
 import { serializable } from "@/lib/tx";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { resolveServiceTerm, roundToMonthStart } from "@/lib/terms";
 import { periodKeyOf } from "@/lib/periods";
 import { buildInvoiceLines, nextInvoiceNumber } from "@/lib/invoiceBuild";

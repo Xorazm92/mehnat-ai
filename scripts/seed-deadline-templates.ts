@@ -18,7 +18,7 @@
 // yaratilgan majburiyatlarni reset darhol o'chirib yuborardi.
 import "./load-env";
 import { prisma } from "@/lib/prisma";
-import { runGenerationLocked } from "@/lib/obligationRun";
+import { runGenerationLocked } from "@/lib/engines/obligation/obligationRun";
 import type { Periodicity, DeadlineAnchorType } from "@prisma/client";
 
 // contractDate yo'q firmalar uchun taxminiy xizmat-boshlanish sanasi.

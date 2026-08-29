@@ -22,7 +22,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveServiceTerm, roundToMonthStart } from "@/lib/terms";
 import { periodKeyOf } from "@/lib/periods";
 import { isCompanyEligible, type CompanyFacts } from "@/lib/engines/obligation/applicability";
-import { logServerError } from "@/lib/logger";
+import { logServerError } from "@/lib/platform/logger";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 

@@ -7,7 +7,7 @@ import {
   isCompanyReviewer,
   isReviewerOwnedValue,
 } from "@/lib/reportPermissions";
-import type { CompanyRelation } from "@/lib/access";
+import type { CompanyRelation } from "@/lib/platform/access";
 
 const SENIOR = ["super_admin", "admin", "chief_accountant", "supervisor"];
 

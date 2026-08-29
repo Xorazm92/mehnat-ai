@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { friendlyError } from "@/lib/actionError";
 import { previewBulkRecipients, sendBulkAssignment, type BulkAudience, type BulkRecipient } from "@/server/bulkAssign";
-import type { CompanyRelation } from "@/lib/permissions";
+import type { CompanyRelation } from "@/lib/platform/permissions";
 import type { TaskPriority } from "@prisma/client";
 import { DateField } from "./ui/DateField";
 

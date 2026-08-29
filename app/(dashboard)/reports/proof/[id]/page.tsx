@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { assertCompanyPermission, companyRelations } from "@/lib/access";
+import { assertCompanyPermission, companyRelations } from "@/lib/platform/access";
 import { isCompanyReviewer } from "@/lib/reportPermissions";
 import { notFound, redirect } from "next/navigation";
 import ProofViewClient from "./ProofViewClient";

@@ -2,8 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
-import { companyRelations, assertCompanyPermission } from "@/lib/access";
+import { isSeniorRole } from "@/lib/platform/permissions";
+import { companyRelations, assertCompanyPermission } from "@/lib/platform/access";
 import { checkCellWrite, CELL_EMPTY } from "@/lib/reportPermissions";
 import { clearCellEvidence, syncCellToObligation } from "@/lib/obligationBridge";
 import { updateTag } from "next/cache";

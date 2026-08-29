@@ -11,7 +11,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { isAdminRole } from "@/lib/platform/permissions";
 import {
   ROLE_CONTEXT_COOKIE,
   parseRoleContext,

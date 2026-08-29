@@ -6,7 +6,7 @@ import {
   getCachedUsers,
   getCachedOperations,
 } from "@/lib/cached-queries";
-import { isSeniorRole } from "@/lib/permissions";
+import { isSeniorRole } from "@/lib/platform/permissions";
 import { getEffectiveViewsForRole } from "@/server/rbac";
 import { readTabParam } from "@/lib/tabs";
 import { KPI_TAB_IDS, defaultKpiTab, type KpiTabId } from "@/lib/kpiTabs";

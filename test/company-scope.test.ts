@@ -10,7 +10,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 const { prisma } = await import("@/lib/prisma");
 const { companyScopeWhere, companyRelations, isReviewerOn, scopedStaffIds } = await import(
-  "@/lib/access"
+  "@/lib/platform/access"
 );
 
 const TAG = `vitest-scope-${Date.now()}`;

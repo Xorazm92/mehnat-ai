@@ -9,9 +9,9 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isAdminRole, isSeniorRole } from "@/lib/permissions";
+import { isAdminRole, isSeniorRole } from "@/lib/platform/permissions";
 import { serialize } from "@/lib/serialize";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { updateTag } from "next/cache";
 
 const PERIODICITIES = ["monthly", "quarterly", "yearly", "one_time"] as const;

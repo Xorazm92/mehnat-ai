@@ -15,7 +15,7 @@
 // Node-only (ioredis). proxy.ts (Edge) bu moduldan import qilmasligi kerak.
 
 import { Redis } from "ioredis";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/platform/logger";
 
 const globalForRedis = globalThis as unknown as { asroRedis?: Redis | null };
 

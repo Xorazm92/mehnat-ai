@@ -9,8 +9,8 @@
 // draft → approved → active → retired (inson tasdig'i, audit). Reviewer #4,#16.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { isAdminRole } from "@/lib/platform/permissions";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { updateTag } from "next/cache";
 import type { Periodicity, DeadlineAnchorType, WorkdayAdjustmentPolicy, TemplateLifecycle } from "@prisma/client";
 

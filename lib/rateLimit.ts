@@ -11,7 +11,7 @@
 
 import { RATE_LIMIT } from "@/lib/constants";
 import { getRedis } from "@/lib/redis";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/platform/logger";
 
 interface Bucket {
   count: number;

@@ -3,7 +3,7 @@ import {
   Grid3x3, Trophy, CheckSquare, Settings, User, AlarmClock, Calculator, History, Lock, type LucideIcon,
   Scale,
 } from "lucide-react";
-import type { AppView } from "@/lib/permissions";
+import type { AppView } from "@/lib/platform/permissions";
 import { KPI_CONFIG_ROLES, KPI_REVIEW_ROLES } from "@/lib/kpiTabs";
 
 /**

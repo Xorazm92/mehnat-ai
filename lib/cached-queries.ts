@@ -14,8 +14,8 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { isSeniorRole } from "@/lib/permissions";
-import { companyScopeWhere, scopedStaffIds } from "@/lib/access";
+import { isSeniorRole } from "@/lib/platform/permissions";
+import { companyScopeWhere, scopedStaffIds } from "@/lib/platform/access";
 import { mapMonthlyReportToOperationEntry } from "@/lib/operationTemplates";
 import {
   TARIFF_PRESET_SETTING_KEY,

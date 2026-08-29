@@ -21,7 +21,7 @@ import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { phoneKey, formatPhone } from "@/lib/phone";
 import { nameCandidates, scoreMatch, type MatchTier } from "@/lib/nameMatch";
-import type { UserRole } from "@/lib/permissions";
+import type { UserRole } from "@/lib/platform/permissions";
 
 interface RosterEntry {
   /** Ro'yxatdagi to'liq yozuv (lavozim/firma so'zlari bilan). */

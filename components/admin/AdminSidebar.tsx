@@ -9,7 +9,7 @@ import {
   ADMIN_GROUP_LABELS,
   type AdminModuleGroup,
 } from "@/lib/admin/registry";
-import type { UserRole } from "@/lib/permissions";
+import type { UserRole } from "@/lib/platform/permissions";
 import { useMobileNav } from "@/components/MobileNavContext";
 
 const GROUP_ORDER: AdminModuleGroup[] = ["tizim", "moliya", "integratsiya"];

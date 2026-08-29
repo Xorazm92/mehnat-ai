@@ -2,8 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
-import { staffScopeFilter } from "@/lib/access";
+import { isSeniorRole } from "@/lib/platform/permissions";
+import { staffScopeFilter } from "@/lib/platform/access";
 import { serialize } from "@/lib/serialize";
 import { classifyArrival, aggregateMonthlyAttendance } from "@/lib/attendance";
 

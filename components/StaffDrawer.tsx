@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Staff, Company } from "@/types";
-import { ROLE_LABELS, ROLE_COLORS, type UserRole } from "@/lib/permissions";
+import { ROLE_LABELS, ROLE_COLORS, type UserRole } from "@/lib/platform/permissions";
 import { formatUzDate, formatNum } from "@/lib/format";
 import {
   X, Edit3, Phone, Mail, IdCard, Briefcase, Building, GraduationCap,

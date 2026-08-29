@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { Prisma } from "@prisma/client";
-import { assertCompanyPermission, type Actor } from "../../../../lib/access";
-import { recordAuditLog } from "../../../../lib/auditTrail";
+import { assertCompanyPermission, type Actor } from "../../../../lib/platform/access";
+import { recordAuditLog } from "../../../../lib/platform/auditTrail";
 import { ESCALATION_PENALTY_PERCENT } from "../../../../lib/engines/automation/escalation";
 import { excuseObligationDelay, reassignObligationTo } from "../../../../lib/engines/obligation/obligationDelay";
 import { appendKpiEvent } from "../../kpi/application/append-kpi-event";

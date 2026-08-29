@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { OPEN_OBLIGATION_STATUSES } from "../../../../lib/engines/workflow/obligationWorkflow";
-import { isSeniorRole } from "../../../../lib/permissions";
+import { isSeniorRole } from "../../../../lib/platform/permissions";
 import { canSeeDirectorReport } from "../../../../lib/directorReport";
 import { DIRECTOR_SECTION } from "../../digest/application/render-director-section";
 import { scopeCompanyIds } from "../../../../lib/engines/automation/dailyDigest";

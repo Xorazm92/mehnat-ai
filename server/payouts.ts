@@ -20,13 +20,13 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
-import { staffScopeFilter } from "@/lib/access";
+import { isAdminRole } from "@/lib/platform/permissions";
+import { staffScopeFilter } from "@/lib/platform/access";
 import { assertSufficientFunds } from "@/lib/balance";
 import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { computeObligation, computeRemaining } from "@/lib/payrollObligation";
 import { serialize } from "@/lib/serialize";
 

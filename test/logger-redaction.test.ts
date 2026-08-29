@@ -3,7 +3,7 @@
  * Sof unit test (DB kerak emas).
  */
 import { describe, it, expect } from "vitest";
-import { redactSensitive, REDACTED } from "@/lib/logger";
+import { redactSensitive, REDACTED } from "@/lib/platform/logger";
 
 describe("redactSensitive — sezgir kalitlar", () => {
   it("parol, hash, token, cookie va secret'ni tozalaydi", () => {

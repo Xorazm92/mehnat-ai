@@ -2,7 +2,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 import { auth } from "@/lib/auth";
-import { logServerError } from "@/lib/logger";
+import { logServerError } from "@/lib/platform/logger";
 import {
   ASSISTANT_SYSTEM_INSTRUCTION,
   heuristicReply,

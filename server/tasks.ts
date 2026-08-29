@@ -7,9 +7,9 @@
 // firmalari vazifalarini ko'radi. Har mutatsiya event + audit yozadi.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isAdminRole, isSeniorRole } from "@/lib/permissions";
-import { recordAuditLog } from "@/lib/auditTrail";
-import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/access";
+import { isAdminRole, isSeniorRole } from "@/lib/platform/permissions";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
+import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/platform/access";
 import { canTransitionTask, taskTimingPatch } from "@/lib/engines/workflow/taskWorkflow";
 import { syncTaskDoneToObligation } from "@/lib/obligationBridge";
 import { updateTag } from "next/cache";

@@ -2,11 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
-import { scopedStaffIds } from "@/lib/access";
+import { isSeniorRole } from "@/lib/platform/permissions";
+import { scopedStaffIds } from "@/lib/platform/access";
 import { updateTag } from "next/cache";
 import bcrypt from "bcryptjs";
-import type { UserRole } from "@/lib/permissions";
+import type { UserRole } from "@/lib/platform/permissions";
 import { serialize } from "@/lib/serialize";
 import { phoneKey } from "@/lib/phone";
 

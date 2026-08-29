@@ -12,7 +12,7 @@ import {
   ROLE_LABELS,
   type AssignmentRole,
   type UserRole,
-} from "@/lib/permissions";
+} from "@/lib/platform/permissions";
 import { STANDARD_TARIFF, resolveTariffPreset, type TariffPreset } from "@/lib/tariffPresets";
 import {
   PAYROLL_BASIS_DEFAULT,

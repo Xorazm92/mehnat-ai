@@ -5,7 +5,7 @@ import {
   computeDueAt,
   makeWorkdayPredicate,
   type CalendarDay,
-} from "../lib/deadlines";
+} from "../lib/engines/obligation/deadlines";
 
 /**
  * Hali bajarilmagan Obligation'larning `dueAt` ini shablonning JORIY sozlamasi

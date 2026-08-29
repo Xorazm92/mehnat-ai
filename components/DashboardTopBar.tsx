@@ -14,7 +14,7 @@ import { useDismissable } from "@/hooks/useDismissable";
 import { useTheme } from "next-themes";
 import GlobalSearch from "@/components/GlobalSearch";
 import FinanceAssistant from "@/components/FinanceAssistant";
-import { getHomeRoute, type AppView } from "@/lib/permissions";
+import { getHomeRoute, type AppView } from "@/lib/platform/permissions";
 import RoleContextSwitcher from "@/components/RoleContextSwitcher";
 import MultiRoleSwitcher from "@/components/MultiRoleSwitcher";
 import type { ContextOption, RoleContext } from "@/lib/roleContext";

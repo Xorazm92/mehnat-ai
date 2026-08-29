@@ -32,8 +32,8 @@ import "./load-env";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { prisma } from "@/lib/prisma";
-import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
-import { ESCALATION_CHANNEL, escalationDedupKey } from "@/lib/escalation";
+import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
+import { ESCALATION_CHANNEL, escalationDedupKey } from "@/lib/engines/automation/escalation";
 
 /** B4 da bekor qilinadigan soxta PAYROLL shablonlari — qamrovdan tashqarida. */
 const PAYROLL_CODES = ["PAYROLL_CALC", "PAYROLL_POSTED"] as const;

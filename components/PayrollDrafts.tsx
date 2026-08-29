@@ -15,7 +15,7 @@ import { TableToolbar } from "@/components/ui/TableToolbar";
 import { exportToExcel } from "@/lib/exportExcel";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
-import { ROLE_LABELS, ASSIGNMENT_ROLE_LABELS, type UserRole, type AssignmentRole } from "@/lib/permissions";
+import { ROLE_LABELS, ASSIGNMENT_ROLE_LABELS, type UserRole, type AssignmentRole } from "@/lib/platform/permissions";
 import { MonthPicker } from "./ui/MonthPicker";
 import { ModalLayer } from "./ui/ModalLayer";
 

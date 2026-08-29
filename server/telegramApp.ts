@@ -9,10 +9,10 @@
 // avtorizatsiya qatlami yo'q, faqat ikkita ekran uchun ma'lumot.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { companyScopeWhere, type Actor } from "@/lib/access";
+import { companyScopeWhere, type Actor } from "@/lib/platform/access";
 import { scopeCompanyIds } from "@/lib/engines/automation/dailyDigest";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
-import { isSeniorRole } from "@/lib/permissions";
+import { isSeniorRole } from "@/lib/platform/permissions";
 
 async function requireActor(): Promise<Actor> {
   const session = await auth();

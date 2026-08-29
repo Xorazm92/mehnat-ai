@@ -2,8 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
-import { companyScopeWhere } from "@/lib/access";
+import { isSeniorRole } from "@/lib/platform/permissions";
+import { companyScopeWhere } from "@/lib/platform/access";
 import { serialize } from "@/lib/serialize";
 import { REPORT_TYPES } from "@/lib/reportTypes";
 import { Prisma } from "@prisma/client";

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { logServerError } from "@/lib/logger";
+import { logServerError } from "@/lib/platform/logger";
 import { prisma } from "@/lib/prisma";
 import { getRedis, REDIS_URL } from "@/lib/redis";
 

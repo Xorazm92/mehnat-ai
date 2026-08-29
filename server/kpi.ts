@@ -2,9 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isSeniorRole, isAdminRole } from "@/lib/permissions";
-import { companyScopeWhere, staffScopeFilter, assertCompanyPermission } from "@/lib/access";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { isSeniorRole, isAdminRole } from "@/lib/platform/permissions";
+import { companyScopeWhere, staffScopeFilter, assertCompanyPermission } from "@/lib/platform/access";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { serialize } from "@/lib/serialize";
 import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
 import { toPerformanceMonth } from "@/lib/periods";

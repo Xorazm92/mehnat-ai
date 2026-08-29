@@ -12,10 +12,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { assertCompanyPermission } from "@/lib/access";
-import { isSeniorRole } from "@/lib/permissions";
+import { assertCompanyPermission } from "@/lib/platform/access";
+import { isSeniorRole } from "@/lib/platform/permissions";
 import { serialize } from "@/lib/serialize";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { updateTag } from "next/cache";
 
 const DOCUMENT_TYPES = [

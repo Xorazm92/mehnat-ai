@@ -18,7 +18,7 @@ import BalanceOverview from "@/components/BalanceOverview";
 import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { formatUzDateTime, formatNum } from "@/lib/format";
-import { ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import type { BalanceBreakdown } from "@/types";
 
 const fmtMln = (v: number) => {

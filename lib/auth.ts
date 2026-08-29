@@ -13,7 +13,7 @@ import {
   recordLoginFailure,
   resetLoginRateLimit,
 } from "@/lib/rateLimit";
-import { logLoginFailure, logLoginSuccess, logRateLimitBlock } from "@/lib/logger";
+import { logLoginFailure, logLoginSuccess, logRateLimitBlock } from "@/lib/platform/logger";
 import { revalidateSessionToken } from "@/lib/sessionRevalidation";
 import { getUserCompanyRelations, parseRelations } from "@/lib/userRelations";
 import { verifyInitData } from "@/lib/telegramInitData";

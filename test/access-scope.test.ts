@@ -209,7 +209,7 @@ describe("P1-2 · rol konteksti", () => {
   // hammasini ARALASH ko'rardi va qaysi sifatda javob berishini
   // ajratolmasdi.
   it("kontekstsiz — barcha biriktiruvlar birga (eski xatti-harakat)", async () => {
-    const { companyScopeWhere } = await import("@/lib/access");
+    const { companyScopeWhere } = await import("@/lib/platform/access");
     const where = companyScopeWhere({ id: ids.supervisor, role: "supervisor" });
     const found = await prisma.company.findMany({
       where: { ...where, name: { startsWith: TAG } },
@@ -219,7 +219,7 @@ describe("P1-2 · rol konteksti", () => {
   });
 
   it("kontekst tanlanganda faqat SHU vazifadagi firma qoladi", async () => {
-    const { companyScopeWhere } = await import("@/lib/access");
+    const { companyScopeWhere } = await import("@/lib/platform/access");
 
     const asSupervisor = await prisma.company.findMany({
       where: {
@@ -243,7 +243,7 @@ describe("P1-2 · rol konteksti", () => {
   });
 
   it("kontekst ko'rinishni KENGAYTIRMAYDI — begona firma baribir yopiq", async () => {
-    const { companyScopeWhere } = await import("@/lib/access");
+    const { companyScopeWhere } = await import("@/lib/platform/access");
     for (const ctx of ["all", "accountant", "supervisor", "chief_accountant", "bank_manager"] as const) {
       const found = await prisma.company.findMany({
         where: {

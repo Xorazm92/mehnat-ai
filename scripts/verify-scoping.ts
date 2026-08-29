@@ -1,6 +1,6 @@
 import "./load-env"; // must be the first import — populates DATABASE_URL
 import { prisma } from "@/lib/prisma";
-import { companyScopeWhere, scopedStaffIds } from "@/lib/access";
+import { companyScopeWhere, scopedStaffIds } from "@/lib/platform/access";
 
 /**
  * Portfel scope'ini bazadagi haqiqiy ma'lumot bilan tekshiradi.

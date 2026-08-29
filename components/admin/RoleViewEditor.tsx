@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Save, Check, Lock } from "lucide-react";
-import { ROLE_LABELS, VIEW_LABELS, type UserRole, type AppView } from "@/lib/permissions";
+import { ROLE_LABELS, VIEW_LABELS, type UserRole, type AppView } from "@/lib/platform/permissions";
 import { saveRoleViews, type RoleViewMatrix } from "@/server/rbac";
 import { Button } from "@/components/ui/Button";
 

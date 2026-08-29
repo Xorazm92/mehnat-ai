@@ -11,7 +11,7 @@
 // (lib/sessionRevalidation.ts) — biriktiruv o'zgarsa 5 daqiqada kuchga kiradi.
 
 import { prisma } from "@/lib/prisma";
-import { normalizeAssignmentRole, type CompanyRelation } from "@/lib/permissions";
+import { normalizeAssignmentRole, type CompanyRelation } from "@/lib/platform/permissions";
 
 /** `contractAssignment.role` (kanonik) → mas'uliyat turi. */
 const ASSIGNMENT_TO_RELATION: Record<string, CompanyRelation> = {

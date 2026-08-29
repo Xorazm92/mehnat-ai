@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth";
-import { isAdminRole, getHomeRoute, ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { isAdminRole, getHomeRoute, ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminTopbar } from "@/components/admin/AdminTopbar";
 import { MobileNavProvider } from "@/components/MobileNavContext";

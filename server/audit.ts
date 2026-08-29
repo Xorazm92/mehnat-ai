@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isAdminRole, isSeniorRole } from "@/lib/permissions";
+import { isAdminRole, isSeniorRole } from "@/lib/platform/permissions";
 import { updateTag } from "next/cache";
 import type { AuditAction } from "@prisma/client";
 import { serialize } from "@/lib/serialize";

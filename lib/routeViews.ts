@@ -1,4 +1,4 @@
-import type { AppView } from "@/lib/permissions";
+import type { AppView } from "@/lib/platform/permissions";
 
 /**
  * MANZIL → EKRAN (view) XARITASI — yagona manba.

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { assertCompanyPermission } from "@/lib/access";
+import { assertCompanyPermission } from "@/lib/platform/access";
 
 export const runtime = "nodejs";
 

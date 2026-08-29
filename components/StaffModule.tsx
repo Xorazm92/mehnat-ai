@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useViewMode } from '@/hooks/useViewMode';
 import { Staff, Company, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
-import { ROLE_LABELS, ROLE_COLORS, type UserRole } from '@/lib/permissions';
+import { ROLE_LABELS, ROLE_COLORS, type UserRole } from '@/lib/platform/permissions';
 import { generateMemorablePassword } from '@/lib/passwordUtils';
 import StaffDrawer from './StaffDrawer';
 import {

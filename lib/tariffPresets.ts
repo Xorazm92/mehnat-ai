@@ -11,7 +11,7 @@
 // o'tkazib qiymat yozadi. (Ilgari payroll `salaryType` ni umuman ko'rmasdi
 // va notanish qiymat jim nolga aylanardi — shu sabab bu qoida saqlanadi.)
 
-import type { AssignmentRole } from "@/lib/permissions";
+import type { AssignmentRole } from "@/lib/platform/permissions";
 
 export type TariffPreset = Record<AssignmentRole, number>;
 

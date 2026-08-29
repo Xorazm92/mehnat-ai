@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ALLOWED_VIEWS, getHomeRoute, ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { ALLOWED_VIEWS, getHomeRoute, ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import { NAV_ITEMS, NAV_GROUP_LABELS, type NavGroup } from "@/lib/navigation";
 import { useMobileNav } from "@/components/MobileNavContext";
 // Ikonkalar `NAV_ITEMS` bilan birga keladi (lib/navigation.ts) — bu yerda

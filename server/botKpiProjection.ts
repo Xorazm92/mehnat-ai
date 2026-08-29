@@ -14,7 +14,7 @@
 // Bu fayl — uning ustidagi ruxsat qobig'i.
 
 import { auth } from "@/lib/auth";
-import { isSeniorRole } from "@/lib/permissions";
+import { isSeniorRole } from "@/lib/platform/permissions";
 import { evaluateResponseEvidence } from "@/lib/kpiEvidence";
 
 export async function projectResponseKpiToPerformance(month: string) {

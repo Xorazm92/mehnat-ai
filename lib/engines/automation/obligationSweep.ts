@@ -12,7 +12,7 @@
 // `due` va `overdue` bosqichlari qo'shimcha ravishda eskalatsiya zanjirini
 // ishga tushiradi (L1 nazoratchi → L2 bosh buxgalter).
 import { Prisma } from "@prisma/client";
-import { logServerError } from "@/lib/logger";
+import { logServerError } from "@/lib/platform/logger";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
 import { formatUzDate } from "@/lib/format";
 import {

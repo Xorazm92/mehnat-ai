@@ -20,7 +20,7 @@
  */
 import "./load-env";
 import { prisma } from "@/lib/prisma";
-import { runGenerationLocked } from "@/lib/obligationRun";
+import { runGenerationLocked } from "@/lib/engines/obligation/obligationRun";
 
 function parseCatchUp(): number {
   const arg = process.argv.find((a) => a.startsWith("--catch-up="));

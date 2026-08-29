@@ -32,7 +32,7 @@ import "./load-env";
 import { readFileSync } from "node:fs";
 import type { ObligationStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { canTransition } from "@/lib/obligationWorkflow";
+import { canTransition } from "@/lib/engines/workflow/obligationWorkflow";
 import { B4_CRITERIA, B4_REASON } from "./recovery-b4-preview";
 
 interface BaselineCandidate {

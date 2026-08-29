@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 import { UserCog, Check } from "lucide-react";
 import { useDismissable } from "@/hooks/useDismissable";
 import { setActiveRole } from "@/server/activeRole";
-import { ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 
 interface Props {
   roles: string[];

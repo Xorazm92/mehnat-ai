@@ -12,7 +12,7 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { getYearMovement, getMovementBefore } from "@/lib/balance";
 import { getTrialBalance } from "@/lib/ledger";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { serialize } from "@/lib/serialize";
 
 async function requireSuperAdmin() {

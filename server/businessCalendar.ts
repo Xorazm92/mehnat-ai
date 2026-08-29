@@ -7,8 +7,8 @@
 // surishда ishlatadi. Admin-gated. Sana UTC yarim tunda (@db.Date). Reviewer #16.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { isAdminRole } from "@/lib/platform/permissions";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { updateTag } from "next/cache";
 
 async function requireAdmin(): Promise<string> {

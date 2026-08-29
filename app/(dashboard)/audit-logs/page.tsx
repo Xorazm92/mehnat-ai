@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getHomeRoute, type UserRole } from "@/lib/permissions";
+import { getHomeRoute, type UserRole } from "@/lib/platform/permissions";
 import { currentUserViews } from "@/server/rbac";
 import AuditLogModule from "@/components/AuditLogModule";
 

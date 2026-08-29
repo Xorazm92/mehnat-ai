@@ -17,7 +17,7 @@ import {
   isSeniorRole,
   normalizeAssignmentRole,
   type CompanyRelation,
-} from "@/lib/permissions";
+} from "@/lib/platform/permissions";
 
 // `CompanyRelation` endi `lib/permissions.ts` da yashaydi: sahifa darvozasi
 // (`effectiveViewsForRole`) ham shu turga tayanadi, permissions esa access'dan

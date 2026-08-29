@@ -5,7 +5,7 @@ import { Company, Staff, Language } from "@/types";
 import { FileText, Plus, X, Calendar, ShieldCheck, Download, Trash2, PenLine, Send, CheckCircle2 } from "lucide-react";
 import { getFinancialReports, getReportDeadlines, createFinancialReport, setReportStatus, deleteFinancialReport } from "@/server/reports";
 import { REPORT_TYPES } from "@/lib/reportTypes";
-import { isSeniorRole } from "@/lib/permissions";
+import { isSeniorRole } from "@/lib/platform/permissions";
 import { formatUzDayShort, formatNum } from "@/lib/format";
 import { useConfirm, usePrompt } from '@/components/ui/ConfirmDialog';
 import { toast } from "sonner";

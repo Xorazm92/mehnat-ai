@@ -31,7 +31,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { ObligationStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { OPEN_OBLIGATION_STATUSES, canTransition } from "@/lib/obligationWorkflow";
+import { OPEN_OBLIGATION_STATUSES, canTransition } from "@/lib/engines/workflow/obligationWorkflow";
 
 // ── Tanlov mezonlari — bitta joyda, 2-bosqich ham shuni o'qiydi ──────────
 export const B4_CRITERIA = {

@@ -18,7 +18,7 @@
 // uchun uni cookie'da saqlash xavfsiz — hujumchi cookie'ni o'zgartirib
 // begona firmani ko'ra olmaydi, chunki asos baribir biriktiruv.
 
-import type { CompanyRelation } from "@/lib/access";
+import type { CompanyRelation } from "@/lib/platform/access";
 
 /** "all" — barcha biriktiruvlar birga (standart, eski xatti-harakat). */
 export type RoleContext = CompanyRelation | "all";

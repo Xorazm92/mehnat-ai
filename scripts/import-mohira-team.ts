@@ -27,7 +27,7 @@
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
 import { formatNum as som } from "@/lib/format";
-import { ASSIGNMENT_ROLE_LABELS, type AssignmentRole } from "@/lib/permissions";
+import { ASSIGNMENT_ROLE_LABELS, type AssignmentRole } from "@/lib/platform/permissions";
 
 interface SourceRow {
   name: string;

@@ -23,7 +23,7 @@ import { prisma } from "@/lib/prisma";
 import { requireKassa, requireAdmin } from "@/server/guards";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/serialize";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { serializable } from "@/lib/tx";
 import { periodOf } from "@/lib/bank/importStatement";

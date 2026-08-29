@@ -12,7 +12,7 @@
 // test bilan qulflab bo'lmasdi.
 
 import { prisma } from "@/lib/prisma";
-import { logServerError } from "@/lib/logger";
+import { logServerError } from "@/lib/platform/logger";
 import { SESSION_MAX_AGE } from "@/lib/auth.config";
 import { getUserCompanyRelations } from "@/lib/userRelations";
 

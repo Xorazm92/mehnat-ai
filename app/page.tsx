@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getHomeRoute } from "@/lib/permissions";
+import { getHomeRoute } from "@/lib/platform/permissions";
 
 export default async function HomePage() {
   const session = await auth();

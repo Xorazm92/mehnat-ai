@@ -10,7 +10,7 @@
 // faqat Payout yozilganda chiqadi. Soft-delete qilingan yozuvlar hisobga kirmaydi.
 // Bu server-only modul (prisma ishlatadi) — faqat server komponent/actionlardan chaqiriladi.
 import { prisma } from "@/lib/prisma";
-import { isAdminRole, ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import { isAdminRole, ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import type { Prisma } from "@prisma/client";
 import { formatNum } from "@/lib/format";
 import type { BalanceBreakdown } from "@/types";

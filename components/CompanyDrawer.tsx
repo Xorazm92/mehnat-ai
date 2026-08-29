@@ -57,7 +57,7 @@ import {
   normalizeAssignmentRole,
   sortStaffForAssignmentRole,
   type AssignmentRole,
-} from '@/lib/permissions';
+} from '@/lib/platform/permissions';
 import { friendlyError } from "@/lib/actionError";
 import { DateField } from './ui/DateField';
 

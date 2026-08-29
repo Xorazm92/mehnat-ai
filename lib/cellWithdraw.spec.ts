@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { checkCellWrite, CELL_EMPTY, CELL_SUBMITTED, CELL_APPROVED, CELL_ZERO_REPORT } from "./reportPermissions";
-import type { CompanyRelation } from "./permissions";
+import type { CompanyRelation } from "./platform/permissions";
 
 /**
  * O'Z TOPSHIRIG'INI QAYTARIB OLISH.

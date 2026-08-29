@@ -10,8 +10,8 @@
 import "./load-env";
 import { readFileSync } from "node:fs";
 import { prisma } from "@/lib/prisma";
-import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
-import { escalationDedupKey } from "@/lib/escalation";
+import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
+import { escalationDedupKey } from "@/lib/engines/automation/escalation";
 
 const PAYROLL_CODES = ["PAYROLL_CALC", "PAYROLL_POSTED"] as const;
 const MILESTONES = ["D-5", "D-3", "D-1", "due", "overdue:L1"] as const;

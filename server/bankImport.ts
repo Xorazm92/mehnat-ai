@@ -16,7 +16,7 @@ import { prisma } from "@/lib/prisma";
 import { requireStatementRole, requireKassa } from "@/server/guards";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/serialize";
-import { recordAuditLog } from "@/lib/auditTrail";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { recordKassaMovement, runCashTx } from "@/lib/cashGate";
 import { ACCOUNTS } from "@/lib/ledger";

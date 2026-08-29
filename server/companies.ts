@@ -9,9 +9,9 @@ import {
   staffFitsAssignmentRole,
   ASSIGNMENT_ROLE_LABELS,
   type AssignmentRole,
-} from "@/lib/permissions";
-import { companyScopeWhere, assertCompanyPermission } from "@/lib/access";
-import { recordAuditLog } from "@/lib/auditTrail";
+} from "@/lib/platform/permissions";
+import { companyScopeWhere, assertCompanyPermission } from "@/lib/platform/access";
+import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { updateTag } from "next/cache";
 import type { TaxRegime, StatsType } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
@@ -20,7 +20,7 @@ import { PRIMARY_SERVICE, BANK_SERVICE } from "@/lib/credentials";
 import { setServiceCredential } from "@/server/credentials";
 import { notifyOneCBaseNeeded } from "@/lib/oneCBase";
 import { telegramQueueDispatcher } from "@/lib/notifyDispatch";
-import { logServerError } from "@/lib/logger";
+import { logServerError } from "@/lib/platform/logger";
 import { normalizeTaxRegime } from "@/lib/taxRegimes";
 import { createServiceTerm, resolveServiceTerm } from "@/lib/terms";
 import { periodKeyOf } from "@/lib/periods";
