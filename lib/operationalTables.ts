@@ -108,6 +108,9 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "financialReport", why: "moliyaviy hisobotlar" },
 
   // Integratsiya (IntegrationEvent.syncRunId = SetNull → tartib erkin)
+  { model: "integrationEvent", why: "1C hodisalari navbati", refillsWhenLive: true },
+  { model: "syncError", why: "1C sinxron xatolari (DLQ)" },
+  { model: "syncRun", why: "1C sinxron yugurishlari tarixi" },
 ];
 
 /**
@@ -128,6 +131,8 @@ export const REFERENCE_TABLES: string[] = [
   // Firma darajasidagi istisno — shablon qoidasining bir qismi, ya'ni
   // sozlama. Majburiyat qayta generatsiya qilinganda ham saqlanadi.
   "companyObligationOverride",
+  "oneCConnection",
+  "oneCCompanyMapping",
   "businessCalendarDay",
   "systemSetting",
   "clientCredential",
