@@ -11,6 +11,7 @@
 // tekshiradi — bu faqat qulaylik qatlami.
 import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/actionError";
 import { Ban, RotateCcw, Search } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -43,7 +44,7 @@ export function TemplateOverridesPanel({
   const load = () => {
     getTemplateOverrides(templateId)
       .then((r) => setRows(r.rows as unknown as Row[]))
-      .catch((e) => toast.error((e as Error).message));
+      .catch((e) => toast.error(friendlyError(e)));
   };
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export function TemplateOverridesPanel({
         setReason("");
         load();
       } catch (e) {
-        toast.error((e as Error).message);
+        toast.error(friendlyError(e));
       }
     });
 

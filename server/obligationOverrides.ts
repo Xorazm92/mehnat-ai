@@ -20,7 +20,7 @@ import { isAdminRole, isSeniorRole } from "@/lib/platform/permissions";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { serialize } from "@/lib/serialize";
 import { companyScopeWhere, type Actor } from "@/lib/platform/access";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 
 const ACTIONS = ["disable", "custom_due", "reassign"] as const;
 export type OverrideAction = (typeof ACTIONS)[number];
@@ -130,7 +130,7 @@ export async function setObligationOverride(input: OverrideInput) {
     newData: { companyId: input.companyId, templateId: input.templateId, ...data },
   });
 
-  revalidateTag("obligations", "max");
+  updateTag("obligations");
   return serialize(row);
 }
 
@@ -158,6 +158,6 @@ export async function removeObligationOverride(id: string) {
     oldData: { companyId: row.companyId, templateId: row.templateId, action: row.action, reason: row.reason },
   });
 
-  revalidateTag("obligations", "max");
+  updateTag("obligations");
   return { ok: true };
 }

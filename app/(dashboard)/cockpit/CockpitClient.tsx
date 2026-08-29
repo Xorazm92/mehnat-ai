@@ -21,7 +21,7 @@ import type { ConcernLevel, Score } from "@/lib/engines/analytics/twin";
 const TONE: Record<ConcernLevel, { fg: string; bg: string }> = {
   unknown: { fg: "var(--text-muted)", bg: "var(--surface-2)" },
   low: { fg: "var(--success)", bg: "var(--success-bg)" },
-  medium: { fg: "var(--warning-dark)", bg: "var(--warning-bg)" },
+  medium: { fg: "var(--warning)", bg: "var(--warning-bg)" },
   high: { fg: "var(--danger-dark)", bg: "var(--danger-bg)" },
 };
 
@@ -46,7 +46,7 @@ function Block({ title, icon, hint, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl p-4" style={{ background: "var(--surface-1)", border: "1px solid var(--rule)" }}>
+    <section className="rounded-xl p-4" style={{ background: "var(--surface)", border: "1px solid var(--rule)" }}>
       <header className="flex items-center gap-2 mb-3">
         <span style={{ color: "var(--text-muted)" }}>{icon}</span>
         <h2 className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-primary)" }}>{title}</h2>
@@ -123,8 +123,8 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
               onClick={() => setHorizon(b.key)}
               className="rounded-xl px-3 py-2.5 text-left transition"
               style={{
-                background: on ? "var(--accent-bg)" : "var(--surface-1)",
-                border: `1px solid ${on ? "var(--accent)" : "var(--rule)"}`,
+                background: on ? "var(--accent-blue-light)" : "var(--surface)",
+                border: `1px solid ${on ? "var(--accent-blue)" : "var(--rule)"}`,
               }}
             >
               <div className="text-micro" style={{ color: "var(--text-muted)" }}>{b.label}</div>
@@ -257,7 +257,7 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
           <Link
             href="/deadlines"
             className="mt-3 inline-flex items-center gap-1 text-xs font-semibold"
-            style={{ color: "var(--accent)" }}
+            style={{ color: "var(--accent-blue)" }}
           >
             Muddatlarga o&apos;tish <ArrowRight size={12} />
           </Link>
