@@ -7,7 +7,7 @@
 // oldini oladi). Catch-up: joriy davr + oxirgi N oyni qayta ko'radi (downtime
 // vaqtida o'tkazib yuborilgan davrlar ham yaratiladi; idempotent). Reviewer #8.
 import type { PrismaClient } from "@prisma/client";
-import { generateObligations, type GenerateResult } from "@/lib/obligations";
+import { generateObligations, type GenerateResult } from "@/lib/engines/obligation/obligations";
 
 // Barqaror advisory lock kaliti (obligation generatsiyasiga xos).
 const GEN_LOCK = 918273645;

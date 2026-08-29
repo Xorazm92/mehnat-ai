@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canTransition, permissionForTransition, timingPatch } from "@/lib/obligationWorkflow";
+import { canTransition, permissionForTransition, timingPatch } from "@/lib/engines/workflow/obligationWorkflow";
 
 describe("canTransition", () => {
   it("qonuniy o'tishlar", () => {

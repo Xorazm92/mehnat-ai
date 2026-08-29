@@ -10,8 +10,8 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { companyScopeWhere, type Actor } from "@/lib/access";
-import { scopeCompanyIds } from "@/lib/dailyDigest";
-import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
+import { scopeCompanyIds } from "@/lib/engines/automation/dailyDigest";
+import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
 import { isSeniorRole } from "@/lib/permissions";
 
 async function requireActor(): Promise<Actor> {

@@ -11,7 +11,7 @@
 // odamga kuniga bitta xabar boradi.
 import { Prisma } from "@prisma/client";
 import { companyScopeWhere, type Actor } from "@/lib/access";
-import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
+import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
 import { isSeniorRole } from "@/lib/permissions";
 import { logServerError } from "@/lib/logger";
 

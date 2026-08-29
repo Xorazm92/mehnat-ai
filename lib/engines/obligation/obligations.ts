@@ -12,12 +12,12 @@ import {
   periodWindowFor,
   computeDueAt,
   makeWorkdayPredicate,
-} from "@/lib/deadlines";
+} from "@/lib/engines/obligation/deadlines";
 import {
   isCompanyEligible,
   templateApplies,
   type CompanyFacts,
-} from "@/lib/applicability";
+} from "@/lib/engines/obligation/applicability";
 
 type Db = Prisma.TransactionClient;
 

@@ -6,7 +6,7 @@ import "server-only";
 // takrorlanishni yo'q qilyapmiz.
 import { getObligations, getObligationCounts } from "@/server/obligations";
 import { getTasks, getTaskFormData } from "@/server/tasks";
-import { OBLIGATION_PAGE_SIZE } from "@/lib/obligationWorkflow";
+import { OBLIGATION_PAGE_SIZE } from "@/lib/engines/workflow/obligationWorkflow";
 import type { ObligationRow, TaskRow } from "./WorkInboxClient";
 
 export async function loadWorkInbox() {

@@ -1,5 +1,5 @@
 import { trySendMessage } from "../../../telegram/bot";
-import type { EscalationSender } from "../../../../lib/escalation";
+import type { EscalationSender } from "../../../../lib/engines/automation/escalation";
 import { renderAlert } from "../application/render-alert";
 
 /**

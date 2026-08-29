@@ -13,7 +13,7 @@
 // ishga tushiradi (L1 nazoratchi → L2 bosh buxgalter).
 import { Prisma } from "@prisma/client";
 import { logServerError } from "@/lib/logger";
-import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
+import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
 import { formatUzDate } from "@/lib/format";
 import {
   escalate,
@@ -21,7 +21,7 @@ import {
   ESCALATION_CHANNEL,
   type EscalationLevel,
   type EscalationSender,
-} from "@/lib/escalation";
+} from "@/lib/engines/automation/escalation";
 
 type Db = Prisma.TransactionClient;
 

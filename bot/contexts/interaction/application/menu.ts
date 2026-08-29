@@ -1,9 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
-import { OPEN_OBLIGATION_STATUSES } from "../../../../lib/obligationWorkflow";
+import { OPEN_OBLIGATION_STATUSES } from "../../../../lib/engines/workflow/obligationWorkflow";
 import { isSeniorRole } from "../../../../lib/permissions";
 import { canSeeDirectorReport } from "../../../../lib/directorReport";
 import { DIRECTOR_SECTION } from "../../digest/application/render-director-section";
-import { scopeCompanyIds } from "../../../../lib/dailyDigest";
+import { scopeCompanyIds } from "../../../../lib/engines/automation/dailyDigest";
 import { encodeCallback } from "../domain/callback-token";
 import { ACTION } from "../domain/actions";
 import {

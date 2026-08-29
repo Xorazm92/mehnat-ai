@@ -21,7 +21,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveServiceTerm, roundToMonthStart } from "@/lib/terms";
 import { periodKeyOf } from "@/lib/periods";
-import { isCompanyEligible, type CompanyFacts } from "@/lib/applicability";
+import { isCompanyEligible, type CompanyFacts } from "@/lib/engines/obligation/applicability";
 import { logServerError } from "@/lib/logger";
 
 type Db = Prisma.TransactionClient | typeof prisma;

@@ -1,9 +1,9 @@
 import { Worker, type Job } from "bullmq";
 import { logJobFailure, logServerError } from "../../lib/logger";
 import { prisma } from "../../lib/prisma";
-import { runGenerationLocked } from "../../lib/obligationRun";
+import { runGenerationLocked } from "../../lib/engines/obligation/obligationRun";
 import { generateMonthlyPayments } from "../../lib/paymentGeneration";
-import { sweepDeadlines } from "../../lib/obligationSweep";
+import { sweepDeadlines } from "../../lib/engines/automation/obligationSweep";
 import { createRedisConnection } from "./connection";
 import { QUEUE, callbackSecret, hasTelegramToken } from "../config";
 import { sendMessage } from "../telegram/bot";

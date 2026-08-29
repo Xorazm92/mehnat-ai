@@ -1,7 +1,7 @@
 import { encodeCallback } from "../../interaction/domain/callback-token";
 import { ACTION } from "../../interaction/domain/actions";
 import { cbButton, inlineKeyboard, type InlineKeyboardMarkup } from "../../../telegram/keyboard";
-import { ESCALATION_PENALTY_PERCENT, type EscalationRecipient, type EscalationSubject } from "../../../../lib/escalation";
+import { ESCALATION_PENALTY_PERCENT, type EscalationRecipient, type EscalationSubject } from "../../../../lib/engines/automation/escalation";
 
 const LEVEL_ICON: Record<number, string> = { 0: "🟡", 1: "⚠️", 2: "🚨" };
 const LEVEL_TITLE: Record<number, string> = {

@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 const { prisma } = await import("@/lib/prisma");
-const { generateObligations } = await import("@/lib/obligations");
+const { generateObligations } = await import("@/lib/engines/obligation/obligations");
 
 const TAG = `vitest-obl-${Date.now()}`;
 const SVC = `${TAG}-svc`; // faqat test kompaniyasi ega bo'ladigan xizmat kaliti

@@ -16,12 +16,12 @@ import {
   timingPatch,
   OBLIGATION_PAGE_SIZE,
   OPEN_OBLIGATION_STATUSES,
-} from "@/lib/obligationWorkflow";
+} from "@/lib/engines/workflow/obligationWorkflow";
 import {
   markObligationDelayReason,
   approveObligationDelayReason,
   reassignObligationTo,
-} from "@/lib/obligationDelay";
+} from "@/lib/engines/obligation/obligationDelay";
 import { updateTag } from "next/cache";
 import type { ObligationStatus, SubmissionStatus, EvidenceType, DelayReason } from "@prisma/client";
 

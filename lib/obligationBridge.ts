@@ -10,7 +10,7 @@
 // mustaqil holat saqlamaydi. MonthlyReport ustunlari tez render uchun ko'rinish
 // keshi bo'lib qoladi.
 import { prisma } from "@/lib/prisma";
-import { timingPatch } from "@/lib/obligationWorkflow";
+import { timingPatch } from "@/lib/engines/workflow/obligationWorkflow";
 import { toObligationMonthKey, toYearMonthKey } from "@/lib/periods";
 import {
   CELL_APPROVED,

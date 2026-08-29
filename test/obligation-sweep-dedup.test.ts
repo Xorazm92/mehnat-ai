@@ -27,8 +27,8 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidateTag: () => {}, revalidatePath: () => {} }));
 
 const { prisma } = await import("@/lib/prisma");
-const { sweepDeadlines } = await import("@/lib/obligationSweep");
-const { escalationDedupKey } = await import("@/lib/escalation");
+const { sweepDeadlines } = await import("@/lib/engines/automation/obligationSweep");
+const { escalationDedupKey } = await import("@/lib/engines/automation/escalation");
 
 const TAG = `vitest-dedup-${Date.now()}`;
 

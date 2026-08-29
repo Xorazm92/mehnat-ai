@@ -1,5 +1,5 @@
 import { trySendMessage } from "../../../telegram/bot";
-import type { DigestSender } from "../../../../lib/dailyDigest";
+import type { DigestSender } from "../../../../lib/engines/automation/dailyDigest";
 import { renderDigest } from "../application/render-digest";
 
 /**

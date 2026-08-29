@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 const { prisma } = await import("@/lib/prisma");
-const { sweepDeadlines } = await import("@/lib/obligationSweep");
+const { sweepDeadlines } = await import("@/lib/engines/automation/obligationSweep");
 
 const TAG = `vitest-sweep-${Date.now()}`;
 const NOW = new Date(Date.UTC(2097, 6, 15, 12, 0, 0)); // 2097-07-15

@@ -7,7 +7,7 @@ import {
   computeDueAt,
   addDays,
   dateKey,
-} from "@/lib/deadlines";
+} from "@/lib/engines/obligation/deadlines";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const utc = (y: number, m: number, d: number) => new Date(Date.UTC(y, m - 1, d));

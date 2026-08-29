@@ -1,4 +1,4 @@
-import type { Digest } from "../../../../lib/dailyDigest";
+import type { Digest } from "../../../../lib/engines/automation/dailyDigest";
 import { encodeCallback } from "../../interaction/domain/callback-token";
 import { ACTION } from "../../interaction/domain/actions";
 import { cbButton, inlineKeyboard, type InlineKeyboardMarkup } from "../../../telegram/keyboard";

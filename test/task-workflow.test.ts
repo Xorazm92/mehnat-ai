@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canTransitionTask, taskTimingPatch } from "@/lib/taskWorkflow";
+import { canTransitionTask, taskTimingPatch } from "@/lib/engines/workflow/taskWorkflow";
 
 describe("canTransitionTask", () => {
   it("legal transitions", () => {

@@ -15,7 +15,7 @@
 
 import { Prisma } from "@prisma/client";
 import { getAvailableBalance, getDayMovement } from "@/lib/balance";
-import { OPEN_OBLIGATION_STATUSES } from "@/lib/obligationWorkflow";
+import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
 import { logServerError } from "@/lib/logger";
 import { formatNum } from "@/lib/format";
 import {

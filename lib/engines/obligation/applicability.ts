@@ -9,7 +9,7 @@
 // boshlanishi (contractDate) ham tekshiriladi. #5: applicability faqat
 // taxRegime emas; #16: template.lifecycle=active bo'lishi generator gate'ida.
 
-import { normalizeTaxRegime, taxRegimeEngineBucket } from "./taxRegimes";
+import { normalizeTaxRegime, taxRegimeEngineBucket } from "../../taxRegimes";
 
 export interface CompanyFacts {
   id: string;

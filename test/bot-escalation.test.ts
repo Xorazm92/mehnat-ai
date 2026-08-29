@@ -17,7 +17,7 @@ import {
   QUESTION_L2_AFTER_MINUTES,
   type EscalationRecipient,
   type EscalationSubject,
-} from "@/lib/escalation";
+} from "@/lib/engines/automation/escalation";
 import {
   handleQuestionVerdict,
   handleObligationExcuse,

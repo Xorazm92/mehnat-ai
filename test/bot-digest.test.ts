@@ -14,7 +14,7 @@ import {
   DIGEST_CHANNEL,
   type Digest,
   type DigestUser,
-} from "@/lib/dailyDigest";
+} from "@/lib/engines/automation/dailyDigest";
 import { renderDigest } from "@/bot/contexts/digest/application/render-digest";
 
 const TAG = `vitest-dig-${Date.now()}`;

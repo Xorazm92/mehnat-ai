@@ -10,7 +10,7 @@ import { auth } from "@/lib/auth";
 import { isAdminRole, isSeniorRole } from "@/lib/permissions";
 import { recordAuditLog } from "@/lib/auditTrail";
 import { companyScopeWhere, assertCompanyPermission, type Actor } from "@/lib/access";
-import { canTransitionTask, taskTimingPatch } from "@/lib/taskWorkflow";
+import { canTransitionTask, taskTimingPatch } from "@/lib/engines/workflow/taskWorkflow";
 import { syncTaskDoneToObligation } from "@/lib/obligationBridge";
 import { updateTag } from "next/cache";
 import type { Prisma, TaskStatus, TaskPriority } from "@prisma/client";

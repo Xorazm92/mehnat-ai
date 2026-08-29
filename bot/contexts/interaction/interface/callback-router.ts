@@ -24,7 +24,7 @@ import {
   renderMyTasks,
   renderTeam,
 } from "../application/menu";
-import { buildDigest } from "../../../../lib/dailyDigest";
+import { buildDigest } from "../../../../lib/engines/automation/dailyDigest";
 import { renderDigest } from "../../digest/application/render-digest";
 import { handleDirectorSection } from "../../digest/application/handle-director-section";
 import {

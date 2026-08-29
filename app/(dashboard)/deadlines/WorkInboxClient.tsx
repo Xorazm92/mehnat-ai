@@ -10,7 +10,7 @@
 // esa o'z manbasiga yozadi.
 
 import { useMemo, useState, useTransition } from "react";
-import { obligationTypeLabel } from "@/lib/obligations";
+import { obligationTypeLabel } from "@/lib/engines/obligation/obligations";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ObligationStatus, DelayReason, TaskStatus, TaskPriority } from "@prisma/client";

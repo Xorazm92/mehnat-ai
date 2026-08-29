@@ -1,8 +1,8 @@
 import { Worker, type Job } from "bullmq";
 import { logJobFailure, logServerError } from "../../lib/logger";
 import { prisma } from "../../lib/prisma";
-import { sweepQuestionEscalations } from "../../lib/escalation";
-import { runDailyDigest } from "../../lib/dailyDigest";
+import { sweepQuestionEscalations } from "../../lib/engines/automation/escalation";
+import { runDailyDigest } from "../../lib/engines/automation/dailyDigest";
 import { runDirectorReport } from "../../lib/directorReport";
 import { createRedisConnection } from "./connection";
 import { QUEUE, callbackSecret, hasTelegramToken } from "../config";

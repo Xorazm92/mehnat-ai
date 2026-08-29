@@ -3,7 +3,7 @@ import {
   isCompanyEligible,
   templateApplies,
   type CompanyFacts,
-} from "@/lib/applicability";
+} from "@/lib/engines/obligation/applicability";
 
 const base: CompanyFacts = {
   id: "c1",
