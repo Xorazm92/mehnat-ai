@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { canSeeViewWith, type UserRole } from "@/lib/platform/permissions";
-import { getRoleViewOverrides } from "@/server/rbac";
+import { currentUserViews } from "@/server/rbac";
 import { getOperationsTimeline } from "@/server/timeline";
 import { getCompanyTwins, getStaffCapacity } from "@/server/twin";
 import { getCurrentPeriodKey } from "@/lib/periods";
@@ -10,13 +9,12 @@ import CockpitClient from "./CockpitClient";
 export const metadata = { title: "Kabina" };
 
 export default async function CockpitPage() {
-  const session = await auth();
-  const role = (session?.user?.role as string) || "";
-  // Server darvozasi. Proxy ham shu yo'lni qo'riqlaydi, lekin sahifa o'zi ham
-  // tekshiradi — va AYNAN O'SHA manbadan: ro'yxat admin tomonidan
-  // tahrirlanadigan bo'lgani uchun statik allowlist bilan tekshirilsa,
-  // ruxsat berilgan rol proxy'dan o'tib sahifada qaytarilardi.
-  if (!canSeeViewWith(role as UserRole, "cockpit", await getRoleViewOverrides())) {
+  await auth();
+  // Server darvozasi — proxy bilan AYNAN bir manbadan (rol + admin override +
+  // biriktiruvlar). Aks holda proxy kiritadi, sahifa qaytaradi va yon panelning
+  // prefetch'i cheksiz siklga aylanadi (server/rbac.ts → currentUserViews).
+  const views = await currentUserViews();
+  if (!views.includes("cockpit")) {
     redirect("/dashboard");
   }
 
