@@ -110,7 +110,9 @@ const eslintConfig = defineConfig([
   {
     // CLI entrypoints: console IS the user interface. An operator running
     // `tsx scripts/generate-obligations.ts` reads stdout, not a log aggregator.
-    files: ["scripts/**/*.ts", "prisma/**/*.ts"],
+    files: ["scripts/**/*.ts", "prisma/**/*.ts", "test/setup.ts"],
+    // `test/setup.ts` — CLI bilan bir toifada: u test yuguruvchiga QAYSI bazaga
+    // ulanganini aytadi. Bu xabar terminalda ko'rinishi kerak, jurnalda emas.
     rules: { "no-console": "off" },
   },
   {
