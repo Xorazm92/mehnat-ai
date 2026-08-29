@@ -176,3 +176,25 @@ export async function getOpeningBalance(year: number) {
   });
   return snapshot ? Number(snapshot.closingBalance) : null;
 }
+
+export async function getAccountingPeriods(year?: number) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  return serialize(
+    await prisma.accountingPeriod.findMany({
+      where: { companyId: null, ...(year ? { year } : {}) },
+      orderBy: [{ year: "desc" }, { month: "desc" }],
+    })
+  );
+}
+
+export async function getFinancialSnapshots() {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  return serialize(
+    await prisma.financialSnapshot.findMany({
+      where: { companyId: null },
+      orderBy: { period: "desc" },
+    })
+  );
+}
