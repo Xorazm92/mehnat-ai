@@ -76,7 +76,7 @@ export default function LeadsPage() {
         <button
           onClick={() => setShowForm(!showForm)}
           style={{
-            background: "var(--accent, #3b82f6)",
+            background: "var(--accent-blue)",
             color: "#fff",
             border: "none",
             borderRadius: "8px",

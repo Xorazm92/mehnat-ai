@@ -1,4 +1,5 @@
 "use client";
+import { friendlyError } from "@/lib/actionError";
 
 // =====================================================
 // DIRECTOR COCKPIT — bitta ekran, beshta blok
@@ -128,7 +129,7 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
         );
         router.refresh();
       } catch (e) {
-        toast.error((e as Error).message || "Xatolik");
+        toast.error(friendlyError(e) || "Xatolik");
       }
     });
   const active = timeline.find((b) => b.key === horizon) ?? timeline[0];

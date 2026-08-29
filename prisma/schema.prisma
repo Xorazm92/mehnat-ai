@@ -110,6 +110,7 @@ model User {
   statementImports    BankStatementImport[]
   fiscalReportImports FiscalReportImport[]
   payoutChannels      DisbursementChannel[] @relation("ChannelEmployee")
+  assignedLeads       Lead[]                @relation("AssignedLeads")
 
   @@index([email])
   @@index([role])
@@ -120,6 +121,41 @@ model User {
 // =====================================================
 // COMPANY
 // =====================================================
+
+// ── CRM: LID ─────────────────────────────────────────────────
+// Mijozga aylanmagan murojaat. Firma bo'lgach `Company` yaratiladi —
+// lid o'chirilmaydi, tarix sifatida qoladi (qaysi manbadan kelgani KPI emas,
+// marketing savoli).
+enum LeadStatus {
+  new
+  contacted
+  qualified
+  proposal
+  negotiation
+  won
+  lost
+}
+
+model Lead {
+  id     String     @id @default(uuid())
+  name   String
+  phone  String?
+  email  String?
+  inn    String?
+  source String?
+  status LeadStatus @default(new)
+  note   String?
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedLeads", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([assignedToId])
+}
 
 model Company {
   id                String      @id @default(uuid())
@@ -271,6 +307,8 @@ model Company {
   oneCMappings         OneCCompanyMapping[]
   /// KPI hajm normallashtirishi uchun og'irlik (lib/fairKpi.ts).
   complexity           CompanyComplexity           @default(standard)
+  /// Mijoz portali havolasi uchun maxfiy token (/portal?token=…).
+  portalToken          String?                     @unique
 
   @@index([accountantId])
   @@index([supervisorId])

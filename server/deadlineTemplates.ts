@@ -100,7 +100,7 @@ export async function setTemplateNormativeMinutes(id: string, minutes: number | 
     oldData: { normativeMinutes: cur.normativeMinutes },
     newData: { normativeMinutes: value },
   });
-  revalidateTag("deadline-templates", "max");
+  updateTag("deadline-templates");
   return { ok: true, normativeMinutes: value };
 }
 

@@ -41,6 +41,7 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "obligationStatusEvent", why: "majburiyat holat tarixi" },
   { model: "obligationAssignmentEvent", why: "majburiyat biriktirish tarixi" },
   { model: "obligation", why: "majburiyatlar (har oy qayta generatsiya qilinadi)" },
+  { model: "lead", why: "CRM lidlari — mijozga aylanmagan murojaatlar" },
 
   // Bot: savol/javob va xabar tarixi
   { model: "answer", why: "javoblar" },
