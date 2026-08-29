@@ -12,7 +12,7 @@
 import { prisma } from "@/lib/prisma";
 import { isAdminRole, ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import type { Prisma } from "@prisma/client";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import type { BalanceBreakdown } from "@/types";
 import { getTotalTransitBalance } from "@/lib/transit";
 import { KASSA_START_DATE, KASSA_START_PERIOD } from "@/lib/constants";

@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Building2, CheckCircle2, Clock, Ban, type LucideIcon } from "lucide-react";
-import { formatUzDateFull, formatNum } from "@/lib/format";
+import { formatUzDateFull, formatNum } from "@/lib/platform/format";
 import {
   getCachedCompanyStats,
   getCachedObligationSummary,

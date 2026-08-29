@@ -9,7 +9,7 @@ import React, { useState } from "react";
 import { CalendarCheck2, Lock, LockOpen, RefreshCw, Printer, AlertTriangle, CheckCircle2, XCircle, Archive } from "lucide-react";
 import { getMonthClosingBoard, validateMonth, closeMonth, reopenMonth } from "@/server/monthClosing";
 import { closeYear, getYearClosingState } from "@/server/accounting";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/actionError";

@@ -15,7 +15,7 @@ import React, { useEffect, useState, useTransition, useMemo } from "react";
 import { Search, Download, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Money } from "@/components/ui";
-import { formatNum, formatUzDate } from "@/lib/format";
+import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/exportTable";
 import { RANGE_LABELS, type RangePreset } from "@/lib/dateRange";

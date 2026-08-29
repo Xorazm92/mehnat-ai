@@ -5,7 +5,7 @@ import { Search, Shield, History, User } from 'lucide-react';
 import { translations } from '@/lib/translations';
 
 import { getAuditLogs } from '@/server/audit';
-import { formatUzDateNumeric, formatUzTime } from '@/lib/format';
+import { formatUzDateNumeric, formatUzTime } from '@/lib/platform/format';
 
 interface AuditLog {
     id: string;

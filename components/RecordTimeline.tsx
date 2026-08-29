@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { History, Plus, Pencil, Trash2, LogIn, LogOut } from "lucide-react";
 import { getRecordHistory } from "@/server/audit";
-import { formatUzDateTime } from "@/lib/format";
+import { formatUzDateTime } from "@/lib/platform/format";
 import { ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonTable } from "@/components/ui/Skeleton";

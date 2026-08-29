@@ -15,7 +15,7 @@
 
 import { Prisma } from "@prisma/client";
 import { notifyUsers, type TelegramDispatcher } from "@/lib/notify";
-import { formatUzDate } from "@/lib/format";
+import { formatUzDate } from "@/lib/platform/format";
 
 type Db = Prisma.TransactionClient;
 

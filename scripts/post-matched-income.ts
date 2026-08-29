@@ -16,7 +16,7 @@ import { prisma } from "@/lib/prisma";
 import { postIncomeTransaction } from "@/lib/bank/importStatement";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { periodKeyOf } from "@/lib/periods";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 
 async function main(): Promise<void> {
   const apply = process.argv.includes("--apply");

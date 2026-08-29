@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ALL_SERVICE_KEYS as ALL_SERVICE_KEYS_SRC, SERVICE_LABELS as SERVICE_LABELS_SRC, serviceGroups, serviceFullLabel } from '@/lib/reportColumns';
 import { Company, Staff, TaxType, ServerInfo } from '@/types';
 import { ChevronRight, ChevronLeft, Check, X, Building2, Server, Calculator, Users } from 'lucide-react';
-import { groupDigits, ungroupDigits } from '@/lib/format';
+import { groupDigits, ungroupDigits } from '@/lib/platform/format';
 import { Button } from "@/components/ui/Button";
 import { updateServiceTerm, getServiceTermInfo } from "@/server/companies";
 import { friendlyError } from "@/lib/actionError";

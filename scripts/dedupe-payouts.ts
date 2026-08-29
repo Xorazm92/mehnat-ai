@@ -23,7 +23,7 @@ import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { serializable } from "@/lib/tx";
 import { reverseLedger } from "@/lib/ledger";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 
 const REASON = "dublikat: pul tranzit daftaridan KassaEntry sifatida yozilgan";
 

@@ -24,7 +24,7 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 import { postIncomeTransaction, autoMatchTransactions } from "@/lib/bank/importStatement";
 
 const APPLY = process.argv.includes("--apply");

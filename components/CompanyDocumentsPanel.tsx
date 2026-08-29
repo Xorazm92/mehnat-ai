@@ -9,7 +9,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Upload, Download, Trash2, FileText, AlertTriangle } from "lucide-react";
-import { formatUzDate } from "@/lib/format";
+import { formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { listDocuments, uploadDocument, deleteDocument } from "@/server/documents";
 

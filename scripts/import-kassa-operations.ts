@@ -28,7 +28,7 @@
 import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { requireImportFile } from "./import-source";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { periodKeyOf } from "@/lib/periods";
 import fs from "node:fs";

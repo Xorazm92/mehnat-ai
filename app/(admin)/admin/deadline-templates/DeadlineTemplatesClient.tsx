@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { Periodicity, DeadlineAnchorType, WorkdayAdjustmentPolicy, TemplateLifecycle } from "@prisma/client";
-import { formatUzDate } from "@/lib/format";
+import { formatUzDate } from "@/lib/platform/format";
 import {
   createDeadlineTemplate,
   setTemplateLifecycle,

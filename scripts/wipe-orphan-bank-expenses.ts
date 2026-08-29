@@ -20,7 +20,7 @@ import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { serializable } from "@/lib/tx";
 import { reverseLedger } from "@/lib/ledger";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 
 const REASON = "yetim: manba vipiskasi re-baseline'da o'chirilgan — navbatdan qayta yoziladi";
 

@@ -14,7 +14,7 @@
  */
 import type { DirectorReport } from "../../../../lib/directorReport";
 import type { DebtorRow } from "../../../../lib/debt";
-import { formatNum as som } from "../../../../lib/format";
+import { formatNum as som } from "../../../../lib/platform/format";
 import { encodeCallback } from "../../interaction/domain/callback-token";
 import { ACTION } from "../../interaction/domain/actions";
 import {

@@ -18,7 +18,7 @@
 
 import "./load-env";
 import { prisma } from "@/lib/prisma";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 import { periodKeyOf } from "@/lib/periods";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { serializable } from "@/lib/tx";

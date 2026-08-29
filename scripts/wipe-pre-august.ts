@@ -23,7 +23,7 @@ import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { serializable } from "@/lib/tx";
 import { reverseLedger } from "@/lib/ledger";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 
 const AUGUST_START = new Date(2026, 7, 1);
 /** Bugungi rebaseline'dan KEYINGI qo'lda yozuvlar qoladi. */

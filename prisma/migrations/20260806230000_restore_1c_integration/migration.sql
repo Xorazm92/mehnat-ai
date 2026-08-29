@@ -2,11 +2,14 @@
 -- Modellar bir marta olib tashlangan edi; dalil (evidence) landing qatlami
 -- ularsiz ishlamaydi — claim 1C mapping orqali firmaga bog'lanadi.
 
--- CreateEnum
-CREATE TYPE "IntegrationEventStatus" AS ENUM ('received', 'processing', 'processed', 'failed', 'dead');
+-- CreateEnum (idempotent: test bazasi va dev bazasi turli nuqtalardan keladi)
+DO $$ BEGIN
+  CREATE TYPE "IntegrationEventStatus" AS ENUM ('received', 'processing', 'processed', 'failed', 'dead');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- CreateEnum
-CREATE TYPE "SyncRunStatus" AS ENUM ('running', 'completed', 'failed');
+DO $$ BEGIN
+  CREATE TYPE "SyncRunStatus" AS ENUM ('running', 'completed', 'failed');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "OneCConnection" (
@@ -125,17 +128,22 @@ CREATE INDEX IF NOT EXISTS "SyncError_integrationEventId_idx" ON "SyncError"("in
 CREATE INDEX IF NOT EXISTS "SyncError_connectionId_idx" ON "SyncError"("connectionId");
 
 -- AddForeignKey
+ALTER TABLE "OneCCompanyMapping" DROP CONSTRAINT IF EXISTS "OneCCompanyMapping_connectionId_fkey";
 ALTER TABLE "OneCCompanyMapping" ADD CONSTRAINT "OneCCompanyMapping_connectionId_fkey" FOREIGN KEY ("connectionId") REFERENCES "OneCConnection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "OneCCompanyMapping" DROP CONSTRAINT IF EXISTS "OneCCompanyMapping_companyId_fkey";
 ALTER TABLE "OneCCompanyMapping" ADD CONSTRAINT "OneCCompanyMapping_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "IntegrationEvent" DROP CONSTRAINT IF EXISTS "IntegrationEvent_connectionId_fkey";
 ALTER TABLE "IntegrationEvent" ADD CONSTRAINT "IntegrationEvent_connectionId_fkey" FOREIGN KEY ("connectionId") REFERENCES "OneCConnection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "IntegrationEvent" DROP CONSTRAINT IF EXISTS "IntegrationEvent_syncRunId_fkey";
 ALTER TABLE "IntegrationEvent" ADD CONSTRAINT "IntegrationEvent_syncRunId_fkey" FOREIGN KEY ("syncRunId") REFERENCES "SyncRun"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "SyncRun" DROP CONSTRAINT IF EXISTS "SyncRun_connectionId_fkey";
 ALTER TABLE "SyncRun" ADD CONSTRAINT "SyncRun_connectionId_fkey" FOREIGN KEY ("connectionId") REFERENCES "OneCConnection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

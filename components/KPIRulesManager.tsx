@@ -4,7 +4,7 @@ import { ModalLayer } from "@/components/ui/ModalLayer";
 import { KPIRule, KpiRuleOption, Language, KPIRoleType } from '@/types';
 import { Settings, Edit3, Trash2, X, Shield, Landmark, Calculator, Plus } from 'lucide-react';
 import { getKpiRules, createKpiRule, updateKpiRule, deleteKpiRule } from '@/server/kpi';
-import { submitOnCtrlEnter } from '@/lib/format';
+import { submitOnCtrlEnter } from '@/lib/platform/format';
 import { kpiCategoryLabel } from '@/lib/kpiLabels';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { toast } from "sonner";

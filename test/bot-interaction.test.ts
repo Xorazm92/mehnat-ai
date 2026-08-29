@@ -367,7 +367,9 @@ describe("routeCallback", () => {
     const routed = await routeCallback(prisma, callbackUpdate(STAFF_TG, data), {
       secret: SECRET,
     });
-    expect(routed!.outcome.edit?.text).toContain(`${TAG} Staff`);
+    // Ekran sarlavhasi har doim bor; xodim nomi faqat hodisa bo'lganda
+    // ko'rinadi (bo'sh oyda "hali KPI hodisasi yo'q" matni chiqadi).
+    expect(routed!.outcome.edit?.text).toContain("KPI ballarim");
     // Drill-down screens keep a way back to the menu.
     expect(routed!.outcome.edit?.replyMarkup?.inline_keyboard.length).toBe(1);
   });

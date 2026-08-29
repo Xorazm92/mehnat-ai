@@ -20,7 +20,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, CreditCard, Building2 } from "lucide-react";
-import { formatNum, formatUzDate } from "@/lib/format";
+import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { Money, StatStrip, type StatItem } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from "@/lib/bank/classifyExpense";

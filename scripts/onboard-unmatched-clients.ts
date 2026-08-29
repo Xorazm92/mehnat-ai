@@ -22,7 +22,7 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 import { postIncomeTransaction } from "@/lib/bank/importStatement";
 import { Prisma } from "@prisma/client";
 

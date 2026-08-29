@@ -14,7 +14,7 @@ import { obligationTypeLabel } from "@/lib/engines/obligation/obligations";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ObligationStatus, DelayReason, TaskStatus, TaskPriority } from "@prisma/client";
-import { formatUzDate } from "@/lib/format";
+import { formatUzDate } from "@/lib/platform/format";
 import { updateObligationStatus, setDelayReason, approveDelayReason } from "@/server/obligations";
 import { createTask, updateTaskStatus, assignTask } from "@/server/tasks";
 import { Button } from "@/components/ui/Button";

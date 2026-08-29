@@ -9,7 +9,7 @@ import { getKpiRules, getMonthlyPerformance, upsertPerformance } from '@/server/
 import { getPayrollAdjustments, getPayrollBasisContext } from '@/server/payroll';
 import { PAYROLL_BASIS_DEFAULT, type PayrollBasis } from '@/lib/payrollBasis';
 import type { CompanyAssignment } from '@/lib/kpiLogic';
-import { formatUzDate, formatNum } from '@/lib/format';
+import { formatUzDate, formatNum } from '@/lib/platform/format';
 import KpiEntryCard from './kpi/KpiEntryCard';
 import { MonthPicker } from './ui/MonthPicker';
 

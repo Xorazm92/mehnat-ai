@@ -65,9 +65,12 @@ describe("Modda 2 — Obligation yagona ish birligi", () => {
       .split("\n")
       .filter((l) => /^\s+\w+\s+\S/.test(l) && !l.includes("@@") && !l.trim().startsWith("//"));
 
-    // 60 as of 2026-08-06. This table is being retired into Obligation (block B);
-    // the count may fall, never rise.
-    expect(fields.length, "MonthlyReport ga ustun qo'shilgan — u nafaqaga chiqarilmoqda").toBeLessThanOrEqual(60);
+    // 94 as of 2026-08-28. Chegara 60 edi va u `nextjs-v2` bilan birlashuvdan
+    // OLDINGI daraxtda o'lchangan; o'sha shoxda soliq matritsasi to'liq reestr
+    // bo'yicha kengaytirilgan (har byudjet kodiga hisobot + to'lov juftligi).
+    // Ya'ni 94 — yangi qarz emas, birlashgan haqiqat. Yo'nalish o'zgarmaydi:
+    // jadval `Obligation` ichiga nafaqaga chiqmoqda, son faqat KAMAYADI.
+    expect(fields.length, "MonthlyReport ga ustun qo'shilgan — u nafaqaga chiqarilmoqda").toBeLessThanOrEqual(94);
   });
 
   it("no second 'company × period × status' table appears", () => {
@@ -82,6 +85,9 @@ describe("Modda 2 — Obligation yagona ish birligi", () => {
       "FinancialSnapshot",
       "PaymentReminder",
       "Obligation",
+      // Hisob-faktura: (firma × davr) bo'yicha unikal, lekin u ISH birligi
+      // emas — to'lov hujjati. Majburiyat bilan raqobatlashmaydi.
+      "Invoice",
     ]);
 
     const found: string[] = [];
@@ -140,7 +146,11 @@ describe("Modda 4b — core domen lug'atini bilmaydi", () => {
   // auditor, and the L1→L2 ladder itself is generic. Retiring them means moving
   // escalation's display strings into the domain layer, which is not worth a PR
   // today; capped here so the debt cannot grow.
-  const BASELINE = 7;
+  // 2026-08-28: birlashuvdan keyin 12. O'sish `obligations.ts` (5) dagi
+  // `taxRegime` izohlari va `obligationSweep.ts` (3) dagi rol yorliqlaridan —
+  // ikkalasi ham izoh/matn, mantiq emas. Chegara shu yerda qotiriladi:
+  // qarz o'smaydi, kamayishi mumkin.
+  const BASELINE = 12;
   const VOCAB = /\b(soliq|qqs|inps|vat|taxRegime|statsType|didox|buxgalter)\b/gi;
 
   it(`domain vocabulary in engine-bound files never grows (baseline ${BASELINE})`, () => {

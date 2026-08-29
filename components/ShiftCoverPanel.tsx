@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { ArrowLeftRight } from "lucide-react";
 import { Staff } from "@/types";
 import { Button } from "@/components/ui/Button";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { assignShiftCover, getShiftCovers, applyCoverTransfers } from "@/server/shiftCover";
 import { friendlyError } from "@/lib/actionError";
 import { MonthPicker } from "./ui/MonthPicker";

@@ -28,7 +28,7 @@ import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { serializable } from "@/lib/tx";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 
 async function main(): Promise<void> {
   const apply = process.argv.includes("--apply");

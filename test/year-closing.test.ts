@@ -21,9 +21,14 @@ const { createExpense } = await import("@/server/kassa");
 
 const TAG = `vitest-close-${Date.now()}`;
 const YEAR = 2096;
-const ids = { user: "", company: "", payment: "", kassa: "", expense: "", payout: "" };
+const ids = { user: "", company: "", payment: "", kassa: "", expense: "", payout: "", channel: "" };
 
 beforeAll(async () => {
+  // Chiqim MANBASIZ yozilmaydi (server/kassa.ts) — test uchun naqd kanal.
+  const ch = await prisma.disbursementChannel.create({
+    data: { type: "cash", label: `${TAG}-cash` },
+  });
+  ids.channel = ch.id;
   await prisma.financialSnapshot.deleteMany({ where: { period: String(YEAR) } });
   await prisma.accountingPeriod.deleteMany({ where: { year: YEAR } });
 
@@ -99,7 +104,7 @@ describe("year closing", () => {
 
     // Yopilgan yilga xarajat kiritib bo'lmaydi.
     await expect(
-      createExpense({ amount: 100_000, date: new Date(YEAR, 8, 5), category: "boshqa" })
+      createExpense({ amount: 100_000, date: new Date(YEAR, 8, 5), category: "boshqa", channelId: ids.channel })
     ).rejects.toThrow(/yopilgan/);
   });
 
@@ -129,6 +134,7 @@ describe("year closing", () => {
       amount: 100_000,
       date: new Date(YEAR, 8, 5),
       category: `${TAG}-correction`,
+      channelId: ids.channel,
     });
     expect(exp.id).toBeTruthy();
     // tozalash

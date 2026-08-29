@@ -32,7 +32,7 @@ import { CABINET_TAB_IDS, type CabinetTabId as TabId } from "@/lib/cabinetTabs";
 import KpiLeaderboard from "@/components/KpiLeaderboard";
 import { updateUser, changePassword } from "@/server/users";
 import { ROLE_LABELS, ROLE_COLORS, isSeniorRole, type UserRole } from "@/lib/platform/permissions";
-import { formatUzMonthYear, formatUzDateNumeric, formatUzTime, formatNum } from "@/lib/format";
+import { formatUzMonthYear, formatUzDateNumeric, formatUzTime, formatNum } from "@/lib/platform/format";
 // Soliq rejimi yorlig'i — kanonik manba. Ilgari bu yerda uch shoxli
 // ternary bor edi va u `vat` ni qamramasdi: ekranda xom "VAT" chiqardi,
 // boshqa hamma ekranda esa "NDS". Bitta tushuncha, ikki qisqartma.

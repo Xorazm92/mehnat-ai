@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { logServerError } from "@/lib/platform/logger";
 import { getMonthSummaryData } from "@/server/monthClosing";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

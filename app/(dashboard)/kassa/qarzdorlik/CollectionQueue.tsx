@@ -15,7 +15,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Phone, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { formatNum, formatUzDate } from "@/lib/format";
+import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { setDebtContact } from "@/server/debt";
 import { DateField } from "@/components/ui/DateField";

@@ -15,7 +15,7 @@ import { getPayouts, createPayout } from '@/server/payouts';
 import { getPayrollBasisContext } from '@/server/payroll';
 import { PAYROLL_BASIS_DEFAULT, type PayrollBasis } from '@/lib/payrollBasis';
 import type { CompanyAssignment } from '@/lib/kpiLogic';
-import { groupDigits, ungroupDigits, submitOnCtrlEnter, formatNum } from '@/lib/format';
+import { groupDigits, ungroupDigits, submitOnCtrlEnter, formatNum } from '@/lib/platform/format';
 import { ROLE_LABELS, type UserRole } from '@/lib/platform/permissions';
 import { adjustmentMagnitude } from '@/lib/adjustments';
 import { computeObligation } from '@/lib/payrollObligation';

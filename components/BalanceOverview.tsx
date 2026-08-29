@@ -3,7 +3,7 @@
 import React from "react";
 import type { BalanceBreakdown } from "@/types";
 import { Wallet, AlertTriangle, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 
 const som = (v: number) => formatNum(Math.round(v));
 

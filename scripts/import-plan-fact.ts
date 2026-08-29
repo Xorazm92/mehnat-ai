@@ -8,7 +8,7 @@
  */
 import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 import fs from "node:fs";
 import path from "node:path";
 import { findImportFileByPrefix, importDirs, requireImportFile } from "./import-source";

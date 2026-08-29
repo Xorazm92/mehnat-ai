@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { formatUzDate } from "@/lib/format";
+import { formatUzDate } from "@/lib/platform/format";
 import { getCalendarDays, upsertCalendarDay, deleteCalendarDay } from "@/server/businessCalendar";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";

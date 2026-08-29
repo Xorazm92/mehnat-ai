@@ -10,7 +10,7 @@ import { getPayrollAdjustments, approveEmployeeSalary, getPayrollBasisContext } 
 import { PAYROLL_BASIS_DEFAULT, PAYROLL_BASIS_LABELS, type PayrollBasis } from '@/lib/payrollBasis';
 import type { CompanyAssignment } from '@/lib/kpiLogic';
 import { toast } from 'sonner';
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 import { exportObjectsToExcel } from "@/lib/exportTable";
 import { Button } from "@/components/ui/Button";

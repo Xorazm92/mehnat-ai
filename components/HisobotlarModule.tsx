@@ -6,7 +6,7 @@ import { FileText, Plus, X, Calendar, ShieldCheck, Download, Trash2, PenLine, Se
 import { getFinancialReports, getReportDeadlines, createFinancialReport, setReportStatus, deleteFinancialReport } from "@/server/reports";
 import { REPORT_TYPES } from "@/lib/reportTypes";
 import { isSeniorRole } from "@/lib/platform/permissions";
-import { formatUzDayShort, formatNum } from "@/lib/format";
+import { formatUzDayShort, formatNum } from "@/lib/platform/format";
 import { useConfirm, usePrompt } from '@/components/ui/ConfirmDialog';
 import { toast } from "sonner";
 import { SkeletonTable } from "@/components/ui/Skeleton";

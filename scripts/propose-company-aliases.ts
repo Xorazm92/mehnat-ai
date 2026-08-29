@@ -26,7 +26,7 @@ import { requireImportFile } from "./import-source";
 import { readLooseJsonArray } from "@/lib/bank/parsePlastik";
 import { parseDebtSnapshot } from "@/lib/debtReport";
 import { matchCompanyByName, normalizeCompanyName } from "@/lib/companyMatch";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 import fs from "node:fs";
 
 /** Nomzodni baholash: umumiy so'zlar ulushi. Faqat KO'RSATISH uchun. */

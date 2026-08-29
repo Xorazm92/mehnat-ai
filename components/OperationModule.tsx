@@ -9,7 +9,7 @@ import { MonthPicker } from './ui/MonthPicker';
 import { useConfirm } from './ui/ConfirmDialog';
 import { useTableState } from '@/hooks/useTableState';
 import { periodsEqual } from '@/lib/periods';
-import { formatNum } from '@/lib/format';
+import { formatNum } from '@/lib/platform/format';
 import { toast } from 'sonner';
 import { writeSheet } from '@/lib/exportTable';
 import { upsertMonthlyReport, clearColumnForPeriod } from '@/server/operations';

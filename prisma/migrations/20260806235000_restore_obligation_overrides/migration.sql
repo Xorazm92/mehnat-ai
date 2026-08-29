@@ -22,9 +22,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS "CompanyObligationOverride_companyId_templateI
 CREATE INDEX IF NOT EXISTS "CompanyObligationOverride_companyId_idx"
     ON "CompanyObligationOverride"("companyId");
 
+ALTER TABLE "CompanyObligationOverride" DROP CONSTRAINT IF EXISTS "CompanyObligationOverride_companyId_fkey";
 ALTER TABLE "CompanyObligationOverride"
     ADD CONSTRAINT "CompanyObligationOverride_companyId_fkey"
     FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "CompanyObligationOverride" DROP CONSTRAINT IF EXISTS "CompanyObligationOverride_templateId_fkey";
 ALTER TABLE "CompanyObligationOverride"
     ADD CONSTRAINT "CompanyObligationOverride_templateId_fkey"
     FOREIGN KEY ("templateId") REFERENCES "DeadlineTemplate"("id") ON DELETE CASCADE ON UPDATE CASCADE;

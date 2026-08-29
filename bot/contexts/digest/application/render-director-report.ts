@@ -1,5 +1,5 @@
 import type { DirectorReport } from "../../../../lib/directorReport";
-import { formatNum as som } from "../../../../lib/format";
+import { formatNum as som } from "../../../../lib/platform/format";
 import { b, esc, expandableQuote, i } from "../../../telegram/html";
 
 /**

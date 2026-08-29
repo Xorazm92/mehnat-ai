@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { groupDigits, ungroupDigits } from "@/lib/format";
+import { groupDigits, ungroupDigits } from "@/lib/platform/format";
 
 /**
  * MONEY FIELD — ajratkichli summa kiritish.

@@ -10,7 +10,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import {
   listServices,

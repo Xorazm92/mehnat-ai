@@ -28,7 +28,7 @@ import { requireImportFile } from "./import-source";
 import { readLooseJsonArray } from "@/lib/bank/parsePlastik";
 import { parseDebtSnapshot, contractKindOf, type DebtSnapshotLine } from "@/lib/debtReport";
 import { matchCompanyByName, matchCompanyByInn } from "@/lib/companyMatch";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 import fs from "node:fs";
 
 /** Fayl → qaysi sanaga yoziladi. */

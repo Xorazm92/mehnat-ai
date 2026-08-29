@@ -17,7 +17,7 @@ import { Prisma } from "@prisma/client";
 import { periodKeyOf } from "@/lib/periods";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { resolveServiceTerm } from "@/lib/terms";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { transactionHash } from "./parseStatement";
 import { extractContract } from "./extractContract";
 import { classifyExpense, type ExpenseCategory } from "./classifyExpense";

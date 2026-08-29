@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CalendarClock, AlertTriangle, ChevronRight, CheckCircle2 } from "lucide-react";
-import { formatUzDate } from "@/lib/format";
+import { formatUzDate } from "@/lib/platform/format";
 
 export interface DeadlineRow {
   id: string;

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { X, Upload, Clipboard, Check, Ban, Loader2, ImageIcon, Clock, ZoomIn, ExternalLink } from "lucide-react";
 import { compressImageFile, compressDataUrl } from "@/lib/imageCompress";
 import { saveReportProof, getReportProof, reviewReportProof } from "@/server/proofs";
-import { formatUzDateNumeric, formatUzTime } from "@/lib/format";
+import { formatUzDateNumeric, formatUzTime } from "@/lib/platform/format";
 import { ImageZoomModal } from "@/components/ImageZoomModal";
 import { Button } from "@/components/ui/Button";
 import { ModalLayer } from "./ui/ModalLayer";

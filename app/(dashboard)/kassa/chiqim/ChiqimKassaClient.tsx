@@ -7,7 +7,7 @@ import {
   CreditCard, Link2, Plus, Wand2, Snowflake, Play, AlertTriangle, ArrowDownRight, ArrowUpRight,
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { groupDigits, ungroupDigits, todayKey, formatNum, formatUzDate } from "@/lib/format";
+import { groupDigits, ungroupDigits, todayKey, formatNum, formatUzDate } from "@/lib/platform/format";
 import { Money } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { EXPENSE_CATEGORY_LABELS } from "@/lib/bank/classifyExpense";

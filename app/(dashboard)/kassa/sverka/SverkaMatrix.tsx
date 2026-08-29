@@ -13,7 +13,7 @@
 
 import React from "react";
 import { Money } from "@/components/ui";
-import { formatUzDate } from "@/lib/format";
+import { formatUzDate } from "@/lib/platform/format";
 import { AlertTriangle } from "lucide-react";
 
 export interface MatrixDay {

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FilePlus2, Send, Ban, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { formatNum, formatUzDate } from "@/lib/format";
+import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { createInvoicesForPeriod, issueInvoice, cancelInvoice } from "@/server/invoices";
 

@@ -28,7 +28,7 @@
  */
 import "./load-env";
 import { prisma } from "@/lib/prisma";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 import { reverseLedger } from "@/lib/ledger";
 
 /** Sun'iy yozuvning belgisi — `description` boshidagi barqaror prefiks. */

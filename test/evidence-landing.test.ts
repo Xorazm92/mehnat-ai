@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("next/cache", () => ({ revalidateTag: () => {} }));
+vi.mock("next/cache", () => ({ revalidateTag: () => {}, updateTag: () => {} }));
 
 const { prisma } = await import("@/lib/prisma");
 const { landObligationClaim, applyEvidenceEvent } = await import("@/lib/engines/evidence/landing");

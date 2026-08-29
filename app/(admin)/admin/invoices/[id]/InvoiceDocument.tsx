@@ -9,7 +9,7 @@
 
 import React from "react";
 import { Printer } from "lucide-react";
-import { formatNum, formatUzDate } from "@/lib/format";
+import { formatNum, formatUzDate } from "@/lib/platform/format";
 
 interface Line {
   id: string;

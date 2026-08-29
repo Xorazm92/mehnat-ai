@@ -25,7 +25,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { formatNum, formatUzDate } from "@/lib/format";
+import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { Money, StatStrip, type StatItem } from "@/components/ui";
 import { Scale, Search, AlertTriangle, ChevronRight } from "lucide-react";
 

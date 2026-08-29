@@ -9,7 +9,7 @@ import { getKpiRules, getPerformanceForReview, upsertPerformance, approvePerform
 import { projectAllKpiForMonth } from '@/server/kpiProjection';
 import { deriveAttendanceKpi } from '@/server/attendance';
 import KpiEntryCard from './kpi/KpiEntryCard';
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { TableToolbar } from "@/components/ui/TableToolbar";
 import { toast } from "sonner";
 import { usePrompt } from "@/components/ui/ConfirmDialog";

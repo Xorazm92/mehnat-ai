@@ -21,7 +21,7 @@
 // tugmada ko'rinib turadi, ya'ni yashiringani sir emas.
 
 import React, { useMemo, useState } from "react";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { Money } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/exportTable";

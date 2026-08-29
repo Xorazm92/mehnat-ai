@@ -88,7 +88,9 @@ interface TplSeed {
 const TEMPLATES: TplSeed[] = [
   {
     code: "QQS_DECL",
-    matrixKey: "aylanma_qqs",
+    // Birlashgan `aylanma_qqs` ustuni bu shoxda IKKIGA bo'lingan (QQS oylik /
+    // aylanma alohida). Eski kalit hech qanday ustunga mos kelmasdi.
+    matrixKey: "qqs",
     name: "QQS deklaratsiyasi",
     obligationType: "tax_declaration",
     periodicity: "monthly",
@@ -98,7 +100,7 @@ const TEMPLATES: TplSeed[] = [
   },
   {
     code: "AYLANMA_SOLIQ",
-    matrixKey: "aylanma_qqs",
+    matrixKey: "aylanma",
     name: "Aylanma soliq",
     obligationType: "tax_declaration",
     periodicity: "monthly",

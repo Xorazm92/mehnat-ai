@@ -38,7 +38,7 @@
 
 import "./load-env";
 import { prisma } from "@/lib/prisma";
-import { formatNum as som } from "@/lib/format";
+import { formatNum as som } from "@/lib/platform/format";
 import { ACCOUNTS, reverseLedger } from "@/lib/ledger";
 import { recordKassaMovement, runCashTx, type CashActor } from "@/lib/cashGate";
 import { serializable } from "@/lib/tx";

@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/Button";
 import { Money } from "@/components/ui";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 import { useConfirm, usePrompt } from "@/components/ui/ConfirmDialog";
-import { groupDigits, ungroupDigits, todayKey, formatUzDate, formatNum } from "@/lib/format";
+import { groupDigits, ungroupDigits, todayKey, formatUzDate, formatNum } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { canApproveExpense } from "@/lib/expenseApproval";
 import { RANGE_LABELS, type RangePreset } from "@/lib/dateRange";

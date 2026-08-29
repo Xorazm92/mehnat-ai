@@ -3,7 +3,7 @@
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { MONTHS_UZ } from "@/lib/periods";
 import { TrendingUp } from "lucide-react";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 
 interface Point {
   month: string; // "2026-07"

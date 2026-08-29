@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Download } from "lucide-react";
 import { KPIRule, KpiRuleOption, Language, MonthlyPerformance } from "@/types";
 import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 
 interface Props {
   rule: KPIRule;

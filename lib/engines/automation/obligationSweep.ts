@@ -14,7 +14,7 @@
 import { Prisma } from "@prisma/client";
 import { logServerError } from "@/lib/platform/logger";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
-import { formatUzDate } from "@/lib/format";
+import { formatUzDate } from "@/lib/platform/format";
 import {
   escalate,
   escalationDedupKey,

@@ -19,7 +19,7 @@ import {
   FileCheck,
 } from "lucide-react";
 import { reviewReportProof } from "@/server/proofs";
-import { formatUzDateNumeric, formatUzTime } from "@/lib/format";
+import { formatUzDateNumeric, formatUzTime } from "@/lib/platform/format";
 import { ImageZoomModal } from "@/components/ImageZoomModal";
 import { Button } from "@/components/ui/Button";
 

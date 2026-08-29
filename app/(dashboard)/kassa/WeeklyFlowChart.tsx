@@ -5,7 +5,7 @@
 // ilovada allaqachon o'rnatilgan semantik juftlik (`Money` komponenti bilan
 // bir xil: kirim = yashil, chiqim = qizil), shuning uchun yangi palitra
 // tanlash shart emas.
-import { formatNum, formatUzDayShort } from "@/lib/format";
+import { formatNum, formatUzDayShort } from "@/lib/platform/format";
 
 interface WeekPoint {
   weekStart: string;

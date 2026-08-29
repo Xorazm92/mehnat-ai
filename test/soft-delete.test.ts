@@ -9,6 +9,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 const SESSION = { user: { id: "", role: "super_admin" as string } };
+const CHANNEL = { id: "" };
 
 vi.mock("@/lib/auth", () => ({ auth: async () => SESSION }));
 vi.mock("server-only", () => ({}));
@@ -22,6 +23,11 @@ const DATE = new Date(2099, 7, 15); // 2099-08 — ochiq davr
 const ids = { user: "" };
 
 beforeAll(async () => {
+  // Chiqim MANBASIZ yozilmaydi (server/kassa.ts) — test uchun naqd kanal.
+  const channel = await prisma.disbursementChannel.create({
+    data: { type: "cash", label: `${TAG}-cash` },
+  });
+  CHANNEL.id = channel.id;
   const user = await prisma.user.create({
     data: { email: `${TAG}@vitest.local`, fullName: `${TAG} admin`, passwordHash: "x", role: "super_admin" },
     select: { id: true },
@@ -86,6 +92,7 @@ describe("soft delete", () => {
       amount: 900_000, // <1 mln — avto-tasdiq, ledger yoziladi
       date: DATE,
       category: `${TAG}-expense`,
+      channelId: CHANNEL.id,
     });
     expect(exp.status).toBe("approved");
 

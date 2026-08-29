@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Clock, Users, ShieldCheck, ArrowRight, RefreshCw } from "lucide-react";
 import { persistRiskLevels } from "@/server/twin";
 import { Button } from "@/components/ui/Button";
-import { formatUzDayShort, formatNum } from "@/lib/format";
+import { formatUzDayShort, formatNum } from "@/lib/platform/format";
 import type { TimelineBucket, TimelineItem } from "@/server/timeline";
 import type { CompanyTwin, StaffCapacity } from "@/lib/domains/accounting/twinCompute";
 import type { ConcernLevel, Score } from "@/lib/engines/analytics/twin";

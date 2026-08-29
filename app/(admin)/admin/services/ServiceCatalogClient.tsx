@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Save, Archive, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { upsertService, archiveService } from "@/server/services";
 

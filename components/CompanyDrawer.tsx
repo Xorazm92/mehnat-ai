@@ -42,7 +42,7 @@ import {
 import { getKpiRules, getCompanyKpiRules, upsertCompanyKpiRule } from '@/server/kpi';
 import { getClientCredentials, createClientCredential, deleteClientCredential, setPrimaryCredential, setServiceCredential } from '@/server/credentials';
 import { PRIMARY_SERVICE, BANK_SERVICE } from '@/lib/credentials';
-import { formatUzDate, formatUzDateTime, formatNum } from '@/lib/format';
+import { formatUzDate, formatUzDateTime, formatNum } from '@/lib/platform/format';
 import { kpiCategoryLabel } from '@/lib/kpiLabels';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { taxRegimeLabel } from '@/lib/taxRegimes';

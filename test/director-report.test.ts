@@ -163,10 +163,14 @@ describe("renderDirectorReport", () => {
     const report = await buildDirectorReport(prisma, NOW);
     const text = renderDirectorReport(report);
 
-    expect(text).toContain("Kunlik hisobot — 14-iyul");
-    expect(text).toContain("Kirim:  1,000,000 so'm");
-    expect(text).toContain("Chiqim: 400,000 so'm");
-    expect(text).toContain("Sof:    +600,000 so'm");
+    // Renderer HTML beradi (`<b>`/`<i>`) — bezakka emas, MAZMUNGA tayanamiz.
+    expect(text).toContain("Kunlik hisobot");
+    expect(text).toContain("14-iyul");
+    // Summalar vergul bilan; joylashuvi renderer'ga tegishli, shuning uchun
+    // faqat RAQAM shakli tekshiriladi (⬆️ 1,000,000 · ⬇️ 400,000 · +600,000).
+    expect(text).toContain("1,000,000");
+    expect(text).toContain("400,000");
+    expect(text).toContain("+600,000");
     // Intl "M07" kabi qiymat bermasin.
     expect(text).not.toMatch(/M\d\d/);
   });

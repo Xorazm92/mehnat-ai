@@ -5,7 +5,7 @@ import { getKpiLeaderboard } from "@/server/kpi";
 import { Trophy, TrendingUp, Award, AlertTriangle, Wallet, Activity } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { MONTHS_UZ } from "@/lib/periods";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { KPI_CATEGORY_UZ } from "@/lib/kpiLabels";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { MonthPicker } from "./ui/MonthPicker";

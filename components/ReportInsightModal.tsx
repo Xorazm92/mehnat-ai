@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Copy, Search, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { useDismissable } from "@/hooks/useDismissable";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import {
   INSIGHT_DIMENSIONS,
   STATUS_ICON,

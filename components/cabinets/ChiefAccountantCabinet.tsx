@@ -10,7 +10,7 @@ import {
   FileCheck,
   ShieldCheck,
 } from "lucide-react";
-import { formatUzMonthYear, formatNum } from "@/lib/format";
+import { formatUzMonthYear, formatNum } from "@/lib/platform/format";
 import { ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
 import { PageHeader } from "@/components/ui/PageHeader";

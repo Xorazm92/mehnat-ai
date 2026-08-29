@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
-import { formatUzDateNumeric } from "@/lib/format";
+import { formatUzDateNumeric } from "@/lib/platform/format";
 
 /**
  * DATE FIELD — o'zbekcha sana kiritish.

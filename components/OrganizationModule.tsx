@@ -10,7 +10,7 @@ import { writeSheet } from '@/lib/exportTable';
 import OnboardingWizard from './OnboardingWizard';
 import { MonthPicker } from './ui/MonthPicker';
 import { periodsEqual } from '@/lib/periods';
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import RiskBadge from './RiskBadge';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';

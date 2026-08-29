@@ -20,9 +20,15 @@ const { createPayrollAdjustment, approveEmployeeSalary } = await import("@/serve
 const TAG = `vitest-lock-${Date.now()}`;
 const YEAR = 2097;
 const LOCKED_DATE = new Date(2097, 4, 10); // 2097-05-10
-const ids = { user: "" };
+const ids = { user: "", channel: "" };
 
 beforeAll(async () => {
+  // Chiqim endi MANBASIZ yozilmaydi (server/kassa.ts) — test uchun bitta
+  // naqd kanal yaratamiz, aks holda qulf tekshiruvi kanal xatosiga urilardi.
+  const ch = await prisma.disbursementChannel.create({
+    data: { type: "cash", label: `${TAG}-cash` },
+  });
+  ids.channel = ch.id;
   const user = await prisma.user.create({
     data: { email: `${TAG}@vitest.local`, fullName: `${TAG} admin`, passwordHash: "x", role: "super_admin" },
     select: { id: true },
@@ -74,7 +80,7 @@ describe("period lock", () => {
 
     // Xarajat — yopiq oy sanasi bilan
     await expect(
-      createExpense({ amount: 500_000, date: LOCKED_DATE, category: "boshqa" })
+      createExpense({ amount: 500_000, date: LOCKED_DATE, category: "boshqa", channelId: ids.channel })
     ).rejects.toThrow(/yopilgan/);
 
     // Kassa yozuvi

@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   TrendingUp,
 } from "lucide-react";
-import { formatUzMonthYear } from "@/lib/format";
+import { formatUzMonthYear } from "@/lib/platform/format";
 import Link from "next/link";
 import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
 import { KpiCard } from "@/components/ui/KpiCard";

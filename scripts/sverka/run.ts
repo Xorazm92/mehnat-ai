@@ -24,7 +24,7 @@ import { detectKind, type FileKind } from "./detect";
 import { parseFiscalWorkbook, fmHintFromFileName } from "@/lib/pos/parseFiscalReport";
 import { classifySettlement, settlementSign, defaultInScope, CHANNEL_LABELS } from "@/lib/pos/classifySettlement";
 import { reconcile, dayKey, type DeviceDay, type SettlementDay } from "@/lib/pos/reconcile";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 
 interface Args { dir: string; from?: string; to?: string; out: string }
 

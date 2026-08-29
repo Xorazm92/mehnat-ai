@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Staff, Company } from "@/types";
 import { ROLE_LABELS, ROLE_COLORS, type UserRole } from "@/lib/platform/permissions";
-import { formatUzDate, formatNum } from "@/lib/format";
+import { formatUzDate, formatNum } from "@/lib/platform/format";
 import {
   X, Edit3, Phone, Mail, IdCard, Briefcase, Building, GraduationCap,
   CalendarDays, User as UserIcon, Award, CheckCircle2, Hash, Building2, Percent,

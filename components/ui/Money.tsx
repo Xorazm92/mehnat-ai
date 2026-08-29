@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 
 /**
  * MONEY — pul summasining YAGONA ko'rinishi.

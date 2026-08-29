@@ -10,7 +10,7 @@ import {
   ChevronRight,
   Wallet,
 } from "lucide-react";
-import { formatUzMonthYear, formatUzDateNumeric, formatNum } from "@/lib/format";
+import { formatUzMonthYear, formatUzDateNumeric, formatNum } from "@/lib/platform/format";
 import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
 
 interface AssignedCompany {

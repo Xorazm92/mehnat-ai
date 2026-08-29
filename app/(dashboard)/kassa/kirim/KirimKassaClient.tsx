@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Upload, Link2, EyeOff, Banknote, CreditCard, Wallet, Search, AlertTriangle, Plus } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { groupDigits, ungroupDigits, todayKey, formatNum, formatUzDate } from "@/lib/format";
+import { groupDigits, ungroupDigits, todayKey, formatNum, formatUzDate } from "@/lib/platform/format";
 import { Money } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import {

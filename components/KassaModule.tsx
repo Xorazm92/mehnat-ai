@@ -9,7 +9,7 @@ import { Wallet, Search, Plus, CheckCircle2, Clock, Trash2, CreditCard, Loader2 
 import { TableToolbar } from "@/components/ui/TableToolbar";
 import { toast } from 'sonner';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_COLORS } from '@/lib/constants';
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";

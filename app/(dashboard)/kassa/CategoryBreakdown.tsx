@@ -11,7 +11,7 @@
 // qo'shib yuborilsa, bitta pul ikki manbadan sanalardi.
 
 import React from "react";
-import { formatNum } from "@/lib/format";
+import { formatNum } from "@/lib/platform/format";
 import { Money } from "@/components/ui";
 import { ArrowDownRight, ArrowUpRight, PieChart } from "lucide-react";
 

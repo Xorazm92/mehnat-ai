@@ -10,7 +10,7 @@ import {
   ClipboardList,
   User as UserIcon,
 } from "lucide-react";
-import { formatUzDateFull, formatUzMonthYear } from "@/lib/format";
+import { formatUzDateFull, formatUzMonthYear } from "@/lib/platform/format";
 import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
 
 interface CompanyProgress {

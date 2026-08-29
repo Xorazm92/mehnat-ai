@@ -2,7 +2,7 @@
 import { Company, OperationEntry, ContractRole, MonthlyPerformance, KPIRule, Staff, CompanyKPIRule, CompanyBreakdown } from '@/types';
 import { capKpiPercent } from '@/lib/kpiScoring';
 import { periodsEqual } from '@/lib/periods';
-import { formatNum } from '@/lib/format';
+import { formatNum } from '@/lib/platform/format';
 import {
     PAYROLL_BASIS_DEFAULT,
     resolveSalaryBasis,

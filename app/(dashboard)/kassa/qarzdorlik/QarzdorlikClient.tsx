@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AlertTriangle, Search, TrendingUp, CheckCircle2, XCircle } from "lucide-react";
-import { formatNum, formatUzDate } from "@/lib/format";
+import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import CollectionQueue from "./CollectionQueue";
 import DebtStatement, { type DebtStatementData } from "./DebtStatement";
