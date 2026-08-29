@@ -125,6 +125,9 @@ export const REFERENCE_TABLES: string[] = [
   "companyKpiRule",
   "deadlineTemplate",
   "templateApplicability",
+  // Firma darajasidagi istisno — shablon qoidasining bir qismi, ya'ni
+  // sozlama. Majburiyat qayta generatsiya qilinganda ham saqlanadi.
+  "companyObligationOverride",
   "businessCalendarDay",
   "systemSetting",
   "clientCredential",
