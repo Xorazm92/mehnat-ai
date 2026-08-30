@@ -19,6 +19,70 @@ import { logger } from "@/lib/platform/logger";
  * eski `obligationBridge` har nosozlikda jimgina qaytardi va oylar davomida
  * deyarli hech narsa qilmaganini hech kim sezmadi (ADR-0009).
  */
+/**
+ * TOPSHIRISH URINISHI — dalil tarixi.
+ *
+ * Holat o'zgarishidan MUSTAQIL yoziladi: rad etilgandan keyingi qayta
+ * topshirish ham, allaqachon "sent" turgan majburiyatga yangi skrinshot ham
+ * alohida urinish. Bu yozuv birlashtirishda tushib qolgan edi — natijada
+ * majburiyat "yuborilgan" bo'lib turardi-yu, ortida bitta ham urinish
+ * bo'lmasdi va audit/KPI dalilni topa olmasdi.
+ *
+ * `storageRef` base64 saqlamaydi — u `ReportProof` yozuviga ishora qiladi.
+ */
+async function recordSubmissionAttempt(
+  obligationId: string,
+  colKey: string,
+  proofId: string | null,
+  actorId: string | null,
+) {
+  const attemptNo =
+    (await prisma.obligationSubmission.count({ where: { obligationId } })) + 1;
+  const submission = await prisma.obligationSubmission.create({
+    data: {
+      obligationId,
+      attemptNo,
+      status: "sent",
+      sentAt: new Date(),
+      sourceSystem: "asro",
+      createdById: actorId,
+    },
+    select: { id: true },
+  });
+  if (proofId) {
+    await prisma.submissionEvidence.create({
+      data: {
+        submissionId: submission.id,
+        type: "screenshot",
+        storageRef: `reportProof:${proofId}`,
+        note: `Matritsa ustuni: ${colKey}`,
+        createdById: actorId,
+      },
+    });
+  }
+}
+
+/** Nazoratchi qarori oxirgi urinishga yoziladi (qabul qilindi / rad etildi). */
+async function closeSubmissionAttempt(
+  obligationId: string,
+  decision: "accepted" | "rejected",
+) {
+  const latest = await prisma.obligationSubmission.findFirst({
+    where: { obligationId },
+    orderBy: { attemptNo: "desc" },
+    select: { id: true },
+  });
+  if (!latest) return;
+  const now = new Date();
+  await prisma.obligationSubmission.update({
+    where: { id: latest.id },
+    data:
+      decision === "accepted"
+        ? { status: "accepted", acceptedAt: now }
+        : { status: "rejected", rejectedAt: now },
+  });
+}
+
 function reportSync(outcome: MatrixWriteOutcome, ctx: Record<string, unknown>) {
   if (outcome.ok) return;
   logger.warn({ event: "matrix.obligation_sync_failed", reason: outcome.reason, detail: outcome.detail, ...ctx },
@@ -172,18 +236,19 @@ export async function saveReportProof(input: {
     update: { [dbCol]: "topshirildi" },
   });
 
-  // 2b) Majburiyat statusini "sent" ga o'tkazish
-  reportSync(
-    await applyObligationStatus(prisma, {
-      companyId: input.companyId,
-      period: input.period,
-      matrixKey: input.colKey,
-      status: "sent",
-      userId,
-      note: `proof:${input.colKey}`,
-    }),
-    { companyId: input.companyId, period: input.period, colKey: input.colKey },
-  );
+  // 2b) Majburiyat statusini "sent" ga o'tkazish + topshirish urinishini yozish
+  const sentOutcome = await applyObligationStatus(prisma, {
+    companyId: input.companyId,
+    period: input.period,
+    matrixKey: input.colKey,
+    status: "sent",
+    userId,
+    note: `proof:${input.colKey}`,
+  });
+  reportSync(sentOutcome, { companyId: input.companyId, period: input.period, colKey: input.colKey });
+  if (sentOutcome.ok && "obligationId" in sentOutcome) {
+    await recordSubmissionAttempt(sentOutcome.obligationId, input.colKey, proof.id, userId);
+  }
 
   // 3) Nazoratchilarga xabar (firma nazoratchisi + barcha tekshiruvchi rollar)
   const reviewerIds = new Set<string>();
@@ -351,18 +416,21 @@ export async function reviewReportProof(input: {
     update: { [dbCol]: cellValue },
   });
 
-  // Majburiyat statusini "accepted" yoki "rejected" ga o'tkazish
-  reportSync(
-    await applyObligationStatus(prisma, {
-      companyId: input.companyId,
-      period: input.period,
-      matrixKey: input.colKey,
-      status: input.decision === "approved" ? "accepted" : "rejected",
-      userId,
-      note: `proof-review:${input.colKey}`,
-    }),
-    { companyId: input.companyId, period: input.period, colKey: input.colKey },
-  );
+  // Majburiyat statusini "accepted" yoki "rejected" ga o'tkazish + nazoratchi
+  // qarorini oxirgi topshirish urinishiga yozish (dalil tarixi yopiladi).
+  const decision = input.decision === "approved" ? ("accepted" as const) : ("rejected" as const);
+  const reviewOutcome = await applyObligationStatus(prisma, {
+    companyId: input.companyId,
+    period: input.period,
+    matrixKey: input.colKey,
+    status: decision,
+    userId,
+    note: `proof-review:${input.colKey}`,
+  });
+  reportSync(reviewOutcome, { companyId: input.companyId, period: input.period, colKey: input.colKey });
+  if (reviewOutcome.ok && "obligationId" in reviewOutcome) {
+    await closeSubmissionAttempt(reviewOutcome.obligationId, decision);
+  }
 
   // Buxgalterga natijani xabar qilish
   const company = await prisma.company.findUnique({
