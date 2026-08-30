@@ -195,10 +195,31 @@ export async function upsertMonthlyReport(
   // MANBA — majburiyat. Katak yozuvi shu yerda `Obligation` ga o'tadi, aks
   // holda matritsada "topshirildi" turgan ish `/deadlines` da "kechikdi" bo'lib
   // qolaverardi (buxgalter bir ishni ikki joyda belgilashga majbur edi).
-  // Tozalash alohida yo'l: u dalilni ham olib tashlaydi.
+  //
+  // DIQQAT — bu ikki tarmoq: TOZALASH dalilni ham olib tashlaydi, oddiy yozuv
+  // esa faqat holatni suradi. Birlashtirishda tozalash tarmog'i qolib, ikkinchisi
+  // tushib qolgan edi: ya'ni katakni ✓ qilish majburiyatni HARAKATGA
+  // KELTIRMASDI va matritsa bilan "Ishlar" ro'yxati yana ajralib ketardi.
   for (const [rawKey, value] of Object.entries(rawFields)) {
-    if (!isClearedValue(value)) continue;
-    await clearCellEvidence(companyId, period, rawKey);
+    if (isClearedValue(value)) {
+      await clearCellEvidence(companyId, period, rawKey);
+      continue;
+    }
+    const outcome = await applyCellWrite(prisma, {
+      companyId,
+      period,
+      matrixKey: rawKey,
+      value: String(value ?? ""),
+      userId,
+    });
+    if (!outcome.ok) {
+      // Jim emas, lekin to'sqinlik ham emas: matritsaga yozish foydalanuvchining
+      // asosiy ishi va u majburiyat qatori yo'qligi uchun to'xtamasligi kerak.
+      logger.warn(
+        { event: "matrix.obligation_sync_failed", reason: outcome.reason, detail: outcome.detail, companyId, period, colKey: rawKey },
+        "katak yozildi, majburiyat surilmadi",
+      );
+    }
   }
 
   /**
