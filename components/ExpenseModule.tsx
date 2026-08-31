@@ -5,7 +5,7 @@ import { useModalA11y } from '@/hooks/useModalA11y';
 import { useViewMode } from '@/hooks/useViewMode';
 import { Expense, Language } from '@/types';
 import { translations } from '@/lib/translations';
-import { Receipt, Plus, Search, Edit3, Trash2, Tag, TrendingDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { exportObjectsToExcel } from '@/lib/exportTable';
 import { canApproveExpense } from '@/lib/expenseApproval';
 import BalanceOverview from '@/components/BalanceOverview';
@@ -16,7 +16,7 @@ import type { BalanceBreakdown } from '@/types';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
 import { useTableState } from '@/hooks/useTableState';
-import { PageHeader } from "@/components/ui/PageHeader";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { Button } from "@/components/ui/Button";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 import { periodKeyOf } from '@/lib/periods';
@@ -180,25 +180,6 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
         };
     }, [expenses]);
 
-    // Oylik byudjet + kategoriya limitlari (ASRO Xarajatlar prototipi)
-    const budget = useMemo(() => {
-        const cm = new Date().toISOString().slice(0, 7);
-        const monthExp = expenses.filter(e => e.date.startsWith(cm));
-        const spentOf = (keys: string[]) =>
-            monthExp.filter(e => keys.some(k => (e.category || '').toLowerCase().includes(k))).reduce((s, e) => s + (e.amount || 0), 0);
-        const cats = [
-            { label: 'Ijara', keys: ['ijara', 'rent'], limit: 12_500_000 },
-            { label: 'IT', keys: ['it', 'server', 'software'], limit: 6_000_000 },
-            { label: 'Kommunal', keys: ['kommunal', 'utilit'], limit: 3_000_000 },
-            { label: 'Transport', keys: ['transport'], limit: 2_000_000 },
-            { label: 'Ofis', keys: ['office', 'ofis', 'kanstel', 'other'], limit: 1_500_000 },
-        ].map(c => ({ label: c.label, limit: c.limit, spent: spentOf(c.keys) }));
-        const totalSpent = monthExp.reduce((s, e) => s + (e.amount || 0), 0);
-        const totalBudget = cats.reduce((s, c) => s + c.limit, 0);
-        return { cats, totalSpent, totalBudget, remaining: totalBudget - totalSpent };
-    }, [expenses]);
-
-    const som = (v: number) => formatNum(Math.round(v));
     const fmtDate = (d: string) => (d ? formatUzDateNumeric(d) : '—');
     const STATUS_UZ: Record<string, string> = { approved: 'Tasdiqlangan', pending: 'Kutilmoqda', rejected: 'Rad etilgan' };
     const handleExport = () => {
@@ -211,8 +192,6 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
         }));
         void exportObjectsToExcel(rows, `xarajatlar-${new Date().toISOString().slice(0, 10)}`, 'Xarajatlar');
     };
-    const pct = (a: number, b: number) => (b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0);
-    const limitColor = (p: number) => (p >= 100 ? 'var(--danger)' : p >= 90 ? 'var(--warning)' : 'var(--accent-blue)');
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -237,109 +216,58 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
 
     return (
         <div className="space-y-4 animate-fade-in pb-20">
-      <PageHeader
-        icon={<Receipt size={20} />}
-        title="Xarajatlar"
-        description="Firma xarajatlari, tasdiqlash va byudjet nazorati"
-      />
+      {/*
+        SAHIFA SARLAVHASI OLIB TASHLANDI. Bu modul `/kassa/chiqim` ning
+        "Xarajat" YORLIG'I ichida ochiladi — sahifada allaqachon
+        "Chiqim kassa" sarlavhasi va faol yorliq turibdi. Ikkinchi
+        sarlavha ekranda ikkita sahifa borday taassurot berardi.
+      */}
             {/* Mavjud balans — yagona kassa (kirim − chiqim − oylik) */}
             {balance && <BalanceOverview breakdown={balance} variant="compact" />}
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div className="dashboard-card p-5 relative overflow-hidden flex flex-col justify-between">
-                    <div className="absolute top-[-20px] right-[-20px] opacity-5 pointer-events-none">
-                        <TrendingDown size={140} style={{ color: 'var(--danger)' }} />
-                    </div>
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md shrink-0 bg-gradient-to-br from-[var(--danger)] to-[var(--danger-dark)]">
-                                <TrendingDown size={20} />
-                            </div>
-                            <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>SHU OYDA</span>
-                        </div>
-                        <div className="text-3xl font-semibold tabular-nums leading-none mb-4" style={{ color: 'var(--text)' }}>
-                            {formatNum(stats.totalMonth)} <span className="text-sm font-bold ml-1" style={{ color: 'var(--text-muted)' }}>so&apos;m</span>
-                        </div>
-                        {/* Shu oy eng katta oyinga nisbatan — ilgari chiziq
-                            dekorativ `w-3/4` edi va hech narsani o'lchamasdi. */}
-                        <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
-                            <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.round((stats.totalMonth / stats.maxMonth) * 100))}%`, background: 'var(--accent-red)' }} />
-                        </div>
-                        <div className="text-micro font-bold mt-1.5" style={{ color: 'var(--text-muted)' }}>
-                            eng yuqori oyga nisbatan
-                        </div>
-                    </div>
-                </div>
+            {/*
+              KO'RSATKICHLAR — umumiy `StatStrip` tilida.
 
-                <div className="dashboard-card p-5 flex flex-col justify-center relative">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
-                            <Receipt size={20} />
-                        </div>
-                        <div>
-                            <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>UMUMIY</span>
-                            <h4 className="font-bold text-body tracking-tight" style={{ color: 'var(--text)' }}>Jami xarajat</h4>
-                        </div>
-                    </div>
-                    <div className="text-2xl font-semibold tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>
-                        {formatNum(stats.totalAll)} <span className="text-xs font-bold ml-1" style={{ color: 'var(--text-muted)' }}>so&apos;m</span>
-                    </div>
-                </div>
+              Ilgari bu yerda uchta `dashboard-card` bor edi va ularning
+              har biri boshqacha yasалган: birinchisi gradient ikonka +
+              140px dekorativ fon rasmi + `text-3xl`, ikkinchisi ramkali
+              ikonka + `text-2xl`, uchinchisi yana `text-3xl`. Uchala
+              karta ekranning butun ekran balandligini egallar, ma'lumot
+              esa uch qatorga sig'ardi.
 
-                <div className="dashboard-card p-5 flex flex-col justify-center relative">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center border" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
-                            <Tag size={20} />
-                        </div>
-                        <div>
-                            <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>FAOLLIK</span>
-                            <h4 className="font-bold text-body tracking-tight" style={{ color: 'var(--text)' }}>Tranzaksiyalar</h4>
-                        </div>
-                    </div>
-                    <div className="flex items-end gap-2 leading-none">
-                        <span className="text-3xl font-semibold tabular-nums" style={{ color: 'var(--text)' }}>{stats.count}</span>
-                        <span className="text-meta font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>QAYD</span>
-                    </div>
-                </div>
-            </div>
+              "Tranzaksiyalar 227 QAYD" ALOHIDA ko'rsatkich sifatida olib
+              tashlandi: qayd soni o'z-o'zicha qaror qabul qildirmaydi, u
+              jami summaning izohi — shuning uchun `meta` ga tushdi.
+            */}
+            <StatStrip
+              items={[
+                { label: "Shu oyda", value: stats.totalMonth, tone: "out" },
+                { label: "Jami xarajat", value: stats.totalAll, tone: "neutral", meta: `${stats.count} qayd` },
+              ]}
+            />
 
-            {/* Byudjet paneli + kategoriya limitlari (ASRO prototip) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div className="lg:col-span-2 dashboard-card p-5">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>Oylik byudjet</h3>
-                        <span className="text-body font-semibold tabular-nums" style={{ color: 'var(--text-primary)' }}>
-                            {som(budget.totalSpent)} <span className="text-meta font-bold" style={{ color: 'var(--text-muted)' }}>/ {som(budget.totalBudget)} so&apos;m</span>
-                        </span>
-                    </div>
-                    <div className="h-3 w-full rounded-full overflow-hidden" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)' }}>
-                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct(budget.totalSpent, budget.totalBudget)}%`, background: limitColor(pct(budget.totalSpent, budget.totalBudget)) }} />
-                    </div>
-                    <p className="text-meta font-bold mt-2" style={{ color: budget.remaining >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                        Qoldiq: {som(Math.abs(budget.remaining))} so&apos;m {budget.remaining < 0 ? '(oshib ketdi)' : ''}
-                    </p>
-                </div>
-                <div className="dashboard-card p-5">
-                    <h3 className="text-xs font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Kategoriya limitlari</h3>
-                    <div className="space-y-3">
-                        {budget.cats.map(c => {
-                            const p = pct(c.spent, c.limit);
-                            return (
-                                <div key={c.label}>
-                                    <div className="flex justify-between text-meta font-bold mb-1">
-                                        <span style={{ color: 'var(--text-secondary)' }}>{c.label}</span>
-                                        <span style={{ color: limitColor(p) }}>{(c.spent / 1_000_000).toFixed(1)}<span style={{ color: 'var(--text-muted)' }}> / {c.limit / 1_000_000} mln</span></span>
-                                    </div>
-                                    <div className="h-1.5 rounded-full" style={{ background: 'var(--input-bg)' }}>
-                                        <div className="h-1.5 rounded-full" style={{ width: `${p}%`, background: limitColor(p) }} />
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
+            {/*
+              BYUDJET PANELI VA KATEGORIYA LIMITLARI OLIB TASHLANDI.
+
+              Ular SOXTA ma'lumot ko'rsatardi: limitlar shu komponentning
+              ichida qotirilgan edi — Ijara 12,5 mln · IT 6 mln · Kommunal
+              3 mln · Transport 2 mln · Ofis 1,5 mln — va hech qanday
+              sozlamadan kelmasdi. "Oylik byudjet 25 000 000" ham shu
+              beshtaning yig'indisi edi.
+
+              Ya'ni ekranda "Qoldiq: 24 550 000 so'm" deb turardi, holbuki
+              o'sha byudjetni hech kim belgilamagan. Moliyaviy ekranda
+              o'ylab topilgan raqam bo'sh joydan yomonroq: u noto'g'ri
+              ishonch beradi.
+
+              Toifalarni moslashtirish ham ishonchsiz edi: `'it'` kaliti
+              `includes()` bilan qidirilardi, ya'ni tarkibida "it" bo'lgan
+              HAR QANDAY toifa "IT" byudjetiga tushardi.
+
+              Haqiqiy byudjet kerak bo'lsa: limitlar `SystemSetting` da
+              saqlanib, admin sozlamalaridan kelishi kerak — aynan
+              `lib/kassaCategories.ts` toifalar bilan qilgani kabi.
+            */}
 
             {/* Tasdiqlash oqimi banner */}
             {(() => {

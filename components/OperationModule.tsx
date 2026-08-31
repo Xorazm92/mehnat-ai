@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { compareText } from "@/lib/collate";
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Company, OperationEntry, Language, Staff } from '@/types';
 import { translations } from '@/lib/translations';
@@ -623,7 +624,7 @@ const OperationModule: React.FC<Props> = ({
         const v = (pick(r) ?? '').trim();
         if (v && v !== '—') set.add(v);
       }
-      return [...set].sort((a, b) => a.localeCompare(b, 'uz'));
+      return [...set].sort((a, b) => compareText(a, b));
     };
 
     // `matchesFacets` bilan BIR XIL maydonlar: sanoq filtr natijasidan
@@ -853,7 +854,7 @@ const OperationModule: React.FC<Props> = ({
       if (key === 'completion') return (settledRatio(tallyOf(a)) - settledRatio(tallyOf(b))) * dir;
       const av = String(a[key] ?? ''), bv = String(b[key] ?? '');
       if (key === 'inn') return av.localeCompare(bv, undefined, { numeric: true }) * dir;
-      return av.localeCompare(bv, 'uz') * dir;
+      return compareText(av, bv) * dir;
     });
   }, [searchedRows, filterStatus, tallyOf, table.sortKey, table.sortDir]);
 

@@ -16,6 +16,7 @@ import {
   type CellStatus,
   type StatusTally,
 } from "./reportStatus";
+import { compareText } from "@/lib/collate";
 
 /** Qatorlarni qaysi belgi bo'yicha guruhlash. */
 export type InsightDimension =
@@ -176,7 +177,7 @@ export function buildInsight(
       (a, b) =>
         severityOf(a.worst) - severityOf(b.worst) ||
         b.tally.outstanding - a.tally.outstanding ||
-        a.name.localeCompare(b.name, "uz")
+        compareText(a.name, b.name)
     );
 
   const groups: InsightGroup[] = [...byKey.entries()]
@@ -193,7 +194,7 @@ export function buildInsight(
         // Eng ko'p ish qolgani tepada; teng bo'lsa foizi pasti; keyin alfavit.
         b.tally.outstanding - a.tally.outstanding ||
         a.percent - b.percent ||
-        a.label.localeCompare(b.label, "uz")
+        compareText(a.label, b.label)
     );
 
   return {

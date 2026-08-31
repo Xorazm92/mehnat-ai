@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { compareText } from "@/lib/collate";
 import { ArrowUp, ArrowDown, ChevronsUpDown, ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { Density, SortDir } from "@/hooks/useTableState";
 import { EmptyState } from "./EmptyState";
@@ -220,7 +221,7 @@ export function DataTable<T>({
       if (av === null || av === undefined) return 1;
       if (bv === null || bv === undefined) return -1;
       if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
-      return String(av).localeCompare(String(bv), "uz") * dir;
+      return compareText(String(av), String(bv)) * dir;
     });
   }, [rows, cols, sortKey, sortDir]);
 

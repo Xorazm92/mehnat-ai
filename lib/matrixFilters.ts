@@ -12,6 +12,7 @@
 // da DB'siz sinaladi.
 
 import { classifyCell, isSettled, type CellStatus } from "./reportStatus";
+import { compareText } from "@/lib/collate";
 import { columnAppliesToRegime } from "./reportApplicability";
 import { TAX_REGIME_LABEL } from "./taxRegimes";
 
@@ -264,7 +265,7 @@ export function slotFacetOptions(
   }
   return [...counts]
     .map(([value, count]) => ({ value, count }))
-    .sort((a, b) => a.value.localeCompare(b.value, "uz"));
+    .sort((a, b) => compareText(a.value, b.value));
 }
 
 /**
@@ -288,7 +289,7 @@ export function personFacetOptions(
   }
   return [...counts]
     .map(([value, count]) => ({ value, count }))
-    .sort((a, b) => a.value.localeCompare(b.value, "uz"));
+    .sort((a, b) => compareText(a.value, b.value));
 }
 
 /**

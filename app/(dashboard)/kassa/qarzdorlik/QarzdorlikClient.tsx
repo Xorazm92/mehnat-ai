@@ -7,6 +7,8 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import CollectionQueue from "./CollectionQueue";
 import DebtStatement, { type DebtStatementData } from "./DebtStatement";
 import { Tabs, type TabItem } from "@/components/ui";
+import { useTabParam } from "@/hooks/useTabParam";
+import { QARZDORLIK_TAB_IDS, type QarzdorlikTab } from "@/lib/qarzdorlikTabs";
 import { useRouter } from "next/navigation";
 import KassaModule from "@/components/KassaModule";
 import { upsertPayment, deletePayment } from "@/server/kassa";
@@ -84,6 +86,8 @@ interface Props {
       neverPaid: number;
     };
   };
+  /** `?tab=` dan SERVERDA o'qilgan boshlang'ich yorliq (hidratsiya uchun). */
+  initialTab?: QarzdorlikTab;
   /** "Bugun gaplashish kerak" navbati — `getCollectionQueue`. */
   queue: {
     rows: DebtorRow[];
@@ -136,6 +140,7 @@ export default function QarzdorlikClient({
   planFact,
   recon = [],
   statement,
+  initialTab = "holat",
 }: Props) {
   const router = useRouter();
 
@@ -146,9 +151,11 @@ export default function QarzdorlikClient({
   // `components/ui/Tabs` — WAI-ARIA naqshi bilan. Qo'lda yozilgan tugmalar
   // qatorida `role="tablist"` bo'lmaydi: ekran o'quvchi ularni oddiy tugma
   // deb o'qiydi va strelka bilan yurib bo'lmaydi.
-  type TabKey = "holat" | "undirish" | "tolovlar" | "tekshiruv";
-  const [tab, setTab] = useState<TabKey>("holat");
-  const TAB_ITEMS: TabItem<TabKey>[] = [
+  // Yorliq URL'da: nazoratchi "undirish kerak bo'lganlarni ko'r" deb
+  // `/kassa/qarzdorlik?tab=undirish` havolasini yuborishi mumkin va F5
+  // bosilganda holat yo'qolmaydi. Ilgari bu oddiy `useState` edi.
+  const [tab, setTab] = useTabParam<QarzdorlikTab>("tab", QARZDORLIK_TAB_IDS, initialTab);
+  const TAB_ITEMS: TabItem<QarzdorlikTab>[] = [
     { id: "holat", label: "Holat", hint: "Mijoz bilan hisob-kitob holati" },
     { id: "undirish", label: "Undirish", hint: "Bugun kim bilan gaplashish kerak", count: queue.rows.length || undefined },
     { id: "tolovlar", label: "To'lovlar", hint: "Firmalar bo'yicha oylik to'lovlar" },

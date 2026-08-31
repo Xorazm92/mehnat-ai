@@ -12,6 +12,8 @@ import {
 import { getCachedCompanies } from "@/lib/cached-queries";
 import { getPayments } from "@/server/kassa";
 import QarzdorlikClient from "./QarzdorlikClient";
+import { readTabParam } from "@/lib/tabs";
+import { QARZDORLIK_TAB_IDS, type QarzdorlikTab } from "@/lib/qarzdorlikTabs";
 
 export const metadata = { title: "Qarzdorlik" };
 
@@ -25,9 +27,9 @@ function parseDay(v: string | undefined): Date | undefined {
 export default async function QarzdorlikPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dan?: string; gacha?: string }>;
+  searchParams: Promise<{ dan?: string; gacha?: string; tab?: string }>;
 }) {
-  const { dan, gacha } = await searchParams;
+  const { dan, gacha, tab } = await searchParams;
   const session = await auth();
   if (!session) redirect("/login?expired=1");
 
@@ -77,6 +79,7 @@ export default async function QarzdorlikPage({
   return (
     <div className="h-full">
       <QarzdorlikClient
+        initialTab={readTabParam<QarzdorlikTab>(tab, QARZDORLIK_TAB_IDS, "holat")}
         statement={statement ? JSON.parse(JSON.stringify(statement)) : null}
         debt={JSON.parse(JSON.stringify(debt))}
         debtors={JSON.parse(JSON.stringify(debtors))}

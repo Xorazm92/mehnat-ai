@@ -137,7 +137,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
             exportValue: item => remaining(item),
             cell: item => (
                 <span className="font-bold text-body" style={{ color: 'var(--text)' }}>
-                    {formatNum(remaining(item))} <span className="text-micro font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>sum</span>
+                    {formatNum(remaining(item))} <span className="text-micro font-bold ml-1 uppercase" style={{ color: 'var(--text-muted)' }}>so&apos;m</span>
                 </span>
             ),
         },
@@ -229,9 +229,9 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
             {/* Header & Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div className="md:col-span-2 dashboard-card p-5 relative overflow-hidden flex flex-col justify-between">
-                    <div className="absolute top-[-20px] right-[-20px] opacity-5 pointer-events-none">
-                        <Wallet size={200} style={{ color: 'var(--accent-blue)' }} />
-                    </div>
+                    {/* 200px li dekorativ hamyon rasmi olib tashlandi: u
+                        kartaning yarmini egallar, hech qanday ma'lumot
+                        bermas va boshqa kassa ekranlarida yo'q edi. */}
 
                     <div className="relative z-10 flex justify-between items-start mb-6">
                         <div className="flex items-center gap-4">
@@ -250,13 +250,13 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                         <div className="min-w-0">
                             <span className="text-meta font-bold uppercase tracking-widest mb-2 block" style={{ color: 'var(--text-muted)' }}>Kutilayotgan</span>
                             <div className="stat-metric text-2xl font-semibold tabular-nums leading-none" style={{ color: 'var(--text-primary)' }}>
-                                {formatNum(stats.remainingExpected)} <span className="text-xs font-bold ml-1" style={{ color: 'var(--text-muted)' }}>sum</span>
+                                {formatNum(stats.remainingExpected)} <span className="text-xs font-bold ml-1" style={{ color: 'var(--text-muted)' }}>so&apos;m</span>
                             </div>
                         </div>
                         <div className="min-w-0">
                             <span className="text-meta font-bold uppercase tracking-widest mb-2 block" style={{ color: 'var(--success)' }}>To&apos;langan</span>
                             <div className="stat-metric text-2xl font-semibold tabular-nums leading-none" style={{ color: 'var(--success)' }}>
-                                {formatNum(stats.totalPaid)} <span className="text-xs font-bold ml-1 opacity-60">sum</span>
+                                {formatNum(stats.totalPaid)} <span className="text-xs font-bold ml-1 opacity-60">so&apos;m</span>
                             </div>
                         </div>
                     </div>
@@ -329,7 +329,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                                     <div className="font-semibold text-sm tabular-nums" style={{ color: 'var(--text)' }}>
                                         {formatNum(remaining(item))}
                                     </div>
-                                    <div className="text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
+                                    <div className="text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>so&apos;m</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 mt-2.5 flex-wrap">
@@ -428,7 +428,7 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                                             style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
                                             required
                                         />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>sum</div>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>so&apos;m</div>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
