@@ -46,6 +46,7 @@
 //     qolishi kerak.
 
 import { Prisma } from "@prisma/client";
+import { debtAgingStage, type DebtAgingStage } from "@/lib/debtAging";
 import { periodKeyOf } from "@/lib/periods";
 
 type Db = Prisma.TransactionClient;
@@ -581,7 +582,7 @@ export async function listDebtors(
 // 4 BOSQICHLI AGING DEBT MATRITSASI
 // ─────────────────────────────────────────────────────────
 
-export type DebtAgingStage = "normal" | "warning" | "suspension" | "critical";
+export type { DebtAgingStage };
 
 export interface DebtAgingStageGroup {
   stage: DebtAgingStage;
@@ -655,16 +656,9 @@ export function computeDebtAgingMatrix(debtors: DebtorRow[]): DebtAgingMatrix {
 
     const days = d.overdueDays;
 
-    let targetStage: DebtAgingStage;
-    if (days <= 10) {
-      targetStage = "normal";
-    } else if (days <= 30) {
-      targetStage = "warning";
-    } else if (days <= 60) {
-      targetStage = "suspension";
-    } else {
-      targetStage = "critical";
-    }
+    // Chegaralar `lib/debtAging.ts` da — ekran ham, direktor hisoboti ham
+    // AYNAN shu funksiyani ishlatadi, ya'ni ular ajralib keta olmaydi.
+    const targetStage = debtAgingStage(days);
 
     const group = matrix.stages[targetStage];
     group.companyCount++;

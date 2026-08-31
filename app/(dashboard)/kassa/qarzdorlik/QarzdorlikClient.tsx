@@ -6,9 +6,10 @@ import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import CollectionQueue from "./CollectionQueue";
 import DebtStatement, { type DebtStatementData } from "./DebtStatement";
-import { Tabs, type TabItem } from "@/components/ui";
+import { Tabs, StatStrip, type TabItem } from "@/components/ui";
 import { useTabParam } from "@/hooks/useTabParam";
-import { QARZDORLIK_TAB_IDS, type QarzdorlikTab } from "@/lib/qarzdorlikTabs";
+import { QARZDORLIK_TAB_IDS, QARZDORLIK_DEFAULT_TAB, type QarzdorlikTab } from "@/lib/qarzdorlikTabs";
+import { DEBT_AGING_STAGES, debtAgingStage, type DebtAgingStage } from "@/lib/debtAging";
 import { useRouter } from "next/navigation";
 import KassaModule from "@/components/KassaModule";
 import { upsertPayment, deletePayment } from "@/server/kassa";
@@ -107,28 +108,12 @@ interface Props {
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
 
 /**
- * 4 BOSQICHLI AGING MATRITSASI.
- *
- * Chegaralar `lib/debt.ts` `computeDebtAgingMatrix` bilan AYNAN bir xil —
- * ekran va direktorning kunlik hisoboti bir xil bosqichni ko'rsatishi kerak.
- * Kun `overdueDays` dan olinadi: u eng eski to'lanmagan hisobning to'lov
- * oynasi yopilganidan beri o'tgan HAQIQIY kun.
+ * Bosqich ta'rifi `lib/debtAging.ts` da — ekran, `lib/debt.ts` va
+ * direktorning kunlik hisoboti bir manbadan o'qiydi. Ilgari chegaralar
+ * shu faylda QAYTA yozilgan edi va izoh "aynan bir xil bo'lishi kerak"
+ * deb ogohlantirardi; ogohlantirish kerak bo'lishining o'zi ajralib
+ * ketish xavfi edi.
  */
-const AGING_STAGES = [
-  { key: "normal", label: "1-10 kun", hint: "Operatsion", max: 10, color: "var(--text-muted)" },
-  { key: "warning", label: "11-30 kun", hint: "Ogohlantirish", max: 30, color: "var(--warning)" },
-  { key: "suspension", label: "31-60 kun", hint: "To'xtatish xavfi", max: 60, color: "var(--warning)" },
-  { key: "critical", label: "60+ kun", hint: "Kritik / sud", max: Infinity, color: "var(--danger)" },
-] as const;
-
-type AgingStageKey = (typeof AGING_STAGES)[number]["key"];
-
-const stageOf = (days: number): AgingStageKey => {
-  if (days <= 10) return "normal";
-  if (days <= 30) return "warning";
-  if (days <= 60) return "suspension";
-  return "critical";
-};
 
 export default function QarzdorlikClient({
   debt,
@@ -140,7 +125,7 @@ export default function QarzdorlikClient({
   planFact,
   recon = [],
   statement,
-  initialTab = "holat",
+  initialTab = QARZDORLIK_DEFAULT_TAB,
 }: Props) {
   const router = useRouter();
 
@@ -156,8 +141,8 @@ export default function QarzdorlikClient({
   // bosilganda holat yo'qolmaydi. Ilgari bu oddiy `useState` edi.
   const [tab, setTab] = useTabParam<QarzdorlikTab>("tab", QARZDORLIK_TAB_IDS, initialTab);
   const TAB_ITEMS: TabItem<QarzdorlikTab>[] = [
-    { id: "holat", label: "Holat", hint: "Mijoz bilan hisob-kitob holati" },
     { id: "undirish", label: "Undirish", hint: "Bugun kim bilan gaplashish kerak", count: queue.rows.length || undefined },
+    { id: "holat", label: "Hisob-kitob", hint: "1C kesimi bilan yonma-yon solishtirish" },
     { id: "tolovlar", label: "To'lovlar", hint: "Firmalar bo'yicha oylik to'lovlar" },
     { id: "tekshiruv", label: "Tekshiruv", hint: "Import nomuvofiqliklari va 1C solishtiruvi" },
   ];
@@ -167,12 +152,12 @@ export default function QarzdorlikClient({
   const [onlyDiff, setOnlyDiff] = useState(false);
   const [debtorQuery, setDebtorQuery] = useState("");
   // Bosqich filtri — kartani bosganda jadval o'sha bosqichga qisqaradi.
-  const [stageFilter, setStageFilter] = useState<AgingStageKey | null>(null);
+  const [stageFilter, setStageFilter] = useState<DebtAgingStage | null>(null);
 
   // Matritsa FAQAT muddati o'tganlardan quriladi: "bu oy yig'iladi" hali
   // kechikish emas va uni bosqichga qo'yish soxta signal berardi.
   const aging = useMemo(() => {
-    const acc: Record<AgingStageKey, { count: number; amount: number }> = {
+    const acc: Record<DebtAgingStage, { count: number; amount: number }> = {
       normal: { count: 0, amount: 0 },
       warning: { count: 0, amount: 0 },
       suspension: { count: 0, amount: 0 },
@@ -180,7 +165,7 @@ export default function QarzdorlikClient({
     };
     for (const r of debtors.rows) {
       if (r.overdue <= 0) continue;
-      const bucket = acc[stageOf(r.overdueDays)];
+      const bucket = acc[debtAgingStage(r.overdueDays)];
       bucket.count++;
       bucket.amount += r.overdue;
     }
@@ -190,7 +175,7 @@ export default function QarzdorlikClient({
   const debtorRows = useMemo(() => {
     const q = debtorQuery.trim().toLowerCase();
     return debtors.rows
-      .filter((r) => (stageFilter ? r.overdue > 0 && stageOf(r.overdueDays) === stageFilter : true))
+      .filter((r) => (stageFilter ? r.overdue > 0 && debtAgingStage(r.overdueDays) === stageFilter : true))
       .filter(
         (r) =>
           !q ||
@@ -238,16 +223,40 @@ export default function QarzdorlikClient({
       )}
 
       {tab === "undirish" && (<>
-      {/* Rahbarga kerak bo'lgan birinchi narsa — raqam emas, HARAKAT ro'yxati.
-          Shuning uchun u sahifaning eng tepasida. */}
-      <CollectionQueue rows={queue.rows} totals={queue.totals} />
+      {/*
+        BOSHLASH NUQTASI — bitta qatorda umumiy manzara.
+
+        Ilgari bu raqamlar ekranda YO'Q edi: `debtors.totals` serverdan
+        kelar, lekin faqat pastdagi jadval sarlavhasida qisman ko'rinardi.
+        Rahbar "umuman qancha qarz bor?" degan savolga javob olish uchun
+        228 qatorni aylantirishi kerak edi.
+      */}
+      <StatStrip
+        items={[
+          { label: "Jami qarz", value: debtors.totals.outstanding, tone: "neutral", meta: `${debtors.totals.companies} firma` },
+          { label: "Muddati o'tgan", value: debtors.totals.overdue, tone: "out", meta: `${debtors.totals.overdueCompanies} firma` },
+          { label: "Bu oy yig'iladi", value: debtors.totals.dueNow, tone: "in" },
+          { label: "Hech to'lamagan", value: debtors.totals.neverPaid, tone: "muted", meta: "firma" },
+        ]}
+        className="rounded-xl overflow-hidden"
+      />
+
+
+      {/*
+        ESKIRISH BOSQICHLARI RO'YXATDAN YUQORIDA.
+
+        Ilgari ular undirish navbatidan KEYIN turardi — ya'ni prioritetni
+        tanlaydigan boshqaruv o'zi filtrlaydigan 228 qatorli ro'yxatning
+        PASTIDA edi va uni ko'rish uchun butun ro'yxatni aylantirish kerak
+        bo'lardi. Filtr har doim o'zi filtrlaydigan narsadan oldin turadi.
+      */}
 
       {/* AGING MATRITSASI — "qancha qarz" emas, "qancha VAQTDAN BERI".
           60 kunlik 10 mln 10 kunlik 50 mln dan xavfliroq, va bu farq
           yig'ma summada umuman ko'rinmaydi. */}
       {debtors.totals.overdue > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {AGING_STAGES.map((s) => {
+          {DEBT_AGING_STAGES.map((s) => {
             const b = aging[s.key];
             const active = stageFilter === s.key;
             return (
@@ -280,6 +289,10 @@ export default function QarzdorlikClient({
           })}
         </div>
       )}
+
+      {/* Rahbarga kerak bo'lgan birinchi narsa — raqam emas, HARAKAT ro'yxati.
+          Shuning uchun u sahifaning eng tepasida. */}
+      <CollectionQueue rows={queue.rows} totals={queue.totals} />
 
       {/* TO'LAMAGAN FIRMALAR — sahifaning eng amaliy bloki, shuning uchun
           eng tepada. Direktorning kunlik Telegram hisoboti aynan shu
@@ -374,7 +387,7 @@ export default function QarzdorlikClient({
                       style={{
                         color:
                           r.overdue > 0
-                            ? AGING_STAGES.find((s) => s.key === stageOf(r.overdueDays))!.color
+                            ? DEBT_AGING_STAGES.find((s) => s.key === debtAgingStage(r.overdueDays))!.color
                             : "var(--text-muted)",
                       }}
                     >

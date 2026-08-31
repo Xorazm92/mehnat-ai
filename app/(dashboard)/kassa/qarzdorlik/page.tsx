@@ -13,7 +13,7 @@ import { getCachedCompanies } from "@/lib/cached-queries";
 import { getPayments } from "@/server/kassa";
 import QarzdorlikClient from "./QarzdorlikClient";
 import { readTabParam } from "@/lib/tabs";
-import { QARZDORLIK_TAB_IDS, type QarzdorlikTab } from "@/lib/qarzdorlikTabs";
+import { QARZDORLIK_TAB_IDS, QARZDORLIK_DEFAULT_TAB, type QarzdorlikTab } from "@/lib/qarzdorlikTabs";
 
 export const metadata = { title: "Qarzdorlik" };
 
@@ -79,7 +79,7 @@ export default async function QarzdorlikPage({
   return (
     <div className="h-full">
       <QarzdorlikClient
-        initialTab={readTabParam<QarzdorlikTab>(tab, QARZDORLIK_TAB_IDS, "holat")}
+        initialTab={readTabParam<QarzdorlikTab>(tab, QARZDORLIK_TAB_IDS, QARZDORLIK_DEFAULT_TAB)}
         statement={statement ? JSON.parse(JSON.stringify(statement)) : null}
         debt={JSON.parse(JSON.stringify(debt))}
         debtors={JSON.parse(JSON.stringify(debtors))}
