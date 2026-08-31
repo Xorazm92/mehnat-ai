@@ -23,12 +23,30 @@
  * ko'rmasin.
  */
 
-/** Next prod'da almashtirib qo'yadigan matnning barqaror bo'laklari. */
+/**
+ * Next prod'da almashtirib qo'yadigan matnning barqaror bo'laklari.
+ *
+ * DIQQAT — bu ro'yxat Next/React versiyasiga bog'liq va JIM eskiradi.
+ * 2026-09-01 da brauzer testida aniqlandi: Next 16 / React 19 da server
+ * amali xatosi endi eski matn bilan emas, MINIFIKATSIYALANGAN REACT
+ * XATOSI bilan qaytadi:
+ *
+ *   "Minified React error #441; visit https://react.dev/errors/441 for the
+ *    full message or use the non-minified dev environment…"
+ *
+ * Ro'yxatda bu shakl yo'q edi, ya'ni himoya to'ri teshilgan: buxgalter
+ * "Oylik kassa chiqimi sifatida yozilmaydi" o'rniga o'sha inglizcha React
+ * kodini ko'rardi. DEV rejimida matn haqiqiy bo'lgani uchun sinovda
+ * ko'rinmasdi — faqat production build'da.
+ */
 const REDACTED_MARKERS = [
   "omitted in production",
   "An error occurred in the Server Components render",
   "digest property is included",
   "Server Components render",
+  // Next 16 / React 19
+  "Minified React error",
+  "react.dev/errors/",
 ];
 
 /** Foydalanuvchiga ko'rsatib bo'lmaydigan (texnik) xabarmi? */

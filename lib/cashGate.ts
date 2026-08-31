@@ -24,6 +24,7 @@
 // invalidatsiyasi chaqiruvchi `server/*.ts` ning ishi.
 
 import { Prisma } from "@prisma/client";
+import { SALARY_CATEGORY_RE } from "@/lib/salaryCategory";
 import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { assertSufficientFunds, getChannelCashBalance } from "@/lib/balance";
@@ -157,8 +158,10 @@ export interface KassaMovementInput {
  * shu konstantadan olsin — kategoriyalar ro'yxati kengaysa bitta joyda
  * kengayadi.
  */
-export const SALARY_CATEGORY_RE =
-  /oylik|ish\s*haqi|mehnat\s*haqi|maosh|zarplata|зарплат|ойлик|иш\s*хак/i;
+// Qoida `lib/salaryCategory.ts` da — u bog'liqliksiz va MIJOZ ham import
+// qila oladi (bu fayl Prisma tortadi, qila olmaydi). Qayta eksport eski
+// import yo'llarini sindirmaslik uchun.
+export { SALARY_CATEGORY_RE, isSalaryCategory } from "@/lib/salaryCategory";
 
 export interface CashResult {
   id: string;

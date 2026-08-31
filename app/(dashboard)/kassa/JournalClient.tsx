@@ -34,6 +34,7 @@ import {
   createKassaEntry, deleteKassaEntry, approveExpense, rejectExpense,
 } from "@/server/kassa";
 import { DateField } from "@/components/ui/DateField";
+import { isSalaryCategory } from "@/lib/salaryCategory";
 
 const PRESETS: RangePreset[] = ["month_to_date", "last_month", "today", "yesterday", "this_week", "year_to_date", "custom"];
 
@@ -87,7 +88,30 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
   // (tur/summa/toifa/kassa) darhol ko'rinadi, bularniki "Batafsil" ostida.
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const categoryOptions = addKind === "kirim" ? incomeCategories : expenseCategories;
+  /**
+   * CHIQIMDA OYLIK TOIFASI TAKLIF QILINMAYDI.
+   *
+   * Server uni allaqachon rad etadi (`server/kassa.ts#assertNotSalary`) —
+   * oylik `/payroll` orqali beriladi va uni kassa chiqimi qilib yozish
+   * bitta pulni ikki marta hisoblaydi. Lekin ekran o'sha taqiqlangan
+   * tanlovni ro'yxatda TAKLIF QILARDI: foydalanuvchi tanlar, summani
+   * yozar, saqlar — va faqat shundan keyin xato ko'rardi. Next
+   * production'da esa xato matni yashirilgani uchun SABABNI ham
+   * ko'rmasdi (brauzer testida tasdiqlangan).
+   *
+   * Endi noto'g'ri tanlov umuman mavjud emas — xatoni tushuntirishdan
+   * ko'ra oldini olish yaxshiroq. Kirimda cheklov yo'q: oylik QAYTIB
+   * tushishi mumkin (masalan ortiqcha berilgan pul qaytarilishi).
+   */
+  const categoryOptions = useMemo(
+    () =>
+      addKind === "kirim"
+        ? incomeCategories
+        : expenseCategories.filter((c) => !isSalaryCategory(c)),
+    [addKind, incomeCategories, expenseCategories],
+  );
+  const salaryHidden =
+    addKind === "chiqim" && expenseCategories.some((c) => isSalaryCategory(c));
 
   // Tur almashganda toifa ro'yxati ham almashadi. Effekt EMAS: React 19
   // effekt ichidagi sinxron setState ni kaskadli render deb belgilaydi —
@@ -334,12 +358,27 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
 
       {/* TEZ KIRITISH — saqlangandan keyin ochiq qoladi */}
       {addOpen && (
-        <div className="m-3 p-3 rounded-xl space-y-2" style={{ border: "1px solid var(--accent-blue)", background: "var(--accent-blue-light)" }}>
+        // TEZ KIRITISH ENDI FORMA.
+        //
+        // Ilgari bu `<div>` edi va Enter FAQAT "Izoh" maydonida ishlardi
+        // (`onKeyDown` o'sha bitta inputga qo'lda osilgan edi). Summani yozib
+        // Enter bosgan odam hech narsa olmasdi — sichqonchaga qo'l uzatishi
+        // kerak edi. Alisher kunda o'nlab chiqim yozadi, ya'ni bu har safar
+        // takrorlanadigan ishqalanish edi.
+        //
+        // `<form onSubmit>` bilan Enter HAR QANDAY maydonda saqlaydi —
+        // `/kassa/kirim` dagi qo'lda kirim formasi bilan bir xil xulq.
+        <form
+          onSubmit={(e) => { e.preventDefault(); void saveNew(); }}
+          className="m-3 p-3 rounded-xl space-y-2"
+          style={{ border: "1px solid var(--accent-blue)", background: "var(--accent-blue-light)" }}
+        >
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid var(--card-border)" }}>
               {([["chiqim", "Chiqim"], ["kirim", "Kirim"]] as const).map(([k, label]) => (
                 <button
                   key={k}
+                  type="button"
                   onClick={() => setAddKind(k)}
                   className="px-3 py-1.5 text-micro font-semibold inline-flex items-center gap-1"
                   style={addKind === k
@@ -371,7 +410,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
             <div className="w-52">
               <FundingSourceSelect value={saveChannelId} onChange={setSaveChannelId} className="w-full px-2 py-1.5 rounded-lg text-meta outline-none" />
             </div>
-            <Button variant="primary" size="sm" disabled={saving} onClick={() => void saveNew()}>
+            <Button type="submit" variant="primary" size="sm" loading={saving}>
               {saving ? "Yozilmoqda…" : "Saqlash"}
             </Button>
             <button
@@ -398,11 +437,18 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
                 placeholder="Izoh (ixtiyoriy)"
                 value={desc}
                 onChange={(e) => setDesc(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") void saveNew(); }}
                 className="px-3 py-1.5 rounded-lg text-meta flex-1 min-w-[220px] outline-none"
                 style={inputStyle}
               />
             </div>
+          )}
+
+          {salaryHidden && (
+            <p className="text-micro" style={{ color: "var(--text-muted)" }}>
+              Oylik toifasi bu yerda yo&apos;q — u{" "}
+              <a href="/payroll" className="underline" style={{ color: "var(--accent-blue)" }}>Oylik</a>{" "}
+              bo&apos;limi orqali beriladi (aks holda bir pul ikki marta hisoblanadi).
+            </p>
           )}
 
           <p className="text-micro" style={{ color: "var(--text-muted)" }}>
@@ -411,7 +457,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
             <a href="/kassa/kirim" className="underline" style={{ color: "var(--accent-blue)" }}>/kassa/kirim</a>{" "}
             da — u qarzni kamaytiradi.
           </p>
-        </div>
+        </form>
       )}
 
       {/* JADVAL */}

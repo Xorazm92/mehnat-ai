@@ -34,6 +34,18 @@ describe("friendlyError", () => {
     expect(friendlyError(new Error(REDACTED), "Saqlanmadi")).toBe("Saqlanmadi");
   });
 
+  // Brauzer testida topilgan (2026-09-01): Next 16 / React 19 server amali
+  // xatosini shu shaklda qaytaradi va u eski belgilar ro'yxatiga tushmasdi —
+  // foydalanuvchi "Minified React error #441" ni ko'rardi.
+  it("Next 16 / React 19 ning minifikatsiyalangan xatosini ham ushlaydi", () => {
+    const react19 =
+      "Minified React error #441; visit https://react.dev/errors/441 for the full message " +
+      "or use the non-minified dev environment for full errors and additional helpful warnings.";
+    expect(isRedactedServerError(react19)).toBe(true);
+    expect(friendlyError(new Error(react19))).not.toContain("Minified React error");
+    expect(friendlyError(new Error(react19), "Saqlanmadi")).toBe("Saqlanmadi");
+  });
+
   it("haqiqiy o'zbekcha xabarni o'zgartirmaydi", () => {
     const msg = "Tasdiqlangan yoki tekshiruvdagi katakni o'zgartirib bo'lmaydi.";
     expect(friendlyError(new Error(msg))).toBe(msg);
