@@ -21,6 +21,7 @@ import { formatNum as som } from "@/lib/platform/format";
 import fs from "node:fs";
 import path from "node:path";
 import { parseWorkbook } from "@/lib/bank/parseStatement";
+import { readWorkbook } from "@/lib/bank/readWorkbook";
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from "@/lib/bank/classifyExpense";
 import {
   commitStatement,
@@ -28,7 +29,30 @@ import {
   postIncomeTransaction,
 } from "@/lib/bank/importStatement";
 
-const SOURCE_DIR = path.join(process.cwd(), "cash_json_files");
+/**
+ * Manba papka. Standarti `cash_json_files/` (oldindan JSON ga o'girilgan
+ * vipiskalar), lekin ASL `.xls` fayllarni to'g'ridan-to'g'ri berish afzal:
+ *
+ *   npx tsx scripts/import-statements.ts --dir=~/Documents/solishtir --dry-run
+ *
+ * NEGA ASL FAYL AFZAL. 2026-09-01 auditi bu vipiskalar aslida windows-1251
+ * HTML ekanini aniqladi — ".xls" faqat kengaytma. Oraliq JSON ga o'girishda
+ * har safar biror narsa yo'qoldi: bir konvertorda 60 996 ta belgi U+FFFD
+ * bo'lib ketdi, tuzatilganida esa kontragent/maqsad bitta katakka yopishib,
+ * satr tashlash yo'qoldi (parser aynan shunga tayanadi).
+ *
+ * `lib/bank/readWorkbook.ts` ikkala holatni ham biladi va VEB-YUKLASH bilan
+ * bir xil kod — ya'ni skript natijasi keyingi kunlik yuklash bilan mos keladi.
+ *
+ * Papkada vipiska bo'lmagan fayllar bo'lsa — `parseWorkbook` xatosi bilan
+ * jimgina o'tkazib yuboriladi (pastdagi try/catch).
+ */
+const SOURCE_DIR = path.resolve(
+  process.cwd(),
+  process.argv.find((a) => a.startsWith("--dir="))?.slice(6) ??
+    process.env.IMPORT_DIR ??
+    "cash_json_files"
+);
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
@@ -56,7 +80,7 @@ async function main() {
 
   const files = fs
     .readdirSync(SOURCE_DIR)
-    .filter((f) => f.endsWith(".json") && !f.includes("conversion_log"))
+    .filter((f) => /\.(json|xls|xlsx)$/i.test(f) && !f.includes("conversion_log"))
     .sort();
 
   let totalTx = 0;
@@ -73,7 +97,12 @@ async function main() {
   console.log("═".repeat(78));
 
   for (const file of files) {
-    const workbook = JSON.parse(fs.readFileSync(path.join(SOURCE_DIR, file), "utf8"));
+    const full = path.join(SOURCE_DIR, file);
+    // `.xls`/`.xlsx` — veb-yuklash bilan bir xil o'qigich (HTML niqobi va
+    // cp1251 shu yerda hal qilinadi). `.json` — oldindan o'girilgan nusxa.
+    const workbook = file.toLowerCase().endsWith(".json")
+      ? JSON.parse(fs.readFileSync(full, "utf8"))
+      : await readWorkbook(new File([fs.readFileSync(full)], file));
 
     let parsed;
     try {

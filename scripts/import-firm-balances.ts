@@ -1,4 +1,13 @@
 /**
+ * ⚠️  ESKIRGAN — O'Z FIRMALAR UCHUN ISHLATMANG.
+ *     O'rniga: `npx tsx scripts/set-opening-balances.ts --apply`
+ *
+ * 2026-09-01 auditi bu skript o'qiydigan "BANK OSTATKASI" ustuni haqiqatdan
+ * 20 baravar uzoq ekanini ko'rsatdi (THE POWERFUL TEAM: 36 083 174 vs
+ * haqiqiy 21 513,10) va ustunda SANA yo'q. Uch firma bo'yicha yozilgan
+ * qoldiq balansni 63 568 294 so'mga shishirgan edi. Endi qoldiq bank
+ * vipiskasidan olinadi (`BankStatementImport.openingBalance`).
+ *
  * FIRMA BANK QOLDIQLARI — "Band qilganlar.json" → `Firmalar` varag'i
  * =================================================================
  *

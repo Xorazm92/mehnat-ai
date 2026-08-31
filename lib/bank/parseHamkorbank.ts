@@ -64,7 +64,25 @@ function findTxHeader(
       // olib tashlandi: ustun nomlari to'liq tanilmasa ham topilgan
       // sarlavha qatoridan foydalanish (avvalgi haqiqiy xulq) saqlanadi,
       // lekin endi buni kod ham shunday DEYDI.
-      return { rows: rows.slice(i + 1), keys };
+      // ── SARLAVHA QATORIDAGI BIRINCHI TRANZAKSIYA ────────────────────
+      // Bu eksportda sarlavha va BIRINCHI tranzaksiya bitta qatorga
+      // yopishib keladi: c0–c7 ustun nomlari, c8–c15 esa o'sha tartibdagi
+      // birinchi yozuvning qiymatlari. Sarlavha qatori butunlay tashlansa,
+      // o'sha yozuv JIMGINA yo'qoladi — MOLIYA AI vipiskasida bu 15 252,00
+      // so'mlik debet edi va yopilish qoldig'i deklaratsiyaga mos kelmay
+      // qolardi (826 455,19 o'rniga 811 203,19 bo'lishi kerak).
+      const width = entries.length / 2;
+      const tail = entries.slice(width);
+      const merged =
+        Number.isInteger(width) && tail.some(([, v]) => v !== null && v !== undefined && v !== "")
+          ? [
+              Object.fromEntries(
+                entries.slice(0, width).map(([k], j) => [k, tail[j]?.[1] ?? null])
+              ) as SheetRow,
+            ]
+          : [];
+
+      return { rows: [...merged, ...rows.slice(i + 1)], keys };
     }
   }
   return null;

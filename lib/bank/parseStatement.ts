@@ -73,6 +73,17 @@ export function parseWorkbook(workbook: Workbook): ParsedStatement {
       }
     }
 
+    // BO'SH NATIJA — MUVAFFAQIYAT EMAS. Ko'p sahifali eksportda sarlavha
+    // bitta sahifada, jadval boshqasida: sahifa parseri formatni tanidi,
+    // lekin na hisob raqami, na bitta tranzaksiya topa oldi. Bunday natija
+    // qaytarilsa, pastdagi kitob darajasidagi parser (Hamkorbank) UMUMAN
+    // ishga tushmaydi — MOLIYA AI vipiskasi aynan shu sababdan "hisob
+    // raqami o'qilmadi" bo'lib, 22 ta tranzaksiya import qilinmagan edi.
+    if (parsed.transactions.length === 0 && !parsed.accountNumber) {
+      errors.push(`${name}: na hisob raqami, na tranzaksiya topildi`);
+      continue;
+    }
+
     return withSanityChecks(parsed);
   }
 

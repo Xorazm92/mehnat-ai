@@ -213,10 +213,28 @@ export function parseLitsevoy(rows: SheetRow[]): ParsedStatement {
   }
   flush();
 
+  // ── YOPILISH QOLDIG'I ────────────────────────────────────────────────
+  // "Исходящий остаток за 28.08.2026 | 1,586,886.88" — jadval OXIRIDA,
+  // sarlavha blokida emas, shuning uchun `readStatementHeader` uni ko'rmaydi.
+  //
+  // Nega kerak: bu bankning O'Z deklaratsiyasi. U bo'lmasa vipiskani o'zida
+  // yopib bo'lmaydi (ochilish + kredit − debet = yopilish) — ya'ni eng
+  // kuchli nazorat ishlamaydi. Avval faqat 10 vipiskadan 1 tasi (Hamkorbank)
+  // tekshirilardi.
+  let closingBalance: number | null = null;
+  for (const row of rows) {
+    const entries = Object.entries(row);
+    const at = entries.findIndex(([, v]) => /Исходящий\s*остаток/i.test(String(v ?? "")));
+    if (at === -1) continue;
+    const value = entries.slice(at + 1).find(([, v]) => toAmount(v) !== 0);
+    closingBalance = toAmount(value?.[1]);
+    break;
+  }
+
   return {
     format: "litsevoy",
     ...header,
-    closingBalance: null,
+    closingBalance,
     transactions,
   };
 }
