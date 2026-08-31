@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Upload, Link2, EyeOff, Banknote, CreditCard, Wallet, Search, AlertTriangle, Plus } from "lucide-react";
+import { Upload, Link2, EyeOff, CreditCard, Wallet, Search, AlertTriangle, Plus } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { groupDigits, ungroupDigits, todayKey, formatNum, formatUzDate } from "@/lib/platform/format";
 import { Money } from "@/components/ui";
@@ -58,18 +58,6 @@ interface UnmatchedRow {
   account: { label: string };
 }
 
-interface NonBankRow {
-  id: string;
-  /** plastik | naqd */
-  source: string;
-  amount: string | number;
-  receivedAt: string | null;
-  externalRef: string | null;
-  payment: { period: string; company: { name: string; inn: string } } | null;
-  /** true ⇒ qo'lda kiritilgan (mijozga bog'lanmagan). */
-  manual?: boolean;
-}
-
 interface CompanyOption {
   id: string;
   name: string;
@@ -80,7 +68,6 @@ interface CompanyOption {
 interface Props {
   accounts: AccountRow[];
   unmatched: UnmatchedRow[];
-  nonBank: NonBankRow[];
   companies: CompanyOption[];
   /** `?tab=` dan SERVERDA o'qilgan boshlang'ich yorliq (hidratsiya uchun). */
   initialTab?: KirimTab;
@@ -91,7 +78,7 @@ const card: React.CSSProperties = {
   border: "1px solid var(--card-border)",
 };
 
-export default function KirimKassaClient({ accounts, unmatched, nonBank, companies, initialTab = "reyestr" }: Props) {
+export default function KirimKassaClient({ accounts, unmatched, companies, initialTab = "reyestr" }: Props) {
   const router = useRouter();
 
   // TABLAR. Sahifada 10 ta firma kartochkasi, 133 qatorli reyestr va
@@ -306,23 +293,15 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
 
-  // Bank / plastik / naqd — foydalanuvchi aynan shu uchtasini bir ekranda
-  // ko'rishni so'ragan. Uchalasi ham Payment orqali o'tadi, shuning uchun
-  // raqamlar qarzdorlik bilan bir manbadan.
-  // UCHALA KARTOCHKA BIR XIL DAVRNI KO'RSATADI. Ilgari bank "shu oy" edi,
-  // plastik va naqd esa BOSHIDAN BERI — natijada yonma-yon turgan uch raqam
-  // taqqoslab bo'lmaydigan bo'lib qolardi (plastik 40,7 mln ko'rinardi,
-  // pastdagi reyestrda esa shu oyda atigi 1 mln).
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-  const thisMonth = (m: NonBankRow) => !!m.receivedAt && new Date(m.receivedAt) >= monthStart;
-
-  const plastik = nonBank.filter((m) => m.source === "plastik" && thisMonth(m));
-  const naqd = nonBank.filter((m) => m.source === "naqd" && thisMonth(m));
-  const sum = (rows: NonBankRow[]) => rows.reduce((s, r) => s + Number(r.amount), 0);
-
-  const totalBankIncome = accounts.reduce((s, a) => s + a.monthIncome, 0);
+  // EKRANDA BITTA RAQAM QATORI QOLDI.
+  //
+  // Ilgari tepada "shu oy" bo'yicha uchta karta (bank / plastik / naqd)
+  // turardi, reyestr ustida esa yana to'rtta karta — lekin ular TANLANGAN
+  // DAVRGA bo'ysunardi. Ikki to'plam bir xil ko'rinar, boshqa davrni
+  // ko'rsatar va raqamlari mos kelmasdi; qaysi biri "haqiqiy" ekani
+  // ekrandan bilinmasdi. Endi faqat reyestr kartalari qoldi — ular davr
+  // chiplariga bo'ysunadi, ya'ni ekranda ko'rilayotgan raqam har doim
+  // ko'rilayotgan ro'yxatning raqami.
   const totalUnmatched = accounts.reduce((s, a) => s + a.unmatchedCount, 0);
 
   const filteredUnmatched = useMemo(() => {
@@ -420,15 +399,34 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* ASOSIY AMAL — endi tugma sifatida ko'rinadi. Ilgari tushum
-              qo'shish stat kartalar burchagidagi mayda "+" belgisi orqasida
-              edi va uni hech kim sezmagan. */}
+          {/*
+            TUR ENDI TUGMANING O'ZIDA.
+
+            Ilgari bu bitta "Tushum qo'shish" tugmasi edi va u har doim
+            NAQD formasini ochardi — yorlig'i esa turni aytmasdi. Plastik
+            tushum qo'shishning yagona yo'li pastdagi stat kartani bosish
+            edi; o'sha karta `<button>` ichida yana `role="button"` saqlab
+            turardi (HTML jihatdan noto'g'ri, klaviatura uchun buzilgan).
+
+            Alisher kunda NAQD ham, PLASTIK ham kiritadi — ikkalasi ham
+            bir bosishda bo'lishi kerak, shuning uchun ikkitasi ham asosiy
+            amal sifatida turadi.
+          */}
           <Button
             variant="primary"
             size="md"
+            icon={<Wallet size={15} />}
             onClick={() => { setManualType("naqd"); setManualError(null); }}
           >
-            <Plus size={15} /> Tushum qo&apos;shish
+            Naqd
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            icon={<CreditCard size={15} />}
+            onClick={() => { setManualType("plastik"); setManualError(null); }}
+          >
+            Plastik
           </Button>
           <Button
             variant="secondary"
@@ -452,71 +450,6 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
             <Upload size={15} /> Vipiska yuklash
           </Button>
         </div>
-      </div>
-
-      {/* Umumiy raqamlar — plastik va naqd kartasi BUTUNLAY bosiladigan:
-          karta o'zi shu turdagi tushumni qo'shish formasi ochadi. */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-4 rounded-xl" style={card}>
-          <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
-            <Banknote size={14} /> Bank kirimi (shu oy)
-          </div>
-          <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
-            {formatNum(totalBankIncome)} <span className="text-meta">so&apos;m</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => { setManualType("plastik"); setManualError(null); }}
-          className="p-4 rounded-xl text-left transition-colors hover:bg-[var(--input-bg)] cursor-pointer"
-          style={card}
-        >
-          <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
-            <CreditCard size={14} /> Plastik karta (shu oy)
-            <span
-              className="ml-auto icon-btn"
-              title="Plastik tushum qo'shish"
-              aria-label="Plastik tushum qo'shish"
-              role="button"
-              tabIndex={-1}
-              onClick={(e) => { e.stopPropagation(); setManualType("plastik"); setManualError(null); }}
-            >
-              <Plus size={14} />
-            </span>
-          </div>
-          <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
-            {formatNum(sum(plastik))} <span className="text-meta">so&apos;m</span>
-          </div>
-          <div className="text-micro" style={{ color: "var(--text-muted)" }}>
-            {plastik.length} ta tushum · bosib qo&apos;shing
-          </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => { setManualType("naqd"); setManualError(null); }}
-          className="p-4 rounded-xl text-left transition-colors hover:bg-[var(--input-bg)] cursor-pointer"
-          style={card}
-        >
-          <div className="flex items-center gap-2 text-meta" style={{ color: "var(--text-muted)" }}>
-            <Wallet size={14} /> Naqd pul (shu oy)
-            <span
-              className="ml-auto icon-btn"
-              title="Naqd tushum qo'shish"
-              aria-label="Naqd tushum qo'shish"
-              role="button"
-              tabIndex={-1}
-              onClick={(e) => { e.stopPropagation(); setManualType("naqd"); setManualError(null); }}
-            >
-              <Plus size={14} />
-            </span>
-          </div>
-          <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
-            {formatNum(sum(naqd))} <span className="text-meta">so&apos;m</span>
-          </div>
-          <div className="text-micro" style={{ color: "var(--text-muted)" }}>
-            {naqd.length} ta tushum · bosib qo&apos;shing
-          </div>
-        </button>
       </div>
 
       <Tabs

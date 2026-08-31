@@ -17,7 +17,6 @@ import { getAvailableBalance, getMonthBreakdown, getWeeklyMovement } from "@/lib
 import { getCashDeskReport, getCategoryBreakdown } from "@/server/kassaReport";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { currentUserViews } from "@/server/rbac";
 import {
   KASSA_CATEGORIES_KEY,
   resolveKassaCategories,
@@ -28,7 +27,6 @@ import CategoryBreakdown from "./CategoryBreakdown";
 import PeriodPicker from "./PeriodPicker";
 import KassaClient from "./KassaClient";
 import JournalClient from "./JournalClient";
-import KassaSectionNav from "@/components/KassaSectionNav";
 import WeeklyFlowChart from "./WeeklyFlowChart";
 import QuickActions from "./QuickActions";
 
@@ -62,7 +60,7 @@ export default async function KassaPage({
   const [y, m] = period.split("-").map(Number);
   const session = await auth();
   const userRole = (session?.user?.role as string) || "";
-  const [balance, views] = await Promise.all([getAvailableBalance(), currentUserViews()]);
+  const balance = await getAvailableBalance();
 
   // Korxona lug'ati — jurnal tez kiritish formasi uchun.
   const catRow = await prisma.systemSetting.findUnique({
@@ -80,10 +78,6 @@ export default async function KassaPage({
 
   return (
     <div className="h-full p-4 md:p-6 space-y-4">
-      {/* Kassa bo'limlari orasidagi ko'chish — bir joyda, har doim ko'rinadi.
-          "Qayerga borishni bilmayman" muammosining to'g'ridan-to'g'ri yechimi. */}
-      <KassaSectionNav views={views} />
-
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
           Kassa — umumiy ko&apos;rinish

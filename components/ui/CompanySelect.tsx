@@ -68,6 +68,13 @@ export interface CompanySelectProps {
   className?: string;
   /** Zich joy (jadval katagi) uchun. */
   size?: "sm" | "md";
+  /**
+   * Standart — butun kenglik (forma maydoni). Filtr qatorida `false` bering,
+   * aks holda o'ram `w-full` bo'lib yonidagi filtrlarni keyingi qatorga
+   * surib yuboradi. `ui/Select` da xuddi shu prop bor — ikkalasi bir xil
+   * ishlashi kerak.
+   */
+  fullWidth?: boolean;
 }
 
 const SIZE: Record<"sm" | "md", string> = {
@@ -100,6 +107,7 @@ export function CompanySelect({
   id,
   className = "",
   size = "md",
+  fullWidth = true,
   ...aria
 }: CompanySelectProps) {
   const [open, setOpen] = useState(false);
@@ -291,6 +299,7 @@ export function CompanySelect({
         "erp-input appearance-none cursor-pointer text-left truncate",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         SIZE[size],
+        fullWidth ? "w-full" : "w-auto",
         className,
       ]
         .filter(Boolean)
@@ -306,7 +315,7 @@ export function CompanySelect({
   );
 
   return (
-    <span className="relative block w-full">
+    <span className={`relative ${fullWidth ? "block w-full" : "inline-block"}`}>
       {trigger}
       <ChevronDown
         size={size === "sm" ? 13 : 15}

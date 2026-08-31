@@ -76,6 +76,30 @@ export interface IncomeRegisterTotals {
 const SOURCES = new Set(["bank", "plastik", "naqd"]);
 
 /**
+ * `KassaEntry(income)` dan reyestrga TUSHADIGAN toifalar.
+ *
+ * BUG (2026-08-31, prodda topildi): bu ro'yxat yo'q edi va qator
+ *   `k.category === "Naqd tushum" ? "naqd" : "plastik"`
+ * bilan tasniflanardi — ya'ni "Naqd tushum" dan BOSHQA HAMMA NARSA
+ * "plastik" bo'lib chiqardi.
+ *
+ * Prodda `KassaEntry(income)` ning hammasi — 3 qator, 63 568 294 so'm —
+ * "Boshlang'ich qoldiq" edi. U MIJOZ TUSHUMI EMAS: `scripts/import-firm-balances.ts`
+ * o'z firmaning Exceldagi bank ostatkasi bilan tizimdagi qoldiq FARQINI
+ * yozadi, ya'ni bu balansni to'g'rilash yozuvi. Natijada ekranda:
+ *   · "Jami kirim" 63,5 mln ga shishgan (bu oyda mijozdan kelmagan pul);
+ *   · uchala qator "To'lov turi: Plastik" deb turardi, holbuki o'sha
+ *     qatorning "Kassa" ustuni "Bank hisobi (schyot)" deyardi — bitta
+ *     qatorda ikkita zid ma'lumot;
+ *   · plastik tushum 1 mln o'rniga 64,5 mln bo'lib ko'rinardi.
+ *
+ * `server/bankImport.getNonBankIncome` ALLAQACHON shu ikki toifani oq
+ * ro'yxatga olgan — ya'ni ikki ekran bir xil ma'lumotni ikki xil o'qirdi.
+ * Endi ta'rif bitta.
+ */
+const MANUAL_INCOME_CATEGORIES = ["Naqd tushum", "Plastik tushum"] as const;
+
+/**
  * Tanlangan oraliqdagi BARCHA tushum + kesimlar bo'yicha yig'indi.
  *
  * Yig'indi jadval qatorlaridan hisoblanadi (alohida `aggregate` so'rovi emas) —
@@ -138,8 +162,14 @@ export async function getIncomeRegister(filter: IncomeRegisterFilter = {}) {
             date: { gte: range.from, lt: range.to },
             ...(filter.companyId ? { companyId: filter.companyId } : {}),
             ...(filter.channelId ? { channelId: filter.channelId } : {}),
-            ...(source === "naqd" ? { category: "Naqd tushum" } : {}),
-            ...(source === "plastik" ? { category: "Plastik tushum" } : {}),
+            // Faqat HAQIQIY tushum: balansni to'g'rilash yozuvlari
+            // ("Boshlang'ich qoldiq") kirim emas.
+            category:
+              source === "naqd"
+                ? "Naqd tushum"
+                : source === "plastik"
+                  ? "Plastik tushum"
+                  : { in: [...MANUAL_INCOME_CATEGORIES] },
           },
           select: {
             id: true,
@@ -175,8 +205,14 @@ export async function getIncomeRegister(filter: IncomeRegisterFilter = {}) {
             date: { gte: range.from, lt: range.to },
             ...(filter.companyId ? { companyId: filter.companyId } : {}),
             ...(filter.channelId ? { channelId: filter.channelId } : {}),
-            ...(source === "naqd" ? { category: "Naqd tushum" } : {}),
-            ...(source === "plastik" ? { category: "Plastik tushum" } : {}),
+            // Faqat HAQIQIY tushum: balansni to'g'rilash yozuvlari
+            // ("Boshlang'ich qoldiq") kirim emas.
+            category:
+              source === "naqd"
+                ? "Naqd tushum"
+                : source === "plastik"
+                  ? "Plastik tushum"
+                  : { in: [...MANUAL_INCOME_CATEGORIES] },
           },
         }),
   ]);
@@ -227,7 +263,7 @@ export async function getIncomeRegister(filter: IncomeRegisterFilter = {}) {
       companyInn: k.companyId ? (companyById.get(k.companyId)?.inn ?? null) : null,
       contractNumber: null,
       period: null,
-      source: k.category === "Naqd tushum" ? "naqd" : "plastik",
+      source: k.category === "Naqd tushum" ? "naqd" : "plastik",  // oq ro'yxat tufayli faqat shu ikkitasi keladi
       channelId: k.channelId,
       channelLabel: labelOf(k.channelId),
       amount: Number(k.amount),

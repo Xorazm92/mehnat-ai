@@ -8,7 +8,6 @@ import { getExpenses } from "@/server/kassa";
 import { getAvailableBalance } from "@/lib/balance";
 import { KASSA_CATEGORIES_KEY, resolveKassaCategories } from "@/lib/kassaCategories";
 import ChiqimKassaClient from "./ChiqimKassaClient";
-import KassaSectionNav from "@/components/KassaSectionNav";
 
 export const metadata = { title: "Chiqim kassa" };
 
@@ -69,9 +68,6 @@ export default async function ChiqimKassaPage({
 
   return (
     <div className="h-full">
-      <div className="px-4 md:px-6 pt-4">
-        <KassaSectionNav views={views} />
-      </div>
       <ChiqimKassaClient
         overview={JSON.parse(JSON.stringify(overview))}
         unlinked={JSON.parse(JSON.stringify(unlinked))}

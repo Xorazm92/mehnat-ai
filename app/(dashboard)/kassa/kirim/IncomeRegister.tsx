@@ -224,6 +224,7 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
         <CompanySelect
           className="min-w-[200px]"
           size="sm"
+          fullWidth={false}
           companies={companies}
           value={companyId}
           onChange={setCompanyId}

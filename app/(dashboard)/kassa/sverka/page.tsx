@@ -13,7 +13,6 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { currentUserViews } from "@/server/rbac";
 import { getSverkaData } from "@/server/posSverka";
-import KassaSectionNav from "@/components/KassaSectionNav";
 import SverkaClient from "./SverkaClient";
 
 export const metadata = { title: "Kassa–bank sverka" };
@@ -35,7 +34,6 @@ export default async function SverkaPage({
 
   return (
     <div className="space-y-4">
-      <KassaSectionNav views={views} />
       <SverkaClient data={data} />
     </div>
   );

@@ -1,10 +1,9 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { currentUserViews } from "@/server/rbac";
-import { getBankAccountsOverview, getUnmatchedIncome, getNonBankIncome } from "@/server/bankImport";
+import { getBankAccountsOverview, getUnmatchedIncome } from "@/server/bankImport";
 import { prisma } from "@/lib/prisma";
 import KirimKassaClient from "./KirimKassaClient";
-import KassaSectionNav from "@/components/KassaSectionNav";
 import { readTabParam } from "@/lib/tabs";
 import { KIRIM_TAB_IDS, type KirimTab } from "@/lib/kirimTabs";
 
@@ -32,11 +31,13 @@ export default async function KirimKassaPage({
   const views = await currentUserViews();
   if (!views.includes("kassa_income")) redirect("/cabinet");
 
-  const [accounts, unmatched, nonBank] = await Promise.all([
+  // `getNonBankIncome()` bu yerdan OLIB TASHLANDI: u faqat tepadagi uchta
+  // stat kartani to'ldirardi, kartalar esa reyestr kartalari bilan
+  // takrorlanib, boshqa davrni ko'rsatgani uchun olib tashlandi. So'rov
+  // qolganda har ochilishda 200 qator bekorga o'qilib klientga jo'natilardi.
+  const [accounts, unmatched] = await Promise.all([
     getBankAccountsOverview(),
     getUnmatchedIncome(),
-    // Plastik va naqd — bank vipiskasidan tashqaridagi tushumlar.
-    getNonBankIncome(),
   ]);
 
   // Mijozlar ro'yxati — moslashtirilmagan tranzaksiyani qo'lda bog'lash uchun.
@@ -53,13 +54,9 @@ export default async function KirimKassaPage({
 
   return (
     <div className="h-full">
-      <div className="px-4 md:px-6 pt-4">
-        <KassaSectionNav views={views} />
-      </div>
       <KirimKassaClient
         accounts={JSON.parse(JSON.stringify(accounts))}
         unmatched={JSON.parse(JSON.stringify(unmatched))}
-        nonBank={JSON.parse(JSON.stringify(nonBank))}
         companies={JSON.parse(JSON.stringify(companies))}
         initialTab={readTabParam<KirimTab>(sp.tab, KIRIM_TAB_IDS, "reyestr")}
       />

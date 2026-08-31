@@ -12,7 +12,6 @@ import {
 import { getCachedCompanies } from "@/lib/cached-queries";
 import { getPayments } from "@/server/kassa";
 import QarzdorlikClient from "./QarzdorlikClient";
-import KassaSectionNav from "@/components/KassaSectionNav";
 
 export const metadata = { title: "Qarzdorlik" };
 
@@ -77,9 +76,6 @@ export default async function QarzdorlikPage({
 
   return (
     <div className="h-full">
-      <div className="px-4 md:px-6 pt-4">
-        <KassaSectionNav views={views} />
-      </div>
       <QarzdorlikClient
         statement={statement ? JSON.parse(JSON.stringify(statement)) : null}
         debt={JSON.parse(JSON.stringify(debt))}
