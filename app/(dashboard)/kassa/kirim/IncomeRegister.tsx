@@ -14,6 +14,8 @@
 import React, { useEffect, useState, useTransition, useMemo } from "react";
 import { Search, Download, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CompanySelect } from "@/components/ui/CompanySelect";
+import { Select } from "@/components/ui/Select";
 import { Money } from "@/components/ui";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
@@ -217,28 +219,29 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
 
       {/* Kesimlar */}
       <div className="flex items-center gap-2 flex-wrap">
-        <select
-          className="px-3 py-1.5 rounded-lg text-meta outline-none"
-          style={inputStyle}
+        {/* Reyestr filtri — 269 firma. Qidiruvsiz ro'yxatda kerakli
+            firmani topish uchun aylantirish kerak edi. */}
+        <CompanySelect
+          className="min-w-[200px]"
+          size="sm"
+          companies={companies}
           value={companyId}
-          onChange={(e) => setCompanyId(e.target.value)}
-        >
-          <option value="">Barcha firmalar</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-        <select
-          className="px-3 py-1.5 rounded-lg text-meta outline-none"
-          style={inputStyle}
+          onChange={setCompanyId}
+          emptyLabel="Barcha firmalar"
+          placeholder="Barcha firmalar"
+        />
+        <Select
+          size="sm"
+          fullWidth={false}
           value={source}
           onChange={(e) => setSource(e.target.value)}
+          placeholder="Barcha to'lov turlari"
+          aria-label="To'lov turi bo'yicha filtr"
         >
-          <option value="">Barcha to&apos;lov turlari</option>
           <option value="naqd">Naqd</option>
           <option value="plastik">Plastik</option>
           <option value="bank">Bank o&apos;tkazmasi</option>
-        </select>
+        </Select>
         <div className="relative">
           <Search
             size={14}

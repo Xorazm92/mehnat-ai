@@ -15,6 +15,7 @@ import {
 import { TableToolbar } from "@/components/ui/TableToolbar";
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
+import { Select } from '@/components/ui/Select';
 import { useTableState } from '@/hooks/useTableState';
 import { exportRowsToCsv, exportRowsToExcel } from '@/lib/exportTable';
 import { Button } from "@/components/ui/Button";
@@ -349,6 +350,15 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
+            {/*
+              ISTISNO — `components/ui/Select` ga ko'chirilmaydi. Bu tanlagichda
+              CHAP tomonda ikonka bor (`pl-12` + absolyut joylashgan ikonka), ya'ni
+              boshlovchi ikonka sloti kerak. Butun ilovada bunday tanlagich ATIGI
+              3 ta (shu fayl + `DocumentsModule`) — primitivga slot qo'shish uchun
+              yetarli dalil emas (aks holda bitta joy uchun variant paydo bo'ladi).
+              Qachonki bunday holat ko'paysa — primitivga `icon` sloti qo'shiladi,
+              bu yerga to'rtinchi tanlagich uslubi YOZILMAYDI.
+            */}
             <select
               className="w-full pl-12 pr-10 py-3.5 rounded-xl text-meta font-bold uppercase tracking-widest outline-none appearance-none sm:min-w-[200px]"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
@@ -443,32 +453,32 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
               <input className="erp-input" placeholder="+998 90 123 45 67" value={form.phone || ''} onChange={e => set('phone', e.target.value)} />
             </Field>
             <Field label="Jinsi">
-              <select className="erp-input" value={form.gender || ''} onChange={e => set('gender', e.target.value)}>
+              <Select value={form.gender || ''} onChange={e => set('gender', e.target.value)}>
                 <option value="">Tanlanmagan</option>
                 <option value="erkak">Erkak</option>
                 <option value="ayol">Ayol</option>
-              </select>
+              </Select>
             </Field>
             <Field label="Tug'ilgan sana" icon={CalendarDays}>
               <DateField value={form.birthDate ? String(form.birthDate).slice(0, 10) : ''} onChange={v => set('birthDate', v)} />
             </Field>
             <Field label="Ma'lumoti" icon={GraduationCap}>
-              <select className="erp-input" value={form.education || ''} onChange={e => set('education', e.target.value)}>
+              <Select value={form.education || ''} onChange={e => set('education', e.target.value)}>
                 <option value="">Tanlanmagan</option>
                 <option value="orta">O&apos;rta / O&apos;rta-maxsus</option>
                 <option value="oliy">Oliy</option>
                 <option value="magistratura">Magistratura</option>
-              </select>
+              </Select>
             </Field>
           </FormSection>
 
           {/* 2. LAVOZIM & LOGIN */}
           <FormSection icon={ShieldCheck} title="Lavozim va tizimga kirish">
             <Field label="Lavozim *" icon={Briefcase}>
-              <select className="erp-input" value={form.role || ''} onChange={e => set('role', e.target.value)}>
+              <Select value={form.role || ''} onChange={e => set('role', e.target.value)}>
                 <option value="" disabled>Tanlang...</option>
                 {ROLE_OPTIONS.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label="Bo'lim" icon={Building}>
               <input className="erp-input" placeholder="Masalan: Buxgalteriya" value={form.department || ''} onChange={e => set('department', e.target.value)} />
@@ -515,11 +525,11 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
               <DateField value={form.hiredAt ? String(form.hiredAt).slice(0, 10) : ''} onChange={v => set('hiredAt', v)} />
             </Field>
             <Field label="Holati">
-              <select className="erp-input" value={form.status || 'active'} onChange={e => set('status', e.target.value)}>
+              <Select value={form.status || 'active'} onChange={e => set('status', e.target.value)}>
                 <option value="active">Faol (ishda)</option>
                 <option value="vacation">Mehnat ta&apos;tilida</option>
                 <option value="sick">Betob / kasal</option>
-              </select>
+              </Select>
             </Field>
             <Field label="Avatar rangi">
               <div className="flex items-center gap-3">

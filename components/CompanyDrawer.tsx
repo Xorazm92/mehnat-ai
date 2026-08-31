@@ -3,12 +3,6 @@ import CompanyServicesPanel from '@/components/CompanyServicesPanel';
 import CompanyDocumentsPanel from '@/components/CompanyDocumentsPanel';
 import { ALL_SERVICE_KEYS, SERVICE_LABELS, serviceGroups, serviceFullLabel } from '@/lib/reportColumns';
 import { createPortal } from 'react-dom';
-import {
-  getCompanyContracts,
-  createContract,
-  updateContract,
-  deactivateContract,
-} from '@/server/contracts';
 import { Company, OperationEntry, Payment, Language, ClientCredential, ClientHistory, Staff } from '@/types';
 import {
   X,
@@ -17,7 +11,6 @@ import {
   Lock,
   Globe,
   Building2,
-  Download,
   Eye,
   EyeOff,
   Users,
@@ -34,7 +27,6 @@ import {
   Plus,
   Pencil,
   Save,
-  Loader2,
   Phone,
   History,
   FolderOpen,
@@ -49,6 +41,9 @@ import { taxRegimeLabel } from '@/lib/taxRegimes';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonTable } from "@/components/ui/Skeleton";
 import { Tabs, TabPanel, type TabItem } from "@/components/ui/Tabs";
 import RecordTimeline from "@/components/RecordTimeline";
 import {
@@ -56,10 +51,11 @@ import {
   ASSIGNMENT_ROLE_LABELS,
   normalizeAssignmentRole,
   sortStaffForAssignmentRole,
-  type AssignmentRole,
 } from '@/lib/platform/permissions';
 import { friendlyError } from "@/lib/actionError";
-import { DateField } from './ui/DateField';
+import { ContractsPanel } from './company-drawer/ContractsPanel';
+import { CredentialCard } from './company-drawer/CredentialCard';
+import type { TabId } from './company-drawer/types';
 
 interface DrawerProps {
   company: Company | null;
@@ -72,7 +68,6 @@ interface DrawerProps {
   onSave?: (company: Company, assignments?: any[]) => void;
 }
 
-type TabId = 'pasport' | 'soliq' | 'loginlar' | 'jamoa' | 'shartnoma' | 'xizmatlar' | 'hujjatlar' | 'kpi' | 'tarix';
 
 /**
  * Xizmat katakchalari — barcha matritsa ustunlari, guruh tartibida.
@@ -87,6 +82,24 @@ const SERVICE_ROWS: { key: string; label: string }[] = serviceGroups().flatMap((
 // Vault'dagi texnik nomlar ekranda odam o'qiydigan yorliq bilan chiqadi.
 // Xizmat nomi ixtiyoriy matn bo'lishi mumkin, shuning uchun mos kelmasa
 // xomligicha ko'rsatiladi.
+/**
+ * 1C holati — ekrandagi nomi va toni. Qiymat 1C importidan keladi, bu panelda
+ * faqat ko'rsatiladi.
+ */
+const ONE_C_LABEL: Record<string, string> = {
+  cloud: '☁️ Cloud',
+  local: '💻 Local',
+  server: '🖥️ Server',
+  none: "❌ Yo'q",
+};
+
+const ONE_C_TONE: Record<string, 'success' | 'info' | 'neutral'> = {
+  cloud: 'info',
+  local: 'neutral',
+  server: 'success',
+  none: 'neutral',
+};
+
 const SERVICE_TITLES: Record<string, string> = {
   soliq: 'Soliq.uz',
   bank_client: 'Bank-Klient',
@@ -108,14 +121,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabId>('pasport');
-  const [isEditingMainLogin, setIsEditingMainLogin] = useState(false);
   const [isAddingCredential, setIsAddingCredential] = useState(false);
   const [newCred, setNewCred] = useState({ serviceName: '', loginId: '', password: '', notes: '' });
-  const [tempLogin, setTempLogin] = useState(company?.login || '');
-  const [tempPassword, setTempPassword] = useState(company?.password || '');
-  const [isEditingBankLogin, setIsEditingBankLogin] = useState(false);
-  const [tempBankLogin, setTempBankLogin] = useState(company?.bankClientLogin || '');
-  const [tempBankPassword, setTempBankPassword] = useState(company?.bankClientPassword || '');
   const [kpiRules, setKpiRules] = useState<any[]>([]);
   const [companyKpiRules, setCompanyKpiRules] = useState<any[]>([]);
   const [isSavingKpi, setIsSavingKpi] = useState<string | null>(null); // ruleId of saving item
@@ -127,11 +134,6 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
   useEffect(() => {
     if (company) {
-      setTempLogin(company.login || '');
-      setTempPassword(company.password || '');
-      setTempBankLogin(company.bankClientLogin || '');
-      setTempBankPassword(company.bankClientPassword || '');
-      setIsEditingBankLogin(false);
       setAssignmentsError(null);
       (async () => {
         try {
@@ -171,7 +173,11 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
       })();
 
     }
-  }, [company?.id, company?.login, company?.password]);
+    // `company?.login` / `company?.password` bog'liqlikdan OLIB TASHLANDI:
+    // ular faqat tahrir maydonlarini qayta urug'lantirish uchun kerak edi,
+    // o'sha holat esa endi `CredentialCard` ichida. Ular qolganda parolni
+    // saqlash butun kredensial + KPI to'plamini qayta yuklatardi.
+  }, [company?.id]);
 
   // Yagona manba: rol uchun haq turi/qiymatini bitta qoidaga ko'ra aniqlaydi.
   // Jamoa va Shartnoma tablari SHU yordamchidan foydalanadi — ikki xil
@@ -250,6 +256,16 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
   if (!company || !mounted) return null;
 
+  /**
+   * Asosiy (soliq) va bank kredensiallari YUQORIDAGI kartalarda ko'rsatiladi,
+   * shuning uchun pastdagi "qo'shimcha" ro'yxatidan chiqariladi. Ilgari bu
+   * filtr JSX ichida turgani uchun "ro'yxat bo'shmi?" degan savolga javob
+   * bermasdi — natijada bo'sh holat umuman chizilmasdi.
+   */
+  const extraCredentials = credentials.filter(
+    (cred) => cred.serviceName !== PRIMARY_SERVICE && cred.serviceName !== BANK_SERVICE,
+  );
+
   const handleShowPassword = async (credId: string) => {
     if (!showPasswords[credId]) {
       // Access logged
@@ -291,27 +307,36 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
       >
         <div className="dashboard-card shrink-0 z-20 shadow-md !rounded-none !border-0 !border-b border-[var(--border)] relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
-          <div className="p-6 flex justify-between items-start">
-            <div className="flex gap-5 items-start">
-              <div className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl text-white font-semibold shrink-0 shadow-md transition-transform hover:scale-105" style={{ background: `linear-gradient(135deg, var(--primary), var(--accent-blue-hover))` }}>
+          <div className="p-4 sm:p-6 flex justify-between items-start gap-3">
+            <div className="flex gap-3 sm:gap-5 items-start min-w-0">
+              {/* Avatar telefonda 48px: 64px + 20px oraliq nom uchun ~200px
+                  qoldirar va uzun firma nomi to'rt qatorga sinardi. */}
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-2xl sm:text-3xl text-white font-semibold shrink-0 shadow-md transition-transform hover:scale-105" style={{ background: `linear-gradient(135deg, var(--primary), var(--accent-blue-hover))` }}>
                 {company.name.charAt(0)}
               </div>
-              <div className="flex flex-col gap-1.5 pt-1">
-                <h2 className="text-sm font-semibold tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.name}</h2>
+              <div className="flex flex-col gap-1.5 pt-1 min-w-0">
+                <h2 className="text-sm font-semibold tracking-tight leading-snug break-words" style={{ color: 'var(--text)' }}>{company.name}</h2>
+                {/* Ilgari ikkalasi `c1-badge` + qo'lda berilgan rang edi —
+                    loyihadagi beshta badge tizimidan biri. Endi primitiv. */}
                 <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>INN: {company.inn}</span>
-                  <span className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{taxRegimeLabel(company.taxRegime ?? company.taxType)}</span>
+                  <Badge tone="neutral">INN: {company.inn}</Badge>
+                  <Badge tone="info">{taxRegimeLabel(company.taxRegime ?? company.taxType)}</Badge>
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-xl transition-all shadow-sm icon-btn-danger" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
-              <X size={20} />
-            </button>
+            <Button
+              variant="secondary"
+              onClick={onClose}
+              aria-label="Firma kartasini yopish"
+              title="Yopish (Esc)"
+              icon={<X size={20} />}
+              className="!p-2.5 shrink-0"
+            />
           </div>
-          {/* SAKKIZTA yorliq — ilgari hammasi "asosiy amal" tugmasi
+          {/* To'qqizta yorliq — ilgari hammasi "asosiy amal" tugmasi
               ko'rinishida edi va panel sarlavhasi ostida ko'k tugmalar
               devorini hosil qilardi. */}
-          <div className="px-6 pb-1">
+          <div className="px-4 sm:px-6 pb-1">
             <Tabs
               items={tabs}
               value={activeTab}
@@ -323,7 +348,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
           </div>
         </div>
 
-        <TabPanel tabId={activeTab} idBase="company-drawer" className="p-6 flex-1 space-y-6">
+        <TabPanel tabId={activeTab} idBase="company-drawer" className="p-4 sm:p-6 flex-1 space-y-6">
           {activeTab === 'pasport' && (
             <div className="space-y-6 animate-fade-in pb-10">
               <div className="dashboard-card p-5 border-l-4" style={{ borderLeftColor: 'var(--accent-blue)' }}>
@@ -331,7 +356,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
                     <User size={20} />
                   </div>
-                  <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Direktor / Rahbar</h4>
+                  <h3 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Direktor / Rahbar</h3>
                 </div>
                 <div className="pl-14">
                   <p className="text-xl font-semibold tracking-tight leading-none" style={{ color: 'var(--text)' }}>{company.directorName || '—'}</p>
@@ -346,7 +371,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm" style={{ background: 'var(--warning-light)', color: 'var(--warning)' }}>
                     <MapPin size={20} />
                   </div>
-                  <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Yuridik Manzil</h4>
+                  <h3 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Yuridik Manzil</h3>
                 </div>
                 <div className="pl-14">
                   <p className="text-body font-bold tracking-tight leading-relaxed" style={{ color: 'var(--text)' }}>{company.legalAddress || 'Manzil ko\'rsatilmagan'}</p>
@@ -357,7 +382,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               <div className="dashboard-card overflow-hidden">
                 <div className="px-5 py-4 flex items-center gap-3" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
                   <Check size={18} style={{ color: 'var(--text-muted)' }} />
-                  <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Xizmatlar & Operatsiyalar</h4>
+                  <h3 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Xizmatlar & Operatsiyalar</h3>
                 </div>
                 <div className="p-6">
                   <div className="flex flex-wrap gap-2 mb-6">
@@ -372,13 +397,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                       <span className="text-micro font-bold flex items-center px-1 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>+{company.activeServices.length - 8} YANA</span>
                     )}
                   </div>
-                  <button
-                    onClick={() => setActiveTab('xizmatlar')}
-                    className="w-full py-3 rounded-lg text-meta font-bold uppercase tracking-[0.2em] transition-all shadow-sm flex items-center justify-center gap-2 icon-btn-accent"
-                    style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
-                  >
-                    BARCHASINI KO&apos;RISH
-                  </button>
+                  <Button variant="secondary" fullWidth onClick={() => setActiveTab('xizmatlar')}>
+                    Barchasini ko&apos;rish
+                  </Button>
                 </div>
               </div>
             </div>
@@ -386,9 +407,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
           {activeTab === 'soliq' && (
             <div className="space-y-4 animate-fade-in">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="dashboard-card p-5">
-                  <h4 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>1C Server & Baza</h4>
+                  <h3 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>1C Server & Baza</h3>
                   <div className="space-y-3 text-xs">
                     <p className="font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>Server ID: <span style={{ color: 'var(--accent-blue)' }}>{company.serverInfo || '—'}</span></p>
                     {company.serverName && (
@@ -405,7 +426,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="dashboard-card p-5">
-                  <h4 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Statistika Hisobotlari</h4>
+                  <h3 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Statistika Hisobotlari</h3>
                   <div className="flex flex-wrap gap-2">
                     {company.statReports?.length ? company.statReports.map(s => (
                       <span key={s} className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>{s}</span>
@@ -414,7 +435,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
 
                 <div className="dashboard-card p-5">
-                  <h4 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Majburiy Hisobotlar</h4>
+                  <h3 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Majburiy Hisobotlar</h3>
                   <div className="flex flex-wrap gap-2">
                     {company.requiredReports?.length ? company.requiredReports.map(r => (
                       <span key={r} className="c1-badge" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>{r}</span>
@@ -423,7 +444,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
 
                 <div className="dashboard-card p-5 col-span-1 md:col-span-2">
-                  <h4 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Xizmatlar Ko&apos;lami (Scope)</h4>
+                  <h3 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Xizmatlar Ko&apos;lami (Scope)</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {company.serviceScope?.length ? company.serviceScope.map(s => (
                       <div key={s} className="flex items-center gap-2 p-2 rounded-lg transition-colors" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
@@ -442,203 +463,67 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               <div className="dashboard-card p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Database size={16} style={{ color: 'var(--text-muted)' }} />
-                  <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>1C Holati</h4>
+                  <h3 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>1C Holati</h3>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  {['cloud', 'local', 'server', 'none'].map(status => (
-                    <Button variant="primary" size="md" key={status} className={`px-4 py-2 rounded-lg border font-bold text-meta uppercase transition-all tracking-widest shadow-sm`} style={company.oneCStatus === status ? { background: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: '#fff' } : { background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}>
-                      {status === 'cloud' ? '☁️ Cloud' : status === 'local' ? '💻 Local' : status === 'server' ? '🖥️ Server' : '❌ Yo\'q'}
-                    </Button>
-                  ))}
-                </div>
+                {/*
+                  BUG: bu yerda to'rtta variant TUGMA ko'rinishida chizilardi —
+                  faol bo'lgani ko'k, qolganlari kulrang — lekin BIRORTASIDA
+                  `onClick` yo'q edi. Ya'ni xodim 1C holatini o'zgartirmoqchi
+                  bo'lib bosardi va hech narsa bo'lmasdi; xato ham ko'rinmasdi.
+                  Bu ekranda holat faqat O'QILADI (u 1C importidan keladi),
+                  shuning uchun endi u AYNAN SHUNDAY — bitta holat chipi.
+                  Yana: faol variantda `color: '#fff'` qotirilgan edi —
+                  qorong'i temada o'qilmaydigan kombinatsiya.
+                */}
+                <Badge tone={ONE_C_TONE[company.oneCStatus ?? 'none'] ?? 'neutral'}>
+                  {ONE_C_LABEL[company.oneCStatus ?? 'none'] ?? company.oneCStatus}
+                </Badge>
               </div>
             </div>
           )}
 
           {activeTab === 'loginlar' && (
             <div className="space-y-4 animate-fade-in">
-              <div className="bg-[var(--card-bg)] p-4 rounded-lg border border-[var(--card-border)] shadow-sm transition-colors">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Globe size={12} className="text-[var(--text-muted)]" />
-                    <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Soliq.uz (Asosiy)</h4>
-                  </div>
-                  {isEditingMainLogin ? (
-                    <div className="flex gap-1.5">
-                      <button
-                        onClick={() => {
-                          setIsEditingMainLogin(false);
-                          setTempLogin(company.login || '');
-                          setTempPassword(company.password || '');
-                        }}
-                        className="px-2.5 py-1 text-micro font-bold text-[var(--text-muted)] uppercase rounded-lg border border-[var(--card-border)] hover:bg-[var(--bg-hover)] transition-all"
-                      >
-                        Bekor qilish
-                      </button>
-                      <button
-                        onClick={async () => {
-                          // Shifrlangan vault'ga yoziladi (ClientCredential,
-                          // serviceName="soliq"), Company.login/password
-                          // ustunlariga EMAS — ular deprecated ochiq matn.
-                          try {
-                            await setPrimaryCredential(company.id, tempLogin, tempPassword);
-                            // Ota-komponentdagi ro'yxat yangilansin (parol
-                            // faqat huquqi bor foydalanuvchiga qaytariladi).
-                            onSave?.({ ...company, login: tempLogin, password: tempPassword });
-                          } catch (e) {
-                            console.warn('[CompanyDrawer] setPrimaryCredential failed:', e);
-                          }
-                          setIsEditingMainLogin(false);
-                        }}
-                        className="px-2.5 py-1 bg-[var(--success)] hover:opacity-90 text-white text-micro font-bold uppercase rounded-lg border border-[var(--success-border)] transition-all shadow-sm"
-                      >
-                        Saqlash
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setIsEditingMainLogin(true)}
-                      className="px-2.5 py-1 bg-[var(--input-bg)] hover:bg-[var(--bg-hover)] text-micro font-bold text-[var(--text-secondary)] uppercase rounded-lg border border-[var(--card-border)] transition-all hover:text-[var(--accent-blue)]"
-                    >
-                      Tahrirlash
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1">
-                    <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">Login</p>
-                    {isEditingMainLogin ? (
-                      <input
-                        type="text"
-                        className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] font-mono text-meta uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
-                        value={tempLogin}
-                        onChange={(e) => setTempLogin(e.target.value)}
-                      />
-                    ) : (
-                      <p className="text-meta font-mono font-bold text-[var(--text)] uppercase bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] transition-colors">{company.login || '—'}</p>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">Parol</p>
-                    <div className="relative">
-                      {isEditingMainLogin ? (
-                        <input
-                          type="text"
-                          className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] font-mono text-meta outline-none focus:border-[var(--accent-blue)] transition-colors"
-                          value={tempPassword}
-                          onChange={(e) => setTempPassword(e.target.value)}
-                        />
-                      ) : (
-                        <div className="flex items-center justify-between bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] transition-colors">
-                          <p className="text-meta font-mono font-bold text-[var(--text)] tracking-widest leading-none">
-                            {showPasswords['main'] ? company.password || '—' : '••••••••'}
-                          </p>
-                          <button onClick={() => setShowPasswords(prev => ({ ...prev, main: !prev.main }))} className="text-[var(--text-muted)] hover:text-[var(--accent-blue)] transition-all">
-                            {showPasswords['main'] ? <EyeOff size={12} /> : <Eye size={12} />}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <CredentialCard
+                title="Soliq.uz (Asosiy)"
+                icon={<Globe size={12} />}
+                login={company.login || ''}
+                password={company.password || ''}
+                uppercaseLogin
+                onSave={async (login, password) => {
+                  // Shifrlangan vault'ga yoziladi (ClientCredential,
+                  // serviceName="soliq"), Company.login/password ustunlariga
+                  // EMAS — ular deprecated ochiq matn.
+                  await setPrimaryCredential(company.id, login, password);
+                  onSave?.({ ...company, login, password });
+                }}
+              />
 
               {/* Bank-Klient — wizarddagi maydonlar bilan BIR XIL manba (vault).
                   Ilgari u faqat `Company` ustunlarida yotardi va bu tabda umuman
                   ko'rinmasdi, ya'ni kiritilgan parol "yo'qolib qolgandek" edi. */}
-              <div className="bg-[var(--card-bg)] p-4 rounded-lg border border-[var(--card-border)] shadow-sm transition-colors">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Building2 size={12} className="text-[var(--text-muted)]" />
-                    <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Bank-Klient</h4>
-                  </div>
-                  {isEditingBankLogin ? (
-                    <div className="flex gap-1.5">
-                      <button
-                        onClick={() => {
-                          setIsEditingBankLogin(false);
-                          setTempBankLogin(company.bankClientLogin || '');
-                          setTempBankPassword(company.bankClientPassword || '');
-                        }}
-                        className="px-2.5 py-1 text-micro font-bold text-[var(--text-muted)] uppercase rounded-lg border border-[var(--card-border)] hover:bg-[var(--bg-hover)] transition-all"
-                      >
-                        Bekor qilish
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
-                            await setServiceCredential(company.id, BANK_SERVICE, tempBankLogin, tempBankPassword);
-                            onSave?.({ ...company, bankClientLogin: tempBankLogin, bankClientPassword: tempBankPassword });
-                          } catch (e) {
-                            console.warn('[CompanyDrawer] setServiceCredential(bank) failed:', e);
-                          }
-                          setIsEditingBankLogin(false);
-                        }}
-                        className="px-2.5 py-1 bg-[var(--success)] hover:opacity-90 text-white text-micro font-bold uppercase rounded-lg border border-[var(--success-border)] transition-all shadow-sm"
-                      >
-                        Saqlash
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setIsEditingBankLogin(true)}
-                      className="px-2.5 py-1 bg-[var(--input-bg)] hover:bg-[var(--bg-hover)] text-micro font-bold text-[var(--text-secondary)] uppercase rounded-lg border border-[var(--card-border)] transition-all hover:text-[var(--accent-blue)]"
-                    >
-                      Tahrirlash
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1">
-                    <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">Login</p>
-                    {isEditingBankLogin ? (
-                      <input
-                        type="text"
-                        className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] font-mono text-meta outline-none focus:border-[var(--accent-blue)] transition-colors"
-                        value={tempBankLogin}
-                        onChange={(e) => setTempBankLogin(e.target.value)}
-                      />
-                    ) : (
-                      <p className="text-meta font-mono font-bold text-[var(--text)] bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] transition-colors">{company.bankClientLogin || '—'}</p>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <p className="text-micro font-bold text-[var(--text-muted)] uppercase tracking-widest">Parol</p>
-                    {isEditingBankLogin ? (
-                      <input
-                        type="text"
-                        className="w-full bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] font-mono text-meta outline-none focus:border-[var(--accent-blue)] transition-colors"
-                        value={tempBankPassword}
-                        onChange={(e) => setTempBankPassword(e.target.value)}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-between bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] transition-colors">
-                        <p className="text-meta font-mono font-bold text-[var(--text)] tracking-widest leading-none">
-                          {showPasswords['bank'] ? company.bankClientPassword || '—' : '••••••••'}
-                        </p>
-                        <button onClick={() => setShowPasswords(prev => ({ ...prev, bank: !prev.bank }))} className="text-[var(--text-muted)] hover:text-[var(--accent-blue)] transition-all">
-                          {showPasswords['bank'] ? <EyeOff size={12} /> : <Eye size={12} />}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <CredentialCard
+                title="Bank-Klient"
+                icon={<Building2 size={12} />}
+                login={company.bankClientLogin || ''}
+                password={company.bankClientPassword || ''}
+                onSave={async (bankClientLogin, bankClientPassword) => {
+                  await setServiceCredential(company.id, BANK_SERVICE, bankClientLogin, bankClientPassword);
+                  onSave?.({ ...company, bankClientLogin, bankClientPassword });
+                }}
+              />
 
               <div className="bg-[var(--card-bg)] rounded-lg border border-[var(--card-border)] shadow-sm overflow-hidden transition-colors">
                 <div className="bg-[var(--input-bg)] px-3 py-2 flex items-center justify-between border-b border-[var(--card-border)]">
-                  <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Qo&apos;shimcha Kirish Ma&apos;lumotlari</h4>
-                  <button
-                    onClick={() => setIsAddingCredential(true)}
-                    className="flex items-center gap-1 text-micro font-bold text-[var(--accent-blue)] uppercase py-1 px-2.5 bg-[var(--accent-blue-light)] rounded-lg border border-[var(--card-border)] hover:bg-[var(--bg-hover)] transition-all shadow-sm"
-                  >
-                    <Plus size={10} /> Yangi Qo&apos;shish
-                  </button>
+                  <h3 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Qo&apos;shimcha Kirish Ma&apos;lumotlari</h3>
+                  <Button variant="secondary" size="sm" icon={<Plus size={10} />} onClick={() => setIsAddingCredential(true)}>
+                    Yangi qo&apos;shish
+                  </Button>
                 </div>
 
                 {isAddingCredential && (
                   <div className="p-3 border-b border-[var(--card-border)] bg-[var(--accent-blue-light)] transition-colors">
-                    <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                       <div className="col-span-2">
                         <label className="text-micro font-bold text-[var(--text-muted)] uppercase mb-1 block tracking-widest">Xizmat nomi (Didox, Bank...)</label>
                         <input
@@ -677,8 +562,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 text-micro uppercase font-bold">
-                      <button onClick={() => setIsAddingCredential(false)} className="px-2.5 py-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors uppercase tracking-widest">Bekor qilish</button>
-                      <button
+                      <Button variant="ghost" size="sm" onClick={() => setIsAddingCredential(false)}>Bekor qilish</Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
                         disabled={!newCred.serviceName || !newCred.loginId}
                         onClick={async () => {
                           if (!newCred.serviceName || !newCred.loginId) return;
@@ -697,17 +584,28 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             toast.error(friendlyError(e) || "Saqlashda xatolik");
                           }
                         }}
-                        className="px-2.5 py-1 bg-[var(--accent-blue)] text-white rounded-lg border border-[var(--accent-blue)] disabled:opacity-50 shadow-sm transition-all"
                       >
                         Qo&apos;shish
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
 
+                {extraCredentials.length === 0 && !isAddingCredential && (
+                  <EmptyState
+                    icon={<Key size={26} />}
+                    title="Qo'shimcha kirish yo'q"
+                    description="Didox, bank yoki boshqa xizmat hisobini shu yerga qo'shsangiz, u firma kartasida qoladi."
+                    action={
+                      <Button variant="secondary" size="sm" icon={<Plus size={10} />} onClick={() => setIsAddingCredential(true)}>
+                        Yangi qo'shish
+                      </Button>
+                    }
+                  />
+                )}
+
                 <div className="divide-y divide-[var(--card-border)]">
-                  {credentials
-                    .filter((cred) => cred.serviceName !== PRIMARY_SERVICE && cred.serviceName !== BANK_SERVICE)
+                  {extraCredentials
                     .map((cred) => (
                     <div key={cred.id} className="p-3 hover:bg-[var(--bg-hover)] transition-colors relative group/cred">
                       <div className="flex justify-between items-center mb-2">
@@ -715,7 +613,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           <Key size={10} className="text-[var(--text-muted)]" />
                           <p className="text-micro font-bold text-[var(--text)] uppercase tracking-tight">{SERVICE_TITLES[cred.serviceName] ?? cred.serviceName}</p>
                         </div>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`${cred.serviceName} kredensialini o'chirish`}
+                          title="O'chirish"
+                          icon={<Trash2 size={10} />}
                           onClick={async () => {
                             if (await confirm({ title: `"${cred.serviceName}" kredensiali o'chirilsinmi?`, description: "Saqlangan login va parol o'chiriladi.", confirmLabel: "O'chirish", tone: 'danger' })) {
                               try {
@@ -726,12 +629,10 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               }
                             }
                           }}
-                          className="p-1 text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] rounded-lg opacity-0 group-hover/cred:opacity-100 transition-all"
-                        >
-                          <Trash2 size={10} />
-                        </button>
+                          className="!px-2 !py-1 shrink-0"
+                        />
                       </div>
-                      <div className="grid grid-cols-2 gap-3 mt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
                         <div className="bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--card-border)] transition-colors">
                           <p className="text-micro font-bold text-[var(--text-muted)] uppercase mb-0.5 tracking-widest">Login</p>
                           <p className="font-mono text-meta font-bold text-[var(--text)] uppercase truncate leading-none mt-1">{cred.loginId || '—'}</p>
@@ -741,9 +642,15 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             <p className="text-micro font-bold text-[var(--text-muted)] uppercase mb-0.5 tracking-widest">Parol</p>
                             <p className="font-mono text-meta font-bold text-[var(--text)] tracking-widest leading-none mt-1">{showPasswords[cred.id] ? cred.encryptedPassword || '—' : '••••••••'}</p>
                           </div>
-                          <button onClick={() => handleShowPassword(cred.id)} className="text-[var(--text-muted)] hover:text-[var(--accent-blue)] transition-all shrink-0">
-                            {showPasswords[cred.id] ? <EyeOff size={11} /> : <Eye size={11} />}
-                          </button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleShowPassword(cred.id)}
+                            aria-pressed={Boolean(showPasswords[cred.id])}
+                            aria-label={showPasswords[cred.id] ? `${cred.serviceName} parolini yashirish` : `${cred.serviceName} parolini ko'rsatish`}
+                            icon={showPasswords[cred.id] ? <EyeOff size={11} /> : <Eye size={11} />}
+                            className="!px-2 !py-1 shrink-0"
+                          />
                         </div>
                       </div>
                       {cred.notes && <p className="text-micro font-bold text-[var(--text-muted)] mt-2 uppercase tracking-tight italic opacity-70">Izoh: {cred.notes}</p>}
@@ -758,9 +665,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
             <div className="space-y-4 animate-fade-in">
               <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg shadow-sm overflow-hidden transition-colors">
                 <div className="bg-[var(--input-bg)] px-3 py-2 flex items-center justify-between border-b border-[var(--card-border)]">
-                  <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Amaldagi Jamoa</h4>
+                  <h3 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Amaldagi Jamoa</h3>
                   {onSave && !isEditingJamoa && (
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<Pencil size={10} />}
                       onClick={() => {
                         const source = assignments.length > 0 ? assignments : teamFallbackAssignments();
                         setEditAssignments(source.map((a: any) => ({
@@ -771,21 +681,25 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                         })));
                         setIsEditingJamoa(true);
                       }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-secondary)] text-micro font-bold uppercase transition-all hover:text-[var(--accent-blue)] hover:bg-[var(--accent-blue-light)]"
                     >
-                      <Pencil size={10} /> Tahrirlash
-                    </button>
+                      Tahrirlash
+                    </Button>
                   )}
                   {isEditingJamoa && (
                     <div className="flex gap-1.5">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isSavingJamoa}
                         onClick={() => setIsEditingJamoa(false)}
-                        className="px-2.5 py-1 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] text-micro font-bold uppercase transition-all"
                       >
                         Bekor
-                      </button>
-                      <button
-                        disabled={isSavingJamoa}
+                      </Button>
+                      <Button
+                        variant="success"
+                        size="sm"
+                        loading={isSavingJamoa}
+                        icon={<Save size={10} />}
                         onClick={async () => {
                           if (!company || !onSave) return;
                           setIsSavingJamoa(true);
@@ -795,16 +709,21 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                               id: `edited-${i}`, role: a.role, user_id: a.userId, salary_type: a.salaryType, salary_value: a.salaryValue
                             })));
                             setIsEditingJamoa(false);
-                          } catch (e: any) {
-                            console.error('Jamoa saqlashda xatolik:', e);
+                          } catch (e) {
+                            // BUG: ilgari bu yerda faqat `console.error` bor edi.
+                            // Server rad etsa (masalan biriktirish huquqi yo'q)
+                            // panel xuddi saqlangandek YOPILARDI va ekranda
+                            // saqlanmagan qiymatlar turardi. Biriktiruv oylik
+                            // hisobiga ta'sir qiladi — bu jim yo'qolish
+                            // qimmatga tushadi.
+                            toast.error(friendlyError(e) || "Jamoani saqlab bo'lmadi");
                           } finally {
                             setIsSavingJamoa(false);
                           }
                         }}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--success-border)] bg-[var(--success)] hover:opacity-90 text-white text-micro font-bold uppercase transition-all shadow-sm disabled:opacity-50"
                       >
-                        {isSavingJamoa ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} Saqlash
-                      </button>
+                        Saqlash
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -882,7 +801,26 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                                   onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, salaryValue: Number(e.target.value) } : a))}
                                   className="w-full bg-[var(--input-bg)] px-2 py-1.5 text-micro font-bold outline-none"
                                 />
+                                {/*
+                                  YAGONA saqlanib qolgan xom `<button>`: bu —
+                                  maydonga YOPISHGAN o'lchov birligi tugmasi
+                                  (input-affix). `Button` primitivi o'z radiusi,
+                                  paddingi va `uppercase tracking-widest`
+                                  tipografiyasi bilan keladi, ular esa maydon
+                                  bilan bir butun ko'rinishni buzadi. Primitivga
+                                  "affix" varianti qo'shish — bitta joy uchun
+                                  yangi variant, ya'ni forkning boshqa turi.
+                                  Shu sababli xom qoldirildi, LEKIN xulqi
+                                  to'ldirildi: `type`, `aria-pressed`,
+                                  `aria-label`.
+                                */}
+                                {/* eslint-disable-next-line no-restricted-syntax */}
                                 <button
+                                  type="button"
+                                  aria-pressed={asgn.salaryType === 'fixed'}
+                                  aria-label={asgn.salaryType === 'percent'
+                                    ? "Haq turi: foiz. Summaga o'tkazish"
+                                    : "Haq turi: summa. Foizga o'tkazish"}
                                   onClick={() => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, salaryType: a.salaryType === 'percent' ? 'fixed' : 'percent' } : a))}
                                   className="px-2 py-1.5 bg-[var(--input-bg)] text-micro font-bold uppercase text-[var(--text-secondary)] shrink-0 border-l border-[var(--card-border)] hover:bg-[var(--accent-blue-light)] transition-all hover:text-[var(--accent-blue)]"
                                 >
@@ -907,19 +845,21 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                       return (
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {missing.map((r) => (
-                            <button
+                            <Button
                               key={r}
-                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              icon={<Plus size={10} />}
                               onClick={() =>
                                 setEditAssignments((prev) => [
                                   ...prev,
                                   { role: r, userId: '', salaryType: 'percent', salaryValue: 0 },
                                 ])
                               }
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-dashed border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] text-micro font-bold uppercase tracking-widest transition-all hover:text-[var(--accent-blue)] hover:border-[var(--accent-blue)]"
+                              className="!border-dashed"
                             >
-                              + {ASSIGNMENT_ROLE_LABELS[r]}
-                            </button>
+                              {ASSIGNMENT_ROLE_LABELS[r]}
+                            </Button>
                           ))}
                         </div>
                       );
@@ -931,7 +871,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
               {clientHistory.length > 0 && (
                 <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg shadow-sm overflow-hidden transition-colors">
                   <div className="bg-[var(--input-bg)] px-3 py-2 border-b border-[var(--card-border)]">
-                    <h4 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Tayinlovlar Tarixi</h4>
+                    <h3 className="text-micro font-bold text-[var(--text)] uppercase tracking-widest">Tayinlovlar Tarixi</h3>
                   </div>
                   <div className="divide-y divide-[var(--card-border)] max-h-[250px] overflow-y-auto">
                     {clientHistory.filter(h => h.changeType === 'assign_role' || h.changeType === 'remove_role').map((h, i) => (
@@ -953,7 +893,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
           {activeTab === 'shartnoma' && (
             <div className="space-y-6 animate-fade-in px-2">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Tomon ikki xil bo'ladi: o'z firmamiz (yozma shartnoma) yoki
                     plastik/naqd kanali (og'zaki kelishuv). Ikkalasi bir vaqtda
                     to'ldirilmaydi — DB'da CHECK. */}
@@ -998,8 +938,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 
               <div className="dashboard-card overflow-hidden !shadow-sm">
                 <div className="p-5 text-center" style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                  <h4 className="text-micro font-bold uppercase tracking-widest mb-5" style={{ color: 'var(--text-muted)' }}>Moliyaviy Holat</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h3 className="text-micro font-bold uppercase tracking-widest mb-5" style={{ color: 'var(--text-muted)' }}>Moliyaviy Holat</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
                       <p className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Xizmat Narxi</p>
                       <p className="text-lg font-semibold tabular-nums tracking-tight leading-none" style={{ color: 'var(--text)' }}>{formatNum(Number(company.contractAmount || 0))} <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>so&apos;m</span></p>
@@ -1014,7 +954,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 </div>
 
                 <div className="p-5">
-                  <h4 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Kaskadli Taqsimot (Oylik prognozi)</h4>
+                  <h3 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Kaskadli Taqsimot (Oylik prognozi)</h3>
                   {(() => {
                     // Jamoa tabi bilan bir xil manba (deriveRoleComp) — qiymatlar
                     // ikkala tabda doim mos keladi.
@@ -1063,10 +1003,12 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 <div className="flex items-center justify-between mb-5 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
                   <div className="flex items-center gap-3">
                     <Check size={16} style={{ color: 'var(--text-muted)' }} />
-                    <h4 className="text-meta font-semibold uppercase tracking-widest leading-none mt-0.5" style={{ color: 'var(--text)' }}>Aktiv Xizmatlar</h4>
+                    <h3 className="text-meta font-semibold uppercase tracking-widest leading-none mt-0.5" style={{ color: 'var(--text)' }}>Aktiv Xizmatlar</h3>
                   </div>
                   <div className="flex gap-3">
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => {
                         if (onSave) {
                           // Yagona manba (lib/reportColumns.ts) — to'lov yarmi bilan birga. Qo'lda
@@ -1076,20 +1018,41 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           onSave({ ...company, activeServices: allKeys });
                         }
                       }}
-                      className="px-3 py-2 text-micro font-semibold rounded-lg transition-all uppercase tracking-widest shadow-sm"
-                      style={{ color: 'var(--success)', background: 'color-mix(in srgb, var(--success) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 20%, transparent)' }}
                     >
                       Hammasini yoqish
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (onSave) onSave({ ...company, activeServices: [] });
+                    </Button>
+                    {/*
+                      BUG — tugma yorlig'i teskari edi. U `activeServices: []`
+                      yozadi, `lib/reportColumns.serviceEnabled` esa BO'SH
+                      RO'YXATNI "hamma xizmat yoqilgan" deb o'qiydi
+                      (`activeServices.length === 0 → return true`). Ya'ni
+                      "Hammasini o'chirish" aslida HAMMASINI YOQARDI, ustiga
+                      qizil (xavfli) ko'rinishda — firmani xizmatdan chiqarmoqchi
+                      bo'lgan xodim buning teskarisini qilardi.
+
+                      Yozuv o'zgartirilmadi (ma'lumot modelida "birorta xizmat
+                      yo'q" holati UMUMAN yo'q — bu mahsulot qarori, UI qarori
+                      emas). Yorliq esa endi rost: bu — standart holatga
+                      qaytarish. Tasdiq so'raladi, chunki u firmadagi qo'lda
+                      qilingan tanlovni butunlay yo'q qiladi.
+                    */}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={async () => {
+                        if (!onSave) return;
+                        const ok = await confirm({
+                          title: 'Xizmatlar standart holatga qaytarilsinmi?',
+                          description:
+                            "Qo'lda qilingan tanlov o'chadi va firma uchun BARCHA xizmatlar yoqilgan holatga qaytadi.",
+                          confirmLabel: 'Qaytarish',
+                          tone: 'danger',
+                        });
+                        if (ok) onSave({ ...company, activeServices: [] });
                       }}
-                      className="px-3 py-2 text-micro font-semibold rounded-lg transition-all uppercase tracking-widest shadow-sm"
-                      style={{ color: 'var(--danger)', background: 'color-mix(in srgb, var(--danger) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--danger) 20%, transparent)' }}
                     >
-                      Hammasini o&apos;chirish
-                    </button>
+                      Standart holatga qaytarish
+                    </Button>
                   </div>
                 </div>
 
@@ -1140,15 +1103,17 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
           {activeTab === 'kpi' && (
             <div className="space-y-6 animate-fade-in px-2">
               {isLoadingKpi ? (
-                <div className="dashboard-card p-5 flex flex-col items-center justify-center transition-colors">
-                  <div className="animate-spin w-8 h-8 border-3 border-t-transparent rounded-full mb-4" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
-                  <p className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>KPI ma&apos;lumotlari yuklanmoqda...</p>
+                /* Tuzilma oldindan ma'lum (sarlavha + qoidalar ro'yxati),
+                   shuning uchun aylanuvchi spinner emas, skeleton: sahifa
+                   yuklangach element joyidan sakramaydi. */
+                <div className="dashboard-card !p-0 overflow-hidden">
+                  <SkeletonTable rows={5} cols={4} />
                 </div>
               ) : (
                 <div className="dashboard-card p-5 !shadow-sm">
                   <div className="flex items-center gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
                     <Calculator size={16} style={{ color: 'var(--text-muted)' }} />
-                    <h4 className="text-meta font-semibold uppercase tracking-widest mt-0.5 leading-none" style={{ color: 'var(--text)' }}>Mijoz KPI Soblamalari (Override)</h4>
+                    <h3 className="text-meta font-semibold uppercase tracking-widest mt-0.5 leading-none" style={{ color: 'var(--text)' }}>Mijoz KPI Soblamalari (Override)</h3>
                   </div>
 
                   <div className="space-y-4">
@@ -1180,7 +1145,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4 mt-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                             <div className="flex items-center gap-3 p-2 rounded-lg border transition-colors shadow-sm" style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>
                               <label className="text-micro font-semibold uppercase tracking-widest whitespace-nowrap pl-2" style={{ color: 'var(--success)' }}>Bonus %:</label>
                               <input
@@ -1307,252 +1272,3 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
 };
 
 export default CompanyDrawer;
-
-// =====================================================
-// SHARTNOMALAR PANELI
-// =====================================================
-//
-// `Contract` jadvali bor edi, lekin ekranda faqat O'QILARDI — yangi shartnoma
-// qo'shishning yagona yo'li 1C importi edi. Shu sababdan yangi mijozning
-// shartnomasi eski bitta ustunga (`Company.contractNumber`) tushib qolar va
-// bitta mijozda bir nechta shartnoma bo'lishi ko'tarilmasdi.
-//
-// TO'LOV TURI (naqd/plastik/bank) bu yerda YO'Q: u shartnomaning emas, har
-// bir to'lovning xossasi va kirim kassasida tanlanadi.
-
-interface ContractRow {
-  id: string;
-  number: string;
-  signedAt: string | null;
-  amount: number | null;
-  source?: string;
-  isActive?: boolean;
-  ownFirmName?: string | null;
-}
-
-function ContractsPanel({ companyId, initial }: { companyId: string; initial: ContractRow[] }) {
-  const [rows, setRows] = useState<ContractRow[]>(initial);
-  const [editing, setEditing] = useState<ContractRow | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [number, setNumber] = useState('');
-  const [signedAt, setSignedAt] = useState('');
-  const [amount, setAmount] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const reload = async () => {
-    const fresh = await getCompanyContracts(companyId);
-    setRows(
-      fresh.map((c: any) => ({
-        id: c.id,
-        number: c.number,
-        signedAt: c.signedAt,
-        amount: c.amount == null ? null : Number(c.amount),
-        source: c.source,
-        isActive: c.isActive,
-        ownFirmName: c.ownFirm?.name ?? null,
-      }))
-    );
-  };
-
-  const openNew = () => {
-    setEditing(null);
-    setAdding(true);
-    setNumber('');
-    setSignedAt('');
-    setAmount('');
-    setError(null);
-  };
-
-  const openEdit = (row: ContractRow) => {
-    setAdding(false);
-    setEditing(row);
-    setNumber(row.number);
-    setSignedAt(row.signedAt ? String(row.signedAt).slice(0, 10) : '');
-    setAmount(row.amount != null ? String(row.amount) : '');
-    setError(null);
-  };
-
-  const close = () => {
-    setAdding(false);
-    setEditing(null);
-    setError(null);
-  };
-
-  const save = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const payload = {
-        number,
-        signedAt: signedAt || null,
-        amount: amount ? Number(amount.replace(/[^\d.]/g, '')) : null,
-      };
-      if (editing) await updateContract(editing.id, payload);
-      else await createContract({ companyId, ...payload });
-      await reload();
-      close();
-    } catch (e) {
-      setError(friendlyError(e) || 'Saqlab bo\'lmadi');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const deactivate = async (row: ContractRow) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await deactivateContract(row.id);
-      await reload();
-    } catch (e) {
-      setError(friendlyError(e) || 'Bajarib bo\'lmadi');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const inputStyle: React.CSSProperties = {
-    background: 'var(--input-bg)',
-    border: '1px solid var(--card-border)',
-    color: 'var(--text)',
-  };
-
-  const total = rows.filter(r => r.isActive !== false).reduce((sum, k) => sum + (k.amount ?? 0), 0);
-
-  return (
-    <div className="dashboard-card overflow-hidden !shadow-sm">
-      <div
-        className="px-3 py-2 flex items-center justify-between gap-2"
-        style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}
-      >
-        <h4 className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>
-          Shartnomalar ({rows.length})
-        </h4>
-        <div className="flex items-center gap-2">
-          <span className="text-micro font-bold tabular-nums" style={{ color: 'var(--text-muted)' }}>
-            {formatNum(total)} so&apos;m
-          </span>
-          <button
-            onClick={openNew}
-            className="flex items-center gap-1 px-2 py-1 rounded text-micro font-semibold"
-            style={{ background: 'var(--accent-blue)', color: '#fff' }}
-          >
-            <Plus size={12} /> Qo&apos;shish
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <p className="px-3 py-2 text-micro" style={{ color: 'var(--danger)' }}>{error}</p>
-      )}
-
-      {(adding || editing) && (
-        <div className="p-3 space-y-2" style={{ borderBottom: '1px solid var(--card-border)' }}>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <label className="block">
-              <span className="text-micro" style={{ color: 'var(--text-muted)' }}>Shartnoma raqami *</span>
-              <input
-                className="w-full mt-1 px-2 py-1.5 rounded text-meta outline-none"
-                style={inputStyle}
-                value={number}
-                onChange={e => setNumber(e.target.value)}
-                placeholder="02/26BK"
-              />
-            </label>
-            <label className="block">
-              <span className="text-micro" style={{ color: 'var(--text-muted)' }}>Sana</span>
-              <DateField
-                className="mt-1"
-                inputClassName="w-full px-2 py-1.5 rounded text-meta outline-none"
-                inputStyle={inputStyle}
-                value={signedAt}
-                onChange={setSignedAt}
-              />
-            </label>
-            <label className="block">
-              <span className="text-micro" style={{ color: 'var(--text-muted)' }}>Oylik summa (so&apos;m)</span>
-              <input
-                inputMode="numeric"
-                className="w-full mt-1 px-2 py-1.5 rounded text-meta text-right tabular-nums outline-none"
-                style={inputStyle}
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                placeholder="3000000"
-              />
-            </label>
-          </div>
-          <p className="text-micro" style={{ color: 'var(--text-muted)' }}>
-            To&apos;lov turi (naqd / plastik / bank) shartnomada emas — u har bir to&apos;lovda
-            kirim kassasida tanlanadi.
-          </p>
-          <div className="flex gap-2">
-            <button
-              disabled={busy || !number.trim()}
-              onClick={save}
-              className="px-3 py-1.5 rounded text-micro font-semibold disabled:opacity-50"
-              style={{ background: 'var(--accent-blue)', color: '#fff' }}
-            >
-              {busy ? 'Saqlanmoqda…' : 'Saqlash'}
-            </button>
-            <button
-              onClick={close}
-              className="px-3 py-1.5 rounded text-micro font-semibold"
-              style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-            >
-              Bekor qilish
-            </button>
-          </div>
-        </div>
-      )}
-
-      {rows.length === 0 ? (
-        <p className="px-3 py-3 text-meta" style={{ color: 'var(--text-muted)' }}>
-          Shartnoma kiritilmagan.
-        </p>
-      ) : (
-        <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
-          {rows.map(k => (
-            <div
-              key={k.id}
-              className="flex items-center justify-between gap-3 px-3 py-2"
-              style={{ opacity: k.isActive === false ? 0.5 : 1 }}
-            >
-              <div className="min-w-0">
-                <p className="text-body font-semibold tracking-tight truncate" style={{ color: 'var(--text)' }}>
-                  {k.number}
-                  {k.isActive === false && (
-                    <span className="text-micro ml-2" style={{ color: 'var(--text-muted)' }}>nofaol</span>
-                  )}
-                </p>
-                <p className="text-micro" style={{ color: 'var(--text-muted)' }}>
-                  {k.signedAt ? formatUzDate(k.signedAt) : 'sana ko\'rsatilmagan'}
-                  {k.ownFirmName ? ` · ${k.ownFirmName}` : ''}
-                  {k.source === '1c_import' ? ' · 1C' : ''}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-body font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text)' }}>
-                  {k.amount != null ? `${formatNum(k.amount)} so'm` : '—'}
-                </span>
-                <button onClick={() => openEdit(k)} title="Tahrirlash" aria-label="Tahrirlash" style={{ color: 'var(--text-muted)' }}>
-                  <Pencil size={14} />
-                </button>
-                {k.isActive !== false && (
-                  <button
-                    onClick={() => deactivate(k)}
-                    disabled={busy}
-                    title="Nofaol qilish (o'chirilmaydi — to'lovlar tarixi saqlanadi)" aria-label="Nofaol qilish (o'chirilmaydi — to'lovlar tarixi saqlanadi)"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

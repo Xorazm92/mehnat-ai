@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { AlertTriangle, Building2, Clock, Wallet } from "lucide-react";
+import { Card, EmptyState, KpiCard, Money, PageHeader } from "@/components/ui";
+import { formatNum, formatUzDayShort } from "@/lib/platform/format";
+
+export const metadata: Metadata = {
+  title: "Direktor ko'rigi",
+};
 
 export default async function DirectorPage() {
   const session = await auth();
@@ -75,124 +83,154 @@ export default async function DirectorPage() {
     }),
   ]);
 
-  const payrollFund = Number(payrollFundResult._sum.amount ?? 0);
-
-  const fmtMln = (v: number) => {
-    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} mln`;
-    if (v >= 1_000) return `${(v / 1_000).toFixed(0)} ming`;
-    return `${v} so'm`;
-  };
-
-  const fmtUzDate = (d: Date) =>
-    d.toLocaleDateString("uz-UZ", { day: "2-digit", month: "short" });
+  const monthIncome = Number(payrollFundResult._sum.amount ?? 0);
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
-      <h1 style={{ fontSize: "24px", marginBottom: "24px" }}>
-        Direktor ko&apos;rikdona
-      </h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Direktor ko'rigi"
+        description="Kechikkan majburiyatlar, yaqin muddatlar va oxirgi tushumlar"
+        icon={<Building2 size={20} />}
+      />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "32px" }}>
-        <div style={{ background: "var(--card-bg, #1a1a2e)", borderRadius: "12px", padding: "20px" }}>
-          <div style={{ color: "var(--text-muted, #888)", fontSize: "13px", marginBottom: "8px" }}>
-            Kechikkan majburiyatlar
-          </div>
-          <div style={{ fontSize: "36px", fontWeight: "bold", color: overdueCount > 0 ? "var(--danger, #ef4444)" : "var(--success, #22c55e)" }}>
-            {overdueCount}
-          </div>
-        </div>
-
-        <div style={{ background: "var(--card-bg, #1a1a2e)", borderRadius: "12px", padding: "20px" }}>
-          <div style={{ color: "var(--text-muted, #888)", fontSize: "13px", marginBottom: "8px" }}>
-            24 soat ichida muddat
-          </div>
-          <div style={{ fontSize: "36px", fontWeight: "bold", color: dueSoonCount > 0 ? "var(--warning, #f59e0b)" : "inherit" }}>
-            {dueSoonCount}
-          </div>
-        </div>
-
-        <div style={{ background: "var(--card-bg, #1a1a2e)", borderRadius: "12px", padding: "20px" }}>
-          <div style={{ color: "var(--text-muted, #888)", fontSize: "13px", marginBottom: "8px" }}>
-            Faol firmalar
-          </div>
-          <div style={{ fontSize: "36px", fontWeight: "bold" }}>{activeCompanies}</div>
-        </div>
-
-        <div style={{ background: "var(--card-bg, #1a1a2e)", borderRadius: "12px", padding: "20px" }}>
-          <div style={{ color: "var(--text-muted, #888)", fontSize: "13px", marginBottom: "8px" }}>
-            Bu oy tushumlari
-          </div>
-          <div style={{ fontSize: "28px", fontWeight: "bold", color: "var(--success, #22c55e)" }}>
-            {fmtMln(payrollFund)}
-          </div>
-        </div>
+      {/*
+        Plitkalar BOSILADIGAN: ilgari direktor "7 ta kechikkan" ni ko'rardi-yu,
+        qaysi firmalar ekanini bilish uchun "Ishlar" ekraniga o'tib filtrni
+        qo'lda qayta terardi. Endi plitka filtri qo'yilgan ro'yxatga olib boradi
+        — 3 ta harakat (o'tish + filtr + tanlash) o'rniga 1 ta bosish.
+      */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          label="Kechikkan majburiyatlar"
+          value={formatNum(overdueCount)}
+          tone={overdueCount > 0 ? "danger" : "success"}
+          emphasize
+          icon={<AlertTriangle size={14} />}
+          href="/deadlines?tab=overdue"
+          hint={overdueCount > 0 ? "Darhol ko'rib chiqilsin" : "Kechikkani yo'q"}
+        />
+        <KpiCard
+          label="24 soat ichida muddat"
+          value={formatNum(dueSoonCount)}
+          tone={dueSoonCount > 0 ? "warning" : "neutral"}
+          emphasize={dueSoonCount > 0}
+          icon={<Clock size={14} />}
+          // "Ishlar" ekranida 24 soatlik yorliq YO'Q (`lib/workTabs.ts`:
+          // all | mine | overdue | tasks). Shuning uchun havola umumiy
+          // ro'yxatga boradi — mavjud bo'lmagan `?status=` parametri bilan
+          // "filtrlangan" ko'rinish va'da qilish yolg'on bo'lardi.
+          href="/deadlines"
+        />
+        <KpiCard
+          label="Faol firmalar"
+          value={formatNum(activeCompanies)}
+          icon={<Building2 size={14} />}
+          href="/organizations"
+        />
+        <KpiCard
+          label="Bu oy tushumlari"
+          value={<Money value={monthIncome} tone="in" />}
+          tone="success"
+          icon={<Wallet size={14} />}
+          href="/kassa/kirim"
+        />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-        <div style={{ background: "var(--card-bg, #1a1a2e)", borderRadius: "12px", padding: "20px" }}>
-          <h2 style={{ fontSize: "16px", marginBottom: "16px" }}>Muddati yaqin majburiyatlar</h2>
+      {/*
+        Ikki ustun FAQAT keng ekranda. Ilgari `1fr 1fr` qotirilgan edi va
+        telefonda ikkala jadval ham 50% kenglikka siqilib, firma nomlari
+        o'qilmasdi.
+      */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/*
+          So'rovda QUYI chegara yo'q (`dueAt: { lte: in3d }`) — ya'ni ro'yxatga
+          kechikkanlar ham tushadi va ular birinchi turadi (`orderBy: dueAt asc`).
+          Bu ATAYLAB: direktorga eng shoshilinchi ish yuqorida kerak. Lekin
+          sarlavhada "Keyingi 3 kun" deb yozish YOLG'ON edi — brauzerda
+          ko'rilganda ro'yxat 26 kun oldin muddati o'tgan qatorlar bilan
+          boshlanardi. So'rov o'zgartirilmadi (bu biznes xulqi), matn rostlandi.
+        */}
+        <Card title="Shoshilinch majburiyatlar" subtitle="Kechikkanlar va keyingi 3 kun" flush>
           {recentObligations.length === 0 ? (
-            <p style={{ color: "var(--text-muted, #888)" }}>Hammasi joyida</p>
+            <EmptyState
+              title="Hammasi joyida"
+              description="Keyingi uch kunda muddati kelayotgan majburiyat yo'q."
+            />
           ) : (
-            <table style={{ width: "100%", fontSize: "14px", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ textAlign: "left", color: "var(--text-muted, #888)", borderBottom: "1px solid var(--border, #333)" }}>
-                  <th style={{ padding: "0 0 8px 0" }}>Firma</th>
-                  <th style={{ padding: "0 0 8px 0" }}>Majburiyat</th>
-                  <th style={{ padding: "0 0 8px 0" }}>Muddat</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentObligations.map((o) => {
-                  const isOverdue = o.dueAt < now;
-                  const isUrgent = o.dueAt < in24h;
-                  return (
-                    <tr key={o.id} style={{ borderTop: "1px solid var(--border, #333)" }}>
-                      <td style={{ padding: "8px 0" }}>{o.company.name}</td>
-                      <td style={{ padding: "8px 0" }}>{o.template.name}</td>
-                      <td style={{
-                        padding: "8px 0",
-                        color: isOverdue ? "var(--danger, #ef4444)" : isUrgent ? "var(--warning, #f59e0b)" : "var(--text, #fff)",
-                      }}>
-                        {fmtUzDate(o.dueAt)}
+            <div className="overflow-x-auto">
+              <table className="erp-table w-full">
+                <caption className="sr-only">Muddati yaqin majburiyatlar</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Firma</th>
+                    <th scope="col">Majburiyat</th>
+                    <th scope="col">Muddat</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentObligations.map((o) => {
+                    const isOverdue = o.dueAt < now;
+                    const isUrgent = o.dueAt < in24h;
+                    return (
+                      <tr key={o.id}>
+                        <td>{o.company.name}</td>
+                        <td style={{ color: "var(--text-secondary)" }}>{o.template.name}</td>
+                        <td
+                          className="tabular-nums whitespace-nowrap font-bold"
+                          style={{
+                            color: isOverdue
+                              ? "var(--danger)"
+                              : isUrgent
+                                ? "var(--warning)"
+                                : "var(--text-secondary)",
+                          }}
+                        >
+                          {formatUzDayShort(o.dueAt)}
+                          {isOverdue && <span className="sr-only"> (kechikkan)</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        <Card title="Oxirgi to'lovlar" subtitle="So'nggi 7 kun" flush>
+          {recentPayments.length === 0 ? (
+            <EmptyState
+              title="To'lovlar yo'q"
+              description="So'nggi yetti kunda tushum qayd etilmagan."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="erp-table w-full">
+                <caption className="sr-only">Oxirgi to'lovlar</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Firma</th>
+                    <th scope="col" className="col-numeric">Summa</th>
+                    <th scope="col">Sana</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentPayments.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.company.name}</td>
+                      <td className="col-numeric">
+                        <Money value={Number(p.amount)} tone="in" showSign />
+                      </td>
+                      <td className="tabular-nums whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                        {p.paymentDate ? formatUzDayShort(p.paymentDate) : "—"}
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
-
-        <div style={{ background: "var(--card-bg, #1a1a2e)", borderRadius: "12px", padding: "20px" }}>
-          <h2 style={{ fontSize: "16px", marginBottom: "16px" }}>Oxirgi to&apos;lovlar</h2>
-          {recentPayments.length === 0 ? (
-            <p style={{ color: "var(--text-muted, #888)" }}>To&apos;lovlar yo&apos;q</p>
-          ) : (
-            <table style={{ width: "100%", fontSize: "14px", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ textAlign: "left", color: "var(--text-muted, #888)", borderBottom: "1px solid var(--border, #333)" }}>
-                  <th style={{ padding: "0 0 8px 0" }}>Firma</th>
-                  <th style={{ padding: "0 0 8px 0" }}>Summa</th>
-                  <th style={{ padding: "0 0 8px 0" }}>Sana</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentPayments.map((p) => (
-                  <tr key={p.id} style={{ borderTop: "1px solid var(--border, #333)" }}>
-                    <td style={{ padding: "8px 0" }}>{p.company.name}</td>
-                    <td style={{ padding: "8px 0", color: "var(--success, #22c55e)" }}>
-                      +{Number(p.amount).toLocaleString()}
-                    </td>
-                    <td style={{ padding: "8px 0", color: "var(--text-muted, #888)" }}>
-                      {p.paymentDate ? fmtUzDate(p.paymentDate) : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        </Card>
       </div>
     </div>
   );

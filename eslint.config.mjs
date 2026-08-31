@@ -2,6 +2,182 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+// ─────────────────────────────────────────────────────────────────
+// DIZAYN TIZIMI DARVOZASI — BAZAVIY RO'YXAT (baseline)
+//
+// Qoida yangi kodga DARHOL tegadi; quyidagi fayllar esa mavjud qarz
+// sifatida vaqtincha ozod. Ro'yxat FAYL nomlari bilan yozilgan, ya'ni:
+//   • yangi fayl ro'yxatda yo'q → qoida ishlaydi;
+//   • eski faylni primitivga ko'chirdingiz → uni ro'yxatdan O'CHIRING,
+//     shunda u qayta qarzga tushmaydi.
+// Ro'yxat faqat QISQARISHI kerak. O'sishi = regressiya.
+// ─────────────────────────────────────────────────────────────────
+const RAW_BUTTON_BASELINE = [
+  "app/(admin)/admin/business-calendar/BusinessCalendarClient.tsx",
+  "app/(admin)/admin/crm/page.tsx",
+  "app/(admin)/admin/deadline-templates/DeadlineTemplatesClient.tsx",
+  "app/(admin)/admin/invoices/\\[id\\]/InvoiceDocument.tsx",
+  "app/(admin)/admin/invoices/InvoicesClient.tsx",
+  "app/(admin)/admin/month-closing/MonthClosingClient.tsx",
+  "app/(admin)/admin/operation-matrix/OperationMatrixClient.tsx",
+  "app/(admin)/admin/services/ServiceCatalogClient.tsx",
+  "app/(admin)/admin/settings/AdminSettingsClient.tsx",
+  "app/(admin)/error.tsx",
+  "app/(auth)/login/page.tsx",
+  "app/(dashboard)/cockpit/CockpitClient.tsx",
+  "app/(dashboard)/error.tsx",
+  "app/(dashboard)/kassa/CashDeskTable.tsx",
+  "app/(dashboard)/kassa/chiqim/ExpenseQueue.tsx",
+  "app/(dashboard)/kassa/JournalClient.tsx",
+  "app/(dashboard)/kassa/PeriodPicker.tsx",
+  "app/(dashboard)/kassa/qarzdorlik/DebtStatement.tsx",
+  "app/(dashboard)/kassa/qarzdorlik/QarzdorlikClient.tsx",
+  "app/(dashboard)/kassa/sverka/SverkaClient.tsx",
+  "app/(dashboard)/reports/proof/\\[id\\]/ProofViewClient.tsx",
+  "app/global-error.tsx",
+  "app/portal/page.tsx",
+  "app/telegram-app/proof/ProofUploader.tsx",
+  "components/admin/AdminDepartments.tsx",
+  "components/admin/AdminTopbar.tsx",
+  "components/admin/AdminUserManager.tsx",
+  "components/admin/RoleViewEditor.tsx",
+  "components/admin/TemplateOverridesPanel.tsx",
+  "components/AttendanceModule.tsx",
+  "components/BotKpiProjectionButton.tsx",
+  "components/BulkAssignModal.tsx",
+  "components/cabinets/MyCabinet.tsx",
+  "components/CompanyDocumentsPanel.tsx",
+  "components/CompanyServicesPanel.tsx",
+  "components/DashboardTopBar.tsx",
+  "components/DocumentsModule.tsx",
+  "components/ErrorBoundary.tsx",
+  "components/ExpenseModule.tsx",
+  "components/FinanceAssistant.tsx",
+  "components/GlobalSearch.tsx",
+  "components/HisobotlarModule.tsx",
+  "components/ImageZoomModal.tsx",
+  "components/KassaModule.tsx",
+  "components/kpi/KpiEntryCard.tsx",
+  "components/KPIRulesManager.tsx",
+  "components/MatrixFilterPanel.tsx",
+  "components/MobileBottomNav.tsx",
+  "components/MultiRoleSwitcher.tsx",
+  "components/NotificationsModule.tsx",
+  "components/OnboardingWizard.tsx",
+  "components/OperationModule.tsx",
+  "components/operation/StatusCell.tsx",
+  "components/OrganizationModule.tsx",
+  "components/PayrollDrafts.tsx",
+  "components/PayrollTable.tsx",
+  "components/ReportInsightModal.tsx",
+  "components/ReportProofModal.tsx",
+  "components/RiskBadge.tsx",
+  "components/RoleContextSwitcher.tsx",
+  "components/StaffDrawer.tsx",
+  "components/StaffModule.tsx",
+  "app/(dashboard)/kassa/kirim/KirimKassaClient.tsx",
+  "app/(dashboard)/kassa/kirim/IncomeRegister.tsx",
+];
+
+const RAW_TABLE_BASELINE = [
+  "app/(admin)/admin/business-calendar/BusinessCalendarClient.tsx",
+  "app/(admin)/admin/invoices/\\[id\\]/InvoiceDocument.tsx",
+  "app/(admin)/admin/invoices/InvoicesClient.tsx",
+  "app/(admin)/admin/month-closing/MonthClosingClient.tsx",
+  "app/(admin)/admin/services/ServiceCatalogClient.tsx",
+  "app/(dashboard)/kassa/CashDeskTable.tsx",
+  "app/(dashboard)/kassa/CategoryBreakdown.tsx",
+  "app/(dashboard)/kassa/chiqim/ChiqimKassaClient.tsx",
+  "app/(dashboard)/kassa/chiqim/ExpenseQueue.tsx",
+  "app/(dashboard)/kassa/JournalClient.tsx",
+  "app/(dashboard)/kassa/kirim/IncomeRegister.tsx",
+  "app/(dashboard)/kassa/kirim/KirimKassaClient.tsx",
+  "app/(dashboard)/kassa/qarzdorlik/DebtStatement.tsx",
+  "app/(dashboard)/kassa/qarzdorlik/QarzdorlikClient.tsx",
+  "app/(dashboard)/kassa/sverka/SverkaClient.tsx",
+  "app/(dashboard)/kassa/sverka/SverkaMatrix.tsx",
+  "components/admin/AdminUserManager.tsx",
+  "components/admin/RolePermissionMatrix.tsx",
+  "components/admin/RoleViewEditor.tsx",
+  "components/AuditLogModule.tsx",
+  "components/cabinets/MyCabinet.tsx",
+  "components/CompanyServicesPanel.tsx",
+  "components/HisobotlarModule.tsx",
+  "components/OperationModule.tsx",
+  "components/PayrollDrafts.tsx",
+  "components/ShiftCoverPanel.tsx",
+];
+
+const RAW_SELECT_BASELINE = [
+  "app/(admin)/admin/business-calendar/BusinessCalendarClient.tsx",
+  "app/(admin)/admin/crm/page.tsx",
+  "app/(admin)/admin/deadline-templates/DeadlineTemplatesClient.tsx",
+  "app/(admin)/admin/services/ServiceCatalogClient.tsx",
+  "app/(admin)/admin/settings/AdminSettingsClient.tsx",
+  "app/(dashboard)/kassa/chiqim/ChiqimKassaClient.tsx",
+  "app/(dashboard)/kassa/JournalClient.tsx",
+  "app/(dashboard)/kassa/qarzdorlik/DebtStatement.tsx",
+  "app/(dashboard)/kassa/sverka/SverkaClient.tsx",
+  "app/telegram-app/proof/ProofUploader.tsx",
+  "components/admin/AdminDepartments.tsx",
+  "components/admin/AdminUserManager.tsx",
+  "components/AttendanceModule.tsx",
+  "components/BulkAssignModal.tsx",
+  "components/CompanyDocumentsPanel.tsx",
+  "components/CompanyDrawer.tsx",
+  "components/CompanyServicesPanel.tsx",
+  "components/DocumentsModule.tsx",
+  "components/ExpenseModule.tsx",
+  "components/HisobotlarModule.tsx",
+  "components/KassaModule.tsx",
+  "components/MatrixFilterPanel.tsx",
+  "components/OnboardingWizard.tsx",
+  "components/OrganizationModule.tsx",
+  "components/ReportInsightModal.tsx",
+  "components/ShiftCoverPanel.tsx",
+  "components/StaffModule.tsx",
+];
+
+// `Modal`/`useModalA11y` qoidasi — HAR BIR faylga tegadi (bazaviy ro'yxatsiz),
+// chunki uning migratsiyasi allaqachon tugagan. Bazaviy fayllar uchun ham
+// saqlanib qolishi kerak, shuning uchun alohida const.
+const MODAL_RULES = [
+  {
+    selector: "JSXAttribute[name.name='className'] > Literal[value=/fixed\\s+inset-0/]",
+    message:
+      "Qo'lda yozilgan dialog qatlami. `components/ui/Modal` dan foydalaning; o'z tartibini saqlashi kerak bo'lgan panel uchun `hooks/useModalA11y` (fokus tuzog'i + Escape + role=\"dialog\").",
+  },
+  {
+    selector:
+      "JSXAttribute[name.name='className'] > JSXExpressionContainer TemplateElement[value.raw=/fixed\\s+inset-0/]",
+    message:
+      "Qo'lda yozilgan dialog qatlami. `components/ui/Modal` dan foydalaning; o'z tartibini saqlashi kerak bo'lgan panel uchun `hooks/useModalA11y` (fokus tuzog'i + Escape + role=\"dialog\").",
+  },
+];
+
+const RAW_BUTTON_RULE = {
+  selector: "JSXOpeningElement[name.name='button']",
+  message:
+    "Xom `<button>`. `components/ui/Button` dan foydalaning — u o'lcham, ton, `loading` (ikki marta yuborishni yopadi), `disabled` va QORONG'I REJIM uchun to'g'ri `--on-*` matn rangini o'zi hal qiladi. Primitiv yetarli bo'lmasa — uni KENGAYTIRING, forklamang.",
+};
+
+const RAW_TABLE_RULE = {
+  // `.erp-table` sinfi bilan yozilgan jadval — RUXSAT ETILGAN yo'l. Uch qatorli
+  // statik ro'yxatga `DataTable` (saralash, tanlash, sahifalash, eksport)
+  // majburlash primitivni forklashga undaydi. Qoida faqat SINFSIZ jadvalni
+  // ushlaydi: aynan o'sha holatda har ekran o'z sarlavha uslubini qayta yozadi.
+  selector:
+    "JSXOpeningElement[name.name='table']:not(:has(JSXAttribute[name.name='className'] > Literal[value=/erp-table/]))",
+  message:
+    "Xom `<table>`. Interaktiv ro'yxat uchun `components/ui/DataTable` (saralash + `aria-sort`, `scope=\"col\"`, qator tanlash, zichlik, sahifalash, CSV/Excel, URL holati). Faqat DataTable mos kelmasa — `globals.css` dagi `.erp-table` sinfi bilan yozing va sababini izohda ko'rsating.",
+};
+
+const RAW_SELECT_RULE = {
+  selector: "JSXOpeningElement[name.name='select']",
+  message:
+    "Xom `<select>`. `components/ui/Select` dan foydalaning — u `.erp-input` uslubini (tokenli ramka, fokus halqasi, telefonda 16px), o'z g'ildiragini, `disabled`/`invalid` holatini va `placeholder` bo'sh variantini beradi. O'LCHOV: 75 ta xom tanlagichdan 60 tasi uslubni qayta yozardi. Primitiv yetarli bo'lmasa — uni KENGAYTIRING, forklamang.",
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -75,22 +251,49 @@ const eslintConfig = defineConfig([
     files: ["app/**/*.{tsx,jsx}", "components/**/*.{tsx,jsx}"],
     ignores: ["components/ui/**"],
     rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "JSXAttribute[name.name='className'] > Literal[value=/fixed\\s+inset-0/]",
-          message:
-            "Qo'lda yozilgan dialog qatlami. `components/ui/Modal` dan foydalaning; o'z tartibini saqlashi kerak bo'lgan panel uchun `hooks/useModalA11y` (fokus tuzog'i + Escape + role=\"dialog\").",
-        },
-        {
-          selector:
-            "JSXAttribute[name.name='className'] > JSXExpressionContainer TemplateElement[value.raw=/fixed\\s+inset-0/]",
-          message:
-            "Qo'lda yozilgan dialog qatlami. `components/ui/Modal` dan foydalaning; o'z tartibini saqlashi kerak bo'lgan panel uchun `hooks/useModalA11y` (fokus tuzog'i + Escape + role=\"dialog\").",
-        },
-      ],
+      "no-restricted-syntax": ["error", ...MODAL_RULES, RAW_BUTTON_RULE, RAW_TABLE_RULE, RAW_SELECT_RULE],
     },
   },
+  // ─────────────────────────────────────────────────────────────
+  // BAZAVIY ISTISNOLAR — GENERATSIYA QILINADI.
+  //
+  // `no-restricted-syntax` BUTUN massiv sifatida almashadi, ya'ni bazaviy
+  // fayl uchun qolgan qoidalarni QAYTA yozish kerak. Uch qoida = sakkiz
+  // kombinatsiya; ularni qo'lda yozish xatoga olib keladi. Endi kombinatsiya
+  // fayl ro'yxatlaridan HISOBLANADI: yangi qoida qo'shilsa ham bu blok
+  // o'zgarmaydi.
+  //
+  // Migratsiya tartibi: faylni primitivga ko'chiring → nomini tegishli
+  // ro'yxatdan o'chiring → `npm run lint` tekshiradi. Ro'yxatlar faqat
+  // QISQARISHI kerak.
+  // ─────────────────────────────────────────────────────────────
+  ...(() => {
+    const gates = [
+      [RAW_BUTTON_BASELINE, RAW_BUTTON_RULE],
+      [RAW_TABLE_BASELINE, RAW_TABLE_RULE],
+      [RAW_SELECT_BASELINE, RAW_SELECT_RULE],
+    ];
+    const all = [...new Set(gates.flatMap(([list]) => list))];
+    const groups = new Map();
+    for (const file of all) {
+      const sig = gates.map(([list]) => list.includes(file)).join("|");
+      if (!groups.has(sig)) groups.set(sig, []);
+      groups.get(sig).push(file);
+    }
+    return [...groups].map(([sig, files]) => {
+      const exempt = sig.split("|").map((v) => v === "true");
+      return {
+        files,
+        rules: {
+          "no-restricted-syntax": [
+            "error",
+            ...MODAL_RULES,
+            ...gates.filter((_, i) => !exempt[i]).map(([, rule]) => rule),
+          ],
+        },
+      };
+    });
+  })(),
   {
     // Request-path server code logs through lib/platform/logger.ts (pino):
     // structured, and it redacts password/token/cookie/secret keys at any depth.

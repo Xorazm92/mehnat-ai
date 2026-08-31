@@ -24,6 +24,11 @@ import IncomeRegister from "./IncomeRegister";
 import { Tabs, type TabItem } from "@/components/ui";
 import { friendlyError } from "@/lib/actionError";
 import { DateField } from "@/components/ui/DateField";
+import { CompanySelect } from "@/components/ui/CompanySelect";
+import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { useTabParam } from "@/hooks/useTabParam";
+import { KIRIM_TAB_IDS, type KirimTab } from "@/lib/kirimTabs";
 
 interface AccountRow {
   id: string;
@@ -77,6 +82,8 @@ interface Props {
   unmatched: UnmatchedRow[];
   nonBank: NonBankRow[];
   companies: CompanyOption[];
+  /** `?tab=` dan SERVERDA o'qilgan boshlang'ich yorliq (hidratsiya uchun). */
+  initialTab?: KirimTab;
 }
 
 const card: React.CSSProperties = {
@@ -84,14 +91,18 @@ const card: React.CSSProperties = {
   border: "1px solid var(--card-border)",
 };
 
-export default function KirimKassaClient({ accounts, unmatched, nonBank, companies }: Props) {
+export default function KirimKassaClient({ accounts, unmatched, nonBank, companies, initialTab = "reyestr" }: Props) {
   const router = useRouter();
 
   // TABLAR. Sahifada 10 ta firma kartochkasi, 133 qatorli reyestr va
   // moslashtirilmaganlar navbati bir vertikalda edi — kundalik ish
   // (reyestr) uchun har safar pastga aylantirish kerak bo'lardi.
-  type TabKey = "reyestr" | "hisoblar" | "navbat";
-  const [tab, setTab] = useState<TabKey>("reyestr");
+  // Yorliq URL'da: F5 bosilganda holat saqlanadi va "muddati kelgan
+  // bog'lanmaganlarga qara" deb havola yuborish mumkin
+  // (`/kassa/kirim?tab=navbat`). Ilgari bu oddiy `useState` edi — bank
+  // xodimi kechqurun navbatni ochib, sahifani yangilasa reyestrga
+  // qaytib tushardi.
+  const [tab, setTab] = useTabParam<KirimTab>("tab", KIRIM_TAB_IDS, initialTab);
   useAutoRefresh();
 
   // `IncomeRegister` o'z ma'lumotini MUSTAQIL o'qiydi (server action, props
@@ -123,7 +134,6 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   const [manualContractId, setManualContractId] = useState("");
   const [manualDocRef, setManualDocRef] = useState("");
   /** Takroriylik ogohlantirishi — foydalanuvchi tasdiqlagach saqlanadi. */
-  const [dupWarning, setDupWarning] = useState<string | null>(null);
   const [manualAmount, setManualAmount] = useState("");
   const [manualNote, setManualNote] = useState("");
   // Toshkent kalendari — UTC `toISOString` kechki tunda KECCHA sanani
@@ -136,6 +146,8 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
   // 691 kassa yozuvining HAMMASI shu sababdan kanalsiz.
   const [manualChannelId, setManualChannelId] = useState("");
   const [manualBusy, setManualBusy] = useState(false);
+  // Tasdiq dialogi — `(dashboard)` layoutidagi `ConfirmProvider` dan.
+  const confirm = useConfirm();
   const [manualError, setManualError] = useState<string | null>(null);
 
   // Firma tanlanganda — shu oy uchun shartnomada belgilangan qism qancha
@@ -188,7 +200,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
 
   // Tushum formasi ochilganda ko'rinadigan joyga suring — ilgari u sahifa
   // o'rtasida paydo bo'lib, foydalanuvchi uni qidirib topishi kerak edi.
-  const formRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (manualType) formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [manualType]);
@@ -201,7 +213,6 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
     setManualCompanyId("");
     setManualContractId("");
     setManualDocRef("");
-    setDupWarning(null);
   };
 
   const submitManual = async (opts?: { force?: boolean }) => {
@@ -246,12 +257,24 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           receivedAt,
         });
         if (duplicates.length > 0) {
-          setDupWarning(
-            `Shu firmadan bu summada ${duplicates.length} ta to'lov allaqachon qayd etilgan. ` +
-              `Baribir saqlansinmi?`
-          );
+          // Ilgari bu yerda inline banner chizilib, funksiya QAYTIB ketardi:
+          // xodim "Saqlash" ni bosib, keyin bannerdagi "Baribir saqlash" ni
+          // bosardi — ikki qaror nuqtasi, ikki bosish. Endi bitta dialog va
+          // javob shu yerda kutiladi.
+          //
+          // Tekshiruvning O'ZI o'zgarmadi: server tomondagi qattiq `dedupKey`
+          // ham, ±1 kunlik yumshoq ogohlantirish ham o'z joyida.
           setManualBusy(false);
-          return;
+          const ok = await confirm({
+            title: "Bu to'lov allaqachon kiritilganga o'xshaydi",
+            description:
+              `Shu firmadan bu summada ${duplicates.length} ta to'lov allaqachon qayd etilgan. ` +
+              `Baribir saqlansinmi?`,
+            confirmLabel: "Baribir saqlash",
+            tone: "danger",
+          });
+          if (!ok) return;
+          setManualBusy(true);
         }
       }
 
@@ -501,7 +524,7 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           { id: "reyestr", label: "Barcha tushum", hint: "Bank, plastik va naqd — bitta ro'yxatda" },
           { id: "hisoblar", label: "Firma hisoblari", hint: "O'z firmalarimiz bo'yicha bank kirimi" },
           { id: "navbat", label: "Bog'lash kerak", hint: "Qaysi firmadan ekani hali aniqlanmagan kirimlar", count: totalUnmatched || undefined },
-        ] as TabItem<TabKey>[]}
+        ] as TabItem<KirimTab>[]}
         value={tab}
         onChange={setTab}
         ariaLabel="Kirim kassa bo'limlari"
@@ -509,12 +532,21 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
 
       {/* Qo'lda kirim formasi */}
       {manualType && (
-        <div ref={formRef} className="p-4 rounded-xl space-y-3" style={{ ...card, borderColor: "var(--accent-blue)" }}>
+        // ILGARI bu oddiy `<div>` edi: butun kassa modulida bitta ham
+        // `<form onSubmit>` yo'q edi (`grep -c onSubmit` → 0), ya'ni Enter
+        // hech qayerda saqlamasdi. Alisher kunda o'nlab yozuv kiritadi —
+        // har safar sichqonchaga qo'l uzatish shu yerda tugadi.
+        <form
+          ref={formRef}
+          onSubmit={(e) => { e.preventDefault(); void submitManual(); }}
+          className="p-4 rounded-xl space-y-3"
+          style={{ ...card, borderColor: "var(--accent-blue)" }}
+        >
           <div className="flex items-center justify-between">
             <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
               {manualType === "naqd" ? "Naqd tushum" : manualType === "plastik" ? "Plastik tushum" : "Offset (vzaimozachyot)"} qo&apos;shish
             </h2>
-            <Button variant="secondary" size="sm" onClick={resetManual}>Yopish</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={resetManual}>Yopish</Button>
           </div>
           {manualError && (
             <p className="text-meta" style={{ color: "var(--danger)" }}>{manualError}</p>
@@ -557,48 +589,45 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <label className="block">
               <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Kimdan (firma)</span>
-              <select
-                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
-                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+              {/*
+                269 ta firma. Ilgari bu tekis `<select>` edi va native
+                klaviatura qidiruvi faqat NOM boshidan mos kelardi — STIR
+                bo'yicha qidirib bo'lmasdi. `CompanySelect` ikkalasini ham
+                qidiradi.
+              */}
+              <CompanySelect
+                className="mt-1"
+                companies={companies}
                 value={manualCompanyId}
-                onChange={(e) => {
-                  setManualCompanyId(e.target.value);
+                onChange={(next) => {
+                  setManualCompanyId(next);
                   setManualContractId("");
-                  setDupWarning(null);
-                }}
-              >
-                {manualType === "offset" ? (
-                  <option value="">Firmani tanlang</option>
-                ) : (
-                  <option value="">Nomsiz tushum (firmaga bog'lanmagan)</option>
-                )}
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} — {c.inn}
-                  </option>
-                ))}
-              </select>
+                              }}
+                placeholder="Firmani tanlang"
+                emptyLabel={
+                  manualType === "offset" ? undefined : "Nomsiz tushum (firmaga bog'lanmagan)"
+                }
+              />
             </label>
             <label className="block">
               <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Shartnoma</span>
-              <select
-                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
-                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+              <Select
+                className="mt-1"
                 value={manualContractId}
                 onChange={(e) => setManualContractId(e.target.value)}
                 disabled={!manualCompanyId || selectedContracts.length === 0}
-              >
-                <option value="">
-                  {!manualCompanyId
+                placeholder={
+                  !manualCompanyId
                     ? "Avval firmani tanlang"
                     : selectedContracts.length === 0
                       ? "Shartnoma kiritilmagan"
-                      : "Ko'rsatilmagan"}
-                </option>
+                      : "Ko'rsatilmagan"
+                }
+              >
                 {selectedContracts.map((ct) => (
                   <option key={ct.id} value={ct.id}>{ct.number}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Chek / hujjat raqami</span>
@@ -644,35 +673,12 @@ export default function KirimKassaClient({ accounts, unmatched, nonBank, compani
               )}
             </>
           )}
-          {dupWarning ? (
-            <div
-              className="p-3 rounded-lg flex items-start gap-3"
-              style={{ background: "var(--danger-bg)", border: "1px solid var(--danger)" }}
-            >
-              <AlertTriangle size={16} style={{ color: "var(--danger)" }} className="mt-0.5 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-meta" style={{ color: "var(--text)" }}>{dupWarning}</p>
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    disabled={manualBusy}
-                    onClick={() => submitManual({ force: true })}
-                  >
-                    Baribir saqlash
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => setDupWarning(null)}>
-                    Bekor qilish
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <Button variant="primary" size="md" disabled={manualBusy} onClick={() => submitManual()}>
-              {manualBusy ? "Yozilmoqda…" : "Saqlash"}
-            </Button>
-          )}
-        </div>
+          {/* `type="submit"` — forma `onSubmit` ga ulangan, ya'ni istalgan
+              maydonda Enter ham shu tugmani bosgan bilan barobar. */}
+          <Button type="submit" variant="primary" size="md" loading={manualBusy}>
+            {manualBusy ? "Yozilmoqda…" : "Saqlash"}
+          </Button>
+        </form>
       )}
 
       {/* Xato paneli — toast emas, chunki matn uzun va o'qilishi kerak */}
@@ -1072,12 +1078,13 @@ function UnmatchedCard({
             Bu pul MIJOZ to&apos;lovi emas — xarajat sifatida yoziladi (kassadan chiqdi).
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
-            <select
+            <Select
+              size="sm"
+              fullWidth={false}
               value={expCategory}
               onChange={(e) => setExpCategory(e.target.value)}
               disabled={busy}
-              className="px-2 py-1.5 rounded-lg text-meta outline-none"
-              style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+              aria-label="Xarajat toifasi"
             >
               <option value="oylik">Oylik / maosh</option>
               <option value="Moliyaviy yordam">Moliyaviy yordam</option>
@@ -1087,7 +1094,7 @@ function UnmatchedCard({
               <option value="Ovqatga">Ovqat</option>
               <option value="Texnika">Texnika</option>
               <option value="Boshqa xarajatlar">Boshqa</option>
-            </select>
+            </Select>
             <input
               placeholder="Kimga / nima uchun (ixtiyoriy)"
               value={expNote}
@@ -1106,50 +1113,54 @@ function UnmatchedCard({
         </div>
       ) : (
         <>
+          {suggested.length === 1 && companyId !== suggested[0].id && (
+            <div className="mt-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={busy}
+                onClick={() => { setCompanyId(suggested[0].id); setContractId(""); }}
+              >
+                <Link2 size={12} /> {suggested[0].name} — STIR mos
+              </Button>
+            </div>
+          )}
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
             <div className="flex gap-2">
-              <select
-                className="flex-1 px-2 py-1.5 rounded-lg text-meta outline-none min-w-0"
-                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+              {/*
+                Taklif ro'yxat ICHIDA `optgroup` bo'lib turardi: tizim javobni
+                bilardi, lekin uni ko'rish uchun 269 talik ro'yxatni ochish
+                kerak edi. Bank xodimi kechqurun o'nlab qatorni biriktiradi —
+                shuning uchun BITTA aniq taklif endi bosiladigan chip.
+              */}
+              <CompanySelect
+                className="flex-1 min-w-0"
+                size="sm"
+                companies={companies}
                 value={companyId}
-                onChange={(e) => {
-                  setCompanyId(e.target.value);
+                onChange={(next) => {
+                  setCompanyId(next);
                   setContractId("");
                 }}
-              >
-                <option value="">Firmani tanlang…</option>
-                {suggested.length > 0 && (
-                  <optgroup label="STIR bo'yicha taklif">
-                    {suggested.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                <optgroup label="Barcha firmalar">
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.inn})
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
+                suggestions={suggested.map((c) => c.id)}
+                placeholder="Firmani tanlang…"
+              />
 
               {selected && selected.contracts.length > 0 && (
-                <select
-                  className="px-2 py-1.5 rounded-lg text-meta outline-none"
-                  style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                <Select
+                  size="sm"
+                  fullWidth={false}
                   value={contractId}
                   onChange={(e) => setContractId(e.target.value)}
+                  placeholder="Shartnomasiz"
+                  aria-label="Shartnoma"
                 >
-                  <option value="">Shartnomasiz</option>
                   {selected.contracts.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.number}
                     </option>
                   ))}
-                </select>
+                </Select>
               )}
             </div>
 

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { LayoutGrid, List, Download, Filter, Search } from "lucide-react";
+import { LayoutGrid, List, Download, Filter, Rows2, Rows3, Search } from "lucide-react";
+import type { Density } from "@/hooks/useTableState";
 
 export type ViewMode = "grid" | "list";
 
@@ -17,6 +18,18 @@ interface TableToolbarProps {
 
   /** A month/period control slot, e.g. <MonthPicker/>. */
   month?: React.ReactNode;
+
+  /**
+   * Zichlik almashtirgichi. Ikkalasi berilsa ko'rinadi.
+   *
+   * Nega bu yerda: zichlik `useTableState` da bor va `DataTable` uni
+   * qo'llaydi, LEKIN uni almashtiradigan boshqaruv faqat BITTA ekranda
+   * (`StaffModule`) qo'lda yozilgan edi — ya'ni qolgan jadvallarda zichlik
+   * amalda o'zgarmas. ERP ro'yxatida bu muhim: bir foydalanuvchi ekranga
+   * ko'proq qator sig'ishini, boshqasi kengroq qatorni xohlaydi.
+   */
+  density?: Density;
+  onDensityChange?: (d: Density) => void;
 
   /** Excel/CSV export. Omit to hide. */
   onExport?: () => void;
@@ -44,6 +57,8 @@ const btnBase =
 export function TableToolbar({
   view,
   onViewChange,
+  density,
+  onDensityChange,
   search,
   onSearchChange,
   searchPlaceholder = "Qidirish...",
@@ -144,6 +159,21 @@ export function TableToolbar({
             </>
           )}
         </div>
+      )}
+
+      {/* Zichlik */}
+      {density && onDensityChange && (
+        <button
+          type="button"
+          onClick={() => onDensityChange(density === "compact" ? "comfortable" : "compact")}
+          aria-pressed={density === "compact"}
+          title={density === "compact" ? "Zich qatorlar — kengaytirish" : "Keng qatorlar — zichlashtirish"}
+          className={btnBase}
+          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-2)" }}
+        >
+          {density === "compact" ? <Rows2 size={14} /> : <Rows3 size={14} />}
+          {density === "compact" ? "Zich" : "Keng"}
+        </button>
       )}
 
       {/* Export */}

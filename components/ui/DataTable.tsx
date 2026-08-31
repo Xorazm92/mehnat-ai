@@ -93,6 +93,14 @@ export interface DataTableProps<T> {
   emptyTitle?: string;
   emptyDescription?: string;
   emptyIcon?: React.ReactNode;
+  /**
+   * Bo'sh holatdagi amal — odatda "Filtrni tozalash".
+   *
+   * Nega kerak: filtr yoki qidiruv natijani nolga tushirganda foydalanuvchi
+   * "ma'lumot yo'q" deb o'qiydi va ro'yxat HAQIQATAN bo'sh deb o'ylashi
+   * mumkin. Chiqish yo'lini ko'rsatmaslik — ekranni boshi berk qiladi.
+   */
+  emptyAction?: React.ReactNode;
   /** Ekran o'quvchilar uchun jadval tavsifi */
   caption: string;
   className?: string;
@@ -163,6 +171,7 @@ export function DataTable<T>({
   emptyTitle = "Ma'lumot topilmadi",
   emptyDescription,
   emptyIcon,
+  emptyAction,
   caption,
   className = "",
   rowLabel,
@@ -454,7 +463,7 @@ export function DataTable<T>({
         </div>
 
         {visible.length === 0 && (
-          <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
+          <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />
         )}
 
         {pageSize && totalPages > 1 && (

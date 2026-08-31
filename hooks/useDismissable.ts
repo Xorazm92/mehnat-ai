@@ -21,6 +21,14 @@ import { useEffect, useRef, type RefObject } from "react";
 export function useDismissable<T extends HTMLElement = HTMLDivElement>(
   isOpen: boolean,
   onClose: () => void,
+  /**
+   * Panel PORTALDA bo'lganda tetik uning DOM avlodi bo'lmaydi — natijada
+   * tetikni bosish "tashqi bosish" deb hisoblanadi: `pointerdown` panelni
+   * yopadi, keyin `click` uni qayta ochadi va tetik bilan YOPIB BO'LMAY
+   * qoladi. Tetik ref'i shu yerga berilsa, uning ustidagi bosish e'tiborsiz
+   * qoldiriladi va yopishni tetikning o'z ishlovchisi hal qiladi.
+   */
+  ignoreRef?: RefObject<HTMLElement | null>,
 ): RefObject<T | null> {
   const ref = useRef<T | null>(null);
   // onClose har renderda yangi bo'lishi mumkin — effektni qayta ulamaslik uchun
@@ -41,7 +49,11 @@ export function useDismissable<T extends HTMLElement = HTMLDivElement>(
 
     const onPointerDown = (e: PointerEvent) => {
       const el = ref.current;
-      if (el && !el.contains(e.target as Node)) onCloseRef.current();
+      if (!el) return;
+      const target = e.target as Node;
+      if (el.contains(target)) return;
+      if (ignoreRef?.current?.contains(target)) return;
+      onCloseRef.current();
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onCloseRef.current();
@@ -53,7 +65,7 @@ export function useDismissable<T extends HTMLElement = HTMLDivElement>(
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, ignoreRef]);
 
   return ref;
 }

@@ -18,6 +18,7 @@ import React, { useEffect, useState } from "react";
 import { getFundingSources, type FundingSourceGroups } from "@/server/fundingSources";
 import { CHANNEL_TYPE_LABELS, CHANNEL_TYPE_ORDER } from "@/lib/transitChannels";
 import { friendlyError } from "@/lib/actionError";
+import { Select } from "./Select";
 
 interface Props {
   value: string;
@@ -68,14 +69,17 @@ export const FundingSourceSelect: React.FC<Props> = ({
   }
 
   return (
-    <select
+    // Uslub `Select` primitivida: bu yerda faqat DOMEN (qaysi kanallar,
+    // qanday guruhlangan). Ilgari bu fayl ham o'z tokenli uslubini yozardi va
+    // u `--card-border` ni ishlatardi, `.erp-input` esa `--input-border` ni —
+    // ikkita tanlagich yonma-yon turganda ramka rangi farq qilardi.
+    <Select
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled || !groups}
       className={className}
-      style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+      placeholder={allowEmpty ? "— Tanlanmagan —" : "Manbani tanlang…"}
     >
-      <option value="">{allowEmpty ? "— Tanlanmagan —" : "Manbani tanlang…"}</option>
       {groups &&
         CHANNEL_TYPE_ORDER.filter((t) => (groups[t]?.length ?? 0) > 0).map((t) => (
           <optgroup key={t} label={CHANNEL_TYPE_LABELS[t]}>
@@ -88,7 +92,7 @@ export const FundingSourceSelect: React.FC<Props> = ({
             ))}
           </optgroup>
         ))}
-    </select>
+    </Select>
   );
 };
 

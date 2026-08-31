@@ -7,7 +7,7 @@ import "server-only";
 import { getObligations, getObligationCounts } from "@/server/obligations";
 import { getTasks, getTaskFormData } from "@/server/tasks";
 import { OBLIGATION_PAGE_SIZE } from "@/lib/engines/workflow/obligationWorkflow";
-import type { ObligationRow, TaskRow } from "./WorkInboxClient";
+import type { ObligationRow, TaskRow } from "./workInboxTypes";
 
 export async function loadWorkInbox() {
   const [obligations, counts, tasks, formData] = await Promise.all([

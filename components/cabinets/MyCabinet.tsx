@@ -25,6 +25,7 @@ import {
   X,
   Trophy,
 } from "lucide-react";
+import { Select } from "@/components/ui/Select";
 import { TableToolbar } from "@/components/ui/TableToolbar";
 import { Tabs, TabPanel, type TabItem } from "@/components/ui/Tabs";
 import { useTabParam } from "@/hooks/useTabParam";
@@ -355,31 +356,28 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
             <input className="erp-input" placeholder="Masalan: Buxgalteriya" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
           </FormField>
           <FormField label="Jinsi">
-            <select className="erp-input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
-              <option value="">Tanlanmagan</option>
+            <Select value={form.gender} placeholder="Tanlanmagan" onChange={(e) => setForm({ ...form, gender: e.target.value })}>
               <option value="erkak">Erkak</option>
               <option value="ayol">Ayol</option>
-            </select>
+            </Select>
           </FormField>
           <FormField label="Tug'ilgan sana">
             <DateField value={form.birthDate} onChange={(v) => setForm({ ...form, birthDate: v })} />
           </FormField>
           <FormField label="Ma'lumoti">
-            <select className="erp-input" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })}>
-              <option value="">Tanlanmagan</option>
+            <Select value={form.education} placeholder="Tanlanmagan" onChange={(e) => setForm({ ...form, education: e.target.value })}>
               <option value="orta">O&apos;rta / O&apos;rta-maxsus</option>
               <option value="oliy">Oliy</option>
               <option value="magistratura">Magistratura</option>
-            </select>
+            </Select>
           </FormField>
           {canEditSkill && (
             <FormField label="Malaka darajasi">
-              <select className="erp-input" value={form.skillLevel} onChange={(e) => setForm({ ...form, skillLevel: e.target.value })}>
-                <option value="">Tanlanmagan</option>
+              <Select value={form.skillLevel} placeholder="Tanlanmagan" onChange={(e) => setForm({ ...form, skillLevel: e.target.value })}>
                 <option value="stajyor">Stajyor</option>
                 <option value="orta">O&apos;rta malakali</option>
                 <option value="tajribali">Tajribali</option>
-              </select>
+              </Select>
             </FormField>
           )}
           <FormField label="Avatar rangi">

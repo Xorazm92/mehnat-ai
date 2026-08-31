@@ -110,22 +110,30 @@ degan his-tuyg'uning asosiy manbalaridan biri shu.
 Har bosqich mustaqil build/deploy qilinadi. Tartib muhimligi sababi:
 Faza 0 komponentlari qolgan hamma fazada ishlatiladi.
 
-### Faza 0 — Asos (yarim kun)
+### Faza 0 — Asos ✅ BAJARILDI (2026-08-31)
 
-- [ ] `components/ui/CompanySelect.tsx` — qidiriladigan combobox:
-      nom/STIR bo'yicha qidiruv, keyboard navigatsiya,
-      "STIR bo'yicha taklif" guruhini optgroup sifatida ichida oladi.
-- [ ] `useQueryParam` hook — commit `d19e3bd` dagi shallow-history naqshini
-      umumiylashtirish (tab/filtr holati URL'da, `router.replace`siz).
+- [x] `components/ui/CompanySelect.tsx` — qidiriladigan combobox:
+      **nom VA STIR** bo'yicha qidiruv, ↑↓/Enter/Escape, taklif guruhi
+      ro'yxat tepasida. O'zaro ta'sir naqshi `GlobalSearch` dan olindi
+      (noldan yozilmadi); ko'rinish `.erp-input`.
+- [x] URL holati — yangi hook YOZILMADI: mavjud `hooks/useTabParam.ts` +
+      `lib/tabs.ts` naqshi yetarli edi (`lib/kirimTabs.ts` qo'shildi).
+      Rejadagi `useQueryParam` — ortiqcha abstraksiya bo'lardi.
+- [x] `hooks/useDismissable.ts` uchinchi argument oldi (`ignoreRef`) —
+      PORTALdagi panel uchun: tetik "tashqi bosish" deb sanalmasin.
 
-### Faza 1 — Kirim ekrani (1 kun)
+### Faza 1 — Kirim ekrani ✅ BAJARILDI (2026-08-31)
 
-- [ ] Firmali selectlar → `CompanySelect` (2 joy: qo'lda forma, navbat).
-- [ ] Tablar `?tab=` ga ulanadi (chiqimdagi `initialTab` naqshidek).
-- [ ] Forma: istalgan maydonda Enter saqlaydi (form `onSubmit`).
-- [ ] Duplikat oqimi `useConfirm` dialogiga o'tadi — bitta bosish.
-- [ ] Stat kartochkalardagi button-ichida-button hack tozalanadi:
-      karta ma'lumot ko'rsatadi, "+" alohida tugma bo'ladi.
+- [x] Firmali selectlar → `CompanySelect` (3 joy: qo'lda forma, navbat,
+      reyestr filtri).
+- [x] Tablar `?tab=` da (`useTabParam` + serverda `readTabParam`).
+- [x] Forma `<form onSubmit>` — istalgan maydonda Enter saqlaydi.
+      **Butun kassa modulida bu BIRINCHI `onSubmit` edi.**
+- [x] Duplikat oqimi `useConfirm` dialogiga o'tdi — 2 bosish → 1.
+- [x] Navbatda BITTA aniq STIR-taklif bir bosishli chipga chiqarildi.
+- [x] Qolgan 3 ta kichik tanlagich `ui/Select` ga (bir formada ikki xil
+      maydon ko'rinishi qolmasin).
+- [x] Button-ichida-button hack — allaqachon tuzatilgan edi (tekshirildi).
 
 ### Faza 2 — Jurnal (1 kun)
 

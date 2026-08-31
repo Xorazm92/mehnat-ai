@@ -10,6 +10,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { toast } from "sonner";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { friendlyError } from "@/lib/actionError";
 
 // inputTypeV2 → legacy inputType (yangi qoida yaratishda talab qilinadi)
@@ -278,12 +279,12 @@ const KPIRulesManager: React.FC<Props> = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Rol</label>
-                                        <select className="erp-input font-bold" value={editingRule.role || 'accountant'} onChange={e => setEditingRule({ ...editingRule, role: e.target.value as KPIRule['role'] })}>
+                                        <Select className="font-bold" value={editingRule.role || 'accountant'} onChange={e => setEditingRule({ ...editingRule, role: e.target.value as KPIRule['role'] })}>
                                             <option value="accountant">Buxgalter</option>
                                             <option value="bank_client">Bank-klient</option>
                                             <option value="supervisor">Nazoratchi</option>
                                             <option value="all">Hammasi</option>
-                                        </select>
+                                        </Select>
                                     </div>
                                     <div>
                                         <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Ichki nom (ixtiyoriy)</label>
@@ -298,21 +299,21 @@ const KPIRulesManager: React.FC<Props> = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Qamrov</label>
-                                    <select className="erp-input font-bold" value={editingRule.scope || 'per_company'} onChange={e => setEditingRule({ ...editingRule, scope: e.target.value as KPIRule['scope'] })}>
+                                    <Select className="font-bold" value={editingRule.scope || 'per_company'} onChange={e => setEditingRule({ ...editingRule, scope: e.target.value as KPIRule['scope'] })}>
                                         <option value="global">Umumiy</option>
                                         <option value="per_company">Firma bo&apos;yicha</option>
                                         <option value="per_group">Guruh bo&apos;yicha</option>
-                                    </select>
+                                    </Select>
                                 </div>
                                 <div>
                                     <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--text-muted)' }}>Kirish turi</label>
-                                    <select className="erp-input font-bold" value={editingRule.inputTypeV2 || 'select'} onChange={e => setEditingRule({ ...editingRule, inputTypeV2: e.target.value as KPIRule['inputTypeV2'] })}>
+                                    <Select className="font-bold" value={editingRule.inputTypeV2 || 'select'} onChange={e => setEditingRule({ ...editingRule, inputTypeV2: e.target.value as KPIRule['inputTypeV2'] })}>
                                         <option value="select">Ro&apos;yxatdan tanlash</option>
                                         <option value="counter">Sanagich</option>
                                         <option value="checkbox_bonus">Belgi (bonus)</option>
                                         <option value="checkbox_penalty">Belgi (jarima)</option>
                                         <option value="amount_penalty">Summa (jarima)</option>
-                                    </select>
+                                    </Select>
                                 </div>
                                 <div>
                                     <label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: 'var(--success)' }}>Maksimal bonus %</label>

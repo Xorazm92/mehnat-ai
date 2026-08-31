@@ -5,10 +5,19 @@ import { getBankAccountsOverview, getUnmatchedIncome, getNonBankIncome } from "@
 import { prisma } from "@/lib/prisma";
 import KirimKassaClient from "./KirimKassaClient";
 import KassaSectionNav from "@/components/KassaSectionNav";
+import { readTabParam } from "@/lib/tabs";
+import { KIRIM_TAB_IDS, type KirimTab } from "@/lib/kirimTabs";
 
 export const metadata = { title: "Kirim kassa" };
 
-export default async function KirimKassaPage() {
+export default async function KirimKassaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  // Yorliq SERVERDA tekshiriladi: mijozda `window.location` dan o'qilsa
+  // hidratsiya mos kelmaydi (`lib/tabs.ts` izohiga qarang).
+  const sp = await searchParams;
   const session = await auth();
   if (!session) redirect("/login?expired=1");
 
@@ -52,6 +61,7 @@ export default async function KirimKassaPage() {
         unmatched={JSON.parse(JSON.stringify(unmatched))}
         nonBank={JSON.parse(JSON.stringify(nonBank))}
         companies={JSON.parse(JSON.stringify(companies))}
+        initialTab={readTabParam<KirimTab>(sp.tab, KIRIM_TAB_IDS, "reyestr")}
       />
     </div>
   );

@@ -11,6 +11,8 @@ export { Modal, type ModalProps, type ModalSize } from "./Modal";
 export { ConfirmProvider, useConfirm, type ConfirmOptions } from "./ConfirmDialog";
 export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from "./Button";
 export { Field, type FieldProps } from "./Field";
+export { Select, type SelectProps, type SelectSize } from "./Select";
+export { CompanySelect, type CompanySelectProps, type CompanyOption } from "./CompanySelect";
 export { Badge, type BadgeProps, type BadgeTone } from "./Badge";
 export { Card, type CardProps } from "./Card";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
