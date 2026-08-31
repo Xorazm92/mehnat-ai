@@ -7,7 +7,7 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import CollectionQueue from "./CollectionQueue";
 import DebtStatement, { type DebtStatementData } from "./DebtStatement";
 import { Tabs, StatStrip, type TabItem } from "@/components/ui";
-import { useTabParam } from "@/hooks/useTabParam";
+import { useTabParam, useUrlParam } from "@/hooks/useTabParam";
 import { QARZDORLIK_TAB_IDS, QARZDORLIK_DEFAULT_TAB, type QarzdorlikTab } from "@/lib/qarzdorlikTabs";
 import { DEBT_AGING_STAGES, debtAgingStage, type DebtAgingStage } from "@/lib/debtAging";
 import { useRouter } from "next/navigation";
@@ -89,6 +89,10 @@ interface Props {
   };
   /** `?tab=` dan SERVERDA o'qilgan boshlang'ich yorliq (hidratsiya uchun). */
   initialTab?: QarzdorlikTab;
+  /** `?bosqich=` / `?kesim=` / `?q=` — ular ham SERVERDA o'qiladi. */
+  initialStage?: string;
+  initialFocus?: string;
+  initialQuery?: string;
   /** "Bugun gaplashish kerak" navbati — `getCollectionQueue`. */
   queue: {
     rows: DebtorRow[];
@@ -126,6 +130,9 @@ export default function QarzdorlikClient({
   recon = [],
   statement,
   initialTab = QARZDORLIK_DEFAULT_TAB,
+  initialStage = "",
+  initialFocus = "",
+  initialQuery = "",
 }: Props) {
   const router = useRouter();
 
@@ -150,9 +157,24 @@ export default function QarzdorlikClient({
   const [query, setQuery] = useState("");
   // Farqi bor qatorlar tepada — aynan ular e'tibor talab qiladi.
   const [onlyDiff, setOnlyDiff] = useState(false);
-  const [debtorQuery, setDebtorQuery] = useState("");
+  // FILTR VA QIDIRUV URL'DA. Ilgari ikkalasi ham lokal `useState` edi:
+  // "11-30 kunlik qarzdorlarni ko'r" deb havola yuborib bo'lmasdi va F5
+  // bosilganda tanlov yo'qolardi. Yorliq allaqachon URL'da edi — ya'ni
+  // holatning yarmi ulashiladigan, yarmi yo'q edi.
+  const [debtorQuery, setDebtorQuery] = useUrlParam("q", initialQuery);
   // Bosqich filtri — kartani bosganda jadval o'sha bosqichga qisqaradi.
-  const [stageFilter, setStageFilter] = useState<DebtAgingStage | null>(null);
+  const [stageParam, setStageParam] = useUrlParam("bosqich", initialStage);
+  const stageFilter = (DEBT_AGING_STAGES.some((x) => x.key === stageParam) ? stageParam : null) as DebtAgingStage | null;
+  const setStageFilter = (next: DebtAgingStage | null) => setStageParam(next ?? "");
+
+  /**
+   * "Muddati o'tgan" va "Hech to'lamagan" ko'rsatkichlari ham FILTR.
+   * Ta'riflar `getDebtors` dagi jamlar bilan AYNAN bir xil — aks holda
+   * bosilgan raqam va chiqqan ro'yxat mos kelmasdi.
+   */
+  const [focusParam, setFocusParam] = useUrlParam("kesim", initialFocus);
+  const focus = focusParam === "overdue" || focusParam === "neverPaid" ? focusParam : null;
+  const toggleFocus = (next: "overdue" | "neverPaid") => setFocusParam(focus === next ? "" : next);
 
   // Matritsa FAQAT muddati o'tganlardan quriladi: "bu oy yig'iladi" hali
   // kechikish emas va uni bosqichga qo'yish soxta signal berardi.
@@ -176,6 +198,11 @@ export default function QarzdorlikClient({
     const q = debtorQuery.trim().toLowerCase();
     return debtors.rows
       .filter((r) => (stageFilter ? r.overdue > 0 && debtAgingStage(r.overdueDays) === stageFilter : true))
+      .filter((r) =>
+        focus === "overdue" ? r.overdue > 0
+        : focus === "neverPaid" ? r.overdue > 0 && r.paid === 0
+        : true,
+      )
       .filter(
         (r) =>
           !q ||
@@ -183,7 +210,7 @@ export default function QarzdorlikClient({
           r.inn.includes(q) ||
           (r.accountantName ?? "").toLowerCase().includes(q)
       );
-  }, [debtors.rows, debtorQuery, stageFilter]);
+  }, [debtors.rows, debtorQuery, stageFilter, focus]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -233,10 +260,41 @@ export default function QarzdorlikClient({
       */}
       <StatStrip
         items={[
-          { label: "Jami qarz", value: debtors.totals.outstanding, tone: "neutral", meta: `${debtors.totals.companies} firma` },
-          { label: "Muddati o'tgan", value: debtors.totals.overdue, tone: "out", meta: `${debtors.totals.overdueCompanies} firma` },
-          { label: "Bu oy yig'iladi", value: debtors.totals.dueNow, tone: "in" },
-          { label: "Hech to'lamagan", value: debtors.totals.neverPaid, tone: "muted", meta: "firma" },
+          {
+            label: "Jami qarz",
+            value: debtors.totals.outstanding,
+            tone: "neutral",
+            meta: `${debtors.totals.companies} firma`,
+            hint: "Barcha to'lanmagan qoldiq — muddati kelgani ham, kelmagani ham",
+          },
+          {
+            // BOSILADIGAN: sarlavhadagi raqamdan to'g'ridan-to'g'ri o'sha
+            // ro'yxatga. Ilgari bu raqam ko'rinar, lekin unga BOSIB bo'lmasdi —
+            // foydalanuvchi "199 firma" ni ko'rib, ularni topish uchun
+            // eskirish bosqichlarini birma-bir bosishi kerak edi.
+            label: "Muddati o'tgan",
+            value: debtors.totals.overdue,
+            tone: "out",
+            meta: `${debtors.totals.overdueCompanies} firma`,
+            hint: "To'lov oynasi yopilgan, hali to'lanmagan. Bosing — faqat shular qoladi",
+            onClick: () => toggleFocus("overdue"),
+            active: focus === "overdue",
+          },
+          {
+            label: "Bu oy yig'iladi",
+            value: debtors.totals.dueNow,
+            tone: "in",
+            hint: "Shu oy uchun hisoblangan, muddati hali o'tmagan",
+          },
+          {
+            label: "Hech to'lamagan",
+            value: debtors.totals.neverPaid,
+            tone: "muted",
+            meta: "firma",
+            hint: "Muddati o'tgan va tizimda birorta ham to'lovi qayd etilmagan",
+            onClick: () => toggleFocus("neverPaid"),
+            active: focus === "neverPaid",
+          },
         ]}
         className="rounded-xl overflow-hidden"
       />
@@ -346,9 +404,22 @@ export default function QarzdorlikClient({
 
         {debtorRows.length === 0 ? (
           <div className="px-3 py-8 text-center text-meta" style={{ color: "var(--text-muted)" }}>
+            {/*
+              SABABNI AYTADI. Ilgari filtr natijasi bo'sh bo'lganda ham
+              "Qidiruvga mos firma topilmadi" deb yozilardi — holbuki
+              qidiruv umuman kiritilmagan bo'lishi va sabab eskirish
+              bosqichi bo'lishi mumkin edi. Foydalanuvchi nimani
+              o'zgartirishni bilmasdi.
+            */}
             {debtors.rows.length === 0
               ? "To'lov kutilayotgan firma yo'q"
-              : "Qidiruvga mos firma topilmadi"}
+              : stageFilter
+                ? `${DEBT_AGING_STAGES.find((x) => x.key === stageFilter)?.label} oralig'ida qarzdor topilmadi`
+                : focus === "overdue"
+                  ? "Muddati o'tgan qarzdor topilmadi"
+                  : focus === "neverPaid"
+                    ? "Hech to'lamagan qarzdor topilmadi"
+                    : "Qidiruvga mos firma topilmadi"}
           </div>
         ) : (
           <div className="overflow-x-auto">

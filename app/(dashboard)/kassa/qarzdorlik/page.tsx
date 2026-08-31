@@ -27,9 +27,13 @@ function parseDay(v: string | undefined): Date | undefined {
 export default async function QarzdorlikPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dan?: string; gacha?: string; tab?: string }>;
+  searchParams: Promise<{ dan?: string; gacha?: string; tab?: string; bosqich?: string; kesim?: string; q?: string }>;
 }) {
-  const { dan, gacha, tab } = await searchParams;
+  // Filtrlar SERVERDA o'qiladi: `useUrlParam` mount paytida URL'ni o'qimaydi
+  // (uning o'z izohi shuni aytadi) — boshlang'ich qiymat serverdan kelmasa
+  // `?bosqich=` bilan ulashilgan havola filtrsiz ochilar va F5 tanlovni
+  // yo'qotardi.
+  const { dan, gacha, tab, bosqich, kesim, q } = await searchParams;
   const session = await auth();
   if (!session) redirect("/login?expired=1");
 
@@ -80,6 +84,9 @@ export default async function QarzdorlikPage({
     <div className="h-full">
       <QarzdorlikClient
         initialTab={readTabParam<QarzdorlikTab>(tab, QARZDORLIK_TAB_IDS, QARZDORLIK_DEFAULT_TAB)}
+        initialStage={typeof bosqich === "string" ? bosqich : ""}
+        initialFocus={typeof kesim === "string" ? kesim : ""}
+        initialQuery={typeof q === "string" ? q : ""}
         statement={statement ? JSON.parse(JSON.stringify(statement)) : null}
         debt={JSON.parse(JSON.stringify(debt))}
         debtors={JSON.parse(JSON.stringify(debtors))}

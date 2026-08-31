@@ -87,21 +87,29 @@ export function useUrlParam(
   useEffect(() => {
     const sync = () => {
       const p = new URLSearchParams(window.location.search).get(key);
-      if (p) setValue(p);
+      // Parametr YO'Q bo'lsa boshlang'ich qiymatga qaytamiz. Ilgari bu holat
+      // e'tiborsiz qolardi: "orqaga" tugmasi bilan filtrsiz manzilga
+      // qaytilganda ekranda filtr qolib ketardi va URL bilan ko'rinish
+      // bir-biriga mos kelmasdi.
+      setValue(p ?? initial);
     };
     window.addEventListener("popstate", sync);
     return () => window.removeEventListener("popstate", sync);
-  }, [key]);
+  }, [key, initial]);
 
   const set = useCallback(
     (next: string) => {
       setValue(next);
       const params = new URLSearchParams(window.location.search);
-      params.set(key, next);
+      // Bo'sh qiymat = filtr yo'q → parametr URL'dan OLIB TASHLANADI.
+      // `?q=&bosqich=` kabi ma'nosiz quyruq ulashilgan havolada chalkashtiradi.
+      if (next) params.set(key, next);
+      else params.delete(key);
+      const qs = params.toString();
       window.history.replaceState(
         null,
         "",
-        `${window.location.pathname}?${params.toString()}`
+        qs ? `${window.location.pathname}?${qs}` : window.location.pathname
       );
     },
     [key]
