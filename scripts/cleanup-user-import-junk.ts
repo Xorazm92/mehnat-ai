@@ -18,19 +18,18 @@ import "./load-env"; // must be first: loads DATABASE_URL before Prisma is used
 import { prisma } from "@/lib/prisma";
 
 async function countRefs(ids: string[]) {
-  const [perf, payadj, kassa, exp, pay, audit, notif, att, contracts] =
+  const [perf, payadj, kassa, pay, audit, notif, att, contracts] =
     await Promise.all([
       prisma.monthlyPerformance.count({ where: { employeeId: { in: ids } } }),
       prisma.payrollAdjustment.count({ where: { employeeId: { in: ids } } }),
       prisma.kassaEntry.count({ where: { createdBy: { in: ids } } }),
-      prisma.expense.count({ where: { createdBy: { in: ids } } }),
       prisma.payment.count({ where: { createdBy: { in: ids } } }),
       prisma.auditLog.count({ where: { userId: { in: ids } } }),
       prisma.notification.count({ where: { userId: { in: ids } } }),
       prisma.attendance.count({ where: { userId: { in: ids } } }),
       prisma.contractAssignment.count({ where: { userId: { in: ids } } }),
     ]);
-  return perf + payadj + kassa + exp + pay + audit + notif + att + contracts;
+  return perf + payadj + kassa + pay + audit + notif + att + contracts;
 }
 
 async function main() {

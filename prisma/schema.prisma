@@ -101,7 +101,6 @@ model User {
   performanceRecords  MonthlyPerformance[]
   payrollAdjustments  PayrollAdjustment[]
   kassaEntries        KassaEntry[]
-  expenses            Expense[]
   attendances         Attendance[]          @relation("UserAttendance")
   payments            Payment[]
   payouts             Payout[]              @relation("EmployeePayouts")
@@ -1230,45 +1229,6 @@ model KassaEntry {
 }
 
 // =====================================================
-// EXPENSE
-// =====================================================
-
-model Expense {
-  id             String    @id @default(uuid())
-  amount         Decimal   @db.Decimal(12, 2)
-  date           DateTime
-  category       String
-  paymentMethod  String    @default("naqd") // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
-  description    String?
-  // Tasdiqlash oqimi: <1mln avto, 1-10mln Bosh Buxgalter, >10mln + Superadmin
-  status         String    @default("pending") // pending | approved | rejected
-  approvedBy     String?
-  approvedAt     DateTime?
-  rejectedReason String?
-  createdAt      DateTime  @default(now())
-  createdBy      String?
-  user           User?     @relation(fields: [createdBy], references: [id])
-
-  // Pul QAYSI MANBADAN chiqdi: o'z firmaning bank hisobi (schyot) yoki plastik
-  // karta. `DisbursementChannel.id` — o'sha jadval ikkala turni ham saqlaydi
-  // (`own_firm_account` / `employee_card`), shuning uchun bitta maydon yetadi.
-  // FK emas — `KassaEntry.channelId` uslubiga mos (kanal o'chirilsa tarixiy
-  // xarajat yo'qolmasin). Eski yozuvlarda NULL: manba tushunchasi keyin qo'shildi.
-  channelId String?
-
-  // Soft delete
-  deletedAt    DateTime?
-  deletedBy    String?
-  deleteReason String?
-
-  @@index([date])
-  @@index([category])
-  @@index([status])
-  @@index([deletedAt])
-  @@index([channelId])
-}
-
-// =====================================================
 // AUDIT LOG
 // =====================================================
 
@@ -1745,6 +1705,18 @@ enum SyncRunStatus {
 }
 
 // Agent ro'yxati — har firma/baza uchun bitta ulanish + token (hash saqlanadi).
+/// ─────────────────────────────────────────────────────────────────────────
+/// 1C INTEGRATSIYASI — REJALASHTIRILGAN, HALI ULANMAGAN.
+///
+/// Bu klaster (`OneCConnection`, `OneCCompanyMapping`, `IntegrationEvent`,
+/// `SyncRun`, `SyncError`) prodda BO'SH va ilovada bironta ham
+/// `prisma.<model>` chaqiruvi yo'q. Shunga qaramay O'CHIRILMAYDI:
+/// u ADR-0008 dagi dalil oqimining manba tomoni va
+/// `test/evidence-landing.test.ts` shu jadvallar ustida ishlaydi.
+///
+/// Yangi kod yozayotgan bo'lsangiz: bu qatlam hali ishlamaydi. Qaror
+/// `ARCHITECTURE_DEBT.md` §D3 da.
+/// ─────────────────────────────────────────────────────────────────────────
 model OneCConnection {
   id         String    @id @default(uuid())
   name       String

@@ -111,24 +111,9 @@ async function backfillLedger(): Promise<Record<string, number>> {
     counts.KassaEntry++;
   }
 
-  // Tasdiqlangan xarajatlar
-  const expenses = await prisma.expense.findMany({ where: { status: "approved", deletedAt: null } });
-  for (const e of expenses) {
-    const amount = Number(e.amount);
-    if (amount <= 0 || (await hasLedger("Expense", e.id))) continue;
-    await postLedger(prisma, {
-      legs: [
-        { accountId: ACCOUNTS.OPERATING_EXPENSE, debit: amount },
-        { accountId: ACCOUNTS.CASH, credit: amount },
-      ],
-      period: periodKeyOf(e.date),
-      sourceTable: "Expense",
-      sourceId: e.id,
-      createdBy: e.createdBy,
-      description: `migratsiya: xarajat (${e.category})`,
-    });
-    counts.Expense++;
-  }
+  // `Expense` jadvali olib tashlandi (2026-09): u `KassaEntry` bilan bir xil
+  // savolga javob berardi va prodda uch qatori ham yumshoq o'chirilgan edi.
+  // Xarajat oyog'i yuqoridagi KassaEntry sikliga kiradi.
 
   // Payoutlar (1-bosqichda yaratilganlar ham)
   const payouts = await prisma.payout.findMany({ where: { deletedAt: null } });

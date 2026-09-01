@@ -11,11 +11,14 @@ havolasi bilan ko'rsatilgan; §7 da o'sha o'lchovlarni qayta olish buyruqlari bo
 
 ## Holat (2026-09-01)
 
-**1-to'lqin kodda BAJARILDI** — D1, D2, D4 va reja paytida topilgan D2a
-(bildirishnoma fan-out'i). Kod lokal darajada tayyor va yashil
-(`tsc` 0 xato, yangi `test/proof-storage.test.ts` o'tadi), lekin **prodda
-hali qo'llanmagan**: migratsiya, ko'chirish va tozalash skriptlari kutmoqda
-(§6 dagi tartib). D3, D5, D6-D10 hali ochiq.
+**1-to'lqin PRODDA QO'LLANDI (2026-09-01)** — D1, D2, D4 va reja paytida
+topilgan D2a. O'lchangan natija: `ReportProof` **128 MB → 848 kB**, baza
+dump'i **79 MB → 4.9 MB**, `Notification` **37 480 → 23 884**. Fayllar endi
+diskda (78 MB, 1 209 fayl — 245 tasi mazmun bo'yicha dublikat bo'lib
+birlashdi) va zaxira ikki qismli.
+
+**D5 yopildi (2026-09-01)** — pastga qarang. **D3 qayta baholandi** — u ham
+pastda. Qolgan ochiq: D6-D10.
 
 ## 0. Bir jumlada
 
@@ -139,38 +142,42 @@ kunlik vazifa sifatida.
 
 ---
 
-### D3 · 71 modeldan 29 tasi prodda bo'sh 🟡
+### D3 · Bo'sh modellar — QAYTA BAHOLANDI 🟡
 
-**Dalil.** Prodda bir qator ham yo'q:
+> **2026-09-01 tuzatish.** Bu bandning dastlabki shakli ("29 model bo'sh →
+> o'chirish kerak") **noto'g'ri xulosaga olib borardi** va shuni yozib
+> qo'yish kerak, chunki keyingi o'quvchi ham xuddi shu tuzoqqa tushadi.
 
-```
-Invoice, InvoiceLine, Service, CompanyService, Task, TaskEvent,
-PosTerminal, PosSettlement, FiscalDevice, FiscalDailyReport,
-FiscalReportImport, OneCConnection, OneCCompanyMapping, SyncRun,
-SyncError, IntegrationEvent, Lead, Attendance, KpiEvent, Document,
-CompanyKpiRule, CompanyObligationOverride, ShiftCover, Question,
-Answer, PaymentReminder, BusinessCalendarDay, FinancialSnapshot,
-ObligationAssignmentEvent
-```
+**Nega bo'shlik o'liklik emas.** Prod 2026-08 da ATAYLAB tozalangan
+(`clean-start-2026-08`). Shu sababli ko'p jadval funksiya o'lgani uchun emas,
+**ma'lumot hali kirmagani uchun** bo'sh. Kod izini o'lchaganda ko'rinadi:
 
-Ularning ko'pi kodda ham deyarli chaqirilmaydi: `IntegrationEvent`,
-`InvoiceLine`, `OneCConnection`, `SyncError`, `SyncRun` — **0 murojaat**;
-`Answer`, `ObligationAssignmentEvent`, `OneCCompanyMapping`,
-`TelegramMessage` — 1 tadan.
+| Model | Ilova fayllari | Holat |
+|---|---|---|
+| `Question` / `Answer` | 9 | botning savol-javob oqimi — tirik |
+| `KpiEvent` | 5 | KPI dalil qatlami — tirik |
+| `Attendance` | 4 | davomat — tirik |
+| `Invoice` / `InvoiceLine` | `server/invoices.ts` | schyot yozadi — tirik |
+| `Service`, `Lead`, `PosTerminal`, `ShiftCover` | har biri 1 modul + ekran | tirik |
 
-Bu `ASRO_CPO_AUDIT.md` da aytilgan narsaning o'lchangan ko'rinishi: 1C sinxroni,
-POS/fiskal, invoys va lead qatlamlari yozilgan, lekin ishlatilmaydi.
+**`InvoiceLine` alohida saboq:** `prisma.invoiceLine` bo'yicha qidiruv NOL
+beradi, chunki u relation orqali yoziladi (`invoice.create({ lines: { create:
+… } })`). Model o'likligini faqat `prisma.<model>` bo'yicha o'lchash
+YETARLI EMAS — relation maydonlarini ham sanash kerak. Bu tekshiruvsiz
+ishlaydigan schyot funksiyasi o'chib ketardi.
 
-**Ta'sir.** Har bir bo'sh model — schema'da o'qiladigan sirt, migratsiyada
-yuritiladigan yuk, va yangi kod yozuvchi uchun "bu ishlaydi shekilli" degan
-noto'g'ri signal. §D8 dagi foydalanilmagan indekslarning katta qismi ham shular.
+**Haqiqatan o'lik va nima qilindi:**
 
-**Taklif.** Ikkiga ajratish — **rejalashtirilgan** (yaqin oylarda ulanadi,
-schema'da izoh bilan belgilanadi) va **voz kechilgan** (migratsiya bilan
-o'chadi). Usul allaqachon sinalgan: 2026-08 dagi konsolidatsiyada 68 → 52
-model shu yo'l bilan qisqartirilgan.
+- `Expense` — **o'chirildi** (§D5).
+- 1C klasteri (`OneCConnection`, `OneCCompanyMapping`, `IntegrationEvent`,
+  `SyncRun`, `SyncError`) — **saqlanadi**, schema'da "rejalashtirilgan" deb
+  belgilandi. Ilovada murojaat yo'q, lekin ADR-0008 dalil oqimining manba
+  tomoni va `test/evidence-landing.test.ts` shular ustida ishlaydi.
+  O'chirish qarori D4 (evidence engine) bilan birga ko'riladi.
+- `ObligationAssignmentEvent` — saqlanadi, ikkita bot testi ishlatadi.
 
-**Mehnat.** Qaror — 1 majlis; migratsiya — ~1 kun.
+**Qolgan ish.** Yo'q — band yopilgan. §D8 dagi foydalanilmagan indekslar shu
+sababdan ham o'z joyida qoladi: ular bo'sh, ammo tirik jadvallarga tegishli.
 
 ---
 
@@ -192,19 +199,18 @@ hal qilinsa, `evidence` engine testlari bilan birga o'chirilsin.
 
 ---
 
-### D5 · `Expense` va `KassaEntry(expense)` — bitta savol, ikkita jadval 🟡
+### D5 · `Expense` — YOPILDI (2026-09-01) ✅
 
-**Dalil.** Prodda: `Expense` — **3 qator** (hammasi `pending`),
-`KassaEntry` — 1 361. `Expense_deletedAt_idx` hech qachon skan qilinmagan.
-Kodda `Expense` ga 5 murojaat qolgan; `server/kassa.ts` `createExpense` /
-`deleteExpense` allaqachon `KassaEntry` yo'liga ulangan.
+**Kutilganidan sodda chiqdi.** `scripts/migrate-expense-to-kassa.ts` prodda
+"ko'chiriladigan qator yo'q" dedi: uchala qator ham 2026-08-18 da yumshoq
+o'chirilgan edi (`deletedAt` qo'yilgan), ya'ni ko'chiradigan ma'lumot yo'q.
 
-Bu `KASSA_REVIEW.md` (2026-08-18) da aytilgan edi va **hali yopilmagan**.
+Bajarildi: model schema'dan olib tashlandi, `DROP TABLE "Expense"`
+migratsiyasi yozildi, ishini bajarib bo'lgan ko'chirish skripti o'chirildi,
+uchta skriptdagi `prisma.expense` chaqiruvlari tozalandi.
 
-**Taklif.** 3 qatorni `KassaEntry` ga ko'chirib, `Expense` modelini
-migratsiya bilan olib tashlash. Bu D3 ning eng arzon bo'lagi.
-
-**Mehnat.** ~3 soat.
+Jurnal izi tegilmadi: `LedgerEntry.sourceTable = 'Expense'` qatorlari tarixiy
+yozuv sifatida qoladi (FK yo'q edi).
 
 ---
 

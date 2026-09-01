@@ -1,0 +1,12 @@
+-- `Expense` jadvali olib tashlanadi.
+--
+-- U `KassaEntry(type='expense')` bilan BIR XIL savolga javob berardi
+-- ("pul chiqdi") va tasdiq oqimi 2026-08 da `KassaEntry` ning o'ziga
+-- ko'chirilgan edi. Prodda uchala qatori ham o'sha kuni yumshoq o'chirilgan
+-- (2026-08-18), ya'ni jadval amalda bo'sh; ilovada bironta ham
+-- `prisma.expense` chaqiruvi qolmagan.
+--
+-- Jurnal izi TEGILMAYDI: `LedgerEntry.sourceTable = 'Expense'` qatorlari
+-- o'z joyida qoladi — ular tarixiy yozuv va bu jadvalga FK bilan
+-- bog'lanmagan.
+DROP TABLE IF EXISTS "Expense";

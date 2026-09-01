@@ -556,10 +556,9 @@ async function checkDataQuality(): Promise<void> {
 async function checkTestResidue(): Promise<void> {
   header("7 · TEST QOLDIQLARI (ishchi bazadagi vitest izlari)");
 
-  const [users, kassa, expenses, companies, ledger] = await Promise.all([
+  const [users, kassa, companies, ledger] = await Promise.all([
     prisma.user.count({ where: { OR: [{ email: { contains: "vitest" } }, { fullName: { contains: "vitest" } }] } }),
     prisma.kassaEntry.count({ where: { description: { contains: "vitest" } } }),
-    prisma.expense.count({ where: { description: { contains: "vitest" } } }),
     prisma.company.count({ where: { name: { contains: "vitest" } } }),
     prisma.ledgerEntry.count({ where: { sourceTable: { contains: "Vitest" } } }),
   ]);
@@ -567,7 +566,6 @@ async function checkTestResidue(): Promise<void> {
   const rows: [string, number][] = [
     ["User", users],
     ["KassaEntry", kassa],
-    ["Expense", expenses],
     ["Company", companies],
     ["LedgerEntry", ledger],
   ];
