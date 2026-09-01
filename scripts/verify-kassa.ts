@@ -29,11 +29,22 @@ const check = (name: string, ok: boolean, detail: string) => results.push({ name
 const near = (a: number, b: number) => Math.abs(a - b) < 1;
 
 /**
- * Har hisob uchun eng oxirgi vipiska — `BankStatementImport` har YUKLASHNING
- * izi (kim, qachon), shuning uchun bitta hisobda bir necha qator bo'lishi
- * normal. Qoldiq esa hisobga tegishli, importga emas.
+ * Tekshirilayotgan OY uchun har hisobning vipiska ko'rsatkichlari.
+ *
+ * `BankStatementImport` — har YUKLASHNING izi, shuning uchun bitta hisobda
+ * bitta oyga bir nechta qator bo'lishi normal va prodda shunday: to'liq
+ * 01–28 vipiskasi yonida qisman 01–18 va 19–24 yuklamalari turibdi.
+ *
+ * Shu sababdan "eng oxirgi yuklama" NOTO'G'RI tanlov: MOLIYA AI'da bir kunlik
+ * 23–23 vipiskasi eng oxirgi bo'lib, uning yopilish qoldig'i (813 653,58)
+ * butun oyning tranzaksiyalari bilan solishtirilardi va nazorat yolg'ondan
+ * qizil chiqardi.
+ *
+ * To'g'ri qoida: ochilish — oydagi ENG ERTA boshlangan vipiskadan, yopilish
+ * esa davri ENG UZOQQA cho'zilgan (va yopilish qoldig'i e'lon qilingan)
+ * vipiskadan. Tranzaksiyalar o'sha oxirgi kungacha yig'iladi.
  */
-async function latestStatements() {
+async function monthStatements() {
   const accounts = await prisma.bankAccount.findMany({ select: { id: true, label: true } });
   const out: {
     accountId: string;
@@ -45,19 +56,26 @@ async function latestStatements() {
   }[] = [];
 
   for (const a of accounts) {
-    const imp = await prisma.bankStatementImport.findFirst({
-      where: { accountId: a.id, openingBalance: { not: null } },
-      orderBy: [{ periodFrom: "desc" }, { createdAt: "desc" }],
+    const overlapping = await prisma.bankStatementImport.findMany({
+      where: { accountId: a.id, periodFrom: { lt: to }, periodTo: { gte: from } },
+      orderBy: [{ periodFrom: "asc" }, { createdAt: "asc" }],
       select: { openingBalance: true, closingBalance: true, periodFrom: true, periodTo: true },
     });
-    if (!imp) continue;
+    const first = overlapping.find((i) => i.openingBalance != null);
+    if (!first) continue;
+
+    const closers = overlapping.filter((i) => i.closingBalance != null);
+    const last = closers.length
+      ? closers.reduce((a, b) => (b.periodTo > a.periodTo ? b : a))
+      : null;
+
     out.push({
       accountId: a.id,
       label: a.label,
-      opening: Number(imp.openingBalance),
-      closing: imp.closingBalance == null ? null : Number(imp.closingBalance),
-      periodFrom: imp.periodFrom,
-      periodTo: imp.periodTo,
+      opening: Number(first.openingBalance),
+      closing: last ? Number(last.closingBalance) : null,
+      periodFrom: first.periodFrom,
+      periodTo: last?.periodTo ?? first.periodTo,
     });
   }
   return out;
@@ -65,7 +83,7 @@ async function latestStatements() {
 
 /** 1. Har vipiska o'zida yopiladi: ochilish + kredit − debet = yopilish. */
 async function checkStatements(): Promise<void> {
-  const statements = await latestStatements();
+  const statements = await monthStatements();
   const bad: string[] = [];
   let checked = 0;
 
@@ -207,7 +225,7 @@ async function checkOpenings(): Promise<void> {
   const handWritten = entries.filter((e) => !e.dedupKey?.startsWith("opening:"));
   const total = entries.reduce((s, e) => s + Number(e.amount), 0);
 
-  const expected = (await latestStatements()).reduce((s, x) => s + x.opening, 0);
+  const expected = (await monthStatements()).reduce((s, x) => s + x.opening, 0);
 
   check(
     "Boshlang'ich qoldiq vipiskadan olingan",
