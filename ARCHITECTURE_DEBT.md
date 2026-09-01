@@ -18,8 +18,8 @@ diskda (78 MB, 1 209 fayl — 245 tasi mazmun bo'yicha dublikat bo'lib
 birlashdi) va zaxira ikki qismli.
 
 **D5 yopildi (2026-09-01)** — pastga qarang. **D3 qayta baholandi** — u ham
-pastda. **D11 yangi ochildi (2026-09-01)** — bank vipiskasidagi postlanmagan
-chiqim. Qolgan ochiq: D6-D11.
+pastda. **D11 ochildi va yopildi (2026-09-01)** — bank vipiskasidagi
+postlanmagan chiqim. Qolgan ochiq: D6-D10.
 
 ## 0. Bir jumlada
 
@@ -359,22 +359,21 @@ Yangi fayl tekis ildizga tushmasin, agar u sof yordamchi bo'lmasa.
 5. **D6** qoidasini `AGENTS.md` ga; **D7** faylga tegilganda bo'lish.
 6. **D9** hujjatlarni `docs/audit/` ga + holat qatori; **D10** kamaytirish.
 
-### D11 · Bank vipiskasidagi postlanmagan chiqim — OCHIQ (2026-09-01)
+### D11 · Bank vipiskasidagi postlanmagan chiqim — YOPILDI (2026-09-01) ✅
 
 `KASSA_REVIEW.md` §1 dagi 441,7 mln yopilganda (`KASSA_GAP_441M.md`) yonidan
 alohida teshik chiqdi: avgustda **91 ta bank chiqimi / 73 323 355,03 so'm**
 `unmatched` holatda — ya'ni `KassaEntry` ga ham, jurnalga ham tushmagan.
 
-**Ommaviy tuzatib bo'lmaydi.** Ikki xil juftlik tahlili ikki xil javob berdi
-(45,4 mln va 25,4 mln postlash nomzodi), chunki toifalarning o'zi ishonchsiz:
-53 ta `bank_komissiya` qatorining 47 tasida karta belgisi bor, kartaga
-o'tkazmalar esa `oylik` deb tasniflangan. Ildiz sabab —
-`lib/bank/classifyExpense.ts`.
+**Toifalagichda xato yo'q edi** — dastlabki tashxis noto'g'ri chiqdi.
+"Maqsadda 16 raqam bormi" qidiruvi 20 xonali hisob raqamining ichiga ham
+tushib, 53 ta komissiyadan 47 tasini "kartaga o'tkazma" ko'rsatgan. To'g'ri
+qoida (`~` bilan ajratilgan aynan 16 raqam) bo'yicha bunday qator nolta.
 
-**Ish hajmi:** (a) toifalagichni tuzatish + test; (b) 91 qatorni operator
-ko'rigidan o'tkazish; (c) `verify-kassa` ga "postlanmagan bank chiqimi"
-nazorati. Ommaviy skript **tavsiya etilmaydi** — 40 mln ni ikki marta
-sanash xavfi bor.
+**Bajarildi:** `scripts/post-bank-expenses.ts --apply` — 86 qator /
+67 777 868,32 kassaga va jurnalga yozildi (101 ta kartaga o'tkazma va 5 ta
+oylik ataylab olinmadi). `verify-kassa` ga yettinchi nazorat qo'shildi,
+farq `test/bank-card-marker.test.ts` bilan qotirildi.
 
 ---
 

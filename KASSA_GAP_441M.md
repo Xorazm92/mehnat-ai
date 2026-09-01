@@ -13,10 +13,9 @@ da'vo SQL natijasi bilan.
 qolmagan (0 ta), iyul ham, avgust ham to'liq kassaga va jurnalga tushgan.
 Ildiz sabab ko'rikda to'g'ri aniqlangan edi — import skriptlari
 `recordTransitOut` ni chetlab o'tib to'g'ridan-to'g'ri `TransitEntry` yozgan;
-tuzatish 2026-09-01 da qo'llandi. Bank tomonida esa **yangi** bo'shliq qoldi: 91 qator / 73 323 355,03
-`unmatched` holatda — ammo juftlik tahlili ko'rsatdiki, bu raqamning katta
-qismi kartaga tegishli va uni ommaviy postlash ikki marta sanashga olib
-keladi (§3.2).
+tuzatish 2026-09-01 da qo'llandi. Tuzatish jarayonida **ikkinchi bo'shliq** topildi — navbatda unutilgan
+91 ta bank chiqimi — va u ham o'sha kuni yopildi: 86 qator / 67 777 868,32
+kassaga yozildi (§3.2).
 
 ---
 
@@ -137,7 +136,7 @@ O'z bank hisobimizdan o'z xodimimiz kartasiga o'tkazma — xarajat emas
 sarflanganda yuz beradi va u allaqachon `TransitEntry(out)` → `KassaEntry`
 zanjiri bilan yozilgan. Ularni "postlash" xarajatni **ikki marta** sanardi.
 
-### 3.2 YANGI BO'SHLIQ — bank tomonidagi 73,3 mln postlanmagan
+### 3.2 YOPILDI — bank tomonidagi navbatda qolgan chiqim
 
 Kartaga o'tkazmani chiqarib tashlagach, avgustda `unmatched` holatda
 qolgan haqiqiy chiqimlar:
@@ -157,53 +156,34 @@ tushmagan edi, bu yerda esa bank vipiskasi qatori `KassaEntry` ga
 o'tkazilmagan (`server/bankImport.ts#postExpenseFromBankTransaction`
 chaqirilmagan).
 
-#### Juftlik tahlili (2026-09-01, faqat SQL)
+#### Juftlik tahlili va yopilishi (2026-09-01)
 
-**1-urinish — summa + sana (±3 kun).** Bank qatori karta daftaridagi yozuv
-bilan juftlashtirildi (aynan teng summa, birma-bir moslik):
+**O'z xatoim.** Avval "toifalar ishonchsiz" deb yozgan edim: 53 ta bank
+komissiyasidan 47 tasida "karta belgisi bor" ko'ringan. Sabab — qidiruv
+namunam (`\d{16}`) 20 xonali **hisob raqamining** ichiga tushgan
+(`...счета 20208000005723186001...`). To'g'ri qoida — `~` bilan ajratilgan
+**aynan 16 raqamli** bo'lak; u bo'yicha 91 qatordan **noltasida** karta
+belgisi yo'q. Ya'ni `lib/bank/classifyExpense.ts` to'g'ri ishlagan.
 
-| Toifa | Jami | Juft topildi | Juftsiz | Postlash nomzodi |
-|---|---:|---:|---:|---:|
-| soliq | 23 | 6 | 17 | 15 391 310,71 |
-| ijara | 3 | 0 | 3 | 16 560 000,00 |
-| boshqa | 3 | 1 | 2 | 5 078 000,00 |
-| oylik | 5 | 0 | 5 | 5 545 486,71 |
-| aloqa | 4 | 2 | 2 | 1 495 000,00 |
-| bank_komissiya | 53 | 0 | 53 | 1 353 557,61 |
-| **JAMI** | **91** | **9** | **82** | **45 423 355,03** |
+Summa+sana bo'yicha topilgan 9 ta "juft" ham tasodif: byudjetga to'lov firma
+hisobidan, karta kirimi esa shaxs kartasiga tushadi — bir xil pul bo'la
+olmaydi. Masalan 10 000 000 so'mlik soliq to'lovi karta tomonidagi butunlay
+boshqa odamning "Otabek akaga" yozuvi bilan juftlashgan edi.
 
-**Ammo bu 9 juftning ko'pi YOLG'ON.** Qo'lda ko'rilganda:
+**Xulosa:** 91 qator haqiqiy chiqim, ular navbatda unutilgan (192 tadan
+160 tasi tasdiqlangan, qolgani yo'q).
 
-| Bank | so'm | Karta tomoni | Baho |
-|---|---:|---|---|
-| soliq, FININFO, "AMINBOYEV ALISHER…" | 10 000 000 | XIKMATULLAYEVA MAHMUDAXON / "Otabek akaga" | ✗ yolg'on |
-| soliq, FININFO, "AMINBOYEV ALISHER…" | 10 000 000 | RO'ZMETOV JAVOHIR / "Vosstanovleniya" | ✗ yolg'on |
-| boshqa, BAROKAT, "04/26БК shartnoma" | 2 000 000 | ATAXONOV RUSLONBEK / "O'ziga oylik" | ✗ yolg'on |
-| aloqa, "elektron hujjat aylanishi" | 100 000 ×2 | AMINBOYEV ALISHER / "O'ziga oylik" | ✗ yolg'on |
-| soliq, BAROKAT, "(5614…5378) MUXAMMADJONOV DILXUSHBEK" | 700 000 | MUXAMMADJONOV DILXUSHBEK | ✓ haqiqiy |
-| soliq, SEVEN'S UP, "o'zini-o'zi band qilgan shaxs" | 2 700 000 / 1 300 000 / 1 000 000 | MIRAZIZOV MIRABBOS, BEKTURDIYEVA SEVINCHOY | ~ ehtimol |
+**Bajarildi** — `scripts/post-bank-expenses.ts --month=2026-08 --apply`:
 
-**2-urinish — kuchli belgi.** "Bu qator aslida kartaga tegishlimi?" degan
-savolga to'lov maqsadi javob beradi: unda 16 raqamli karta raqami yoki
-kanal egasining familiyasi bormi.
+```
+  Navbatdagi chiqim : 192 ta
+  O'tkazib yuborildi: 101 ta ·    683,119,730  (xodim_kartasi — xarajat emas)
+  O'tkazib yuborildi:   5 ta ·      5,545,487  (oylik — Payout qatlami)
+  YOZILDI           :  86 ta ·     67,777,868
+```
 
-| Kesim | Qator | so'm |
-|---|---:|---:|
-| Kartaga tegishli ko'rinadi | 74 | 47 889 385,42 |
-| … shulardan karta kirimi ham topilgani | 11 | 40 042 642,00 |
-| Mustaqil chiqimga o'xshaydi | 17 | 25 433 969,61 |
-
-#### Xulosa — ommaviy skript yozilmasin
-
-Ikki o'lchov ikki xil javob berdi (45,4 mln va 25,4 mln), ya'ni **avtomatik
-juftlash bu ma'lumotda ishonchli emas**. Ildiz sabab —
-`lib/bank/classifyExpense.ts` toifalari noto'g'ri: bank komissiyasi `soliq`
-deb, kartaga o'tkazma `oylik` deb tasniflangan (53 ta komissiya qatorining
-47 tasida karta belgisi bor).
-
-Shu sababdan tavsiya: bu 91 qator **operator ko'rigidan** o'tsin
-(`/kassa/chiqim` navbati), toifalagich alohida tuzatilsin. Ommaviy postlash
-eng yaxshi holatda 25 mln ni to'g'ri yozadi va 40 mln ni ikki marta sanaydi.
+Tekshiruv: `OPERATING_EXPENSE` 171 470 787,11 → 239 248 655,43 (farq
+**67 777 868,32**); `verify-kassa` yettinchi nazorati — navbat bo'sh.
 
 ### 3.3 `ignored` qatorlar asosli
 

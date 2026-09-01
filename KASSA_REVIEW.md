@@ -74,10 +74,10 @@ Import skripti `recordTransitOut` ni chetlab o'tib to'g'ridan-to'g'ri
 
 ---
 
-## 1.1 OCHIQ — bank tomonidagi postlanmagan chiqim (2026-09-01 da topildi)
+## 1.1 YOPILDI (2026-09-01) — bank tomonidagi postlanmagan chiqim
 
 Bu ko'rikda **topilmagan**, 441,7 mln ni tuzatish jarayonida chiqqan alohida
-teshik. Holati: **OCHIQ**, juftlik tahlili qilingan, qaror kutilmoqda.
+teshik. Topildi, o'lchandi va o'sha kuni yopildi.
 
 Avgustda `unmatched` holatda qolgan bank chiqimlari (kartaga o'tkazmadan
 tashqari): **91 qator / 73 323 355,03**. Ammo bu raqamni to'g'ridan-to'g'ri
@@ -90,19 +90,39 @@ postlab bo'lmaydi — o'lchov shuni ko'rsatdi:
 | … shulardan karta kirimi ham topilgani | 11 | 40 042 642,00 |
 | Mustaqil chiqimga o'xshaydi | 17 | 25 433 969,61 |
 
-**Asosiy xulosa: avtomatik juftlash bu ma'lumotda ISHONCHLI EMAS.** Summa +
-sana (±3 kun) bo'yicha 9 juft topildi, lekin qo'lda ko'rilganda ularning
-ko'pi YOLG'ON juft bo'lib chiqdi — masalan 10 000 000 so'mlik "soliq"
-to'lovi (FININFO) karta tomonidagi butunlay boshqa odamning "Otabek akaga"
-yozuvi bilan juftlashdi.
+### Dastlabki xulosam XATO edi — toifalagichda muammo yo'q
 
-Ildiz sabab — **toifalar ishonchsiz**: `bank_komissiya` qatorlari `soliq`
-deb, kartaga o'tkazmalar `oylik` deb tasniflangan
-(`lib/bank/classifyExpense.ts`).
+Avval "toifalar ishonchsiz, `classifyExpense` buzuq" deb yozilgan edi.
+Sabab — mening o'lchovimdagi xato: "maqsadda 16 raqam bormi" degan qidiruv
+(`\d{16}`) 20 xonali **hisob raqamining** ichiga ham tushdi
+(`...счета 20208000005723186001...`) va 53 ta bank komissiyasidan 47 tasi
+"kartaga o'tkazma" bo'lib ko'rindi.
 
-**Tavsiya:** bu 91 qator uchun ommaviy skript YOZILMASIN. Ular operator
-ko'rigidan o'tsin (`/kassa/chiqim` navbati), toifalagich esa alohida
-tuzatilsin. Ommaviy postlash 40 mln ni ikki marta sanash xavfini olib keladi.
+To'g'ri qoida — `~` bilan ajratilgan **aynan 16 raqamli** bo'lak
+(`lib/bank/classifyExpense.ts#extractCardTransfer` boshidan shunday
+ishlagan). Shu qoida bo'yicha 91 qatordan **NOLTASIDA** karta belgisi yo'q.
+Farq `test/bank-card-marker.test.ts` bilan qotirildi.
+
+### Yopilishi
+
+Karta to'ldirish emasligi aniqlangach, qolgani oddiy: bu 91 qator haqiqiy
+chiqim va ular navbatda unutilgan (160 tasi tasdiqlangan, qolgani yo'q).
+Summa+sana "juftliklari" tasodif — byudjetga to'lov firma hisobidan,
+karta kirimi esa shaxs kartasiga tushadi; ular bir xil pul bo'la olmaydi.
+
+`scripts/post-bank-expenses.ts --month=2026-08 --apply`:
+
+```
+  Navbatdagi chiqim : 192 ta
+  O'tkazib yuborildi: 101 ta ·    683,119,730  (xodim_kartasi)
+  O'tkazib yuborildi:   5 ta ·      5,545,487  (oylik → Payout qatlami)
+  YOZILDI           :  86 ta ·     67,777,868
+  ✓ Yozildi: 86 ta · allaqachon bor edi: 0 ta
+```
+
+Tekshiruv: `OPERATING_EXPENSE` 171 470 787,11 → 239 248 655,43
+(farq **67 777 868,32** — aynan yozilgan summa), `verify-kassa` ning
+yettinchi nazorati "Vipiska chiqimi navbatda qolmagan" — **navbat bo'sh**.
 
 **Tavsiya:** `Expense` ni `KassaEntry` ga yig'ish — tasdiq maydonlari
 (`status`/`approvedBy`/`approvedAt`) `KassaEntry` ga ko'chadi, `Expense`
