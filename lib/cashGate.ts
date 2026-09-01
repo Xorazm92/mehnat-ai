@@ -147,7 +147,11 @@ export interface KassaMovementInput {
    * operatsion xarajat bo'lib ko'rinadi va foyda tahlili buziladi. Prodda
    * bu 269 mln so'mlik farq (tranzit kartalaridan berilgan oylik).
    */
-  expenseAccount?: typeof ACCOUNTS.OPERATING_EXPENSE | typeof ACCOUNTS.SALARY_EXPENSE;
+  expenseAccount?:
+    | typeof ACCOUNTS.OPERATING_EXPENSE
+    | typeof ACCOUNTS.SALARY_EXPENSE
+    /** Ta'sischiga taqsimot — pul chiqadi, lekin xarajat emas. */
+    | typeof ACCOUNTS.OWNER_DISTRIBUTION;
 }
 
 /**

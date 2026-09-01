@@ -37,7 +37,7 @@ import {
   resolveRegister,
   type CleanCashMovement,
 } from "@/lib/kassaClean";
-import { isSalaryCategory } from "@/lib/salaryCategory";
+import { expenseAccountFor } from "@/lib/expenseAccount";
 import { recordKassaMovement, reverseKassaMovement, runCashTx } from "@/lib/cashGate";
 import { ACCOUNTS } from "@/lib/ledger";
 
@@ -219,9 +219,9 @@ async function main(): Promise<void> {
           description: `${m.register}: ${part.description ?? part.category}`,
           channelId,
           dedupKey,
-          expenseAccount: isSalaryCategory(part.category)
-            ? ACCOUNTS.SALARY_EXPENSE
-            : ACCOUNTS.OPERATING_EXPENSE,
+          // Oylik / ta'sischiga taqsimot / operatsion — uchalasi boshqa
+          // hisobga (`lib/expenseAccount.ts`).
+          expenseAccount: ACCOUNTS[expenseAccountFor(part.category)],
         })
       );
       if (!res.alreadyRecorded) posted++;
