@@ -44,6 +44,7 @@ Kassa ma'lumotini Excel'dan ko'chirish tartibi: `docs/KASSA_IMPORT.md`.
 Har biri allaqachon yuz bergan xato.
 
 - **`prisma migrate dev` va `migrate reset` ishlatilmaydi.** `schema.prisma` da hali commit qilinmagan modellar bor; ular drift deb hisoblanib baza reset qilinishi taklif qilinadi. Migratsiya SQL'i qo'lda yoziladi, keyin `migrate deploy`. `.claude/hooks/guard-bash.sh` buni to'sadi.
+- **`prisma db pull` ishlatilmaydi.** Sabab `migrate dev` bilan bir xil: `schema.prisma` da hali migratsiya qilinmagan, lekin kodda ishlatiladigan modellar bor va `db pull` sxemani bazadan qayta yozib ularni jimgina o'chiradi. Sxema qo'lda yoziladi.
 - **`prisma generate` dan keyin dev serverni QAYTA ishga tushiring.** Aks holda eski mijoz bilan ishlab `Unknown field` deb 500 qaytaradi va sabab uzoq izlanadi.
 - **Har `tsx` skripti birinchi qatorda `import "./load-env"` yozadi**, `@/lib/prisma` dan OLDIN. `lib/prisma` yalqov (`getPrisma` + Proxy); dotenv ikkinchi marta ulanmaydi.
 - **Kassa yozuvi jurnalga ham tushishi shart.** Kassalar hisoboti (`server/kassaReport.ts`) qoldiqni faqat `LedgerEntry` ning CASH oyoqlaridan o'qiydi. Jurnalsiz `KassaEntry` ro'yxatda ko'rinadi, balansda esa yo'q bo'ladi.

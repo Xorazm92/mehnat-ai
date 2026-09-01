@@ -18,7 +18,8 @@ diskda (78 MB, 1 209 fayl — 245 tasi mazmun bo'yicha dublikat bo'lib
 birlashdi) va zaxira ikki qismli.
 
 **D5 yopildi (2026-09-01)** — pastga qarang. **D3 qayta baholandi** — u ham
-pastda. Qolgan ochiq: D6-D10.
+pastda. **D11 yangi ochildi (2026-09-01)** — bank vipiskasidagi postlanmagan
+chiqim. Qolgan ochiq: D6-D11.
 
 ## 0. Bir jumlada
 
@@ -357,6 +358,25 @@ Yangi fayl tekis ildizga tushmasin, agar u sof yordamchi bo'lmasa.
 **3-to'lqin — shakl** (fon ishi, alohida sprint emas)
 5. **D6** qoidasini `AGENTS.md` ga; **D7** faylga tegilganda bo'lish.
 6. **D9** hujjatlarni `docs/audit/` ga + holat qatori; **D10** kamaytirish.
+
+### D11 · Bank vipiskasidagi postlanmagan chiqim — OCHIQ (2026-09-01)
+
+`KASSA_REVIEW.md` §1 dagi 441,7 mln yopilganda (`KASSA_GAP_441M.md`) yonidan
+alohida teshik chiqdi: avgustda **91 ta bank chiqimi / 73 323 355,03 so'm**
+`unmatched` holatda — ya'ni `KassaEntry` ga ham, jurnalga ham tushmagan.
+
+**Ommaviy tuzatib bo'lmaydi.** Ikki xil juftlik tahlili ikki xil javob berdi
+(45,4 mln va 25,4 mln postlash nomzodi), chunki toifalarning o'zi ishonchsiz:
+53 ta `bank_komissiya` qatorining 47 tasida karta belgisi bor, kartaga
+o'tkazmalar esa `oylik` deb tasniflangan. Ildiz sabab —
+`lib/bank/classifyExpense.ts`.
+
+**Ish hajmi:** (a) toifalagichni tuzatish + test; (b) 91 qatorni operator
+ko'rigidan o'tkazish; (c) `verify-kassa` ga "postlanmagan bank chiqimi"
+nazorati. Ommaviy skript **tavsiya etilmaydi** — 40 mln ni ikki marta
+sanash xavfi bor.
+
+---
 
 **Migratsiya eslatmasi.** `prisma migrate dev` ishlatilmaydi (schema'da commit
 qilinmagan modellar bor — `AGENTS.md` "Tuzoqlar"). SQL qo'lda yoziladi, keyin

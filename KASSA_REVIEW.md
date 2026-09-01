@@ -1,5 +1,10 @@
 # Kassa moduli — takroriylik ko'rigi
 
+> **HOLAT (2026-09-01):** §1 dagi asosiy topilma — 441,7 mln so'mlik karta
+> xarajati — **YOPILDI**. Dalil va tuzatish tafsiloti: `KASSA_GAP_441M.md`.
+> ⚠️ Tuzatish jarayonida **YANGI, hali yopilmagan** teshik topildi (§1.1),
+> uni ham o'qing: bu hujjat "yopiq" deb qaralsa, o'sha teshik unutiladi.
+
 **Sana:** 2026-08-18 · **Manba:** prod bazasi (o'qish) · **Qamrov:** 4 277 qator server/lib + 3 127 qator UI
 
 Bu hujjat kassa modulidagi TAKRORIYLIKNI sanaydi: bir xil ish necha joyda
@@ -50,6 +55,54 @@ TransitEntry(out):            125 ta / 441 753 336 so'm
 Import skripti `recordTransitOut` ni chetlab o'tib to'g'ridan-to'g'ri
 `TransitEntry` yozgan. Natijada karta qoldig'i to'g'ri, firma balansi esa
 441,7 mln ga **ortiqcha** ko'rsatmoqda (666 mln raqamining ichida).
+
+> **YOPILDI (2026-09-01).** Prodda bog'lanmagan `TransitEntry(out)` qolmagan:
+>
+> ```
+>    oy    | boglanmagan | jami |    summa
+> ---------+-------------+------+--------------
+>  2026-07 |           0 |  126 | 441753336.42
+>  2026-08 |           0 |  124 | 767407132.62
+> ```
+>
+> Iyul: `scripts/link-transit-expenses.ts --apply` (104 qator / 424 516 503;
+> 22 tasi avvaldan bog'langan edi). Avgust:
+> `scripts/import-kassa-clean.ts --replace --with-expenses` (124 qator).
+> Ikkalasi ham `lib/cashGate.ts#recordKassaMovement` orqali, ya'ni jurnal
+> birga yozildi: 450 ta `KassaEntry` dan jurnalsizi **0 ta**.
+> To'liq dalil — `KASSA_GAP_441M.md` §2.
+
+---
+
+## 1.1 OCHIQ — bank tomonidagi postlanmagan chiqim (2026-09-01 da topildi)
+
+Bu ko'rikda **topilmagan**, 441,7 mln ni tuzatish jarayonida chiqqan alohida
+teshik. Holati: **OCHIQ**, juftlik tahlili qilingan, qaror kutilmoqda.
+
+Avgustda `unmatched` holatda qolgan bank chiqimlari (kartaga o'tkazmadan
+tashqari): **91 qator / 73 323 355,03**. Ammo bu raqamni to'g'ridan-to'g'ri
+postlab bo'lmaydi — o'lchov shuni ko'rsatdi:
+
+| Kesim | Qator | so'm |
+|---|---:|---:|
+| Jami `unmatched` (kartasiz) | 91 | 73 323 355,03 |
+| Maqsadida karta raqami yoki xodim familiyasi bor | 74 | 47 889 385,42 |
+| … shulardan karta kirimi ham topilgani | 11 | 40 042 642,00 |
+| Mustaqil chiqimga o'xshaydi | 17 | 25 433 969,61 |
+
+**Asosiy xulosa: avtomatik juftlash bu ma'lumotda ISHONCHLI EMAS.** Summa +
+sana (±3 kun) bo'yicha 9 juft topildi, lekin qo'lda ko'rilganda ularning
+ko'pi YOLG'ON juft bo'lib chiqdi — masalan 10 000 000 so'mlik "soliq"
+to'lovi (FININFO) karta tomonidagi butunlay boshqa odamning "Otabek akaga"
+yozuvi bilan juftlashdi.
+
+Ildiz sabab — **toifalar ishonchsiz**: `bank_komissiya` qatorlari `soliq`
+deb, kartaga o'tkazmalar `oylik` deb tasniflangan
+(`lib/bank/classifyExpense.ts`).
+
+**Tavsiya:** bu 91 qator uchun ommaviy skript YOZILMASIN. Ular operator
+ko'rigidan o'tsin (`/kassa/chiqim` navbati), toifalagich esa alohida
+tuzatilsin. Ommaviy postlash 40 mln ni ikki marta sanash xavfini olib keladi.
 
 **Tavsiya:** `Expense` ni `KassaEntry` ga yig'ish — tasdiq maydonlari
 (`status`/`approvedBy`/`approvedAt`) `KassaEntry` ga ko'chadi, `Expense`
