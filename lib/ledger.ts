@@ -25,6 +25,21 @@ export const ACCOUNTS = {
    * o'zgarmaydi; faqat qarama-qarshi hisob boshqacha.
    */
   OWNER_DISTRIBUTION: "OWNER_DISTRIBUTION",
+  /**
+   * Berilgan moliyaviy yordam — AKTIV, xarajat emas.
+   *
+   * Pul chiqadi, lekin u yo'qolmaydi: kontragent qaytarishi kerak. Uni
+   * xarajat deb yozish foydani asossiz kamaytiradi. Qaytganda shu hisob
+   * kreditlanadi va nolga qaytadi.
+   */
+  LOAN_GIVEN: "LOAN_GIVEN",
+  /**
+   * Olingan moliyaviy yordam — PASSIV (majburiyat), daromad emas.
+   *
+   * Pul kiradi, lekin u bizniki emas: qaytarishimiz kerak. Uni daromad deb
+   * yozish foydani asossiz oshiradi.
+   */
+  LOAN_RECEIVED: "LOAN_RECEIVED",
 } as const;
 
 export type AccountId = (typeof ACCOUNTS)[keyof typeof ACCOUNTS];
@@ -65,6 +80,14 @@ export const ACCOUNT_SPEC: Record<
   // Kimga taqsimlangani ko'rsatilsa yoziladi; majburiy emas, chunki
   // Excel daftarida faqat "Otabek akaga" degan matn bor.
   OWNER_DISTRIBUTION: { channel: "forbidden", subject: "user_optional" },
+  // Kontragent JUDA KERAK ("kimga berdik / kimdan oldik"), lekin MAJBURIY
+  // emas: qarz beriladigan tomon har doim ham `Company` jadvalida bo'lmaydi
+  // (masalan "Khorezm Golden Building", STIR 203147569 — vipiskada bor,
+  // reyestrda yo'q). Majburiy qilinsa, yozuv umuman yozilmay qolardi va pul
+  // jurnaldan tushib qolardi. Kontragent topilmasa, uning nomi va STIRi
+  // izohga yoziladi.
+  LOAN_GIVEN: { channel: "forbidden", subject: "company_optional" },
+  LOAN_RECEIVED: { channel: "forbidden", subject: "company_optional" },
 };
 
 export interface LedgerLeg {
