@@ -3,6 +3,7 @@ import { logServerError } from "@/lib/platform/logger";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertCompanyPermission } from "@/lib/platform/access";
+import { readStoredFile } from "@/lib/evidenceStore";
 
 export const runtime = "nodejs";
 
@@ -38,23 +39,12 @@ export async function GET(
 
     const isDownload = req.nextUrl.searchParams.get("download") === "1";
 
-    // Base64 parsing
-    let contentType = "image/jpeg";
-    let buffer: Buffer;
-
-    const match = proof.imageData.match(/^data:(image\/[a-zA-Z0-9\+\-\.]+);base64,(.+)$/);
-    if (match) {
-      contentType = match[1];
-      buffer = Buffer.from(match[2], "base64");
-    } else if (proof.imageData.startsWith("data:")) {
-      const commaIdx = proof.imageData.indexOf(",");
-      const mime = proof.imageData.substring(5, proof.imageData.indexOf(";"));
-      if (mime) contentType = mime;
-      const rawBase64 = proof.imageData.substring(commaIdx + 1);
-      buffer = Buffer.from(rawBase64, "base64");
-    } else {
-      buffer = Buffer.from(proof.imageData, "utf-8");
+    const stored = await readStoredFile(proof.imageRef, proof.imageData);
+    if (!stored) {
+      return NextResponse.json({ error: "Skrinshot topilmadi" }, { status: 404 });
     }
+    const contentType = stored.mime ?? "image/jpeg";
+    const buffer = stored.bytes;
 
     const safeColKey = proof.colKey.replace(/[^a-zA-Z0-9_-]/g, "_");
     const safeCompanyName = proof.company.name.replace(/[^a-zA-Z0-9_-]/g, "_");

@@ -81,3 +81,6 @@ others_json_files/
 
 # Tashqi loyiha nusxasi (Twenty CRM) — tahlil uchun, kodimizga aloqasi yo'q.
 twenty-main/
+
+# Dalil/hujjat fayllari ombori — mijoz hujjatlari, repozitoriyaga tushmaydi.
+storage/

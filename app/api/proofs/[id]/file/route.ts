@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertCompanyPermission } from "@/lib/platform/access";
+import { readStoredFile } from "@/lib/evidenceStore";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,7 @@ export async function GET(
         companyId: true,
         colKey: true,
         period: true,
+        fileRef: true,
         fileData: true,
         fileName: true,
         fileType: true,
@@ -42,7 +44,7 @@ export async function GET(
     if (!proof) {
       return NextResponse.json({ error: "Dalil topilmadi" }, { status: 404 });
     }
-    if (!proof.fileData) {
+    if (!proof.fileRef && !proof.fileData) {
       return NextResponse.json({ error: "Bu dalilga fayl biriktirilmagan" }, { status: 404 });
     }
 
@@ -57,11 +59,11 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const comma = proof.fileData.indexOf(",");
-    if (comma < 0) {
+    const stored = await readStoredFile(proof.fileRef, proof.fileData);
+    if (!stored) {
       return NextResponse.json({ error: "Fayl buzilgan" }, { status: 422 });
     }
-    const buffer = Buffer.from(proof.fileData.slice(comma + 1), "base64");
+    const buffer = stored.bytes;
 
     // Nom bazadan keladi (foydalanuvchi bergan) — sarlavhaga qo'yishdan oldin
     // tozalanadi, aks holda tirnoq yoki yangi qator sarlavhani buzardi.

@@ -8,6 +8,8 @@ import { recordQuestionKpi } from "../contexts/kpi/application/record-question-k
 import { runBillingReminders } from "../contexts/billing/application/run-reminders";
 import { enqueueNotifyJob } from "../queues/notify.queue";
 import { autoManageReadiness, gatherChecklist } from "../../lib/monthClose";
+import { notifyUsers } from "../../lib/notify";
+import { SENIOR_REVIEW_ROLES } from "../../lib/reportPermissions";
 
 const SWEEP_INTERVAL_MS = 60_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -39,6 +41,68 @@ async function sendTelegram(chatId: bigint, text: string, replyMarkup?: unknown)
  *    running late/again after downtime never duplicates a reminder.
  * All state lives in Postgres → restart-safe. Returns a stop function.
  */
+/**
+ * KUNLIK YIG'MA — tasdiq kutayotgan dalillar.
+ *
+ * Dalil topshirilganda darhol xabar FAQAT o'sha firmaning nazoratchisi va
+ * bosh buxgalteriga ketadi (server/proofs.ts). Qolgan senior rollar ilgari
+ * har topshiriqda xabar olardi — prodda 13 596 ta `approval_request`
+ * qatoridan 13 577 tasi o'qilmagan bo'lib yig'ilgandi. Endi ular kuniga
+ * BITTA yig'ma xabar oladi.
+ */
+async function runProofDigest(): Promise<void> {
+  const pending = await prisma.reportProof.count({ where: { status: "pending" } });
+  if (pending === 0) return;
+
+  const seniors = await prisma.user.findMany({
+    where: { role: { in: [...SENIOR_REVIEW_ROLES] }, isActive: true },
+    select: { id: true },
+  });
+  if (seniors.length === 0) return;
+
+  const day = new Date().toISOString().slice(0, 10);
+  const res = await notifyUsers(prisma, {
+    userIds: seniors.map((u) => u.id),
+    type: "approval_request",
+    title: "Tasdiqlash kutmoqda",
+    message: `${pending} ta hisobot dalili tekshiruvni kutmoqda.`,
+    link: "/reports",
+    channel: "proof-digest",
+    dedupKey: day,
+  });
+  console.log(`[cron] proof digest: pending=${pending} inapp=${res.inapp} skipped=${res.skipped}`);
+}
+
+/**
+ * BILDIRISHNOMA SAQLASH MUDDATI.
+ *
+ * Iyulda 424, avgustda 35 938 qator — hech qanday tozalash yo'q edi.
+ * Bular moliyaviy yozuv emas, shuning uchun jismonan o'chadi.
+ *
+ * `NotificationDelivery` da EHTIYOT SHART: `dedupKey` shu jadvalda
+ * idempotentlik qulfi (lib/notify.ts). Qator o'chsa o'sha kalit bo'shaydi va
+ * xabar QAYTA yuborilishi mumkin. Shuning uchun oyna 180 kun — har qanday
+ * jonli majburiyat eslatmasidan uzunroq, ya'ni bo'shagan kalitni hech kim
+ * qayta ishlatmaydi.
+ */
+async function runNotificationRetention(): Promise<void> {
+  const now = Date.now();
+  const daysAgo = (n: number) => new Date(now - n * DAY_MS);
+
+  const read = await prisma.notification.deleteMany({
+    where: { isRead: true, createdAt: { lt: daysAgo(90) } },
+  });
+  const unread = await prisma.notification.deleteMany({
+    where: { isRead: false, createdAt: { lt: daysAgo(180) } },
+  });
+  const delivery = await prisma.notificationDelivery.deleteMany({
+    where: { createdAt: { lt: daysAgo(180) }, status: { in: ["sent", "failed"] } },
+  });
+  console.log(
+    `[cron] retention: notification read=${read.count} unread=${unread.count} delivery=${delivery.count}`
+  );
+}
+
 export function startCron(): () => void {
   const sweepTimer = setInterval(async () => {
     try {
@@ -82,6 +146,30 @@ export function startCron(): () => void {
     }, msUntilHour(config.billing.cronHour));
     console.log(`[cron] billing reminders scheduled daily at ${config.billing.cronHour}:00`);
   }
+
+  // ── Kunlik uy ishlari: yig'ma xabar + saqlash muddati ─────────────────────
+  // Soat 9:00 — ish kuni boshida ko'rinsin. Ikkalasi ham idempotent
+  // (yig'ma `dedupKey` bilan, tozalash esa o'z-o'zidan), shuning uchun
+  // qayta ishga tushish hech narsani buzmaydi.
+  const runDailyChores = async () => {
+    try {
+      await runProofDigest();
+    } catch (err) {
+      console.error(`[cron] proof digest failed: ${(err as Error).message}`);
+    }
+    try {
+      await runNotificationRetention();
+    } catch (err) {
+      console.error(`[cron] retention failed: ${(err as Error).message}`);
+    }
+  };
+
+  let choresInterval: ReturnType<typeof setInterval> | undefined;
+  const choresStart = setTimeout(() => {
+    void runDailyChores();
+    choresInterval = setInterval(() => void runDailyChores(), DAY_MS);
+  }, msUntilHour(9));
+  console.log(`[cron] daily chores (proof digest + retention) scheduled at 9:00`);
 
   // ── Month-end closing avtomatikasi ────────────────────────────────────────
   // Oy oxirgi kuni 23:55 — checklist (log/ogohlantirish); yangi oy 1-kuni
@@ -135,5 +223,7 @@ export function startCron(): () => void {
     clearInterval(monthClosingTimer);
     if (billingStart) clearTimeout(billingStart);
     if (billingInterval) clearInterval(billingInterval);
+    clearTimeout(choresStart);
+    if (choresInterval) clearInterval(choresInterval);
   };
 }

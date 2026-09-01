@@ -26,7 +26,7 @@ export default async function ProofViewPage({
     where: { id },
     select: {
       id: true, companyId: true, period: true, colKey: true,
-      imageData: true, fileName: true, fileType: true, note: true, status: true,
+      fileName: true, fileType: true, note: true, status: true,
       submittedById: true, submittedByName: true, submittedAt: true,
       reviewedById: true, reviewedByName: true, reviewedAt: true, rejectReason: true,
       company: {

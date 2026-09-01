@@ -511,7 +511,16 @@ model ReportProof {
   period    String // "2026-03"
   colKey    String // OperationModule REPORT_COLUMNS kaliti, masalan "didox"
 
-  imageData String @db.Text // skrinshot (base64 data URL, klient tomonda siqilgan)
+  /// Diskdagi ombor havolasi ("disk://YYYY/MM/<sha256>.jpg") —
+  /// `lib/engines/evidence/store.ts`. Yangi dalillar SHU yerga yoziladi.
+  imageRef String?
+  /// Hujjat fayli uchun o'sha ombor havolasi.
+  fileRef  String?
+
+  /// ESKI YO'L — base64 data URL bevosita bazada. Ko'chirish tugagach bo'sh
+  /// qoladi va alohida migratsiyada tashlanadi; hozircha o'qish ikki yo'lli
+  /// (`imageRef ?? imageData`), aks holda ko'chirilmagan qator ochilmasdi.
+  imageData String @db.Text
 
   // HISOBOTNING O'ZI — skrinshotga qo'shimcha, IXTIYORIY.
   // Skrinshot majburiy bo'lib qoladi (tez ko'z yugurtirish uchun), fayl esa
@@ -704,7 +713,10 @@ model Document {
   title   String
   note    String?
 
-  fileData String @db.Text // data:<mime>;base64,...
+  /// Diskdagi ombor havolasi — `ReportProof.imageRef` bilan bir xil shakl.
+  storageRef String?
+  /// ESKI YO'L (base64). Ko'chirishdan keyin bo'shaydi.
+  fileData String @db.Text
   fileName String
   fileType String
   fileSize Int    @default(0)

@@ -63,8 +63,33 @@ trap - EXIT
 sha256sum "$FILE" > "$FILE.sha256"
 echo "  size: $(du -h "$FILE" | cut -f1)   sha256: $(cut -d' ' -f1 "$FILE.sha256")"
 
+# ── FAYL OMBORI ──────────────────────────────────────────────────────────────
+# Skrinshot va hujjatlar endi bazada emas, diskda (lib/evidenceStore.ts).
+# Ya'ni `pg_dump` YOLG'IZ O'ZI TO'LIQ ZAXIRA EMAS: dump'da faqat `storageRef`
+# bor, baytlar shu katalogda. Ikkalasi birga olinadi va birga tiklanadi.
+FILES_ROOT="${ASRO_FILES_ROOT:-./storage/files}"
+if [ -d "$FILES_ROOT" ]; then
+  FILES_ARCHIVE="$DIR/files_${STAMP}.tar.gz"
+  echo "▶ fayl ombori ($FILES_ROOT) → $FILES_ARCHIVE"
+  FTMP="$FILES_ARCHIVE.partial"
+  trap 'rm -f "$FTMP"' EXIT
+  tar -czf "$FTMP" -C "$FILES_ROOT" .
+  [ -s "$FTMP" ] || { echo "✗ fayl arxivi bo'sh chiqdi"; exit 5; }
+  mv "$FTMP" "$FILES_ARCHIVE"
+  trap - EXIT
+  sha256sum "$FILES_ARCHIVE" > "$FILES_ARCHIVE.sha256"
+  echo "  size: $(du -h "$FILES_ARCHIVE" | cut -f1)"
+else
+  echo "⚠ fayl ombori topilmadi ($FILES_ROOT) — faqat baza zaxiralandi"
+fi
+
 # Retention: keep the newest $KEEP dumps in this tier, prune the rest.
 ls -1t "$DIR"/asro_*.dump 2>/dev/null | tail -n +"$((KEEP + 1))" | while read -r old; do
+  echo "  prune: $old"
+  rm -f "$old" "$old.sha256"
+done
+
+ls -1t "$DIR"/files_*.tar.gz 2>/dev/null | tail -n +"$((KEEP + 1))" | while read -r old; do
   echo "  prune: $old"
   rm -f "$old" "$old.sha256"
 done

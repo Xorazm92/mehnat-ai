@@ -8,6 +8,13 @@
  *   pm2 logs asro-web
  *   pm2 save && pm2 startup                         # persist across reboots
  */
+const path = require("node:path");
+
+// Fayl ombori (skrinshot/hujjat) — web ham, bot ham, scripts/backup.sh ham
+// SHU katalogga qarashi shart. Nisbiy yo'l qoldirilsa protsessning cwd'iga
+// bog'lanib qolardi va bittasi boshqa joyga yozib qo'yishi mumkin edi.
+const FILES_ROOT = process.env.ASRO_FILES_ROOT || path.join(__dirname, "storage", "files");
+
 module.exports = {
   apps: [
     {
@@ -21,7 +28,7 @@ module.exports = {
       max_memory_restart: "700M",
       // TZ aniq belgilanadi: server UTC bo'lsa davomat chegaralari (08:30/09:00)
       // va cron soatlari 5 soatga surilib ketardi.
-      env: { NODE_ENV: "production", PORT: "3000", TZ: "Asia/Tashkent" },
+      env: { NODE_ENV: "production", PORT: "3000", TZ: "Asia/Tashkent", ASRO_FILES_ROOT: FILES_ROOT },
     },
     {
       // The bot worker owns an in-process cron (bot/cron/scheduler.ts), so it
@@ -34,7 +41,7 @@ module.exports = {
       autorestart: true,
       max_memory_restart: "500M",
       // Billing cron (09:00) va deadline sweep lokal vaqtga tayanadi.
-      env: { NODE_ENV: "production", TZ: "Asia/Tashkent" },
+      env: { NODE_ENV: "production", TZ: "Asia/Tashkent", ASRO_FILES_ROOT: FILES_ROOT },
     },
   ],
 };

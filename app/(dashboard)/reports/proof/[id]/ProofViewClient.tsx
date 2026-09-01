@@ -28,7 +28,6 @@ interface ProofData {
   companyId: string;
   period: string;
   colKey: string;
-  imageData: string;
   note: string | null;
   status: string;
   submittedById: string;

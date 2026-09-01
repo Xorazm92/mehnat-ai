@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertCompanyPermission } from "@/lib/platform/access";
+import { readStoredFile } from "@/lib/evidenceStore";
 
 export const runtime = "nodejs";
 
@@ -27,6 +28,7 @@ export async function GET(
       where: { id },
       select: {
         companyId: true,
+        storageRef: true,
         fileData: true,
         fileName: true,
         fileType: true,
@@ -49,9 +51,9 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const comma = doc.fileData.indexOf(",");
-    if (comma < 0) return NextResponse.json({ error: "Fayl buzilgan" }, { status: 422 });
-    const buffer = Buffer.from(doc.fileData.slice(comma + 1), "base64");
+    const stored = await readStoredFile(doc.storageRef, doc.fileData);
+    if (!stored) return NextResponse.json({ error: "Fayl buzilgan" }, { status: 422 });
+    const buffer = stored.bytes;
 
     // Nom foydalanuvchidan keladi — sarlavhaga qo'yishdan oldin tozalanadi,
     // aks holda tirnoq yoki yangi qator sarlavhani buzardi.

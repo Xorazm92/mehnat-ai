@@ -15,7 +15,6 @@ interface ProofFull {
   companyId: string;
   period: string;
   colKey: string;
-  imageData: string;
   /** Hisobotning o'zi — ixtiyoriy, skrinshotga qo'shimcha. */
   fileName: string | null;
   fileType: string | null;
@@ -396,7 +395,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                   <div className="relative group rounded-lg overflow-hidden border cursor-zoom-in" style={{ borderColor: "var(--card-border)", background: "var(--surface-2)" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={proof.imageData}
+                      src={`/api/proofs/${proof.id}/image`}
                       alt="Skrinshot"
                       onClick={() => setLightbox(true)}
                       className="w-full rounded-lg transition-transform duration-200 group-hover:scale-[1.01]"
@@ -498,7 +497,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
     {/* ── Interaktiv to'liq ekran kattalashtirish (Zoom, Pan, Rotate, New Tab) ── */}
     {lightbox && proof && (
       <ImageZoomModal
-        src={proof.imageData}
+        src={`/api/proofs/${proof.id}/image`}
         title={`${state?.companyName || ""} · ${state?.colLabel || proof.colKey}`}
         subtitle={`${period} davri uchun topshirilgan skrinshot`}
         proofId={proof.id}

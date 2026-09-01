@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { companyScopeWhere, companyRelations, assertCompanyPermission } from "@/lib/platform/access";
 import { isCompanyReviewer } from "@/lib/reportPermissions";
+import { notifyUsers } from "@/lib/notify";
+import { evidenceStore, parseDataUrl } from "@/lib/evidenceStore";
 import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
 import { normalizePeriodKey, isFuturePeriod, formatPeriodLabel } from "@/lib/periods";
@@ -93,14 +95,12 @@ function reportSync(outcome: MatrixWriteOutcome, ctx: Record<string, unknown>) {
 // REPORT PROOFS — Buxgalter topshirgan skrinshot dalili + nazoratchi tasdig'i
 // =====================================================
 
-const REVIEWER_ROLES = ["supervisor", "chief_accountant", "admin", "super_admin"];
-
 /**
  * HISOBOT FAYLI CHEGARALARI.
  *
- * Fayl `imageData` kabi base64 bo'lib BAZADA yotadi, shuning uchun chegara
- * kod tomonda majburlanishi shart — busiz bitta 50 MB'lik skan bazani ham,
- * har kunlik `pg_dump` ni ham cho'ktirardi.
+ * Fayl endi diskdagi omborda (`lib/evidenceStore.ts`), lekin chegara baribir
+ * kod tomonda majburlanadi — busiz bitta 50 MB'lik skan omborni ham, uning
+ * kunlik arxivini ham cho'ktirardi.
  *
  * base64 xom hajmdan ~33% katta bo'ladi, shu sabab tekshiruv SATR uzunligi
  * bo'yicha, ya'ni haqiqiy saqlanadigan hajm bo'yicha.
@@ -187,7 +187,18 @@ export async function saveReportProof(input: {
   const colLabel = input.colLabel || input.colKey;
   const deepLink = `/reports?company=${input.companyId}&col=${input.colKey}&period=${encodeURIComponent(period)}`;
 
-  // 1) Dalilni saqlash (yangi topshiriq — holat "pending", eski tekshiruv tozalanadi)
+  // 1) Fayllar OMBORGA, bazaga faqat havola.
+  //
+  // Bazada base64 saqlash `ReportProof` jadvalini 128 MB ga olib chiqqandi
+  // (1 454 qator) va har `pg_dump` shuni ko'tarib yurardi. Ombor
+  // mazmun-adresli, ya'ni bir xil skrinshotni ikki marta yuklash bepul.
+  const image = parseDataUrl(input.imageData);
+  const stored = await evidenceStore.put(image.bytes, image.mime);
+
+  const file = input.fileData ? parseDataUrl(input.fileData) : null;
+  const storedFile = file ? await evidenceStore.put(file.bytes, file.mime) : null;
+
+  // 1b) Dalilni saqlash (yangi topshiriq — holat "pending", eski tekshiruv tozalanadi)
   const proof = await prisma.reportProof.upsert({
     where: {
       companyId_period_colKey: {
@@ -200,8 +211,10 @@ export async function saveReportProof(input: {
       companyId: input.companyId,
       period: period,
       colKey: input.colKey,
-      imageData: input.imageData,
-      fileData: input.fileData ?? null,
+      imageRef: stored.storageRef,
+      fileRef: storedFile?.storageRef ?? null,
+      imageData: "",
+      fileData: null,
       fileName: input.fileName ?? null,
       fileType: input.fileType ?? null,
       note: input.note ?? null,
@@ -210,11 +223,16 @@ export async function saveReportProof(input: {
       submittedByName: myName,
     },
     update: {
-      imageData: input.imageData,
+      imageRef: stored.storageRef,
+      // Eski base64 qoldig'i qayta topshirishda tozalanadi — aks holda
+      // ko'chirilmagan qator yangi rasm bilan eski baytlarni yonma-yon
+      // saqlab qolardi va o'qish yo'li eskisini ko'rsatardi.
+      imageData: "",
       // Qayta topshirishda fayl berilmasa ESKISI O'CHADI: aks holda yangi
       // skrinshot eski faylga yopishib qolib, nazoratchi mos kelmagan
       // hujjatni ko'rardi.
-      fileData: input.fileData ?? null,
+      fileRef: storedFile?.storageRef ?? null,
+      fileData: null,
       fileName: input.fileName ?? null,
       fileType: input.fileType ?? null,
       note: input.note ?? null,
@@ -250,27 +268,32 @@ export async function saveReportProof(input: {
     await recordSubmissionAttempt(sentOutcome.obligationId, input.colKey, proof.id, userId);
   }
 
-  // 3) Nazoratchilarga xabar (firma nazoratchisi + barcha tekshiruvchi rollar)
+  // 3) Xabar — FAQAT SHU FIRMANING tekshiruvchilariga.
+  //
+  // Ilgari bu yerda `SENIOR_REVIEW_ROLES` dagi BARCHA faol foydalanuvchiga
+  // ham yozilardi. Natijasi prodda o'lchandi: har dalilga o'rtacha 9.4 ta
+  // xabar, 13 596 ta `approval_request` qatoridan 13 577 tasi o'qilmagan,
+  // bitta xodimda 2 267 ta — ya'ni qo'ng'iroq belgisi butunlay foydasiz
+  // bo'lib qolgandi. Firmaga biriktirilmagan senior rollar endi kunlik
+  // yig'ma xabar oladi (bot/cron/scheduler.ts).
   const reviewerIds = new Set<string>();
   if (company.supervisorId) reviewerIds.add(company.supervisorId);
   if (company.chiefAccountantId) reviewerIds.add(company.chiefAccountantId);
-
-  const reviewers = await prisma.user.findMany({
-    where: { role: { in: REVIEWER_ROLES as never }, isActive: true },
-    select: { id: true },
-  });
-  reviewers.forEach((u) => reviewerIds.add(u.id));
   reviewerIds.delete(userId); // o'ziga o'zi xabar bermaymiz
 
   if (reviewerIds.size) {
-    await prisma.notification.createMany({
-      data: [...reviewerIds].map((rid) => ({
-        userId: rid,
-        type: "approval_request",
-        title: "Tasdiqlash kutilmoqda ⏳",
-        message: `${myName} "${company.name}" firmasining "${colLabel}" hisobotini skrinshot bilan topshirdi. Iltimos, tekshirib tasdiqlang.`,
-        link: deepLink,
-      })),
+    // `dedupKey` dalilga bog'langan: rad etilgandan keyingi QAYTA topshirish
+    // yangi `proof.id` bermaydi (katak bo'yicha upsert), shuning uchun kalitga
+    // topshirish vaqti ham kiradi — aks holda ikkinchi topshirish jimgina
+    // xabarsiz qolardi.
+    await notifyUsers(prisma, {
+      userIds: [...reviewerIds],
+      type: "approval_request",
+      title: "Tasdiqlash kutilmoqda ⏳",
+      message: `${myName} "${company.name}" firmasining "${colLabel}" hisobotini skrinshot bilan topshirdi. Iltimos, tekshirib tasdiqlang.`,
+      link: deepLink,
+      channel: "proof-approval",
+      dedupKey: `${proof.id}:${proof.submittedAt.toISOString()}`,
     });
   }
 
@@ -327,15 +350,15 @@ export async function getReportProof(companyId: string, period: string, colKey: 
 
   await assertCompanyPermission(prisma, { id: userId, role }, companyId, "proof:read");
 
-  // `fileData` ATAYLAB tanlanmaydi: u 2 MB gacha base64 va oyna har ochilganda
-  // tarmoqdan o'tardi. Faylning O'ZI alohida yo'ldan olinadi
-  // (`/api/proofs/[id]/file`), bu yerda faqat nomi va turi kerak — havolani
-  // ko'rsatish uchun shuning o'zi yetadi.
+  // NA `fileData`, NA `imageData` tanlanmaydi. Ikkalasi ham alohida yo'ldan
+  // olinadi (`/api/proofs/[id]/file`, `.../image`) — bu yerda faqat nomi va
+  // turi kerak. Ilgari skrinshot base64 bo'lib javobga tushardi va oyna har
+  // ochilganda ~90 KB tarmoqdan o'tardi.
   const proof = await prisma.reportProof.findUnique({
     where: { companyId_period_colKey: { companyId, period: normalizePeriodKey(period), colKey } },
     select: {
       id: true, companyId: true, period: true, colKey: true,
-      imageData: true, fileName: true, fileType: true, note: true, status: true,
+      fileName: true, fileType: true, note: true, status: true,
       submittedById: true, submittedByName: true, submittedAt: true,
       reviewedById: true, reviewedByName: true, reviewedAt: true, rejectReason: true,
     },

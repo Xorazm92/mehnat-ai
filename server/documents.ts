@@ -4,7 +4,9 @@
 // FIRMA HUJJATLARI ARXIVI
 // =====================================================
 //
-// Fayl base64 holida bazada saqlanadi (`ReportProof` bilan bir xil usul).
+// Fayl DISKDAGI omborda saqlanadi (`lib/evidenceStore.ts`), bazada faqat
+// `storageRef`. Ilgari base64 bevosita ustunda yotardi — `ReportProof` shu
+// yo'l bilan 128 MB ga yetgani uchun ikkalasi ham omborga o'tkazildi.
 // RO'YXAT SO'ROVI `fileData` NI HECH QACHON TANLAMAYDI: bitta 5 MB lik
 // shartnoma skani ro'yxatga qo'shilsa, o'nta hujjatli firma kartochkasi
 // 50 MB javob qaytarardi. Fayl faqat `/api/documents/[id]/file` orqali,
@@ -17,6 +19,7 @@ import { isSeniorRole } from "@/lib/platform/permissions";
 import { serialize } from "@/lib/serialize";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { updateTag } from "next/cache";
+import { evidenceStore, parseDataUrl } from "@/lib/evidenceStore";
 
 const DOCUMENT_TYPES = [
   "shartnoma",
@@ -110,11 +113,9 @@ export async function uploadDocument(input: {
   }
   assertFile(input.fileData, input.fileType);
 
-  // base64 uzunligidan haqiqiy o'lchamni chiqarish — ro'yxatda ko'rsatish
-  // uchun. Taxminiy: har 4 belgi 3 baytga to'g'ri keladi.
-  const comma = input.fileData.indexOf(",");
-  const b64 = comma >= 0 ? input.fileData.slice(comma + 1) : "";
-  const fileSize = Math.floor((b64.length * 3) / 4);
+  const parsed = parseDataUrl(input.fileData);
+  const stored = await evidenceStore.put(parsed.bytes, parsed.mime);
+  const fileSize = stored.byteSize;
 
   const created = await prisma.document.create({
     data: {
@@ -122,7 +123,8 @@ export async function uploadDocument(input: {
       docType: input.docType,
       title,
       note: input.note?.trim() || null,
-      fileData: input.fileData,
+      storageRef: stored.storageRef,
+      fileData: "",
       fileName: input.fileName.slice(0, 200),
       fileType: input.fileType,
       fileSize,

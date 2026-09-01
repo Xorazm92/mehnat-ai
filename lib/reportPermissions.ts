@@ -64,6 +64,17 @@ const MATRIX_EDITOR_ROLES = [
 ];
 
 /**
+ * Hisobot tasdig'ini KO'RADIGAN lavozimlar — firmaga biriktiruvdan qat'i nazar.
+ *
+ * Bu ro'yxat AYNAN BIR ishga xizmat qiladi: kunlik yig'ma xabar kimga ketadi
+ * (bot/cron/scheduler.ts). Dalil topshirilganda darhol xabar oladiganlar bu
+ * emas — ular faqat SHU firmaning nazoratchisi va bosh buxgalteri
+ * (server/proofs.ts). Ikkisi qo'shilib ketmasin: ilgari shunday bo'lgani uchun
+ * prodda 13 596 ta o'qilmagan xabar yig'ilgandi.
+ */
+export const SENIOR_REVIEW_ROLES = ["supervisor", "chief_accountant", "admin", "super_admin"] as const;
+
+/**
  * Matritsani tahrirlay oladimi?
  *
  * Lavozim bo'yicha, YOKI shu firmaga biriktirilgani bo'yicha. Ikkinchisi
