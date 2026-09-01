@@ -54,6 +54,23 @@ export const ACCOUNTS = {
    * ham emas, shuning uchun foyda hisobiga tegmaydi.
    */
   OPENING_BALANCE: "OPENING_BALANCE",
+  /**
+   * HISOBLANGAN OYLIK — PASSIV (xodimlar oldidagi majburiyat).
+   *
+   * Oylik ilgari SOF KASSA usulida yozilardi: to'lov paytida
+   * `SALARY_EXPENSE` debet / `CASH` kredit. Bunda P&L dagi oylik xarajati
+   * o'sha oyda QANCHA TO'LANGANIGA teng bo'lardi, qancha HISOBLANGANIGA
+   * emas — ya'ni to'lov kechikkan oy arzon, ikki oylik birga to'langan oy
+   * qimmat ko'rinardi.
+   *
+   * Accrual usulida ikki yozuv ajraladi:
+   *   hisoblash (oy oxiri) : SALARY_EXPENSE    debet / ACCRUED_SALARIES kredit
+   *   to'lov               : ACCRUED_SALARIES  debet / CASH             kredit
+   *
+   * Qoldiq = to'lanmagan oylik. MANFIY qoldiq ham ma'noli: hisoblangandan
+   * ko'p to'langan (avans yoki oldingi oy qoldig'i).
+   */
+  ACCRUED_SALARIES: "ACCRUED_SALARIES",
 } as const;
 
 export type AccountId = (typeof ACCOUNTS)[keyof typeof ACCOUNTS];
@@ -90,6 +107,10 @@ export const ACCOUNT_SPEC: Record<
   // Ochilish qoldig'i - kanal ham, kontragent ham ma'nosiz: u qarama-qarshi
   // oyoq, pul harakati emas.
   OPENING_BALANCE: { channel: "forbidden", subject: null },
+  // Kanal yo'q (pul oyog'i emas), xodim esa berilsa yoziladi: oylik
+  // majburiyati odatda jami summa bilan kiritiladi, xodim kesimi esa
+  // `MonthlyPerformance` da.
+  ACCRUED_SALARIES: { channel: "forbidden", subject: "user_optional" },
   CONTRACT_INCOME: { channel: "forbidden", subject: "company_optional" },
   KASSA_INCOME: { channel: "forbidden", subject: null },
   OPERATING_EXPENSE: { channel: "forbidden", subject: null },
