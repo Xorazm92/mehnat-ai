@@ -47,7 +47,8 @@ export interface Expense {
 export interface BalanceBreakdown {
   income: number; // jami kirim
   outflow: number; // jami chiqim
-  balance: number; // income − outflow (mavjud mablag')
+  balance: number; // openingCash + income − outflow (mavjud mablag')
+  openingCash: number; // davr boshidagi qoldiq (01.08.2026)
   transitBalance?: number; // tranzit kartalardagi sarflanmagan qoldiq
   incomePayments: number; // to'langan shartnoma to'lovlari
   incomeKassa: number; // kassa kirimlari

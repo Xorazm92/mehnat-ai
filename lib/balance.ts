@@ -2,6 +2,10 @@
 // Yagona balans manbai — barcha pul jadvallarini bitta "mavjud mablag'" ga bog'laydi.
 //   Kirim  = to'langan shartnoma to'lovlari (Payment.paid) + kassa kirimlari
 //   Chiqim = TASDIQLANGAN kassa chiqimlari + REAL berilgan oyliklar (Payout)
+//   Balans = OCHILISH QOLDIG'I + Kirim - Chiqim
+//
+// Ochilish qoldig'isiz balans "01.08.2026 da kassada nol pul bor edi" deb
+// hisoblardi va shu sababli manfiy chiqardi.
 //
 // `Expense` jadvali OLIB TASHLANDI: u `KassaEntry(expense)` bilan bir xil
 // savolga javob berardi va tasdiq oqimi endi `KassaEntry.status` da.
@@ -49,7 +53,7 @@ export async function getAvailableBalance(opts?: {
   db?: Db;
 }): Promise<BalanceBreakdown> {
   const db = opts?.db ?? prisma;
-  const [paidPaymentRows, kassaIncome, kassaExpense, payouts, transitBalance] =
+  const [paidPaymentRows, kassaIncome, kassaExpense, payouts, transitBalance, openingRow] =
     await Promise.all([
       // `Payment.amount` QARZ yig'indisi — "offset" (vzaimozachyot/ijara)
       // ham kiradi, chunki mijoz nuqtai nazaridan bu ham to'lov. KASSA
@@ -84,6 +88,18 @@ export async function getAvailableBalance(opts?: {
         _sum: { amount: true },
       }),
       getTotalTransitBalance(db as Prisma.TransactionClient).catch(() => 0),
+      // OCHILISH QOLDIG'I. Balans faqat KASSA_START_DATE dan beri yig'iladi,
+      // ya'ni undan oldingi pul hisobga kirmasdi va natija manfiy chiqardi
+      // (prodda −255 282 877, holbuki naqd qoldiq manfiy bo'la olmaydi).
+      //
+      // Raqam JURNALDAN o'qiladi, kodga qotirilmaydi: u
+      // `scripts/post-opening-balances.ts` bilan bir marta kiritiladi va
+      // shu bilan yagona manba bo'lib qoladi. Yozuv bo'lmasa 0 — eski
+      // xatti-harakat saqlanadi.
+      db.ledgerEntry.aggregate({
+        where: { sourceTable: "OpeningBalance", accountId: "CASH" },
+        _sum: { debit: true, credit: true },
+      }),
     ]);
 
   const incomePayments = cashFromPaymentRows(paidPaymentRows);
@@ -95,13 +111,16 @@ export async function getAvailableBalance(opts?: {
   // ekranlar (BalanceOverview) buzilmasin.
   const outflowExpenses = 0;
 
+  const openingCash = n(openingRow._sum.debit) - n(openingRow._sum.credit);
+
   const income = incomePayments + incomeKassa;
   const outflow = outflowKassa + outflowPayroll;
 
   return {
     income,
     outflow,
-    balance: income - outflow,
+    openingCash,
+    balance: openingCash + income - outflow,
     transitBalance,
     incomePayments,
     incomeKassa,
