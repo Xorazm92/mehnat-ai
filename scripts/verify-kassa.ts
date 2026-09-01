@@ -120,7 +120,19 @@ async function checkStatements(): Promise<void> {
   );
 }
 
-/** 2. Har kassa (shaxs) balansi: kirim − chiqim = qoldiq, manfiy bo'lmasin. */
+/**
+ * 2. Kartada BO'LMAGAN pul sarflanmagan.
+ *
+ * DIQQAT — bu BIZNES pozitsiyasi haqida emas. Biznesda manfiy turish odatiy
+ * hol: ish qilingan, puli hali olinmagan. Ammo o'sha manfiylik MAJBURIYAT
+ * qatlamida yashaydi (mijoz bizga qarzdor — `DebtSnapshot`; biz xodimga
+ * qarzdormiz — `PayrollAdjustment`), pul qutisida emas.
+ *
+ * Plastik karta minusga tusha olmaydi: undan faqat ustida turgan pulni
+ * sarflash mumkin. Shuning uchun manfiy karta qoldig'i — biznes holati emas,
+ * YOZUV XATOSI: yo kirim yozilmay qolgan, yo chiqim ikki marta yozilgan.
+ * Aynan shu belgi bilan avvalgi importdagi 109 mln yo'qolgan kirim ushlanadi.
+ */
 async function checkRegisters(): Promise<void> {
   const rows = await prisma.transitEntry.groupBy({
     by: ["channelId", "direction"],
@@ -153,7 +165,7 @@ async function checkRegisters(): Promise<void> {
   }
 
   check(
-    "Kassalar manfiy qoldiqqa tushmaydi",
+    "Kartada bo'lmagan pul sarflanmagan",
     negative.length === 0,
     negative.length
       ? negative.join("; ")
