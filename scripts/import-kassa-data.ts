@@ -78,6 +78,31 @@ async function main() {
     console.log(`   Bu varaqlar baribir import qilinadi — farqi kichik va tafsilot to'g'ri.`);
   }
 
+  // ── SANA VARAQ NOMIGA MOS KELMASA — TO'XTAYMIZ ─────────────────────────
+  // Yig'indi farqidan FARQLI o'laroq bu jimgina o'tkazilmaydi: sana xato
+  // bo'lsa, yozuv butunlay boshqa davrga tushadi. Real faylda "Январь 2026"
+  // varag'idagi ustunlar 2026-DEKABR ni ko'rsatgan va 39 ta yozuv (1 221 000)
+  // kelajak davriga tushib ketgan edi — joriy hisobotda ko'rinmay, keyin
+  // o'sha oy kelganda yo'qdan paydo bo'ladigan pul.
+  const wrongMonth = sheets.filter((s) => s.monthMismatch);
+  if (wrongMonth.length > 0) {
+    console.error(`\n❌ SANA VARAQ NOMIGA MOS KELMADI (${wrongMonth.length}):`);
+    for (const s of wrongMonth) {
+      const dates = s.expenses.map((e) => e.date.toISOString().slice(0, 7));
+      const uniq = [...new Set(dates)].sort().join(", ");
+      const want = s.declaredMonth
+        ? `${s.declaredMonth.year}-${String(s.declaredMonth.month).padStart(2, "0")}`
+        : "?";
+      console.error(`   "${s.sheet}" — nomida ${want}, kataklarda ${uniq}`);
+    }
+    console.error(
+      `\n   Xato FAYLDA: ustun sarlavhalaridagi Excel sanasi noto'g'ri.\n` +
+        `   Fayl tuzatilsin yoki shu varaqlar chiqarib tashlansin.`
+    );
+    if (!process.argv.includes("--force")) process.exit(1);
+    console.error("   --force berilgan — baribir davom etilmoqda.\n");
+  }
+
   if (dryRun) {
     console.log("\n--dry-run: hech narsa yozilmadi.");
     return;

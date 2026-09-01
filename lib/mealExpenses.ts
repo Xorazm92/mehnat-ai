@@ -45,6 +45,13 @@ export interface ParsedMealSheet {
   declaredTotal: number | null;
   /** Hisoblangan va e'lon qilingan yig'indi mos keldimi. */
   matches: boolean;
+  /** Varaq nomidagi oy (o'qilsa). */
+  declaredMonth: { year: number; month: number } | null;
+  /**
+   * Katak sanalari varaq nomidagi oyga tushmaydi — FAYLDAGI xato.
+   * Bunday varaqni jim import qilish yozuvni boshqa davrga tashlaydi.
+   */
+  monthMismatch: boolean;
 }
 
 const isSummaryLabel = (label: string): boolean => {
@@ -52,8 +59,40 @@ const isSummaryLabel = (label: string): boolean => {
   return label.trim().endsWith(":") || SUMMARY_WORDS.some((w) => l.includes(w));
 };
 
+
+/**
+ * Varaq nomidan oy — "Январь 2026", "август 2026", "Avgust | 2025",
+ * "декабр 2025" (imlo xatosi bilan) kabi shakllar.
+ *
+ * NEGA KERAK: varaq nomi va katak ichidagi sana bir-biriga MOS KELMASLIGI
+ * mumkin. Real faylda shunday bo'lgan: "Январь 2026" varag'idagi ustun
+ * sarlavhalari 2026-DEKABR ni ko'rsatadi (Excel serial 46361 = 2026-12-05),
+ * "февраль 2026" esa 2025-FEVRAL ni. Xato faylda, parserda emas — lekin uni
+ * jimgina o'tkazib yuborish 39 ta yozuvni KELAJAK davriga tushirgan edi:
+ * joriy oy hisobotida ko'rinmaydi, keyin o'sha oy kelganda yo'qdan paydo
+ * bo'ladi.
+ */
+const MONTH_WORDS: [RegExp, number][] = [
+  [/янв|yanv/i, 1], [/фев|fevr/i, 2], [/мар|mart/i, 3], [/апр|aprel/i, 4],
+  [/ма[йя]|\bmay\b/i, 5], [/июн|iyun/i, 6], [/июл|iyul/i, 7], [/авг|avgust/i, 8],
+  [/сен|sentyabr/i, 9], [/окт|oktyabr/i, 10], [/ноя|noyabr/i, 11], [/дек|dekabr/i, 12],
+];
+
+export function sheetMonthOf(sheet: string): { year: number; month: number } | null {
+  const year = /(20\d{2})/.exec(sheet)?.[1];
+  if (!year) return null;
+  for (const [re, month] of MONTH_WORDS) {
+    if (re.test(sheet)) return { year: Number(year), month };
+  }
+  return null;
+}
+
 export function parseMealSheet(sheet: string, rows: Row[]): ParsedMealSheet {
-  const empty: ParsedMealSheet = { sheet, expenses: [], total: 0, declaredTotal: null, matches: true };
+  const declaredMonth = sheetMonthOf(sheet);
+  const empty: ParsedMealSheet = {
+    sheet, expenses: [], total: 0, declaredTotal: null, matches: true,
+    declaredMonth, monthMismatch: false,
+  };
   if (rows.length === 0) return empty;
 
   const header = rows[0];
@@ -92,12 +131,27 @@ export function parseMealSheet(sheet: string, rows: Row[]): ParsedMealSheet {
   }
 
   const total = expenses.reduce((s, e) => s + e.amount, 0);
+
+  // Sanalar varaq nomidagi oyga tushadimi. Bitta-ikkita chetdagi katak
+  // bo'lishi mumkin (oy chegarasi), shuning uchun KO'PCHILIK qaraladi.
+  const inMonth = declaredMonth
+    ? expenses.filter(
+        (e) =>
+          e.date.getUTCFullYear() === declaredMonth.year &&
+          e.date.getUTCMonth() + 1 === declaredMonth.month
+      ).length
+    : 0;
+  const monthMismatch =
+    declaredMonth !== null && expenses.length > 0 && inMonth < expenses.length / 2;
+
   return {
     sheet,
     expenses,
     total,
     declaredTotal,
     matches: declaredTotal === null || Math.abs(declaredTotal - total) < 1,
+    declaredMonth,
+    monthMismatch,
   };
 }
 
