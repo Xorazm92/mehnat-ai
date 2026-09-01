@@ -270,6 +270,34 @@ async function checkDuplicateChannels(): Promise<void> {
   );
 }
 
+/**
+ * 6. Kelajak sanali yozuv yo'q.
+ *
+ * 2026-09-01 da prodda 39 ta "ovqat_xojalik" yozuvi 2026-12-05…12-30
+ * sanalari bilan turgani topildi — ular 2026-08-09 da AVGUST obed
+ * faylidan import qilingan, ya'ni sana noto'g'ri o'qilgan. Bunday yozuv
+ * jimgina kelajak davrga tushadi: joriy oy hisobotida ko'rinmaydi, keyin
+ * esa o'sha oy kelganda yo'qdan paydo bo'ladi.
+ */
+async function checkFutureDates(): Promise<void> {
+  const horizon = new Date(Date.now() + 86_400_000); // ertaga
+  const rows = await prisma.kassaEntry.findMany({
+    where: { deletedAt: null, date: { gt: horizon } },
+    select: { category: true, amount: true, date: true },
+    orderBy: { date: "asc" },
+  });
+
+  const sum = rows.reduce((s, r) => s + Number(r.amount), 0);
+  const first = rows[0]?.date.toISOString().slice(0, 10);
+  const last = rows[rows.length - 1]?.date.toISOString().slice(0, 10);
+
+  check(
+    "Kelajak sanali kassa yozuvi yo'q",
+    rows.length === 0,
+    rows.length ? `${rows.length} yozuv · ${som(sum)} · ${first} … ${last}` : "topilmadi"
+  );
+}
+
 async function main(): Promise<void> {
   console.log(`\nDavr: ${month}\n${"─".repeat(72)}`);
 
@@ -278,6 +306,7 @@ async function main(): Promise<void> {
   await checkCrossReconciliation();
   await checkOpenings();
   await checkDuplicateChannels();
+  await checkFutureDates();
 
   for (const r of results) {
     console.log(`${r.ok ? "✓" : "✗"} ${r.name.padEnd(44)} ${r.detail}`);
