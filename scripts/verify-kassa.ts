@@ -19,6 +19,7 @@
 import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { formatNum as som } from "@/lib/platform/format";
+import { NON_POSTABLE_CATEGORIES } from "@/lib/bank/classifyExpense";
 
 const month = process.argv.find((a) => a.startsWith("--month="))?.slice(8) ?? "2026-08";
 const from = new Date(`${month}-01T00:00:00.000Z`);
@@ -298,6 +299,38 @@ async function checkFutureDates(): Promise<void> {
   );
 }
 
+/**
+ * 7. Vipiska chiqimi navbatda qolib ketmagan.
+ *
+ * Bank chiqimi `unmatched` holatda navbatda turadi va operator uni
+ * tasdiqlaganda kassaga tushadi. 2026-09-01 da avgustda 91 ta qator
+ * (73 323 355,03) navbatda unutilgan holda topildi — balansda ham, foyda
+ * hisobida ham yo'q edi.
+ *
+ * Kartaga o'tkazma bu yerga KIRMAYDI: u xarajat emas (o'z cho'ntagimizdan
+ * o'z cho'ntagimizga) va `xodim_kartasi` toifasida qoladi.
+ */
+async function checkUnpostedBankExpenses(): Promise<void> {
+  const rows = await prisma.bankTransaction.findMany({
+    where: {
+      direction: "expense",
+      status: "unmatched",
+      valueDate: { gte: from, lt: to },
+      NOT: { expenseCategory: { in: [...NON_POSTABLE_CATEGORIES] } },
+    },
+    select: { amount: true, expenseCategory: true },
+  });
+
+  const sum = rows.reduce((s, r) => s + Number(r.amount), 0);
+  const cats = [...new Set(rows.map((r) => r.expenseCategory ?? "boshqa"))].sort();
+
+  check(
+    "Vipiska chiqimi navbatda qolmagan",
+    rows.length === 0,
+    rows.length ? `${rows.length} ta · ${som(sum)} · ${cats.join(", ")}` : "navbat bo'sh"
+  );
+}
+
 async function main(): Promise<void> {
   console.log(`\nDavr: ${month}\n${"─".repeat(72)}`);
 
@@ -307,6 +340,7 @@ async function main(): Promise<void> {
   await checkOpenings();
   await checkDuplicateChannels();
   await checkFutureDates();
+  await checkUnpostedBankExpenses();
 
   for (const r of results) {
     console.log(`${r.ok ? "✓" : "✗"} ${r.name.padEnd(44)} ${r.detail}`);

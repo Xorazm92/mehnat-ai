@@ -92,7 +92,6 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "payout", why: "real to'lovlar" },
   { model: "payrollAdjustment", why: "oylik: bonus/jarima/avans/hisoblangan" },
   { model: "payment", why: "mijoz to'lovlari" },
-  { model: "expense", why: "xarajatlar" },
   { model: "kassaEntry", why: "kassa kirim/chiqim" },
 
   // KPI
