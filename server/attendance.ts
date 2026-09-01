@@ -147,3 +147,20 @@ export async function deriveAttendanceKpi(employeeId: string, month: string) {
 
   return aggregateMonthlyAttendance(rows);
 }
+
+/**
+ * Davomat yozuvi BOR oylar ro'yxati ("YYYY-MM"), yangisidan eskisiga.
+ * Ekrandagi oy tanlagich shu ro'yxatdan to'ldiriladi — bo'sh oy taklif
+ * qilinmaydi va foydalanuvchi qaysi oyda ma'lumot borligini ko'rib turadi.
+ */
+export async function getAttendanceMonths(): Promise<string[]> {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const rows = await prisma.$queryRaw<{ ym: string }[]>`
+    SELECT DISTINCT to_char("date", 'YYYY-MM') AS ym
+    FROM "Attendance"
+    ORDER BY ym DESC
+  `;
+  return rows.map((r) => r.ym);
+}

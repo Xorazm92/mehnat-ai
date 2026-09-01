@@ -13,9 +13,13 @@ interface Props {
   records: AttendanceRecord[];
   staff: Staff[];
   canEdit: boolean;
+  /** Ko'rilayotgan oy, "YYYY-MM". */
+  month: string;
+  /** Yozuvi bor oylar — tanlagich shu ro'yxatdan to'ldiriladi. */
+  months: string[];
 }
 
-export default function AttendanceClient({ records, staff, canEdit }: Props) {
+export default function AttendanceClient({ records, staff, canEdit, month, months }: Props) {
   const router = useRouter();
   useAutoRefresh();
 
@@ -42,12 +46,21 @@ export default function AttendanceClient({ records, staff, canEdit }: Props) {
     return res;
   };
 
+  // Oy serverdan olinadi (butun oy bir so'rovda), shuning uchun almashtirish
+  // URL orqali — sahifa qayta yuklanadi va yangi oy ma'lumoti keladi.
+  const handleMonthChange = (next: string) => {
+    router.push(`/attendance?month=${next}`);
+  };
+
   return (
     <div className="space-y-6">
       <AttendanceModule
         records={records}
         staff={staff}
         lang="uz"
+        month={month}
+        months={months}
+        onMonthChange={handleMonthChange}
         canEdit={canEdit}
         onSave={handleSave}
         onDelete={handleDelete}

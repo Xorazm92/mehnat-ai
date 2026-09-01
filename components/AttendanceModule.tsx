@@ -32,6 +32,11 @@ interface Props {
     staff: Staff[];
     lang: Language;
     canEdit: boolean;
+    /** Ko'rilayotgan oy, "YYYY-MM". */
+    month: string;
+    /** Yozuvi bor oylar, yangisidan eskisiga. */
+    months: string[];
+    onMonthChange: (month: string) => void;
     onSave: (data: {
         userId: string;
         date: string;
@@ -58,7 +63,16 @@ const fmtTime = (iso?: string) => {
     return d.toTimeString().slice(0, 5);
 };
 
-const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSave, onDelete, onSyncEjurnal }) => {
+const MONTH_NAMES_UZ = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
+    'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+
+/** "2026-08" → "2026 Avgust". Intl ishlatilmaydi — SSR bilan mos kelmaydi. */
+const monthLabel = (ym: string) => {
+    const [y, m] = ym.split('-').map(Number);
+    return `${y} ${MONTH_NAMES_UZ[m - 1] ?? m}`;
+};
+
+const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, month, months, onMonthChange, onSave, onDelete, onSyncEjurnal }) => {
     const table = useTableState({ ns: 'att', defaultSortKey: 'user' });
   const confirm = useConfirm();
     const t = translations[lang];
@@ -96,8 +110,14 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
         return latest;
     }, [records]);
     const [selectedDate, setSelectedDate] = useState(
-        latestRecordDate || new Date().toISOString().slice(0, 10),
+        latestRecordDate || `${month}-01`,
     );
+
+    // Oy almashsa tanlangan kun eski oyda qolib ketardi va ekran bo'sh
+    // ko'rinardi. Yangi oyning yozuvi bor oxirgi kuniga o'tamiz.
+    React.useEffect(() => {
+        setSelectedDate(latestRecordDate || `${month}-01`);
+    }, [month, latestRecordDate]);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // DIALOG XULQI — fokus tuzog'i, Escape, scroll qulfi, fokusni qaytarish.
@@ -258,6 +278,18 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
 
             {/* Controls */}
             <div className="flex flex-col md:flex-row gap-4">
+                <select
+                    value={month}
+                    onChange={(e) => onMonthChange(e.target.value)}
+                    className="rounded-xl py-3 px-4 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
+                >
+                    {/* Joriy oy ro'yxatda bo'lmasligi mumkin (hali yozuv yo'q) —
+                        u holda ham tanlangan qiymat ko'rinib turishi kerak. */}
+                    {(months.includes(month) ? months : [month, ...months]).map(m => (
+                        <option key={m} value={m}>{monthLabel(m)}</option>
+                    ))}
+                </select>
                 <div className="relative">
                     <DateField
                         className="w-auto"
