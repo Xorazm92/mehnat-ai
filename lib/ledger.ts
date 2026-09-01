@@ -40,6 +40,20 @@ export const ACCOUNTS = {
    * yozish foydani asossiz oshiradi.
    */
   LOAN_RECEIVED: "LOAN_RECEIVED",
+  /**
+   * OCHILISH QOLDIG'I — kapital tomonidagi qarama-qarshi hisob.
+   *
+   * Jurnal 2026-08 dan boshlanadi (`clean-start-2026-08`), lekin biznes undan
+   * oldin ham ishlagan. Aprelda berilgan moliyaviy yordam avgustda QAYTGANDA
+   * jurnalga faqat qaytish oyog'i tushadi va `LOAN_GIVEN` — aktiv hisob —
+   * MANFIY qoldiqqa o'tadi. Prodda aynan shunday bo'ldi: Khorezm Golden
+   * Building bo'yicha 55 mln berilgan, 125 mln qaytgan, netto -70 mln.
+   *
+   * Bu xato emas — yozuvlar hujjatga mos. Yetishmagani davr boshidagi
+   * qoldiq. Shu hisob o'sha qoldiqni kiritish uchun: u daromad ham, xarajat
+   * ham emas, shuning uchun foyda hisobiga tegmaydi.
+   */
+  OPENING_BALANCE: "OPENING_BALANCE",
 } as const;
 
 export type AccountId = (typeof ACCOUNTS)[keyof typeof ACCOUNTS];
@@ -73,6 +87,9 @@ export const ACCOUNT_SPEC: Record<
   // Faza 2 da (kanal backfilli tugagach) bu bitta so'z "required" ga o'zgaradi
   // va o'sha paytdan boshlab kanalsiz CASH yozuvi umuman yozilmaydi.
   CASH: { channel: "optional", subject: null },
+  // Ochilish qoldig'i - kanal ham, kontragent ham ma'nosiz: u qarama-qarshi
+  // oyoq, pul harakati emas.
+  OPENING_BALANCE: { channel: "forbidden", subject: null },
   CONTRACT_INCOME: { channel: "forbidden", subject: "company_optional" },
   KASSA_INCOME: { channel: "forbidden", subject: null },
   OPERATING_EXPENSE: { channel: "forbidden", subject: null },
@@ -228,9 +245,9 @@ interface Dimensions {
   subjectId: string | null;
 }
 
-// ` ` ajratgich: id larda uchramaydi, shuning uchun kalit noaniq bo'lmaydi.
+// `\u0000` ajratgich: id larda uchramaydi, shuning uchun kalit noaniq bo'lmaydi.
 const dimKey = (d: Dimensions) =>
-  `${d.accountId} ${d.channelId ?? ""} ${d.subjectType ?? ""} ${d.subjectId ?? ""}`;
+  `${d.accountId}\u0000${d.channelId ?? ""}\u0000${d.subjectType ?? ""}\u0000${d.subjectId ?? ""}`;
 
 /** Manba bo'yicha hali yopilmagan netto — o'lchovlar kesimida. */
 async function netBySource(
