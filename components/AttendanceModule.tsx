@@ -83,7 +83,21 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, onSa
     const [searchTerm, setSearchTerm] = useState('');
     // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
     const [viewMode, setViewMode] = useViewMode('davomat');
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+    // Boshlang'ich sana — YOZUVI BOR eng oxirgi kun, bugun emas. Bugun uchun
+    // davomat odatda hali kiritilmagan (e-jurnal importi kechroq bo'ladi), shu
+    // sababli ekran har safar bo'sh ochilib "davomat yo'q" degan taassurot
+    // qoldirardi — aslida ma'lumot bor, faqat boshqa kunda.
+    const latestRecordDate = useMemo(() => {
+        let latest = '';
+        for (const r of records) {
+            const day = r.date.slice(0, 10);
+            if (day > latest) latest = day;
+        }
+        return latest;
+    }, [records]);
+    const [selectedDate, setSelectedDate] = useState(
+        latestRecordDate || new Date().toISOString().slice(0, 10),
+    );
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // DIALOG XULQI — fokus tuzog'i, Escape, scroll qulfi, fokusni qaytarish.
