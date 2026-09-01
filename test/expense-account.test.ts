@@ -37,3 +37,14 @@ describe("expenseAccountFor", () => {
     expect(isOwnerDistribution("Ovqat")).toBe(false);
   });
 });
+
+describe("vosstanovleniya", () => {
+  it("mehnat haqi hisobiga tushadi (bir martalik xizmat ulushi)", () => {
+    expect(expenseAccountFor("Vosstanovleniya")).toBe("SALARY_EXPENSE");
+  });
+
+  it("lekin jurnalda taqiqlanmaydi — oylik qoidasiga qo'shilmagan", async () => {
+    const { isSalaryCategory } = await import("@/lib/salaryCategory");
+    expect(isSalaryCategory("Vosstanovleniya")).toBe(false);
+  });
+});
