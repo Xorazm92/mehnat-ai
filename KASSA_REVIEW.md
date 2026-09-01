@@ -2,8 +2,10 @@
 
 > **HOLAT (2026-09-01):** §1 dagi asosiy topilma — 441,7 mln so'mlik karta
 > xarajati — **YOPILDI**. Dalil va tuzatish tafsiloti: `KASSA_GAP_441M.md`.
-> ⚠️ Tuzatish jarayonida **YANGI, hali yopilmagan** teshik topildi (§1.1),
-> uni ham o'qing: bu hujjat "yopiq" deb qaralsa, o'sha teshik unutiladi.
+> Tuzatish jarayonida yana ikkita teshik chiqdi va ular ham yopildi:
+> §1.1 (navbatda qolgan bank chiqimi, 67 777 868,32) va noto'g'ri sanali
+> 39 ta xo'jalik yozuvi (1 221 000 → 2026-01 ga ko'chirildi).
+> `npm run verify:kassa` — **7/7 yashil**.
 
 **Sana:** 2026-08-18 · **Manba:** prod bazasi (o'qish) · **Qamrov:** 4 277 qator server/lib + 3 127 qator UI
 

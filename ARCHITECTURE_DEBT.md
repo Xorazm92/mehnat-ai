@@ -18,8 +18,9 @@ diskda (78 MB, 1 209 fayl — 245 tasi mazmun bo'yicha dublikat bo'lib
 birlashdi) va zaxira ikki qismli.
 
 **D5 yopildi (2026-09-01)** — pastga qarang. **D3 qayta baholandi** — u ham
-pastda. **D11 ochildi va yopildi (2026-09-01)** — bank vipiskasidagi
-postlanmagan chiqim. Qolgan ochiq: D6-D10.
+pastda. **D11 va D12 ochildi va yopildi (2026-09-01)** — bank vipiskasidagi
+postlanmagan chiqim va noto'g'ri sanali xo'jalik yozuvlari.
+Qolgan ochiq: D6-D10.
 
 ## 0. Bir jumlada
 
@@ -374,6 +375,24 @@ qoida (`~` bilan ajratilgan aynan 16 raqam) bo'yicha bunday qator nolta.
 67 777 868,32 kassaga va jurnalga yozildi (101 ta kartaga o'tkazma va 5 ta
 oylik ataylab olinmadi). `verify-kassa` ga yettinchi nazorat qo'shildi,
 farq `test/bank-card-marker.test.ts` bilan qotirildi.
+
+---
+
+### D12 · Noto'g'ri sanali xo'jalik yozuvlari — YOPILDI (2026-09-01) ✅
+
+"FinCo Obed harajatlar" faylida ikkita varaqda ustun sarlavhalaridagi Excel
+sanasi xato: "Январь 2026" 2026-DEKABR ni ko'rsatadi (serial 46361 =
+2026-12-05), "февраль 2026" esa 2025-FEVRAL ni. Parser to'g'ri o'qigan —
+xato faylda.
+
+Oqibati: 39 ta yozuv / 1 221 000 kelajak davriga tushgan. Bunday yozuv joriy
+hisobotda ko'rinmaydi, keyin o'sha oy kelganda yo'qdan paydo bo'ladi.
+
+**Bajarildi:** `parseMealSheet` endi varaq nomidan oyni o'qiydi va
+nomuvofiqlikda import TO'XTAYDI (`scripts/import-kassa-data.ts`, `--force`
+bilan chetlab o'tiladi); mavjud 39 yozuv `scripts/fix-meal-dates.ts` bilan
+2026-01 ga ko'chirildi (eski bekor qilinib, yangisi yozildi — jurnal
+append-only). Qo'riqchi: `test/meal-sheet-month.test.ts`.
 
 ---
 
