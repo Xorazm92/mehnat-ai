@@ -216,6 +216,57 @@ yozuv sifatida qoladi (FK yo'q edi).
 
 ---
 
+### D11 · Pul ikki joyda, ikki xil hisoblanadi 🔴
+
+**Qanday topildi.** Jurnaldagi `CASH` hisobi tuzatilgandan keyin ekranda
+HECH NARSA o'zgarmadi. Sabab: [`lib/balance.ts`](lib/balance.ts)
+`getAvailableBalance` — ekrandagi barcha balans raqamlarining manbasi —
+**jurnalni umuman o'qimaydi**. U `Payment`, `KassaEntry`, `Payout`
+jadvallaridan to'g'ridan-to'g'ri yig'adi.
+
+Ya'ni tizimda pul haqida IKKI PARALLEL HAQIQAT bor:
+
+| | Manba | 2026-09-01 holati |
+|---|---|---|
+| Jurnal | `LedgerEntry.CASH` | **−31 592 462** |
+| Ekran | `getAvailableBalance` | **+289 445 041** |
+
+Farq — **321 037 503**. Ikkalasi ham bir xil bazadan o'qiydi.
+
+**Farq qayerdan.** Uchta tizimli sabab, hammasi o'lchangan:
+
+| Sabab | Summa |
+|---|---|
+| `Payment` — jurnal to'liq summani yozadi, ekran esa "offset" (vzaimozachyot) ulushini chiqarib tashlaydi | 39 700 000 |
+| `KassaEntry` — ekran `date >= 01.08.2026` va `status='approved'` bilan filtrlaydi, jurnalda bunday filtr yo'q | 425 737 503 |
+| `BankTransaction` — moliyaviy yordam oqimlari faqat jurnalda, operatsion hisobda umuman yo'q | 65 000 000 |
+
+**Ta'sir.** Bu shunchaki nomuvofiqlik emas. `assertSufficientFunds` —
+chiqimni bloklaydigan qo'riqchi — `getAvailableBalance` ga tayanadi. Ya'ni
+pul sarflashga ruxsat JURNALDAN emas, ikkinchi hisobdan so'raladi. Ikkisi
+321 mln ga farq qilganda "yetarli mablag' bor" degan javob ham shuncha
+noaniq bo'ladi.
+
+**Qisman yopildi (2026-09-01).** Ochilish qoldig'i endi ekrandagi formulaga
+ham kiradi va u JURNALDAN o'qiladi (`sourceTable='OpeningBalance'`), kodga
+qotirilmaydi. Bu manfiy balans ogohlantirishini olib tashladi, lekin
+YUQORIDAGI FARQNI YOPMAYDI.
+
+**Qolgan ish — qaror talab qiladi.** Qaysi biri haqiqat?
+
+1. *Jurnal yagona manba bo'ladi* — `getAvailableBalance` `LedgerEntry.CASH`
+   dan o'qiydi. Eng toza, lekin `KASSA_START_DATE` kesimi va offset qoidasi
+   jurnal tomonida qayta ifodalanishi kerak.
+2. *Operatsion hisob yagona manba bo'ladi* — u holda jurnal faqat hisobot
+   uchun qoladi va `assertSufficientFunds` bugungidek ishlaydi.
+
+Ikkinchisini tanlash ham mumkin, lekin u holda jurnaldagi `CASH` ni
+"haqiqiy pul" deb ko'rsatadigan har qanday ekran olib tashlanishi shart —
+aks holda foydalanuvchi ikki xil raqamni ko'rib qaysi biriga ishonishni
+bilmaydi. Bugungi holat aynan shu.
+
+---
+
 ### D6 · `lib/` da qatlam chegarasi yo'q 🟡
 
 **Dalil.** `lib/` ichida **138 ta tekis `.ts` fayl** va 4 ta nomlangan qatlam
