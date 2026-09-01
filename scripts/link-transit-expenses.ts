@@ -15,9 +15,11 @@
 //
 // TASNIF. Toifalar ikki guruhga bo'linadi va ular boshqa hisobga tushadi:
 //
-//   salary     — "Oylik", "O'ziga oylik", "Otabek akaga" (103 ta / 421.5 mln)
-//                → SALARY_EXPENSE. Bular mehnat haqi (foydalanuvchi tasdiqladi),
-//                  operatsion xarajat emas — aks holda foyda tahlili buziladi.
+//   salary     — "Oylik", "O'ziga oylik" → SALARY_EXPENSE. Mehnat haqi
+//                  operatsion xarajat emas, aks holda foyda tahlili buziladi.
+//   owner      — "Otabek akaga" → OWNER_DISTRIBUTION. 2026-09-01 biznes
+//                  qarori: bu foyda taqsimoti, xarajat EMAS. Ilgari bu yerda
+//                  oylik deb tasniflanardi.
 //   operating  — ovqat, texnika, bank komissiyasi va h.k. (22 ta / 20.2 mln)
 //                → OPERATING_EXPENSE.
 //
@@ -40,6 +42,7 @@ import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { formatNum as som } from "@/lib/platform/format";
 import { ACCOUNTS, reverseLedger } from "@/lib/ledger";
+import { expenseAccountFor } from "@/lib/expenseAccount";
 import { recordKassaMovement, runCashTx, type CashActor } from "@/lib/cashGate";
 import { serializable } from "@/lib/tx";
 import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
@@ -51,15 +54,22 @@ const arg = (f: string) => {
   const i = process.argv.indexOf(f);
   return i >= 0 ? (process.argv[i + 1] ?? null) : null;
 };
-const GROUP = (arg("--group") ?? "all") as "operating" | "salary" | "all";
+const GROUP = (arg("--group") ?? "all") as "operating" | "salary" | "owner" | "all";
 const RECEIPT_PATH = arg("--receipt");
 
 const ACTOR: CashActor = { kind: "script", name: "link-transit-expenses" };
 
 /** Mehnat haqi toifalari — foydalanuvchi tasdiqlagan ro'yxat. */
-const SALARY_RE = /oylik|ish\s*haqi|mehnat\s*haqi|maosh|zarplata|otabek\s*akaga|o'ziga|ozida/i;
+// Tasnif YAGONA manbadan (`lib/expenseAccount.ts`) — ilgari bu yerda o'z
+// regexi bor edi va u "Otabek akaga" ni oylik deb bilardi.
 
-const isSalary = (category: string | null) => !!category && SALARY_RE.test(category);
+/** Toifa qaysi guruhga tegishli — `lib/expenseAccount.ts` bilan bir xil qoida. */
+function groupOf(category: string | null): "salary" | "owner" | "operating" {
+  const account = expenseAccountFor(category ?? "");
+  if (account === "OWNER_DISTRIBUTION") return "owner";
+  if (account === "SALARY_EXPENSE") return "salary";
+  return "operating";
+}
 
 interface Row {
   id: string;
@@ -68,7 +78,7 @@ interface Row {
   date: Date;
   channelId: string;
   description: string | null;
-  group: "salary" | "operating";
+  group: "salary" | "owner" | "operating";
 }
 
 async function collect(): Promise<Row[]> {
@@ -80,7 +90,7 @@ async function collect(): Promise<Row[]> {
   return rows.map((r) => ({
     ...r,
     amount: Number(r.amount),
-    group: isSalary(r.category) ? ("salary" as const) : ("operating" as const),
+    group: groupOf(r.category),
   }));
 }
 
@@ -134,11 +144,13 @@ async function main() {
 
   const sum = (rows: Row[]) => rows.reduce((s, r) => s + r.amount, 0);
   const salary = all.filter((r) => r.group === "salary");
+  const owner = all.filter((r) => r.group === "owner");
   const operating = all.filter((r) => r.group === "operating");
 
   console.log("\n━━━ TRANZIT → KASSA " + (APPLY ? "(APPLY)" : "(DRY-RUN)") + " ━━━━━━━━━━━\n");
   console.log(`  Bog'lanmagan jami : ${all.length} ta · ${som(sum(all))} so'm`);
   console.log(`    oylik (SALARY_EXPENSE)    : ${salary.length} ta · ${som(sum(salary))} so'm`);
+  console.log(`    ta'sischiga (OWNER_DISTR) : ${owner.length} ta · ${som(sum(owner))} so'm`);
   console.log(`    xarajat (OPERATING)       : ${operating.length} ta · ${som(sum(operating))} so'm`);
   console.log(`\n  Tanlangan guruh   : ${GROUP} — ${target.length} ta · ${som(sum(target))} so'm\n`);
   for (const [cat, v] of summarize(target)) {
@@ -175,7 +187,7 @@ async function main() {
           channelId: r.channelId,
           dedupKey: `transit:${r.id}`,
           expenseAccount:
-            r.group === "salary" ? ACCOUNTS.SALARY_EXPENSE : ACCOUNTS.OPERATING_EXPENSE,
+            ACCOUNTS[expenseAccountFor(r.category ?? "")],
         });
         // Zanjirni yopamiz: endi tranzit qatori o'z kassa yozuvini biladi va
         // skript ikkinchi marta yurgizilsa uni umuman ko'rmaydi.

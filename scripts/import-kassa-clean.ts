@@ -41,7 +41,21 @@ import { expenseAccountFor } from "@/lib/expenseAccount";
 import { recordKassaMovement, reverseKassaMovement, runCashTx } from "@/lib/cashGate";
 import { ACCOUNTS } from "@/lib/ledger";
 
-const PERIOD = "2026-08";
+/**
+ * Qaysi oy. Avgust — auditning tozalangan fayli
+ * (`json_clean/cash_transactions.json`); qolgan oylar
+ * `scripts/convert-transit-to-clean.ts` chiqishidan
+ * (`json_clean/cash_transactions_<davr>.json`).
+ */
+const PERIOD = process.argv.find((a) => a.startsWith("--period="))?.slice(9) ?? "2026-08";
+if (!/^\d{4}-\d{2}$/.test(PERIOD)) {
+  console.error(`Davr YYYY-MM formatida bo'lishi kerak: "${PERIOD}"`);
+  process.exit(1);
+}
+const SOURCE_FILE =
+  PERIOD === "2026-08"
+    ? "json_clean/cash_transactions.json"
+    : `json_clean/cash_transactions_${PERIOD}.json`;
 const LEGACY_PREFIX = `xls:${PERIOD}:`;
 const dryRun = process.argv.includes("--dry-run");
 const replace = process.argv.includes("--replace");
@@ -51,7 +65,7 @@ const actor = { kind: "script" as const, name: "import-kassa-clean" };
 const key = (m: CleanCashMovement, dir: "in" | "out" | "fee") =>
   `clean:${PERIOD}:${m.rowNo}:${dir}`;
 
-/** Eski (buzuq manbadan kelgan) avgust qatorlarini bekor qiladi. */
+/** Eski (xom Excel manbasidan kelgan) shu oy qatorlarini bekor qiladi. */
 async function purgeLegacy(): Promise<void> {
   const rows = await prisma.transitEntry.findMany({
     where: { dedupKey: { startsWith: LEGACY_PREFIX } },
@@ -61,7 +75,7 @@ async function purgeLegacy(): Promise<void> {
   const sum = (dir: string) =>
     rows.filter((r) => r.direction === dir).reduce((s, r) => s + Number(r.amount), 0);
   console.log(
-    `Eski avgust qatorlari: ${rows.length} ta — kirim ${som(sum("in"))} · chiqim ${som(sum("out"))}`
+    `Eski ${PERIOD} qatorlari: ${rows.length} ta — kirim ${som(sum("in"))} · chiqim ${som(sum("out"))}`
   );
   if (!rows.length || dryRun) return;
 
@@ -71,7 +85,7 @@ async function purgeLegacy(): Promise<void> {
     const res = await runCashTx((tx) =>
       reverseKassaMovement(tx, actor, {
         kassaEntryId: r.kassaEntryId!,
-        reason: "Buzuq Excel manbasidan kelgan avgust yozuvi — tozalangan daftardan qayta import",
+        reason: `Xom Excel manbasidan kelgan ${PERIOD} yozuvi — tozalangan daftardan qayta import`,
       })
     );
     if (res.reversed) reversed++;
@@ -81,11 +95,11 @@ async function purgeLegacy(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const file = requireImportFile("json_clean/cash_transactions.json");
+  const file = requireImportFile(SOURCE_FILE);
   const movements = parseCleanCash(JSON.parse(fs.readFileSync(file, "utf8")));
   const totals = cleanCashTotals(movements);
 
-  console.log(`\nManba: ${file}`);
+  console.log(`\nDavr: ${PERIOD}\nManba: ${file}`);
   console.log(
     `Fayl: ${totals.rows} qator · kirim ${totals.inCount} / ${som(totals.totalIn)} · ` +
       `chiqim ${totals.outCount} / ${som(totals.totalOut)} · komissiya ${som(totals.totalFee)}`
@@ -132,8 +146,8 @@ async function main(): Promise<void> {
     });
     if (legacy) {
       console.error(
-        `\n${legacy} ta eski avgust qatori turibdi (${LEGACY_PREFIX}…). Ular buzuq manbadan ` +
-          `kelgan va yonma-yon qolsa avgust ikki barobar ko'rinadi.\nQayta import: --replace`
+        `\n${legacy} ta eski ${PERIOD} qatori turibdi (${LEGACY_PREFIX}…). Ular buzuq manbadan ` +
+          `kelgan va yonma-yon qolsa ${PERIOD} ikki barobar ko'rinadi.\nQayta import: --replace`
       );
       process.exit(1);
     }
