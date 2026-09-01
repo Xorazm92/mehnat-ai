@@ -123,8 +123,11 @@ async function main(): Promise<void> {
   const plans: Plan[] = aidRows.map((t) => {
     const isReturn = RETURN_RE.test(t.purpose ?? "");
     const isExpense = t.direction === "expense";
-    // Jadval yuqoridagi izohda.
-    const account = isExpense === isReturn ? ACCOUNTS.LOAN_GIVEN : ACCOUNTS.LOAN_RECEIVED;
+    // Jadval yuqoridagi izohda. BIZ BERDIK bo'lgan ikki holat — "chiqim va
+    // qaytarish emas" hamda "kirim va qaytarish" — ya'ni ikki bayroq HAR XIL
+    // bo'lganda `LOAN_GIVEN`. Ular bir xil bo'lsa, aksincha: qarzni biz
+    // olganmiz.
+    const account = isExpense !== isReturn ? ACCOUNTS.LOAN_GIVEN : ACCOUNTS.LOAN_RECEIVED;
     return {
       id: t.id,
       date: t.valueDate,
