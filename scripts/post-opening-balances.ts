@@ -1,5 +1,5 @@
 // =====================================================
-// OCHILISH QOLDIG'I — 01.08.2026 holatiga berilgan/olingan moliyaviy yordam
+// OCHILISH QOLDIG'I — 01.08.2026 holatiga pul va moliyaviy yordam
 // =====================================================
 //
 // MUAMMO. Jurnal 2026-08 dan boshlanadi (`clean-start-2026-08`), biznes esa
@@ -34,8 +34,8 @@
 //   LOAN_GIVEN     netto  55 000 000  (06.08 da berilgan, hali qaytmagan)
 //   LOAN_RECEIVED  netto           0  (iyunda olingan 5 mln avgustda qaytarildi)
 //
-//   npx tsx scripts/post-opening-loans.ts            # dry-run
-//   npx tsx scripts/post-opening-loans.ts --apply
+//   npx tsx scripts/post-opening-balances.ts            # dry-run
+//   npx tsx scripts/post-opening-balances.ts --apply
 
 import "./load-env";
 import { prisma } from "@/lib/prisma";
@@ -50,6 +50,19 @@ const PERIOD = "2026-08";
  * dublikatni bloklaydi, ya'ni skriptni ikki marta yurgizish xavfsiz.
  */
 const OPENINGS = [
+  {
+    // Manba: 01.08.2026 holatiga bank hisobvaraqlari + kassadagi jami naqd
+    // qoldiq (foydalanuvchi bergan yakuniy raqam, 2026-09-01).
+    //
+    // BUSIZ NIMA BO'LARDI: avgustdagi har chiqim NOL qoldiqdan ayirilardi va
+    // `CASH` — aktiv hisob — −508 542 512 ga tushib qolgandi. Bu raqam
+    // kiritilgach avgust oxiridagi haqiqiy qoldiq 36 185 406 bo'ladi.
+    sourceId: "opening:cash:2026-08-01",
+    account: ACCOUNTS.CASH,
+    side: "debit" as const,
+    amount: 544_727_918,
+    description: "Ochilish qoldig'i 01.08.2026 — bank va kassadagi jami pul",
+  },
   {
     sourceId: "opening:loan-given:khorezm-golden-building:2026-04-24",
     account: ACCOUNTS.LOAN_GIVEN,
@@ -84,9 +97,14 @@ async function netOf(accountId: string) {
 async function main() {
   console.log(`\n=== Ochilish qoldig'i ${APPLY ? "(APPLY)" : "(DRY-RUN)"} ===\n`);
 
-  console.log("OLDIN:");
-  console.log(`  LOAN_GIVEN    ${som(await netOf(ACCOUNTS.LOAN_GIVEN))}`);
-  console.log(`  LOAN_RECEIVED ${som(await netOf(ACCOUNTS.LOAN_RECEIVED))}\n`);
+  const show = async (label: string) => {
+    console.log(`${label}:`);
+    console.log(`  CASH            ${som(await netOf(ACCOUNTS.CASH))}`);
+    console.log(`  LOAN_GIVEN      ${som(await netOf(ACCOUNTS.LOAN_GIVEN))}`);
+    console.log(`  LOAN_RECEIVED   ${som(await netOf(ACCOUNTS.LOAN_RECEIVED))}`);
+    console.log(`  OPENING_BALANCE ${som(await netOf(ACCOUNTS.OPENING_BALANCE))}\n`);
+  };
+  await show("OLDIN");
 
   for (const o of OPENINGS) {
     const already = await prisma.ledgerEntry.count({ where: { sourceId: o.sourceId } });
@@ -113,10 +131,8 @@ async function main() {
     });
   }
 
-  console.log("\nKEYIN:");
-  console.log(`  LOAN_GIVEN    ${som(await netOf(ACCOUNTS.LOAN_GIVEN))}`);
-  console.log(`  LOAN_RECEIVED ${som(await netOf(ACCOUNTS.LOAN_RECEIVED))}`);
-  console.log(`  OPENING_BALANCE ${som(await netOf(ACCOUNTS.OPENING_BALANCE))}`);
+  console.log("");
+  await show("KEYIN");
 
   if (!APPLY) console.log(`\nDRY-RUN — hech narsa yozilmadi. Bajarish: --apply`);
 }
