@@ -63,13 +63,17 @@ const threeState = (bonus: number, penalty: number): Opt[] => [
 export const RULES: RuleSeed[] = [
   // ===================== BUXGALTER (20% + max 5% KPI) =====================
   {
+    // Kechikish jarimasi -0.5% da to'xtaydi. Sabab: Face ID skaneri ishonchli
+    // emas — xodim kelgan bo'lsa ham o'tishni unutadi, kamera keyin qo'lda
+    // tekshirilib to'ldiriladi. Chegarasiz hisob shu nuqsonni oylikka
+    // aylantirardi (avgustda bir kishida -26.88% chiqqan edi).
     name: "acc_attendance", nameUz: "Ishga kelish (08:30 gacha)", role: "accountant",
     category: "attendance", inputTypeV2: "counter", scope: "global", sortOrder: 1,
     descriptionUz: "Har kuni 08:30 gacha kelish +0.04%/kun (max +1%). Uzrsiz 09:00 dan kech kelish har 5 daqiqa uchun -0.1%.",
     maxBonus: 1.0, maxPenalty: null,
     options: [
       { key: "early_days", label_uz: "08:30 gacha kelgan kunlar", color: "green", coeff_per_unit: 0.04, max_coeff: 1.0, note: "Har kun +0.04%, max +1%" },
-      { key: "late_5min", label_uz: "Kechikkan har 5 daqiqa (09:00 dan)", color: "red", coeff_per_unit: -0.1, max_coeff: null },
+      { key: "late_5min", label_uz: "Kechikkan har 5 daqiqa (09:00 dan)", color: "red", coeff_per_unit: -0.1, max_coeff: -0.5 },
     ],
   },
   {
@@ -207,7 +211,7 @@ export const RULES: RuleSeed[] = [
     maxBonus: 1.0, maxPenalty: null,
     options: [
       { key: "early_days", label_uz: "08:30 gacha kelgan kunlar", color: "green", coeff_per_unit: 0.04, max_coeff: 1.0 },
-      { key: "late_5min", label_uz: "Kechikkan har 5 daqiqa (09:00 dan)", color: "red", coeff_per_unit: -0.2, max_coeff: null },
+      { key: "late_5min", label_uz: "Kechikkan har 5 daqiqa (09:00 dan)", color: "red", coeff_per_unit: -0.2, max_coeff: -0.5 },
     ],
   },
   {
@@ -287,7 +291,7 @@ export const RULES: RuleSeed[] = [
     category: "attendance", inputTypeV2: "counter", scope: "global", sortOrder: 33,
     descriptionUz: "Uzrsiz 09:00 dan kech kelish: har 5 daqiqa uchun -0.1%.",
     maxBonus: 0.0, maxPenalty: null,
-    options: [{ key: "late_5min", label_uz: "Kechikkan har 5 daqiqa", color: "red", coeff_per_unit: -0.1, max_coeff: null }],
+    options: [{ key: "late_5min", label_uz: "Kechikkan har 5 daqiqa", color: "red", coeff_per_unit: -0.1, max_coeff: -0.5 }],
   },
   {
     name: "sup_unresolved", nameUz: "Muammolarni yechimisiz qoldirish", role: "supervisor",

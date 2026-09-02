@@ -13,6 +13,30 @@ export interface AttendanceThresholds {
   lateAfterMin: number;
 }
 
+/**
+ * Ish kuni bo'lmagan sanalar ("YYYY-MM-DD") — shanba/yakshanbadan tashqari.
+ * 31.08.2026 — Xotira va qadrlash kuni.
+ */
+export const NON_WORKING_DAYS = new Set(["2026-08-31"]);
+
+/** Shanba, yakshanba yoki bayram bo'lmagan kunmi. */
+export function isWorkday(iso: string): boolean {
+  if (NON_WORKING_DAYS.has(iso)) return false;
+  const wd = new Date(`${iso}T00:00:00.000Z`).getUTCDay();
+  return wd !== 0 && wd !== 6;
+}
+
+/** Oydagi ish kunlari soni. `month` — 1..12. */
+export function countWorkdays(year: number, month: number): number {
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  let n = 0;
+  for (let d = 1; d <= last; d++) {
+    const iso = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    if (isWorkday(iso)) n++;
+  }
+  return n;
+}
+
 /** ASRO reglamenti: 08:30 gacha — erta, 09:00 dan keyin — kechikish. */
 export const DEFAULT_ATTENDANCE_THRESHOLDS: AttendanceThresholds = {
   earlyBeforeMin: 8 * 60 + 30,
@@ -86,6 +110,13 @@ export interface MonthlyAttendanceSummary {
 export function aggregateMonthlyAttendance(
   rows: DailyAttendance[],
   t: AttendanceThresholds = DEFAULT_ATTENDANCE_THRESHOLDS,
+  /**
+   * Oydagi ish kunlari soni. Berilsa, `allEarly` (to'liq bonus) uchun xodimning
+   * HAR ish kunida yozuvi bo'lishi ham talab qilinadi — aks holda Face ID dan
+   * ikki kun o'tib, ikkalasida ham erta kelgan odam "uzilishsiz oy" bonusini
+   * olib ketardi.
+   */
+  expectedWorkdays?: number,
 ): MonthlyAttendanceSummary {
   const s: MonthlyAttendanceSummary = {
     workedDays: 0,
@@ -137,7 +168,11 @@ export function aggregateMonthlyAttendance(
     }
   }
 
-  s.allEarly = s.workedDays > 0 && s.earlyDays === s.workedDays && s.absentDays === 0;
+  s.allEarly =
+    s.workedDays > 0 &&
+    s.earlyDays === s.workedDays &&
+    s.absentDays === 0 &&
+    (expectedWorkdays === undefined || s.workedDays >= expectedWorkdays);
 
   return s;
 }

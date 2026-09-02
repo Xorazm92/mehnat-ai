@@ -11,7 +11,7 @@
 import { prisma } from "@/lib/prisma";
 import { toPerformanceMonth, toYearMonthKey, toObligationMonthKey } from "@/lib/periods";
 import { computeRuleScore } from "@/lib/kpiScoring";
-import { aggregateMonthlyAttendance } from "@/lib/attendance";
+import { aggregateMonthlyAttendance, countWorkdays } from "@/lib/attendance";
 import { responseColorFromCounts, RESPONSE_RULE_BY_ROLE } from "@/lib/kpiProjection";
 import { Prisma } from "@prisma/client";
 
@@ -385,7 +385,11 @@ export async function evaluateAttendanceEvidence(
   let skippedNeutral = 0;
 
   for (const [userId, entry] of byUser.entries()) {
-    const summary = aggregateMonthlyAttendance(entry.rows);
+    const summary = aggregateMonthlyAttendance(
+      entry.rows,
+      undefined,
+      countWorkdays(year, month),
+    );
 
     const userCompanies = companies.filter(
       (c) => c.accountantId === userId || c.bankClientId === userId || c.supervisorId === userId
@@ -445,6 +449,21 @@ export async function evaluateAttendanceEvidence(
       }
     }
   }
+
+  // Dalili YO'Q bo'lib qolgan taklifni o'chirish. Davomat yozuvlari qayta
+  // import qilinganda (masalan soxta 'kelmagan' qatorlari tozalanganda) xodim
+  // umuman yozuvsiz qolishi mumkin — u holda sikl uni ko'rmaydi va eski
+  // taklifi (masalan -20%) MonthlyPerformance da jimgina qolib ketardi.
+  // Tasdiqlangani tegilmaydi.
+  await prisma.monthlyPerformance.deleteMany({
+    where: {
+      month: perfMonth,
+      source: "system",
+      status: { not: "approved" },
+      rule: { category: "attendance" },
+      employeeId: { notIn: [...byUser.keys()] },
+    },
+  });
 
   const res = await flushProposals(perfMonth, proposals);
   return {

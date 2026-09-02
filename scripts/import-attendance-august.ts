@@ -11,8 +11,11 @@
  * QARORLAR (foydalanuvchi tasdiqlagan):
  *  1. Dam olish kuniga qator YOZILMAYDI — u yo'qlik emas, KPI'ga kirmasligi
  *     kerak (`excused` deb yozilsa excusedDays soxta shishadi).
- *  2. Belgisi yo'q ish kuni → status='absent'. Shu tufayli oy "to'liq"
- *     bo'ladi: har ish kuni yo kelish, yo yo'qlik.
+ *  2. Belgisi yo'q ish kuniga qator YOZILMAYDI. Avval u 'absent' deb
+ *     yozilardi — bu XATO edi: Face ID skaneri ishonchli emas, xodim kelgan
+ *     bo'lsa ham o'tishni unutadi va kun bo'sh qoladi. Uzrsiz yo'qlik (-1%)
+ *     kamerani tekshirgandan keyin ODAM tomonidan qo'yiladi, mashina taxmin
+ *     qilmaydi. Amalda bu holat hali bir marta ham bo'lmagan.
  *  3. Dam olish kuni FAQAT katakda yozilgani bilan aniqlanmaydi. E-jurnal
  *     ba'zi xodimlar uchun dam olish kataklarini umuman chiqarmagan (masalan
  *     Alisher, Mardon A, Mohirbek) — ularda faqat ish kunlari bor. Belgi
@@ -33,15 +36,11 @@
 import "./load-env";
 import { readFileSync } from "node:fs";
 import { prisma } from "@/lib/prisma";
-import { classifyArrival } from "@/lib/attendance";
+import { classifyArrival, isWorkday } from "@/lib/attendance";
 
 const SOURCE_FILE =
   "kassa/attendance_table_2026-08-01_2026-08-31 (1).json";
 const APPLY = process.argv.includes("--apply");
-
-/** Ish kuni bo'lmagan bayramlar. 31.08 — Xotira va qadrlash kuni: dushanba,
- * lekin manbada 30 xodimning birortasida ham katak yo'q. */
-const HOLIDAYS = new Set(["2026-08-31"]);
 
 /**
  * E-jurnaldagi ism → bazadagi `User.fullName`. Ataylab qo'lda: e-jurnal
@@ -118,13 +117,6 @@ interface Cell {
   restDay: boolean;
 }
 
-/** Shanba/yakshanba yoki bayram — ish kuni emas. */
-function isRestDay(iso: string): boolean {
-  if (HOLIDAYS.has(iso)) return true;
-  const wd = new Date(`${iso}T00:00:00.000Z`).getUTCDay();
-  return wd === 0 || wd === 6;
-}
-
 function parseCells(row: SourceRow): Cell[] {
   const cells: Cell[] = [];
   for (const [key, value] of Object.entries(row)) {
@@ -175,7 +167,8 @@ async function main() {
   let people = 0;
   let present = 0;
   let late = 0;
-  let absent = 0;
+  let unmarked = 0;
+  let cleaned = 0;
   let rest = 0;
 
   for (const row of rows) {
@@ -201,19 +194,12 @@ async function main() {
       const cell = cells.get(iso);
       // Dam olishda ishlagan bo'lsa (dam olish kunida kelish vaqti bor) —
       // u yozilishi kerak, chunki bu haqiqiy ish vaqti.
-      if (cell?.restDay || (!cell && isRestDay(iso))) {
+      if (cell?.restDay || (!cell && !isWorkday(iso))) {
         rest++;
         continue;
       }
       if (!cell) {
-        absent++;
-        records.push({
-          date: dayUtc(iso),
-          status: "absent",
-          checkIn: null,
-          checkOut: null,
-          lateMinutes: 0,
-        });
+        unmarked++;
         continue;
       }
 
@@ -231,6 +217,27 @@ async function main() {
     }
 
     if (APPLY) {
+      // Skriptning oldingi tahriri belgisiz kunlarni 'absent' deb yozgan edi.
+      // Endi u qoida bekor — o'sha O'ZI YARATGAN qatorlarni tozalaydi. Faqat
+      // mashina yozgani (source='ejurnal', kelish vaqti yo'q) o'chiriladi;
+      // odam qo'lda qo'ygan yo'qlik tegilmaydi.
+      const marked = new Set(records.map((r) => r.date.getTime()));
+      const stale = await prisma.attendance.findMany({
+        where: {
+          userId,
+          date: { gte: dayUtc(days[0]), lte: dayUtc(days[days.length - 1]) },
+          status: "absent",
+          source: "ejurnal",
+          checkIn: null,
+        },
+        select: { id: true, date: true },
+      });
+      const staleIds = stale.filter((a) => !marked.has(a.date.getTime())).map((a) => a.id);
+      if (staleIds.length) {
+        await prisma.attendance.deleteMany({ where: { id: { in: staleIds } } });
+        cleaned += staleIds.length;
+      }
+
       for (const r of records) {
         const data = {
           status: r.status,
@@ -256,8 +263,9 @@ async function main() {
   console.log(`  xodim:        ${people} / ${rows.length}`);
   console.log(`  vaqtida:      ${present}`);
   console.log(`  kechikkan:    ${late}`);
-  console.log(`  kelmagan:     ${absent}`);
+  console.log(`  belgisiz:     ${unmarked} (yozilmadi — Face ID o'tmagan bo'lishi mumkin)`);
   console.log(`  dam olish:    ${rest} (yozilmadi)`);
+  if (cleaned) console.log(`  TOZALANDI:    ${cleaned} ta eski soxta 'kelmagan' qatori o'chirildi`);
   if (skipped.length) {
     console.log(`\n  MOSLANMADI (${skipped.length}) — qo'lda hal qiling:`);
     for (const s of skipped) console.log(`    - ${s}`);

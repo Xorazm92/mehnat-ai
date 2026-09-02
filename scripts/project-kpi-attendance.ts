@@ -16,7 +16,7 @@
  */
 import "./load-env";
 import { prisma } from "@/lib/prisma";
-import { aggregateMonthlyAttendance } from "@/lib/attendance";
+import { aggregateMonthlyAttendance, countWorkdays } from "@/lib/attendance";
 import { computeRuleScore } from "@/lib/kpiScoring";
 import { evaluateAttendanceEvidence, earlyDaysForFullBonus } from "@/lib/kpiEvidence";
 import { toPerformanceMonth } from "@/lib/periods";
@@ -105,7 +105,7 @@ async function main() {
   }[] = [];
 
   for (const [userId, e] of byUser) {
-    const s = aggregateMonthlyAttendance(e.rows);
+    const s = aggregateMonthlyAttendance(e.rows, undefined, countWorkdays(year, mon));
     const firms = companies.filter(
       (c) => c.accountantId === userId || c.bankClientId === userId || c.supervisorId === userId,
     ).length;
