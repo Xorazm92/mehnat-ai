@@ -107,7 +107,7 @@ export default function SverkaMatrix({ days, devices, terminals, totals }: Props
                   {/* Sanasi tafsilotda YO'Q tushum shu kunga hujjat sanasi
                       bo'yicha tushgan — kunlik farq shartli, buni yashirmaymiz. */}
                   {d.approximateDate && (
-                    <AlertTriangle size={12} style={{ color: "var(--accent-amber, #d97706)" }} aria-label="Sana hujjatdan olingan" />
+                    <AlertTriangle size={12} style={{ color: "var(--accent-amber)" }} aria-label="Sana hujjatdan olingan" />
                   )}
                 </span>
               </td>

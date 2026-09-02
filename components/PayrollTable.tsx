@@ -20,7 +20,9 @@ import { ROLE_LABELS, type UserRole } from '@/lib/platform/permissions';
 import { adjustmentMagnitude } from '@/lib/adjustments';
 import { computeObligation } from '@/lib/payrollObligation';
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
+import { IdentityCell } from "@/components/ui";
 import { useTableState } from "@/hooks/useTableState";
+import { usePageSize } from "@/hooks/usePageSize";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
@@ -44,6 +46,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
     // "kim eng ko'p qarzdor" yoki "kimning bonusi eng yuqori" savoliga
     // avval umuman javob berib bo'lmasdi — saralash yo'q edi.
     const table = useTableState({ ns: 'pay', defaultSortKey: 'name' });
+    const [pageSize, setPageSize] = usePageSize("payroll");
     const [editingAdj, setEditingAdj] = useState<{ empId: string, type: 'bonus' | 'jarima' | 'avans' | 'payment', amount: number, reason: string } | null>(null);
     const [adjustmentsList, setAdjustmentsList] = useState<PayrollAdjustment[]>([]);
     // REAL berilgan pullar (Payout jadvali) — majburiyatdan alohida o'qiladi.
@@ -289,6 +292,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
             return {
                 employeeId: s.id,
                 employeeName: s.name,
+                employeeAvatarRef: s.avatarRef ?? null,
                 employeeRole: s.role,
                 month,
                 companyCount: myCompaniesSet.size,
@@ -317,19 +321,13 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
             key: 'name', header: 'Xodim',
             sortValue: r => r.employeeName,
             cell: r => (
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                        style={{ background: `hsl(${(r.employeeName.charCodeAt(0) * 37) % 360}, 60%, 50%)` }}>
-                        {r.employeeName.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                        <p className="text-body font-semibold leading-none truncate" style={{ color: "var(--text-primary)" }}>{r.employeeName}</p>
-                        <p className="text-micro mt-0.5 leading-none" style={{ color: "var(--text-muted)" }}>
-                            {ROLE_LABELS[r.employeeRole as UserRole] || r.employeeRole}
-                            <span className="ml-1.5 opacity-60">• {r.companyCount} firma</span>
-                        </p>
-                    </div>
-                </div>
+                <IdentityCell
+                    name={r.employeeName}
+                    userId={r.employeeId}
+                    avatarRef={r.employeeAvatarRef}
+                    size="md"
+                    secondary={`${ROLE_LABELS[r.employeeRole as UserRole] || r.employeeRole} · ${r.companyCount} firma`}
+                />
             ),
         },
         {
@@ -632,6 +630,10 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                         sortDir={table.sortDir}
                         onToggleSort={table.toggleSort}
                         density={table.density}
+                        page={table.page}
+                        pageSize={pageSize}
+                        onPageSizeChange={setPageSize}
+                        onPageChange={table.setPage}
                         loading={isLoading}
                         emptyIcon={<Wallet size={36} />}
                         emptyTitle="Bu oy uchun ma'lumot topilmadi"

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useViewMode } from '@/hooks/useViewMode';
 import { Staff, Company, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
-import { ROLE_LABELS, ROLE_COLORS, type UserRole } from '@/lib/platform/permissions';
+import { ROLE_LABELS, type UserRole } from '@/lib/platform/permissions';
 import { generateMemorablePassword } from '@/lib/passwordUtils';
 import StaffDrawer from './StaffDrawer';
 import {
@@ -15,8 +15,11 @@ import {
 import { TableToolbar } from "@/components/ui/TableToolbar";
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
+import { Avatar, Badge, IdentityCell, type BadgeTone } from '@/components/ui';
+import AvatarUploader from '@/components/AvatarUploader';
 import { Select } from '@/components/ui/Select';
 import { useTableState } from '@/hooks/useTableState';
+import { usePageSize } from "@/hooks/usePageSize";
 import { exportRowsToCsv, exportRowsToExcel } from '@/lib/exportTable';
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
@@ -43,10 +46,12 @@ const ROLE_OPTIONS: UserRole[] = [
   'super_admin', 'admin', 'chief_accountant', 'supervisor', 'accountant', 'bank_manager',
 ];
 
-const STATUS_META: Record<string, { label: string; dot: string; c: string; bg: string }> = {
-  active: { label: 'Faol', dot: 'bg-[var(--success)]', c: 'var(--success)', bg: 'rgba(16,185,129,.12)' },
-  vacation: { label: "Ta'til", dot: 'bg-[var(--danger)]', c: 'var(--danger)', bg: 'rgba(244,63,94,.12)' },
-  sick: { label: 'Betob', dot: 'bg-[var(--warning)]', c: 'var(--warning)', bg: 'rgba(245,158,11,.12)' },
+const STATUS_META: Record<string, { label: string; tone: BadgeTone }> = {
+  active: { label: 'Faol', tone: 'success' },
+  // Ta'til QIZIL edi — ya'ni "muammo" rangida. Ta'tilda bo'lish muammo emas,
+  // bu shunchaki ma'lumot; qizil faqat harakat talab qiladigan holat uchun.
+  vacation: { label: "Ta'til", tone: 'info' },
+  sick: { label: 'Betob', tone: 'warning' },
 };
 
 const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete, onResetPassword, canManageStaff = true }) => {
@@ -69,6 +74,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
     defaultSortKey: 'name',
     defaultFilters: { role: 'all', status: 'all' },
   });
+  const [pageSize, setPageSize] = usePageSize("staff");
   const searchTerm = table.debouncedSearch;
   const roleFilter = table.filters.role;
   const statusFilter = table.filters.status;
@@ -143,31 +149,23 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       header: 'Xodim',
       sortValue: p => p.name,
       exportValue: p => p.name,
-      cell: (person) => {
-        const sm = STATUS_META[person.status || 'active'] || STATUS_META.active;
-        return (
-          <div className="flex items-center gap-3">
-            <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-semibold text-white" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
-                {person.name.charAt(0)}
-              </div>
-              <div className={`absolute -bottom-1 -right-1 w-3 h-3 border-2 rounded-full ${sm.dot}`} style={{ borderColor: 'var(--card-bg)' }} />
-            </div>
-            <div className="min-w-0">
-              <div className="text-body font-bold truncate" style={{ color: 'var(--text)' }}>{person.name}</div>
-              {/* JSHSHIR bo'lmasa — HECH NARSA. Ilgari bu yerda ichki
-                  identifikatorning sakkiz belgisi (`657913b3`) chizilardi:
-                  foydalanuvchi uchun ma'nosiz, lekin ism ostidagi eng
-                  qimmatli qatorni egallab turardi. */}
-              {person.pinfl && (
-                <div className="text-micro font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  JSHSHIR: {person.pinfl}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      },
+      // JSHSHIR bo'lmasa — HECH NARSA. Ilgari bu yerda ichki identifikatorning
+      // sakkiz belgisi (`657913b3`) chizilardi: foydalanuvchi uchun ma'nosiz,
+      // lekin ism ostidagi eng qimmatli qatorni egallab turardi.
+      //
+      // Avatar ustidagi holat nuqtasi ham olib tashlandi: xuddi shu holat
+      // o'ng tomonda "Holat" ustunida MATNI bilan turadi, ya'ni nuqta bir xil
+      // narsani ikkinchi marta, faqat rang bilan aytardi.
+      cell: (person) => (
+        <IdentityCell
+          name={person.name}
+          color={person.avatarColor}
+          userId={person.id}
+          avatarRef={person.avatarRef}
+          size="md"
+          secondary={person.pinfl ? `JSHSHIR: ${person.pinfl}` : undefined}
+        />
+      ),
     },
     {
       key: 'role',
@@ -175,15 +173,15 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       align: 'center',
       mobile: 'meta',
       sortValue: p => ROLE_LABELS[p.role as UserRole] || p.role,
-      cell: (person) => {
-        const roleColor = ROLE_COLORS[person.role as UserRole] || 'var(--text-muted)';
-        return (
-          <span className="text-micro font-semibold uppercase tracking-widest px-2.5 py-1 rounded-lg whitespace-nowrap"
-            style={{ color: roleColor, background: `${roleColor}1a`, border: `1px solid ${roleColor}40` }}>
-            {ROLE_LABELS[person.role as UserRole] || person.role}
-          </span>
-        );
-      },
+      // Lavozim HOLAT emas, tasnif — shuning uchun u endi rang tashimaydi.
+      // Ilgari `ROLE_COLORS` dan olti xil rang (qizil/to'q sariq/binafsha/
+      // ko'k/yashil/moviy) berilardi va jadvalda qizil "Super Admin" nishoni
+      // qizil "muddati o'tgan" bilan bir xil shoshilinchlikda ko'rinardi.
+      cell: (person) => (
+        <span className="text-body" style={{ color: "var(--text-secondary)" }}>
+          {ROLE_LABELS[person.role as UserRole] || person.role}
+        </span>
+      ),
     },
     {
       key: 'department',
@@ -218,10 +216,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       sortValue: p => STATUS_META[p.status || 'active']?.label ?? '',
       cell: (person) => {
         const sm = STATUS_META[person.status || 'active'] || STATUS_META.active;
-        return (
-          <span className="text-micro font-semibold uppercase tracking-widest px-2.5 py-1 rounded-lg whitespace-nowrap"
-            style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
-        );
+        return <Badge tone={sm.tone} dot>{sm.label}</Badge>;
       },
     },
     {
@@ -537,6 +532,19 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
                 <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{form.avatarColor || 'var(--brand)'}</span>
               </div>
             </Field>
+            {/* Rasm YANGI xodimda chiqmaydi: uni yuklash uchun avval yozuv
+                yaratilib, `id` olinishi kerak. Mavjud xodimda esa rasm shu
+                yerdan qo'yiladi va rang faqat rasmsiz holat uchun qoladi. */}
+            {form.id && (
+              <Field label="Avatar rasmi">
+                <AvatarUploader
+                  userId={form.id}
+                  name={form.name || '—'}
+                  color={form.avatarColor}
+                  avatarRef={form.avatarRef}
+                />
+              </Field>
+            )}
           </FormSection>
 
           {/* Actions */}
@@ -561,23 +569,17 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           const myCompaniesCount = companyCountById.get(person.id) ?? 0;
           const status = person.status || 'active';
           const sm = STATUS_META[status] || STATUS_META.active;
-          const roleColor = ROLE_COLORS[person.role as UserRole] || 'var(--text-muted)';
           return (
             <div key={person.id} onClick={() => setSelected(person)} className="dashboard-card p-4 flex items-center gap-3 cursor-pointer active:scale-[0.99] transition-transform">
-              <div className="relative shrink-0">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-semibold text-white shadow-sm" style={{ backgroundColor: person.avatarColor || 'var(--accent-blue)' }}>
-                  {person.name.charAt(0)}
-                </div>
-                <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 rounded-full ${sm.dot}`} style={{ borderColor: 'var(--card-bg)' }} />
-              </div>
+              <Avatar name={person.name} color={person.avatarColor} userId={person.id} avatarRef={person.avatarRef} size="lg" className="shadow-sm" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-semibold tracking-tight truncate" style={{ color: 'var(--text)' }}>{person.name}</span>
-                  <span className="text-micro font-semibold uppercase tracking-widest px-2 py-0.5 rounded-lg" style={{ color: roleColor, background: `${roleColor}1a` }}>{ROLE_LABELS[person.role as UserRole] || person.role}</span>
+                  <Badge tone="neutral">{ROLE_LABELS[person.role as UserRole] || person.role}</Badge>
                 </div>
                 <div className="text-meta font-bold mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{person.phone || person.email || '—'}</div>
                 <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-micro font-semibold uppercase tracking-widest px-2 py-0.5 rounded-lg" style={{ color: sm.c, background: sm.bg }}>{sm.label}</span>
+                  <Badge tone={sm.tone} dot>{sm.label}</Badge>
                   <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>{myCompaniesCount} firma</span>
                 </div>
               </div>
@@ -615,7 +617,8 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           onToggleSort={table.toggleSort}
           density={table.density}
           page={table.page}
-          pageSize={50}
+          pageSize={pageSize}
+                        onPageSizeChange={setPageSize}
           onPageChange={table.setPage}
           selected={selectedIds}
           onSelectedChange={setSelectedIds}

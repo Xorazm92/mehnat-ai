@@ -18,40 +18,42 @@ import { toast } from "sonner";
 import { AlertTriangle, Clock, Users, ShieldCheck, ArrowRight, RefreshCw } from "lucide-react";
 import { persistRiskLevels } from "@/server/twin";
 import { Button } from "@/components/ui/Button";
+import { Badge, IdentityCell, type BadgeTone } from "@/components/ui";
 import { formatUzDayShort, formatNum } from "@/lib/platform/format";
 import type { TimelineBucket, TimelineItem } from "@/server/timeline";
 import type { CompanyTwin, StaffCapacity } from "@/lib/domains/accounting/twinCompute";
 import type { ConcernLevel, Score } from "@/lib/engines/analytics/twin";
 
-const TONE: Record<ConcernLevel, { fg: string; bg: string }> = {
-  unknown: { fg: "var(--text-muted)", bg: "var(--surface-2)" },
-  low: { fg: "var(--success)", bg: "var(--success-bg)" },
-  medium: { fg: "var(--warning)", bg: "var(--warning-bg)" },
-  high: { fg: "var(--danger-dark)", bg: "var(--danger-bg)" },
+const LEVEL_TONE: Record<ConcernLevel, BadgeTone> = {
+  unknown: "neutral",
+  low: "success",
+  medium: "warning",
+  high: "danger",
 };
 
 /**
  * Ball nishoni.
  *
- * Rang — YAGONA belgi emas: qiymat matn sifatida turadi va `aria-label` uni
+ * Rang — YAGONA belgi emas: qiymat matn sifatida turadi va `ariaLabel` uni
  * nomi bilan aytadi ("Xavf 42 foiz"). Aks holda ekran o'quvchi "42" deb
  * o'qirdi — nimaning 42 ekani rangda qolib ketardi.
  *
- * `—` ekran o'quvchida "tire" bo'lib chiqadi, shuning uchun u yashiriladi va
+ * `—` ekran o'quvchida "tire" bo'lib chiqadi, shuning uchun `ariaLabel`
  * o'rniga "o'lchanmagan" o'qiladi.
  */
 function ScoreChip({ label, score, suffix = "%" }: { label: string; score: Score | null; suffix?: string }) {
   const level: ConcernLevel = score?.level ?? "unknown";
-  const tone = TONE[level];
   const unmeasured = score?.value == null;
   return (
-    <span
-      className="inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-bold tabular-nums"
-      style={{ background: tone.bg, color: tone.fg }}
-      aria-label={unmeasured ? `${label}: o'lchanmagan` : `${label} ${formatNum(score!.value!)}${suffix}`}
+    <Badge
+      tone={LEVEL_TONE[level]}
+      // Nishon ichida raqam turadi — harf oralig'ini kengaytirish uni o'qishga
+      // qiyin qiladi, shuning uchun `tracking-widest` bekor qilinadi.
+      className="tabular-nums tracking-normal"
+      ariaLabel={unmeasured ? `${label}: o'lchanmagan` : `${label} ${formatNum(score!.value!)}${suffix}`}
     >
-      {unmeasured ? <span aria-hidden="true">—</span> : `${formatNum(score!.value!)}${suffix}`}
-    </span>
+      {unmeasured ? "—" : `${formatNum(score!.value!)}${suffix}`}
+    </Badge>
   );
 }
 
@@ -133,6 +135,7 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
       }
     });
   const active = timeline.find((b) => b.key === horizon) ?? timeline[0];
+  const overdueCount = timeline.find((b) => b.key === "overdue")?.count ?? 0;
 
   // Xavf bo'yicha saralash: o'lchanmaganlar (null) OXIRIDA emas, alohida —
   // ular "xavfsiz" degani emas, "hali ma'lum emas" degani.
@@ -159,26 +162,33 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
         </span>
       </div>
 
-      {/* 1 — UFQ: oynalar kesishmaydi, ya'ni sanoqlarni qo'shsa jami chiqadi. */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+      {/* 1 — UFQ: oynalar kesishmaydi, ya'ni sanoqlarni qo'shsa jami chiqadi.
+
+          Yettala plitka BOSILADIGAN FILTR bo'lib qoladi — hech biri "batafsil"
+          ostiga yashirilmaydi, aks holda ufqni almashtirish ikki bosishga
+          aylanardi. Ierarxiya yashirish bilan emas, VAZN bilan beriladi:
+          kechikkan ish bo'lsa o'sha plitka ikki barobar joy va qizil zamin
+          oladi, qolgan oltitasi ikkinchi darajali bo'lib qoladi. Kechikkan
+          nolga tushsa urg'u ham yo'qoladi — qator yana teng bo'ladi. */}
+      <div className={`grid grid-cols-2 sm:grid-cols-4 gap-2 ${overdueCount > 0 ? "lg:grid-cols-8" : "lg:grid-cols-7"}`}>
         {timeline.map((b) => {
           const on = b.key === horizon;
-          const danger = b.key === "overdue" && b.count > 0;
+          const lead = b.key === "overdue" && b.count > 0;
           return (
             <button
               key={b.key}
               onClick={() => setHorizon(b.key)}
               aria-pressed={on}
-              className="rounded-xl px-3 py-2.5 text-left transition"
+              className={`rounded-xl px-3 py-2.5 text-left transition ${lead ? "col-span-2" : ""}`}
               style={{
-                background: on ? "var(--accent-blue-light)" : "var(--surface)",
-                border: `1px solid ${on ? "var(--accent-blue)" : "var(--rule)"}`,
+                background: lead ? "var(--danger-bg)" : on ? "var(--accent-blue-light)" : "var(--surface)",
+                border: `1px solid ${on ? "var(--accent-blue)" : lead ? "var(--danger-border)" : "var(--rule)"}`,
               }}
             >
               <div className="text-micro" style={{ color: "var(--text-muted)" }}>{b.label}</div>
               <div
-                className="text-xl font-bold tabular-nums"
-                style={{ color: danger ? "var(--danger-dark)" : "var(--text-primary)" }}
+                className={`${lead ? "text-3xl" : "text-xl"} font-bold tabular-nums leading-none mt-0.5`}
+                style={{ color: lead ? "var(--danger-dark)" : "var(--text-primary)" }}
               >
                 {formatNum(b.count)}
               </div>
@@ -257,15 +267,11 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
                   style={{ borderBottom: "1px solid var(--rule)" }}
                 >
                   <ScoreChip label="Yuklama" score={c.score} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>
-                      {c.fullName}
-                    </span>
-                    <span className="block text-micro" style={{ color: "var(--text-muted)" }}>
-                      {c.score.reasons[0]?.detail}
-                      {c.estimated ? " · taxminiy" : ""}
-                    </span>
-                  </span>
+                  <IdentityCell
+                    name={c.fullName}
+                    secondary={`${c.score.reasons[0]?.detail ?? ""}${c.estimated ? " · taxminiy" : ""}`}
+                    className="flex-1"
+                  />
                 </div>
               ))}
             </div>

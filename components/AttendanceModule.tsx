@@ -12,7 +12,9 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
+import { Badge, IdentityCell, TONE_COLORS, type BadgeTone } from "@/components/ui";
 import { useTableState } from "@/hooks/useTableState";
+import { usePageSize } from "@/hooks/usePageSize";
 import { friendlyError } from "@/lib/actionError";
 import { DateField } from './ui/DateField';
 
@@ -54,11 +56,11 @@ interface Props {
     onSyncEjurnal?: (date: string) => Promise<{ imported: number; total: number; unmatched: string[] }>;
 }
 
-const STATUS_META: Record<string, { labelUz: string; labelRu: string; color: string; bg: string; icon: React.ReactNode }> = {
-    present: { labelUz: 'Kelgan', labelRu: 'Пришёл', color: 'var(--success)', bg: 'var(--success-bg)', icon: <CheckCircle2 size={14} /> },
-    late: { labelUz: 'Kechikkan', labelRu: 'Опоздал', color: 'var(--warning)', bg: 'var(--warning-bg)', icon: <Clock size={14} /> },
-    absent: { labelUz: 'Kelmagan', labelRu: 'Отсутствовал', color: 'var(--danger)', bg: 'var(--danger-bg)', icon: <XCircle size={14} /> },
-    excused: { labelUz: 'Sababli', labelRu: 'Уважительно', color: 'var(--accent-blue)', bg: 'var(--accent-blue-light)', icon: <UserCheck size={14} /> },
+const STATUS_META: Record<string, { labelUz: string; labelRu: string; tone: BadgeTone; icon: React.ReactNode }> = {
+    present: { labelUz: 'Kelgan', labelRu: 'Пришёл', tone: 'success', icon: <CheckCircle2 size={14} /> },
+    late: { labelUz: 'Kechikkan', labelRu: 'Опоздал', tone: 'warning', icon: <Clock size={14} /> },
+    absent: { labelUz: 'Kelmagan', labelRu: 'Отсутствовал', tone: 'danger', icon: <XCircle size={14} /> },
+    excused: { labelUz: 'Sababli', labelRu: 'Уважительно', tone: 'info', icon: <UserCheck size={14} /> },
 };
 
 const fmtTime = (iso?: string) => {
@@ -79,6 +81,7 @@ const monthLabel = (ym: string) => {
 
 const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, month, months, onMonthChange, onSave, onDelete, onExcuseLate, onSyncEjurnal }) => {
     const table = useTableState({ ns: 'att', defaultSortKey: 'user' });
+    const [pageSize, setPageSize] = usePageSize("attendance");
   const confirm = useConfirm();
     const t = translations[lang];
     const [isSyncing, setIsSyncing] = useState(false);
@@ -195,11 +198,24 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
             setIsSaving(false);
         }
     };
+    // Davomat yozuvida faqat `userId` bor — rasm havolasi esa xodimlar
+    // ro'yxatida. Har katakda `staff.find()` qilish O(n·m) bo'lardi.
+    const avatarRefById = useMemo(
+        () => new Map(staff.map(p => [p.id, p.avatarRef ?? null])),
+        [staff],
+    );
+
     const attColumns = useMemo<DataColumn<typeof records[number]>[]>(() => [
         {
             key: 'user', header: 'Xodim',
             sortValue: r => r.userName ?? '',
-            cell: r => <span className="text-body font-bold tracking-tight" style={{ color: 'var(--text)' }}>{r.userName}</span>,
+            cell: r => (
+                <IdentityCell
+                    name={r.userName ?? '—'}
+                    userId={r.userId}
+                    avatarRef={avatarRefById.get(r.userId)}
+                />
+            ),
         },
         {
             key: 'status', header: t.status, width: '140px', mobile: 'status',
@@ -208,9 +224,7 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
                 const meta = STATUS_META[r.status] || STATUS_META.present;
                 return (
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro font-bold uppercase tracking-widest whitespace-nowrap" style={{ background: meta.bg, color: meta.color }}>
-                            {meta.icon}{meta.labelUz}
-                        </span>
+                        <Badge tone={meta.tone} icon={meta.icon}>{meta.labelUz}</Badge>
                         {r.lateExcused && (
                             <span
                                 title={r.lateExcuseReason || undefined}
@@ -314,14 +328,17 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
                     return (
                         <div key={key} className="dashboard-card p-5 flex flex-col justify-between">
                             <div className="flex items-center gap-3 mb-3">
-                                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: meta.bg, color: meta.color }}>
+                                <div
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                                    style={{ background: TONE_COLORS[meta.tone].bg, color: TONE_COLORS[meta.tone].fg }}
+                                >
                                     {meta.icon}
                                 </div>
                                 <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
                                     {lang === 'uz' ? meta.labelUz : meta.labelRu}
                                 </span>
                             </div>
-                            <div className="text-3xl font-semibold tabular-nums leading-none" style={{ color: meta.color }}>{stats[key]}</div>
+                            <div className="text-3xl font-semibold tabular-nums leading-none" style={{ color: TONE_COLORS[meta.tone].fg }}>{stats[key]}</div>
                         </div>
                     );
                 })}
@@ -390,9 +407,13 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
                     return (
                         <div key={r.id} className="dashboard-card p-4 flex items-center gap-3">
                             <div className="flex-1 min-w-0">
-                                <div className="text-body font-semibold tracking-tight truncate" style={{ color: 'var(--text)' }}>{r.userName}</div>
+                                <IdentityCell
+                                    name={r.userName ?? '—'}
+                                    userId={r.userId}
+                                    avatarRef={avatarRefById.get(r.userId)}
+                                />
                                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-micro font-semibold uppercase tracking-widest" style={{ background: meta.bg, color: meta.color }}>{meta.icon}{lang === 'uz' ? meta.labelUz : meta.labelRu}</span>
+                                    <Badge tone={meta.tone} icon={meta.icon}>{lang === 'uz' ? meta.labelUz : meta.labelRu}</Badge>
                                     <span className="text-meta font-mono font-bold" style={{ color: 'var(--text-muted)' }}>{fmtTime(r.checkIn)} – {fmtTime(r.checkOut)}</span>
                                 </div>
                                 {r.notes && <div className="text-meta mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>{r.notes}</div>}
@@ -426,6 +447,10 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
                         sortDir={table.sortDir}
                         onToggleSort={table.toggleSort}
                         density={table.density}
+                        page={table.page}
+                        pageSize={pageSize}
+                        onPageSizeChange={setPageSize}
+                        onPageChange={table.setPage}
                         emptyIcon={<Calendar size={36} />}
                         emptyTitle="Bu kun uchun yozuv yo'q"
                     />

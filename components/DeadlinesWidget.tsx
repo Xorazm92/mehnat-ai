@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CalendarClock, AlertTriangle, ChevronRight, CheckCircle2 } from "lucide-react";
 import { formatUzDate } from "@/lib/platform/format";
+import { Badge } from "@/components/ui";
 
 export interface DeadlineRow {
   id: string;
@@ -68,13 +69,22 @@ export default function DeadlinesWidget({
 
       {/* Ikki hisoblagich: o'tib ketgan / yaqin */}
       <div className="grid grid-cols-2 divide-x" style={{ borderColor: "var(--card-border)" }}>
-        <Link href="/deadlines" className="p-4 flex items-center gap-3 transition-colors hover:bg-[var(--table-row-hover)]">
+        <Link
+          href="/deadlines"
+          className="p-4 flex items-center gap-3 transition-colors hover:bg-[var(--table-row-hover)]"
+          style={overdueCount > 0 ? { background: "var(--danger-bg)" } : undefined}
+        >
           <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "var(--danger-bg)" }}>
             <AlertTriangle size={16} style={{ color: "var(--danger)" }} />
           </div>
           <div>
-            <div className="text-xl font-bold tabular" style={{ color: overdueCount > 0 ? "var(--danger)" : "var(--text-primary)" }}>{overdueCount}</div>
-            <div className="text-micro" style={{ color: "var(--text-muted)" }}>O&apos;tib ketgan</div>
+            <div
+              className={`${overdueCount > 0 ? "text-3xl" : "text-xl"} font-bold tabular leading-none`}
+              style={{ color: overdueCount > 0 ? "var(--danger)" : "var(--text-primary)" }}
+            >
+              {overdueCount}
+            </div>
+            <div className="text-micro mt-1" style={{ color: "var(--text-muted)" }}>O&apos;tib ketgan</div>
           </div>
         </Link>
         <Link href="/deadlines" className="p-4 flex items-center gap-3 transition-colors hover:bg-[var(--table-row-hover)]">
@@ -112,10 +122,10 @@ export default function DeadlinesWidget({
                 <p className="text-micro truncate" style={{ color: "var(--text-muted)" }}>{o.companyName} · {o.periodKey}</p>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-xs font-semibold" style={{ color: o.isOverdue ? "var(--danger)" : "var(--warning)" }}>
+                <Badge tone={o.isOverdue ? "danger" : "warning"} dot className="tracking-normal">
                   {relativeLabel(o.dueAt, o.isOverdue)}
-                </p>
-                <p className="text-micro" style={{ color: "var(--text-muted)" }}>{formatUzDate(o.dueAt)}</p>
+                </Badge>
+                <p className="text-micro mt-1" style={{ color: "var(--text-muted)" }}>{formatUzDate(o.dueAt)}</p>
               </div>
             </Link>
           ))}

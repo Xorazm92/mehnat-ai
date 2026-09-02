@@ -66,6 +66,10 @@ model User {
   /// o'qiyveradi — kod bo'ylab alohida ishlov shart emas.
   extraRoles   String[]  @default([])
   avatarColor  String?   @default("hsl(200, 50%, 50%)")
+  /// Yuklangan avatar rasmining ombor havolasi (`disk://YYYY/MM/<sha256>.<ext>`).
+  /// Bo'sh bo'lsa initsial doira `avatarColor` bilan chiziladi — ikkala shakl
+  /// yonma-yon yashaydi. Fayllar `storage/files` da, bazada emas.
+  avatarRef    String?
   phone        String?
   pinfl        String? // JSHSHIR — 14 raqamli shaxsiy identifikatsiya raqami
   department   String?

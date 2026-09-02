@@ -13,6 +13,9 @@
 // 10 ta xarajat kiritish uchun har safar formani ochib-yopish shart emas.
 
 import React, { useEffect, useMemo, useState, useTransition } from "react";
+import { Pagination, pageSlice } from "@/components/ui";
+import { usePageSize } from "@/hooks/usePageSize";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -161,6 +164,23 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
         r.channelLabel?.toLowerCase().includes(q)
     );
   }, [rows, search]);
+
+  /**
+   * SAHIFALASH. Jurnal 1165 qatorgacha chiqadi va ilgari hammasi bitta uzun
+   * sahifada chizilardi — brauzer ming qatorlik DOM ni qurib, aylantirish
+   * sekinlashardi, kerakli yozuvni topish esa faqat qidiruv orqali edi.
+   *
+   * DIQQAT: jami summalar (`shown`) SAHIFADAN emas, butun filtrdan
+   * hisoblanadi — pastdagi "Kirim/Chiqim/Sof" qatori sahifa almashganda
+   * o'zgarmasligi kerak, aks holda u hisobot emas, tasodifiy bo'lak bo'lardi.
+   */
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize("journal");
+  const paged = useMemo(() => pageSlice(visible, page, pageSize), [visible, page]);
+
+  // Filtr yoki qidiruv ro'yxatni qisqartirsa, joriy sahifa mavjud bo'lmay
+  // qolishi mumkin — o'shanda boshiga qaytamiz, bo'sh ekran ko'rsatmaymiz.
+  useEffect(() => { setPage(1); }, [preset, customFrom, customTo, kind, channelId, search]);
 
   // Ekrandagi jami HAR DOIM ko'rinayotgan qatorlardan (pending/rejected jamga
   // kirmaydi — manba bilan bir xil qoida).
@@ -461,8 +481,8 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       )}
 
       {/* JADVAL */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-meta">
+      <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 300px)" }}>
+        <table className="table-sticky-head w-full text-meta">
           <thead>
             <tr style={{ background: "var(--table-header-bg)" }}>
               {["Sana", "Turi", "Manba", "Kim / Toifa", "Izoh", "Holat", "Summa"].map((h, i) => (
@@ -485,7 +505,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
                 </td>
               </tr>
             ) : (
-              visible.map((r) => {
+              paged.map((r) => {
                 const isPending = r.status === "pending";
                 const isRejected = r.status === "rejected";
                 const canApr = isPending && r.editable && canApproveExpense(userRole, r.amount);
@@ -587,6 +607,15 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
           <span style={{ color: "var(--warning)" }}>Jurnal katta — davrni qisqartiring</span>
         )}
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={visible.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        unit="yozuv"
+      />
     </div>
   );
 }

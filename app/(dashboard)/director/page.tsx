@@ -105,6 +105,7 @@ export default async function DirectorPage() {
           value={formatNum(overdueCount)}
           tone={overdueCount > 0 ? "danger" : "success"}
           emphasize
+          emphasis={overdueCount > 0}
           icon={<AlertTriangle size={14} />}
           href="/deadlines?tab=overdue"
           hint={overdueCount > 0 ? "Darhol ko'rib chiqilsin" : "Kechikkani yo'q"}
@@ -113,7 +114,6 @@ export default async function DirectorPage() {
           label="24 soat ichida muddat"
           value={formatNum(dueSoonCount)}
           tone={dueSoonCount > 0 ? "warning" : "neutral"}
-          emphasize={dueSoonCount > 0}
           icon={<Clock size={14} />}
           // "Ishlar" ekranida 24 soatlik yorliq YO'Q (`lib/workTabs.ts`:
           // all | mine | overdue | tasks). Shuning uchun havola umumiy

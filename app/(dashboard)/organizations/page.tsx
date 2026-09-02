@@ -27,6 +27,7 @@ function mapCompany(c: any) {
     ...c,
     taxType,
     accountantName: c.accountant?.fullName ?? null,
+    accountantAvatarRef: c.accountant?.avatarRef ?? null,
     // Ekran `internalContractor` (nom) kutadi, bazada esa ID turadi.
     internalContractorId: c.internalContractorId ?? null,
     internalContractor: c.internalContractorFirm?.name ?? null,
@@ -34,6 +35,7 @@ function mapCompany(c: any) {
     internalChannelId: c.internalChannelId ?? null,
     internalChannelLabel: c.internalChannel?.label ?? null,
     supervisorName: c.supervisor?.fullName ?? null,
+    supervisorAvatarRef: c.supervisor?.avatarRef ?? null,
     chiefAccountantName: c.chiefAccountant?.fullName ?? null,
     bankClientName: c.bankClient?.fullName ?? c.bankClientName ?? null,
     itParkResident: c.itParkResident === "yes" ? true : c.itParkResident === "no" ? false : Boolean(c.itParkResident),

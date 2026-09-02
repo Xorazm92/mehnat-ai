@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Pencil, KeyRound, UserCheck, UserX, X } from "lucide-react";
 import { ROLES, ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import { Button } from "@/components/ui/Button";
+import { Pagination, pageSlice } from "@/components/ui";
+import { usePageSize } from "@/hooks/usePageSize";
+
 import { DateField } from "../ui/DateField";
 import { ModalLayer } from "../ui/ModalLayer";
 
@@ -88,6 +91,13 @@ export function AdminUserManager({
     });
   }, [users, search, roleFilter]);
 
+  const [page, setPage] = useState(1);
+
+  const [pageSize, setPageSize] = usePageSize("admin-users");
+  const paged = pageSlice(filtered, page, pageSize);
+  // Qidiruv yoki rol filtri ro'yxatni qisqartirsa joriy sahifa yo'qolishi mumkin.
+  useEffect(() => { setPage(1); }, [search, roleFilter]);
+
   const openCreate = () =>
     setForm({ fullName: "", email: "", phone: "", role: ROLES.ACCOUNTANT, password: "", department: "", pinfl: "", gender: "", birthDate: "", education: "", skillLevel: "", hiredAt: "", status: "active" });
   const openEdit = (u: AdminUser) =>
@@ -147,8 +157,8 @@ export function AdminUserManager({
       </div>
 
       <div className="rounded-xl overflow-hidden" style={card}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+        <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 300px)" }}>
+          <table className="table-sticky-head w-full text-xs">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--card-border)", color: "var(--text-muted)" }}>
                 {["Ism", "Email", "Rol", "Holat", "Amallar"].map((h) => (
@@ -157,7 +167,7 @@ export function AdminUserManager({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((u) => (
+              {paged.map((u) => (
                 <tr key={u.id} style={{ borderBottom: "1px solid var(--card-border)" }}>
                   <td className="px-4 py-2.5 font-semibold" style={{ color: "var(--text-primary)" }}>{u.fullName}</td>
                   <td className="px-4 py-2.5" style={{ color: "var(--text-secondary)" }}>{u.email}</td>
@@ -189,6 +199,15 @@ export function AdminUserManager({
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={filtered.length}
+          onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+          unit="xodim"
+        />
       </div>
 
       {/* Create / Edit modal */}

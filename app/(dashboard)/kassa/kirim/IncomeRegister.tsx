@@ -12,6 +12,9 @@
 // bo'lim ularning ostiga qo'shiladi.
 
 import React, { useEffect, useState, useTransition, useMemo } from "react";
+import { Pagination, pageSlice } from "@/components/ui";
+import { usePageSize } from "@/hooks/usePageSize";
+
 import { Search, Download, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CompanySelect } from "@/components/ui/CompanySelect";
@@ -136,6 +139,18 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
         (r.note ?? "").toLowerCase().includes(q)
     );
   }, [rows, search]);
+
+  /**
+   * SAHIFALASH. Reyestr davr bo'yicha yuzlab qator qaytaradi va hammasi
+   * bitta ro'yxatda chizilardi.
+   *
+   * DIQQAT: pastdagi yig'indilar (`shown`) SAHIFADAN emas, butun filtrdan
+   * hisoblanadi — "Jami tushum" sahifa almashganda o'zgarmasligi kerak.
+   */
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize("income");
+  const paged = useMemo(() => pageSlice(visible, page, pageSize), [visible, page]);
+  useEffect(() => { setPage(1); }, [preset, customFrom, customTo, companyId, source, search]);
 
   // Ekrandagi jami HAR DOIM ko'rinib turgan qatorlardan hisoblanadi — qidiruv
   // qo'yilganda serverdan kelgan yig'indi noto'g'ri bo'lib qolardi.
@@ -294,8 +309,9 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
           {pending ? "Yuklanmoqda…" : "Tanlangan davrda kirim yo'q."}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl" style={{ ...card, opacity: pending ? 0.6 : 1 }}>
-          <table className="w-full text-meta">
+        <>
+        <div className="overflow-auto rounded-xl" style={{ ...card, opacity: pending ? 0.6 : 1, maxHeight: "calc(100vh - 300px)" }}>
+          <table className="table-sticky-head w-full text-meta">
             <thead>
               <tr style={{ background: "var(--input-bg)" }}>
                 <th className="text-left p-2">Sana</th>
@@ -308,7 +324,7 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
               </tr>
             </thead>
             <tbody>
-              {visible.map((r) => {
+              {paged.map((r) => {
                 const c = SOURCE_COLORS[r.source] ?? SOURCE_COLORS.bank;
                 return (
                   <tr key={r.id} className="transition-colors hover:bg-[var(--input-bg)]" style={{ borderTop: "1px solid var(--card-border)" }}>
@@ -364,6 +380,16 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
             </tfoot>
           </table>
         </div>
+
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={visible.length}
+          onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+          unit="qator"
+        />
+        </>
       )}
     </div>
   );

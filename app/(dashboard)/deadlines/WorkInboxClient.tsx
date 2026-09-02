@@ -30,6 +30,7 @@ import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { TableToolbar } from "@/components/ui/TableToolbar";
 import { DataTable } from "@/components/ui/DataTable";
 import { useTableState } from "@/hooks/useTableState";
+import { usePageSize } from "@/hooks/usePageSize";
 import { useTabParam } from "@/hooks/useTabParam";
 import { WORK_TAB_IDS, type WorkTab } from "@/lib/workTabs";
 import BulkAssignModal from "@/components/BulkAssignModal";
@@ -55,8 +56,6 @@ import {
 export type { ObligationRow, TaskRow, WorkRow };
 export type { WorkTab };
 
-/** Bir sahifada ko'rinadigan qatorlar. */
-const PAGE_SIZE = 50;
 
 export default function WorkInboxClient({
   obligations,
@@ -90,6 +89,7 @@ export default function WorkInboxClient({
   // `useTableState` URL'ni `history.replaceState` bilan yozadi: navigatsiya
   // ham, server so'rovi ham qo'zg'almaydi. Ma'lumot allaqachon mijozda.
   const table = useTableState({ ns: "work", defaultSortKey: "due", defaultSortDir: "asc" });
+  const [viewSize, setViewSize] = usePageSize("work");
 
   const [showForm, setShowForm] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
@@ -224,8 +224,9 @@ export default function WorkInboxClient({
         onToggleSort={table.toggleSort}
         density={table.density}
         page={table.page}
-        pageSize={PAGE_SIZE}
+        pageSize={viewSize}
         onPageChange={table.setPage}
+        onPageSizeChange={setViewSize}
         emptyIcon={<Inbox size={36} />}
         emptyTitle={tabCounts.all === 0 ? "Hozircha ish yo'q" : "Bu filtrga mos ish yo'q"}
         emptyDescription={

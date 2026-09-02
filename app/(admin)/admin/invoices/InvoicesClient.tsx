@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FilePlus2, Send, Ban, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Badge, type BadgeTone } from "@/components/ui";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { createInvoicesForPeriod, issueInvoice, cancelInvoice } from "@/server/invoices";
@@ -27,6 +28,15 @@ const STATUS_LABELS: Record<string, string> = {
   draft: "Qoralama",
   issued: "Berilgan",
   cancelled: "Bekor qilingan",
+};
+
+// Bekor qilingan schyot — harakat natijasi, xato emas; shuning uchun u
+// "muammo" qizili emas, neytral-qorong'i o'qiladi. Berilgan schyot esa
+// ma'lumot: to'lov holati alohida ustunda turadi.
+const STATUS_TONE: Record<string, BadgeTone> = {
+  draft: "neutral",
+  issued: "info",
+  cancelled: "danger",
 };
 
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
@@ -157,7 +167,11 @@ export default function InvoicesClient({
                         {formatNum(r.collected)}
                         <span className="text-micro ml-1">{pay.text}</span>
                       </td>
-                      <td className="py-2 pr-3 text-meta">{STATUS_LABELS[r.status] ?? r.status}</td>
+                      <td className="py-2 pr-3">
+                        <Badge tone={STATUS_TONE[r.status] ?? "neutral"} dot>
+                          {STATUS_LABELS[r.status] ?? r.status}
+                        </Badge>
+                      </td>
                       <td className="py-2 text-right whitespace-nowrap">
                         {r.status === "draft" && (
                           <button

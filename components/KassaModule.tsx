@@ -13,7 +13,9 @@ import { formatNum } from "@/lib/platform/format";
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
+import { Badge } from "@/components/ui";
 import { useTableState } from "@/hooks/useTableState";
+import { usePageSize } from "@/hooks/usePageSize";
 import { MonthPicker } from './ui/MonthPicker';
 import { DateField } from './ui/DateField';
 
@@ -37,6 +39,7 @@ interface KassaModuleProps {
 
 const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCompany = {}, lang, onSavePayment, onDeletePayment }) => {
     const table = useTableState({ ns: 'kassa', defaultSortKey: 'name' });
+    const [pageSize, setPageSize] = usePageSize("kassa");
   const confirm = useConfirm();
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
@@ -145,17 +148,14 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
             key: 'status', header: t.status, align: 'center', width: '140px', mobile: 'status',
             sortValue: item => item.payment?.status ?? 'KUTILMOQDA',
             cell: item => item.payment ? (
-                <span className="c1-badge inline-flex items-center gap-1.5" style={{
-                    background: item.payment.status === PaymentStatus.PAID ? 'var(--success-bg)' : item.payment.status === PaymentStatus.PENDING ? 'var(--warning-light)' : 'var(--danger-bg)',
-                    color: item.payment.status === PaymentStatus.PAID ? 'var(--success)' : item.payment.status === PaymentStatus.PENDING ? 'var(--warning)' : 'var(--danger)',
-                }}>
-                    {item.payment.status === PaymentStatus.PAID ? <CheckCircle2 size={12} strokeWidth={3} /> : <Clock size={12} strokeWidth={3} />}
+                <Badge
+                    tone={item.payment.status === PaymentStatus.PAID ? 'success' : item.payment.status === PaymentStatus.PENDING ? 'warning' : 'danger'}
+                    icon={item.payment.status === PaymentStatus.PAID ? <CheckCircle2 size={12} strokeWidth={3} /> : <Clock size={12} strokeWidth={3} />}
+                >
                     {item.payment.status}
-                </span>
+                </Badge>
             ) : (
-                <span className="c1-badge inline-flex items-center gap-1.5" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
-                    <Clock size={12} strokeWidth={3} />Kutilmoqda
-                </span>
+                <Badge tone="neutral" icon={<Clock size={12} strokeWidth={3} />}>Kutilmoqda</Badge>
             ),
         },
         {
@@ -285,9 +285,9 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                         </div>
                     </div>
                     <div className="mt-6 flex flex-col items-center">
-                        <div className="c1-badge" style={{ background: stats.percent >= 90 ? 'var(--success-bg)' : 'var(--warning-light)', color: stats.percent >= 90 ? 'var(--success)' : 'var(--warning)' }}>
-                            {stats.pendingCount} TA KORXONA QOLDI
-                        </div>
+                        <Badge tone={stats.percent >= 90 ? 'success' : 'warning'} dot>
+                            {stats.pendingCount} ta korxona qoldi
+                        </Badge>
                     </div>
                 </div>
             </div>
@@ -370,7 +370,8 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                         onToggleSort={table.toggleSort}
                         density={table.density}
                         page={table.page}
-                        pageSize={50}
+                        pageSize={pageSize}
+                        onPageSizeChange={setPageSize}
                         onPageChange={table.setPage}
                         onRowClick={item => openPayment(item)}
                         rowLabel={item => `${item.name} — to'lov kartochkasi`}

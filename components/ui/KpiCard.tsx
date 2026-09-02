@@ -40,6 +40,18 @@ export interface KpiCardProps {
   href?: string;
   /** Qiymat rangi ton bilan bir xil bo'lsinmi (masalan "yuqori risk" qizil) */
   emphasize?: boolean;
+  /**
+   * Sahifaning ASOSIY raqami — kattaroq teriladi va rangi tonga o'tadi.
+   * Sahifada BITTA plitka olishi kerak: ikkitasi urg'uli bo'lsa ko'z qaysi
+   * biriga tushishini bilmaydi va ierarxiya yo'qoladi.
+   *
+   * Ataylab ustun EGALLAMAYDI (`col-span`): aks holda har chaqiruvchi grid
+   * ustunlar sonini urg'u bor-yo'qligiga qarab o'zgartirishi kerak bo'lardi va
+   * urg'u nolga tushganda qatorda bo'sh katak qolardi.
+   */
+  emphasis?: boolean;
+  /** Qiymat ostidagi o'zgarish satri — "+14 o'tgan haftadan". */
+  trend?: React.ReactNode;
   className?: string;
 }
 
@@ -51,9 +63,14 @@ export function KpiCard({
   tone = "neutral",
   href,
   emphasize = false,
+  emphasis = false,
+  trend,
   className = "",
 }: KpiCardProps) {
   const t = TONE[tone];
+  // Urg'uli plitkada qiymat rangi ham tonga o'tadi: katta neytral raqam
+  // rangli fon ustida "o'chgan" ko'rinadi.
+  const colored = emphasize || emphasis;
 
   const body = (
     <>
@@ -72,11 +89,16 @@ export function KpiCard({
         )}
       </div>
       <div
-        className="font-mono text-2xl font-semibold tabular-nums leading-none"
-        style={{ color: emphasize ? t.fg : "var(--text-primary)", letterSpacing: "-0.03em" }}
+        className={`font-mono ${emphasis ? "text-3xl" : "text-2xl"} font-semibold tabular-nums leading-none`}
+        style={{ color: colored ? t.fg : "var(--text-primary)", letterSpacing: "-0.03em" }}
       >
         {value}
       </div>
+      {trend && (
+        <p className="text-micro mt-1.5 tabular-nums" style={{ color: "var(--text-muted)" }}>
+          {trend}
+        </p>
+      )}
       {hint && (
         <p className="text-micro mt-1.5" style={{ color: "var(--text-muted)" }}>
           {hint}

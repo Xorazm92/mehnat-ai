@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { formatUzDateFull, formatUzMonthYear } from "@/lib/platform/format";
 import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
+import { KpiCard } from "@/components/ui/KpiCard";
 
 interface CompanyProgress {
   id: string;
@@ -72,48 +73,35 @@ export function AccountantCabinet({
       </div>
 
       {/* Ko'rsatkichlar */}
+      {/* To'rttala plitka qo'lda terilgan edi — biri `rgba(99,102,241,0.1)` ni
+          qotirib yozgan, ya'ni qorong'u temada ham o'sha och indigo qolardi.
+          Endi `KpiCard`: ranglar tokenlardan, plitkalar bosiladigan. Yagona
+          katta urg'u — o'tib ketgan muddat, va faqat u nolda bo'lmasa. */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-xl p-4" style={{ background: "var(--accent-blue-light)", border: "1px solid var(--accent-blue)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Building2 size={16} style={{ color: "var(--accent-blue)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Firmalarim</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{companiesCount}</div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 size={16} style={{ color: "var(--success)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Hisobot bajarilishi</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>
-            {reportSummary.percent === null ? "—" : `${reportSummary.percent}%`}
-          </div>
-          <p className="text-micro mt-1" style={{ color: "var(--text-muted)" }}>
-            {reportSummary.percent === null ? "Ma'lumot yo'q" : `${reportSummary.done}/${reportSummary.required} hisobot`}
-          </p>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={16} style={{ color: "var(--danger)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>O&apos;tib ketgan muddat</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: deadlines.overdueCount > 0 ? "var(--danger)" : "var(--text-primary)" }}>
-            {deadlines.overdueCount}
-          </div>
-        </div>
-
-        <div className="rounded-xl p-4" style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp size={16} style={{ color: "var(--accent-indigo)" }} />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>KPI ball</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{kpi.totalScore.toFixed(0)}</div>
-          {kpi.pendingCount > 0 && (
-            <p className="text-micro mt-1" style={{ color: "var(--text-muted)" }}>{kpi.pendingCount} tasdiq kutmoqda</p>
-          )}
-        </div>
+        <KpiCard
+          label="Firmalarim" value={companiesCount} tone="brand"
+          icon={<Building2 size={15} />} href="/organizations"
+        />
+        <KpiCard
+          label="Hisobot bajarilishi"
+          value={reportSummary.percent === null ? "—" : `${reportSummary.percent}%`}
+          tone="success" emphasize
+          icon={<CheckCircle2 size={15} />}
+          hint={reportSummary.percent === null ? "Ma'lumot yo'q" : `${reportSummary.done}/${reportSummary.required} hisobot`}
+        />
+        <KpiCard
+          label="O'tib ketgan muddat"
+          value={deadlines.overdueCount}
+          tone={deadlines.overdueCount > 0 ? "danger" : "neutral"}
+          emphasize={deadlines.overdueCount > 0}
+          emphasis={deadlines.overdueCount > 0}
+          icon={<AlertTriangle size={15} />} href="/deadlines?tab=overdue"
+        />
+        <KpiCard
+          label="KPI ball" value={kpi.totalScore.toFixed(0)} tone="indigo"
+          icon={<TrendingUp size={15} />} href="/kpi"
+          hint={kpi.pendingCount > 0 ? `${kpi.pendingCount} tasdiq kutmoqda` : undefined}
+        />
       </div>
 
       {/* Firmalar hisobot holati + Muddatlar */}

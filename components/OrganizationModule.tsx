@@ -14,6 +14,8 @@ import { formatNum } from "@/lib/platform/format";
 import RiskBadge from './RiskBadge';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
+import { Badge, IdentityCell } from '@/components/ui';
+import { usePageSize } from '@/hooks/usePageSize';
 import { useTableState } from '@/hooks/useTableState';
 import type { TariffPreset } from '@/lib/tariffPresets';
 import { hiddenMatchOnly, matchesCompanySearch } from '@/lib/companySearch';
@@ -132,7 +134,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const setFilterOwn = (v: string) => table.setFilter('own', v);
   const [showFilters, setShowFilters] = useState(false);
 
-  const itemsPerPage = 100;
+  const [itemsPerPage, setItemsPerPage] = usePageSize("organizations", 100);
 
   // Risk darajasi. Rang YOLG'IZ ma'no tashimasligi kerak (ACCESSIBILITY §A6),
   // shuning uchun har daraja shakl (to'la / yarim / bo'sh doira) va matnli
@@ -247,7 +249,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
       cell: c => <span className="font-mono text-meta font-bold" style={{ color: 'var(--text-secondary)' }}>{c.inn}</span>,
     },
     {
-      key: 'contract', header: 'SHARTNOMA', numeric: true, width: '140px',
+      key: 'contract', header: 'Shartnoma', numeric: true, width: '140px',
       sortValue: c => Number(opByCompany.get(c.id)?.contract_amount ?? c.contractAmount ?? 0),
       exportValue: c => Number(opByCompany.get(c.id)?.contract_amount ?? c.contractAmount ?? 0),
       cell: (c) => {
@@ -260,40 +262,43 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
       },
     },
     {
-      key: 'taxType', header: 'REJIM', align: 'center', width: '110px', mobile: 'status',
+      key: 'taxType', header: 'Rejim', align: 'center', width: '110px', mobile: 'status',
       sortValue: c => c.taxType ?? '',
       cell: c => (
-        <span className="c1-badge" style={{
-          background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)',
-          color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)',
-        }}>
+        <Badge tone={c.taxType?.includes('nds') ? 'info' : 'neutral'}>
           {TAX_REGIME_SHORT[normalizeTaxRegime(c.taxRegime ?? c.taxType)]}
-        </span>
+        </Badge>
       ),
     },
     {
-      key: 'accountant', header: 'BUXGALTER', width: '170px',
+      key: 'accountant', header: 'Buxgalter', width: '170px',
       sortValue: c => opByCompany.get(c.id)?.assigned_accountant_name ?? c.accountantName ?? '',
       cell: (c) => {
-        const name = opByCompany.get(c.id)?.assigned_accountant_name ?? c.accountantName;
-        return (
-          <div className="flex items-center gap-1.5 truncate">
-            <Users size={12} style={{ color: 'var(--text-muted)' }} className="shrink-0" />
-            <span className="truncate text-meta font-bold uppercase tracking-tight" style={{ color: 'var(--text)' }}>{name || '—'}</span>
-          </div>
-        );
+        const fromMatrix = opByCompany.get(c.id)?.assigned_accountant_name;
+        const name = fromMatrix ?? c.accountantName;
+        // Rasm FAQAT firma yozuvidagi buxgalter ko'rsatilganda chiziladi.
+        // Matritsadan kelgan ism boshqa odamniki bo'lishi mumkin va `id` u
+        // bilan birga kelmaydi — o'shanda begona odamning rasmi chiqardi.
+        const own = !fromMatrix || fromMatrix === c.accountantName;
+        return name
+          ? <IdentityCell name={name} userId={own ? c.accountantId : undefined} avatarRef={own ? c.accountantAvatarRef : undefined} />
+          : <span style={{ color: 'var(--text-muted)' }}>—</span>;
       },
     },
     {
-      key: 'supervisor', header: 'NAZORATCHI', width: '160px',
+      key: 'supervisor', header: 'Nazoratchi', width: '160px',
       sortValue: c => opByCompany.get(c.id)?.assigned_supervisor_name ?? c.supervisorName ?? '',
       cell: (c) => {
-        const name = opByCompany.get(c.id)?.assigned_supervisor_name ?? c.supervisorName;
-        return <span className="truncate block text-meta font-bold uppercase tracking-tight" style={{ color: 'var(--text-secondary)' }}>{name || '—'}</span>;
+        const fromMatrix = opByCompany.get(c.id)?.assigned_supervisor_name;
+        const name = fromMatrix ?? c.supervisorName;
+        const own = !fromMatrix || fromMatrix === c.supervisorName;
+        return name
+          ? <IdentityCell name={name} userId={own ? c.supervisorId : undefined} avatarRef={own ? c.supervisorAvatarRef : undefined} />
+          : <span style={{ color: 'var(--text-muted)' }}>—</span>;
       },
     },
     {
-      key: 'server', header: '1C SERVER', width: '140px',
+      key: 'server', header: '1C server', width: '140px',
       sortValue: c => `${c.serverInfo ?? ''} ${c.serverName ?? ''}`.trim(),
       cell: c => (
         <div className="flex flex-col">
@@ -696,10 +701,10 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                           <span className="verdict-mark" aria-hidden />
                           <span className="sr-only">{risk.label}</span>
                         </span>
-                        <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>INN: {c.inn}</span>
-                        <span className="c1-badge" style={{ background: c.taxType?.includes('nds') ? 'var(--danger-bg)' : 'var(--accent-blue-light)', color: c.taxType?.includes('nds') ? 'var(--danger)' : 'var(--accent-blue)' }}>
+                        <Badge tone="neutral">INN: {c.inn}</Badge>
+                        <Badge tone={c.taxType?.includes('nds') ? 'info' : 'neutral'}>
                           {TAX_REGIME_SHORT[normalizeTaxRegime(c.taxRegime ?? c.taxType)]}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                     <RiskBadge riskLevel={c.riskLevel} companyStatus={c.companyStatus} companyName={c.name} compact className="self-start" />
@@ -777,6 +782,7 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               density={table.density}
               page={table.page}
               pageSize={itemsPerPage}
+              onPageSizeChange={setItemsPerPage}
               onPageChange={table.setPage}
               selected={selectedIds}
               onSelectedChange={setSelectedIds}

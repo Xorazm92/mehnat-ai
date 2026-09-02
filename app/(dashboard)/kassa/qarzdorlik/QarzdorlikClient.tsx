@@ -264,6 +264,9 @@ export default function QarzdorlikClient({
             label: "Jami qarz",
             value: debtors.totals.outstanding,
             tone: "neutral",
+            // Bu sahifaning asosiy raqami — qolgan ko'rsatkichlar uning
+            // kesimlari, shuning uchun yagona urg'u shu yerda.
+            emphasis: true,
             meta: `${debtors.totals.companies} firma`,
             hint: "Barcha to'lanmagan qoldiq — muddati kelgani ham, kelmagani ham",
           },

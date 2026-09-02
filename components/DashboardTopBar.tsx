@@ -2,14 +2,15 @@
 
 import { signOut } from "next-auth/react";
 import {
-  LogOut, User, Sun, Moon, ChevronDown,
-  Bell, BellOff, Settings, PanelLeftClose, PanelLeftOpen
+  LogOut, Sun, Moon, ChevronDown,
+  Bell, Volume2, VolumeX, Settings, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
 import { useMobileNav } from "@/components/MobileNavContext";
+import { Avatar } from "@/components/ui";
 import { useDismissable } from "@/hooks/useDismissable";
 import { useTheme } from "next-themes";
 import GlobalSearch from "@/components/GlobalSearch";
@@ -48,6 +49,10 @@ interface DashboardTopBarProps {
   userName: string;
   userEmail: string;
   userRole: string;
+  /** Sessiyadagi `id` — o'z avatar rasmini ko'rsatish uchun. */
+  userId?: string;
+  /** `User.avatarRef` — rasm bor-yo'qligi va versiyasi. */
+  avatarRef?: string | null;
   avatarColor?: string;
   unreadCount?: number;
   /** Ko'p vazifali odam uchun kontekst tanlash (bo'sh bo'lsa chizilmaydi). */
@@ -63,6 +68,8 @@ export function DashboardTopBar({
   userName,
   userEmail,
   userRole,
+  userId,
+  avatarRef,
   avatarColor,
   unreadCount = 0,
   allowedViews,
@@ -105,13 +112,6 @@ export function DashboardTopBar({
       setLoggingOut(false);
     }
   };
-
-  const initials = userName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 
   const roleColor = ROLE_COLORS[userRole] || "var(--brand)";
   // avatarColor foydalanuvchi profilidan keladigan qiymat; bo'lmasa brend.
@@ -207,7 +207,7 @@ export function DashboardTopBar({
             title={soundOn ? "Ovoz yoqilgan" : "Ovoz o'chirilgan"}
             style={soundOn ? undefined : { opacity: 0.55 }}
           >
-            {soundOn ? <Bell size={17} /> : <BellOff size={17} />}
+            {soundOn ? <Volume2 size={17} /> : <VolumeX size={17} />}
           </button>
         )}
 
@@ -229,13 +229,7 @@ export function DashboardTopBar({
             aria-expanded={showUserMenu}
             className="flex items-center gap-2.5 px-1.5 h-11 rounded-lg transition-colors duration-100 hover:bg-[var(--bg-hover)]"
           >
-            {/* Avatar — tekis to'ldirish; gradient va soya olib tashlandi */}
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-mono text-meta font-bold flex-shrink-0"
-              style={{ background: bgColor }}
-            >
-              {initials || <User size={14} />}
-            </div>
+            <Avatar name={userName} color={bgColor} userId={userId} avatarRef={avatarRef} size="md" />
 
             <div className="hidden sm:block text-left leading-none">
               <p
@@ -272,12 +266,7 @@ export function DashboardTopBar({
                 {/* Header */}
                 <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--rule)" }}>
                   <div className="flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-mono text-body font-bold flex-shrink-0"
-                      style={{ background: bgColor }}
-                    >
-                      {initials || <User size={16} />}
-                    </div>
+                    <Avatar name={userName} color={bgColor} userId={userId} avatarRef={avatarRef} size="lg" />
                     <div className="min-w-0">
                       <p
                         className="text-body font-semibold truncate"

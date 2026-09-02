@@ -9,6 +9,7 @@ import { getKpiRules, getMonthlyPerformance, upsertPerformance } from '@/server/
 import { getPayrollAdjustments, getPayrollBasisContext } from '@/server/payroll';
 import { PAYROLL_BASIS_DEFAULT, type PayrollBasis } from '@/lib/payrollBasis';
 import type { CompanyAssignment } from '@/lib/kpiLogic';
+import { Badge, type BadgeTone } from '@/components/ui';
 import { formatUzDate, formatNum } from '@/lib/platform/format';
 import KpiEntryCard from './kpi/KpiEntryCard';
 import { MonthPicker } from './ui/MonthPicker';
@@ -178,7 +179,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <p className="text-micro font-bold uppercase text-[var(--text-secondary)] mb-1">{(t as any).currentMonthEst || 'Joriy oy'}</p>
-                            <h3 className="text-2xl font-bold tabular-nums text-[var(--text-primary)] dark:text-white">
+                            <h3 className="text-3xl font-bold tabular-nums leading-none text-[var(--text-primary)] dark:text-white">
                                 {formatNum(summary.totalSalary)} <span className="text-sm font-bold text-[var(--text-muted)]">UZS</span>
                             </h3>
                         </div>
@@ -385,7 +386,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                                         {roleRules.map(rule => {
                                             const perf = performances.find(p => p.companyId === company.id && p.ruleId === rule.id);
                                             const status = perf?.status;
-                                            const badge = status === 'approved'
+                                            const badge: { t: string; c: BadgeTone } | null = status === 'approved'
                                                 ? { t: lang === 'uz' ? 'Tasdiqlangan' : 'Одобрено', c: 'success' }
                                                 : status === 'submitted'
                                                     ? { t: lang === 'uz' ? 'Kutilmoqda' : 'На проверке', c: 'warning' }
@@ -404,7 +405,7 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                                                     {(badge || perf?.rejectedReason) && (
                                                         <div className="flex items-center gap-2 px-1 flex-wrap">
                                                             {badge && (
-                                                                <span className="c1-badge" style={{ background: `var(--${badge.c}-bg)`, color: `var(--${badge.c})`, border: `1px solid var(--${badge.c}-border)` }}>{badge.t}</span>
+                                                                <Badge tone={badge.c} dot>{badge.t}</Badge>
                                                             )}
                                                             {perf?.rejectedReason && (
                                                                 <span className="text-micro font-bold" style={{ color: 'var(--danger)' }}>&quot;{perf.rejectedReason}&quot;</span>

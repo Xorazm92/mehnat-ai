@@ -186,12 +186,16 @@ export interface Company {
   ownerName?: string;
   accountantId?: string;
   accountantName?: string;
+  /** Buxgalter rasmining havolasi — jadvalda avatar chizish uchun. */
+  accountantAvatarRef?: string | null;
   bankClientId?: string;
   bankClientLogin?: string;
   bankClientPassword?: string;
   bankClientName?: string; // New from JSON: "bank klient"
   supervisorId?: string;
   supervisorName?: string;
+  /** Nazoratchi rasmining havolasi. */
+  supervisorAvatarRef?: string | null;
   chiefAccountantId?: string;
   chiefAccountantName?: string;
   accountantPerc?: number;
@@ -433,6 +437,8 @@ export interface Staff {
   password?: string; // Auth (only for creation)
   role: string;
   avatarColor: string;
+  /** Yuklangan avatar rasmi bormi — jadval va tahrirlash formasi uchun. */
+  avatarRef?: string | null;
   phone?: string;
   pinfl?: string; // JSHSHIR — 14 raqamli shaxsiy identifikatsiya raqami
   department?: string;

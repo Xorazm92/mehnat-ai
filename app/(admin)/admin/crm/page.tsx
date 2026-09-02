@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { listLeads, createLead, updateLeadStatus, assignLead } from "@/server/leads";
+import { Badge, type BadgeTone } from "@/components/ui";
+import { formatUzDateNumeric } from "@/lib/platform/format";
 
 interface Lead {
   id: string;
@@ -26,14 +28,27 @@ const STATUS_LABELS: Record<string, string> = {
   lost: "Yo'qotildi",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  new: "#888",
-  contacted: "#3b82f6",
-  qualified: "#22c55e",
-  proposal: "#f59e0b",
-  negotiation: "#8b5cf6",
-  won: "#10b981",
-  lost: "#ef4444",
+// Yettita bosqich uchun yettita rang bor edi (ko'k/yashil/sariq/binafsha/
+// qizil...) — ya'ni rang bosqichni emas, shunchaki "boshqacha" ekanini
+// bildirardi. Endi rang faqat NATIJANI aytadi: yutildi yashil, yo'qotildi
+// qizil, muzokara davom etmoqda sariq, qolgani neytral.
+/** Maydon uslubi — beshta inputda bir xil, shuning uchun bir marta. */
+const FIELD: React.CSSProperties = {
+  padding: "8px",
+  borderRadius: "6px",
+  border: "1px solid var(--card-border)",
+  background: "var(--input-bg)",
+  color: "var(--text-primary)",
+};
+
+const STATUS_TONE: Record<string, BadgeTone> = {
+  new: "neutral",
+  contacted: "neutral",
+  qualified: "info",
+  proposal: "info",
+  negotiation: "warning",
+  won: "success",
+  lost: "danger",
 };
 
 export default function LeadsPage() {
@@ -77,7 +92,7 @@ export default function LeadsPage() {
           onClick={() => setShowForm(!showForm)}
           style={{
             background: "var(--accent-blue)",
-            color: "#fff",
+            color: "var(--on-brand)",
             border: "none",
             borderRadius: "8px",
             padding: "8px 16px",
@@ -89,42 +104,42 @@ export default function LeadsPage() {
       </div>
 
       {error && (
-        <div style={{ background: "#fee2e2", color: "#991b1b", padding: "12px", borderRadius: "8px", marginBottom: "16px" }}>
+        <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "12px", borderRadius: "8px", marginBottom: "16px" }}>
           {error}
         </div>
       )}
 
       {showForm && (
-        <form onSubmit={handleCreate} style={{ background: "var(--card-bg, #1a1a2e)", padding: "20px", borderRadius: "12px", marginBottom: "24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <form onSubmit={handleCreate} style={{ background: "var(--card-bg)", padding: "20px", borderRadius: "12px", marginBottom: "24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
           <input
             placeholder="Mijoz nomi *"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
-            style={{ padding: "8px", borderRadius: "6px", border: "1px solid #333", background: "#111", color: "#fff" }}
+            style={FIELD}
           />
           <input
             placeholder="Telefon"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            style={{ padding: "8px", borderRadius: "6px", border: "1px solid #333", background: "#111", color: "#fff" }}
+            style={FIELD}
           />
           <input
             placeholder="Email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            style={{ padding: "8px", borderRadius: "6px", border: "1px solid #333", background: "#111", color: "#fff" }}
+            style={FIELD}
           />
           <input
             placeholder="STIR (INN)"
             value={form.inn}
             onChange={(e) => setForm({ ...form, inn: e.target.value })}
-            style={{ padding: "8px", borderRadius: "6px", border: "1px solid #333", background: "#111", color: "#fff" }}
+            style={FIELD}
           />
           <select
             value={form.source}
             onChange={(e) => setForm({ ...form, source: e.target.value ?? "" })}
-            style={{ padding: "8px", borderRadius: "6px", border: "1px solid #333", background: "#111", color: "#fff" }}
+            style={FIELD}
           >
             <option value="">Manba</option>
             <option value="telegram">Telegram</option>
@@ -138,11 +153,11 @@ export default function LeadsPage() {
             value={form.note}
             onChange={(e) => setForm({ ...form, note: e.target.value })}
             rows={2}
-            style={{ gridColumn: "1/-1", padding: "8px", borderRadius: "6px", border: "1px solid #333", background: "#111", color: "#fff" }}
+            style={{ ...FIELD, gridColumn: "1/-1" }}
           />
           <button
             type="submit"
-            style={{ gridColumn: "1/-1", background: "var(--success, #22c55e)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px", cursor: "pointer" }}
+            style={{ gridColumn: "1/-1", background: "var(--success)", color: "var(--on-success)", border: "none", borderRadius: "8px", padding: "10px", cursor: "pointer" }}
           >
             Saqlash
           </button>
@@ -150,42 +165,54 @@ export default function LeadsPage() {
       )}
 
       {loading ? (
-        <p style={{ color: "#888" }}>Yuklanmoqda...</p>
+        <p style={{ color: "var(--text-muted)" }}>Yuklanmoqda...</p>
       ) : leads.length === 0 ? (
-        <p style={{ color: "#888" }}>Lead lar yo'q</p>
+        <p style={{ color: "var(--text-muted)" }}>Lead lar yo'q</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
           {leads.map((lead) => (
-            <div key={lead.id} style={{ background: "var(--card-bg, #1a1a2e)", borderRadius: "12px", padding: "16px" }}>
+            <div key={lead.id} style={{ background: "var(--card-bg)", borderRadius: "12px", padding: "16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                 <strong>{lead.name}</strong>
-                <select
-                  value={lead.status}
-                  onChange={(e) => handleStatus(lead.id, e.target.value)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: STATUS_COLORS[lead.status] ?? "#888",
-                    fontSize: "12px",
-                    cursor: "pointer",
-                  }}
-                >
-                  {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                    <option key={k} value={k} style={{ background: "#1a1a2e", color: STATUS_COLORS[k] }}>{v}</option>
-                  ))}
-                </select>
+                <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Badge tone={STATUS_TONE[lead.status] ?? "neutral"} dot>
+                    {STATUS_LABELS[lead.status] ?? lead.status}
+                  </Badge>
+                  {/* Nishon holatni KO'RSATADI, tanlagich uni O'ZGARTIRADI.
+                      Ilgari bitta rangli <select> ikkalasini ham qilardi va
+                      `<option>` foni `#1a1a2e` ga qotirilgani uchun yorug'
+                      temada qora ro'yxat ochilardi. */}
+                  <select
+                    value={lead.status}
+                    onChange={(e) => handleStatus(lead.id, e.target.value)}
+                    aria-label={`${lead.name} — holatni o'zgartirish`}
+                    style={{
+                      background: "var(--input-bg)",
+                      border: "1px solid var(--card-border)",
+                      borderRadius: "6px",
+                      color: "var(--text-secondary)",
+                      fontSize: "12px",
+                      padding: "2px 4px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                </span>
               </div>
-              {lead.phone && <div style={{ fontSize: "13px", color: "#888" }}>📞 {lead.phone}</div>}
-              {lead.email && <div style={{ fontSize: "13px", color: "#888" }}>✉ {lead.email}</div>}
-              {lead.inn && <div style={{ fontSize: "13px", color: "#888" }}>STIR: {lead.inn}</div>}
-              {lead.source && <div style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>#{lead.source}</div>}
+              {lead.phone && <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>📞 {lead.phone}</div>}
+              {lead.email && <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>✉ {lead.email}</div>}
+              {lead.inn && <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>STIR: {lead.inn}</div>}
+              {lead.source && <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>#{lead.source}</div>}
               {lead.assignedTo && (
-                <div style={{ fontSize: "12px", color: "#22c55e", marginTop: "4px" }}>
+                <div style={{ fontSize: "12px", color: "var(--success)", marginTop: "4px" }}>
                   👤 {lead.assignedTo.fullName}
                 </div>
               )}
-              <div style={{ fontSize: "11px", color: "#555", marginTop: "8px" }}>
-                {new Date(lead.createdAt).toLocaleDateString("uz-UZ")}
+              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "8px" }}>
+                {formatUzDateNumeric(lead.createdAt)}
               </div>
             </div>
           ))}

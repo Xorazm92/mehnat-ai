@@ -9,6 +9,7 @@ import { kpiCategoryLabel } from '@/lib/kpiLabels';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { toast } from "sonner";
 import { SkeletonTable } from "@/components/ui/Skeleton";
+import { Badge } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { friendlyError } from "@/lib/actionError";
@@ -34,15 +35,6 @@ const COLOR: Record<string, { fg: string; bg: string; bd: string }> = {
     yellow: { fg: 'var(--warning)', bg: 'var(--warning-bg)', bd: 'var(--warning-border)' },
     red: { fg: 'var(--danger)', bg: 'var(--danger-bg)', bd: 'var(--danger-border)' },
 };
-
-const Badge: React.FC<{ children: React.ReactNode; tone?: 'muted' | 'blue' }> = ({ children, tone = 'muted' }) => (
-    <span className="text-2xs font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-lg"
-        style={tone === 'blue'
-            ? { background: 'var(--accent-blue-light)', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)' }
-            : { background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
-        {children}
-    </span>
-);
 
 const KPIRulesManager: React.FC<Props> = () => {
     const confirm = useConfirm();
@@ -196,7 +188,7 @@ const KPIRulesManager: React.FC<Props> = () => {
                                 <meta.icon size={13} />
                             </div>
                             <h3 className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{meta.label}</h3>
-                            <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>{list.length} qoida</span>
+                            <Badge tone="neutral">{list.length} qoida</Badge>
                         </div>
                         <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
                             {list.map(rule => (
@@ -212,9 +204,9 @@ const KPIRulesManager: React.FC<Props> = () => {
                                         <div className="flex items-center gap-2 flex-wrap mb-1.5">
                                             <p className="font-bold text-xs" style={{ color: 'var(--text-primary)' }}>{rule.nameUz}</p>
                                             <span className="text-2xs font-mono font-bold" style={{ color: 'var(--text-muted)' }}>{rule.name}</span>
-                                            <Badge tone="blue">{rule.inputTypeV2 || rule.inputType}</Badge>
-                                            <Badge>{kpiCategoryLabel(rule.category)}</Badge>
-                                            <Badge>{rule.scope}</Badge>
+                                            <Badge tone="brand">{rule.inputTypeV2 || rule.inputType}</Badge>
+                                            <Badge tone="neutral">{kpiCategoryLabel(rule.category)}</Badge>
+                                            <Badge tone="neutral">{rule.scope}</Badge>
                                         </div>
                                         {rule.descriptionUz && <p className="text-micro mb-2 leading-snug" style={{ color: 'var(--text-muted)' }}>{rule.descriptionUz}</p>}
                                         <OptionPills rule={rule} />

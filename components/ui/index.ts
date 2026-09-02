@@ -13,11 +13,14 @@ export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from ".
 export { Field, type FieldProps } from "./Field";
 export { Select, type SelectProps, type SelectSize } from "./Select";
 export { CompanySelect, type CompanySelectProps, type CompanyOption } from "./CompanySelect";
-export { Badge, type BadgeProps, type BadgeTone } from "./Badge";
+export { Badge, TONE_COLORS, type BadgeProps, type BadgeTone } from "./Badge";
+export { Avatar, initialsOf, type AvatarProps, type AvatarSize } from "./Avatar";
+export { IdentityCell, type IdentityCellProps } from "./IdentityCell";
 export { Card, type CardProps } from "./Card";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { Skeleton, SkeletonTable, type SkeletonProps } from "./Skeleton";
 export { DataTable, type DataTableProps, type DataColumn } from "./DataTable";
+export { Pagination, pageSlice, pageWindow, type PaginationProps } from "./Pagination";
 export { TableToolbar, type ViewMode } from "./TableToolbar";
 export { Tabs, TabPanel, type TabItem, type TabsProps, type TabPanelProps } from "./Tabs";
 export { MonthPicker } from "./MonthPicker";

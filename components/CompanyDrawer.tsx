@@ -387,9 +387,9 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                 <div className="p-6">
                   <div className="flex flex-wrap gap-2 mb-6">
                     {company.serviceScope?.length ? company.serviceScope.map(s => (
-                      <span key={s} className="c1-badge" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>{s}</span>
+                      <Badge key={s} tone="brand">{s}</Badge>
                     )) : company.activeServices?.length ? company.activeServices.slice(0, 8).map(s => (
-                      <span key={s} className="c1-badge" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>{s.replace('_', ' ')}</span>
+                      <Badge key={s} tone="neutral">{s.replace('_', ' ')}</Badge>
                     )) : (
                       <p className="text-meta font-bold uppercase tracking-[0.2em] opacity-50" style={{ color: 'var(--text-muted)' }}>Xizmatlar tanlanmagan</p>
                     )}
@@ -429,7 +429,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <h3 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Statistika Hisobotlari</h3>
                   <div className="flex flex-wrap gap-2">
                     {company.statReports?.length ? company.statReports.map(s => (
-                      <span key={s} className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)' }}>{s}</span>
+                      <Badge key={s} tone="neutral">{s}</Badge>
                     )) : <p className="text-meta font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>belgilanmagan</p>}
                   </div>
                 </div>
@@ -438,7 +438,7 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                   <h3 className="text-meta font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Majburiy Hisobotlar</h3>
                   <div className="flex flex-wrap gap-2">
                     {company.requiredReports?.length ? company.requiredReports.map(r => (
-                      <span key={r} className="c1-badge" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>{r}</span>
+                      <Badge key={r} tone="info">{r}</Badge>
                     )) : <p className="text-meta font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-muted)' }}>belgilanmagan</p>}
                   </div>
                 </div>

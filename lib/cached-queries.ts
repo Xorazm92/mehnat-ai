@@ -40,13 +40,13 @@ const scopeFor = (userId: string, role: string, context?: string) =>
 // Firma kartochkasi/jadvali barcha mas'ul shaxslarni ko'rsatadi va klient
 // tomonda `companyRelations` hisoblanadi — shuning uchun include hamma uchun bir xil.
 const COMPANY_INCLUDE = {
-  accountant: { select: { id: true, fullName: true, avatarColor: true } },
+  accountant: { select: { id: true, fullName: true, avatarColor: true, avatarRef: true } },
   // "Ichki shartnoma tomoni" — shartnoma qaysi O'Z firmamiz nomidan tuzilgan.
   // ID saqlanadi, ekranga esa NOM chiqadi, shuning uchun relation kerak.
   internalContractorFirm: { select: { id: true, name: true } },
   // Og'zaki shartnoma tomoni — plastik/naqd kanali (firma o'rniga).
   internalChannel: { select: { id: true, label: true, type: true } },
-  supervisor: { select: { id: true, fullName: true } },
+  supervisor: { select: { id: true, fullName: true, avatarRef: true } },
   chiefAccountant: { select: { id: true, fullName: true } },
   bankClient: { select: { id: true, fullName: true } },
   // chiefAccountantId — klientda `companyRelations` uchun: bosh buxgalter
@@ -235,6 +235,12 @@ const _getCachedUsers = unstable_cache(
         fullName: true,
         role: true,
         avatarColor: true,
+        // Rasm havolasi — `<Avatar>` uni ham "rasm bormi" belgisi, ham kesh
+        // versiyasi sifatida ishlatadi. Busiz xodimlar ro'yxati doim
+        // initsial doira chizardi, garchi rasm yuklangan bo'lsa ham:
+        // bu so'rov `SAFE_USER_SELECT` dan ALOHIDA maydon ro'yxatiga ega va
+        // u yerga qo'shilgan maydon bu yerga o'z-o'zidan kelmaydi.
+        avatarRef: true,
         phone: true,
         department: true,
         gender: true,

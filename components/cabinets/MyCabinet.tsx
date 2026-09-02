@@ -40,6 +40,8 @@ import { formatUzMonthYear, formatUzDateNumeric, formatUzTime, formatNum } from 
 import { TAX_REGIME_SHORT, normalizeTaxRegime } from "@/lib/taxRegimes";
 import { kpiCategoryLabel, adjustmentTypeLabel } from "@/lib/kpiLabels";
 import RiskBadge from "@/components/RiskBadge";
+import AvatarUploader from "@/components/AvatarUploader";
+import { Badge, type BadgeTone } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
 import { DateField } from "../ui/DateField";
@@ -51,6 +53,8 @@ interface Profile {
   fullName: string;
   role: string;
   avatarColor: string | null;
+  /** Yuklangan rasm havolasi — bo'lsa avatar o'rniga foto chiziladi. */
+  avatarRef: string | null;
   phone: string | null;
   pinfl: string | null;
   department: string | null;
@@ -150,6 +154,13 @@ const STATUS_LABELS: Record<string, string> = {
   vacation: "Mehnat ta'tilida",
   sick: "Betob / kasal",
 };
+// Ta'til va kasallik "muammo" emas — ular ogohlantirish va ma'lumot, xolos.
+// `globals.css` dagi `.status-dot` ham aynan shu juftlikni ishlatadi.
+const STATUS_TONE: Record<string, BadgeTone> = {
+  active: "success",
+  vacation: "info",
+  sick: "warning",
+};
 const SKILL_LABELS: Record<string, string> = {
   stajyor: "Stajyor",
   orta: "O'rta malakali",
@@ -192,12 +203,16 @@ export default function MyCabinet(props: MyCabinetProps & { initialTab?: TabId }
       {/* ─── HEADER ─────────────────────────────── */}
       <div className="dashboard-card p-5 flex flex-col lg:flex-row lg:items-center gap-6">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div
-            className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center text-2xl font-semibold text-white shadow-md"
-            style={{ backgroundColor: profile.avatarColor || roleColor }}
-          >
-            {profile.fullName.charAt(0)}
-          </div>
+          {/* Sarlavhadagi avatar endi shunchaki ko'rsatkich emas — rasm shu
+              yerdan yuklanadi. Ilgari bu yerda bitta harfli kvadrat turardi
+              va rasm qo'yish imkoniyati umuman yo'q edi. */}
+          <AvatarUploader
+            userId={profile.id}
+            name={profile.fullName}
+            color={profile.avatarColor}
+            avatarRef={profile.avatarRef}
+            onChanged={() => router.refresh()}
+          />
           <div className="min-w-0">
             <h2 className="text-sm font-semibold tracking-tight truncate" style={{ color: "var(--text)" }}>
               {profile.fullName}
@@ -410,7 +425,19 @@ function ProfileTab({ profile, onSaved }: { profile: Profile; onSaved: () => voi
         <InfoRow icon={Clock} label="Ish staji" value={formatTenure(profile.hiredAt)} />
         <InfoRow icon={TrendingUp} label="Malaka darajasi" value={profile.skillLevel ? SKILL_LABELS[profile.skillLevel] || profile.skillLevel : "—"} />
         <InfoRow icon={GraduationCap} label="Ma'lumoti" value={profile.education ? EDUCATION_LABELS[profile.education] || profile.education : "—"} />
-        <InfoRow icon={CheckCircle2} label="Holati" value={profile.status ? STATUS_LABELS[profile.status] || profile.status : "—"} />
+        <InfoRow
+          icon={CheckCircle2}
+          label="Holati"
+          value={
+            profile.status ? (
+              <Badge tone={STATUS_TONE[profile.status] ?? "neutral"} dot>
+                {STATUS_LABELS[profile.status] || profile.status}
+              </Badge>
+            ) : (
+              "—"
+            )
+          }
+        />
         <InfoRow icon={Award} label="Reyting" value={profile.rating != null ? String(profile.rating) : "—"} />
       </div>
     </div>
@@ -807,7 +834,7 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3">
       <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}>
@@ -824,7 +851,13 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
 function StatCard({ icon: Icon, value, label, color, small }: { icon: React.ElementType; value: number | string; label: string; color: string; small?: boolean }) {
   return (
     <div className="dashboard-card p-5 flex flex-col gap-2">
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color === "var(--accent-blue)" ? "var(--accent-blue-light)" : color + "1a"}`, color }}>
+      <div
+        className="w-9 h-9 rounded-xl flex items-center justify-center"
+        // Ilgari `color + "1a"` yozilardi — bu faqat hex qiymatda ishlaydi,
+        // token berilganda esa "var(--success)1a" degan YAROQSIZ CSS chiqib,
+        // fon jimgina shaffof qolardi.
+        style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
+      >
         <Icon size={18} />
       </div>
       <div className={`${small ? "text-lg" : "text-2xl"} font-semibold tabular-nums`} style={{ color: "var(--text)" }}>{value}</div>
@@ -834,18 +867,14 @@ function StatCard({ icon: Icon, value, label, color, small }: { icon: React.Elem
 }
 
 function KpiStatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; c: string; bg: string }> = {
-    approved: { label: "Tasdiqlangan", c: "var(--success)", bg: "color-mix(in srgb, var(--success) 12%, transparent)" },
-    submitted: { label: "Yuborilgan", c: "var(--brand)", bg: "color-mix(in srgb, var(--brand) 12%, transparent)" },
-    draft: { label: "Qoralama", c: "var(--warning)", bg: "color-mix(in srgb, var(--warning) 12%, transparent)" },
-    rejected: { label: "Rad etilgan", c: "var(--danger)", bg: "color-mix(in srgb, var(--danger) 12%, transparent)" },
+  const map: Record<string, { label: string; tone: BadgeTone }> = {
+    approved: { label: "Tasdiqlangan", tone: "success" },
+    submitted: { label: "Yuborilgan", tone: "brand" },
+    draft: { label: "Qoralama", tone: "warning" },
+    rejected: { label: "Rad etilgan", tone: "danger" },
   };
   const s = map[status] || map.draft;
-  return (
-    <span className="text-micro font-semibold uppercase tracking-widest px-2 py-1 rounded-lg" style={{ color: s.c, background: s.bg }}>
-      {s.label}
-    </span>
-  );
+  return <Badge tone={s.tone} dot>{s.label}</Badge>;
 }
 
 function EmptyState({ icon: Icon, text, inline }: { icon: React.ElementType; text: string; inline?: boolean }) {

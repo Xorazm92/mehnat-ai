@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ALLOWED_VIEWS, getHomeRoute, ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
-import { NAV_ITEMS, NAV_GROUP_LABELS, type NavGroup } from "@/lib/navigation";
+import { NAV_ITEMS, NAV_GROUP_LABELS, NAV_TINT_VAR, type NavGroup } from "@/lib/navigation";
 import { useMobileNav } from "@/components/MobileNavContext";
 // Ikonkalar `NAV_ITEMS` bilan birga keladi (lib/navigation.ts) — bu yerda
 // yigirmata ikonka nomi import qilinib, birontasi ishlatilmasdan turardi.
@@ -60,14 +60,14 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
       className={`flex-shrink-0 h-dvh flex flex-col md:z-20 overflow-hidden transition-transform duration-200 ease-out fixed md:relative top-0 left-0 w-[var(--sidebar-width)] ${open ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "md:w-[72px] md:translate-x-0" : "md:w-[var(--sidebar-width)] md:translate-x-0"}`}
       style={{
         background: "var(--sidebar-bg)",
-        borderRight: "1px solid var(--rule)",
+        borderRight: "1px solid var(--sidebar-border)",
         zIndex: "var(--z-panel)",
       }}
     >
       {/* Logo */}
       <div
         className={`h-16 flex items-center flex-shrink-0 ${collapsed ? "px-4 md:px-0 md:justify-center" : "px-4"}`}
-        style={{ borderBottom: "1px solid var(--rule)" }}
+        style={{ borderBottom: "1px solid var(--sidebar-border)" }}
       >
         <Link
           href={getHomeRoute(userRole)}
@@ -111,7 +111,7 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
               {/* Yig'ilgan holatda yorliq o'rniga guruhlarni ajratuvchi chiziq */}
               <div
                 className={`hidden ${collapsed ? "md:block" : ""} mx-2 my-2`}
-                style={{ height: 1, background: "var(--rule)" }}
+                style={{ height: 1, background: "var(--sidebar-border)" }}
               />
               <div className={`sidebar-label ${collapsed ? "md:hidden" : ""}`}>{GROUP_LABELS[group]}</div>
               {groupItems.map((item) => {
@@ -139,8 +139,19 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
                     }`}
                   >
                     {/* Faol holat jonli chiziq (.sidebar-nav-item.active::before)
-                        bilan belgilanadi — chevron shuning uchun olib tashlandi. */}
-                    <Icon size={nested ? 14 : 16} className="flex-shrink-0" />
+                        bilan belgilanadi — chevron shuning uchun olib tashlandi.
+
+                        Ikonka o'z rangida turadi (`NavItem.tint`), FAQAT faol
+                        bandda emas: o'sha yerda u yorliq bilan bir rangga
+                        o'tadi, aks holda oq tabletka ichida ikki xil rang
+                        bo'lib, "qaysi biri hozir ochiq" degan belgi
+                        susayardi. */}
+                    <span
+                      className="flex-shrink-0 flex items-center"
+                      style={{ color: isActive ? "inherit" : NAV_TINT_VAR[item.tint] }}
+                    >
+                      <Icon size={nested ? 14 : 16} />
+                    </span>
                     <span className={`flex-1 ${collapsed ? "md:hidden" : ""}`}>{item.label}</span>
                   </Link>
                 );
@@ -153,7 +164,7 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
       {/* Bottom — joriy rol */}
       <div
         className="p-2.5 flex-shrink-0"
-        style={{ borderTop: "1px solid var(--rule)" }}
+        style={{ borderTop: "1px solid var(--sidebar-border)" }}
       >
         <div
           className={`flex items-center gap-2.5 py-2 rounded-lg ${collapsed ? "px-2.5 md:px-0 md:justify-center" : "px-2.5"}`}

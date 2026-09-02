@@ -35,6 +35,15 @@ export interface StatItem {
   /** Berilsa element bosiladigan bo'ladi (filtr). */
   onClick?: () => void;
   active?: boolean;
+  /**
+   * Qatorning ASOSIY ko'rsatkichi — kattaroq teriladi va ko'proq joy oladi.
+   * `active` dan MUSTAQIL o'q: urg'u "bu eng muhim raqam" degani, faollik esa
+   * "hozir shu filtr yoqilgan" — bir element ikkalasi ham bo'lishi mumkin.
+   * Qatorda bittadan ortiq element urg'u olmasin.
+   */
+  emphasis?: boolean;
+  /** Qiymat ostidagi o'zgarish satri — "+14 o'tgan haftadan". */
+  trend?: string;
 }
 
 export interface StatStripProps {
@@ -60,9 +69,9 @@ export function StatStrip({ items, minWidth = 132, className = "" }: StatStripPr
             onClick={s.onClick}
             title={s.hint}
             aria-pressed={interactive ? Boolean(s.active) : undefined}
-            className={`px-3 py-2 flex-1 text-left ${interactive ? "cursor-pointer" : ""}`}
+            className={`px-3 py-2 text-left ${s.emphasis ? "flex-[2]" : "flex-1"} ${interactive ? "cursor-pointer" : ""}`}
             style={{
-              minWidth,
+              minWidth: s.emphasis ? minWidth * 1.5 : minWidth,
               borderRight: i < items.length - 1 ? "1px solid var(--card-border)" : undefined,
               // Faol filtr PASTKI CHIZIQ bilan belgilanadi, fon bilan emas:
               // to'ldirilgan fon zich qatorda qo'shni ko'rsatkichni bosib
@@ -77,9 +86,14 @@ export function StatStrip({ items, minWidth = 132, className = "" }: StatStripPr
             >
               {s.label}
             </div>
-            <div className="text-meta">
+            <div className={s.emphasis ? "text-lg" : "text-meta"}>
               <Money value={s.value} tone={s.tone ?? "neutral"} bold />
             </div>
+            {s.trend && (
+              <div className="text-micro tabular-nums" style={{ color: "var(--text-muted)" }}>
+                {s.trend}
+              </div>
+            )}
             {s.meta && (
               <div className="text-micro" style={{ color: "var(--text-muted)" }}>
                 {s.meta}

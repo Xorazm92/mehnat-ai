@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
 import { useTableState } from "@/hooks/useTableState";
+import { usePageSize } from "@/hooks/usePageSize";
 import { friendlyError } from "@/lib/actionError";
 
 export interface DocumentRecord {
@@ -36,6 +37,7 @@ interface Props {
 
 const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit, onSave, onDelete }) => {
     const table = useTableState({ ns: 'doc', defaultSortKey: 'date', defaultSortDir: 'desc' });
+    const [pageSize, setPageSize] = usePageSize("documents");
   const confirm = useConfirm();
     const t = translations[lang];
     const [searchTerm, setSearchTerm] = useState('');
@@ -190,7 +192,8 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
                         onToggleSort={table.toggleSort}
                         density={table.density}
                         page={table.page}
-                        pageSize={50}
+                        pageSize={pageSize}
+                        onPageSizeChange={setPageSize}
                         onPageChange={table.setPage}
                         emptyIcon={<FileText size={36} />}
                         emptyTitle="Hujjatlar yo'q"

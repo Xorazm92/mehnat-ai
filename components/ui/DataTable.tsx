@@ -2,8 +2,9 @@
 
 import React, { useMemo } from "react";
 import { compareText } from "@/lib/collate";
-import { ArrowUp, ArrowDown, ChevronsUpDown, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ArrowUp, ArrowDown, ChevronsUpDown, X } from "lucide-react";
 import type { Density, SortDir } from "@/hooks/useTableState";
+import { Pagination } from "./Pagination";
 import { EmptyState } from "./EmptyState";
 import { SkeletonTable } from "./Skeleton";
 import { MobileRowCard, type MobileField } from "./MobileRowCard";
@@ -89,6 +90,21 @@ export interface DataTableProps<T> {
   page?: number;
   pageSize?: number;
   onPageChange?: (p: number) => void;
+  /** Berilsa jadval ostida sahifa hajmi tanlagichi chiziladi. */
+  onPageSizeChange?: (n: number) => void;
+  /**
+   * Jadval tanasining eng katta balandligi. Standart — ekran balandligidan
+   * topbar/sarlavha/asboblar uchun joy ayirilgani.
+   *
+   * Nega kerak: cheklovsiz jadval 50 qatorni butun sahifaga yoyardi va
+   * sahifalar chizig'i beshinchi ekranga tushib ketardi — foydalanuvchi
+   * uni umuman ko'rmasdi va ro'yxat "sahifalanmagan" bo'lib tuyulardi.
+   * Endi tana o'z ichida aylanadi: ustun sarlavhalari (`thead` allaqachon
+   * `sticky`) tepada, sahifalar esa doim ko'z oldida qoladi.
+   *
+   * `null` — cheklov yo'q (bosma ko'rinish, ichma-ich jadval).
+   */
+  maxBodyHeight?: string | null;
 
   loading?: boolean;
   emptyTitle?: string;
@@ -168,6 +184,8 @@ export function DataTable<T>({
   page = 1,
   pageSize,
   onPageChange,
+  onPageSizeChange,
+  maxBodyHeight = "calc(100vh - 270px)",
   loading = false,
   emptyTitle = "Ma'lumot topilmadi",
   emptyDescription,
@@ -346,7 +364,10 @@ export function DataTable<T>({
       )}
 
       <div className={`dashboard-card !p-0 overflow-hidden ${renderCard ? "hidden md:block" : ""}`}>
-        <div className="overflow-x-auto">
+        <div
+          className="overflow-auto"
+          style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}
+        >
           <table className="erp-table w-full text-left" data-density={density}>
             <caption className="sr-only">{caption}</caption>
             <thead>
@@ -382,7 +403,7 @@ export function DataTable<T>({
                         <button
                           type="button"
                           onClick={() => onToggleSort!(col.key)}
-                          className="inline-flex items-center gap-1.5 uppercase tracking-[0.09em] font-semibold hover:opacity-75 transition-opacity"
+                          className="inline-flex items-center gap-1.5 font-medium hover:opacity-75 transition-opacity"
                           style={{ color: isSorted ? "var(--brand)" : "inherit" }}
                         >
                           {col.header}
@@ -467,40 +488,14 @@ export function DataTable<T>({
           <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />
         )}
 
-        {pageSize && totalPages > 1 && (
-          <div
-            className="flex items-center justify-between gap-4 px-4 py-3"
-            style={{ borderTop: "1px solid var(--rule)" }}
-          >
-            <span className="text-meta font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
-              {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, sorted.length)} / {sorted.length}
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => onPageChange?.(safePage - 1)}
-                disabled={safePage <= 1}
-                aria-label="Oldingi sahifa"
-                className="icon-btn-sm rounded-lg disabled:opacity-35 disabled:cursor-not-allowed"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <span className="text-meta font-bold tabular-nums px-2" style={{ color: "var(--text-secondary)" }}>
-                {safePage} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => onPageChange?.(safePage + 1)}
-                disabled={safePage >= totalPages}
-                aria-label="Keyingi sahifa"
-                className="icon-btn-sm rounded-lg disabled:opacity-35 disabled:cursor-not-allowed"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <ChevronRight size={15} />
-              </button>
-            </div>
-          </div>
+        {pageSize && (
+          <Pagination
+            page={safePage}
+            pageSize={pageSize}
+            total={sorted.length}
+            onPageChange={(p) => onPageChange?.(p)}
+            onPageSizeChange={onPageSizeChange}
+          />
         )}
       </div>
 

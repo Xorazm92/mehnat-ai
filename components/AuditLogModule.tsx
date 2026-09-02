@@ -1,5 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import { Pagination, pageSlice } from '@/components/ui';
+import { usePageSize } from "@/hooks/usePageSize";
+
 import { Language } from '@/types';
 import { Search, Shield, History, User } from 'lucide-react';
 import { translations } from '@/lib/translations';
@@ -57,11 +60,23 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
         setLoading(false);
     };
 
+    /**
+     * SAHIFALASH. Audit jurnali 1000 dan ortiq yozuvga yetadi va hammasi
+     * bitta ro'yxatda chizilardi — har yozuv `JSON.stringify(details)` ni
+     * ham teradi, ya'ni DOM ham, matn ham katta. Sahifalar 50 tadan.
+     */
     const filteredLogs = logs.filter(log =>
         log.action.toLowerCase().includes(search.toLowerCase()) ||
         log.entity_type.toLowerCase().includes(search.toLowerCase()) ||
         log.profiles?.full_name.toLowerCase().includes(search.toLowerCase())
     );
+
+    const [page, setPage] = useState(1);
+
+    const [pageSize, setPageSize] = usePageSize("audit");
+    const pagedLogs = pageSlice(filteredLogs, page, pageSize);
+    // Qidiruv ro'yxatni qisqartirsa joriy sahifa yo'qolishi mumkin.
+    useEffect(() => { setPage(1); }, [search]);
 
     return (
         <div className="space-y-6 animate-fade-in p-6 bg-[var(--bg-primary)] min-h-dvh">
@@ -107,7 +122,7 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                         <History size={36} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--text-muted)' }} />
                         <span className="text-meta uppercase font-semibold tracking-[0.2em] opacity-60" style={{ color: 'var(--text-muted)' }}>{t.noDataFound}</span>
                     </div>
-                ) : filteredLogs.map((log) => {
+                ) : pagedLogs.map((log) => {
                     const isDel = log.action.includes('delete');
                     const isNew = log.action.includes('create') || log.action.includes('insert');
                     const isUpd = log.action.includes('update');
@@ -136,8 +151,8 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
 
             {/* Audit Table (desktop) */}
             <div className="hidden md:block dashboard-card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
+                <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 300px)" }}>
+                    <table className="table-sticky-head w-full text-left border-collapse text-xs">
                         <thead>
                             <tr style={{ background: 'var(--input-bg)', borderBottom: '1px solid var(--card-border)' }}>
                                 <th className="px-6 py-4 text-micro font-semibold leading-none" style={{ color: 'var(--text-muted)' }}>{t.time}</th>
@@ -166,7 +181,7 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                                         </div>
                                     </td>
                                 </tr>
-                            ) : filteredLogs.map(log => (
+                            ) : pagedLogs.map(log => (
                                 <tr key={log.id} className="transition-all group hover:bg-[var(--input-bg)]" style={{ borderTop: '1px solid var(--card-border)' }}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex flex-col gap-1.5">
@@ -226,6 +241,15 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                     </table>
                 </div>
             </div>
+
+            <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={filteredLogs.length}
+                onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+                unit="yozuv"
+            />
         </div>
     );
 };

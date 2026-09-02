@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { DashboardTopBar } from "@/components/DashboardTopBar";
+import { getAvatarRefs } from "@/server/avatar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MobileNavProvider, SIDEBAR_COOKIE } from "@/components/MobileNavContext";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -31,7 +32,7 @@ export default async function DashboardLayout({
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role ?? "";
   const avatarColor = session?.user?.avatarColor ?? undefined;
-  const [unreadCount, roleViewOverrides, contexts, roleContext, multiRoles] = await Promise.all([
+  const [unreadCount, roleViewOverrides, contexts, roleContext, multiRoles, avatarRefs] = await Promise.all([
     userId ? getCachedUnreadCount(userId) : Promise.resolve(0),
     userId ? getRoleViewOverrides().catch(() => ({})) : Promise.resolve({}),
     // Ko'p vazifali odam uchun kontekst tanlash. Bitta vazifasi bo'lsa
@@ -41,6 +42,11 @@ export default async function DashboardLayout({
     // TIZIM ROLI almashtirgich — ikki rolli xodim uchun (bank klient +
     // buxgalter kabi). Bir rolli odamda null qaytadi, chizilmaydi.
     userId ? getMyRoles().catch(() => null) : Promise.resolve(null),
+    // Avatar rasmi bor-yo'qligi SESSIYADA saqlanmaydi: u JWT ga tushsa,
+    // rasm yuklagan odam yangi rasmini keyingi tokengacha (5 daqiqa)
+    // ko'rmasdi. Shuning uchun har render bazadan — bu bitta indeksli
+    // so'rov va u allaqachon parallel ketayotgan to'plamga qo'shiladi.
+    userId ? getAvatarRefs([userId]) : Promise.resolve({} as Record<string, string>),
   ]);
   // Menyu = proxy darvozasi bilan AYNAN bir manba: kod default'i + admin
   // override'i + foydalanuvchining haqiqiy biriktiruvlari. Uchinchisisiz
@@ -90,6 +96,8 @@ export default async function DashboardLayout({
             userName={session?.user?.name || ""}
             userEmail={session?.user?.email || ""}
             userRole={userRole}
+            userId={userId}
+            avatarRef={avatarRefs[userId]}
             avatarColor={avatarColor}
             unreadCount={unreadCount}
             allowedViews={allowedViews}

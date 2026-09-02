@@ -17,11 +17,13 @@
 // qoida `lib/bank/classifyExpense.ts` da yashaydi va ikki joyda ikki xil
 // bo'lib ketmasligi kerak.
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, CreditCard, Building2 } from "lucide-react";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
-import { Money, StatStrip, type StatItem } from "@/components/ui";
+import { Money, Pagination, StatStrip, pageSlice, type StatItem } from "@/components/ui";
+import { usePageSize } from "@/hooks/usePageSize";
+
 import { Button } from "@/components/ui/Button";
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from "@/lib/bank/classifyExpense";
 import {
@@ -87,13 +89,17 @@ export default function ExpenseQueue({ queue }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [limit, setLimit] = useState(40);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize("expense-queue");
 
   // Navbatda 349 qator bo'lishi mumkin. Hammasini birdan chiqarish sahifani
   // o'qib bo'lmaydigan qilib cho'zadi — ommaviy tugmalar baribir hammasini
   // qamrab oladi, ya'ni to'liq ro'yxat ish uchun shart emas.
   const allRows = queue.rows.filter((r) => r.group === tab);
-  const rows = allRows.slice(0, limit);
+  const rows = pageSlice(allRows, page, pageSize);
+  // Guruh (tab) almashganda ro'yxat butunlay boshqa bo'ladi — eski sahifada
+  // qolib ketish "bo'sh navbat" degan yolg'on taassurot berardi.
+  useEffect(() => { setPage(1); }, [tab]);
   const meta = GROUP_META[tab];
   const bulkCats = queue.byCategory.filter((c) => c.postable && c.count > 1);
 
@@ -206,13 +212,13 @@ export default function ExpenseQueue({ queue }: Props) {
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 300px)" }}>
         {rows.length === 0 ? (
           <p className="px-3 py-6 text-meta text-center" style={{ color: "var(--text-muted)" }}>
             Bu guruhda kutayotgan qator yo&apos;q.
           </p>
         ) : (
-          <table className="w-full text-meta">
+          <table className="table-sticky-head w-full text-meta">
             <thead>
               <tr style={{ background: "var(--input-bg)" }}>
                 <th className="text-left p-2">Sana</th>
@@ -296,20 +302,19 @@ export default function ExpenseQueue({ queue }: Props) {
         style={{ borderTop: "1px solid var(--card-border)", color: "var(--text-muted)" }}
       >
         <span>
-          {allRows.length} qatordan {rows.length} tasi
-          {queue.truncated > 0 && ` · serverda yana ${queue.truncated} ta`}
-          {" · ommaviy tugmalar hammasini qamrab oladi"}
+          {queue.truncated > 0 && `Serverda yana ${queue.truncated} ta · `}
+          Ommaviy tugmalar SAHIFANI emas, butun navbatni qamrab oladi
         </span>
-        {allRows.length > rows.length && (
-          <button
-            onClick={() => setLimit((v) => v + 100)}
-            className="px-2.5 py-1 rounded-lg font-semibold"
-            style={{ background: "var(--input-bg)", color: "var(--text-secondary)" }}
-          >
-            Yana 100 ta
-          </button>
-        )}
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={allRows.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        unit="qator"
+      />
     </div>
   );
 }

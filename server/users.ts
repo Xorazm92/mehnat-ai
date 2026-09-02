@@ -17,6 +17,7 @@ const SAFE_USER_SELECT = {
   fullName: true,
   role: true,
   avatarColor: true,
+  avatarRef: true,
   phone: true,
   pinfl: true,
   department: true,

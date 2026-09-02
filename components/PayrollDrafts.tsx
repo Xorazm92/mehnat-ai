@@ -14,6 +14,7 @@ import { formatNum } from "@/lib/platform/format";
 import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
 import { exportObjectsToExcel } from "@/lib/exportTable";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui";
 import { friendlyError } from "@/lib/actionError";
 import { ROLE_LABELS, ASSIGNMENT_ROLE_LABELS, type UserRole, type AssignmentRole } from "@/lib/platform/permissions";
 import { MonthPicker } from "./ui/MonthPicker";
@@ -329,15 +330,13 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                                 </div>
                                 <div>
                                     {isApproved ? (
-                                        <span className="c1-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro"
-                                            style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
-                                            <CheckCircle2 size={11} /> Tasdiqlandi
-                                        </span>
+                                        <Badge tone="success" icon={<CheckCircle2 size={11} />}>
+                                            Tasdiqlandi
+                                        </Badge>
                                     ) : (
-                                        <span className="c1-badge px-2.5 py-1 rounded-lg text-micro"
-                                            style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>
+                                        <Badge tone="warning" dot>
                                             Qoralama
-                                        </span>
+                                        </Badge>
                                     )}
                                 </div>
                             </div>

@@ -72,7 +72,9 @@ export default function BalanceOverview({
           </div>
           <div>
             <div className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{title}</div>
-            <div className="text-2xl font-semibold tabular-nums leading-tight" style={{ color: accent }}>
+            {/* Kassa ekranining asosiy raqami — qolgan hamma ko'rsatkich shuning
+                kesimi, shuning uchun u yagona va eng katta urg'uni oladi. */}
+            <div className="text-3xl font-semibold tabular-nums leading-tight" style={{ color: accent }}>
               {som(b.balance)} <span className="text-body font-bold" style={{ color: "var(--text-muted)" }}>so&apos;m</span>
             </div>
             {negative && (

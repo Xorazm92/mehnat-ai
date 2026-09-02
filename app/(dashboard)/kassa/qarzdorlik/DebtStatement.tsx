@@ -23,7 +23,10 @@
 // bir ekranda o'qib bo'lmaydi; rahbarning savoli esa MIJOZ haqida.
 // Shartnoma tafsiloti qatorni bosganda ochiladi.
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Pagination, pageSlice } from "@/components/ui";
+import { usePageSize } from "@/hooks/usePageSize";
+
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { Money, StatStrip, type StatItem } from "@/components/ui";
@@ -81,7 +84,8 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<Kind | "all">("all");
   const [open, setOpen] = useState<string | null>(null);
-  const [limit, setLimit] = useState(50);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize("debt");
 
   const setDate = (which: "dan" | "gacha", value: string) => {
     const next = new URLSearchParams(params.toString());
@@ -102,7 +106,9 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
     });
   }, [s.customers, q, kind]);
 
-  const shown = rows.slice(0, limit);
+  const shown = pageSlice(rows, page, pageSize);
+  // Qidiruv yoki kesim ro'yxatni qisqartirsa joriy sahifa yo'qolishi mumkin.
+  useEffect(() => { setPage(1); }, [q, kind]);
 
   if (!s.closingAsOf) {
     return (
@@ -223,8 +229,8 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-meta">
+      <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 300px)" }}>
+        <table className="table-sticky-head w-full text-meta">
           <thead>
             <tr style={{ background: "var(--input-bg)" }}>
               <th className="text-left p-2">Mijoz</th>
@@ -317,19 +323,17 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
         className="px-3 py-2 flex items-center justify-between gap-3 flex-wrap text-micro"
         style={{ borderTop: "1px solid var(--card-border)", color: "var(--text-muted)" }}
       >
-        <span>
-          {rows.length} mijozdan {shown.length} tasi · ● belgisi bazadagi firmaga bog&apos;lanmaganini bildiradi
-        </span>
-        {rows.length > shown.length && (
-          <button
-            onClick={() => setLimit((v) => v + 100)}
-            className="px-2.5 py-1 rounded-lg font-semibold"
-            style={{ background: "var(--input-bg)", color: "var(--text-secondary)" }}
-          >
-            Yana 100 ta
-          </button>
-        )}
+        <span>● belgisi bazadagi firmaga bog&apos;lanmaganini bildiradi</span>
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={rows.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        unit="mijoz"
+      />
     </div>
   );
 }

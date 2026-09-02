@@ -105,7 +105,7 @@ export function ChiefAccountantCabinet({
           icon={<Clock size={15} />} href="/kpi"
         />
         <KpiCard
-          label="Jamoa KPI" value={Math.round(totalTeamScore)} tone="success" emphasize
+          label="Jamoa KPI" value={Math.round(totalTeamScore)} tone="success"
           icon={<TrendingUp size={15} />} href="/kpi"
         />
       </div>

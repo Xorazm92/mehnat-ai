@@ -14,6 +14,7 @@ import { TableToolbar } from "@/components/ui/TableToolbar";
 import { toast } from "sonner";
 import { usePrompt } from "@/components/ui/ConfirmDialog";
 import { SkeletonTable } from "@/components/ui/Skeleton";
+import { Badge } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
 import { MonthPicker } from './ui/MonthPicker';
@@ -234,8 +235,8 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                     )}
                                 </div>
                                 <div className="flex flex-wrap gap-1">
-                                    <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>INN: {c.inn}</span>
-                                    {nameOf(c.accountantId, c.accountantName) && <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>{nameOf(c.accountantId, c.accountantName)}</span>}
+                                    <Badge tone="neutral">INN: {c.inn}</Badge>
+                                    {nameOf(c.accountantId, c.accountantName) && <Badge tone="neutral">{nameOf(c.accountantId, c.accountantName)}</Badge>}
                                 </div>
                             </div>
                         );
@@ -307,9 +308,9 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                             <div className="flex items-center gap-2">
                                                 <div className="w-1 h-4 rounded-lg" style={{ background: group.accent }} />
                                                 <h4 className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{group.label}</h4>
-                                                <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
+                                                <Badge tone="neutral">
                                                     {group.employeeName || (lang === 'uz' ? 'Biriktirilmagan' : 'Не назначен')}
-                                                </span>
+                                                </Badge>
                                             </div>
                                             <span className="text-xs font-extrabold tabular-nums"
                                                 style={{ color: capped > 0 ? 'var(--success)' : capped < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>

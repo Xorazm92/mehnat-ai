@@ -645,7 +645,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                                 </p>
                                             )}
                                             {termError && <p className="text-meta" style={{ color: 'var(--danger)' }}>{termError}</p>}
-                                            {termSuccess && <p className="text-meta" style={{ color: 'var(--success, #16a34a)' }}>Yangi versiya saqlandi.</p>}
+                                            {termSuccess && <p className="text-meta" style={{ color: 'var(--success)' }}>Yangi versiya saqlandi.</p>}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <label className="block">
                                                     <span className="text-micro" style={fieldLabelStyle}>Umumiy summa</span>

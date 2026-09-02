@@ -128,7 +128,7 @@ export function AdminCabinet({
           hint={systemHealth.kpiCompletionPercent === null || systemHealth.kpiCompletionPercent === undefined
             ? "Bu oy uchun baholangan KPI yo'q"
             : undefined}
-          tone="success" emphasize
+          tone="success"
           icon={<TrendingUp size={15} />} href="/kpi"
         />
         <KpiCard

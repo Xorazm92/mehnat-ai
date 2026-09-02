@@ -16,16 +16,18 @@ import type { BalanceBreakdown } from '@/types';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
 import { useTableState } from '@/hooks/useTableState';
+import { usePageSize } from "@/hooks/usePageSize";
 import { StatStrip } from "@/components/ui/StatStrip";
+import { Badge, type BadgeTone } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 import { periodKeyOf } from '@/lib/periods';
 import { DateField } from './ui/DateField';
 
-const EXP_STATUS: Record<string, { label: string; fg: string; bg: string; bd: string }> = {
-    approved: { label: 'Tasdiqlangan', fg: 'var(--success)', bg: 'var(--success-bg)', bd: 'var(--success-border)' },
-    pending: { label: 'Kutilmoqda', fg: 'var(--warning)', bg: 'var(--warning-bg)', bd: 'var(--warning-border)' },
-    rejected: { label: 'Rad etildi', fg: 'var(--danger)', bg: 'var(--danger-bg)', bd: 'var(--danger-border)' },
+const EXP_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
+    approved: { label: 'Tasdiqlangan', tone: 'success' },
+    pending: { label: 'Kutilmoqda', tone: 'warning' },
+    rejected: { label: 'Rad etildi', tone: 'danger' },
 };
 
 // Korxona lug'atini o'qib bo'lmaganda ishlaydigan zaxira ro'yxat.
@@ -62,6 +64,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
         defaultSortDir: 'desc',
         defaultFilters: { status: 'all' },
     });
+    const [pageSize, setPageSize] = usePageSize("expenses");
     const searchTerm = table.debouncedSearch;
     const statusFilter = table.filters.status;
     // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
@@ -98,7 +101,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
         {
             key: 'category', header: 'Kategoriya', width: '150px',
             sortValue: e => e.category ?? '',
-            cell: e => <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>{e.category}</span>,
+            cell: e => <Badge tone="neutral">{e.category}</Badge>,
         },
         {
             key: 'description', header: 'Izoh', mobile: 'title',
@@ -128,9 +131,12 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 const canApr = e.status === 'pending' && canApproveExpense(userRole, e.amount);
                 return (
                     <div className="flex items-center gap-2">
-                        <span className="text-micro font-bold px-2 py-1 rounded-lg uppercase inline-flex items-center gap-1 whitespace-nowrap" style={{ background: st.bg, color: st.fg, border: `1px solid ${st.bd}` }}>
-                            {e.status === 'approved' ? <CheckCircle2 size={10} /> : e.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />} {st.label}
-                        </span>
+                        <Badge
+                            tone={st.tone}
+                            icon={e.status === 'approved' ? <CheckCircle2 size={10} /> : e.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />}
+                        >
+                            {st.label}
+                        </Badge>
                         {canApr && onApproveExpense && (
                             <div className="flex gap-1" onClick={ev => ev.stopPropagation()}>
                                 <button onClick={() => onApproveExpense(e.id)} className="w-6 h-6 flex items-center justify-center rounded-lg" style={{ background: 'var(--success)', color: 'var(--on-success)' }} aria-label="Tasdiqlash"><CheckCircle2 size={13} /></button>
@@ -241,7 +247,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
             */}
             <StatStrip
               items={[
-                { label: "Shu oyda", value: stats.totalMonth, tone: "out" },
+                { label: "Shu oyda", value: stats.totalMonth, tone: "out", emphasis: true },
                 { label: "Jami xarajat", value: stats.totalAll, tone: "neutral", meta: `${stats.count} qayd` },
               ]}
             />
@@ -331,10 +337,13 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="c1-badge" style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>{expense.category}</span>
-                                        <span className="text-micro font-bold px-2 py-1 rounded-lg uppercase inline-flex items-center gap-1" style={{ background: st.bg, color: st.fg, border: `1px solid ${st.bd}` }}>
-                                            {expense.status === 'approved' ? <CheckCircle2 size={10} /> : expense.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />} {st.label}
-                                        </span>
+                                        <Badge tone="neutral">{expense.category}</Badge>
+                                        <Badge
+                                            tone={st.tone}
+                                            icon={expense.status === 'approved' ? <CheckCircle2 size={10} /> : expense.status === 'rejected' ? <XCircle size={10} /> : <Clock size={10} />}
+                                        >
+                                            {st.label}
+                                        </Badge>
                                     </div>
                                     <div className="text-body font-bold mt-1.5 truncate" style={{ color: 'var(--text)' }}>{expense.description || '—'}</div>
                                     <div className="flex items-center gap-2 mt-1 text-meta font-bold" style={{ color: 'var(--text-muted)' }}>
@@ -382,7 +391,8 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     onToggleSort={table.toggleSort}
                     density={table.density}
                     page={table.page}
-                    pageSize={50}
+                    pageSize={pageSize}
+                        onPageSizeChange={setPageSize}
                     onPageChange={table.setPage}
                     selected={selectedIds}
                     onSelectedChange={setSelectedIds}

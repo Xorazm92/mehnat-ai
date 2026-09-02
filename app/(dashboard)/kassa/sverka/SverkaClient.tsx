@@ -306,7 +306,7 @@ function DeviceTab({
           </Button>
         </form>
         {result && result.warnings.length > 0 && (
-          <ul className="mt-2 text-micro space-y-0.5" style={{ color: "var(--accent-amber, #d97706)" }}>
+          <ul className="mt-2 text-micro space-y-0.5" style={{ color: "var(--accent-amber)" }}>
             {result.warnings.map((w) => <li key={w}>⚠ {w}</li>)}
           </ul>
         )}

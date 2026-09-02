@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { formatNum } from "@/lib/platform/format";
 
 export default function PortalPage() {
   const [token, setToken] = useState("");
@@ -27,19 +28,38 @@ export default function PortalPage() {
               value={token}
               onChange={(e) => setToken(e.target.value)}
               placeholder="Havola yoki kod"
-              style={{ padding: "12px", borderRadius: "8px", border: "1px solid #333", background: "#111", color: "#fff" }}
+              style={{
+                padding: "12px",
+                borderRadius: "8px",
+                border: "1px solid var(--card-border)",
+                background: "var(--input-bg)",
+                color: "var(--text-primary)",
+              }}
             />
-            <button type="submit" style={{ padding: "12px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+            <button
+              type="submit"
+              style={{
+                padding: "12px",
+                background: "var(--brand)",
+                color: "var(--on-brand)",
+                border: "none",
+                borderRadius: "8px",
+                cursor: "pointer",
+              }}
+            >
               Kirish
             </button>
-            {error && <p style={{ color: "#ef4444", fontSize: "14px" }}>{error}</p>}
+            {error && <p style={{ color: "var(--danger)", fontSize: "14px" }}>{error}</p>}
           </form>
         ) : (
-          <div style={{ background: "#1a1a2e", borderRadius: "12px", padding: "24px" }}>
+          <div style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", borderRadius: "12px", padding: "24px" }}>
             <h2 style={{ fontSize: "18px", marginBottom: "16px" }}>{data.name}</h2>
-            <p style={{ fontSize: "14px", color: "#888" }}>Balans:</p>
-            <p style={{ fontSize: "32px", fontWeight: "bold", color: data.balance < 0 ? "#ef4444" : "#22c55e" }}>
-              {data.balance.toLocaleString()} so'm
+            <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>Balans:</p>
+            {/* `toLocaleString()` server va brauzerda turlicha teradi (SSR mos
+                kelmasligi) va ajratgichi brauzer tiliga bog'liq bo'lardi —
+                loyihada raqam har doim `formatNum` orqali chiqadi. */}
+            <p style={{ fontSize: "32px", fontWeight: "bold", color: data.balance < 0 ? "var(--danger)" : "var(--success)" }}>
+              {formatNum(data.balance)} so&apos;m
             </p>
           </div>
         )}

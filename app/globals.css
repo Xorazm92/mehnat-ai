@@ -145,13 +145,36 @@
   --text-2: #586371;
   --text-3: #5F6975;
 
-  /* ─── Sidebar ─── */
-  --sidebar-bg: #F6F6F8;
-  --sidebar-border: rgba(23, 29, 38, 0.09);
-  --sidebar-item-active-bg: rgba(15, 102, 174, 0.07);
+  /* ─── Sidebar — "mint tokchasi" ───
+     Yon panel neytral kulrang edi va kanvasdan deyarli farq qilmasdi: ikkalasi
+     ham ~#F6 atrofida turardi, ya'ni navigatsiya ish maydonining davomiga
+     o'xshardi. Endi u yashil tomonga qiya och zamin — logotipdagi chartreuse
+     barg bilan bir oilada, lekin unchalik to'yingan emas.
+
+     Faol band OQ tabletka bo'ladi (mint ustida oq eng aniq ajraladi), matni
+     esa brend ko'ki — ya'ni fon oilasi yashil, harakat rangi ko'k bo'lib
+     qoladi va status ranglari bilan aralashmaydi. */
+  --sidebar-bg: #DCEBE3;
+  --sidebar-border: rgba(20, 48, 38, 0.13);
+  --sidebar-item-active-bg: #FFFFFF;
   --sidebar-item-active-text: #0B5091;
-  --sidebar-item-hover-bg: #ECEDF1;
-  --sidebar-item-text: #586371;
+  --sidebar-item-hover-bg: rgba(255, 255, 255, 0.55);
+  --sidebar-item-text: #3E5049;
+
+  /* ─── Navigatsiya ikonka ranglari ───
+     Menyu bandi ikonkalari uchun ALOHIDA palitra. Ular status ranglaridan
+     (--danger/--warning/--success) ataylab ajratilgan: yon paneldagi qizil
+     ikonka "muammo" degani emas, u shunchaki bo'limning belgisi. Shu sabab
+     bu yerdagi qiymatlar pastroq to'yingan va bir xil yorug'likda turadi —
+     hech biri boshqasidan "shoshilinchroq" ko'rinmaydi. */
+  --nav-blue: #3A6FA8;
+  --nav-teal: #2A7F86;
+  --nav-green: #3D7F58;
+  --nav-olive: #77792C;
+  --nav-amber: #9C7226;
+  --nav-clay: #A85F4C;
+  --nav-plum: #8A5A9E;
+  --nav-indigo: #5B62A8;
   --sidebar-width: 240px;
 
   /* ─── Topbar ─── */
@@ -318,12 +341,24 @@
   --text-3: #727E8A;
 
   /* ─── Sidebar ─── */
-  --sidebar-bg: #15181E;
+  /* Qorong'ida mint "och yashil" bo'la olmaydi — u yerda oila yashil qiyalik
+     bilan saqlanadi: zamin neytral emas, biroz yashil tomonga siljigan. */
+  --sidebar-bg: #101613;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-item-active-bg: rgba(79, 163, 227, 0.13);
+  --sidebar-item-active-bg: rgba(255, 255, 255, 0.07);
   --sidebar-item-active-text: #86C2EE;
-  --sidebar-item-hover-bg: rgba(255, 255, 255, 0.045);
-  --sidebar-item-text: #98A3AF;
+  --sidebar-item-hover-bg: rgba(255, 255, 255, 0.04);
+  --sidebar-item-text: #97A69F;
+
+  /* Nav ikonkalari — qorong'ida yorug'roq va biroz kamroq to'yingan. */
+  --nav-blue: #77AEE0;
+  --nav-teal: #63BEC4;
+  --nav-green: #79BF94;
+  --nav-olive: #B4B65F;
+  --nav-amber: #D6AC63;
+  --nav-clay: #DE9A87;
+  --nav-plum: #C296D4;
+  --nav-indigo: #9AA0DF;
   --sidebar-width: 240px;
 
   /* ─── Topbar ─── */
@@ -991,16 +1026,38 @@ input[type="radio"] {
   top: 0;
   z-index: var(--z-sticky);
   background: var(--table-header-bg);
-  padding: 0.625rem 0.875rem;
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--text-muted);
+  /* Sarlavha ustun NOMI, xolos — kontent emas.
+
+     Ilgari u mono shriftda, KATTA HARFLARDA, 10px va kengaytirilgan harf
+     oralig'i bilan terilardi. Bunday "shtamp" o'qilmaydi, taniladi: ko'z
+     "S-A-N-A" ni harflab yig'adi. Endi u oddiy interfeys matni — 11px,
+     o'z holicha, kulrang. Zich moliyaviy jadvalda ham shu ravonroq
+     o'qiladi va qator ma'lumotidan tinch turadi. */
+  padding: 0.75rem 0.875rem;
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-secondary);
   white-space: nowrap;
   text-align: left;
   border-bottom: 1px solid var(--rule-strong);
+}
+
+/* ─── QO'LDA TERILGAN JADVAL SARLAVHASI ───
+   `.erp-table` dan foydalanmaydigan jadvallar (kassa jurnali, audit jurnali,
+   kirim reyestri, chiqim navbati…) o'z `<thead>` ini o'zi bezaydi. Ular
+   endi balandligi cheklangan, o'z ichida aylanadigan tanaga o'ralgan —
+   sticky bo'lmagan sarlavha esa birinchi aylantirishdayoq yo'qolib,
+   foydalanuvchi qaysi ustun nima ekanini eslab qolishga majbur bo'lardi.
+
+   Ataylab `.erp-table` qo'llanilmagan: u padding, chiziq va rang tizimini
+   ham olib keladi va bu jadvallarning ko'rinishini o'zgartirib yuborardi.
+   Bu yerda faqat sarlavhaning yopishib turishi beriladi. */
+.table-sticky-head thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: var(--table-header-bg);
 }
 
 /* Raqamli ustunning sarlavhasi ma'lumot ortidan borishi shart. `.col-numeric`
@@ -1011,10 +1068,17 @@ input[type="radio"] {
   text-align: right;
 }
 
-/* Ustun chizig'i — jadvalni ro'yxat emas, daftar qiladi. */
+/* VERTIKAL CHIZIQ YO'Q.
+   Ilgari har katak chapdan chiziq olardi va jadval Excel to'riga o'xshardi.
+   To'r har qatorni bo'laklarga kesadi: ko'z avval katakni, keyin qatorni
+   ko'radi — holbuki foydalanuvchi QATORNI (bitta firma, bitta to'lov)
+   o'qiydi. Endi faqat gorizontal ajratgich qoladi.
+
+   Istisno — amallar matritsasi (`OperationModule`): u haqiqatan ham to'r,
+   chunki u yerda katakning O'ZI ma'lumot birligi. U o'z uslubiga ega. */
 .erp-table thead th + th,
 .erp-table tbody td + td {
-  border-left: 1px solid var(--table-border);
+  border-left: none;
 }
 
 .erp-table tbody tr {
@@ -1041,7 +1105,7 @@ input[type="radio"] {
 }
 
 .erp-table tbody td {
-  padding: 0.625rem 0.875rem;
+  padding: 0.875rem;
   font-size: var(--text-body);
   color: var(--text-primary);
   white-space: nowrap;
@@ -1184,7 +1248,7 @@ input[type="radio"] {
   letter-spacing: 0.12em;
   color: var(--text-muted);
   padding: 0 0.75rem;
-  margin-top: 1.25rem;
+  margin-top: 1.5rem;
   margin-bottom: 0.375rem;
 }
 

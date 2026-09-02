@@ -11,6 +11,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { formatUzMonthYear, formatUzDateNumeric, formatNum } from "@/lib/platform/format";
+import { KpiCard } from "@/components/ui/KpiCard";
 import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
 
 interface AssignedCompany {
@@ -91,58 +92,26 @@ export function BankCabinet({
       </div>
 
       {/* Balance Cards */}
+      {/* Uchala plitka qo'lda terilgan edi — har birida o'z `color-mix()`
+          ikonka qutisi va o'z `text-2xl`. Endi `KpiCard`. Sof balans — bu
+          qatorning natijasi, shuning uchun yagona urg'u o'shanda. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl p-5" style={{ background: "var(--success-bg)", border: "1px solid var(--success-border)" }}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "color-mix(in srgb, var(--success) 15%, transparent)" }}>
-              <ArrowUpCircle size={20} style={{ color: "var(--success)" }} />
-            </div>
-            <span className="text-sm" style={{ color: "var(--text-muted)" }}>Kirim</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--success)" }}>
-            {formatNum(balance.income)}
-          </div>
-          <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>so&apos;m</div>
-        </div>
-
-        <div className="rounded-xl p-5" style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "color-mix(in srgb, var(--danger) 15%, transparent)" }}>
-              <ArrowDownCircle size={20} style={{ color: "var(--danger)" }} />
-            </div>
-            <span className="text-sm" style={{ color: "var(--text-muted)" }}>Chiqim</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: "var(--danger)" }}>
-            {formatNum(balance.expense)}
-          </div>
-          <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>so&apos;m</div>
-        </div>
-
-        <div
-          className="rounded-xl p-5"
-          style={{
-            background: balance.net >= 0 ? "var(--accent-blue-light)" : "var(--danger-bg)",
-            border: balance.net >= 0 ? "1px solid var(--accent-blue)" : "1px solid var(--danger-border)"
-          }}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: balance.net >= 0 ? "color-mix(in srgb, var(--brand) 15%, transparent)" : "color-mix(in srgb, var(--danger) 15%, transparent)" }}
-            >
-              <Wallet size={20} style={{ color: balance.net >= 0 ? "var(--accent-blue)" : "var(--danger)" }} />
-            </div>
-            <span className="text-sm" style={{ color: "var(--text-muted)" }}>Sof Balans</span>
-          </div>
-          <div
-            className="text-2xl font-bold"
-            style={{ color: balance.net >= 0 ? "var(--accent-blue)" : "var(--danger)" }}
-          >
-            {balance.net >= 0 ? "+" : ""}
-            {formatNum(balance.net)}
-          </div>
-          <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>so&apos;m</div>
-        </div>
+        <KpiCard
+          label="Kirim" value={formatNum(balance.income)} hint="so'm"
+          tone="success" emphasize icon={<ArrowUpCircle size={15} />}
+        />
+        <KpiCard
+          label="Chiqim" value={formatNum(balance.expense)} hint="so'm"
+          tone="danger" emphasize icon={<ArrowDownCircle size={15} />}
+        />
+        <KpiCard
+          label="Sof balans"
+          value={`${balance.net >= 0 ? "+" : ""}${formatNum(balance.net)}`}
+          hint="so'm"
+          tone={balance.net >= 0 ? "brand" : "danger"}
+          emphasize emphasis
+          icon={<Wallet size={15} />}
+        />
       </div>
 
       {/* Muddatlar — biriktirilgan firmalar bo'yicha */}

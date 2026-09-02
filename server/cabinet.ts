@@ -210,6 +210,7 @@ export async function getMyCabinet() {
         fullName: true,
         role: true,
         avatarColor: true,
+        avatarRef: true,
         phone: true,
         pinfl: true,
         department: true,
