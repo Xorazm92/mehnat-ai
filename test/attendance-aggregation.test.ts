@@ -71,3 +71,35 @@ describe("aggregateMonthlyAttendance", () => {
     expect(s.presentDays).toBe(1);
   });
 });
+
+describe("reglament: uzluksiz oy va uzrli kechikish", () => {
+  const early = (): DailyAttendance => ({ status: "present", checkIn: at(8, 20) });
+
+  it("flags a month where every worked day was early", () => {
+    const s = aggregateMonthlyAttendance([early(), early(), early()]);
+    expect(s.allEarly).toBe(true);
+  });
+
+  it("clears the flag when one day was merely on time", () => {
+    const s = aggregateMonthlyAttendance([early(), { status: "present", checkIn: at(8, 45) }]);
+    expect(s.earlyDays).toBe(1); // kunbay hisob saqlanadi — bonus butunlay kuymaydi
+    expect(s.allEarly).toBe(false);
+  });
+
+  it("clears the flag when an unexcused absence breaks the month", () => {
+    const s = aggregateMonthlyAttendance([early(), { status: "absent", checkIn: null }]);
+    expect(s.allEarly).toBe(false);
+  });
+
+  // Reglament: "Ишга УЗРЛИ САБАБСИЗ 09.00 дан кейин келиш ... -0.1%".
+  it("keeps an excused late arrival out of the penalty", () => {
+    const s = aggregateMonthlyAttendance([
+      { status: "late", checkIn: at(9, 40), lateExcused: true },
+      { status: "late", checkIn: at(9, 10) },
+    ]);
+    expect(s.lateMinutes).toBe(10); // faqat uzrsizi
+    expect(s.lateDays).toBe(1);
+    expect(s.excusedLateDays).toBe(1);
+    expect(s.workedDays).toBe(2); // kun baribir ishlangan
+  });
+});

@@ -44,6 +44,8 @@ export default async function AttendancePage({
     checkIn: a.checkIn ? a.checkIn.toISOString() : "",
     checkOut: a.checkOut ? a.checkOut.toISOString() : "",
     notes: a.notes || "",
+    lateExcused: a.lateExcused,
+    lateExcuseReason: a.lateExcuseReason || "",
   }));
 
   const mappedStaff = staff.map((u) => ({

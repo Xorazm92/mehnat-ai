@@ -50,6 +50,12 @@ export interface DailyAttendance {
   status: string; // 'present' | 'late' | 'absent' | 'excused'
   checkIn: Date | null;
   lateMinutes?: number | null;
+  /**
+   * Kechikish uzrli deb tasdiqlanganmi (shifokor, xizmat safari, rahbar
+   * ruxsati). Reglament kechikishni faqat "узрли сабабсиз" bo'lganda
+   * jarimalaydi — bu bayroq qo'yilgan kun jarimaga kirmaydi.
+   */
+  lateExcused?: boolean | null;
 }
 
 export interface MonthlyAttendanceSummary {
@@ -60,8 +66,16 @@ export interface MonthlyAttendanceSummary {
   excusedDays: number;
   /** KPI: 08:30 gacha kelgan kunlar (bonus). */
   earlyDays: number;
-  /** KPI: jami kechikkan daqiqalar. */
+  /** KPI: jami kechikkan daqiqalar (uzrli deb belgilanganlari kirmaydi). */
   lateMinutes: number;
+  /** Uzrli deb tasdiqlangan kechikish kunlari — hisobotda ko'rsatiladi. */
+  excusedLateDays: number;
+  /**
+   * Ishlangan HAR kun 08:30 gacha kelinganmi (va uzrsiz yo'qlik yo'qmi).
+   * Reglament shu holatda to'liq +1% beradi; kunbay hisob (0.04×20=0.80)
+   * hech qachon o'sha 1% ga yetmasdi, chunki oyda 25 ish kuni bo'lmaydi.
+   */
+  allEarly: boolean;
 }
 
 /**
@@ -81,6 +95,8 @@ export function aggregateMonthlyAttendance(
     excusedDays: 0,
     earlyDays: 0,
     lateMinutes: 0,
+    excusedLateDays: 0,
+    allEarly: false,
   };
 
   for (const r of rows) {
@@ -95,6 +111,15 @@ export function aggregateMonthlyAttendance(
 
     // present | late — worked day.
     s.workedDays++;
+
+    // Uzrli kechikish: kun ishlangan deb sanaladi, lekin daqiqalari jarimaga
+    // qo'shilmaydi. Erta kelish ham bo'lmaydi — 08:30 dan keyin kelgan.
+    if (r.lateExcused) {
+      s.excusedLateDays++;
+      s.presentDays++;
+      continue;
+    }
+
     if (r.checkIn) {
       const c = classifyArrival(r.checkIn, t);
       if (c.status === "late") {
@@ -111,6 +136,8 @@ export function aggregateMonthlyAttendance(
       s.presentDays++;
     }
   }
+
+  s.allEarly = s.workedDays > 0 && s.earlyDays === s.workedDays && s.absentDays === 0;
 
   return s;
 }

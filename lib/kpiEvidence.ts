@@ -51,6 +51,31 @@ const ATTENDANCE_RULE_BY_USER_ROLE: Record<string, string> = {
   supervisor: "sup_attendance",
 };
 
+/**
+ * Oydagi HAR ish kuni 08:30 gacha kelinganda beriladigan to'liq bonusga yetadigan
+ * kun soni.
+ *
+ * Reglament: "+0.04% (бир ой давомида узлуксиз 08.30 дан олдин келиш махимал 1%)".
+ * Kunbay qadam uzilish bo'lganda ham saqlanadi — bir kun kechikkan odam butun
+ * bonusdan mahrum bo'lmaydi. Lekin oyda 25 ish kuni bo'lmagani uchun (20-22)
+ * sof arifmetika 0.04 × 20 = 0.80% da to'xtardi va va'da qilingan 1% ga hech
+ * kim, hech qachon yeta olmasdi. Shuning uchun uzilishsiz oyda counter shiftga
+ * yetkaziladi; clampCounter uni max_coeff da to'xtatadi, ya'ni 1% dan oshmaydi.
+ *
+ * Kun soni qoidaning O'ZIDAN olinadi (max_coeff / coeff_per_unit) — koeffitsiyent
+ * o'zgarsa bu yer ham o'zi ergashadi.
+ */
+export function earlyDaysForFullBonus(rule?: { options: unknown }): number {
+  const opts = Array.isArray(rule?.options)
+    ? (rule!.options as { key?: string; coeff_per_unit?: number; max_coeff?: number | null }[])
+    : [];
+  const early = opts.find((o) => o.key === "early_days");
+  const per = Number(early?.coeff_per_unit ?? 0);
+  const cap = Number(early?.max_coeff ?? 0);
+  if (!per || !cap) return 0;
+  return Math.ceil(cap / per);
+}
+
 const ABSENCE_RULE_BY_USER_ROLE: Record<string, string> = {
   accountant: "acc_absence",
   bank_manager: "bank_absence",
@@ -331,6 +356,7 @@ export async function evaluateAttendanceEvidence(
       status: true,
       checkIn: true,
       lateMinutes: true,
+      lateExcused: true,
       user: { select: { role: true } },
     },
     orderBy: { date: "asc" },
@@ -369,6 +395,8 @@ export async function evaluateAttendanceEvidence(
       continue;
     }
 
+    const attendanceRule = ruleByName.get(ATTENDANCE_RULE_BY_USER_ROLE[entry.role] ?? "");
+
     const jobs: { ruleName?: string; input: Parameters<typeof computeRuleScore>[1] }[] = [
       {
         ruleName: ATTENDANCE_RULE_BY_USER_ROLE[entry.role],
@@ -376,7 +404,9 @@ export async function evaluateAttendanceEvidence(
         // xil bo'lishi SHART — aks holda computeRuleScore jimgina 0 qaytaradi.
         input: {
           counters: {
-            early_days: summary.earlyDays,
+            early_days: summary.allEarly
+              ? earlyDaysForFullBonus(attendanceRule)
+              : summary.earlyDays,
             late_5min: Math.floor(summary.lateMinutes / 5),
           },
         },
@@ -404,7 +434,12 @@ export async function evaluateAttendanceEvidence(
             source: "system",
             status: "submitted",
             submittedAt: now,
-            notes: `Davomat dalili — ${summary.earlyDays} erta kun, ${summary.lateMinutes} daq kechikish, ${summary.absentDays} kelmagan kun`,
+            notes:
+              `Davomat dalili — ${summary.earlyDays} erta kun` +
+              (summary.allEarly ? " (uzilishsiz oy — to'liq bonus)" : "") +
+              `, ${summary.lateMinutes} daq kechikish` +
+              (summary.excusedLateDays ? ` (${summary.excusedLateDays} kun uzrli)` : "") +
+              `, ${summary.absentDays} kelmagan kun`,
           },
         });
       }
@@ -481,11 +516,26 @@ export async function evaluateResponseEvidence(
       continue;
     }
 
-    const score = computeRuleScore(rule as never, { selectedOption: color });
+    // Reglament buxgalter va bank klient uchun "хар сафар -0.5%" deydi — har
+    // bir kechikkan javob alohida sanaladi. Shu ikki qoida `counter` ga
+    // o'tkazilgan; nazoratchida esa matn "хар сафар" demaydi, shuning uchun u
+    // uch holatli `select` bo'lib qoladi.
+    const isCounter = rule.inputTypeV2 === "counter";
+    const input = isCounter
+      ? {
+          counters: {
+            // Uzilishsiz oy — to'liq bonus; bitta kechikish ham bo'lsa bonus yo'q.
+            ontime_month: g.late === 0 && g.onTime > 0 ? 1 : 0,
+            late_responses: g.late,
+          },
+        }
+      : { selectedOption: color };
+
+    const score = computeRuleScore(rule as never, input);
     proposals.push({
       key: { month: perfMonth, companyId: g.companyId, employeeId: g.employeeId, ruleId: rule.id },
       payload: {
-        selectedOption: color,
+        selectedOption: isCounter ? null : color,
         earlyDays: 0,
         lateMinutes: 0,
         absentDays: 0,
@@ -496,7 +546,9 @@ export async function evaluateResponseEvidence(
         status: "submitted",
         ...(opts.submittedBy ? { submittedBy: opts.submittedBy } : {}),
         submittedAt: now,
-        notes: `Bot: ${g.onTime} o'z vaqtida, ${g.late} kechikish (KPI ledger)`,
+        notes:
+          `Bot: ${g.onTime} o'z vaqtida, ${g.late} kechikish (KPI ledger)` +
+          (isCounter && g.late > 0 ? ` — har safar uchun ${g.late} × -0.5%` : ""),
       },
     });
   }

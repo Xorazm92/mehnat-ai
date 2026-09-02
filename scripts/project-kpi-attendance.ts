@@ -18,7 +18,7 @@ import "./load-env";
 import { prisma } from "@/lib/prisma";
 import { aggregateMonthlyAttendance } from "@/lib/attendance";
 import { computeRuleScore } from "@/lib/kpiScoring";
-import { evaluateAttendanceEvidence } from "@/lib/kpiEvidence";
+import { evaluateAttendanceEvidence, earlyDaysForFullBonus } from "@/lib/kpiEvidence";
 import { toPerformanceMonth } from "@/lib/periods";
 
 const month = process.argv[2];
@@ -57,6 +57,7 @@ async function main() {
       status: true,
       checkIn: true,
       lateMinutes: true,
+      lateExcused: true,
       user: { select: { fullName: true, role: true } },
     },
   });
@@ -95,7 +96,9 @@ async function main() {
     role: string;
     firms: number;
     early: number;
+    allEarly: boolean;
     lateMin: number;
+    excusedLate: number;
     absent: number;
     attendancePct: number;
     absencePct: number;
@@ -115,11 +118,17 @@ async function main() {
       role: e.role,
       firms,
       early: s.earlyDays,
+      allEarly: s.allEarly,
       lateMin: s.lateMinutes,
+      excusedLate: s.excusedLateDays,
       absent: s.absentDays,
       attendancePct: attRule
         ? computeRuleScore(attRule as never, {
-            counters: { early_days: s.earlyDays, late_5min: Math.floor(s.lateMinutes / 5) },
+            counters: {
+              // Uzilishsiz oy — to'liq bonus (lib/kpiEvidence.ts bilan bir xil qoida).
+              early_days: s.allEarly ? earlyDaysForFullBonus(attRule) : s.earlyDays,
+              late_5min: Math.floor(s.lateMinutes / 5),
+            },
           }).percent
         : 0,
       absencePct: absRule
@@ -130,13 +139,14 @@ async function main() {
 
   report.sort((a, b) => a.attendancePct + a.absencePct - (b.attendancePct + b.absencePct));
 
-  const head = ["XODIM", "ROL", "FIRMA", "ERTA", "KECH(daq)", "YO'Q", "KELISH%", "YO'QLIK%", "JAMI%"];
+  const head = ["XODIM", "ROL", "FIRMA", "ERTA", "KECH(daq)", "UZRLI", "YO'Q", "KELISH%", "YO'QLIK%", "JAMI%"];
   const rows = report.map((r) => [
     r.name,
     r.role,
     String(r.firms),
-    String(r.early),
+    r.early + (r.allEarly ? "*" : ""),
     String(r.lateMin),
+    String(r.excusedLate),
     String(r.absent),
     fmt(r.attendancePct),
     fmt(r.absencePct),
@@ -146,7 +156,7 @@ async function main() {
   const line = (cells: string[]) =>
     cells.map((c, i) => (i === 0 || i === 1 ? c.padEnd(widths[i]) : c.padStart(widths[i]))).join("  ");
 
-  console.log(`\nDAVOMAT KPI — ${month}\n`);
+  console.log(`\nDAVOMAT KPI — ${month}   (* = uzilishsiz oy, to'liq bonus)\n`);
   console.log(line(head));
   console.log(widths.map((w) => "─".repeat(w)).join("  "));
   for (const r of rows) console.log(line(r));

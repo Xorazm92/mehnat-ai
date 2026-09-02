@@ -6,7 +6,7 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import AttendanceModule, { AttendanceRecord } from "@/components/AttendanceModule";
 import ShiftCoverPanel from "@/components/ShiftCoverPanel";
 import { Staff } from "@/types";
-import { upsertAttendance, deleteAttendance } from "@/server/attendance";
+import { upsertAttendance, deleteAttendance, setLateExcused } from "@/server/attendance";
 import { syncEjurnalAttendance } from "@/server/ejurnal";
 
 interface Props {
@@ -46,6 +46,11 @@ export default function AttendanceClient({ records, staff, canEdit, month, month
     return res;
   };
 
+  const handleExcuseLate = async (id: string, excused: boolean, reason?: string) => {
+    await setLateExcused(id, excused, reason);
+    router.refresh();
+  };
+
   // Oy serverdan olinadi (butun oy bir so'rovda), shuning uchun almashtirish
   // URL orqali — sahifa qayta yuklanadi va yangi oy ma'lumoti keladi.
   const handleMonthChange = (next: string) => {
@@ -64,6 +69,7 @@ export default function AttendanceClient({ records, staff, canEdit, month, month
         canEdit={canEdit}
         onSave={handleSave}
         onDelete={handleDelete}
+        onExcuseLate={canEdit ? handleExcuseLate : undefined}
         onSyncEjurnal={canEdit ? handleSyncEjurnal : undefined}
       />
       {/* Yo'qlik va o'rinbosarlik bir domen — nazoratchi allaqachon shu ekranda

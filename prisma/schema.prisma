@@ -1285,6 +1285,11 @@ model Attendance {
   notes       String?
   source      String?   @default("manual") // 'manual' | 'ejurnal' — where the record came from
   lateMinutes Int?      @default(0) // minutes the check-in is past the 09:00 threshold
+  // Reglament kechikishni faqat "узрли сабабсиз" bo'lganda jarimalaydi. Nazoratchi
+  // shu bayroqni qo'yganda kun ishlangan deb qoladi, lekin daqiqalari KPI jarimasiga
+  // kirmaydi. Sababi `lateExcuseReason` da — kim nima uchun kechirganini ko'rsatadi.
+  lateExcused Boolean   @default(false)
+  lateExcuseReason String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

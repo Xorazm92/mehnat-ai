@@ -66,6 +66,9 @@ export async function upsertAttendance(data: {
   checkIn?: string; // "HH:mm"
   checkOut?: string;
   notes?: string;
+  /** Kechikish uzrli deb tasdiqlansinmi (reglament: "узрли сабабсиз" bo'lsagina jarima). */
+  lateExcused?: boolean;
+  lateExcuseReason?: string;
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -95,6 +98,8 @@ export async function upsertAttendance(data: {
     lateMinutes: checkIn ? classifyArrival(checkIn).lateMinutes : 0,
     source: "manual",
     notes: data.notes,
+    lateExcused: data.lateExcused ?? false,
+    lateExcuseReason: data.lateExcused ? (data.lateExcuseReason ?? null) : null,
   };
 
   if (existing) {
@@ -106,6 +111,31 @@ export async function upsertAttendance(data: {
   return serialize(
     await prisma.attendance.create({
       data: { userId: data.userId, date: day, ...payload },
+    })
+  );
+}
+
+/**
+ * Bitta kechikkan kunni "uzrli" deb belgilaydi yoki belgini oladi.
+ *
+ * Reglament kechikishni faqat UZRSIZ bo'lganda jarimalaydi (shifokor, xizmat
+ * safari, rahbar ruxsati — jarima emas). Butun kunni `excused` qilish bunga
+ * to'g'ri kelmaydi: xodim kelgan, ishlagan, faqat kech kelgan. Shuning uchun
+ * alohida bayroq — kun ishlangan bo'lib qoladi, daqiqalari esa KPI jarimasiga
+ * kirmaydi.
+ */
+export async function setLateExcused(id: string, excused: boolean, reason?: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  if (!isSeniorRole(session.user.role as string)) throw new Error("Forbidden");
+
+  return serialize(
+    await prisma.attendance.update({
+      where: { id },
+      data: {
+        lateExcused: excused,
+        lateExcuseReason: excused ? (reason ?? null) : null,
+      },
     })
   );
 }
@@ -141,7 +171,7 @@ export async function deriveAttendanceKpi(employeeId: string, month: string) {
 
   const rows = await prisma.attendance.findMany({
     where: { userId: employeeId, date: { gte: from, lt: to } },
-    select: { status: true, checkIn: true, lateMinutes: true },
+    select: { status: true, checkIn: true, lateMinutes: true, lateExcused: true },
     orderBy: { date: "asc" },
   });
 

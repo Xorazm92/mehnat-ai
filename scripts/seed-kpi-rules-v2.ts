@@ -74,13 +74,16 @@ export const RULES: RuleSeed[] = [
   },
   {
     name: "acc_group_response", nameUz: "Guruhda javob berish (10 daqiqa)", role: "accountant",
-    category: "communication", inputTypeV2: "select", scope: "per_company", sortOrder: 2,
-    descriptionUz: "Oy davomida uzluksiz 10 daqiqada javob berish. Tizimli kechikish har safar -0.5%.",
-    maxBonus: 1.0, maxPenalty: -0.5,
+    // `counter`, `select` emas: reglament "хар сафар -0.5%" deydi. Uch holatli
+    // tanlov oyiga bitta -0.5% bilan cheklardi, ya'ni oyda to'rt marta kechikkan
+    // xodim bir marta kechikkani bilan bir xil javob berardi. `maxPenalty` shu
+    // sababli null — jarima to'planadi (reglamentda ham shift yo'q).
+    category: "communication", inputTypeV2: "counter", scope: "per_company", sortOrder: 2,
+    descriptionUz: "Oy davomida uzluksiz 10 daqiqada javob berish +1%. Har bir kechikkan javob -0.5%.",
+    maxBonus: 1.0, maxPenalty: null,
     options: [
-      { key: "green", label_uz: "Oy davomida uzluksiz bajarildi", color: "green", coeff: 1.0 },
-      { key: "yellow", label_uz: "Ba'zi holatlar o'tkazildi", color: "yellow", coeff: 0 },
-      { key: "red", label_uz: "Tizimli kechikish (-0.5%)", color: "red", coeff: -0.5 },
+      { key: "ontime_month", label_uz: "Oy davomida uzluksiz bajarildi", color: "green", coeff_per_unit: 1.0, max_coeff: 1 },
+      { key: "late_responses", label_uz: "Kechikkan javob (har safar)", color: "red", coeff_per_unit: -0.5, max_coeff: null },
     ],
   },
   {
@@ -209,13 +212,13 @@ export const RULES: RuleSeed[] = [
   },
   {
     name: "bank_group_response", nameUz: "Guruhda javob berish (5 daqiqa)", role: "bank_client",
-    category: "communication", inputTypeV2: "select", scope: "per_company", sortOrder: 21,
-    descriptionUz: "Oy davomida uzluksiz 5 daqiqada javob berish (Swift mustasno). Tizimli kechikish -0.5%.",
-    maxBonus: 1.0, maxPenalty: -0.5,
+    // Buxgalterdagi kabi `counter` — qarang acc_group_response izohi.
+    category: "communication", inputTypeV2: "counter", scope: "per_company", sortOrder: 21,
+    descriptionUz: "Oy davomida uzluksiz 5 daqiqada javob berish (Swift mustasno) +1%. Har bir kechikkan javob -0.5%.",
+    maxBonus: 1.0, maxPenalty: null,
     options: [
-      { key: "green", label_uz: "Oy davomida uzluksiz bajarildi", color: "green", coeff: 1.0 },
-      { key: "yellow", label_uz: "Ba'zi holatlar o'tkazildi", color: "yellow", coeff: 0 },
-      { key: "red", label_uz: "Tizimli kechikish (-0.5%)", color: "red", coeff: -0.5 },
+      { key: "ontime_month", label_uz: "Oy davomida uzluksiz bajarildi", color: "green", coeff_per_unit: 1.0, max_coeff: 1 },
+      { key: "late_responses", label_uz: "Kechikkan javob (har safar)", color: "red", coeff_per_unit: -0.5, max_coeff: null },
     ],
   },
   {

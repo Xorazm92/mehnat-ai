@@ -25,6 +25,9 @@ export interface AttendanceRecord {
     checkIn?: string;   // ISO or ''
     checkOut?: string;
     notes?: string;
+    /** Kechikish uzrli deb tasdiqlanganmi — jarimaga kirmaydi. */
+    lateExcused?: boolean;
+    lateExcuseReason?: string;
 }
 
 interface Props {
@@ -46,6 +49,8 @@ interface Props {
         notes?: string;
     }) => Promise<void>;
     onDelete: (id: string) => Promise<void>;
+    /** Kechikkan kunni uzrli deb belgilash / belgini olish. */
+    onExcuseLate?: (id: string, excused: boolean, reason?: string) => Promise<void>;
     onSyncEjurnal?: (date: string) => Promise<{ imported: number; total: number; unmatched: string[] }>;
 }
 
@@ -72,7 +77,7 @@ const monthLabel = (ym: string) => {
     return `${y} ${MONTH_NAMES_UZ[m - 1] ?? m}`;
 };
 
-const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, month, months, onMonthChange, onSave, onDelete, onSyncEjurnal }) => {
+const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, month, months, onMonthChange, onSave, onDelete, onExcuseLate, onSyncEjurnal }) => {
     const table = useTableState({ ns: 'att', defaultSortKey: 'user' });
   const confirm = useConfirm();
     const t = translations[lang];
@@ -202,8 +207,19 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
             cell: r => {
                 const meta = STATUS_META[r.status] || STATUS_META.present;
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro font-bold uppercase tracking-widest whitespace-nowrap" style={{ background: meta.bg, color: meta.color }}>
-                        {meta.icon}{meta.labelUz}
+                    <span className="inline-flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro font-bold uppercase tracking-widest whitespace-nowrap" style={{ background: meta.bg, color: meta.color }}>
+                            {meta.icon}{meta.labelUz}
+                        </span>
+                        {r.lateExcused && (
+                            <span
+                                title={r.lateExcuseReason || undefined}
+                                className="inline-flex px-2 py-0.5 rounded-lg text-micro font-bold uppercase tracking-widest whitespace-nowrap"
+                                style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}
+                            >
+                                Uzrli
+                            </span>
+                        )}
                     </span>
                 );
             },
@@ -229,13 +245,48 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
             key: 'actions', header: 'Amallar', align: 'right', width: '100px', hidden: !canEdit,
             cell: r => (
                 <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+                    {/* Jarima faqat UZRSIZ kechikishga qo'yiladi (reglament) —
+                        nazoratchi shu tugma bilan kunni jarimadan chiqaradi. */}
+                    {onExcuseLate && r.status === 'late' && (
+                        <button
+                            onClick={() => handleExcuse(r)}
+                            className="icon-btn-sm rounded-lg"
+                            style={{ color: r.lateExcused ? 'var(--accent-blue)' : 'var(--text-muted)' }}
+                            aria-label={r.lateExcused ? 'Uzrli belgisini olish' : 'Uzrli deb belgilash'}
+                            title={r.lateExcused ? (r.lateExcuseReason || 'Uzrli') : 'Uzrli deb belgilash'}
+                        >
+                            <UserCheck size={15} />
+                        </button>
+                    )}
                     <button onClick={() => openEdit(r)} className="icon-btn-sm icon-btn-accent rounded-lg" style={{ color: 'var(--accent-blue)' }} aria-label={t.edit}><Edit3 size={15} /></button>
                     <button onClick={() => handleDelete(r.id)} className="icon-btn-sm icon-btn-danger rounded-lg" style={{ color: 'var(--danger)' }} aria-label={t.delete}><Trash2 size={15} /></button>
                 </div>
             ),
         },
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    ], [t, canEdit]);
+    ], [t, canEdit, onExcuseLate]);
+
+    /**
+     * Uzrli belgisini qo'yish/olish. Qo'yishda sabab so'raladi — "nega
+     * kechirildi" degan savol keyin javobsiz qolmasligi uchun; olishda esa
+     * sabab tozalanadi (server ham shuni qiladi).
+     */
+    const handleExcuse = async (r: AttendanceRecord) => {
+        if (!onExcuseLate) return;
+        try {
+            if (r.lateExcused) {
+                await onExcuseLate(r.id, false);
+                toast.success('Uzrli belgisi olindi');
+                return;
+            }
+            const reason = window.prompt('Kechikish sababi (shifokor, xizmat safari, rahbar ruxsati...):', '');
+            if (reason === null) return;
+            await onExcuseLate(r.id, true, reason.trim() || undefined);
+            toast.success('Uzrli deb belgilandi — jarimaga kirmaydi');
+        } catch (e) {
+            toast.error(friendlyError(e));
+        }
+    };
 
 
     const handleDelete = async (id: string) => {
