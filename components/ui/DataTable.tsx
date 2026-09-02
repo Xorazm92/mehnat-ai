@@ -363,9 +363,9 @@ export function DataTable<T>({
         </div>
       )}
 
-      <div className={`dashboard-card !p-0 overflow-hidden ${renderCard ? "hidden md:block" : ""}`}>
+      <div className={`dashboard-card !p-0 ${renderCard ? "hidden md:block" : ""}`}>
         <div
-          className="overflow-auto"
+          className="overflow-auto rounded-t-xl"
           style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}
         >
           <table className="erp-table w-full text-left" data-density={density}>

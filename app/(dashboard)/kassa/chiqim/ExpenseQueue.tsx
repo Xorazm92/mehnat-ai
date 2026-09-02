@@ -122,7 +122,7 @@ export default function ExpenseQueue({ queue }: Props) {
     // "Yopish kerak" tabining ICHIDA turadi, tab yorlig'i allaqachon aynan
     // shu ma'noni beradi ("Kassa → Chiqim → Yopish kerak → [bu jadval]").
     // Ikkinchi sarlavha faqat vertikal joy egallardi.
-    <div className="rounded-xl overflow-hidden" style={card}>
+    <div className="rounded-xl" style={card}>
       {/* Guruhlar — StatStrip ning bosiladigan varianti: har biri ham
           ko'rsatkich, ham filtr. Ilgari bu qo'lda yozilgan tugmalar edi. */}
       <StatStrip
@@ -212,7 +212,7 @@ export default function ExpenseQueue({ queue }: Props) {
         </div>
       )}
 
-      <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 300px)" }}>
+      <div className="overflow-auto rounded-t-xl" style={{ maxHeight: "calc(100vh - 300px)" }}>
         {rows.length === 0 ? (
           <p className="px-3 py-6 text-meta text-center" style={{ color: "var(--text-muted)" }}>
             Bu guruhda kutayotgan qator yo&apos;q.

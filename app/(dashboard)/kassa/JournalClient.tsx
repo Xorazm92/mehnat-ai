@@ -272,7 +272,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
   const inputStyle = { background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" } as const;
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+    <div className="rounded-xl" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
       {/* Sarlavha */}
       <div className="px-3 py-2 flex items-center justify-between gap-3 flex-wrap" style={{ background: "var(--input-bg)", borderBottom: "1px solid var(--card-border)" }}>
         <div className="flex items-center gap-2">
@@ -481,7 +481,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       )}
 
       {/* JADVAL */}
-      <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 300px)" }}>
+      <div className="overflow-auto rounded-t-xl" style={{ maxHeight: "calc(100vh - 300px)" }}>
         <table className="table-sticky-head w-full text-meta">
           <thead>
             <tr style={{ background: "var(--table-header-bg)" }}>

@@ -80,8 +80,17 @@ export function Pagination({
 
   return (
     <div
-      className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${className}`}
-      style={{ borderTop: "1px solid var(--rule)" }}
+      // `sticky bottom-0` — sahifa ekrandan bir necha piksel uzun bo'lganda
+      // ham chiziq ko'rinib turadi. Ilgari u oddiy oqimda edi va aynan shu
+      // holatda pastdan qirqilardi: foydalanuvchi 10 qator tanlaydi, hammasi
+      // sig'adi, lekin sahifalar tugmalari ekran chetiga chiqib ketardi.
+      className={`sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-b-xl ${className}`}
+      style={{
+        borderTop: "1px solid var(--rule)",
+        // Fon SHART: yopishgan chiziq ostidan qatorlar ko'rinib o'tsa,
+        // raqamlar o'qilmay qoladi.
+        background: "var(--card-bg)",
+      }}
     >
       {/* "1–15 / 22" o'rniga to'liq jumla: qisqartma o'qilishi uchun
           foydalanuvchi tirenani "dan" deb tarjima qilishi kerak edi. */}

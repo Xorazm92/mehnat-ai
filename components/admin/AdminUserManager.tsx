@@ -156,8 +156,8 @@ export function AdminUserManager({
         </select>
       </div>
 
-      <div className="rounded-xl overflow-hidden" style={card}>
-        <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 300px)" }}>
+      <div className="rounded-xl" style={card}>
+        <div className="overflow-auto rounded-t-xl" style={{ maxHeight: "calc(100vh - 300px)" }}>
           <table className="table-sticky-head w-full text-xs">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--card-border)", color: "var(--text-muted)" }}>
