@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { EmployeeSalarySummary, Language, MonthlyPerformance, Company, OperationEntry, KPIRule, PayrollAdjustment } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
-import { type KpiEntryInput } from '@/lib/kpiScoring';
+import { type KpiEntryInput, kpiBall } from '@/lib/kpiScoring';
 import { translations } from '@/lib/translations';
 import { Wallet, TrendingUp, AlertCircle, Award, TrendingDown, Activity } from 'lucide-react';
 import { getKpiRules, getMonthlyPerformance, upsertPerformance } from '@/server/kpi';
@@ -160,12 +160,20 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
         return <div className="p-20 text-center text-[var(--text-muted)]">{t.noData}</div>;
     }
 
-    // Calculate efficiency percentage (gamification)
-    // Max possible bonus is hard to know exactly without knowing all rules, 
-    // but we can estimate based on performed / total potential
+    // "Samaradorlik" — Reyting (KpiLeaderboard) bilan AYNAN bir xil hisob
+    // (server/kpi.ts getKpiLeaderboard): green = calculatedScore > 0,
+    // red = calculatedScore < 0 YOKI selectedOption === 'red', so'ng
+    // kpiBall(green, red). Bu yerda AVVAL o'zboshimchalik bilan "musbat
+    // yozuvlar soni / 20" edi — haqiqiy qoida og'irliklariga bog'liq
+    // emas, faqat "gamification" deb izohlangan magic number. Natijada
+    // BITTA xodim uchun Dashboard'da bir raqam, Reyting'da BOSHQA raqam
+    // "KPI" nomi ostida ko'rinardi.
     const positiveperf = performances.filter(p => p.calculatedScore > 0).length;
-    // Assume a base goal of 50 positive actions per month for gamification scaling
-    const efficiency = Math.min(100, Math.round((positiveperf / 20) * 100));
+    const negativeperf = performances.filter(p => p.calculatedScore < 0 || p.selectedOption === 'red').length;
+    const efficiencyBall = kpiBall(positiveperf, negativeperf);
+    // Baholanmagan oy — nol EMAS (leaderboard'dagi bilan bir xil qoida,
+    // ADR-0013). Progress-bar 0% ko'rsatadi, lekin raqam o'zi "—".
+    const efficiency = efficiencyBall ?? 0;
 
     // Panel o'z sahifa fonini bo'yamaydi va `min-h-dvh` bilan cho'zilmaydi:
     // ilgari bu yorliq ichida turgani uchun kartaning ustiga ikkinchi kulrang
@@ -216,8 +224,12 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
                     </div>
                     <div>
                         <div className="flex items-end gap-2 mb-2">
-                            <h3 className="text-2xl font-bold text-[var(--text-primary)] dark:text-white tabular-nums">{efficiency}%</h3>
-                            <span className="text-micro font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">ko&apos;rsatkich</span>
+                            <h3 className="text-2xl font-bold text-[var(--text-primary)] dark:text-white tabular-nums">
+                                {efficiencyBall === null ? "—" : `${efficiency}%`}
+                            </h3>
+                            <span className="text-micro font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">
+                                {efficiencyBall === null ? "hali baholanmagan" : <>ko&apos;rsatkich</>}
+                            </span>
                         </div>
                         <div className="w-full bg-[var(--bg-sunken)] h-2 rounded-lg border border-[var(--rule)] overflow-hidden">
                             <div className="h-full bg-[var(--warning)]" style={{ width: `${efficiency}%` }}></div>
