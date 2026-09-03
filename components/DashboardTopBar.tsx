@@ -2,7 +2,7 @@
 
 import { signOut } from "next-auth/react";
 import {
-  LogOut, Sun, Moon, ChevronDown,
+  LogOut, Sun, Moon, ChevronDown, UserCircle, Lock,
   Bell, Volume2, VolumeX, Settings, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -44,6 +44,17 @@ const ROLE_COLORS: Record<string, string> = {
   accountant:       "var(--brand)",
   bank_manager:     "var(--accent-indigo)",
 };
+
+/**
+ * Foydalanuvchi menyusidagi shaxsiy amallar. Hammasi BITTA ekranga
+ * (`/cabinet`) olib boradi, faqat kerakli yorlig'i ochiq holda —
+ * `lib/navigation.ts` → `NAV_SECTIONS` dagi manzillar bilan bir xil.
+ */
+const CABINET_LINKS = [
+  { href: "/cabinet",                label: "Mening kabinetim",      icon: UserCircle },
+  { href: "/cabinet?tab=profile",    label: "Profil sozlamalari",    icon: Settings },
+  { href: "/cabinet?tab=security",   label: "Parolni o'zgartirish",  icon: Lock },
+] as const;
 
 interface DashboardTopBarProps {
   userName: string;
@@ -112,6 +123,11 @@ export function DashboardTopBar({
       setLoggingOut(false);
     }
   };
+
+  // Ochib bo'lmaydigan ekranga <Link> qo'yilmaydi: Next uni prefetch qiladi va
+  // proxy har yangilanishda `/403` ga otadi (Breadcrumbs'dagi bilan bir xil
+  // qoida). Admin RBAC editori `cabinet` view'ini olib tashlashi mumkin.
+  const canCabinet = !allowedViews || allowedViews.includes("cabinet");
 
   const roleColor = ROLE_COLORS[userRole] || "var(--brand)";
   // avatarColor foydalanuvchi profilidan keladigan qiymat; bo'lmasa brend.
@@ -211,12 +227,9 @@ export function DashboardTopBar({
           </button>
         )}
 
-        {/* Profil sozlamalari — `/settings` endi kabinetning shu yorlig'iga
-            yo'naltiradi, shuning uchun to'g'ridan-to'g'ri manzil beriladi
-            (ortiqcha redirect qadamisiz). */}
-        <Link href="/cabinet?tab=profile" className="icon-btn" aria-label="Profil sozlamalari" title="Profil sozlamalari">
-          <Settings size={17} />
-        </Link>
+        {/* Ilgari bu yerda alohida tishli ikonka turardi va u ham
+            `/cabinet?tab=profile` ga olib borardi — ya'ni yonidagi avatar
+            menyusi bilan bir xil joyga. Endi u menyuning ichida. */}
 
         {/* Divider */}
         <div className="w-px h-6 mx-1" style={{ background: "var(--rule)" }} />
@@ -297,6 +310,25 @@ export function DashboardTopBar({
                     {ROLE_LABELS[userRole] || userRole}
                   </span>
                 </div>
+
+                {/* Shaxsiy amallar — kabinetning aynan kerakli yorlig'iga.
+                    Manzillar lib/navigation.ts → NAV_SECTIONS bilan bir xil. */}
+                {canCabinet && (
+                  <div className="p-1.5" style={{ borderBottom: "1px solid var(--rule)" }}>
+                    {CABINET_LINKS.map(({ href, label, icon: Icon }) => (
+                      <Link
+                        key={href}
+                        href={href}
+                        onClick={() => setShowUserMenu(false)}
+                        className="w-full flex items-center gap-2.5 px-2.5 h-11 rounded-lg text-body font-medium transition-colors duration-100 hover:bg-[var(--bg-hover)]"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        <Icon size={15} />
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
 
                 {/* Logout */}
                 <div className="p-1.5">

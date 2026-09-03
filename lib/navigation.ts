@@ -78,6 +78,16 @@ export interface NavItem {
    * yashirilmaydi.
    */
   parent?: string;
+  /**
+   * Yon panelda chizilmaydi. Manzil, RBAC view'i, qidiruv va mobil pastki
+   * panel o'z kuchida qoladi — element reyestrda turaveradi, faqat yon
+   * paneldan chiqariladi.
+   *
+   * Shaxsiy kabinet uchun kerak: u endi yuqori o'ngdagi foydalanuvchi
+   * menyusidan ochiladi, lekin reyestrdan olib tashlansa qidiruv ham, mobil
+   * pastki panel ham uni yo'qotadi.
+   */
+  inSidebar?: false;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -91,6 +101,10 @@ export const NAV_ITEMS: NavItem[] = [
   // saqlanadi (/tasks — o'sha ekranning vazifalar yorlig'i), menyuda esa bitta
   // kirish nuqtasi.
   { href: "/deadlines",     view: "deadlines",     label: "Ishlar",           icon: CalendarClock,   group: "asosiy",  tint: "amber",  keywords: "muddat deadline kechikish vazifa topshiriq task majburiyat ish" },
+  // Bank kabineti SHAXSIY kabinet emas — u bank-klient xodimining ish ekrani
+  // (kirim/chiqim kartalari + muddatlar vidjeti), shu bois MOLIYA guruhida va
+  // shu rolning boshlang'ich ekrani sifatida guruh boshida turadi.
+  { href: "/cabinet/bank",  view: "cabinet_bank",  label: "Bank kabineti",    icon: Banknote,        group: "moliya",  tint: "green", keywords: "bank klient" },
   { href: "/reports",       view: "reports",       label: "Hisobotlar",       icon: FileText,        group: "moliya",  tint: "blue",  keywords: "hisobot matritsa report" },
   { href: "/kassa",         view: "kassa",         label: "Kassa",            icon: Wallet,          group: "moliya",  tint: "green",  keywords: "kirim to'lov naqd" },
   { href: "/kassa/kirim",   view: "kassa_income",  label: "Kirim kassa",      icon: Banknote,        group: "moliya",  tint: "green",  parent: "/kassa", keywords: "vipiska bank kirim tushum vypiska plastik" },
@@ -107,8 +121,13 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/payroll",       view: "payroll",       label: "Oylik",            icon: CreditCard,      group: "moliya",  tint: "olive",  keywords: "maosh zarplata avans" },
   { href: "/attendance",    view: "attendance",    label: "Davomat",          icon: Calendar,        group: "boshqa",  tint: "indigo",  keywords: "kelish ketish tabel" },
   { href: "/notifications", view: "notifications", label: "Xabarlar",         icon: Bell,            group: "boshqa",  tint: "amber",  keywords: "bildirishnoma xabar" },
-  { href: "/cabinet",       view: "cabinet",       label: "Mening kabinetim", icon: UserCircle,      group: "kabinet", tint: "plum", keywords: "profil shaxsiy kabinet" },
-  { href: "/cabinet/bank",  view: "cabinet_bank",  label: "Bank kabineti",    icon: Banknote,        group: "kabinet", tint: "green", parent: "/cabinet", keywords: "bank klient" },
+  // `inSidebar: false` — shaxsga oid hamma narsa endi BITTA joyda: yuqori
+  // o'ngdagi avatar menyusida. Ilgari bitta profil uchun to'rtta kirish
+  // nuqtasi bor edi (yon panel guruhi, tishli ikonka, avatar menyusi va yon
+  // panel pastidagi o'lik kartochka) va xodim qaysi biri "haqiqiy" ekanini
+  // bilmasdi. Reyestrda esa qoladi — qidiruv va mobil pastki panel shu
+  // yozuvdan oziqlanadi.
+  { href: "/cabinet",       view: "cabinet",       label: "Mening kabinetim", icon: UserCircle,      group: "kabinet", tint: "plum", inSidebar: false, keywords: "profil shaxsiy kabinet" },
   { href: "/admin",         view: "admin",         label: "Admin panel",      icon: ShieldCheck,     group: "admin",   tint: "blue",   keywords: "admin sozlash boshqaruv" },
   // `/settings` menyudan olib tashlandi — u `/cabinet` ning KUCHSIZROQ
   // nusxasi edi: bir xil profil formasi va bir xil parol o'zgartirish, faqat

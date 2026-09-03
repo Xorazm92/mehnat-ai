@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ALLOWED_VIEWS, getHomeRoute, ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
+import { ALLOWED_VIEWS, getHomeRoute, type UserRole } from "@/lib/platform/permissions";
 import { NAV_ITEMS, NAV_GROUP_LABELS, NAV_TINT_VAR, type NavGroup } from "@/lib/navigation";
 import { useMobileNav } from "@/components/MobileNavContext";
 // Ikonkalar `NAV_ITEMS` bilan birga keladi (lib/navigation.ts) — bu yerda
@@ -28,6 +28,11 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
     allowedViews.includes(item.view as string)
   );
   const visibleHrefs = new Set(visibleItems.map((i) => i.href));
+
+  // Yon panelga tushmaydigan elementlar (shaxsiy kabinet — u avatar
+  // menyusida). Ota-bola mantig'i YUQORIDAGI `visibleItems` ustida qoladi:
+  // u ruxsat chegarasi, bu esa faqat chizish chegarasi.
+  const sidebarItems = visibleItems.filter((item) => item.inSidebar !== false);
 
   // Group items
   const groups: NavGroup[] = ["asosiy", "moliya", "boshqa", "kabinet", "admin"];
@@ -103,7 +108,7 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-2 px-2.5 scrollbar-hide space-y-0.5">
         {groups.map((group) => {
-          const groupItems = visibleItems.filter((item) => item.group === group);
+          const groupItems = sidebarItems.filter((item) => item.group === group);
           if (groupItems.length === 0) return null;
 
           return (
@@ -161,40 +166,10 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
         })}
       </nav>
 
-      {/* Bottom — joriy rol */}
-      <div
-        className="p-2.5 flex-shrink-0"
-        style={{ borderTop: "1px solid var(--sidebar-border)" }}
-      >
-        <div
-          className={`flex items-center gap-2.5 py-2 rounded-lg ${collapsed ? "px-2.5 md:px-0 md:justify-center" : "px-2.5"}`}
-        >
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center font-mono text-meta font-bold flex-shrink-0"
-            style={{ background: "var(--brand-ghost)", color: "var(--brand)" }}
-          >
-            {userRole?.charAt(0)?.toUpperCase() || "U"}
-          </div>
-          <div className={`flex-1 min-w-0 ${collapsed ? "md:hidden" : ""}`}>
-            <p
-              className="text-meta font-semibold truncate leading-none"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {/* Ilgali bu yerda rol nomlarining uchinchi nusxasi turardi va unda
-                  `admin` bilan `bank_manager` yo'q edi — natijada administrator
-                  o'z yon panelida xom `admin` satrini ko'rardi. Endi yagona
-                  manba: lib/permissions.ts → ROLE_LABELS. */}
-              {ROLE_LABELS[role as UserRole] || "Foydalanuvchi"}
-            </p>
-            <p
-              className="font-mono text-micro mt-1 leading-none uppercase"
-              style={{ color: "var(--text-muted)", letterSpacing: "0.1em" }}
-            >
-              Faol
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Pastda ilgari "joriy rol" kartochkasi turardi: rol nomini IKKINCHI
+          marta yozardi (birinchisi header'da, avatar yonida), ismni ham,
+          avatarni ham ko'rsatmasdi va bosilmasdi ham — sof o'lik piksel.
+          Shaxsga oid hamma narsa endi yuqori o'ngdagi avatar menyusida. */}
     </aside>
     </>
   );
