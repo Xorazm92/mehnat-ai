@@ -4,7 +4,19 @@
 // IDEMPOTENT: qayta ishga tushirish xavfsiz.
 //  1) contractDate yo'q faol firmalarga standart sana (backfill) — aks holda
 //     isCompanyEligible ularni chetlab o'tadi.
-//  2) Standart O'zbekiston deadline shablonlari (upsert, lifecycle=active).
+//  2) Standart O'zbekiston deadline shablonlari (upsert, HAMMASI `draft`).
+//
+// SEED HECH QACHON TASDIQLAMAYDI. Ilgari bu yerda `lifecycle: "active"` va
+// `approvedById: createdBy` yozilardi — ya'ni skript Superadmin nomidan
+// O'ZIGA tasdiq qo'yardi. Bazada bu shunday ko'rinardi: 30 ta shablonda
+// `approvedById = createdBy` va `approvedAt = createdAt` soniyasigacha bir xil.
+// Audit izi "bosh buxgalter ko'rib chiqdi" deb turardi, holbuki hech kim
+// ko'rmagan — va o'sha shablonlar 213 firmaga oyiga ~6 000 majburiyat
+// yaratadi.
+//
+// Endi seed faqat SPRAVOCHNIK beradi. `active` holatga o'tkazish — odamning
+// ishi: `/admin/deadline-templates` → tasdiqlash, va o'shanda
+// `server/deadlineTemplates.ts` haqiqiy `approvedById` ni yozadi.
 //  3) Joriy davr uchun majburiyat generatsiyasi (catch-up=0 → tarixiy
 //     "kechikkan" uyumi yaratilmaydi; muddatlar oldinga qarab toza chiqadi).
 //
@@ -77,9 +89,15 @@ interface TplSeed {
   /** Matritsa ustuni kaliti (`OperationFieldKey`). null = ustuni yo'q. */
   matrixKey?: string | null;
   /**
-   * `draft` — generator uni OLMAYDI (`lifecycle: "active"` filtri), ya'ni
-   * majburiyat yaratilmaydi. Bosh buxgalter ko'rib chiqib `/admin/deadline-templates`
-   * dan `active` ga o'tkazadi. Standart: `active` (tasdiqlangan 15 talik).
+   * SAQLANGAN, LEKIN ENDI TA'SIRI YO'Q.
+   *
+   * Seed hamma shablonni `draft` qilib yaratadi (fayl boshidagi izohga
+   * qarang) — generator uni olmaydi va majburiyat yaratilmaydi. Bosh
+   * buxgalter `/admin/deadline-templates` dan tasdiqlaydi.
+   *
+   * Maydon ro'yxatlarda yozilgan holicha qoldirildi: u qaysi shablon
+   * "tayyor deb hisoblangan", qaysi biri "yangi taklif" ekanini hujjatlashtiradi
+   * va tasdiqlash navbatini tartiblashda foydali.
    */
   lifecycle?: "draft" | "active";
 }
@@ -504,11 +522,12 @@ async function main() {
         adjustmentPolicy: "next_workday",
         effectiveFrom,
         effectiveTo: null,
-        lifecycle: t.lifecycle ?? "active",
+        // HAR DOIM `draft`, tasdiqlovchisiz. Skript o'ziga tasdiq yoza
+        // olmaydi — fayl boshidagi izohga qarang.
+        lifecycle: "draft",
         active: true,
-        // Qoralama tasdiqlanmagan — uni odam ko'rib chiqishi kerak.
-        approvedById: (t.lifecycle ?? "active") === "active" ? (createdBy ?? null) : null,
-        approvedAt: (t.lifecycle ?? "active") === "active" ? new Date() : null,
+        approvedById: null,
+        approvedAt: null,
         createdBy: createdBy ?? null,
       },
       update: {
@@ -546,9 +565,28 @@ async function main() {
     console.log(`   ✓ ${t.code.padEnd(18)} ${t.periodicity.padEnd(9)} ${from} → ${scope}`);
   }
 
+  // Seed hech qachon tasdiqlamagani uchun YANGI muhitda faol shablon NOL
+  // bo'ladi va generator hech narsa yaratmaydi. Bu kutilgan holat, lekin
+  // jimgina bo'lmasligi kerak — aks holda operator "nega majburiyat yo'q?"
+  // deb kod ichidan qidirardi.
+  const [activeCount, draftCount] = await Promise.all([
+    prisma.deadlineTemplate.count({ where: { lifecycle: "active", active: true } }),
+    prisma.deadlineTemplate.count({ where: { lifecycle: "draft", active: true } }),
+  ]);
+  if (activeCount === 0 && draftCount > 0) {
+    console.log(
+      `\n⚠️  ${draftCount} ta shablon QORALAMA holatida — generator ularni olmaydi.\n` +
+        "    Seed ataylab tasdiqlamaydi: majburiyat yaratadigan shablonni odam\n" +
+        "    ko'rikdan o'tkazishi kerak (audit izi haqiqiy bo'lsin).\n" +
+        "    Tasdiqlash:  /admin/deadline-templates → shablonni 'Faol' ga o'tkazing.",
+    );
+  }
+
   if (noGenerate) {
-    const n = await prisma.deadlineTemplate.count({ where: { lifecycle: "active", active: true } });
-    console.log(`\n2) Shablon: ${n} ta faol. Generatsiya o'tkazib yuborildi (--no-generate).`);
+    console.log(
+      `\n2) Shablon: ${activeCount} ta faol, ${draftCount} ta qoralama. ` +
+        "Generatsiya o'tkazib yuborildi (--no-generate).",
+    );
     console.log("   Majburiyatlarni keyin yarating:  npx tsx scripts/generate-obligations.ts");
     await prisma.$disconnect();
     return;

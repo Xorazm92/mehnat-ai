@@ -133,6 +133,40 @@ describe("qoralama xavfsizligi", () => {
     });
     expect(approved).toBe(0);
   });
+
+  it("hech bir tasdiq SKRIPT tomonidan o'ziga yozilmagan", async () => {
+    // SOXTA TASDIQ IZI. `scripts/seed-deadline-templates.ts` ilgari shablonni
+    // `lifecycle: "active"` qilib yaratib, `approvedById` ga O'ZI yozgan
+    // `createdBy` ni (Superadmin) qo'yardi. Bazada bu aniq iz qoldiradi:
+    //   approvedById == createdBy  VA  approvedAt == createdAt (soniyasigacha).
+    // Lokal bazada 30 ta shablon aynan shunday edi — audit izi "bosh buxgalter
+    // ko'rib chiqdi" deb turardi, holbuki hech kim ko'rmagan.
+    //
+    // Haqiqiy tasdiq boshqacha ko'rinadi: odam shablonni yaratgandan KEYIN
+    // `/admin/deadline-templates` dan `draft → approved` ga o'tkazadi
+    // (`server/deadlineTemplates.ts` `setTemplateLifecycle`), ya'ni
+    // `approvedAt` `createdAt` dan keyin bo'ladi va tasdiqlovchi boshqa odam
+    // bo'lishi mumkin.
+    //
+    // Bu tekshiruv yuqoridagi ikkitasi tuta olmaydigan holatni tutadi: seed
+    // shablonni DARHOL tasdiqlangan qilib yaratsa, "tasdiqlovchisiz aktiv"
+    // ham, "tasdiqlangan qoralama" ham bo'lmaydi — lekin ko'rik baribir
+    // bo'lmagan bo'ladi.
+    const rows = await prisma.deadlineTemplate.findMany({
+      where: { approvedById: { not: null } },
+      select: { code: true, approvedById: true, createdBy: true, approvedAt: true, createdAt: true },
+    });
+    const selfApproved = rows.filter(
+      (t) =>
+        t.approvedById === t.createdBy &&
+        t.approvedAt !== null &&
+        Math.abs(t.approvedAt.getTime() - t.createdAt.getTime()) < 1000,
+    );
+    expect(
+      selfApproved.map((t) => t.code),
+      "yaratilgan zahoti o'ziga tasdiq yozilgan — skript tasdig'i",
+    ).toEqual([]);
+  });
 });
 
 describe("client_service KPI'ga tushmaydi", () => {
