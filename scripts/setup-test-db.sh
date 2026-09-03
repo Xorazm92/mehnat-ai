@@ -146,6 +146,13 @@ npx prisma db push --url "$TEST_URL" --accept-data-loss
 echo "▶ KPI qoidalari ekilmoqda…"
 DATABASE_URL="$TEST_URL" npx tsx scripts/seed-kpi-rules-v2.ts
 
+# Muddat shablonlari ham SPRAVOCHNIK: `test/matrix-template-coverage.test.ts`
+# matritsa ustunlarining qamrovini shu jadvalga qarab o'lchaydi va bo'sh
+# jadvalda "qoplangan ustunlar 0" deb yiqilardi. `--no-generate` — majburiyat
+# YARATILMAYDI, faqat shablonlar.
+echo "▶ Muddat shablonlari ekilmoqda…"
+DATABASE_URL="$TEST_URL" npx tsx scripts/seed-deadline-templates.ts --no-generate
+
 echo
 echo "✅ Test bazasi tayyor."
 echo
