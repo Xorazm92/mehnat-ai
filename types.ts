@@ -55,6 +55,7 @@ export interface BalanceBreakdown {
   outflowExpenses: number; // tasdiqlangan xarajatlar
   outflowKassa: number; // kassa chiqimlari
   outflowPayroll: number; // REAL berilgan oyliklar/avanslar (Payout)
+  loanCashMovement: number; // moliyaviy yordam (qarz) — jurnaldan, KassaEntry/Payment/Payout dan tashqari real pul
 }
 
 export enum TaxType {

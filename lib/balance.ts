@@ -21,6 +21,7 @@ import type { BalanceBreakdown } from "@/types";
 import { getTotalTransitBalance } from "@/lib/transit";
 import { KASSA_START_DATE, KASSA_START_PERIOD } from "@/lib/constants";
 import { cashFromPaymentRows } from "@/lib/paymentCash";
+import { ACCOUNTS } from "@/lib/ledger";
 
 /**
  * Balansni tranzaksiya ICHIDA o'qish uchun. Chaqiruvchi `tx` bersa, o'qish
@@ -53,7 +54,7 @@ export async function getAvailableBalance(opts?: {
   db?: Db;
 }): Promise<BalanceBreakdown> {
   const db = opts?.db ?? prisma;
-  const [paidPaymentRows, kassaIncome, kassaExpense, payouts, transitBalance, openingRow] =
+  const [paidPaymentRows, kassaIncome, kassaExpense, payouts, transitBalance, openingRow, loanCashRows] =
     await Promise.all([
       // `Payment.amount` QARZ yig'indisi — "offset" (vzaimozachyot/ijara)
       // ham kiradi, chunki mijoz nuqtai nazaridan bu ham to'lov. KASSA
@@ -100,6 +101,35 @@ export async function getAvailableBalance(opts?: {
         where: { sourceTable: "OpeningBalance", accountId: "CASH" },
         _sum: { debit: true, credit: true },
       }),
+      // MOLIYAVIY YORDAM (qarz) — HAQIQIY PUL, lekin KassaEntry/Payment/Payout
+      // orqali emas. `scripts/post-bank-non-pnl.ts` uni to'g'ridan-to'g'ri
+      // jurnalga yozadi (Dt/Kt CASH ↔ LOAN_GIVEN/LOAN_RECEIVED), chunki bu
+      // xarajat ham, daromad ham emas — aktiv/passiv qayta tasnifi.
+      //
+      // AUDITDA TOPILDI (2026-09-03, prod): shu sababli jadval balansi
+      // (quyidagi formula) va jurnal CASH qoldig'i orasida 65 000 000 so'mlik
+      // doimiy farq bor edi — Khorezm Golden Building 125 mln qaytargan, 55
+      // mln berilgan (netto +70 mln), Shirin Super Taom'ga 5 mln qaytarilgan
+      // (netto −5 mln). `getAvailableBalance` bu real pul harakatini
+      // butunlay bilmasdi, ya'ni balansni HAQIQIYDAN KAMROQ ko'rsatardi —
+      // pul yo'qolish xavfi yo'q (chiqim qo'riqchisi ortiqcha ehtiyotkor
+      // bo'lardi), lekin real mablag' bor bo'lsa ham "yetarli emas" deb
+      // noto'g'ri bloklashi mumkin edi.
+      //
+      // `sourceTable` emas, TRANZAKSIYA HAMROHI bo'yicha aniqlanadi (CASH
+      // oyog'i bilan bir xil `transactionId`da LOAN_GIVEN/LOAN_RECEIVED
+      // oyog'i bormi) — shunda kelajakda boshqa skript shu hisoblarga
+      // yozsa ham (masalan qo'lda tuzatish) avtomatik qamrab olinadi.
+      db.$queryRaw<{ net: unknown }[]>`
+        SELECT coalesce(sum(l.debit), 0) - coalesce(sum(l.credit), 0) AS net
+          FROM "LedgerEntry" l
+         WHERE l."accountId" = ${ACCOUNTS.CASH}
+           AND l.period >= ${KASSA_START_PERIOD}
+           AND EXISTS (
+             SELECT 1 FROM "LedgerEntry" l2
+              WHERE l2."transactionId" = l."transactionId"
+                AND l2."accountId" IN (${ACCOUNTS.LOAN_GIVEN}, ${ACCOUNTS.LOAN_RECEIVED})
+           )`,
     ]);
 
   const incomePayments = cashFromPaymentRows(paidPaymentRows);
@@ -112,6 +142,7 @@ export async function getAvailableBalance(opts?: {
   const outflowExpenses = 0;
 
   const openingCash = n(openingRow._sum.debit) - n(openingRow._sum.credit);
+  const loanCashMovement = n(loanCashRows[0]?.net);
 
   const income = incomePayments + incomeKassa;
   const outflow = outflowKassa + outflowPayroll;
@@ -120,13 +151,14 @@ export async function getAvailableBalance(opts?: {
     income,
     outflow,
     openingCash,
-    balance: openingCash + income - outflow,
+    balance: openingCash + income - outflow + loanCashMovement,
     transitBalance,
     incomePayments,
     incomeKassa,
     outflowExpenses,
     outflowKassa,
     outflowPayroll,
+    loanCashMovement,
   };
 }
 

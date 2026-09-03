@@ -176,6 +176,23 @@ export default function BalanceOverview({
         );
       })()}
 
+      {/* MOLIYAVIY YORDAM (qarz). `getAvailableBalance` (lib/balance.ts) buni
+          KassaEntry/Payment/Payout dan TASHQARI, jurnaldan qo'shadi — bank
+          orqali berilgan/qaytarilgan yordam Kirim/Chiqim manbalari ro'yxatida
+          ko'rinmaydi (u na shartnoma to'lovi, na kassa harakati). Bu qator
+          yo'q bo'lsa, balansdagi raqam qayerdan kelgani tushunarsiz qolardi. */}
+      {b.loanCashMovement !== undefined && b.loanCashMovement !== 0 && (
+        <div className="mb-4 p-3 rounded-xl flex items-center justify-between gap-2 text-xs"
+          style={{ background: "var(--accent-blue-light)", border: "1px solid var(--info-border, var(--card-border))" }}>
+          <span style={{ color: "var(--text-secondary)" }}>
+            Moliyaviy yordam (qarz) — bank orqali, kassa/shartnoma harakati emas
+          </span>
+          <span className="font-bold tabular-nums" style={{ color: "var(--accent-blue)" }}>
+            {b.loanCashMovement > 0 ? "+" : ""}{som(b.loanCashMovement)} so&apos;m
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <div className="text-micro font-bold uppercase tracking-widest mb-2" style={{ color: "var(--success)" }}>Kirim manbalari · {flowNote}</div>

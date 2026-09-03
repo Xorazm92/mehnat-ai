@@ -24,9 +24,11 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidateTag: () => {}, revalidatePath: () => {} }));
 
 const { prisma } = await import("@/lib/prisma");
-const { ACCOUNTS, reverseLedger, getLedgerCashBalance } = await import("@/lib/ledger");
+const { ACCOUNTS, reverseLedger, getLedgerCashBalance, postLedger } = await import("@/lib/ledger");
 const { applyAllocation } = await import("@/lib/bank/importStatement");
 const { recordManualReceipt } = await import("@/server/bankImport");
+const { getAvailableBalance } = await import("@/lib/balance");
+const { periodKeyOf } = await import("@/lib/periods");
 
 const TAG = `vitest-integrity-${Date.now()}`;
 // 2098-yil — boshqa test fayllari 2099 ni band qilgan, davr ham ochiq.
@@ -341,5 +343,70 @@ describe("reverseLedger muvozanatsiz izni teskarilamaydi", () => {
     expect(cashLegs.reduce((s, l) => s + Number(l.debit) - Number(l.credit), 0)).toBe(0);
 
     await prisma.ledgerEntry.deleteMany({ where: { sourceId: okSource } });
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// 4. MOLIYAVIY YORDAM (QARZ) — real pul, KassaEntry/Payment/Payout dan tashqari
+// ─────────────────────────────────────────────────────────
+//
+// PROD AUDITIDA TOPILDI (2026-09-03): `scripts/post-bank-non-pnl.ts` bank
+// vipiskasidagi moliyaviy yordam qatorlarini to'g'ridan-to'g'ri jurnalga
+// yozadi (Dt/Kt CASH ↔ LOAN_GIVEN/LOAN_RECEIVED) — bu haqiqiy pul harakati,
+// lekin `KassaEntry`/`Payment`/`Payout` orqali EMAS. Prodda bu 65 000 000
+// so'mlik doimiy, tushunarsiz farq berardi: jadval balansi 326 445 040,81,
+// jurnal esa 391 445 040,81 — ikkalasi ham "to'g'ri" hisoblangan, lekin
+// ikki xil savolga javob berardi.
+describe("moliyaviy yordam (qarz) balansga kiradi", () => {
+  it("LOAN_GIVEN va LOAN_RECEIVED CASH harakati getAvailableBalance() da ko'rinadi", async () => {
+    const before = await getAvailableBalance();
+    const ledgerBefore = await getLedgerCashBalance(prisma as never, undefined, { fromPeriod: "2026-08" });
+
+    // Biz 5 mln berdik (chiqim): Dt LOAN_GIVEN / Kt CASH.
+    const givenTxId = await postLedger(prisma as never, {
+      legs: [
+        { accountId: ACCOUNTS.LOAN_GIVEN, debit: 5_000_000, subjectId: ids.client },
+        { accountId: ACCOUNTS.CASH, credit: 5_000_000 },
+      ],
+      period: periodKeyOf(at(9, 5)),
+      sourceTable: "BankTransaction",
+      sourceId: `${TAG}-given`,
+      createdBy: ids.user,
+      description: `${TAG} moliyaviy yordam berildi`,
+    });
+    expect(givenTxId).toBeTruthy();
+
+    // Bizga 3 mln qarz berishdi (kirim): Dt CASH / Kt LOAN_RECEIVED.
+    const receivedTxId = await postLedger(prisma as never, {
+      legs: [
+        { accountId: ACCOUNTS.CASH, debit: 3_000_000 },
+        { accountId: ACCOUNTS.LOAN_RECEIVED, credit: 3_000_000, subjectId: ids.client },
+      ],
+      period: periodKeyOf(at(9, 6)),
+      sourceTable: "BankTransaction",
+      sourceId: `${TAG}-received`,
+      createdBy: ids.user,
+      description: `${TAG} moliyaviy yordam olindi`,
+    });
+    expect(receivedTxId).toBeTruthy();
+
+    // Netto CASH harakati: -5 mln + 3 mln = -2 mln.
+    const after = await getAvailableBalance();
+    expect(after.loanCashMovement - before.loanCashMovement).toBeCloseTo(-2_000_000, 2);
+
+    // ASOSIY DA'VO: bu harakat KassaEntry/Payment/Payout hech biriga
+    // tegmaydi (income/outflow o'zgarmaydi), lekin BALANS o'zgaradi —
+    // pulning o'zi haqiqiy ko'chganini aks ettiradi.
+    expect(after.income).toBeCloseTo(before.income, 2);
+    expect(after.outflow).toBeCloseTo(before.outflow, 2);
+    expect(after.balance - before.balance).toBeCloseTo(-2_000_000, 2);
+
+    // Jadval balansi va jurnal CASH qoldig'i endi BIR XIL FARQ bilan
+    // harakatlanadi — auditda topilgan 65 mln'lik doimiy tafovutning aynan
+    // shu turi endi yo'q. (Butun bazaning mutlaq balansini emas, FARQNI
+    // solishtiramiz — boshqa test fayllarining qoldiq fixturalariga bog'liq
+    // bo'lmasin.)
+    const ledgerAfter = await getLedgerCashBalance(prisma as never, undefined, { fromPeriod: "2026-08" });
+    expect(after.balance - before.balance).toBeCloseTo(ledgerAfter - ledgerBefore, 2);
   });
 });
