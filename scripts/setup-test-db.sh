@@ -124,23 +124,34 @@ echo "▶ Test bazasi sxemasi bo'shatilmoqda…"
 # "invalid URI query parameter" beradi. Shuning uchun parametrsiz URL.
 psql "${PREFIX}/${TEST_DB_NAME}" -q -c 'DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;'
 
-# ── 5) MIGRATSIYALAR — `db push` emas ───────────────────────────────────────
+# ── 5) MIGRATSIYALAR — `db push` YO'Q ───────────────────────────────────────
 # `db push` faqat schema.prisma ifodalay oladigan narsani yaratadi. Trigger va
 # qisman (partial) unikal indeks kabi MAXSUS SQL migratsiya fayllarida yashaydi
 # va `db push` ularni butunlay o'tkazib yuboradi. Natijada test bazasi
 # ishlab chiqarishdan farq qilardi va aynan shu himoyalarni tekshiradigan
 # testlar yiqilardi (financial_snapshot_immutable triggeri — o'lchangan).
+#
+# ILGARI BU YERDA `prisma db push` HAM BOR EDI — "migratsiyasiz qolgan model
+# farqini yopish" uchun. Sabab: `20260810150000_consolidate_drop_unused_modules`
+# olti jadvalni (1C integratsiyasi + CompanyObligationOverride) DROP qilgan,
+# lekin schema.prisma ularni hali ham e'lon qiladi — ya'ni sof `migrate deploy`
+# 71 emas, 65 jadval bilan qolardi va `db push` bu farqni jimgina yopardi.
+#
+# `db push` ENDI KERAK EMAS: `20260903140000_reconcile_dropped_models`
+# o'sha olti jadvalni (va ikkita enum turini) forward-only migratsiya bilan
+# tiklaydi — muvofiqlik prod bilan tasdiqlangan (2026-09-03, faqat o'qish
+# so'rovlari: prod 71 jadval, barcha migratsiya "applied"). `db push` yashirgan
+# BOSHQA drift yo'q edi: `prisma migrate diff` bilan tekshirilgan.
+#
+# `db push` OLIB TASHLANDI, chunki u driftni TUZATMAYDI — YASHIRADI: kelgusida
+# schema.prisma yangi model bilan migratsiyasiz kengaysa, test bazasi buni
+# jimgina "to'g'irlab" ketardi va muammo faqat prodga chiqqanda ko'rinardi.
+# Endi test bazasi FAQAT migratsiya fayllaridan quriladi — prod bilan bir xil
+# yo'ldan.
 echo "▶ Migratsiyalar qo'llanmoqda (prisma migrate deploy)…"
 DATABASE_URL="$TEST_URL" npx prisma migrate deploy
 
-# ── 6) Drift yopilishi ──────────────────────────────────────────────────────
-# schema.prisma da migratsiyasi hali yozilmagan modellar bor (repo holati).
-# `db push` o'shalarni qo'shadi; migratsiyalardan kelgan trigger/indekslar
-# joyida qoladi, chunki `db push` mavjud obyektlarni o'chirmaydi.
-echo "▶ Migratsiyasiz qolgan model farqi yopilmoqda (prisma db push)…"
-npx prisma db push --url "$TEST_URL" --accept-data-loss
-
-# ── 7) Spravochnik ma'lumot ─────────────────────────────────────────────────
+# ── 6) Spravochnik ma'lumot ─────────────────────────────────────────────────
 # KPI qoidalari — test emas, SPRAVOCHNIK. Ularsiz KPI proyeksiyasi va scope
 # testlari "qoida topilmadi" deb yiqiladi.
 echo "▶ KPI qoidalari ekilmoqda…"
