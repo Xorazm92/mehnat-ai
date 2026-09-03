@@ -200,7 +200,20 @@ async function verifyRuntimeSchema(): Promise<void> {
   if (runtimeChecked || !verifiedTarget) return;
   runtimeChecked = true;
 
-  const { prisma } = await import("@/lib/prisma");
+  const mod = await import("@/lib/prisma");
+  const prisma = mod.prisma as typeof mod.prisma | undefined;
+
+  // DB'SIZ TEST FAYLI `@/lib/prisma` NI MOCK QILGAN BO'LISHI MUMKIN
+  // (masalan test/proxy-rbac.test.ts — u faqat `getPrisma` stubini beradi).
+  // Mock qilingan client hech qanday bazaga ulana olmaydi, ya'ni tekshiradigan
+  // HAQIQIY ulanish yo'q. Ilgari bu yerda `prisma` undefined bo'lib, qo'riqchi
+  // TypeError bilan qulardi va butun fayl ishga tushmasdi.
+  // Birinchi qavat (`enforceTestDatabase` — URL tekshiruvi) baribir yurgan.
+  if (!prisma || typeof prisma.$queryRaw !== "function") {
+    console.log("\n  🔒 @/lib/prisma mock qilingan — haqiqiy ulanish yo'q, tekshiruv o'tkazib yuborildi\n");
+    return;
+  }
+
   const rows = await prisma.$queryRaw<{ db: string; schema: string }[]>`
     SELECT current_database() AS db, current_schema() AS schema`;
   const actual = rows[0];
