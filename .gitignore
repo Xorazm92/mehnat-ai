@@ -84,3 +84,8 @@ twenty-main/
 
 # Dalil/hujjat fayllari ombori — mijoz hujjatlari, repozitoriyaga tushmaydi.
 storage/
+
+# Agent skilllari — lokal asboblar, ilova kodi emas. Diskda qoladi va
+# ishlayveradi; git ularni kuzatmaydi. Qaysi skill o'rnatilgani
+# `skills-lock.json` da qayd etiladi, ya'ni kerak bo'lsa qayta tiklanadi.
+/.agents/skills/

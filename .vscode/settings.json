@@ -1,0 +1,36 @@
+{
+  // ── VS Code ni ortiqcha kuzatuvdan xalos qiladi ────────────────────────────
+  //
+  // Bularsiz muharrir `node_modules` (46 000+ fayl) va `.next` (4 000+ fayl)
+  // ustiga inotify kuzatuvchisini qo'yadi. Tizim limiti 65 536 (
+  // `/proc/sys/fs/inotify/max_user_watches`), ya'ni ikkisi limitning deyarli
+  // hammasini yeb qo'yadi va Next'ning o'z kuzatuvchisi bilan talashadi —
+  // natijasi aynan "osilib qolish".
+  //
+  // `.gitignore` bunga yordam bermaydi: u faqat git uchun, VS Code kuzatuvchisi
+  // uni o'qimaydi.
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/prisma/generated/**": true
+  },
+
+  // Qidiruv natijalarini ham tozalaydi (Ctrl+Shift+F endi build chiqindisini
+  // ko'rsatmaydi va sezilarli tez ishlaydi).
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/package-lock.json": true
+  },
+
+  // Fayl daraxtidan yashiradi — kod bilan ishlaganda ular baribir kerak emas.
+  "files.exclude": {
+    "**/.next": true
+  },
+
+  // TypeScript serveri katta loyihada xotira yetishmay qayta ishga tushardi.
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "typescript.tsdk": "node_modules/typescript/lib"
+}
