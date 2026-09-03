@@ -121,10 +121,13 @@ export async function closeYear(year: number) {
   });
   const openingBalance = prevSnapshot
     ? Number(prevSnapshot.closingBalance)
-    : await getMovementBefore(year).then((m) => m.income - m.outflow);
+    : await getMovementBefore(year).then((m) => m.income - m.outflow + m.loanCashMovement);
 
   const movement = await getYearMovement(year);
-  const closingBalance = openingBalance + movement.income - movement.outflow;
+  // Moliyaviy yordam (qarz) `closingBalance` ga kiradi, `income`/`outflow`
+  // (P&L) ga EMAS — lib/balance.ts loanCashMovement izohiga qarang. Snapshot
+  // IMMUTABLE bo'lgani uchun bu yerda noto'g'ri qoldiq abadiy muhrlanardi.
+  const closingBalance = openingBalance + movement.income - movement.outflow + movement.loanCashMovement;
 
   // 4-5) Snapshot + 12 oyni qulflash.
   const snapshot = await prisma.$transaction(async (tx) => {

@@ -44,6 +44,50 @@ const n = (v: unknown) => {
 export { cashFromPaymentRows } from "@/lib/paymentCash";
 
 /**
+ * MOLIYAVIY YORDAM (qarz) — HAQIQIY PUL, lekin KassaEntry/Payment/Payout
+ * orqali emas. `scripts/post-bank-non-pnl.ts` uni to'g'ridan-to'g'ri
+ * jurnalga yozadi (Dt/Kt CASH ↔ LOAN_GIVEN/LOAN_RECEIVED) — xarajat ham,
+ * daromad ham emas, aktiv/passiv qayta tasnifi.
+ *
+ * AUDITDA TOPILDI (2026-09-03, prod): `getAvailableBalance` bu harakatni
+ * bilmagani uchun jadval balansi jurnaldan 65 000 000 so'mga farq qilardi.
+ * XUDDI SHU BO'SHLIQ oy/yil yopish figuralarida (`getMonthMovement`,
+ * `getMovementBeforeMonth`, `getYearMovement`, `getMovementBefore`) ham bor
+ * edi — ular ledger emas, shu uchta jadvaldan sanaydi. Natijada avgust
+ * 2026 yopilganda `computeCloseFigures` (lib/monthClose.ts) `closingBalance`
+ * ni jurnal `ledgerBalance` dan 65 mln kam hisoblab, checklist
+ * `ledger_source_balance_match` bandini SOXTA qizil qilib qo'yardi.
+ *
+ * Shuning uchun BITTA umumiy funksiya — barcha besh chaqiruvchi shu yerdan
+ * o'qiydi, kelajakda yana bittasi unutilib qolmasin.
+ *
+ * TRANZAKSIYA HAMROHI bo'yicha aniqlanadi (`sourceTable` emas): CASH oyog'i
+ * bilan bir xil `transactionId`da LOAN_GIVEN/LOAN_RECEIVED oyog'i bor
+ * tranzaksiyalarning netto CASH harakati. Kelajakda boshqa yo'ldan yozilsa
+ * ham (masalan qo'lda tuzatish) avtomatik qamrab olinadi.
+ */
+async function loanCashMovement(
+  db: Pick<Db, "ledgerEntry">,
+  periodWhere: Prisma.LedgerEntryWhereInput["period"]
+): Promise<number> {
+  const loanTx = await db.ledgerEntry.findMany({
+    where: { accountId: { in: [ACCOUNTS.LOAN_GIVEN, ACCOUNTS.LOAN_RECEIVED] } },
+    select: { transactionId: true },
+    distinct: ["transactionId"],
+  });
+  if (loanTx.length === 0) return 0;
+  const agg = await db.ledgerEntry.aggregate({
+    where: {
+      accountId: ACCOUNTS.CASH,
+      transactionId: { in: loanTx.map((t) => t.transactionId) },
+      period: periodWhere,
+    },
+    _sum: { debit: true, credit: true },
+  });
+  return n(agg._sum.debit) - n(agg._sum.credit);
+}
+
+/**
  * Butun tizim bo'yicha joriy mavjud mablag'ni hisoblaydi.
  * @param opts.excludeKassaEntryId — tahrir/qayta tasdiqda yozuv o'z summasini
  *   ikki marta sanamasligi uchun chiqim yig'indisidan chiqarib tashlanadi.
@@ -54,7 +98,7 @@ export async function getAvailableBalance(opts?: {
   db?: Db;
 }): Promise<BalanceBreakdown> {
   const db = opts?.db ?? prisma;
-  const [paidPaymentRows, kassaIncome, kassaExpense, payouts, transitBalance, openingRow, loanCashRows] =
+  const [paidPaymentRows, kassaIncome, kassaExpense, payouts, transitBalance, openingRow, loanCashMovementValue] =
     await Promise.all([
       // `Payment.amount` QARZ yig'indisi — "offset" (vzaimozachyot/ijara)
       // ham kiradi, chunki mijoz nuqtai nazaridan bu ham to'lov. KASSA
@@ -102,34 +146,10 @@ export async function getAvailableBalance(opts?: {
         _sum: { debit: true, credit: true },
       }),
       // MOLIYAVIY YORDAM (qarz) — HAQIQIY PUL, lekin KassaEntry/Payment/Payout
-      // orqali emas. `scripts/post-bank-non-pnl.ts` uni to'g'ridan-to'g'ri
-      // jurnalga yozadi (Dt/Kt CASH ↔ LOAN_GIVEN/LOAN_RECEIVED), chunki bu
-      // xarajat ham, daromad ham emas — aktiv/passiv qayta tasnifi.
-      //
-      // AUDITDA TOPILDI (2026-09-03, prod): shu sababli jadval balansi
-      // (quyidagi formula) va jurnal CASH qoldig'i orasida 65 000 000 so'mlik
-      // doimiy farq bor edi — Khorezm Golden Building 125 mln qaytargan, 55
-      // mln berilgan (netto +70 mln), Shirin Super Taom'ga 5 mln qaytarilgan
-      // (netto −5 mln). `getAvailableBalance` bu real pul harakatini
-      // butunlay bilmasdi, ya'ni balansni HAQIQIYDAN KAMROQ ko'rsatardi —
-      // pul yo'qolish xavfi yo'q (chiqim qo'riqchisi ortiqcha ehtiyotkor
-      // bo'lardi), lekin real mablag' bor bo'lsa ham "yetarli emas" deb
-      // noto'g'ri bloklashi mumkin edi.
-      //
-      // `sourceTable` emas, TRANZAKSIYA HAMROHI bo'yicha aniqlanadi (CASH
-      // oyog'i bilan bir xil `transactionId`da LOAN_GIVEN/LOAN_RECEIVED
-      // oyog'i bormi) — shunda kelajakda boshqa skript shu hisoblarga
-      // yozsa ham (masalan qo'lda tuzatish) avtomatik qamrab olinadi.
-      db.$queryRaw<{ net: unknown }[]>`
-        SELECT coalesce(sum(l.debit), 0) - coalesce(sum(l.credit), 0) AS net
-          FROM "LedgerEntry" l
-         WHERE l."accountId" = ${ACCOUNTS.CASH}
-           AND l.period >= ${KASSA_START_PERIOD}
-           AND EXISTS (
-             SELECT 1 FROM "LedgerEntry" l2
-              WHERE l2."transactionId" = l."transactionId"
-                AND l2."accountId" IN (${ACCOUNTS.LOAN_GIVEN}, ${ACCOUNTS.LOAN_RECEIVED})
-           )`,
+      // orqali emas (yuqoridagi `loanCashMovement` funksiyasi izohiga qarang).
+      // AUDITDA TOPILDI (2026-09-03, prod): shu sababli jadval balansi va
+      // jurnal CASH qoldig'i orasida 65 000 000 so'mlik doimiy farq bor edi.
+      loanCashMovement(db, { gte: KASSA_START_PERIOD }),
     ]);
 
   const incomePayments = cashFromPaymentRows(paidPaymentRows);
@@ -142,7 +162,6 @@ export async function getAvailableBalance(opts?: {
   const outflowExpenses = 0;
 
   const openingCash = n(openingRow._sum.debit) - n(openingRow._sum.credit);
-  const loanCashMovement = n(loanCashRows[0]?.net);
 
   const income = incomePayments + incomeKassa;
   const outflow = outflowKassa + outflowPayroll;
@@ -151,18 +170,18 @@ export async function getAvailableBalance(opts?: {
     income,
     outflow,
     openingCash,
-    balance: openingCash + income - outflow + loanCashMovement,
+    balance: openingCash + income - outflow + loanCashMovementValue,
     transitBalance,
     incomePayments,
     incomeKassa,
     outflowExpenses,
     outflowKassa,
     outflowPayroll,
-    loanCashMovement,
+    loanCashMovement: loanCashMovementValue,
   };
 }
 
-type MovementDb = Pick<typeof prisma, "payment" | "kassaEntry" | "payout">;
+type MovementDb = Pick<typeof prisma, "payment" | "kassaEntry" | "payout" | "ledgerEntry">;
 
 interface MovementRange {
   /** Payment.period ("YYYY-MM" string) uchun filtr */
@@ -176,11 +195,11 @@ interface MovementRange {
 async function movementInRange(
   db: MovementDb,
   range: MovementRange
-): Promise<{ income: number; outflow: number }> {
+): Promise<{ income: number; outflow: number; loanCashMovement: number }> {
   const dateWhere = { gte: range.from ?? KASSA_START_DATE, lt: range.to };
   const periodWhere =
     typeof range.paymentPeriod === "string" ? range.paymentPeriod : range.paymentPeriod;
-  const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
+  const [payments, kassaIn, kassaOut, payouts, loan] = await Promise.all([
     db.payment.aggregate({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: periodWhere, ...(typeof periodWhere === "string" ? { gte: undefined } : {}) },
       _sum: { amount: true },
@@ -197,10 +216,16 @@ async function movementInRange(
       where: { deletedAt: null, paidAt: dateWhere },
       _sum: { amount: true },
     }),
+    // MOLIYAVIY YORDAM — yuqoridagi `loanCashMovement` funksiyasi izohiga
+    // qarang. `periodWhere` shakli LedgerEntry.period bilan bir xil
+    // ("YYYY-MM" string yoki {startsWith}/{lt}), qo'shimcha moslashuv shart
+    // emas.
+    loanCashMovement(db, periodWhere),
   ]);
   return {
     income: n(payments._sum.amount) + n(kassaIn._sum.amount),
     outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
+    loanCashMovement: loan,
   };
 }
 
@@ -272,7 +297,7 @@ export async function getMonthMovement(
   year: number,
   month: number,
   db: MovementDb = prisma
-): Promise<{ income: number; outflow: number }> {
+): Promise<{ income: number; outflow: number; loanCashMovement: number }> {
   const key = `${year}-${String(month).padStart(2, "0")}`;
   return movementInRange(db, {
     paymentPeriod: key,
@@ -372,7 +397,7 @@ export async function getMovementBeforeMonth(
   year: number,
   month: number,
   db: MovementDb = prisma
-): Promise<{ income: number; outflow: number }> {
+): Promise<{ income: number; outflow: number; loanCashMovement: number }> {
   const key = `${year}-${String(month).padStart(2, "0")}`;
   return movementInRange(db, {
     paymentPeriod: { lt: key },
@@ -384,10 +409,12 @@ export async function getMovementBeforeMonth(
  * Bir yil ichidagi kirim/chiqim harakati (snapshot/yil yopilishi uchun).
  * Payment davri "YYYY-MM" string — yil prefiksi bilan filtrlaymiz; qolganlari sana bo'yicha.
  */
-export async function getYearMovement(year: number): Promise<{ income: number; outflow: number }> {
+export async function getYearMovement(
+  year: number
+): Promise<{ income: number; outflow: number; loanCashMovement: number }> {
   const from = new Date(year, 0, 1);
   const to = new Date(year + 1, 0, 1);
-  const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
+  const [payments, kassaIn, kassaOut, payouts, loan] = await Promise.all([
     prisma.payment.aggregate({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { startsWith: `${year}-` } },
       _sum: { amount: true },
@@ -404,17 +431,22 @@ export async function getYearMovement(year: number): Promise<{ income: number; o
       where: { deletedAt: null, paidAt: { gte: from, lt: to } },
       _sum: { amount: true },
     }),
+    // MOLIYAVIY YORDAM — yuqoridagi `loanCashMovement` funksiyasi izohiga qarang.
+    loanCashMovement(prisma, { startsWith: `${year}-` }),
   ]);
   return {
     income: n(payments._sum.amount) + n(kassaIn._sum.amount),
     outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
+    loanCashMovement: loan,
   };
 }
 
 /** Yil boshigacha bo'lgan butun tarix harakati (birinchi snapshot uchun ochilish qoldig'i). */
-export async function getMovementBefore(year: number): Promise<{ income: number; outflow: number }> {
+export async function getMovementBefore(
+  year: number
+): Promise<{ income: number; outflow: number; loanCashMovement: number }> {
   const to = new Date(year, 0, 1);
-  const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
+  const [payments, kassaIn, kassaOut, payouts, loan] = await Promise.all([
     prisma.payment.aggregate({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { lt: `${year}-01` } },
       _sum: { amount: true },
@@ -431,10 +463,13 @@ export async function getMovementBefore(year: number): Promise<{ income: number;
       where: { deletedAt: null, paidAt: { lt: to } },
       _sum: { amount: true },
     }),
+    // MOLIYAVIY YORDAM — yuqoridagi `loanCashMovement` funksiyasi izohiga qarang.
+    loanCashMovement(prisma, { lt: `${year}-01` }),
   ]);
   return {
     income: n(payments._sum.amount) + n(kassaIn._sum.amount),
     outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
+    loanCashMovement: loan,
   };
 }
 

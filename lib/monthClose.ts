@@ -321,6 +321,13 @@ export interface CloseFigures {
   ledgerBalance: number;
   employeeCount: number;
   companyCount: number;
+  /**
+   * Moliyaviy yordam (qarz) — HAQIQIY pul, lekin P&L emas (aktiv/passiv
+   * qayta tasnifi). `closingBalance` ga kiradi, `income`/`outflow`/
+   * `profit`/`loss` ga EMAS — aks holda qarz qaytishi soxta tushum bo'lib
+   * ko'rinardi. `lib/balance.ts` loanCashMovement izohiga qarang.
+   */
+  loanCashMovement: number;
 }
 
 /**
@@ -338,7 +345,7 @@ export async function computeCloseFigures(db: Db, year: number, month: number): 
   });
   const openingBalance = prevSnapshot
     ? Number(prevSnapshot.closingBalance)
-    : await getMovementBeforeMonth(year, month, db).then((m) => m.income - m.outflow);
+    : await getMovementBeforeMonth(year, month, db).then((m) => m.income - m.outflow + m.loanCashMovement);
 
   const movement = await getMonthMovement(year, month, db);
 
@@ -352,6 +359,11 @@ export async function computeCloseFigures(db: Db, year: number, month: number): 
     getLedgerCashBalance(db, key),
   ]);
 
+  // DIQQAT: `net` (foyda/zarar, P&L) moliyaviy yordamni O'Z ICHIGA OLMAYDI —
+  // u xarajat ham, daromad ham emas. `closingBalance` (haqiqiy pul qoldig'i)
+  // esa oladi, aks holda jurnal `ledgerBalance` bilan solishtirilganda
+  // (`ledger_source_balance_match` checklist bandi) SOXTA farq chiqardi
+  // (auditda topildi, 2026-09-03: avgust uchun 65 mln).
   const net = movement.income - movement.outflow;
   return {
     key,
@@ -360,13 +372,14 @@ export async function computeCloseFigures(db: Db, year: number, month: number): 
     outflow: movement.outflow,
     profit: Math.max(0, net),
     loss: Math.max(0, -net),
-    closingBalance: openingBalance + net,
+    closingBalance: openingBalance + net + movement.loanCashMovement,
     payrollTotal: 0, // quyida to'ldiriladi (payout aggregate)
     cashIn: Number(cashAgg._sum.debit ?? 0),
     cashOut: Number(cashAgg._sum.credit ?? 0),
     ledgerBalance,
     employeeCount,
     companyCount,
+    loanCashMovement: movement.loanCashMovement,
   };
 }
 

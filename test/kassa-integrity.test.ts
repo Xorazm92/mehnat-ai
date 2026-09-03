@@ -29,6 +29,7 @@ const { applyAllocation } = await import("@/lib/bank/importStatement");
 const { recordManualReceipt } = await import("@/server/bankImport");
 const { getAvailableBalance } = await import("@/lib/balance");
 const { periodKeyOf } = await import("@/lib/periods");
+const { computeCloseFigures } = await import("@/lib/monthClose");
 
 const TAG = `vitest-integrity-${Date.now()}`;
 // 2098-yil — boshqa test fayllari 2099 ni band qilgan, davr ham ochiq.
@@ -408,5 +409,47 @@ describe("moliyaviy yordam (qarz) balansga kiradi", () => {
     // bo'lmasin.)
     const ledgerAfter = await getLedgerCashBalance(prisma as never, undefined, { fromPeriod: "2026-08" });
     expect(after.balance - before.balance).toBeCloseTo(ledgerAfter - ledgerBefore, 2);
+  });
+
+  it("oy yopish (computeCloseFigures) ham moliyaviy yordamni biladi — avgustni yopish soxta bloklanmaydi", async () => {
+    // AUDITDA TOPILDI: `getAvailableBalance` tuzatilgandan keyin ham
+    // `lib/monthClose.ts computeCloseFigures` ALOHIDA yo'ldan (getMonthMovement)
+    // hisoblardi va xuddi shu bo'shliqqa ega edi. Prodda 2026-07/08 hali OPEN
+    // (tekshirilgan, 2026-09-03) — ya'ni bu avgust birinchi marta yopilganda
+    // portlaydigan, hali sodir bo'lmagan haqiqiy xato edi.
+    //
+    // Mutlaq closingBalance emas, DRIFT (closingBalance - ledgerBalance)
+    // OLDIN/KEYIN solishtiriladi — boshqa test fayllarining shu oyga
+    // qo'shgan fixturalariga bog'liq bo'lmasin.
+    const year = 2098;
+    const month = 11; // "2098-11" — yuqoridagi testlar 2098-10 ni band qilgan.
+    const monthDate = (d: number) => new Date(Date.UTC(year, month - 1, d));
+
+    const figuresBefore = await computeCloseFigures(prisma as never, year, month);
+    const driftBefore = figuresBefore.closingBalance - figuresBefore.ledgerBalance;
+
+    await postLedger(prisma as never, {
+      legs: [
+        { accountId: ACCOUNTS.LOAN_GIVEN, debit: 7_000_000, subjectId: ids.client },
+        { accountId: ACCOUNTS.CASH, credit: 7_000_000 },
+      ],
+      period: periodKeyOf(monthDate(10)),
+      sourceTable: "BankTransaction",
+      sourceId: `${TAG}-month-close-given`,
+      createdBy: ids.user,
+      description: `${TAG} oy yopish — moliyaviy yordam berildi`,
+    });
+
+    const figuresAfter = await computeCloseFigures(prisma as never, year, month);
+    const driftAfter = figuresAfter.closingBalance - figuresAfter.ledgerBalance;
+
+    // ASOSIY DA'VO: drift O'SMADI. Tuzatishsiz driftAfter driftBefore dan
+    // 7 mln ga KATTA chiqardi (closingBalance kam, ledgerBalance to'g'ri).
+    expect(driftAfter).toBeCloseTo(driftBefore, 2);
+    // `loanCashMovement` shu oyning o'zida to'g'ri qayd etilgan (income/
+    // outflow/profit/loss ga aralashmagan holda).
+    expect(figuresAfter.loanCashMovement).toBeCloseTo(-7_000_000, 2);
+    expect(figuresAfter.income).toBeCloseTo(figuresBefore.income, 2);
+    expect(figuresAfter.outflow).toBeCloseTo(figuresBefore.outflow, 2);
   });
 });
