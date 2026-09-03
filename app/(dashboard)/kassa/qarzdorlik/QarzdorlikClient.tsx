@@ -684,6 +684,7 @@ export default function QarzdorlikClient({
             paymentDate: payment.paymentDate ? new Date(payment.paymentDate) : undefined,
             paymentMethod: payment.paymentMethod || "naqd",
             comment: payment.comment,
+            channelId: payment.channelId ?? undefined,
           });
           router.refresh();
         }}

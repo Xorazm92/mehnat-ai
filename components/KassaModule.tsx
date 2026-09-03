@@ -18,6 +18,7 @@ import { useTableState } from "@/hooks/useTableState";
 import { usePageSize } from "@/hooks/usePageSize";
 import { MonthPicker } from './ui/MonthPicker';
 import { DateField } from './ui/DateField';
+import FundingSourceSelect from './ui/FundingSourceSelect';
 
 interface KassaModuleProps {
     companies: Company[];
@@ -206,8 +207,19 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
         setIsModalOpen(true);
     };
 
+    const paymentPostsCash = (s?: string) => s === PaymentStatus.PAID || s === PaymentStatus.PARTIAL;
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        // KIRIM MANBASIZ YOZILMAYDI — server bu holatda rad etadi
+        // (server/kassa.ts upsertPayment), lekin so'rov ketishidan oldin
+        // aniq xabar bilan to'xtatish yaxshiroq.
+        if (editingPayment && paymentPostsCash(editingPayment.status) && !editingPayment.channelId) {
+            toast.error(lang === 'uz'
+                ? "To'lov qaysi hisobga tushganini tanlang"
+                : 'Выберите, на какой счёт поступил платёж');
+            return;
+        }
         if (editingPayment && !isSaving) {
             setIsSaving(true);
             try {
@@ -467,6 +479,19 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                                         {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label.toUpperCase()}</option>)}
                                     </select>
                                 </div>
+                                {paymentPostsCash(editingPayment?.status) && (
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                                            Qaysi hisobga tushdi <span style={{ color: 'var(--danger)' }}>*</span>
+                                        </label>
+                                        <FundingSourceSelect
+                                            value={editingPayment?.channelId || ''}
+                                            onChange={(channelId) => setEditingPayment(prev => ({ ...prev, channelId }))}
+                                            className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 tracking-tight"
+                                            allowEmpty={!!editingPayment?.id}
+                                        />
+                                    </div>
+                                )}
                                 <div className="space-y-2 md:col-span-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
                                     <input

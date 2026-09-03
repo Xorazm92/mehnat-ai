@@ -506,18 +506,38 @@ export async function getPayments(period?: string) {
   }
 
   // To'lov FIRMAGA bog'langan — portfeldan tashqaridagilar ko'rinmaydi.
+  const rows = await prisma.payment.findMany({
+    where: {
+      deletedAt: null,
+      ...(period ? { period } : {}),
+      company: companyScopeWhere({ id: userId, role }),
+    },
+    include: {
+      company: { select: { id: true, name: true, inn: true, contractAmount: true } },
+    },
+    orderBy: [{ period: "desc" }],
+  });
+
+  // KANAL — `Payment` jadvalida saqlanmaydi (faqat jurnalda), aks holda ikki
+  // manba bo'lib qolardi. Tahrirlashda oldingi tanlovni ko'rsatish uchun eng
+  // so'nggi (hali teskarilanmagan) CASH oyog'idan o'qiladi: `upsertPayment`
+  // har saqlashda avval `reverseLedger`, so'ng `postLedger` chaqiradi, ya'ni
+  // istalgan paytda `sourceTable: 'Payment'` (reversal EMAS) belgili eng
+  // yangi qator — joriy kanal.
+  const channelByPayment = new Map<string, string | null>();
+  if (rows.length > 0) {
+    const legs = await prisma.ledgerEntry.findMany({
+      where: { sourceTable: "Payment", accountId: "CASH", sourceId: { in: rows.map((r) => r.id) } },
+      select: { sourceId: true, channelId: true },
+      orderBy: { createdAt: "desc" },
+    });
+    for (const leg of legs) {
+      if (leg.sourceId && !channelByPayment.has(leg.sourceId)) channelByPayment.set(leg.sourceId, leg.channelId);
+    }
+  }
+
   return serialize(
-    await prisma.payment.findMany({
-      where: {
-        deletedAt: null,
-        ...(period ? { period } : {}),
-        company: companyScopeWhere({ id: userId, role }),
-      },
-      include: {
-        company: { select: { id: true, name: true, inn: true, contractAmount: true } },
-      },
-      orderBy: [{ period: "desc" }],
-    })
+    rows.map((r) => ({ ...r, channelId: channelByPayment.get(r.id) ?? null }))
   );
 }
 
@@ -529,6 +549,8 @@ export async function upsertPayment(data: {
   paymentDate?: Date;
   paymentMethod?: string;
   comment?: string;
+  /** Pul qaysi hisobga tushdi. `status` paid/partial bo'lganda MAJBURIY. */
+  channelId?: string;
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -546,9 +568,22 @@ export async function upsertPayment(data: {
   if (!Number.isFinite(data.amount) || data.amount < 0) {
     throw new Error("To'lov summasi manfiy bo'lishi mumkin emas");
   }
+  // KIRIM MANBASIZ YOZILMAYDI — `createKassaEntry` dagi chiqim qoidasi bilan
+  // bir xil sabab (server/kassa.ts yuqorida). Pul haqiqatan tushganida
+  // (paid/partial, summa > 0) qaysi hisobga tushgani jurnalda ko'rinmasa,
+  // "Kassalar hisoboti" (server/kassaReport.ts) uni umuman ko'rmaydi.
+  // AUDITDA TOPILDI (2026-09-03, prod): shu yo'ldan 174 ta yozuv, 872 mln
+  // so'm kanalsiz kirgan edi — CashDeskTable.tsx bu bo'shliqni "kutilgan
+  // holat" deb hujjatlashtirgan va "kanal backfilli tugagach kamayadi" deb
+  // va'da bergan; mana shu o'sha backfil qadami.
+  const postsCash = (data.status === "paid" || data.status === "partial") && data.amount > 0;
+  if (postsCash && !data.channelId) {
+    throw new Error("To'lov qaysi hisobga tushganini tanlang — bank hisobi, Plastik yoki Naqd");
+  }
+  if (data.channelId) await assertFundingSource(data.channelId);
   await assertPeriodOpen(prisma, data.period, "shartnoma to'lovi");
 
-  const { companyId, period, ...fields } = data;
+  const { companyId, period, channelId, ...fields } = data;
 
   const existing = await prisma.payment.findUnique({
     where: { companyId_period: { companyId, period } },
@@ -588,11 +623,11 @@ export async function upsertPayment(data: {
       createdBy: session.user.id,
       reason: "to'lov yangilandi",
     });
-    if ((data.status === "paid" || data.status === "partial") && data.amount > 0) {
+    if (postsCash) {
       await postLedger(tx, {
         legs: [
-          { accountId: ACCOUNTS.CASH, debit: data.amount },
-          { accountId: ACCOUNTS.CONTRACT_INCOME, credit: data.amount },
+          { accountId: ACCOUNTS.CASH, debit: data.amount, channelId: channelId ?? null },
+          { accountId: ACCOUNTS.CONTRACT_INCOME, credit: data.amount, subjectId: companyId },
         ],
         period,
         sourceTable: "Payment",
@@ -612,7 +647,7 @@ export async function upsertPayment(data: {
     ...(existing
       ? { oldData: { amount: Number(existing.amount), status: existing.status, wasDeleted: !!existing.deletedAt } }
       : {}),
-    newData: { companyId, period, amount: data.amount, status: data.status },
+    newData: { companyId, period, amount: data.amount, status: data.status, channelId: channelId ?? null },
   });
 
   return serialize(result);

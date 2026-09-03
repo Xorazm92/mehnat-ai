@@ -30,6 +30,7 @@ const { recordManualReceipt } = await import("@/server/bankImport");
 const { getAvailableBalance } = await import("@/lib/balance");
 const { periodKeyOf } = await import("@/lib/periods");
 const { computeCloseFigures } = await import("@/lib/monthClose");
+const { upsertPayment, getPayments, deletePayment } = await import("@/server/kassa");
 
 const TAG = `vitest-integrity-${Date.now()}`;
 // 2098-yil — boshqa test fayllari 2099 ni band qilgan, davr ham ochiq.
@@ -451,5 +452,69 @@ describe("moliyaviy yordam (qarz) balansga kiradi", () => {
     expect(figuresAfter.loanCashMovement).toBeCloseTo(-7_000_000, 2);
     expect(figuresAfter.income).toBeCloseTo(figuresBefore.income, 2);
     expect(figuresAfter.outflow).toBeCloseTo(figuresBefore.outflow, 2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// 5. upsertPayment — KANALSIZ TO'LOV YOZILMAYDI (R-09)
+// ─────────────────────────────────────────────────────────
+//
+// PROD AUDITIDA TOPILDI (2026-09-03): `upsertPayment` (server/kassa.ts) —
+// "/kassa/qarzdorlik" dagi oddiy to'lov formasi — pul qaysi hisobga
+// tushganini so'ramasdi. Prodda shu yo'ldan 174 ta yozuv, 872 mln so'm
+// kanalsiz kirgan edi ("Kassalar hisoboti" ularni umuman ko'rmaydi —
+// CashDeskTable.tsx bu bo'shliqni "kutilgan holat" deb hujjatlashtirgan
+// va kelajakda backfil qilinishini va'da bergan edi).
+describe("upsertPayment — kanalsiz to'lov yozilmaydi", () => {
+  const period = periodKeyOf(at(11, 1)); // "2098-12" — boshqa testlar band qilmagan.
+
+  afterAll(async () => {
+    await deletePayment(
+      (await prisma.payment.findUnique({ where: { companyId_period: { companyId: ids.client, period } }, select: { id: true } }))?.id ?? "noop",
+    ).catch(() => {});
+  });
+
+  it("status=paid, channelId yo'q — rad etiladi", async () => {
+    await expect(
+      upsertPayment({
+        companyId: ids.client,
+        period,
+        amount: 4_000_000,
+        status: "paid",
+        paymentMethod: "naqd",
+      }),
+    ).rejects.toThrow(/hisobga tushganini tanlang/);
+  });
+
+  it("channelId bilan — yoziladi va jurnalga to'g'ri kanal bilan tushadi", async () => {
+    const res = await upsertPayment({
+      companyId: ids.client,
+      period,
+      amount: 4_000_000,
+      status: "paid",
+      paymentMethod: "naqd",
+      channelId: ids.cash,
+    });
+
+    const legs = await legsOf(res.id);
+    const cashLeg = legs.find((l) => l.accountId === ACCOUNTS.CASH);
+    expect(cashLeg?.channelId).toBe(ids.cash);
+
+    // getPayments ORQALI HAM O'QILADI — jurnaldan tiklangan, Payment
+    // jadvalining o'zida ustun yo'q (ataylab: ikkinchi manba bo'lmasin).
+    const list = (await getPayments(period)) as { id: string; channelId: string | null }[];
+    const row = list.find((p) => p.id === res.id);
+    expect(row?.channelId).toBe(ids.cash);
+  });
+
+  it("pending holatda kanal talab qilinmaydi (pul hali chiqmagan)", async () => {
+    const res = await upsertPayment({
+      companyId: ids.client,
+      period: periodKeyOf(at(11, 15)),
+      amount: 0,
+      status: "pending",
+    });
+    expect(res.id).toBeTruthy();
+    await deletePayment(res.id).catch(() => {});
   });
 });
