@@ -35,6 +35,12 @@ export function pathToView(path: string): AppView | null {
   if (path.startsWith("/cabinet/bank")) return "cabinet_bank";
   if (path.startsWith("/cabinet")) return "cabinet";
   if (path.startsWith("/dashboard")) return "dashboard";
+  // Kabina — `PROTECTED_ROUTES` da bor edi, lekin bu xaritada YO'Q edi.
+  // `proxy.ts` `isAllowed` moslik topilmasa RUXSAT BERADI (fail-open), ya'ni
+  // buxgalter ham, bank-klient ham marshrutdan bemalol o'tardi. Sahifaning
+  // o'z server darvozasi (`currentUserViews`) ularni qaytarardi — ma'lumot
+  // ochilmagan — lekin himoyaning bir qavati ishlamay turgan edi.
+  if (path.startsWith("/cockpit")) return "cockpit";
   // Telegram Mini App ekranlari — mavjud view ruxsatlaridan foydalanadi, ya'ni
   // botdagi ekran ham, veb sahifa ham bir xil RBAC bilan qo'riqlanadi.
   if (path.startsWith("/telegram-app/proof")) return "reports";

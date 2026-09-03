@@ -26,6 +26,14 @@ vi.mock("@/lib/prisma", () => ({
       },
     },
   }),
+  // `proxy.ts` ning O'ZI faqat `getPrisma` ni ishlatadi, lekin u
+  // `lib/userRelations.ts` ni import qiladi va O'SHA modul yuklanish paytida
+  // `{ prisma }` ni so'raydi. Mock uni bermagani uchun butun fayl yuklanishda
+  // yiqilardi. Bu stub CHAQIRILMASLIGI kerak — chaqirilsa, DB'siz test
+  // jimgina bazaga chiqmoqchi bo'lgani ma'nosini beradi, shuning uchun tashlaydi.
+  // Bo'sh obyekt — ATAYLAB: bu testda hech kim uni chaqirmaydi, chaqirsa esa
+  // aniq TypeError beradi (jimgina haqiqiy bazaga chiqib ketmaydi).
+  prisma: {},
 }));
 
 const req = (path: string) => new NextRequest(new URL(path, "http://localhost:3000"));
@@ -45,12 +53,21 @@ async function go(path: string): Promise<string | null> {
   return loc ? new URL(loc).pathname + new URL(loc).search : null;
 }
 
+// `loginAt` MAJBURIY: proxy.ts (118-120) sessiyaga MUTLAQ muddat qo'yadi va
+// `loginAt` siz tokenni muddati o'tgan deb hisoblaydi (ataylab — eski tokenlar
+// ham tugasin). Busiz har bir holat /login ga qaytarilardi va bu testlar
+// RBAC ni emas, sessiya muddatini tekshirib qolardi.
 const staff = (role: string) => {
-  TOKEN = { role, kind: "staff" };
+  TOKEN = { role, kind: "staff", loginAt: Date.now() };
 };
-const client = () => {
-  TOKEN = { role: "client", kind: "client" };
-};
+// MIJOZ PORTALI YO'Q. `client()` yordamchisi va u bilan bog'liq uchta holat
+// olib tashlandi: portal moduli 2026-08 konsolidatsiyasida chiqarib
+// yuborilgan. Bugungi `UserRole` da `client` umuman yo'q (olti xodim roli),
+// `ROLE_HOME_ROUTES` da mijoz yozuvi yo'q va `proxy.ts` `kind` ni umuman
+// o'qimaydi. Testlar esa `/portal` ga yo'naltirishni kutib turaverardi —
+// ya'ni olib tashlangan xatti-harakatni tekshirardi.
+//
+// `app/portal/page.tsx` hali repoda yotibdi (qoldiq) — u alohida tozalanadi.
 
 beforeEach(() => {
   TOKEN = null;
@@ -93,28 +110,6 @@ describe("logged-in landing", () => {
     expect(await go("/")).toBe("/dashboard");
   });
 
-  it("mijoz portalga tushadi", async () => {
-    client();
-    expect(await go("/login")).toBe("/portal");
-  });
-});
-
-describe("staff ↔ client isolation", () => {
-  it("mijoz staff hududiga kira olmaydi", async () => {
-    client();
-    expect(await go("/dashboard")).toBe("/portal");
-    expect(await go("/reports")).toBe("/portal");
-  });
-
-  it("staff portalga kira olmaydi — o'z uyiga qaytariladi", async () => {
-    staff("accountant");
-    expect(await go("/portal")).toBe("/cabinet");
-  });
-
-  it("mijoz portalda qoladi", async () => {
-    client();
-    expect(await go("/portal")).toBeNull();
-  });
 });
 
 describe("view RBAC", () => {
@@ -217,11 +212,18 @@ describe("fail-open on unmapped paths", () => {
 
   it("PROTECTED_ROUTES va pathToView bir xil to'plamni qamraydi", async () => {
     // Yuqoridagi fail-open shu invariant buzilmagunicha xavfsiz.
-    const src = await import("node:fs").then((fs) =>
-      fs.readFileSync(new URL("../proxy.ts", import.meta.url), "utf8"),
-    );
-    const protectedList = [...src.matchAll(/^\s+"(\/[a-z-]+)",$/gm)].map((m) => m[1]);
-    const mapped = new Set([...src.matchAll(/path\.startsWith\("(\/[a-z-]+)/g)].map((m) => m[1]));
+    // IKKI FAYL, BITTA EMAS. `pathToView` `proxy.ts` dan `lib/routeViews.ts`
+    // ga ko'chirilgan (uni `Breadcrumbs` ham o'qiydi), bu tekshiruv esa
+    // ikkala ro'yxatni ham `proxy.ts` dan qidiraverardi. Natijada `mapped`
+    // bo'sh chiqib, HAMMA yo'l "qoplanmagan" bo'lib ko'rinardi — 16 ta soxta
+    // ogohlantirish yagona haqiqiy bo'shliqni (`/cockpit`) ko'mib tashlagan edi.
+    const fs = await import("node:fs");
+    const proxySrc = fs.readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
+    const viewsSrc = fs.readFileSync(new URL("../lib/routeViews.ts", import.meta.url), "utf8");
+    const protectedList = [...proxySrc.matchAll(/^\s+"(\/[a-z-]+)",$/gm)].map((m) => m[1]);
+    const mapped = new Set([...viewsSrc.matchAll(/path\.startsWith\("(\/[a-z-]+)/g)].map((m) => m[1]));
+    expect(protectedList.length, "PROTECTED_ROUTES topilmadi — regexp eskirgan").toBeGreaterThan(5);
+    expect(mapped.size, "pathToView topilmadi — regexp eskirgan").toBeGreaterThan(5);
     const unmapped = protectedList.filter((p) => !mapped.has(p));
     expect(unmapped, "PROTECTED_ROUTES da bor, pathToView da yo'q").toEqual([]);
   });
