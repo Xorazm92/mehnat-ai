@@ -16,6 +16,10 @@
 // ravishda ma'lumotni buzishi mumkin.
 
 import { Prisma } from "@prisma/client";
+import { getAvailableBalance } from "@/lib/balance";
+import { getLedgerCashBalance, LEDGER_DRIFT_TOLERANCE } from "@/lib/ledger";
+import { KASSA_START_PERIOD } from "@/lib/constants";
+import { formatNum } from "@/lib/platform/format";
 
 type Db = Prisma.TransactionClient;
 
@@ -37,6 +41,88 @@ const n = (v: unknown) => Number(v ?? 0);
 /** Barcha sverka tekshiruvlari. Bitta so'rovlar to'plami — sahifa tez ochilsin. */
 export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
   const checks: ReconCheck[] = [];
+
+  // ── 0a. IKKI TOMONLAMA YOZUV INVARIANTI: Σdebit == Σcredit ───────────
+  //
+  // Bu kassa modulining eng asosiy invarianti va u shu paytgacha FAQAT oy
+  // yopish checklistida (`lib/monthClose.ts` `ledger_balanced`, va u ham
+  // faqat BITTA davr kesimida) tekshirilardi. Ya'ni oy yopilmaguncha jurnal
+  // buzilganini hech kim ko'rmasdi.
+  //
+  // Prod jurnalida aynan shu holat topildi: 95 ta BITTA OYOQLI tranzaksiya
+  // va butun jurnal bo'yicha 20 525 777 so'mlik og'ish. Manbasi — qo'lda
+  // kiritilgan "PRIOR PERIOD ADJUSTMENT" qatorlari va nosoz teskari
+  // yozuvlar. Buzilish jim turgan, chunki uni ko'rsatadigan ekran yo'q edi.
+  const trial = await db.$queryRaw<{ debit: number; credit: number }[]>`
+    SELECT coalesce(sum(debit), 0)::float8  AS debit,
+           coalesce(sum(credit), 0)::float8 AS credit
+      FROM "LedgerEntry"`;
+  const trialDebit = n(trial[0]?.debit);
+  const trialCredit = n(trial[0]?.credit);
+  const trialDiff = Math.round((trialDebit - trialCredit) * 100) / 100;
+
+  const oneLegged = await db.$queryRaw<{ c: bigint }[]>`
+    SELECT count(*)::bigint AS c FROM (
+      SELECT "transactionId"
+        FROM "LedgerEntry"
+       GROUP BY "transactionId"
+      HAVING round(sum(debit) - sum(credit), 2) <> 0
+    ) x`;
+  const brokenTx = Number(oneLegged[0]?.c ?? 0);
+
+  checks.push({
+    key: "ledger-balanced",
+    title: "Jurnal muvozanatda (Σdebet = Σkredit)",
+    status: trialDiff === 0 && brokenTx === 0 ? "ok" : "error",
+    value: trialDiff,
+    detail:
+      trialDiff === 0 && brokenTx === 0
+        ? `Butun jurnal muvozanatda (${formatNum(trialDebit)} so'm ikki tomondan)`
+        : `Debet ${formatNum(trialDebit)} · kredit ${formatNum(trialCredit)} — ` +
+          `farq ${formatNum(trialDiff)} so'm, ${brokenTx} ta muvozanatsiz tranzaksiya`,
+    action:
+      trialDiff !== 0 || brokenTx > 0
+        ? "Muvozanatsiz tranzaksiyalarni toping va yetishmagan oyoqni teskari " +
+          "yozuv bilan tiklang. Yangi buzilish yo'li yopilgan (`reverseLedger` " +
+          "endi muvozanatni tekshiradi), qolgani — tarixiy qatorlar."
+        : undefined,
+  });
+
+  // ── 0b. JADVAL BALANSI ↔ JURNAL CASH QOLDIG'I ────────────────────────
+  //
+  // Kassada pul ikki xil yo'l bilan hisoblanadi: jadval agregatlari
+  // (`lib/balance.ts` — ekranlarda ko'rinadigan raqam) va jurnal CASH
+  // qoldig'i (`lib/ledger.ts` — "pul qaysi kassada" hisobotining manbai).
+  // Ular TENG bo'lishi shart. Ilgari bu ham faqat oy yopishda tekshirilardi
+  // (`ledger_source_balance_match`), ya'ni oy davomida ikki ekran ikki xil
+  // raqam ko'rsatib turishi mumkin edi va buni hech narsa aytmasdi.
+  const [available, ledgerCash] = await Promise.all([
+    getAvailableBalance({ db }),
+    getLedgerCashBalance(db, undefined, { fromPeriod: KASSA_START_PERIOD }),
+  ]);
+  const cashDiff = Math.round((available.balance - ledgerCash) * 100) / 100;
+
+  checks.push({
+    key: "cash-vs-ledger",
+    title: "Kassa balansi = jurnal CASH qoldig'i",
+    status:
+      Math.abs(cashDiff) <= 0.01
+        ? "ok"
+        : Math.abs(cashDiff) <= LEDGER_DRIFT_TOLERANCE
+          ? "warn"
+          : "error",
+    value: cashDiff,
+    detail:
+      Math.abs(cashDiff) <= 0.01
+        ? `Ikkala hisob ham ${formatNum(available.balance)} so'm`
+        : `Jadval ${formatNum(available.balance)} · jurnal ${formatNum(ledgerCash)} — ` +
+          `farq ${formatNum(cashDiff)} so'm`,
+    action:
+      Math.abs(cashDiff) > 0.01
+        ? "Farq — jurnalga tushmagan yoki ikki marta tushgan harakat. Quyidagi " +
+          "\"Har bir pul qatori jurnalga tushgan\" tekshiruvidan boshlang."
+        : undefined,
+  });
 
   // ── 1. Payment.amount = taqsimotlar yig'indisi ───────────────────────
   const mismatched = await db.$queryRaw<{ c: bigint }[]>`

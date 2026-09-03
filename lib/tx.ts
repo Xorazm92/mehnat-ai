@@ -24,7 +24,7 @@
 // DB amallaridan iborat, shuning uchun uni qayta ishga tushirish xavfsiz.
 
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
 /** Prisma yozuv konflikti kodi + Postgres serialization_failure. */
 function isRetryable(e: unknown): boolean {
@@ -72,4 +72,37 @@ export async function serializable<T>(
       "Bir necha soniyadan keyin qayta urinib ko'ring." +
       (process.env.NODE_ENV === "development" ? ` (${(last as Error)?.message})` : "")
   );
+}
+
+/**
+ * TRANZAKSIYA BOR BO'LSA — UNI ISHLAT, YO'Q BO'LSA — OCH.
+ *
+ * NIMA UCHUN KERAK. Auditda aniqlandi: tushum yozadigan YAGONA yo'l
+ * (`lib/bank/importStatement.ts` `applyAllocation`) beshta alohida yozuv
+ * qiladi — `Payment` upsert → `PaymentAllocation` upsert → `Payment.amount`
+ * qayta hisoblash → `reverseLedger` → `postLedger`. Uning HAR BIR chaqiruvchisi
+ * (server/bankImport.ts, scripts/*, testlar — 14 joy) esa xom `prisma` beradi,
+ * ya'ni bu beshlik BITTA tranzaksiyada emas edi.
+ *
+ * Oqibati moliyaviy: `reverseLedger` bajarilib, `postLedger` yiqilsa (yoki
+ * jarayon o'sha oraliqda o'lsa) to'lovning jurnal izi NOLGA tushib qolaveradi
+ * — jadvalda pul bor, jurnalda yo'q. Teskarisi ham xavfli: taqsimot yozilib,
+ * `Payment.amount` yangilanmasa qarz noto'g'ri qoladi.
+ *
+ * Har bir chaqiruv joyini o'zgartirish o'rniga qoida FUNKSIYANING O'ZIDA
+ * bo'lsin: tranzaksiya klienti berilgan bo'lsa ichkarida ikkinchi tranzaksiya
+ * OCHILMAYDI (u yangi ulanish olib deadlock berardi), xom klient berilgan
+ * bo'lsa Serializable tranzaksiya ochiladi.
+ */
+export type AnyDb = Prisma.TransactionClient | PrismaClient;
+
+/** Xom klientda `$transaction` bor; tranzaksiya klientida yo'q. */
+const isRawClient = (db: AnyDb): db is PrismaClient =>
+  typeof (db as PrismaClient).$transaction === "function";
+
+export function withSerializable<T>(
+  db: AnyDb,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>
+): Promise<T> {
+  return isRawClient(db) ? serializable(fn) : fn(db);
 }

@@ -1018,7 +1018,7 @@ export async function checkDuplicateReceipt(input: {
  * qoladi, chunki u haqiqatan hech kimning qarzini kamaytirmaydi.
  */
 export async function recordManualReceipt(input: ManualReceiptInput) {
-  const { userId } = await requireStatementRole();
+  const { userId, role } = await requireStatementRole();
 
   const isOffset = input.source === OFFSET_SOURCE;
   if (!MANUAL_SOURCES.has(input.source) && !isOffset) {
@@ -1041,32 +1041,46 @@ export async function recordManualReceipt(input: ManualReceiptInput) {
   await assertPeriodOpen(prisma, input.receivedAt, "kassa kirimi");
 
   // Nomsiz tushum — mijozga bog'lanmagan, qarzga ta'sir qilmaydi.
+  //
+  // DARVOZA ORQALI (`lib/cashGate.ts`). Ilgari bu yerda to'g'ridan-to'g'ri
+  // `prisma.kassaEntry.create` turardi va JURNALGA HECH NARSA YOZILMASDI:
+  // jadval balansi (`lib/balance.ts` kirimni `KassaEntry` dan ham sanaydi)
+  // o'sardi, jurnal CASH qoldig'i esa joyida qolardi. Ya'ni har bir nomsiz
+  // naqd/plastik tushum ikki haqiqat orasidagi tafovutni kengaytirardi va
+  // "pul qaysi kassada" hisoboti (`server/kassaReport.ts`, u FAQAT jurnaldan
+  // o'qiydi) o'sha pulni umuman ko'rmasdi.
+  //
+  // Darvoza manba qatorini va ikki tomonlama yozuvni BITTA Serializable
+  // tranzaksiyada yozadi, `dedupKey` ni esa idempotentlik uchun ishlatadi:
+  // formani ikki marta yuborish endi ikkinchi qator yaratmaydi.
   if (!input.companyId) {
-    const entry = await prisma.kassaEntry.create({
-      data: {
-        type: "income",
-        category: input.source === "naqd" ? "Naqd tushum" : "Plastik tushum",
-        amount: new Prisma.Decimal(amount.toFixed(2)),
-        description: input.note?.trim() || null,
-        date: input.receivedAt,
-        channelId: input.channelId,
-        createdBy: userId,
-        status: "approved",
-        approvedBy: userId,
-        approvedAt: new Date(),
-        dedupKey: manualDedupKey({ ...input, companyId: null, amount }),
-      },
-    });
-    await recordAuditLog({
-      userId,
-      action: "create",
-      tableName: "KassaEntry",
-      recordId: entry.id,
-      newData: { source: input.source, amount, anonymous: true },
-    });
+    const res = await runCashTx((db) =>
+      recordKassaMovement(
+        db,
+        { kind: "user", userId, role },
+        {
+          type: "income",
+          category: input.source === "naqd" ? "Naqd tushum" : "Plastik tushum",
+          amount,
+          date: input.receivedAt,
+          description: input.note?.trim() || null,
+          channelId: input.channelId ?? null,
+          dedupKey: manualDedupKey({ ...input, companyId: null, amount }),
+        }
+      )
+    );
+    if (!res.alreadyRecorded) {
+      await recordAuditLog({
+        userId,
+        action: "create",
+        tableName: "KassaEntry",
+        recordId: res.id,
+        newData: { source: input.source, amount, anonymous: true },
+      });
+    }
     revalidatePath("/kassa/kirim");
     revalidatePath("/kassa");
-    return serialize({ kind: "anonymous" as const, entryId: entry.id });
+    return serialize({ kind: "anonymous" as const, entryId: res.id });
   }
 
   // Shartnoma berilgan bo'lsa u ayni shu firmaniki ekanini tasdiqlaymiz —

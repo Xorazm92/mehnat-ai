@@ -17,6 +17,7 @@ import { Prisma } from "@prisma/client";
 import { periodKeyOf } from "@/lib/periods";
 import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { resolveServiceTerm } from "@/lib/terms";
+import { withSerializable, type AnyDb } from "@/lib/tx";
 import { formatNum } from "@/lib/platform/format";
 import { transactionHash } from "./parseStatement";
 import { extractContract } from "./extractContract";
@@ -281,7 +282,17 @@ export interface AllocationInput {
  * KassaEntry'dan ham sanaydi — ikkalasini yozish balansni ikki barobar
  * ko'rsatardi.
  */
-export async function applyAllocation(db: Db, input: AllocationInput): Promise<PostResult> {
+/**
+ * ATOMIKLIK O'RAMASI. Ichkarida beshta yozuv bor va ular BO'LINMASLIGI kerak
+ * (`lib/tx.ts` `withSerializable` izohiga qarang). Barcha chaqiruvchilar xom
+ * `prisma` beradi, shuning uchun qoida shu yerda majburlanadi; tranzaksiya
+ * ichidan chaqirilsa (vipiska importi) ikkinchi tranzaksiya OCHILMAYDI.
+ */
+export function applyAllocation(db: AnyDb, input: AllocationInput): Promise<PostResult> {
+  return withSerializable(db, (tx) => applyAllocationTx(tx, input));
+}
+
+async function applyAllocationTx(db: Db, input: AllocationInput): Promise<PostResult> {
   const period = periodOf(input.receivedAt);
   const amount =
     input.amount instanceof Prisma.Decimal
@@ -379,12 +390,26 @@ export async function applyAllocation(db: Db, input: AllocationInput): Promise<P
   // kiradi: mijoz uchun bu haqiqatan to'lov). cashTotal — KASSAGA HAQIQATDA
   // tushgan qism (offset chiqarib tashlanadi) — faqat shu jurnalga yoziladi,
   // aks holda vzaimozachyot pul kassa balansida "bor" bo'lib ko'rinardi.
-  const cashOnly = await db.paymentAllocation.aggregate({
+  //
+  // KANAL KESIMIDA. Ilgari bu yerda bitta `aggregate` turardi va butun
+  // `cashTotal` OXIRGI taqsimotning kanaliga yozilardi. Bitta mijoz bir oyda
+  // ikki xil yo'l bilan to'lasa (bankdan 5 mln, keyin naqd 2 mln — iyulda
+  // to'rtta firma shunday qilgan) jurnal ikkinchi yozuvda 7 mln ni BUTUNLAY
+  // naqd kassaga o'tkazib yuborardi: bank hisobi qoldig'i 5 mln ga kamayib,
+  // naqd kassa o'shancha oshib ketardi. Bu "pul qaysi kassada" hisobotini
+  // (`server/kassaReport.ts`) ham, manba bo'yicha chiqim qo'riqchisini ham
+  // (`lib/cashGate.ts` `getChannelCashBalance`) noto'g'ri ma'lumot bilan
+  // oziqlantirardi.
+  //
+  // Endi har kanal o'z oyog'ini oladi. Yig'indi o'zgarmaydi, ya'ni
+  // `CONTRACT_INCOME` oyog'i va umumiy balans avvalgidek qoladi.
+  const cashByChannel = await db.paymentAllocation.groupBy({
+    by: ["channelId"],
     where: { paymentId: payment.id, NOT: { source: "offset" } },
     _sum: { amount: true },
   });
   const paymentTotal = Number(total._sum.amount ?? 0);
-  const cashTotal = Number(cashOnly._sum.amount ?? 0);
+  const cashTotal = cashByChannel.reduce((sum, r) => sum + Number(r._sum.amount ?? 0), 0);
 
   const company = await db.company.findUnique({
     where: { id: input.companyId },
@@ -408,7 +433,13 @@ export async function applyAllocation(db: Db, input: AllocationInput): Promise<P
   if ((status === "paid" || status === "partial") && cashTotal > 0) {
     await postLedger(db, {
       legs: [
-        { accountId: ACCOUNTS.CASH, debit: cashTotal, channelId: input.channelId ?? null },
+        ...cashByChannel
+          .filter((r) => Number(r._sum.amount ?? 0) > 0)
+          .map((r) => ({
+            accountId: ACCOUNTS.CASH,
+            debit: Number(r._sum.amount ?? 0),
+            channelId: r.channelId,
+          })),
         { accountId: ACCOUNTS.CONTRACT_INCOME, credit: cashTotal, subjectId: input.companyId },
       ],
       period,
@@ -440,14 +471,30 @@ export async function applyAllocation(db: Db, input: AllocationInput): Promise<P
  * KassaEntry'dan ham sanaydi — ikkalasini yozish balansni ikki barobar
  * ko'rsatardi.
  */
-export async function postIncomeTransaction(
-  db: Db,
+export function postIncomeTransaction(
+  db: AnyDb,
   input: {
     transactionId: string;
     companyId: string;
     contractId?: string | null;
     createdBy?: string | null;
     /** Pul QAYSI manbaga tushdi — vipiska hisobining firmasi kanali. */
+    channelId?: string | null;
+  }
+): Promise<PostResult> {
+  // Taqsimot va vipiska qatorining "posted" belgisi BITTA tranzaksiyada:
+  // aks holda pul hisobga olinib, qator navbatda qolishi (yoki teskarisi)
+  // mumkin edi — ikkalasi ham qo'lda tuzatishni talab qiladi.
+  return withSerializable(db, (tx) => postIncomeTransactionTx(tx, input));
+}
+
+async function postIncomeTransactionTx(
+  db: Db,
+  input: {
+    transactionId: string;
+    companyId: string;
+    contractId?: string | null;
+    createdBy?: string | null;
     channelId?: string | null;
   }
 ): Promise<PostResult> {
@@ -512,7 +559,7 @@ export interface PlastikAllocationInput {
  * KassaEntry'dan ham sanaydi, ikkalasi bo'lsa balans ikki barobar ko'rinardi.
  */
 export async function allocatePlastikReceipt(
-  db: Db,
+  db: AnyDb,
   input: PlastikAllocationInput
 ): Promise<PostResult> {
   return applyAllocation(db, {

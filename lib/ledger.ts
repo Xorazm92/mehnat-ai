@@ -333,6 +333,34 @@ export async function reverseLedger(
   const net = await netBySource(db, params.sourceTable, params.sourceId);
   if (net.size === 0) return null; // hech narsa yo'q yoki netto allaqachon nol
 
+  // TESKARI YOZUV HAM MUVOZANATLI BO'LISHI SHART.
+  //
+  // Bu invariant matematik jihatdan o'z-o'zidan kelib chiqadi (barcha
+  // o'lchovlar bo'yicha nettolar yig'indisi manbaning netto debit−krediti,
+  // ya'ni nol), LEKIN u faqat manbaning O'ZI muvozanatli bo'lganda to'g'ri.
+  // Prod jurnalida 95 ta BITTA OYOQLI tranzaksiya topildi — ularning
+  // aksariyati `*-reversal`, ya'ni allaqachon nosoz manbani teskarilash
+  // nosozlikni KO'PAYTIRIB yuborgan va sinov balansi (Σdebit = Σcredit) 20,5
+  // mln so'mga og'ib qolgan. `postLedger` bunday yozuvni yozdirmaydi;
+  // `reverseLedger` esa tekshirmasdi — ya'ni ikki yozuv yo'lidan bittasida
+  // qo'riqchi yo'q edi.
+  //
+  // Endi ikkalasida ham bor: muvozanatsiz teskari yozuv YOZILMAYDI, xato
+  // esa o'zidan oldingi buzilishni ko'rsatadi.
+  const legs: LedgerLeg[] = [...net.values()].map(({ dims, net: value }) => ({
+    accountId: dims.accountId as AccountId,
+    ...(value < 0 ? { debit: -value } : { credit: value }),
+  }));
+  try {
+    assertBalancedLegs(legs);
+  } catch (e) {
+    throw new Error(
+      `${params.sourceTable}/${params.sourceId} teskarilanmadi: manbaning jurnal izi ` +
+        `muvozanatsiz (${(e as Error).message}). Avval o'sha yozuvni tuzating — ` +
+        `teskari yozuv nosozlikni ikkilantiradi.`
+    );
+  }
+
   const transactionId = randomUUID();
   await db.ledgerEntry.createMany({
     data: [...net.values()].map(({ dims, net: value, period }) => ({
