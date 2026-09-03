@@ -429,25 +429,31 @@ export async function getTrialBalance(db: Db, period?: string) {
 /**
  * MANBA ↔ JURNAL TAFOVUTIGA YO'L QO'YILADIGAN CHEGARA.
  *
- * Ideal qiymat — 0, va bu VAQTINCHALIK chegara: sababi aniqlangan bitta
- * ma'lumot xatosini o'rab turadi, modelning cheklovini emas.
+ * TARIX. Ilgari 2 000 000 edi — ikkita sabab uni yashirib turardi:
  *
- * SABAB (docs/BALANS_ASOSLASH.md, 5-bo'lim). 284 ta to'lovning 283 tasida
- * jadval summasi jurnal nettosiga tiyinigacha teng. Farq bitta qatorda:
- * SHIRIN SUPER TAOM / 2026-07 — jadvalda 3 000 000, jurnalda 1 000 000.
- * To'lovda ikkita allocation bor, biri (2 mln) `postLedger` kodidan OLDIN
- * kirgan va jurnalga tushmagan. `scripts/backfill-ledger.ts` uni tuzatmadi,
- * chunki "qamralganmi" mezoni ikkilik — NETTOSI NOLMI deb tekshiradi, netto
- * SUMMAGA TENGMI deb emas; 1 mln nol emas, demak qator o'tkazib yuborilgan.
+ *   1. SHIRIN SUPER TAOM / 2026-07 — bitta to'lovning ikkita allocation'idan
+ *      biri (2 mln) `postLedger` kodidan OLDIN kirgan va jurnalga tushmagan
+ *      edi (docs/BALANS_ASOSLASH.md, 5-bo'lim). Ma'lumot darajasida
+ *      tuzatilgan — bu qator endi mavjud emas (2026-09-03 da lokal va
+ *      prodda tasdiqlangan).
+ *   2. Moliyaviy yordam (LOAN_GIVEN/LOAN_RECEIVED) CASH harakati
+ *      `getAvailableBalance`/`computeCloseFigures` formulalarida umuman
+ *      hisobga olinmasdi — prodda doimiy 65 mln farq berardi. Kod
+ *      darajasida tuzatildi (`lib/balance.ts` `loanCashMovement`).
  *
- * YO'L XARITASI: o'sha provodkani teskarilab 3 mln qilib qayta yozish →
- * tafovut 0 → bu qiymat 0.01 ga tushiriladi. Backfill mezoni ham
- * `netto == summa` ga o'zgartirilsin, aks holda bu sinf xatosi qaytalanadi.
+ * Ikkalasi ham yopilgach, prodning haqiqiy farqi 0 ga tushdi (tasdiqlangan,
+ * 2026-09-03: 391 445 040,81 = 391 445 040,81).
  *
- * BU RAQAM O'SMASLIGI KERAK. O'sdi degani — yangi qisman post yoki jurnalga
- * tushmagan harakat paydo bo'ldi. Chegarani kattalashtirmang, sababini toping.
+ * BU RAQAM O'SMASLIGI KERAK. O'sdi degani — yangi qisman post, jurnalga
+ * tushmagan harakat yoki balans formulasida yana bir bo'shliq paydo bo'ldi.
+ * Chegarani kattalashtirmang, sababini toping (ikkitasi yuqorida — namuna).
+ *
+ * ESLATMA: lokal dev bazasida (`inbola`) mustaqil, past ustuvorlikdagi
+ * qoldiq drift bo'lishi mumkin (2026-08 qayta bazalashning izi — R-02,
+ * master reja). Bu chegara endi uni ham to'g'ri ko'rsatadi: mahsulot
+ * kodining emas, ma'lumot sifatining nuqsoni sifatida.
  */
-export const LEDGER_DRIFT_TOLERANCE = 2_000_000;
+export const LEDGER_DRIFT_TOLERANCE = 0.01;
 
 export async function getLedgerCashBalance(
   db: Db,
