@@ -14,6 +14,8 @@ import { companyScopeWhere, type Actor } from "@/lib/platform/access";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
 import { isSeniorRole } from "@/lib/platform/permissions";
 import { logServerError } from "@/lib/platform/logger";
+import { claim, settle, type SendVerdict } from "@/lib/engines/automation/deliveryLedger";
+import { ESCALATION_CHANNEL } from "@/lib/engines/automation/escalation";
 
 type Db = Prisma.TransactionClient;
 
@@ -49,7 +51,22 @@ export interface Digest {
   counts: {
     dueToday: number;
     overdue: number;
+    /**
+     * `overdue` ichidan muddati KECHA tugaganlari.
+     *
+     * Umumiy `overdue` soni haftalab o'zgarmasligi mumkin va shuning uchun
+     * hech narsa demaydi; kecha kechikkani esa bugungi ish. `dueAt` bo'yicha
+     * sanaladi, `firstOverdueAt` bo'yicha emas — u sweep qachon sezganini
+     * yozadi va katta backfill'dan keyin hammasini "yangi" deb ko'rsatardi.
+     */
+    newlyOverdue: number;
     openQuestions: number;
+    /**
+     * Oxirgi sutkada zanjir bo'ylab MENGA ko'tarilgan bosqichlar (L1 yoki L2
+     * qabul qiluvchi sifatida). Bungacha bularning har biri alohida xabar
+     * edi — bitta L2 qabul qiluvchi bir soatda 6 389 tasini olgan.
+     */
+    escalatedToMe: number;
     /** Faqat senior: tasdiq kutayotgan KPI qatorlari. */
     pendingKpi: number;
     /** Faqat senior: joriy davr uchun to'lovi tushmagan mijozlar. */
@@ -121,6 +138,20 @@ export async function buildDigest(db: Db, user: DigestUser, now = new Date()): P
   }));
   const dueToday = mine.filter((o) => o.dueAt >= today).length;
   const overdue = mine.length - dueToday;
+  const since = new Date(now.getTime() - DAY);
+  const yesterday = new Date(today.getTime() - DAY);
+  const newlyOverdue = mine.filter((o) => o.dueAt < today && o.dueAt >= yesterday).length;
+
+  // Zanjir bo'ylab menga ko'tarilgan bosqichlar — sanoq, ro'yxat emas.
+  // Manba `escalate` yozgan daftar (obligationRollup bilan bir xil oyna).
+  const escalatedToMe = await db.notificationDelivery.count({
+    where: {
+      channel: ESCALATION_CHANNEL,
+      recipientId: user.id,
+      createdAt: { gte: since },
+      dedupKey: { startsWith: "obligation:" },
+    },
+  });
 
   // 2) Doiramdagi javobsiz savollar.
   const companyIds = await scopeCompanyIds(db, actor);
@@ -150,7 +181,15 @@ export async function buildDigest(db: Db, user: DigestUser, now = new Date()): P
     });
   }
 
-  const counts = { dueToday, overdue, openQuestions, pendingKpi, unpaidCompanies };
+  const counts = {
+    dueToday,
+    overdue,
+    newlyOverdue,
+    openQuestions,
+    escalatedToMe,
+    pendingKpi,
+    unpaidCompanies,
+  };
   return {
     userId: user.id,
     fullName: user.fullName,
@@ -176,8 +215,13 @@ export async function collectDigestRecipients(db: Db): Promise<DigestUser[]> {
   });
 }
 
-/** Digest yuboruvchi — bot qatlamidan injeksiya qilinadi. */
-export type DigestSender = (digest: Digest) => Promise<boolean>;
+/**
+ * Digest yuboruvchi — bot qatlamidan injeksiya qilinadi.
+ *
+ * Verdikt qaytaradi: "unreachable" (403) doimiy, kalit band qoladi;
+ * "failed" o'tkinchi, kalit bo'shaydi va keyingi yurish qayta urinadi.
+ */
+export type DigestSender = (digest: Digest) => Promise<SendVerdict>;
 
 export interface DigestRunResult {
   recipients: number;
@@ -186,16 +230,9 @@ export interface DigestRunResult {
   skippedEmpty: number;
   /** Bugun allaqachon yuborilganlar. */
   skippedAlready: number;
+  /** Doimiy rad (bot yoza olmaydi) — ertaga ham urinilmaydi. */
+  unreachable: number;
   failed: number;
-}
-
-function isUniqueViolation(e: unknown): boolean {
-  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return true;
-  const err = e as { code?: string; message?: string } | null;
-  return (
-    !!err &&
-    (err.code === "P2002" || (typeof err.message === "string" && err.message.includes("Unique constraint failed")))
-  );
 }
 
 /**
@@ -214,6 +251,7 @@ export async function runDailyDigest(
     sent: 0,
     skippedEmpty: 0,
     skippedAlready: 0,
+    unreachable: 0,
     failed: 0,
   };
 
@@ -234,41 +272,37 @@ export async function runDailyDigest(
     // Avval BAND QILAMIZ, keyin yuboramiz — worker qayta urinsa ikkinchi
     // xabar ketmasin.
     const dedupKey = digestDedupKey(user.id, now);
-    let deliveryId: string;
-    try {
-      const row = await db.notificationDelivery.create({
-        data: {
-          channel: DIGEST_CHANNEL,
-          level: "yellow",
-          dedupKey,
-          recipientId: user.id,
-          targetChatId: user.telegramUserId,
-          status: "pending",
-        },
-        select: { id: true },
-      });
-      deliveryId = row.id;
-    } catch (e) {
-      if (isUniqueViolation(e)) {
-        res.skippedAlready++;
-        continue;
-      }
-      throw e;
+    const deliveryId = await claim(db, {
+      channel: DIGEST_CHANNEL,
+      level: "yellow",
+      dedupKey,
+      recipientId: user.id,
+      targetChatId: user.telegramUserId,
+    });
+    if (deliveryId == null) {
+      res.skippedAlready++;
+      continue;
     }
 
-    let ok = false;
+    if (!deps.send) {
+      // Yuboruvchi yo'q (token sozlanmagan) — ATAYIN yubormadik.
+      await settle(db, deliveryId, "skipped", now);
+      continue;
+    }
+
+    let verdict: SendVerdict = "failed";
     try {
-      ok = deps.send ? await deps.send(digest) : false;
+      verdict = await deps.send(digest);
     } catch (err) {
       logServerError("dailyDigest.send", err, { userId: user.id });
     }
-    if (ok) res.sent++;
+    // O'tkinchi xatoda `settle` kalitni bo'shatadi — digest keyingi yurishda
+    // qayta uriniladi. Bungacha bir marta yiqilgan digest o'sha kun uchun
+    // butunlay yo'qolardi.
+    await settle(db, deliveryId, verdict, now);
+    if (verdict === "sent") res.sent++;
+    else if (verdict === "unreachable") res.unreachable++;
     else res.failed++;
-
-    await db.notificationDelivery.update({
-      where: { id: deliveryId },
-      data: { status: ok ? "sent" : "failed", sentAt: now },
-    });
   }
 
   return res;

@@ -100,6 +100,8 @@ export async function handleGroupPhoto(
       title: `To'lov kvitansiyasi — ${company.name}`,
       message: `Mijoz ${period} davri uchun kvitansiya yubordi. Summani kassaga kiriting.`,
       link: `/kassa?company=${company.id}&period=${period}`,
+      // Pul kelib tushdi — buni ertaga ko'rish kech.
+      priority: "high",
     },
   });
 

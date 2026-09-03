@@ -30,7 +30,9 @@ async function main(): Promise<void> {
   // Compliance schedulers live in Redis (repeatable), not setInterval.
   await registerObligationSchedulers();
   await registerKpiSchedulers();
-  await registerNotifySchedulers();
+  // To'lov eslatmalari ham endi Redis rejasida (bungacha protsess ichidagi
+  // `setTimeout` edi va restart jadvalni siljitardi).
+  await registerNotifySchedulers(config.billing.enabled ? config.billing.cronHour : null);
   console.log(`[bot] ${workers.length} worker(s) + cron + schedulers up · Redis ${config.redisUrl}`);
 
   const bot = config.botMode === "polling" ? getBot() : undefined;

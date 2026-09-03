@@ -191,7 +191,7 @@ describe("runDailyDigest", () => {
     const sentTo: string[] = [];
     const send = async (d: Digest) => {
       if (d.fullName.startsWith(TAG)) sentTo.push(d.userId);
-      return true;
+      return "sent" as const;
     };
 
     const first = await runDailyDigest(prisma, { send, now: NOW });
@@ -218,10 +218,10 @@ describe("runDailyDigest", () => {
     expect(second.skippedAlready).toBeGreaterThanOrEqual(1);
   });
 
-  it("records a failed delivery without stopping the fan-out", async () => {
+  it("403 — kalit band qoladi, fan-out to'xtamaydi", async () => {
     const tomorrow = new Date(NOW.getTime() + DAY);
-    const res = await runDailyDigest(prisma, { send: async () => false, now: tomorrow });
-    expect(res.failed).toBeGreaterThanOrEqual(1);
+    const res = await runDailyDigest(prisma, { send: async () => "unreachable" as const, now: tomorrow });
+    expect(res.unreachable).toBeGreaterThanOrEqual(1);
 
     const claim = await prisma.notificationDelivery.findUnique({
       where: {
@@ -231,6 +231,35 @@ describe("runDailyDigest", () => {
         },
       },
     });
-    expect(claim!.status).toBe("failed");
+    // Ertaga ham o'sha 403 keladi — qayta urinishning ma'nosi yo'q.
+    expect(claim!.status).toBe("unreachable");
+  });
+
+  it("o'tkinchi xatoda kalit BO'SHAYDI — digest keyingi yurishda qayta ketadi", async () => {
+    const dayAfter = new Date(NOW.getTime() + 2 * DAY);
+    const failed = await runDailyDigest(prisma, { send: async () => "failed" as const, now: dayAfter });
+    expect(failed.failed).toBeGreaterThanOrEqual(1);
+
+    const key = {
+      channel_dedupKey: {
+        channel: DIGEST_CHANNEL,
+        dedupKey: digestDedupKey(ids.accountant, dayAfter),
+      },
+    };
+    expect(await prisma.notificationDelivery.findUnique({ where: key })).toBeNull();
+
+    // Qayta yurish — endi yetkazilyapti.
+    const sentTo: string[] = [];
+    const retry = await runDailyDigest(prisma, {
+      now: dayAfter,
+      send: async (d) => {
+        if (d.fullName.startsWith(TAG)) sentTo.push(d.userId);
+        return "sent" as const;
+      },
+    });
+    expect(retry.sent).toBeGreaterThanOrEqual(1);
+    expect(sentTo).toContain(ids.accountant);
+    const row = await prisma.notificationDelivery.findUnique({ where: key });
+    expect(row!.status).toBe("sent");
   });
 });

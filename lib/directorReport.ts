@@ -17,6 +17,7 @@ import { Prisma } from "@prisma/client";
 import { getAvailableBalance, getDayMovement } from "@/lib/balance";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
 import { logServerError } from "@/lib/platform/logger";
+import { claim, settle, type SendVerdict, type SettleOutcome } from "@/lib/engines/automation/deliveryLedger";
 import { formatNum } from "@/lib/platform/format";
 import {
   computeContractDebt,
@@ -402,27 +403,24 @@ export function isReportEmpty(r: DirectorReport): boolean {
   );
 }
 
-/** Telegram'ga uzatuvchi — bot qatlami in'ektsiya qiladi. */
+/**
+ * Telegram'ga uzatuvchi — bot qatlami in'ektsiya qiladi. Verdikt qaytaradi:
+ * 403 (direktor /start bosmagan) doimiy, tarmoq xatosi esa o'tkinchi va
+ * keyingi yurishda qayta uriniladi.
+ */
 export type DirectorSender = (
   recipient: DirectorRecipient,
   report: DirectorReport
-) => Promise<boolean>;
+) => Promise<SendVerdict>;
 
 export interface DirectorRunResult {
   recipients: number;
+  /** Telegram nusxasi yetkazilganlar. In-app hisobot bundan qat'i nazar yoziladi. */
   sent: number;
   skippedAlready: number;
+  /** Telegram doimiy yopiq — in-app hisobot baribir yozildi. */
+  unreachable: number;
   failed: number;
-}
-
-function isUniqueViolation(e: unknown): boolean {
-  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return true;
-  const err = e as { code?: string; message?: string } | null;
-  return (
-    !!err &&
-    (err.code === "P2002" ||
-      (typeof err.message === "string" && err.message.includes("Unique constraint failed")))
-  );
 }
 
 /**
@@ -440,6 +438,7 @@ export async function runDirectorReport(
     recipients: recipients.length,
     sent: 0,
     skippedAlready: 0,
+    unreachable: 0,
     failed: 0,
   };
   if (recipients.length === 0) return res;
@@ -456,36 +455,16 @@ export async function runDirectorReport(
 
   for (const user of recipients) {
     const dedupKey = directorReportDedupKey(user.id, now);
-
-    const claimed = await db.notificationDelivery.findUnique({
-      where: { channel_dedupKey: { channel: DIRECTOR_CHANNEL, dedupKey } },
-      select: { id: true },
+    const deliveryId = await claim(db, {
+      channel: DIRECTOR_CHANNEL,
+      level: "yellow",
+      dedupKey,
+      recipientId: user.id,
+      targetChatId: user.telegramUserId,
     });
-    if (claimed) {
+    if (deliveryId == null) {
       res.skippedAlready++;
       continue;
-    }
-
-    let deliveryId: string;
-    try {
-      const row = await db.notificationDelivery.create({
-        data: {
-          channel: DIRECTOR_CHANNEL,
-          level: "yellow",
-          dedupKey,
-          recipientId: user.id,
-          targetChatId: user.telegramUserId,
-          status: "pending",
-        },
-        select: { id: true },
-      });
-      deliveryId = row.id;
-    } catch (e) {
-      if (isUniqueViolation(e)) {
-        res.skippedAlready++;
-        continue;
-      }
-      throw e;
     }
 
     // Sayt ichidagi xabar — Telegram bog'lanmagan bo'lsa ham qoladi.
@@ -503,21 +482,26 @@ export async function runDirectorReport(
       logServerError("directorReport.notification", err, { userId: user.id });
     }
 
-    let delivered = false;
-    if (deps.send && user.telegramUserId != null) {
+    // Telegram nusxasi. Direktorning akkaunti ulanmagan bo'lsa bu "xato"
+    // emas — shunchaki bu kanal yo'q, in-app hisobot esa yuqorida yozildi.
+    // Bungacha bu holat `failed` deb yozilardi va statusdan hech qanday
+    // xulosa chiqmasdi (lokal bazada 13 592 soxta `failed`).
+    let verdict: SettleOutcome;
+    if (!deps.send || user.telegramUserId == null) {
+      verdict = "skipped";
+    } else {
+      verdict = "failed";
       try {
-        delivered = await deps.send(user, report);
+        verdict = await deps.send(user, report);
       } catch (err) {
         logServerError("directorReport.telegram", err, { userId: user.id });
       }
     }
+    await settle(db, deliveryId, verdict, now);
 
-    await db.notificationDelivery.update({
-      where: { id: deliveryId },
-      data: { status: delivered ? "sent" : "failed", sentAt: now },
-    });
-
-    res.sent++;
+    if (verdict === "sent") res.sent++;
+    else if (verdict === "unreachable") res.unreachable++;
+    else if (verdict === "failed") res.failed++;
   }
 
   return res;

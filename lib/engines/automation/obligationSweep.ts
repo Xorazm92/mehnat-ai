@@ -3,18 +3,33 @@
 // =====================================================
 // Ochiq majburiyatlarni skanerlaydi: (1) muddati o'tganini birinchi marta
 // belgilaydi (firstOverdueAt), (2) eslatma bosqichlarini (D-5/D-3/D-1/due/
-// overdue) IDEMPOTENT yaratadi. Idempotency — NotificationDelivery dedupKey
+// overdue) IDEMPOTENT QAYD ETADI. Idempotency — NotificationDelivery dedupKey
 // (@@unique([channel, dedupKey])) → sweep necha marta ishlasa ham bir bosqich
-// bir marta yuboriladi. Reviewer #9.
+// bir marta qayd etiladi. Reviewer #9.
 //
-// Faza 2 (ADR-0007): eslatma MIJOZ GURUHIGA EMAS, mas'ul xodimning SHAXSIY
-// chatiga boradi — mijoz bizning ichki kechikishlarimizni ko'rmasligi kerak.
-// `due` va `overdue` bosqichlari qo'shimcha ravishda eskalatsiya zanjirini
-// ishga tushiradi (L1 nazoratchi → L2 bosh buxgalter).
+// SWEEP ENDI XABAR YUBORMAYDI — U DAFTAR YURITADI.
+//
+// Bungacha har majburiyat uchun mas'ulga in-app eslatma + Telegram DM, muddat
+// kuni nazoratchiga, ertasiga bosh buxgalterga xabar ketardi. Natijasi lokal
+// bazada o'lchandi: 6 255 ochiq majburiyat ustidagi BITTA soatlik yurish
+// 2026-08-06 20:00 da 44 846 ta bildirishnoma yaratgan; bitta L2 qabul
+// qiluvchi 6 389 tasini olgan; `obligation_reminder` (47 008) va
+// `escalation_obligation` (18 671) qatorlarining 100% i o'qilmagan.
+//
+// Sabab arxitekturaviy: xabar soni DIQQAT TALAB QILADIGAN ISH soniga emas,
+// BAZADAGI QATOR soniga proporsional edi. 300 majburiyatli mas'ul 300 ta
+// xabar olardi. Bunday oqimni hech kim o'qimaydi — va u bilan birga haqiqiy
+// xabarlar ham o'qilmay qoladi.
+//
+// Endi bosqichlar avvalgidek qayd etiladi (zanjir, KPI va audit tarixi
+// buzilmaydi), ko'rinadigan xabarni esa kuniga bir marta
+// `lib/engines/automation/obligationRollup.ts` yig'ib beradi.
+//
+// Faza 2 (ADR-0007): eslatma MIJOZ GURUHIGA HECH QACHON bormaydi — mijoz
+// bizning ichki kechikishlarimizni ko'rmasligi kerak.
 import { Prisma } from "@prisma/client";
-import { logServerError } from "@/lib/platform/logger";
 import { OPEN_OBLIGATION_STATUSES } from "@/lib/engines/workflow/obligationWorkflow";
-import { formatUzDate } from "@/lib/platform/format";
+import { claim, claimedKeys } from "@/lib/engines/automation/deliveryLedger";
 import {
   escalate,
   escalationDedupKey,
@@ -30,6 +45,9 @@ const startOfUtcDay = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUT
 
 /** accepted/cancelled — yakunlangan, eslatma yubormaymiz. */
 const OPEN_STATUSES = OPEN_OBLIGATION_STATUSES;
+
+/** Bosqich daftarining kanali. Nomi tarixiy — qatorlar allaqachon shu kanalda. */
+const REMINDER_CHANNEL = "inapp";
 
 interface Milestone {
   key: string;
@@ -47,15 +65,9 @@ function milestonesFor(daysUntil: number): Milestone[] {
   return out;
 }
 
-function reminderTitle(key: string): string {
-  if (key === "overdue:L1") return "Majburiyat muddati o'tdi";
-  if (key === "due") return "Majburiyat muddati bugun";
-  return `Majburiyat muddati yaqin (${key})`;
-}
-
 /**
- * Qaysi bosqich zanjirni ko'taradi. D-5/D-3/D-1 — faqat mas'ulga eslatma;
- * muddat kuni nazoratchi, ertasiga bosh buxgalter xabardor qilinadi.
+ * Qaysi bosqich zanjirni ko'taradi. D-5/D-3/D-1 — faqat qayd; muddat kuni
+ * nazoratchi, ertasiga bosh buxgalter zanjirga kiritiladi.
  */
 function escalationLevelFor(key: string): EscalationLevel | null {
   if (key === "due") return 1;
@@ -66,36 +78,23 @@ function escalationLevelFor(key: string): EscalationLevel | null {
 export interface SweepResult {
   scanned: number;
   markedOverdue: number;
+  /** Shu yurishda birinchi marta qayd etilgan bosqichlar. */
   remindersCreated: number;
+  /** Allaqachon qayd etilgani uchun o'tkazib yuborilgan bosqichlar. */
   remindersDeduped: number;
-  telegramSent: number;
-  telegramDeduped: number;
   /** Zanjir bo'ylab ko'tarilgan bosqichlar soni (L1 + L2). */
   escalated: number;
-  /** Telegramda topilmagan mas'ullar (xodim botga /start bosmagan). */
-  noTelegram: number;
-}
-
-/** Telegram yuboruvchi — bot qatlamidan injeksiya qilinadi (sweep framework-free). */
-export type TelegramSender = (chatId: bigint, text: string) => Promise<void>;
-
-function isUniqueViolation(e: unknown): boolean {
-  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return true;
-  if (typeof e === "object" && e !== null) {
-    const err = e as { code?: string; message?: string };
-    if (err.code === "P2002") return true;
-    if (typeof err.message === "string" && err.message.includes("Unique constraint failed")) return true;
-  }
-  return false;
 }
 
 export async function sweepDeadlines(
   db: Db,
   opts: {
     now?: Date;
-    /** Mas'ul xodimning shaxsiy chatiga eslatma yuboradi. */
-    notifyTelegram?: TelegramSender;
-    /** `due`/`overdue` bosqichlarida zanjirni ko'taradi (bot qatlami render qiladi). */
+    /**
+     * Zanjir uchun Telegram yuboruvchi. MAJBURIYAT eskalatsiyalari uni
+     * ishlatmaydi (`deliverNow: false`) — parametr shakl birligi uchun
+     * saqlanadi va savol eskalatsiyasi bilan bir xil imzoni beradi.
+     */
     sendEscalation?: EscalationSender;
   } = {},
 ): Promise<SweepResult> {
@@ -116,181 +115,69 @@ export async function sweepDeadlines(
     },
   });
 
-  // Telegram push yoqilgan bo'lsa — mas'ul xodim → SHAXSIY chat mappingi.
-  // (Shaxsiy chatda chat_id = Telegram foydalanuvchi id'si.) Mijoz guruhi
-  // ataylab ishlatilmaydi — ADR-0007.
-  const dmMap = new Map<string, bigint>();
-  if (opts.notifyTelegram && open.length) {
-    const userIds = [...new Set(open.map((o) => o.responsibleUserId).filter((id): id is string => !!id))];
-    if (userIds.length) {
-      const users = await db.user.findMany({
-        where: { id: { in: userIds }, isActive: true, telegramUserId: { not: null } },
-        select: { id: true, telegramUserId: true },
-      });
-      for (const u of users) {
-        if (u.telegramUserId != null) dmMap.set(u.id, u.telegramUserId);
-      }
-    }
-  }
-
-  // Allaqachon eskalatsiya qilingan bosqichlarni BITTA so'rovda oldindan
-  // yuklaymiz. Aks holda muddati o'tgan har bir majburiyat uchun `escalate`
-  // chaqirilib, faqat "band" ekanini bilish uchun so'rov qilinardi — soatlik
-  // sweep minglab qator ustidan yurishini hisobga olsak, bu sezilarli.
-  const dueOrPast = open.filter(
-    (o) => Math.floor((startOfUtcDay(o.dueAt).getTime() - today.getTime()) / DAY) <= 0,
-  );
-  const alreadyEscalated = new Set<string>();
-  if (dueOrPast.length) {
-    const keys = dueOrPast.flatMap((o) => [
-      escalationDedupKey("obligation", o.id, 1),
-      escalationDedupKey("obligation", o.id, 2),
-    ]);
-    const rows = await db.notificationDelivery.findMany({
-      where: { channel: ESCALATION_CHANNEL, dedupKey: { in: keys } },
-      select: { dedupKey: true },
-    });
-    for (const r of rows) if (r.dedupKey) alreadyEscalated.add(r.dedupKey);
-  }
-
   const res: SweepResult = {
     scanned: open.length,
     markedOverdue: 0,
     remindersCreated: 0,
     remindersDeduped: 0,
-    telegramSent: 0,
-    telegramDeduped: 0,
     escalated: 0,
-    noTelegram: 0,
   };
+  if (open.length === 0) return res;
+
+  const daysUntilOf = (dueAt: Date): number =>
+    Math.floor((startOfUtcDay(dueAt).getTime() - today.getTime()) / DAY);
+
+  // ── Allaqachon band bo'lgan kalitlarni IKKI so'rovda oldindan yuklaymiz ──
+  //
+  // Bungacha har majburiyat × har bosqich uchun ikkita `findUnique` ketardi:
+  // 6 255 majburiyat × 5 bosqich × 2 = 60 000 dan ortiq so'rov, soatiga bir
+  // marta. Endi ikkita `IN` so'rovi — bosqich daftari va zanjir daftari.
+  const milestoneKeys: string[] = [];
+  const escalationKeys: string[] = [];
+  for (const o of open) {
+    const daysUntil = daysUntilOf(o.dueAt);
+    for (const m of milestonesFor(daysUntil)) {
+      milestoneKeys.push(`obligation:${o.id}:reminder:${m.key}`);
+      const level = escalationLevelFor(m.key);
+      if (level != null) escalationKeys.push(escalationDedupKey("obligation", o.id, level));
+    }
+  }
+  const claimedMilestones = await claimedKeys(db, REMINDER_CHANNEL, milestoneKeys);
+  const alreadyEscalated = await claimedKeys(db, ESCALATION_CHANNEL, escalationKeys);
 
   for (const o of open) {
-    const daysUntil = Math.floor((startOfUtcDay(o.dueAt).getTime() - today.getTime()) / DAY);
+    const daysUntil = daysUntilOf(o.dueAt);
 
     if (daysUntil < 0 && o.firstOverdueAt == null) {
       await db.obligation.update({ where: { id: o.id }, data: { firstOverdueAt: now } });
       res.markedOverdue++;
     }
 
-    // BIR MAJBURIYAT — BIR XABAR.
-    //
     // `milestonesFor` yetib kelgan BARCHA bosqichlarni qaytaradi (D-5, D-3,
     // D-1, due, overdue) — bu ataylab: sweep bir kun ishlamay qolsa, keyingi
-    // yurishda o'tkazib yuborilgan bosqichlar ham dedup daftariga yoziladi va
-    // eskalatsiya zanjiri uzilmaydi.
-    //
-    // Ammo FOYDALANUVCHI uchun bu bitta ish bo'yicha bir vaqtda 3-5 ta bir
-    // xil xabar degani edi. Jonli tekshiruvda buxgalterda 30 ta majburiyat
-    // uchun 49 ta o'qilmagan xabar bor edi — 05:01 da ikkita, 05:00 da
-    // ikkita, 06:00 da uchta. Xabarlar soni ishning o'zidan ko'p.
-    //
-    // Yechim: daftar va zanjir har bir bosqich uchun avvalgidek yuritiladi,
-    // KO'RINADIGAN xabar esa faqat eng og'ir bosqich uchun yaratiladi.
-    // `milestonesFor` tartibi yumshoqdan qattiqqa, shuning uchun oxirgisi —
-    // eng og'iri.
-    const reached = milestonesFor(daysUntil);
-    const loudest = reached.length > 0 ? reached[reached.length - 1] : null;
-
-    for (const m of reached) {
-      const isLoudest = loudest != null && m.key === loudest.key;
+    // yurishda o'tkazib yuborilgan bosqichlar ham daftarga tushadi va
+    // eskalatsiya zanjiri uzilmaydi. Xabar chiqmagani uchun bu endi
+    // foydalanuvchiga ko'rinmaydi — daftar ichki hisob.
+    for (const m of milestonesFor(daysUntil)) {
       const dedupKey = `obligation:${o.id}:reminder:${m.key}`;
-      const existingInApp = await db.notificationDelivery.findUnique({
-        where: { channel_dedupKey: { channel: "inapp", dedupKey } },
-        select: { id: true },
-      });
-      if (existingInApp) {
+      if (claimedMilestones.has(dedupKey)) {
         res.remindersDeduped++;
       } else {
-        try {
-          // Dedup ledger — bu qator bosqichni bir martaga qulflaydi.
-          await db.notificationDelivery.create({
-            data: {
-              channel: "inapp",
-              level: m.level,
-              dedupKey,
-              recipientId: o.responsibleUserId,
-              status: "sent",
-              sentAt: now,
-            },
-          });
-          res.remindersCreated++;
-          // In-app xabar — best-effort (delivery ledger'i vakolatli).
-          // `isLoudest`: shu yurishda faqat eng og'ir bosqich ko'rinadi.
-          if (o.responsibleUserId && isLoudest) {
-            try {
-              await db.notification.create({
-                data: {
-                  userId: o.responsibleUserId,
-                  type: "obligation_reminder",
-                  title: reminderTitle(m.key),
-                  // NIMA UCHUN NOMLAR: ilgari bu yerda faqat davr va ISO sana
-                  // bo'lardi — "Majburiyat 2026-M07 — muddat 2026-08-25".
-                  // Buxgalterda bir kunda o'nlab shunday xabar to'planardi va
-                  // ularning BIRORTASI qaysi firma, qaysi ish haqidaligini
-                  // aytmasdi: bilish uchun har birini ochish kerak edi.
-                  // Telegram matni (quyida) allaqachon to'g'ri yozilgan —
-                  // ish nomi va firma bilan. Ilova ichidagi xabar undan
-                  // ortda qolgan edi; ikkalasi ham bir xil ma'lumotdan
-                  // quriladi, chunki `template` va `company` yuqoridagi
-                  // so'rovda allaqachon tanlangan.
-                  message: `${o.template?.name ?? "Majburiyat"} — ${o.company.name} · ${o.periodKey} · muddat ${formatUzDate(o.dueAt)}`,
-                  link: `/deadlines?obligation=${o.id}`,
-                },
-              });
-            } catch (err) {
-              logServerError("obligationSweep.notification", err, { obligationId: o.id });
-            }
-          }
-        } catch (e) {
-          if (isUniqueViolation(e)) res.remindersDeduped++;
-          else throw e;
-        }
-      }
-
-      // 2) Telegram kanal — alohida dedup (channel="telegram"), mas'ulning
-      //    SHAXSIY chatiga. Guruhga yozilmaydi (ADR-0007).
-      const dmChatId = o.responsibleUserId ? dmMap.get(o.responsibleUserId) : undefined;
-      if (opts.notifyTelegram && dmChatId != null) {
-        const existingTg = await db.notificationDelivery.findUnique({
-          where: { channel_dedupKey: { channel: "telegram", dedupKey } },
-          select: { id: true },
+        // Faqat daftar tokeni — bu qator ortida hech qanday jo'natish yo'q,
+        // shuning uchun `claimed` (soxta `sent` emas).
+        const id = await claim(db, {
+          channel: REMINDER_CHANNEL,
+          dedupKey,
+          level: m.level,
+          recipientId: o.responsibleUserId,
+          mode: "token",
         });
-        if (existingTg) {
-          res.telegramDeduped++;
-        } else {
-          try {
-            await db.notificationDelivery.create({
-              data: {
-                channel: "telegram",
-                level: m.level,
-                dedupKey,
-                recipientId: o.responsibleUserId,
-                targetChatId: dmChatId,
-                status: "sent",
-                sentAt: now,
-              },
-            });
-            const what = o.template?.name ? `${o.template.name} — ` : "";
-            const text =
-              `⏰ ${reminderTitle(m.key)}\n${what}${o.company.name} (${o.periodKey})\n` +
-              `Muddat: ${o.dueAt.toISOString().slice(0, 10)}`;
-            try {
-              await opts.notifyTelegram(dmChatId, text);
-              res.telegramSent++;
-            } catch (err) {
-              logServerError("obligationSweep.telegram", err, { chatId: String(dmChatId) });
-            }
-          } catch (e) {
-            if (isUniqueViolation(e)) res.telegramDeduped++;
-            else throw e;
-          }
-        }
-      } else if (opts.notifyTelegram && o.responsibleUserId) {
-        // Mas'ul bor, lekin bot unga yoza olmaydi — in-app eslatma qoldi.
-        res.noTelegram++;
+        if (id == null) res.remindersDeduped++;
+        else res.remindersCreated++;
       }
 
-      // 3) Zanjir: muddat kuni nazoratchi, ertasiga bosh buxgalter.
+      // Zanjir: muddat kuni nazoratchi, ertasiga bosh buxgalter. `deliverNow:
+      // false` — bosqich QAYD etiladi, xabarni kunlik yig'ma chiqaradi.
       const level = escalationLevelFor(m.key);
       if (level != null && !alreadyEscalated.has(escalationDedupKey("obligation", o.id, level))) {
         const what = o.template?.name ?? "Majburiyat";
@@ -306,10 +193,10 @@ export async function sweepDeadlines(
             detail:
               `${what} (${o.periodKey}) — muddat ${o.dueAt.toISOString().slice(0, 10)}` +
               (m.key === "due" ? ", bugun oxirgi kun." : ", muddat o'tdi."),
-            link: `/deadlines?obligation=${o.id}`,
+            link: `/deadlines?tab=overdue`,
           },
           level,
-          { sendEscalation: opts.sendEscalation, now },
+          { sendEscalation: opts.sendEscalation, now, deliverNow: false },
         );
         if (escalated.claimed) res.escalated++;
       }

@@ -139,6 +139,8 @@ export async function handleQuestionVerdict(
           title: `KPI jarimasi tasdiqlashni kutmoqda — ${company.name}`,
           message: `Javobsiz savol uchun −${ESCALATION_PENALTY_PERCENT}% taklif qilindi. Oylikka ta'sir qilishi uchun tasdiqlang.`,
           link: `/kpi?employee=${employeeId}`,
+          // Tasdiqlanmasa oylikka yetib bormaydi — kutib turmaydi.
+          priority: "high",
         },
       });
     }

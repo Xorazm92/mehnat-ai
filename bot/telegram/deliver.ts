@@ -1,4 +1,4 @@
-import { trySendMessage } from "./bot";
+import { sendOnce } from "./send";
 import { enqueueNotifyJob } from "../queues/notify.queue";
 import type { OutboundMessage } from "../contexts/interaction/domain/outbound";
 
@@ -21,8 +21,10 @@ export async function deliver(messages: OutboundMessage[]): Promise<DeliveryRepo
   const report: DeliveryReport = { sent: 0, unreachable: [], failed: 0 };
 
   for (const m of messages) {
-    const res = await trySendMessage(m.chatId, m.text, { replyMarkup: m.replyMarkup });
-    if (res.ok) {
+    // `sendOnce` 429 da Telegram aytgan vaqtni kutib bir marta qayta uradi va
+    // 403 ni o'tkinchi xatodan ajratadi — bungacha ikkalasi ham "failed" edi.
+    const res = await sendOnce(m.chatId, m.text, { replyMarkup: m.replyMarkup });
+    if (res.verdict === "sent") {
       report.sent++;
       // O'tkinchi xabar — o'chirishni navbatga qo'yamiz (Redis'da turadi, ya'ni
       // bot qayta ishga tushsa ham bajariladi). Navbat ishlamasa xabar chatda
@@ -41,7 +43,9 @@ export async function deliver(messages: OutboundMessage[]): Promise<DeliveryRepo
       }
       continue;
     }
-    if (res.reason === "no_private_chat") {
+    if (res.verdict === "unreachable") {
+      // DOIMIY rad. Hech qachon tashlamaymiz: bitta /start bosmagan xodim
+      // uchun butun fan-out (va uni chaqirgan BullMQ job'i) qayta yurmasin.
       report.unreachable.push(m.chatId);
       console.warn(`[telegram] unreachable chat ${m.chatId} — user has not started the bot`);
       continue;

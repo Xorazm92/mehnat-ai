@@ -21,6 +21,8 @@
 
 import { Prisma } from "@prisma/client";
 import { logServerError } from "@/lib/platform/logger";
+import { claim, settle } from "@/lib/engines/automation/deliveryLedger";
+import { withinTelegramBudget, type NotifyPriority } from "@/lib/engines/automation/notificationBudget";
 
 type Db = Prisma.TransactionClient;
 
@@ -46,6 +48,23 @@ export interface NotifyInput {
    * — buni ataylab tanlash kerak.
    */
   dedupKey?: string;
+  /**
+   * ILOVA ICHIDAGI takrorlanmaslik kaliti — `Notification.dedupeKey`
+   * (@@unique([userId, dedupeKey])).
+   *
+   * `dedupKey` dan farqi: u YETKAZISH daftarini qulflaydi, bu esa KO'RINADIGAN
+   * qatorni. Ikkalasi kerak, chunki yetkazish qatori o'tkinchi xatoda
+   * bo'shatiladi (`settle`) — o'shanda in-app qator ikkinchi marta yozilmasligi
+   * kerak. Bundan tashqari DB darajasidagi cheklov poygani yopadi:
+   * `findFirst` + `create` naqshi (notify-red.ts) ikkita parallel so'rovda
+   * ikkita xabar yaratardi.
+   */
+  dedupeKey?: string;
+  /**
+   * Shoshilinchlik. `low`/`normal` kunlik Telegram byudjetiga tushadi,
+   * `high`/`critical` esa hech qachon cheklanmaydi. Default: "normal".
+   */
+  priority?: NotifyPriority;
   /** Telegram matni; berilmasa `title` + `message` dan yig'iladi. */
   telegramText?: string;
 }
@@ -57,6 +76,11 @@ export interface NotifyResult {
   telegramQueued: boolean;
   /** dedupKey allaqachon band bo'lgani uchun o'tkazib yuborildimi. */
   skipped: boolean;
+  /**
+   * Kunlik Telegram byudjeti tugagani uchun Telegram nusxasi yuborilmadimi.
+   * Ilova ichidagi xabar bunday holatda ham yozilgan bo'ladi.
+   */
+  budgetSkipped: boolean;
 }
 
 const isUniqueViolation = (e: unknown): boolean =>
@@ -83,47 +107,39 @@ export function buildTelegramText(title: string, message: string): string {
 export async function notifyUsers(
   db: Db,
   input: NotifyInput,
-  deps: { dispatchTelegram?: TelegramDispatcher } = {}
+  deps: { dispatchTelegram?: TelegramDispatcher; now?: Date } = {}
 ): Promise<NotifyResult> {
-  const empty: NotifyResult = { inapp: 0, telegramQueued: false, skipped: false };
+  const empty: NotifyResult = {
+    inapp: 0,
+    telegramQueued: false,
+    skipped: false,
+    budgetSkipped: false,
+  };
 
   const userIds = Array.from(new Set(input.userIds.filter(Boolean)));
   if (userIds.length === 0) return empty;
 
+  const now = deps.now ?? new Date();
+  const priority: NotifyPriority = input.priority ?? "normal";
+
   // ── 1. dedupKey ni band qilamiz (yuborishdan OLDIN) ────────────────────
   let deliveryId: string | null = null;
   if (input.dedupKey) {
-    // Avval arzon o'qish: unikal indeksga urilib xato olish Prisma'ning
-    // konsolga qizil log yozishiga sabab bo'ladi, holbuki takror chaqiruv —
-    // kutilgan holat, hodisa emas. (lib/escalation.ts dagi bilan bir xil yo'l.)
-    const claimed = await db.notificationDelivery.findUnique({
-      where: { channel_dedupKey: { channel: input.channel, dedupKey: input.dedupKey } },
-      select: { id: true },
+    deliveryId = await claim(db, {
+      channel: input.channel,
+      dedupKey: input.dedupKey,
+      level: "yellow", // bu kanalda daraja tushunchasi yo'q; ustun NOT NULL
+      recipientId: userIds[0],
     });
-    if (claimed) return { ...empty, skipped: true };
-
-    try {
-      const row = await db.notificationDelivery.create({
-        data: {
-          channel: input.channel,
-          level: "yellow", // bu kanalda daraja tushunchasi yo'q; ustun NOT NULL
-          dedupKey: input.dedupKey,
-          recipientId: userIds[0],
-          status: "pending",
-        },
-        select: { id: true },
-      });
-      deliveryId = row.id;
-    } catch (e) {
-      if (isUniqueViolation(e)) return { ...empty, skipped: true };
-      throw e;
-    }
+    if (deliveryId == null) return { ...empty, skipped: true };
   }
 
   // ── 2. Sayt ichidagi xabar — ishonchli kanal, har doim yoziladi ────────
   const link = safeLink(input.link);
   let inapp = 0;
   try {
+    // `skipDuplicates`: `dedupeKey` unikal indeksi bilan parallel ikkinchi
+    // chaqiruv xato bermasdan jimgina o'tishi kerak — bu KUTILGAN holat.
     const created = await db.notification.createMany({
       data: userIds.map((userId) => ({
         userId,
@@ -131,7 +147,10 @@ export async function notifyUsers(
         title: input.title,
         message: input.message,
         link,
+        priority,
+        dedupeKey: input.dedupeKey ?? null,
       })),
+      skipDuplicates: true,
     });
     inapp = created.count;
   } catch (err) {
@@ -139,27 +158,45 @@ export async function notifyUsers(
   }
 
   // ── 3. Telegram — navbat orqali, xatosi butun amalni yiqitmaydi ────────
+  //
+  // BYUDJET. `low`/`normal` uchun bir odamga kunlik chegara bor. Chegaradan
+  // oshgan xabar YO'QOLMAYDI — u yuqorida ilova ichida allaqachon yozilgan,
+  // faqat Telegram nusxasi bo'lmaydi.
   let telegramQueued = false;
+  let budgetSkipped = false;
   if (deps.dispatchTelegram) {
-    try {
-      await deps.dispatchTelegram({
-        userIds,
-        text: input.telegramText ?? buildTelegramText(input.title, input.message),
-      });
-      telegramQueued = true;
-    } catch (err) {
-      logServerError("notify.telegram", err, { channel: input.channel, dedupKey: input.dedupKey });
+    const allowedSet = await withinTelegramBudget(db, userIds, priority, now);
+    const allowed = userIds.filter((id) => allowedSet.has(id));
+    budgetSkipped = allowed.length < userIds.length;
+
+    if (allowed.length > 0) {
+      try {
+        await deps.dispatchTelegram({
+          userIds: allowed,
+          text: input.telegramText ?? buildTelegramText(input.title, input.message),
+        });
+        telegramQueued = true;
+      } catch (err) {
+        logServerError("notify.telegram", err, { channel: input.channel, dedupKey: input.dedupKey });
+      }
     }
   }
 
   if (deliveryId) {
-    await db.notificationDelivery
-      .update({
-        where: { id: deliveryId },
-        data: { status: telegramQueued ? "sent" : "failed", sentAt: new Date() },
-      })
-      .catch((err) => logServerError("notify.delivery", err, { dedupKey: input.dedupKey }));
+    // "queued", "sent" EMAS. Bu yerda faqat BullMQ navbatiga qo'yildi;
+    // Telegram uni qabul qildimi — bu qatordan bilinmaydi. Bungacha shu
+    // holat `sent` deb yozilardi va status yolg'on gapirardi.
+    //
+    // "failed" ATAYIN ISHLATILMAYDI. `settle(..., "failed")` kalitni bo'shatadi,
+    // ya'ni chaqiruv qaytarilsa xabar qayta yuboriladi. Bu modulda esa ilova
+    // ichidagi qator ALLAQACHON yozilgan va u — vakolatli kanal; kalit
+    // bo'shasa o'sha qator ikkinchi marta yozilardi. Telegram bu yerda
+    // ataylab best-effort (fayl boshidagi izoh).
+    const outcome = telegramQueued ? "queued" : "skipped";
+    await settle(db, deliveryId, outcome, now).catch((err) =>
+      logServerError("notify.delivery", err, { dedupKey: input.dedupKey })
+    );
   }
 
-  return { inapp, telegramQueued, skipped: false };
+  return { inapp, telegramQueued, skipped: false, budgetSkipped };
 }

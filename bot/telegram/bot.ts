@@ -95,20 +95,47 @@ export type SendFailure =
    * bot, or was kicked. A bot CANNOT initiate a private conversation, so this
    * is the expected failure for staff who never onboarded — callers should fall
    * back to an in-app Notification rather than retry.
+   *
+   * PERMANENT. Retrying produces the same 403 on every sweep, forever.
    */
   | "no_private_chat"
-  /** Anything else (rate limit, network, malformed markup). */
+  /**
+   * 429 — we are sending too fast. Telegram tells us for how long in
+   * `retry_after`; TRANSIENT, and the one failure class where waiting the
+   * stated time and trying once more is exactly the right move.
+   *
+   * Bungacha bu `error` bilan bir xil ishlanardi: 403 (doimiy) va 429
+   * (o'tkinchi) bir xil muomala ko'rardi, ya'ni tezlik chegarasiga urilgan
+   * xabar shunchaki yo'qolardi yoki butun fan-out qayta yurardi.
+   */
+  | "rate_limited"
+  /** Anything else (network, malformed markup) — transient by default. */
   | "error";
 
 export type SendResult =
   | { ok: true; messageId: number | null }
-  | { ok: false; reason: SendFailure; message: string };
+  | {
+      ok: false;
+      reason: SendFailure;
+      message: string;
+      /** Faqat `rate_limited` da: Telegram aytgan kutish vaqti (soniya). */
+      retryAfterSec?: number;
+    };
 
 /** True when Telegram is telling us this chat can never be written to as-is. */
 function isUnreachableChat(err: unknown): boolean {
   if (!(err instanceof GrammyError)) return false;
   if (err.error_code === 403) return true; // blocked / kicked / not started
   return err.error_code === 400 && /chat not found|user is deactivated/i.test(err.description);
+}
+
+/** 429 ⇒ necha soniya kutish kerak. `undefined` — 429 emas. */
+function retryAfterOf(err: unknown): number | undefined {
+  if (!(err instanceof GrammyError) || err.error_code !== 429) return undefined;
+  const after = (err.parameters as { retry_after?: number } | undefined)?.retry_after;
+  // Telegram deyarli har doim `retry_after` beradi; bermasa ham 429 ekani
+  // ma'lum, shuning uchun ehtiyotkor default bilan qaytaramiz.
+  return typeof after === "number" && after > 0 ? after : 1;
 }
 
 /** Non-throwing `sendMessage` for fan-out paths that need a fallback. */
@@ -125,6 +152,10 @@ export async function trySendMessage(
     return { ok: true, messageId };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const retryAfterSec = retryAfterOf(err);
+    if (retryAfterSec != null) {
+      return { ok: false, reason: "rate_limited", message, retryAfterSec };
+    }
     return {
       ok: false,
       reason: isUnreachableChat(err) ? "no_private_chat" : "error",

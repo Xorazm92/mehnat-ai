@@ -179,7 +179,11 @@ describe("renderDirectorReport", () => {
 describe("runDirectorReport", () => {
   it("sayt ichidagi xabarni yozadi (Telegram bog'lanmagan bo'lsa ham)", async () => {
     const res = await runDirectorReport(prisma, { now: NOW });
-    expect(res.sent).toBeGreaterThan(0);
+    // `sent` endi TELEGRAM yetkazilganini bildiradi. Telegram bu yerda yo'q,
+    // shuning uchun 0 — bu xato emas, kanal yo'q. Bungacha bu holat `failed`
+    // deb yozilardi va statusdan hech qanday xulosa chiqmasdi.
+    expect(res.sent).toBe(0);
+    expect(res.failed).toBe(0);
 
     const rows = await prisma.notification.findMany({
       where: { userId: ids.director, type: "director_report" },
@@ -202,8 +206,10 @@ describe("runDirectorReport", () => {
 
   it("ertasi kuni yana yuboradi", async () => {
     const tomorrow = new Date(2099, 6, 16, 9, 0, 0);
-    const res = await runDirectorReport(prisma, { now: tomorrow });
-    expect(res.sent).toBeGreaterThan(0);
+    // Umumiy sanoqqa emas, SHU direktorga tayanamiz: `collectDirectorRecipients`
+    // test bazasidagi barcha adminlarni topadi va boshqa testlardan qolgan
+    // qatorlar aggregat raqamni beqaror qiladi.
+    await runDirectorReport(prisma, { now: tomorrow });
 
     const rows = await prisma.notification.count({
       where: { userId: ids.director, type: "director_report" },
@@ -232,7 +238,7 @@ describe("runDirectorReport", () => {
       now: day,
       send: async (recipient) => {
         seen.push(recipient.id);
-        return true;
+        return "sent" as const;
       },
     });
     expect(res.sent).toBeGreaterThan(0);

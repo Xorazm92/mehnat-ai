@@ -30,6 +30,7 @@ const ids = { sup: "", other: "", quiet: "", mine: "", theirs: "", template: "" 
 const sent: { chatId: string; text: string }[] = [];
 const send = async (chatId: bigint, text: string) => {
   sent.push({ chatId: String(chatId), text });
+  return "sent" as const;
 };
 
 /** Telegram id UNIQUE — to'qnashmaydigan diapazon. */

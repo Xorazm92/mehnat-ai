@@ -1,18 +1,18 @@
-import { trySendMessage } from "../../../telegram/bot";
+import { sendOnce } from "../../../telegram/send";
 import type { AlertSender } from "../../../../lib/domains/accounting/twinAlertRun";
 
 /**
  * `runTwinAlerts` ni Telegramga ulovchi adapter.
  *
- * Yuborilmasa TASHLAYDI, `false` qaytarmaydi — digest'dan farqi shu. Sabab:
- * digest kunlik reja va u yetib bormasa ish to'xtamaydi, ogohlantirish esa
- * band qilingan `dedupKey` bilan ketadi va sukut bilan yo'qolsa, o'sha daraja
- * uchun BOSHQA xabar bo'lmaydi. Xato ko'tarilsa yuborish `failed` deb
- * belgilanadi va u ko'rinadi.
+ * Bungacha bu adapter har qanday xatoda TASHLARDI. Maqsad to'g'ri edi —
+ * band qilingan `dedupKey` bilan ketgan ogohlantirish jimgina yo'qolmasin —
+ * lekin natijasi noto'g'ri: bitta bloklangan foydalanuvchi butun BullMQ
+ * job'ini yiqitar va u uch marta qayta yurar edi.
+ *
+ * Endi verdikt qaytariladi va qarorni `runTwinAlerts` qabul qiladi: o'tkinchi
+ * xatoda kalit bo'shaydi (ogohlantirish keyingi yurishda qayta ketadi),
+ * doimiy radda esa band qoladi.
  */
 export function makeAlertSender(): AlertSender {
-  return async (chatId, text) => {
-    const res = await trySendMessage(chatId, text);
-    if (!res.ok) throw new Error(`Telegram yuborilmadi: ${chatId}`);
-  };
+  return async (chatId, text) => (await sendOnce(chatId, text)).verdict;
 }

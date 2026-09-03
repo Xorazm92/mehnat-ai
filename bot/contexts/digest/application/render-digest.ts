@@ -37,6 +37,14 @@ export function renderDigest(secret: string, digest: Digest, now = new Date()): 
   if (digest.more > 0) lines.push(`… va yana ${digest.more} ta majburiyat`);
 
   const extras: string[] = [];
+  // Kecha kechikkanlari — umumiy `overdue` haftalab o'zgarmasligi mumkin,
+  // yangi kechikish esa aynan bugungi ish.
+  if (counts.newlyOverdue > 0) extras.push(`🆕 ${counts.newlyOverdue} ta majburiyat kecha kechikdi`);
+  // Zanjir bo'ylab menga ko'tarilganlar. Bungacha bularning HAR BIRI alohida
+  // xabar edi (bir bosh buxgalter bir soatda 6 389 ta olgan) — endi bitta qator.
+  if (counts.escalatedToMe > 0) {
+    extras.push(`⬆️ ${counts.escalatedToMe} ta majburiyat sizga ko'tarildi`);
+  }
   if (counts.openQuestions > 0) extras.push(`💬 ${counts.openQuestions} ta javobsiz mijoz savoli`);
   if (counts.pendingKpi > 0) extras.push(`📊 ${counts.pendingKpi} ta KPI qatori tasdiqingizni kutmoqda`);
   if (counts.unpaidCompanies > 0) extras.push(`💳 ${counts.unpaidCompanies} ta mijozdan to'lov tushmagan`);

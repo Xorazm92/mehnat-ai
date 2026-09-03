@@ -5,6 +5,8 @@ import { sweepQuestionEscalations } from "../../lib/engines/automation/escalatio
 import { runDailyDigest } from "../../lib/engines/automation/dailyDigest";
 import { runDirectorReport } from "../../lib/directorReport";
 import { runTwinAlerts } from "../../lib/domains/accounting/twinAlertRun";
+import { runObligationRollup } from "../../lib/engines/automation/obligationRollup";
+import { runDailyChores, runBillingCron } from "../cron/chores";
 import { createRedisConnection } from "./connection";
 import { QUEUE, callbackSecret, hasTelegramToken } from "../config";
 import { makeEscalationSender } from "../contexts/escalation/interface/escalation-sender";
@@ -83,6 +85,24 @@ export function startNotifyWorker(): Worker<NotifyJob> {
         const res = await runTwinAlerts(prisma, { send, now });
         console.log(`[notify.worker] twin alerts:`, res);
         return res;
+      }
+
+      if (job.data.kind === "obligation-rollup") {
+        // Sweep bosqichlarni qayd etadi, bu esa ularni BITTA in-app xabarga
+        // yig'adi. Telegram nusxasi yo'q — u 08:50 digestida.
+        const res = await runObligationRollup(prisma, { now: new Date() });
+        console.log(`[notify.worker] obligation rollup:`, res);
+        return res;
+      }
+
+      if (job.data.kind === "daily-chores") {
+        await runDailyChores();
+        return { ok: true };
+      }
+
+      if (job.data.kind === "billing-reminders") {
+        await runBillingCron();
+        return { ok: true };
       }
 
       if (job.data.kind === "delete-message") {

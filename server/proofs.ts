@@ -294,6 +294,10 @@ export async function saveReportProof(input: {
       link: deepLink,
       channel: "proof-approval",
       dedupKey: `${proof.id}:${proof.submittedAt.toISOString()}`,
+      // Ilova ichida ham bir topshirish = bir xabar (poygaga chidamli).
+      dedupeKey: `proof:${proof.id}:${proof.submittedAt.toISOString()}`,
+      // Tasdiq kutayotgan ish boshqa odamning ishini to'sib turadi.
+      priority: "high",
     });
   }
 
@@ -471,7 +475,15 @@ export async function reviewReportProof(input: {
 
     const deepLink = `/reports?company=${input.companyId}&col=${input.colKey}&period=${encodeURIComponent(period)}`;
     await prisma.notification.create({
-      data: { userId: proof.submittedById, type: "status_change", title, message, link: deepLink },
+      data: {
+        userId: proof.submittedById,
+        type: "status_change",
+        title,
+        message,
+        link: deepLink,
+        // Rad etilgan hisobot xodimning ishini to'sib turadi.
+        priority: "high",
+      },
     });
   }
 

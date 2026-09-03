@@ -13,6 +13,7 @@ export default async function NotificationsPage() {
     message: n.message,
     link: n.link || undefined,
     isRead: n.isRead,
+    priority: n.priority,
     createdAt: n.createdAt.toISOString(),
   }));
 

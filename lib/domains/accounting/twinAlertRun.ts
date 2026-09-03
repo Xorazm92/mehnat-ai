@@ -19,6 +19,7 @@ import { computeCompanyTwins, computeStaffCapacity } from "@/lib/domains/account
 import { selectAlerts, type AlertSubject, type TwinAlert } from "@/lib/engines/automation/twinAlerts";
 import { isSeniorRole } from "@/lib/platform/permissions";
 import { logServerError } from "@/lib/platform/logger";
+import { claim, settle, type SendVerdict } from "@/lib/engines/automation/deliveryLedger";
 import type { Actor } from "@/lib/platform/access";
 
 type Db = Prisma.TransactionClient;
@@ -28,7 +29,12 @@ export const ALERT_CHANNEL = "twin-alert";
 /** Bitta ishga tushishda bitta odamga yuboriladigan eng ko'p xabar. */
 const MAX_PER_RECIPIENT = 5;
 
-export type AlertSender = (chatId: bigint, text: string) => Promise<void>;
+/**
+ * Yuboruvchi verdikt qaytaradi, xato TASHLAMAYDI. Bungacha adapter har xatoda
+ * tashlardi va bitta bloklangan foydalanuvchi butun BullMQ job'ini yiqitib,
+ * uni uch marta qayta yurgizardi.
+ */
+export type AlertSender = (chatId: bigint, text: string) => Promise<SendVerdict>;
 
 export interface AlertRunResult {
   recipients: number;
@@ -38,13 +44,9 @@ export interface AlertRunResult {
   skippedDuplicate: number;
   /** Cheklovdan oshgani uchun bu safar yuborilmadi. */
   skippedCapped: number;
+  /** Doimiy rad (bloklangan / /start bosilmagan) — qayta urinilmaydi. */
+  unreachable: number;
   failed: number;
-}
-
-function isUniqueViolation(e: unknown): boolean {
-  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return true;
-  const err = e as { code?: string; message?: string } | null;
-  return !!err && (err.code === "P2002" || (typeof err.message === "string" && err.message.includes("Unique constraint failed")));
 }
 
 const periodOf = (now: Date) => `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -86,6 +88,7 @@ export async function runTwinAlerts(db: Db, deps: AlertRunDeps = {}): Promise<Al
     sent: 0,
     skippedDuplicate: 0,
     skippedCapped: 0,
+    unreachable: 0,
     failed: 0,
   };
 
@@ -133,46 +136,47 @@ export async function runTwinAlerts(db: Db, deps: AlertRunDeps = {}): Promise<Al
       // bo'lsa, ikkalasi ham xabar olishi kerak.
       const dedupKey = `${alert.dedupKey}:${user.id}`;
 
-      let deliveryId: string;
+      let deliveryId: string | null;
       try {
-        const row = await db.notificationDelivery.create({
-          data: {
-            channel: ALERT_CHANNEL,
-            level: alert.level,
-            dedupKey,
-            recipientId: user.id,
-            targetChatId: user.telegramUserId,
-            status: "pending",
-          },
-          select: { id: true },
+        deliveryId = await claim(db, {
+          channel: ALERT_CHANNEL,
+          level: alert.level,
+          dedupKey,
+          recipientId: user.id,
+          targetChatId: user.telegramUserId,
         });
-        deliveryId = row.id;
       } catch (e) {
-        if (isUniqueViolation(e)) {
-          res.skippedDuplicate++;
-          continue;
-        }
         logServerError("twinAlerts.claim", e, { userId: user.id, dedupKey });
         res.failed++;
         continue;
       }
-
-      if (!deps.send) {
-        // Yuboruvchi yo'q (token sozlanmagan) — band qilingan qator
-        // `pending` bo'lib qoladi va qayta urinishda takrorlanmaydi.
+      if (deliveryId == null) {
+        res.skippedDuplicate++;
         continue;
       }
+
+      if (!deps.send) {
+        // Yuboruvchi yo'q (token sozlanmagan). Bu "urinib ko'rildi va
+        // bo'lmadi" emas — ATAYIN yubormadik, shuning uchun `skipped`.
+        await settle(db, deliveryId, "skipped", now);
+        continue;
+      }
+      let verdict: SendVerdict = "failed";
       try {
-        await deps.send(user.telegramUserId as bigint, alert.text);
-        await db.notificationDelivery.update({
-          where: { id: deliveryId },
-          data: { status: "sent", sentAt: new Date() },
-        });
-        res.sent++;
-        sentToUser++;
+        verdict = await deps.send(user.telegramUserId as bigint, alert.text);
       } catch (err) {
         logServerError("twinAlerts.send", err, { userId: user.id, dedupKey });
-        await db.notificationDelivery.update({ where: { id: deliveryId }, data: { status: "failed" } });
+      }
+      // O'TKINCHI XATODA KALIT BO'SHAYDI (`settle` ichida). Bungacha qator
+      // `failed` bo'lib band turardi va shu daraja uchun BOSHQA xabar hech
+      // qachon ketmasdi — ogohlantirish jimgina yo'qolardi.
+      await settle(db, deliveryId, verdict, now);
+      if (verdict === "sent") {
+        res.sent++;
+        sentToUser++;
+      } else if (verdict === "unreachable") {
+        res.unreachable++;
+      } else {
         res.failed++;
       }
     }

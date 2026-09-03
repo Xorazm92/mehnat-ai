@@ -44,6 +44,29 @@ export type NotifyJob =
     }
   | {
       /**
+       * Majburiyatlar bo'yicha kunlik yig'ma — ilova ichida, qabul qiluvchi
+       * boshiga bitta qator. Sweep endi per-majburiyat xabar yozmaydi.
+       */
+      kind: "obligation-rollup";
+    }
+  | {
+      /**
+       * Kunlik uy ishlari: tasdiq kutayotgan dalillar yig'masi + eski
+       * bildirishnomalarni tozalash.
+       *
+       * Bungacha bular bot protsessi ichida `setTimeout` + `setInterval`
+       * bilan yurardi: restart har safar jadvalni siljitardi va ikkinchi
+       * instance qo'shilsa ikki marta ishlardi. Redis'dagi reja bu ikkisini
+       * ham hal qiladi.
+       */
+      kind: "daily-chores";
+    }
+  | {
+      /** To'lov eslatmalari (🟡🟠🔴). Idempotent: PaymentReminder unikal kaliti. */
+      kind: "billing-reminders";
+    }
+  | {
+      /**
        * Erase a message we sent, after a delay. Parollar uchun: xabar chatda
        * qolsa, u ham "oylab saqlanadi" — aynan qochmoqchi bo'lgan xavf.
        *
@@ -82,7 +105,10 @@ export function getNotifyQueue(): Queue<NotifyJob> {
  * L1 does not wait for this tick — the minute-by-minute question expiry cron
  * enqueues a sweep the moment it marks anything late.
  */
-export async function registerNotifySchedulers(): Promise<void> {
+export async function registerNotifySchedulers(
+  /** `null` ⇒ to'lov eslatmalari o'chirilgan (config.billing.enabled = false). */
+  billingCronHour: number | null = null,
+): Promise<void> {
   const q = getNotifyQueue();
   await q.upsertJobScheduler(
     "notify-escalate-questions",
@@ -111,6 +137,29 @@ export async function registerNotifySchedulers(): Promise<void> {
     { pattern: "0 9 * * *", tz: "Asia/Tashkent" },
     { name: "director-report", data: { kind: "director-report" } },
   );
+  // 08:45 — digest'dan sal oldin. Yig'ma ilova ichida yoziladi, digest esa
+  // Telegramda: shu tartibda odam Telegramdagi xabarni bosib kirganda
+  // qo'ng'iroq belgisida ham o'sha manzarani ko'radi.
+  await q.upsertJobScheduler(
+    "notify-obligation-rollup",
+    { pattern: "45 8 * * *", tz: "Asia/Tashkent" },
+    { name: "obligation-rollup", data: { kind: "obligation-rollup" } },
+  );
+  // 09:00 — kunlik uy ishlari. Bungacha bot protsessi ichidagi `setInterval`
+  // edi (bot/cron/scheduler.ts): restart jadvalni siljitardi va ikkinchi
+  // instance ishni takrorlardi.
+  await q.upsertJobScheduler(
+    "notify-daily-chores",
+    { pattern: "0 9 * * *", tz: "Asia/Tashkent" },
+    { name: "daily-chores", data: { kind: "daily-chores" } },
+  );
+  if (billingCronHour != null) {
+    await q.upsertJobScheduler(
+      "notify-billing-reminders",
+      { pattern: `0 ${billingCronHour} * * *`, tz: "Asia/Tashkent" },
+      { name: "billing-reminders", data: { kind: "billing-reminders" } },
+    );
+  }
 }
 
 /** One-off enqueue — used right after questions are marked late. */

@@ -19,6 +19,7 @@
 // (xodim /start bosmagan), in-app kanal — ishonchli zaxira.
 import { Prisma } from "@prisma/client";
 import { logServerError } from "@/lib/platform/logger";
+import { claim, settle, type SendVerdict } from "@/lib/engines/automation/deliveryLedger";
 
 type Db = Prisma.TransactionClient;
 
@@ -32,7 +33,8 @@ const LEVEL_COLOR: Record<EscalationLevel, string> = {
   2: "red",
 };
 
-const LEVEL_LABEL: Record<EscalationLevel, string> = {
+/** Daraja yorlig'i — yagona manba; yig'ma ham shuni ishlatadi. */
+export const LEVEL_LABEL: Record<EscalationLevel, string> = {
   0: "Mas'ul xodim",
   1: "Nazoratchi",
   2: "Bosh buxgalter",
@@ -43,6 +45,18 @@ export const ESCALATION_PENALTY_PERCENT = 5;
 
 /** Kanal nomi — oddiy eslatmalar ledgeridan ("inapp"/"telegram") ajratilgan. */
 export const ESCALATION_CHANNEL = "escalation";
+
+/**
+ * TELEGRAM nusxasi uchun ALOHIDA kanal.
+ *
+ * Nega ajratildi: `ESCALATION_CHANNEL` — zanjir daftari. U bir bosqichni bir
+ * martaga qulflaydi va uning ostida in-app Notification yoziladi, ya'ni bu
+ * qulf hech qachon bo'shamasligi kerak. Telegram nusxasi esa o'tkinchi xatoda
+ * QAYTA urinilishi kerak. Ikkalasi bitta qatorda bo'lganda ikkisidan biri
+ * yolg'on gapirardi: kalit bo'shatilsa in-app ikki marta yozilardi, band
+ * qoldirilsa Telegram xabari abadiy yo'qolardi.
+ */
+export const ESCALATION_TELEGRAM_CHANNEL = "escalation-tg";
 
 export interface EscalationChain {
   L0: string | null;
@@ -102,13 +116,16 @@ export interface EscalationRecipient {
 }
 
 /**
- * Telegram yuboruvchi — bot qatlamidan injeksiya qilinadi. `false` qaytarsa
- * (masalan 403: xodim botga /start bosmagan) in-app xabar baribir qoladi.
+ * Telegram yuboruvchi — bot qatlamidan injeksiya qilinadi.
+ *
+ * `boolean` emas, verdikt: "unreachable" (403 — xodim /start bosmagan) doimiy
+ * va qayta urinilmaydi, "failed" esa o'tkinchi va keyingi yurishda qayta
+ * uriniladi. Ikkalasida ham in-app xabar joyida qoladi.
  */
 export type EscalationSender = (
   recipient: EscalationRecipient,
   subject: EscalationSubject,
-) => Promise<boolean>;
+) => Promise<SendVerdict>;
 
 export interface EscalateResult {
   /** false ⇒ bu daraja allaqachon xabardor qilingan (yoki qabul qiluvchi yo'q). */
@@ -126,14 +143,22 @@ export function escalationDedupKey(
   return `${kind}:${entityId}:esc:L${level}`;
 }
 
-function isUniqueViolation(e: unknown): boolean {
-  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return true;
-  if (typeof e === "object" && e !== null) {
-    const err = e as { code?: string; message?: string };
-    if (err.code === "P2002") return true;
-    if (typeof err.message === "string" && err.message.includes("Unique constraint failed")) return true;
-  }
-  return false;
+export interface EscalateOptions {
+  sendEscalation?: EscalationSender;
+  now?: Date;
+  /**
+   * false ⇒ faqat zanjir daftariga yoziladi, KO'RINADIGAN xabar chiqmaydi.
+   *
+   * Majburiyat eskalatsiyalari shu rejimda ishlaydi. Sabab o'lchangan: 6 255
+   * ochiq majburiyat ustidagi bitta sweep 18 671 ta `escalation_obligation`
+   * xabari yaratgan, bittasi ham o'qilmagan, bitta L2 qabul qiluvchi bir
+   * soatda 6 389 ta olgan. Zanjir, KPI va audit tarixi uchun bosqichni QAYD ETISH
+   * kerak; xabarni esa kuniga bir marta yig'ib berish kifoya
+   * (lib/engines/automation/obligationRollup.ts).
+   *
+   * Savol SLA eskalatsiyasi bu rejimda ISHLAMAYDI: u yerda daqiqalar muhim.
+   */
+  deliverNow?: boolean;
 }
 
 /**
@@ -145,20 +170,21 @@ export async function escalate(
   db: Db,
   subject: EscalationSubject,
   level: EscalationLevel,
-  deps: { sendEscalation?: EscalationSender; now?: Date } = {},
+  deps: EscalateOptions = {},
 ): Promise<EscalateResult> {
   const now = deps.now ?? new Date();
+  const deliverNow = deps.deliverNow ?? true;
   const dedupKey = escalationDedupKey(subject.kind, subject.entityId, level);
 
   // ARZON TEKSHIRUV BIRINCHI. Soatlik sweep minglab ochiq majburiyat ustidan
   // yuradi va ularning aksariyati allaqachon eskalatsiya qilingan bo'ladi —
   // zanjirni va qabul qiluvchini oldin yuklasak, har biri uchun 5 ta so'rov
   // behuda ketardi. Bu yerda unikal indeks bo'yicha bitta so'rov yetadi.
-  const claimed = await db.notificationDelivery.findUnique({
+  const already = await db.notificationDelivery.findUnique({
     where: { channel_dedupKey: { channel: ESCALATION_CHANNEL, dedupKey } },
     select: { id: true },
   });
-  if (claimed) {
+  if (already) {
     return { claimed: false, recipient: null, telegramDelivered: false, skipped: "already" };
   }
 
@@ -173,6 +199,8 @@ export async function escalate(
     select: { id: true, fullName: true, telegramUserId: true, isActive: true },
   });
   if (!user || !user.isActive) {
+    // Kalit ATAYIN band qilinmaydi: nazoratchi keyinroq biriktirilsa,
+    // eskalatsiya o'shanda ishlashi kerak.
     return { claimed: false, recipient: null, telegramDelivered: false, skipped: "no_recipient" };
   }
 
@@ -183,25 +211,23 @@ export async function escalate(
     telegramUserId: user.telegramUserId,
   };
 
-  let deliveryId: string;
-  try {
-    const row = await db.notificationDelivery.create({
-      data: {
-        channel: ESCALATION_CHANNEL,
-        level: LEVEL_COLOR[level],
-        dedupKey,
-        recipientId: user.id,
-        targetChatId: user.telegramUserId,
-        status: "pending",
-      },
-      select: { id: true },
-    });
-    deliveryId = row.id;
-  } catch (e) {
-    if (isUniqueViolation(e)) {
-      return { claimed: false, recipient, telegramDelivered: false, skipped: "already" };
-    }
-    throw e;
+  // Zanjir daftari — DOIMIY qulf ("claimed"): bu qator "bu bosqich bo'lib
+  // o'tdi" degani, "xabar yetkazildi" degani emas.
+  const chainClaim = await claim(db, {
+    channel: ESCALATION_CHANNEL,
+    dedupKey,
+    level: LEVEL_COLOR[level],
+    recipientId: user.id,
+    targetChatId: user.telegramUserId,
+    mode: "token",
+  });
+  if (chainClaim == null) {
+    return { claimed: false, recipient, telegramDelivered: false, skipped: "already" };
+  }
+
+  if (!deliverNow) {
+    // Bosqich qayd etildi; xabarni kunlik yig'ma chiqaradi.
+    return { claimed: true, recipient, telegramDelivered: false };
   }
 
   // In-app — ishonchli kanal, har doim yoziladi (Telegram yiqilsa ham qoladi).
@@ -213,25 +239,36 @@ export async function escalate(
         title: `${LEVEL_LABEL[level]}ga eskalatsiya — ${subject.companyName}`,
         message: subject.detail,
         link: subject.link ?? null,
+        // Eskalatsiya ta'rifi bo'yicha shoshilinch: byudjet uni kechiktirmaydi.
+        priority: "high",
       },
     });
   } catch (err) {
     logServerError("escalation.notification", err, { dedupKey });
   }
 
+  // Telegram nusxasi — ALOHIDA kalit ostida, chunki o'tkinchi xatoda u
+  // bo'shashi va qayta urinilishi kerak (in-app esa qayta yozilmasligi).
   let telegramDelivered = false;
-  if (deps.sendEscalation && user.telegramUserId != null) {
-    try {
-      telegramDelivered = await deps.sendEscalation(recipient, subject);
-    } catch (err) {
-      logServerError("escalation.telegram", err, { dedupKey, userId: user.id });
+  if (deps.sendEscalation) {
+    const tgClaim = await claim(db, {
+      channel: ESCALATION_TELEGRAM_CHANNEL,
+      dedupKey,
+      level: LEVEL_COLOR[level],
+      recipientId: user.id,
+      targetChatId: user.telegramUserId,
+    });
+    if (tgClaim != null) {
+      let verdict: SendVerdict = "failed";
+      try {
+        verdict = await deps.sendEscalation(recipient, subject);
+      } catch (err) {
+        logServerError("escalation.telegram", err, { dedupKey, userId: user.id });
+      }
+      telegramDelivered = verdict === "sent";
+      await settle(db, tgClaim, verdict, now);
     }
   }
-
-  await db.notificationDelivery.update({
-    where: { id: deliveryId },
-    data: { status: telegramDelivered ? "sent" : "failed", sentAt: now },
-  });
 
   return { claimed: true, recipient, telegramDelivered };
 }

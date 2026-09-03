@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Language } from '@/types';
-import { Bell, Check, CheckCheck, AlertTriangle, Info, TrendingUp, Clock, ExternalLink, Database, BarChart3 } from 'lucide-react';
+import { Bell, Check, CheckCheck, AlertTriangle, Info, TrendingUp, Clock, ExternalLink, Database, BarChart3, ListChecks, ArrowUpCircle, Receipt, MessageSquareWarning } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -17,6 +17,8 @@ export interface NotificationRecord {
     link?: string;
     isRead: boolean;
     createdAt: string;
+    /** 'low' | 'normal' | 'high' | 'critical' — eskisida yo'q, shuning uchun ixtiyoriy. */
+    priority?: string;
 }
 
 interface Props {
@@ -40,15 +42,30 @@ function formatCreatedAt(iso: string): string {
     return isNaN(d.getTime()) ? "" : DATE_FMT.format(d);
 }
 
+// Turi bu ro'yxatda bo'lmagan xabar kulrang qo'ng'iroq bilan chiziladi. Shu
+// sababdan ro'yxat kod yozadigan HAR BIR turni qamrashi kerak — aks holda
+// kunlik yig'ma (endi asosiy xabar) tizim xabari kabi ko'rinardi.
 const TYPE_META: Record<string, { color: string; bg: string; icon: React.ReactNode }> = {
     deadline: { color: 'var(--warning)', bg: 'var(--warning-bg)', icon: <Clock size={16} /> },
     status_change: { color: 'var(--accent-blue)', bg: 'var(--accent-blue-light)', icon: <Info size={16} /> },
     kpi_alert: { color: 'var(--success)', bg: 'var(--success-bg)', icon: <TrendingUp size={16} /> },
+    kpi_penalty_proposed: { color: 'var(--danger)', bg: 'var(--danger-bg)', icon: <TrendingUp size={16} /> },
     approval_request: { color: 'var(--danger)', bg: 'var(--danger-bg)', icon: <AlertTriangle size={16} /> },
     onec_base_request: { color: 'var(--accent-purple)', bg: 'var(--accent-blue-light)', icon: <Database size={16} /> },
     director_report: { color: 'var(--accent-blue)', bg: 'var(--accent-blue-light)', icon: <BarChart3 size={16} /> },
+    // Kunlik yig'ma — majburiyatlar bo'yicha asosiy xabar.
+    obligation_rollup: { color: 'var(--warning)', bg: 'var(--warning-bg)', icon: <ListChecks size={16} /> },
+    // Eski qatorlar (sweep endi bularni yozmaydi, tarixda qoladi).
+    obligation_reminder: { color: 'var(--warning)', bg: 'var(--warning-bg)', icon: <Clock size={16} /> },
+    escalation_obligation: { color: 'var(--danger)', bg: 'var(--danger-bg)', icon: <ArrowUpCircle size={16} /> },
+    escalation_question: { color: 'var(--danger)', bg: 'var(--danger-bg)', icon: <ArrowUpCircle size={16} /> },
+    sla_warning: { color: 'var(--warning)', bg: 'var(--warning-bg)', icon: <MessageSquareWarning size={16} /> },
+    payment_receipt: { color: 'var(--success)', bg: 'var(--success-bg)', icon: <Receipt size={16} /> },
     system: { color: 'var(--text-muted)', bg: 'var(--input-bg)', icon: <Bell size={16} /> },
 };
+
+/** `high`/`critical` — byudjet ularni hech qachon kechiktirmaydi; ro'yxatda ham ko'rinsin. */
+const URGENT = new Set(['high', 'critical']);
 
 const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead }) => {
     const [filter, setFilter] = useState<'all' | 'unread'>('all');
@@ -117,8 +134,18 @@ const NotificationsModule: React.FC<Props> = ({ notifications, lang, onMarkRead 
                                 <div className="flex items-center gap-2">
                                     <h4 className="text-body font-bold tracking-tight" style={{ color: 'var(--text)' }}>{n.title}</h4>
                                     {!n.isRead && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: meta.color }} />}
+                                    {URGENT.has(n.priority ?? '') && (
+                                        <span
+                                            className="text-micro font-bold uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0"
+                                            style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}
+                                        >
+                                            {lang === 'uz' ? 'Shoshilinch' : 'Срочно'}
+                                        </span>
+                                    )}
                                 </div>
-                                <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>{n.message}</p>
+                                {/* Yig'ma matni ko'p qatorli (har majburiyat — alohida qator);
+                                    `whitespace-pre-line` bo'lmasa hammasi bitta qatorga yopishardi. */}
+                                <p className="text-xs font-medium mt-0.5 whitespace-pre-line" style={{ color: 'var(--text-secondary)' }}>{n.message}</p>
                                 <div className="flex items-center gap-3 mt-2">
                                     <span className="text-micro font-bold uppercase tracking-widest tabular-nums" style={{ color: 'var(--text-muted)' }}>
                                         {formatCreatedAt(n.createdAt)}

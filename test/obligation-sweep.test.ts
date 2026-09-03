@@ -126,36 +126,31 @@ describe("sweepDeadlines", () => {
   });
 });
 
-describe("sweepDeadlines — Telegram push", () => {
-  // ADR-0007: ichki eslatma MIJOZ GURUHIGA EMAS, mas'ulning shaxsiy chatiga
-  // boradi — mijoz bizning ichki kechikishlarimizni ko'rmasligi kerak.
-  it("pushes to the responsible person's private chat, never the client group", async () => {
-    const sent: { chatId: bigint; text: string }[] = [];
-    const spy = async (chatId: bigint, text: string) => {
-      sent.push({ chatId, text });
-    };
-
-    const first = await sweepDeadlines(prisma, { now: NOW, notifyTelegram: spy });
-    expect(first.telegramSent).toBeGreaterThanOrEqual(2);
-
-    const mine = sent.filter((s) => s.text.includes(`${TAG} MChJ`));
-    expect(mine.length).toBeGreaterThanOrEqual(2);
-    expect(mine.every((s) => s.chatId === ACC_TG)).toBe(true);
-    expect(sent.some((s) => s.chatId === GROUP_CHAT)).toBe(false);
-
-    const tgRows = await prisma.notificationDelivery.count({
-      where: { channel: "telegram", dedupKey: { startsWith: `obligation:${ids.oblSoon}` } },
-    });
-    expect(tgRows).toBeGreaterThanOrEqual(2);
-
-    // Ikkinchi marta — telegram dedup, yangi yuborish yo'q.
-    sent.length = 0;
-    const second = await sweepDeadlines(prisma, { now: NOW, notifyTelegram: spy });
-    expect(second.telegramDeduped).toBeGreaterThanOrEqual(2);
-    expect(sent.filter((s) => s.text.includes(`${TAG} MChJ`)).length).toBe(0);
+describe("sweepDeadlines — endi xabar YUBORMAYDI, daftar yuritadi", () => {
+  // Bungacha sweep har majburiyat uchun in-app xabar + Telegram DM yozardi va
+  // xabar soni ochiq qatorlar soniga proporsional edi (6 255 majburiyat →
+  // bitta yurishda 44 846 ta bildirishnoma, 100% o'qilmagan). Endi u faqat
+  // bosqichlarni qayd etadi; ko'rinadigan xabarni kunlik yig'ma chiqaradi.
+  it("majburiyat bo'yicha bironta ham Notification yozmaydi", async () => {
+    await prisma.notification.deleteMany({ where: { userId: ids.user } });
+    await sweepDeadlines(prisma, { now: NOW });
+    const rows = await prisma.notification.count({ where: { userId: ids.user } });
+    expect(rows).toBe(0);
   });
 
-  it("escalates a past-due obligation up the ladder, once per rung", async () => {
+  it("bosqich daftari `claimed` bo'ladi — soxta `sent` emas", async () => {
+    const rows = await prisma.notificationDelivery.findMany({
+      where: { channel: "inapp", dedupKey: { startsWith: `obligation:${ids.oblSoon}:reminder:` } },
+      select: { status: true, sentAt: true },
+    });
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    // Bu qatorlar ortida hech qanday jo'natish yo'q, shuning uchun ular
+    // "yuborildi" deb ko'rinmasligi kerak.
+    expect(rows.every((r) => r.status === "claimed")).toBe(true);
+    expect(rows.every((r) => r.sentAt === null)).toBe(true);
+  });
+
+  it("zanjir bosqichini QAYD etadi, lekin xabar yubormaydi", async () => {
     const SUP_TG = ACC_TG + BigInt(1);
     const supervisor = await prisma.user.create({
       data: {
@@ -177,23 +172,33 @@ describe("sweepDeadlines — Telegram push", () => {
     const alerts: Array<{ level: number; userId: string }> = [];
     const spy = async (r: { level: number; userId: string }, s: { entityId: string }) => {
       if (mine.has(s.entityId)) alerts.push({ level: r.level, userId: r.userId });
-      return true;
+      return "sent" as const;
     };
 
     await sweepDeadlines(prisma, { now: NOW, sendEscalation: spy });
-    // The overdue one is past `due`, so the supervisor rung fires.
-    expect(alerts.some((a) => a.level === 1 && a.userId === supervisor.id)).toBe(true);
 
+    // Zanjir qayd etildi…
     const claim = await prisma.notificationDelivery.findFirst({
       where: { channel: "escalation", dedupKey: `obligation:${ids.oblOverdue}:esc:L1` },
     });
     expect(claim).not.toBeNull();
-    expect(claim!.status).toBe("sent");
-
-    // A repeat sweep must not re-alert anyone.
-    alerts.length = 0;
-    await sweepDeadlines(prisma, { now: NOW, sendEscalation: spy });
+    expect(claim!.recipientId).toBe(supervisor.id);
+    // …lekin bu "yuborildi" degani EMAS: majburiyat eskalatsiyasi endi
+    // `deliverNow: false` bilan ishlaydi.
+    expect(claim!.status).toBe("claimed");
     expect(alerts).toHaveLength(0);
+    const supNotifications = await prisma.notification.count({ where: { userId: supervisor.id } });
+    expect(supNotifications).toBe(0);
+
+    // Takroriy yurish yangi qator yaratmaydi.
+    const before = await prisma.notificationDelivery.count({
+      where: { channel: "escalation", dedupKey: { startsWith: `obligation:${ids.oblOverdue}:esc:` } },
+    });
+    await sweepDeadlines(prisma, { now: NOW, sendEscalation: spy });
+    const after = await prisma.notificationDelivery.count({
+      where: { channel: "escalation", dedupKey: { startsWith: `obligation:${ids.oblOverdue}:esc:` } },
+    });
+    expect(after).toBe(before);
 
     await prisma.notificationDelivery.deleteMany({ where: { recipientId: supervisor.id } });
     await prisma.notification.deleteMany({ where: { userId: supervisor.id } });

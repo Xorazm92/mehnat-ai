@@ -139,10 +139,12 @@ describe("B4b · sweep dedup", () => {
     expect(await deliveries("inapp", "reminder:D-3")).toBe(0);
     expect(await deliveries("inapp", "reminder:due")).toBe(0);
 
+    // Sweep endi XABAR YOZMAYDI — daftar qatori bor, bildirishnoma yo'q.
+    // Ko'rinadigan xabarni kunlik yig'ma chiqaradi (obligationRollup.ts).
     const notif = await prisma.notification.count({
       where: { userId: accountantId, type: "obligation_reminder" },
     });
-    expect(notif).toBe(1);
+    expect(notif).toBe(0);
   });
 
   it("4 · AYNAN o'sha sweep qayta yurgizilsa dublikat 0", async () => {

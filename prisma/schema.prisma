@@ -1269,9 +1269,25 @@ model Notification {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
+  // Shoshilinchlik darajasi. Faqat `low`/`normal` Telegram byudjetiga tushadi;
+  // `high`/`critical` hech qachon cheklanmaydi (lib/engines/automation/notificationBudget.ts).
+  priority String @default("normal") // 'low' | 'normal' | 'high' | 'critical'
+
+  // ILOVA ICHIDAGI IDEMPOTENTLIK. NotificationDelivery.dedupKey yetkazish
+  // daftarini qulflaydi, bu esa KO'RINADIGAN qatorni. Ikkalasi ham kerak:
+  // kunlik yig'ma bir odamga kuniga bitta qator yozadi va uni parallel ikkita
+  // yurish ham buzmasligi kerak. NULL — dedup yo'q (eski qatorlar va bir
+  // martalik xabarlar); Postgres unikal indeksi NULL'larni sanamaydi.
+  dedupeKey String?
+
+  @@unique([userId, dedupeKey])
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
+  // Qo'ng'iroq belgisi va bildirishnomalar sahifasi aynan shu uchlik bo'yicha
+  // so'raydi (server/audit.ts getNotifications). Yakka `userId` indeksi 65k
+  // qatorda ham saralashni bazaga qoldirardi.
+  @@index([userId, isRead, createdAt(sort: Desc)])
 }
 
 // =====================================================
@@ -1456,7 +1472,16 @@ model NotificationDelivery {
   channel        String // 'telegram'|'inapp'
   level          String // 'yellow'|'orange'|'red'
   targetChatId   BigInt?
-  status         String    @default("pending") // pending|sent|failed
+  // Statuslarning yagona egasi — lib/engines/automation/deliveryLedger.ts.
+  // claimed  — dedup tokeni, hech narsa yuborilmaydi
+  // pending  — band qilindi, urinish oldinda
+  // queued   — navbatga qo'yildi, yetkazilgani noma'lum
+  // sent     — provayder qabul qildi (faqat urinishdan KEYIN yoziladi)
+  // unreachable — doimiy rad (403: bloklangan / /start bosmagan)
+  // skipped  — ataylab yuborilmadi (Telegram ulanmagan, byudjet, token yo'q)
+  // O'tkinchi xato statusi YO'Q: bunda qator o'chiriladi va kalit bo'shaydi,
+  // aks holda xabar abadiy yo'qolardi (`settle` izohiga qarang).
+  status         String    @default("pending")
   sentAt         DateTime?
   createdAt      DateTime  @default(now())
 
@@ -1468,6 +1493,10 @@ model NotificationDelivery {
 
   @@unique([channel, dedupKey])
   @@index([status])
+  // Kunlik Telegram byudjeti "shu odamga bugun nechta ketdi" deb so'raydi
+  // (lib/engines/automation/notificationBudget.ts) — busiz har xabar uchun
+  // 35k+ qatorli jadval to'liq skanerlanardi.
+  @@index([recipientId, createdAt])
 }
 
 // Payment-reminder trail. @@unique([companyId, period, level]) makes each

@@ -5,9 +5,7 @@ import { runGenerationLocked } from "../../lib/engines/obligation/obligationRun"
 import { loadCompanySubjects } from "../../lib/domains/accounting/subjects";
 import { sweepDeadlines } from "../../lib/engines/automation/obligationSweep";
 import { createRedisConnection } from "./connection";
-import { QUEUE, callbackSecret, hasTelegramToken } from "../config";
-import { sendMessage } from "../telegram/bot";
-import { makeEscalationSender } from "../contexts/escalation/interface/escalation-sender";
+import { QUEUE } from "../config";
 import type { ObligationJob } from "./obligation.queue";
 
 /**
@@ -25,18 +23,11 @@ export function startObligationWorker(): Worker<ObligationJob> {
         console.log(`[obligation.worker] generate:`, res.skipped ? "skipped(locked)" : res.results?.map((r) => r.created));
         return res;
       }
-      // Telegram push faqat token bo'lsa (aks holda faqat in-app eslatma).
-      // `notifyTelegram` — mas'ulning shaxsiy chatiga oddiy eslatma;
-      // `sendEscalation` — nazoratchi/chiefga tugmali ogohlantirish.
-      const notifyTelegram = hasTelegramToken()
-        ? async (chatId: bigint, text: string) => {
-            await sendMessage(chatId, text);
-          }
-        : undefined;
-      const sendEscalation = hasTelegramToken()
-        ? makeEscalationSender(callbackSecret())
-        : undefined;
-      const res = await sweepDeadlines(prisma, { now: new Date(), notifyTelegram, sendEscalation });
+      // Sweep endi XABAR YUBORMAYDI — u bosqichlarni qayd etadi va ko'rinadigan
+      // xabarni kunlik yig'ma chiqaradi (lib/engines/automation/obligationRollup.ts,
+      // `notify-obligation-rollup` rejasi). Shuning uchun bu yerda Telegram
+      // yuboruvchisi ham berilmaydi.
+      const res = await sweepDeadlines(prisma, { now: new Date() });
       console.log(`[obligation.worker] sweep:`, res);
     },
     { connection: createRedisConnection(), concurrency: 1 },

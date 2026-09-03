@@ -13,6 +13,7 @@ import {
   sweepQuestionEscalations,
   escalationDedupKey,
   ESCALATION_CHANNEL,
+  ESCALATION_TELEGRAM_CHANNEL,
   ESCALATION_PENALTY_PERCENT,
   QUESTION_L2_AFTER_MINUTES,
   type EscalationRecipient,
@@ -42,7 +43,7 @@ const companyInn = `99${Date.now() % 100000000}`;
 const delivered: Array<{ level: number; userId: string }> = [];
 const spySender = async (r: EscalationRecipient) => {
   delivered.push({ level: r.level, userId: r.userId });
-  return true;
+  return "sent" as const;
 };
 
 async function makeUser(slug: string, role: string, telegramUserId?: bigint) {
@@ -164,15 +165,17 @@ describe("escalate", () => {
     expect(second.skipped).toBe("already");
   });
 
-  it("records a failed delivery rather than throwing when the bot cannot write", async () => {
+  it("403 — zanjir qulfi qoladi, Telegram qatori `unreachable` bo'ladi", async () => {
     const entityId = `esc-403-${Date.now()}`;
     const res = await escalate(prisma, subject(entityId), 1, {
-      sendEscalation: async () => false, // 403: never pressed Start
+      sendEscalation: async () => "unreachable" as const, // 403: never pressed Start
     });
     expect(res.claimed).toBe(true);
     expect(res.telegramDelivered).toBe(false);
 
-    const row = await prisma.notificationDelivery.findUnique({
+    // Zanjir qatori — "bu bosqich bo'lib o'tdi" degan doimiy qulf. Uning
+    // ostida in-app xabar yozilgan, shuning uchun u hech qachon bo'shamaydi.
+    const chainRow = await prisma.notificationDelivery.findUnique({
       where: {
         channel_dedupKey: {
           channel: ESCALATION_CHANNEL,
@@ -180,7 +183,47 @@ describe("escalate", () => {
         },
       },
     });
-    expect(row!.status).toBe("failed");
+    expect(chainRow!.status).toBe("claimed");
+
+    // Telegram nusxasi ALOHIDA kanalda va `unreachable` — bu "urinib ko'ramiz"
+    // emas, "bu odamga hech qachon yoza olmaymiz". Bungacha bu ham `failed`
+    // deb yozilardi va statusdan hech qanday xulosa chiqmasdi.
+    const tgRow = await prisma.notificationDelivery.findUnique({
+      where: {
+        channel_dedupKey: {
+          channel: ESCALATION_TELEGRAM_CHANNEL,
+          dedupKey: escalationDedupKey("question", entityId, 1),
+        },
+      },
+    });
+    expect(tgRow!.status).toBe("unreachable");
+  });
+
+  it("o'tkinchi xatoda Telegram kaliti BO'SHAYDI — xabar yo'qolmaydi", async () => {
+    const entityId = `esc-transient-${Date.now()}`;
+    const res = await escalate(prisma, subject(entityId), 1, {
+      sendEscalation: async () => "failed" as const, // tarmoq / 429
+    });
+    expect(res.claimed).toBe(true);
+
+    const key = {
+      channel_dedupKey: {
+        channel: ESCALATION_TELEGRAM_CHANNEL,
+        dedupKey: escalationDedupKey("question", entityId, 1),
+      },
+    };
+    // Kalit bo'shadi: keyingi yurish Telegram nusxasini QAYTA yuborishi mumkin.
+    expect(await prisma.notificationDelivery.findUnique({ where: key })).toBeNull();
+
+    // Zanjir qulfi esa joyida — in-app xabar ikkinchi marta yozilmaydi.
+    const notes = await prisma.notification.count({
+      where: { userId: ids.supervisor, message: "test", type: "escalation_question" },
+    });
+    await escalate(prisma, subject(entityId), 1, { sendEscalation: spySender });
+    const after = await prisma.notification.count({
+      where: { userId: ids.supervisor, message: "test", type: "escalation_question" },
+    });
+    expect(after).toBe(notes);
   });
 
   it("skips a rung with nobody assigned", async () => {

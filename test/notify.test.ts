@@ -79,7 +79,7 @@ describe("notifyUsers", () => {
       { dispatchTelegram: async (i) => void sent.push(i) }
     );
 
-    expect(res).toEqual({ inapp: 2, telegramQueued: true, skipped: false });
+    expect(res).toEqual({ inapp: 2, telegramQueued: true, skipped: false, budgetSkipped: false });
     expect(sent).toHaveLength(1);
     expect(sent[0].userIds.sort()).toEqual([ids.userA, ids.userB].sort());
     expect(sent[0].text).toContain("Sarlavha");
@@ -124,7 +124,103 @@ describe("notifyUsers", () => {
     const delivery = await prisma.notificationDelivery.findUnique({
       where: { channel_dedupKey: { channel: `${TAG}-ch2`, dedupKey: `${TAG}-k2` } },
     });
-    expect(delivery?.status).toBe("failed");
+    // "skipped": urinish bo'ldi-yu yetmadi. Kalit ATAYIN bo'shatilmaydi —
+    // in-app qator yozilgan va u vakolatli kanal; kalit bo'shasa qayta
+    // chaqiruv o'sha qatorni ikkinchi marta yozardi.
+    expect(delivery?.status).toBe("skipped");
+    expect(delivery?.sentAt).toBeNull();
+  });
+
+  it("navbatga qo'yilganda `queued` yozadi — `sent` EMAS", async () => {
+    // Bungacha bu yerda `sent` turardi, holbuki xabar faqat BullMQ navbatiga
+    // tushgan bo'lardi: Telegram uni qabul qildimi yoki yo'qmi noma'lum.
+    const res = await notifyUsers(
+      prisma,
+      {
+        userIds: [ids.userA],
+        type: "system",
+        title: "Navbat",
+        message: "Matn",
+        channel: `${TAG}-ch-q`,
+        dedupKey: `${TAG}-kq`,
+      },
+      { dispatchTelegram: async () => {} }
+    );
+    expect(res.telegramQueued).toBe(true);
+    const row = await prisma.notificationDelivery.findUnique({
+      where: { channel_dedupKey: { channel: `${TAG}-ch-q`, dedupKey: `${TAG}-kq` } },
+    });
+    expect(row?.status).toBe("queued");
+  });
+
+  it("`dedupeKey` — parallel chaqiruvda ham bitta in-app qator", async () => {
+    // `findFirst` + `create` naqshi (bungacha notify-red.ts da) bu testda
+    // ikkita qator yozardi: ikkala so'rov ham "yo'q" deb topardi.
+    const dedupeKey = `${TAG}-race`;
+    const call = () =>
+      notifyUsers(prisma, {
+        userIds: [ids.userB],
+        type: "system",
+        title: "Poyga",
+        message: "Matn",
+        channel: `${TAG}-ch-race`,
+        dedupeKey,
+      });
+    await Promise.all([call(), call(), call()]);
+    const rows = await prisma.notification.count({ where: { userId: ids.userB, dedupeKey } });
+    expect(rows).toBe(1);
+  });
+
+  it("byudjet: `low` Telegramda to'xtaydi, in-app qolaveradi", async () => {
+    const { NOTIFY_DAILY_TELEGRAM_BUDGET } = await import(
+      "@/lib/engines/automation/notificationBudget"
+    );
+    // Byudjetni to'ldiramiz: `queued` qatorlar sanaladi.
+    await prisma.notificationDelivery.createMany({
+      data: Array.from({ length: NOTIFY_DAILY_TELEGRAM_BUDGET }, (_, i) => ({
+        channel: `${TAG}-fill`,
+        level: "yellow",
+        dedupKey: `${TAG}-fill-${i}`,
+        recipientId: ids.admin,
+        status: "queued",
+        sentAt: new Date(),
+      })),
+    });
+
+    let dispatched = 0;
+    const low = await notifyUsers(
+      prisma,
+      {
+        userIds: [ids.admin],
+        type: "system",
+        title: "Past",
+        message: "Matn",
+        channel: `${TAG}-ch-low`,
+        priority: "low",
+      },
+      { dispatchTelegram: async () => void dispatched++ }
+    );
+    expect(low.inapp).toBe(1); // xabar YO'QOLMAYDI
+    expect(low.budgetSkipped).toBe(true);
+    expect(dispatched).toBe(0);
+
+    // `critical` byudjetdan o'tib ketadi.
+    const critical = await notifyUsers(
+      prisma,
+      {
+        userIds: [ids.admin],
+        type: "system",
+        title: "Shoshilinch",
+        message: "Matn",
+        channel: `${TAG}-ch-crit`,
+        priority: "critical",
+      },
+      { dispatchTelegram: async () => void dispatched++ }
+    );
+    expect(critical.telegramQueued).toBe(true);
+    expect(dispatched).toBe(1);
+
+    await prisma.notificationDelivery.deleteMany({ where: { channel: `${TAG}-fill` } });
   });
 
   it("tashqi havolani rad etadi (ochiq redirect bo'lmasin)", async () => {
@@ -154,7 +250,7 @@ describe("notifyUsers", () => {
       channel: `${TAG}-ch4`,
       dedupKey: `${TAG}-k4`,
     });
-    expect(res).toEqual({ inapp: 0, telegramQueued: false, skipped: false });
+    expect(res).toEqual({ inapp: 0, telegramQueued: false, skipped: false, budgetSkipped: false });
   });
 });
 
