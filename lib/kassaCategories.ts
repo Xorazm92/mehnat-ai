@@ -6,6 +6,8 @@
 //
 // Manba: "Kassa.json" DICTIONARY varag'i (korxonada amalda ishlatilayotgan).
 
+import { isSalaryCategory } from "./salaryCategory";
+
 export const KASSA_CATEGORIES_KEY = "kassaCategories";
 
 export interface KassaCategories {
@@ -42,6 +44,11 @@ export function resolveKassaCategories(raw: unknown): KassaCategories {
       : fallback;
   return {
     income: list(src.income, DEFAULT_KASSA_CATEGORIES.income),
-    expense: list(src.expense, DEFAULT_KASSA_CATEGORIES.expense),
+    // Sozlamada "Oylik" (yoki shunga o'xshash) qayta paydo bo'lsa ham
+    // ekranga chiqmasin — sabab yuqorida: oylik `Payout` orqali beriladi,
+    // kassa chiqimi sifatida yozilsa balans ikki marta hisoblanadi.
+    expense: list(src.expense, DEFAULT_KASSA_CATEGORIES.expense).filter(
+      (c) => !isSalaryCategory(c)
+    ),
   };
 }

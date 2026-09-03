@@ -2,9 +2,10 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
-  CreditCard, Link2, Plus, Wand2, Snowflake, Play, AlertTriangle, ArrowDownRight, ArrowUpRight,
+  CreditCard, Link2, Plus, Wand2, Snowflake, Play, AlertTriangle, ArrowDownRight, ArrowUpRight, Users,
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { groupDigits, ungroupDigits, todayKey, formatNum, formatUzDate } from "@/lib/platform/format";
@@ -449,9 +450,22 @@ export default function ChiqimKassaClient({
 
       </>)}
 
-      {tab === "xarajat" && (
-        // Avvalgi mustaqil `/expenses` sahifasi — o'zgarishsiz ko'chirildi
-        // (props/callback bir xil, faqat joylashuv o'zgardi).
+      {tab === "xarajat" && (<>
+      {/* Xodimga oylik/avans — "Oylik" toifasi ataylab shu ro'yxatda yo'q
+          (`lib/kassaCategories.ts`): u kassa chiqimi emas, `Payout`
+          orqali beriladi, aks holda balans ikki marta hisoblanadi. Xodim
+          tanlash, oylik hisob-kitobi va real to'lov `/payroll`da tayyor. */}
+      <div className="p-4 rounded-xl flex items-center justify-between gap-3 flex-wrap" style={card}>
+        <p className="text-meta" style={{ color: "var(--text-muted)" }}>
+          Xodimga oylik yoki avans berish uchun alohida ekran bor — u yerda
+          xodim tanlanadi, oylik hisoblanadi va real to&apos;lov yoziladi.
+        </p>
+        <Link href="/payroll">
+          <Button variant="secondary" size="md"><Users size={15} /> Oylik sahifasiga o&apos;tish</Button>
+        </Link>
+      </div>
+      {/* Avvalgi mustaqil `/expenses` sahifasi — o'zgarishsiz ko'chirildi
+          (props/callback bir xil, faqat joylashuv o'zgardi). */}
         <ExpenseModule
           expenses={expenses}
           lang="uz"
@@ -497,7 +511,7 @@ export default function ChiqimKassaClient({
             catch (e) { toast.error(friendlyError(e)); }
           }}
         />
-      )}
+      </>)}
 
       {tab === "kartalar" && (<>
       {/* Bog'lanmagan karta o'tkazmalari */}
