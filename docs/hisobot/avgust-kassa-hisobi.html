@@ -1,0 +1,516 @@
+<title>Avgust kassa hisobi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+  :root{
+    --ground:#F5F6F8; --sheet:#FFFFFF; --line:#DFE3E9; --line-soft:#EDF0F4;
+    --ink:#171B22; --ink-2:#3D4654; --muted:#6B7482;
+    --accent:#1E5FA8; --accent-soft:#E8F0F9;
+    --pos:#0F6B52; --pos-soft:#E4F2ED;
+    --neg:#A8302A; --neg-soft:#F8E9E8;
+    --warn:#8A5A0B; --warn-soft:#F8F0E0;
+    --shadow:0 1px 2px rgba(23,27,34,.06),0 8px 24px -16px rgba(23,27,34,.22);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#101319; --sheet:#171B22; --line:#2A313C; --line-soft:#232932;
+      --ink:#E7EAEF; --ink-2:#B7BFCA; --muted:#8B94A2;
+      --accent:#7FB3EA; --accent-soft:#1B2836;
+      --pos:#5FC7A5; --pos-soft:#132A24;
+      --neg:#EE8A83; --neg-soft:#2E1A1A;
+      --warn:#DFAE5E; --warn-soft:#2B2317;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -18px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#101319; --sheet:#171B22; --line:#2A313C; --line-soft:#232932;
+    --ink:#E7EAEF; --ink-2:#B7BFCA; --muted:#8B94A2;
+    --accent:#7FB3EA; --accent-soft:#1B2836;
+    --pos:#5FC7A5; --pos-soft:#132A24;
+    --neg:#EE8A83; --neg-soft:#2E1A1A;
+    --warn:#DFAE5E; --warn-soft:#2B2317;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -18px rgba(0,0,0,.8);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+    font-size:15px; line-height:1.55; padding:32px 20px 80px;
+  }
+  .wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+
+  header{display:flex;flex-direction:column;gap:8px;padding-bottom:4px}
+  .eyebrow{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1{font-family:"IBM Plex Serif",Georgia,serif;font-weight:600;
+    font-size:clamp(26px,4.6vw,36px);line-height:1.14;margin:0;text-wrap:balance}
+  .lede{color:var(--ink-2);max-width:62ch;margin:0}
+
+  .sheet{background:var(--sheet);border:1px solid var(--line);border-radius:10px;
+    box-shadow:var(--shadow);overflow:hidden}
+  .sheet-head{display:flex;align-items:baseline;justify-content:space-between;
+    gap:12px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--line-soft)}
+  .sheet-head h2{font-family:"IBM Plex Serif",Georgia,serif;font-weight:600;font-size:17px;margin:0}
+  .sheet-head .note{font-size:12.5px;color:var(--muted)}
+
+  .headline{padding:26px 20px 24px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+  .headline .big{font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-variant-numeric:tabular-nums;font-size:clamp(34px,6.4vw,52px);
+    font-weight:600;letter-spacing:-.02em;line-height:1;color:var(--pos)}
+  .headline .cap{font-size:13px;color:var(--muted)}
+
+  .rows{display:flex;flex-direction:column}
+  .row{border-top:1px solid var(--line-soft)}
+  .row:first-child{border-top:none}
+  .row-btn{width:100%;display:grid;grid-template-columns:1fr auto auto;
+    align-items:center;gap:14px;padding:13px 20px;background:none;border:0;
+    cursor:pointer;text-align:left;color:inherit;font:inherit}
+  .row-btn:hover{background:var(--line-soft)}
+  .row-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .row-label{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .row-label b{font-weight:500}
+  .row-label small{color:var(--muted);font-size:12.5px}
+  .val{font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-variant-numeric:tabular-nums;font-size:15.5px;font-weight:500;white-space:nowrap}
+  .val.pos{color:var(--pos)} .val.neg{color:var(--neg)} .val.mut{color:var(--muted)}
+  .chev{width:18px;height:18px;flex:none;color:var(--muted);transition:transform .16s ease}
+  .row-btn[aria-expanded="true"] .chev{transform:rotate(90deg)}
+  .row-btn[aria-expanded="true"]{background:var(--line-soft)}
+
+  .drawer{padding:2px 20px 20px;background:var(--line-soft)}
+  .drawer h4{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+    margin:16px 0 7px;font-weight:500}
+  .drawer h4:first-child{margin-top:6px}
+  .drawer p{margin:0 0 6px;color:var(--ink-2);max-width:66ch}
+  .drawer p:last-child{margin-bottom:0}
+  .brk{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+  .brk td{padding:5px 0;border-bottom:1px dotted var(--line);vertical-align:baseline}
+  .brk tr:last-child td{border-bottom:none}
+  .brk td:first-child{padding-right:12px}
+  .brk td.n{text-align:right;font-family:"IBM Plex Mono",ui-monospace,monospace;white-space:nowrap}
+  .brk td.c{text-align:right;color:var(--muted);font-size:12px;white-space:nowrap;padding-left:10px}
+  .brk tr.sum td{border-top:1px solid var(--line);border-bottom:none;font-weight:600;padding-top:7px}
+  .src{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;line-height:1.6;
+    background:var(--sheet);border:1px solid var(--line);border-radius:6px;
+    padding:9px 11px;overflow-x:auto;white-space:pre;color:var(--ink-2)}
+  .tag{display:inline-block;font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    padding:2px 7px;border-radius:999px;margin-right:6px}
+  .tag.ok{background:var(--pos-soft);color:var(--pos)}
+  .tag.gap{background:var(--warn-soft);color:var(--warn)}
+  .tag.err{background:var(--neg-soft);color:var(--neg)}
+
+  .bridge .row-btn{grid-template-columns:24px 1fr auto auto}
+  .step{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;color:var(--muted)}
+  .totalbar{display:flex;align-items:baseline;justify-content:space-between;
+    gap:12px;flex-wrap:wrap;padding:14px 20px;border-top:2px solid var(--line);
+    background:var(--accent-soft)}
+  .totalbar b{font-weight:600}
+  .totalbar .val{font-size:19px;font-weight:600}
+
+  .foot{color:var(--muted);font-size:12.5px;max-width:66ch}
+  .foot code{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media (max-width:560px){
+    .row-btn{grid-template-columns:1fr auto;row-gap:4px}
+    .chev{display:none}
+    .bridge .row-btn{grid-template-columns:24px 1fr auto}
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">ASRO · kassa solishtirmasi · 01.09.2026</div>
+  <h1>Avgust oyi bo'yicha haqiqiy pul qoldig'i</h1>
+  <p class="lede">Har bir raqamni bosing — u nimadan iborat ekani, qanday
+  hisoblangani va qaysi manbadan olingani ochiladi.</p>
+</header>
+
+<section class="sheet">
+  <div class="sheet-head">
+    <h2>Haqiqiy pul — 28.08.2026</h2>
+    <span class="note">oxirgi vipiska sanasi</span>
+  </div>
+  <div class="headline">
+    <div class="big">180 817 556</div>
+    <div class="cap">so'm · bank hisoblari va xodim kartalarida</div>
+  </div>
+  <div class="rows" id="realRows"></div>
+</section>
+
+<section class="sheet bridge">
+  <div class="sheet-head">
+    <h2>Tizim nega −255 282 877 ko'rsatadi</h2>
+    <span class="note">to'rtta sabab, so'migacha yopiladi</span>
+  </div>
+  <div class="rows" id="bridgeRows"></div>
+  <div class="totalbar">
+    <b>Tuzatilgandan keyin</b>
+    <span class="val pos">178 564 035</span>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="sheet-head">
+    <h2>Avgust kirimi</h2>
+    <span class="note">tizimda qayd etilgani</span>
+  </div>
+  <div class="rows" id="inRows"></div>
+  <div class="totalbar">
+    <b>Jami qayd etilgan kirim</b>
+    <span class="val pos">696 443 406</span>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="sheet-head">
+    <h2>Avgust chiqimi</h2>
+    <span class="note">tasdiqlangan kassa yozuvlari · 383 qayd</span>
+  </div>
+  <div class="rows" id="outRows"></div>
+  <div class="totalbar">
+    <b>Jami chiqim</b>
+    <span class="val neg">951 726 283</span>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="sheet-head">
+    <h2>Mijozlar qarzi va avgust xizmati</h2>
+    <span class="note">1C kesimi bilan solishtirilgan</span>
+  </div>
+  <div class="rows" id="debtRows"></div>
+</section>
+
+<section class="sheet">
+  <div class="sheet-head">
+    <h2>Nima qilinishi kerak</h2>
+    <span class="note">tartib bo'yicha</span>
+  </div>
+  <div class="rows" id="todoRows"></div>
+</section>
+
+<p class="foot">Barcha raqamlar 01.09.2026 da prod bazasidan (<code>inbola</code>)
+faqat o'qish rejimida olindi. Bank qoldiqlari 28.08 dagi oxirgi vipiskadan —
+29–31.08 uchun vipiska hali yuklanmagan.</p>
+
+</div>
+
+<script>
+const N = n => n.toLocaleString('ru-RU').replace(/ /g,' ');
+
+const DATA = {
+  realRows: [
+    ["Xodim kartalarida","54 ta faol kanal · tranzit qoldig'i",176610118,"pos",[
+      ["p","Pulning katta qismi xodimlar kartalarida turadi — firma bank hisobidan kartaga o'tkazadi, xarajat esa kartadan qilinadi. Bu qoldiq <b>sarflanmagan</b> pul."],
+      ["h","Qanday hisoblandi"],
+      ["t",[["Kartaga tushgan (barcha davr)",1385770587,"214 yozuv"],
+            ["Kartadan sarflangan",-1209160469,"250 yozuv"],
+            ["__sum","Qoldiq",176610118,""]]],
+      ["h","Manba"],
+      ["c","select direction, sum(amount), count(*)\nfrom \"TransitEntry\" group by 1;"]
+    ]],
+    ["Bank hisoblarida","10 ta hisob · 28.08 dagi yopilish qoldig'i",4207438,"pos",[
+      ["p","Har bir hisobning vipiskasidagi yopilish qoldig'i. Bank hisoblarida deyarli pul qolmaydi — kelgan pul darhol kartalarga o'tkaziladi."],
+      ["h","Hisoblar kesimi"],
+      ["t",[["FINANCE COUNCIL",1586887,""],["MOLIYA AI",811203,""],
+            ["TOOLSTREK CA",488276,""],["TASTIFY",418169,""],
+            ["BAROKAT TEAM",339884,""],["SOFYTEAM",236983,""],
+            ["SEVEN'S UP",224236,""],["SARDORBEK HOUSE",80287,""],
+            ["THE POWERFUL TEAM",21513,""],["FININFO",0,""],
+            ["__sum","Jami",4207438,"10 hisob"]]],
+      ["h","Manba"],
+      ["c","BankStatementImport.closingBalance\nperiodTo = 2026-08-28"]
+    ]],
+    ["Naqd kassada","hisobga olinmagan — pastga qarang",0,"mut",[
+      ["p","<span class=\"tag gap\">bo'shliq</span> Naqd qoldiq tizimda alohida yuritilmaydi. Iyul daftari bo'yicha 31.07 da <b>2 728 855</b> so'm qolgan edi; avgust uchun naqd kesimi yo'q."],
+      ["h","Iyul daftaridan"],
+      ["t",[["Kirim",444482191,"128 qayd"],["Chiqim",-441600769,""],
+            ["Bank komissiyasi",-152567,""],["__sum","31.07 qoldig'i",2728855,""]]],
+      ["p","Bu raqam mustaqil tasdiqlangan: <code>O'zini-o'zi band Iyul.json</code> dagi \"kartadagi qoldiq\" jami — 2 728 854,58."],
+      ["h","Manba"],
+      ["c","kassa/json_clean/cash_transactions_2026-07.json"]
+    ]]
+  ],
+
+  bridgeRows: [
+    ["__step","0","Tizim ko'rsatayotgan balans","kirim − chiqim, 01.08 dan beri",-255282877,"neg",[
+      ["p","<code>lib/balance.ts</code> <code>getAvailableBalance</code> shu formulani ishlatadi: <b>kirim − chiqim</b>, faqat 01.08.2026 dan boshlab. Davr boshidagi qoldiq va bir nechta pul oqimi bu formulaga kirmaydi — quyidagi to'rt band aynan shular."],
+      ["t",[["Kirim (qayd etilgan)",696443406,""],["Chiqim",-951726283,""],
+            ["__sum","Balans",-255282877,""]]]
+    ]],
+    ["__step","1","Kartalardagi ochilish qoldig'i","01.08 da kartalarda turgan pul",175048512,"pos",[
+      ["p","Eng katta sabab. 01.08.2026 da xodim kartalarida allaqachon <b>175 048 512</b> so'm bor edi, lekin balans formulasi 01.08 dan boshlanadi va bu qoldiqni ko'rmaydi."],
+      ["h","Qanday hisoblandi"],
+      ["t",[["Iyulgacha kartaga tushgan",616801848,"94 yozuv"],
+            ["Iyulgacha sarflangan",-441753336,"126 yozuv"],
+            ["__sum","01.08 dagi qoldiq",175048512,""]]],
+      ["p","Tekshiruv: 175 048 512 + avgust (768 968 739 − 767 407 133) = <b>176 610 118</b> — yuqoridagi karta qoldig'i bilan aynan mos."],
+      ["h","Manba"],
+      ["c","select direction, sum(amount) from \"TransitEntry\"\nwhere date < '2026-08-01' group by 1;"]
+    ]],
+    ["__step","2","\"E'tiborsiz\" deb belgilangan haqiqiy pul","qarz qaytishi va firmalararo o'tkazma",135000000,"pos",[
+      ["p","Bu pul bankka <b>haqiqatan tushgan</b>, lekin mijoz to'lovi bo'lmagani uchun <code>ignored</code> deb belgilangan. Daromad emas — lekin pul."],
+      ["h","Tarkibi"],
+      ["t",[["Khorezm Golden Building — qarz qaytdi (24.04 shartnomasi)",100000000,"20.08"],
+            ["Khorezm Golden Building — qarz qaytdi (15.04 shartnomasi)",25000000,"20.08"],
+            ["Sardorbek House — firmalararo o'tkazma",5000000,"24.08"],
+            ["Finance Council — firmalararo o'tkazma",5000000,"27.08"],
+            ["__sum","Jami",135000000,"4 yozuv"]]],
+      ["p","Qarz qaytishi jurnalda <code>LOAN_GIVEN</code> hisobida to'g'ri aks etgan; balans formulasi esa bu hisobni umuman o'qimaydi."],
+      ["h","Manba"],
+      ["c","BankTransaction where status='ignored'\n  and direction='income'"]
+    ]],
+    ["__step","3","Biriktirilgan, lekin hisobga olinmagan kirim","25–28.08 · 17 ta to'lov",81500000,"pos",[
+      ["p","<span class=\"tag gap\">navbatda</span> Vipiska yuklandi, to'lovlar firmalarga biriktirildi, lekin \"hisobga olish\" bosqichi yurgizilmagan — o'sha importlarda bitta ham <code>posted</code> yozuv yo'q."],
+      ["h","Eng yiriklari"],
+      ["t",[["MCHJ TRINITY TECHNOLOGY",20000000,"26.08"],
+            ["ARIES FASHION MCHJ",20000000,"26.08"],
+            ["ООО \"SHIRIN SUPER TAOM\"",10000000,"28.08"],
+            ["SOF MEDTEX LLC",6000000,"27.08"],
+            ["ООО \"RENOVA CITY\"",4000000,"25.08"],
+            ["XK \"GELATO ICE CREAM MASTER\"",3500000,"26.08"],
+            ["qolgan 11 ta",18000000,""],
+            ["__sum","Jami",81500000,"17 yozuv"]]],
+      ["p","Kassada aksi yo'q (mos <code>KassaEntry</code> — 0 ta), ya'ni ikki marta sanash xavfi yo'q."],
+      ["h","Manba"],
+      ["c","BankTransaction where status='matched'\n  and direction='income'\n  and not exists (LedgerEntry)"]
+    ]],
+    ["__step","4","Firmaga biriktirilmagan kirim","5 ta to'lov",42298400,"pos",[
+      ["p","Vipiskada bor, lekin qaysi mijozga tegishli ekani aniqlanmagan."],
+      ["h","Tarkibi"],
+      ["t",[["Bux. xizmat, iyul uchun (shartnoma raqami bilan)",20000000,"18.08"],
+            ["Bux. xizmat, iyul uchun",15000000,"18.08"],
+            ["MCHJ AVVITAL NATURALS — iyul uchun",2000000,"05.08"],
+            ["Qaytarilgan pul (karta raqami xato)",3798400,"11.08"],
+            ["Qaytarilgan pul (ЭПП)",1500000,"14.08"],
+            ["__sum","Jami",42298400,"5 yozuv"]]],
+      ["p","Birinchi uchtasi (37 mln) — aniq mijoz to'lovi, faqat firma topilmagan. Oxirgi ikkitasi (5,3 mln) — qaytib kelgan pul, daromad emas."],
+      ["h","Manba"],
+      ["c","BankTransaction where status='unmatched'\n  and direction='income'"]
+    ]],
+    ["__step","≈","Qolgan farq","naqd kassa va sana chegarasi",2253521,"mut",[
+      ["p","Tuzatilgandan keyin <b>178 564 035</b> chiqadi, haqiqiy pul esa <b>180 817 556</b>. Farq — <b>2 253 521</b>."],
+      ["h","Izohi"],
+      ["t",[["Naqd kassa qoldig'i (31.07 dagi)",2728855,"hisobga olinmagan"],
+            ["Sana chegarasi: vipiska 28.08 da tugaydi",-475334,"29–31.08 yo'q"],
+            ["__sum","Farq",2253521,""]]],
+      ["p","Ya'ni farqning deyarli hammasi naqd kassa qoldig'i. 29–31.08 vipiskasi yuklangach bu ham aniqlashadi."]
+    ]]
+  ],
+
+  inRows: [
+    ["Shartnoma to'lovlari","mijozlardan tushgan pul · avgust davri",660258000,"pos",[
+      ["h","Holati bo'yicha"],
+      ["t",[["To'liq to'langan",615558000,"123 firma"],
+            ["Qisman to'langan",44700000,"12 firma"],
+            ["__sum","Tushgan pul",660258000,"135 firma"]]],
+      ["p","Jurnaldagi <code>CONTRACT_INCOME</code> avgust davri bilan aynan mos: 660 258 000."],
+      ["h","Manba"],
+      ["c","Payment where period='2026-08'\n  and status in ('paid','partial')"]
+    ]],
+    ["Kassa kirimlari","10 ta bank hisobining ochilish qoldig'i",36185406,"pos",[
+      ["p","<span class=\"tag ok\">muhim</span> Bu yangi pul emas — 01.08.2026 dagi bank qoldiqlari kassaga kirim sifatida kiritilgan. Shuning uchun ochilish qoldig'ini yana alohida qo'shish <b>ikki marta sanash</b> bo'lardi."],
+      ["h","Tarkibi"],
+      ["t",[["FININFO",8833493,""],["THE POWERFULL TEAM",7890259,""],
+            ["FINANCE COUNCIL",6575415,""],["SARDORBEK HOUSE",3270999,""],
+            ["BAROKAT TEAM",2464727,""],["SEVEN'S UP",2331693,""],
+            ["TOOLSTREK CA",2252074,""],["TASTIFY",2010243,""],
+            ["MOLIYA AI",529619,""],["SOFI TEAM",26884,""],
+            ["__sum","Jami",36185406,"10 qayd"]]],
+      ["p","Har bir qatorning toifasi — <code>Boshlang'ich qoldiq</code>, sanasi 01.08.2026, izohida \"vipiska ochilish qoldig'i\" yozilgan."],
+      ["h","Manba"],
+      ["c","KassaEntry where type='income'\n  and category='Boshlang''ich qoldiq'"]
+    ]]
+  ],
+
+  outRows: [
+    ["Oylik va avans","xodimlarga to'langan · 81 qayd",390969308,"neg",[
+      ["h","Ikki toifada"],
+      ["t",[["O'ziga oylik",324380652,"58 qayd"],["Oylik",66588656,"23 qayd"],
+            ["__sum","Jami",390969308,""]]],
+      ["p","Bu <b>to'langan</b> summa. Tabel bo'yicha <b>hisoblangan</b> majburiyat esa 381 309 308 — farq 9 660 000 so'm ortiqcha to'langan (ehtimol iyul qoldig'i). Jurnalda avgust oyligi endi hisoblanma bo'yicha yuritiladi."],
+      ["h","Manba"],
+      ["c","KassaEntry category in ('O''ziga oylik','Oylik')\nLedgerEntry SALARY_EXPENSE / ACCRUED_SALARIES"]
+    ]],
+    ["Ta'sischiga taqsimot","\"Otabek akaga\" · 19 qayd",321508320,"neg",[
+      ["p","<span class=\"tag ok\">to'g'ri tasniflangan</span> Bu <b>xarajat emas</b> — foydadan olingan pul. Jurnalda alohida <code>OWNER_DISTRIBUTION</code> hisobida, shuning uchun foyda hisobini buzmaydi. Pul haqiqatan chiqqani uchun kassadan ayiriladi."],
+      ["h","Manba"],
+      ["c","LedgerEntry accountId='OWNER_DISTRIBUTION'"]
+    ]],
+    ["Soliq to'lovlari","81 qayd",130556095,"neg",[
+      ["p","Mijozlar uchun va o'z firmalar uchun to'langan soliqlar."],
+      ["h","Manba"],
+      ["c","KassaEntry where category='soliq'"]
+    ]],
+    ["Ijara, ovqat, aloqa va boshqa","xo'jalik xarajatlari",91038778,"neg",[
+      ["h","Tarkibi"],
+      ["t",[["Ijara",21287464,"4 qayd"],["Ovqat",20580000,"4 qayd"],
+            ["Xarajat",19334386,"9 qayd"],["Boshqa",14314396,"15 qayd"],
+            ["Other",12777533,"2 qayd"],["Aloqa",1695000,"4 qayd"],
+            ["Mayda toifalar",1049999,""],
+            ["__sum","Jami",91038778,""]]],
+      ["p","Tekshiruv: 390 969 308 + 321 508 320 + 130 556 095 + 91 038 778 + 14 000 000 + 3 653 782 = <b>951 726 283</b> — jami chiqim bilan aynan mos."]
+    ]],
+    ["Vosstanovleniya","2 qayd · daromadi bilan solishtirilgan",14000000,"neg",[
+      ["p","<span class=\"tag ok\">yopildi</span> Ikkala chiqimning ham daromadi topildi."],
+      ["h","Solishtirma"],
+      ["t",[["Javohir — \"Stroy Surxon vost tugadi\"",-10000000,"21.08"],
+            ["Mardon — o'ziga vosstanavleniya pulidan",-4000000,"21.08"],
+            ["STROY SURXON INDUSTRIAL, shartnoma №14/РК",10000000,"05.08"],
+            ["\"Восстановление и анализ...\" to'lovi",3000000,"12.08"],
+            ["o'sha xizmat uchun ikkinchi to'lov",2000000,"26.08"],
+            ["__sum","Marja",1000000,""]]],
+      ["p","Stroy Surxon ishida marja <b>nol</b>: 10 mln kirdi, 10 mln ijrochiga chiqdi. Shartnoma <b>РК</b> turida — bir martalik ish, oylik <b>БК</b> abonent xizmati emas (o'sha firma 03.08 da 3,5 mln ni alohida to'lagan)."]
+    ]],
+    ["Bank komissiyasi","149 qayd",3653782,"neg",[
+      ["p","Har o'tkazma uchun bank ushlab qolgan summa."]
+    ]],
+    ["Tekshirish kerak: takroriy qaydlar","bir xil sana + toifa + summa",46870263,"mut",[
+      ["p","<span class=\"tag err\">shubhali</span> Avgustda <b>34 guruh</b> topildi — bir xil sana, toifa va summaga ega 85 ta qayd. Ularning bir qismi haqiqiy bo'lishi mumkin (bir kunda ikki xodimga bir xil summa), lekin tekshirilishi shart."],
+      ["h","Ortiqcha summa — agar takrorlar haqiqiy bo'lmasa"],
+      ["t",[["Otabek akaga · 21.08 · 13 090 000 × 2",13090000,""],
+            ["Otabek akaga · 27.08 · 10 000 000 × 2",10000000,""],
+            ["soliq · 13.08 · 6 000 000 × 2",6000000,""],
+            ["soliq · 14.08 · 6 000 000 × 2",6000000,""],
+            ["O'ziga oylik · 24.08 · 2 000 000 × 3",4000000,""],
+            ["soliq · 28.08 · 4 000 000 × 2",4000000,""],
+            ["qolgan 28 guruh",3780263,""],
+            ["__sum","Jami ortiqcha",46870263,"34 guruh · 85 qayd"]]],
+      ["p","Bu summa yuqoridagi 951 726 283 ning <b>ichida</b> — alohida qo'shilmaydi."]
+    ]]
+  ],
+
+  debtRows: [
+    ["31.07.2026 dagi qarz","1C kesimi · davr boshi",333993000,"mut",[
+      ["p","<span class=\"tag ok\">tizim bilan mos</span> Fayl uch pog'onali (mijoz → shartnoma → bizning firma) va har summa uch marta takrorlanadi. To'g'ri daraja — <b>shartnoma</b>."],
+      ["h","Hisoblash"],
+      ["t",[["Qarz (shartnoma darajasi)",496633000,"85 qator"],
+            ["Avans",-162640000,""],
+            ["__sum","Netto",333993000,""]]],
+      ["p","Tizimdagi \"BOSHI\" ustuni bilan aynan bir xil."],
+      ["h","Manba"],
+      ["c","kassa/json_files/31.07.2026 qarzdorlik.json"]
+    ]],
+    ["01.08.2026 dagi qarz","iyul xizmati qo'shilgandan keyin",1208243000,"neg",[
+      ["h","Hisoblash"],
+      ["t",[["Qarz",1291533000,"249 shartnoma"],["Avans",-83290000,""],
+            ["__sum","Netto",1208243000,""]]],
+      ["p","Faylning o'z <code>Итого</code> qatori: 1 291 533 000 / 83 290 000 — hisob bilan aynan mos."],
+      ["h","Tekshiruv"],
+      ["t",[["31.07 qoldig'i",333993000,""],["Iyul uchun hisoblandi",882250000,""],
+            ["To'landi",-8000000,""],["__sum","01.08 qoldig'i",1208243000,""]]]
+    ]],
+    ["Avgust xizmati uchun hisoblangan","2026-08 davri · 284 to'lov qatori",1004863555,"mut",[
+      ["p","Avgust oyi uchun xizmat haqi <b>allaqachon hisoblangan</b>. Bugun 01.09 — endi undirish bosqichi."],
+      ["h","Holati"],
+      ["t",[["To'langan",615558000,"123 firma"],
+            ["Qisman to'langan",44700000,"12 firma"],
+            ["To'lanmagan",344605555,"149 firma"],
+            ["__sum","Jami hisoblangan",1004863555,"284 qator"]]],
+      ["p","Taqqoslash uchun: 270 ta faol mijozning oylik shartnoma summasi jami <b>845 555 555</b>. Farq — bir martalik ishlar va qo'shimcha xizmatlar."],
+      ["h","Manba"],
+      ["c","Payment where period='2026-08'"]
+    ]]
+  ],
+
+  todoRows: [
+    ["1 · 81 500 000 ni hisobga olish","Kirim navbati ekranidan",81500000,"pos",[
+      ["p","17 ta to'lov firmaga biriktirilgan, lekin hisobga olinmagan. Har qator uchun <b>qaysi shartnoma va qaysi davr</b> ekani qaror talab qiladi, shuning uchun skript bilan emas — ekrandan."],
+      ["p","Bajarilgach kassa balansi shuncha ko'tariladi va mijozlar qarzi shuncha kamayadi."]
+    ]],
+    ["2 · Kartalardagi ochilish qoldig'ini kiritish","01.08 holatiga",175048512,"pos",[
+      ["p","Balansdagi eng katta bo'shliq. Kiritilgach ekrandagi manfiy balans yo'qoladi."],
+      ["p","Kiritish usuli qaror talab qiladi: bank qoldiqlari kabi <code>Boshlang'ich qoldiq</code> toifasi bilanmi, yoki har karta bo'yicha alohida."]
+    ]],
+    ["3 · 42 298 400 ni tasniflash","5 ta biriktirilmagan kirim",42298400,"pos",[
+      ["p","37 mln — mijoz to'lovi, firmasi topilishi kerak. 5,3 mln — qaytib kelgan pul, daromad emas."]
+    ]],
+    ["4 · Takroriy qaydlarni tekshirish","34 guruh · 85 qayd",46870263,"mut",[
+      ["p","Bir xil sana, toifa va summaga ega qaydlar. Haqiqiy bo'lsa qoldiriladi, takror bo'lsa o'chiriladi — har biri ko'zdan kechirilishi kerak."]
+    ]],
+    ["5 · Naqd kassa qoldig'ini kiritish","31.07 holatiga",2728855,"mut",[
+      ["p","Bank qoldiqlari kiritilgan, naqd qismi kiritilmagan."]
+    ]],
+    ["6 · Iyul oyligini hisoblanmaga o'tkazish","tabel summasi kerak",0,"mut",[
+      ["p","Avgust allaqachon hisoblanma usulida (381 309 308). Iyul hali kassa usulida — 269 344 938, ya'ni \"iyulda to'langan\" summa."],
+      ["c","npx tsx scripts/post-payroll-accrual.ts \\\n  --period=2026-07 --amount=<tabel> --apply"]
+    ]]
+  ]
+};
+
+function drawer(blocks){
+  const d = document.createElement('div');
+  d.className = 'drawer';
+  for (const b of blocks){
+    if (b[0] === 'p'){ const p = document.createElement('p'); p.innerHTML = b[1]; d.append(p); }
+    else if (b[0] === 'h'){ const h = document.createElement('h4'); h.textContent = b[1]; d.append(h); }
+    else if (b[0] === 'c'){ const c = document.createElement('div'); c.className = 'src'; c.textContent = b[1]; d.append(c); }
+    else if (b[0] === 't'){
+      const tb = document.createElement('table'); tb.className = 'brk';
+      for (const r of b[1]){
+        const tr = document.createElement('tr');
+        const isSum = r[0] === '__sum';
+        if (isSum) tr.className = 'sum';
+        const label = isSum ? r[1] : r[0];
+        const value = isSum ? r[2] : r[1];
+        const cnt   = isSum ? (r[3] || '') : (r[2] || '');
+        tr.innerHTML = '<td>' + label + '</td><td class="n">' +
+          (value < 0 ? '−' : '') + N(Math.abs(value)) +
+          '</td><td class="c">' + cnt + '</td>';
+        tb.append(tr);
+      }
+      d.append(tb);
+    }
+  }
+  return d;
+}
+
+function render(id, rows){
+  const host = document.getElementById(id);
+  if (!host) return;
+  rows.forEach(r => {
+    const stepped = r[0] === '__step';
+    const step   = stepped ? r[1] : null;
+    const name   = stepped ? r[2] : r[0];
+    const sub    = stepped ? r[3] : r[1];
+    const val    = stepped ? r[4] : r[2];
+    const cls    = stepped ? r[5] : r[3];
+    const blocks = stepped ? r[6] : r[4];
+
+    const wrap = document.createElement('div');
+    wrap.className = 'row';
+
+    const btn = document.createElement('button');
+    btn.className = 'row-btn';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML =
+      (stepped ? '<span class="step">' + step + '</span>' : '') +
+      '<span class="row-label"><b>' + name + '</b><small>' + sub + '</small></span>' +
+      '<span class="val ' + cls + '">' +
+        (val === 0 ? '—' : (val < 0 ? '−' : '') + N(Math.abs(val))) +
+      '</span>' +
+      '<svg class="chev" viewBox="0 0 20 20" fill="none" aria-hidden="true">' +
+      '<path d="M7.5 4.5l5 5.5-5 5.5" stroke="currentColor" stroke-width="1.6" ' +
+      'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    const dr = drawer(blocks);
+    dr.hidden = true;
+
+    btn.addEventListener('click', () => {
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!open));
+      dr.hidden = open;
+    });
+
+    wrap.append(btn, dr);
+    host.append(wrap);
+  });
+}
+
+for (const k of Object.keys(DATA)) render(k, DATA[k]);
+</script>
