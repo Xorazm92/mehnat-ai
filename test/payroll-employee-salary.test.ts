@@ -31,9 +31,14 @@ const rule = {
   category: "attendance",
 } as KPIRule;
 
+// Har chaqiruv ALOHIDA qator: id — birlamchi kalit, ya'ni ikkita turli qator
+// bir xil id bilan mavjud bo'la olmaydi. Fixture buni buzsa, `lib/kpiLogic.ts`
+// dagi "bitta qator bir marta sanaladi" qo'riqchisi ularni bitta deb qabul
+// qiladi va test yolg'on natija tekshiradi.
+let perfSeq = 0;
 const perf = (calculatedScore: number): MonthlyPerformance =>
   ({
-    id: `p-${calculatedScore}`,
+    id: `p-${++perfSeq}-${calculatedScore}`,
     month: `${MONTH}-01`,
     companyId: "co-1",
     employeeId: "emp-1",

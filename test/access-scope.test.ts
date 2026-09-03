@@ -363,4 +363,54 @@ describe("P0-4 · KPI tasdiqlash xodim/firma scope", () => {
       kpi.upsertCompanyKpiRule({ companyId: ids.mine, ruleId: rule.id, isActive: true })
     ).resolves.toBeTruthy();
   });
+
+  // BAHO YOZISH YO'LI HAM SCOPE'dan o'tadi.
+  //
+  // `approvePerformance` portfelni tekshiradi, lekin `upsertPerformance` senior
+  // chaqiruvida to'g'ridan-to'g'ri `status:'approved'` yozadi — ya'ni o'sha
+  // qo'riqchini chetlab o'tish yo'li ochiq turardi: nazoratchi begona xodimga,
+  // begona firmada tasdiqlangan KPI yozib, uning oyligini o'zgartira olardi.
+  describe("upsertPerformance — begona xodim/firma", () => {
+    const entry = (employeeId: string, companyId: string, ruleId: string) => ({
+      month: "2099-06",
+      companyId,
+      employeeId,
+      ruleId,
+      selectedOption: "green",
+      source: "supervisor",
+      status: "approved",
+    });
+
+    it("begona XODIMga baho yozib bo'lmaydi", async () => {
+      const rule = await prisma.kpiRule.findFirst({ select: { id: true } });
+      if (!rule) return;
+      asUser(ids.supervisor, "supervisor");
+      await expect(
+        kpi.upsertPerformance(entry(ids.staffOutside, ids.mine, rule.id))
+      ).rejects.toThrow(/ruxsat/i);
+    });
+
+    it("begona FIRMAda baho yozib bo'lmaydi", async () => {
+      const rule = await prisma.kpiRule.findFirst({ select: { id: true } });
+      if (!rule) return;
+      asUser(ids.supervisor, "supervisor");
+      await expect(
+        kpi.upsertPerformance(entry(ids.staffInside, ids.theirs, rule.id))
+      ).rejects.toThrow(/ruxsat/i);
+    });
+
+    it("o'z portfelida yozadi va bal SERVERDA hisoblanadi", async () => {
+      const rule = await prisma.kpiRule.findFirst({
+        where: { inputTypeV2: "select" },
+        select: { id: true, maxBonus: true },
+      });
+      if (!rule) return;
+      asUser(ids.supervisor, "supervisor");
+      const saved = (await kpi.upsertPerformance(
+        entry(ids.staffInside, ids.mine, rule.id)
+      )) as unknown as { calculatedScore: number };
+      // Klient hech qanday ball yubormadi — u qoidaning `options` idan chiqdi.
+      expect(Number(saved.calculatedScore)).toBe(Number(rule.maxBonus));
+    });
+  });
 });

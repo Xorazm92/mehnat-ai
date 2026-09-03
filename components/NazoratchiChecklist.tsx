@@ -45,12 +45,12 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     const [loading, setLoading] = useState(false);
     const [busy, setBusy] = useState(false);
 
-    // Server gate'lari bir xil emas, UI ham shunga qarab ajratilishi kerak:
-    // approvePerformance / approveAutoPerformance faqat chief+ ga ruxsat beradi,
-    // rejectPerformance nazoratchiga ham. Bitta `canApprove` bilan nazoratchiga
-    // "Tasdiqlash" tugmasi ko'rinardi va bosilganda "Forbidden" qaytarardi.
+    // Server gate'lari bilan AYNAN bir xil bo'lishi kerak (server/kpi.ts):
+    // bitta qatorni tasdiqlash — nazoratchiga ham ochiq (u allaqachon
+    // upsertPerformance orqali 'approved' yozadi), OMMAVIY tasdiq esa chief+.
     const role = (currentUserRole || '').toLowerCase();
-    const canFinalApprove = ['super_admin', 'admin', 'chief_accountant'].includes(role);
+    const canFinalApprove = ['super_admin', 'admin', 'chief_accountant', 'supervisor'].includes(role);
+    const canBulkApprove = ['super_admin', 'admin', 'chief_accountant'].includes(role);
     const canReject = ['super_admin', 'admin', 'chief_accountant', 'supervisor'].includes(role);
 
     useEffect(() => { loadData(); }, [month]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -77,17 +77,30 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
     );
     const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompanyId), [companies, selectedCompanyId]);
 
-    // Per-company total KPI% (capped per role) for the sidebar badge
+    // Firma bo'yicha jami KPI% (rol bo'yicha qirqilgan) — yon panel belgisi.
+    //
+    // FAQAT `approved`: oylik ham faqat tasdiqlangan qatorni to'laydi
+    // (lib/kpiLogic.ts). Ilgari bu yerda hamma status sanalardi va nazoratchi
+    // ko'rgan foiz to'lanadigan foiz emasdi — tasdiqlanmagan taklif ham
+    // "yozilgan" bo'lib turardi. Tasdiq kutayotganlari alohida qaytariladi.
     const companyTotalPercent = (companyId: string) => {
         const rows = performances.filter(p => p.companyId === companyId);
+        const roleOf = (p: MonthlyPerformance) =>
+            p.ruleRole || rules.find(r => r.id === p.ruleId)?.role || 'accountant';
+
         const byRole = new Map<string, number[]>();
+        let pending = 0;
         for (const p of rows) {
-            const ruleRole = (p as MonthlyPerformance).ruleRole || rules.find(r => r.id === p.ruleId)?.role || 'accountant';
+            if (p.status !== 'approved') {
+                if (Number(p.calculatedScore) !== 0) pending++;
+                continue;
+            }
+            const ruleRole = roleOf(p as MonthlyPerformance);
             (byRole.get(ruleRole) ?? byRole.set(ruleRole, []).get(ruleRole)!).push(Number(p.calculatedScore) || 0);
         }
         let total = 0;
         for (const [role, percents] of byRole) total += capKpiPercent(percents, role as KpiSalaryRole);
-        return total;
+        return { total, pending };
     };
 
     const contractAmount = Number(selectedCompany?.contractAmount || (selectedCompany as unknown as { contract_amount?: number })?.contract_amount || 0);
@@ -217,7 +230,7 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
                     {filteredCompanies.map(c => {
-                        const total = companyTotalPercent(c.id);
+                        const { total, pending } = companyTotalPercent(c.id);
                         const isSelected = selectedCompanyId === c.id;
                         return (
                             <div key={c.id} onClick={() => setSelectedCompanyId(c.id)}
@@ -234,6 +247,11 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                         </span>
                                     )}
                                 </div>
+                                {pending > 0 && (
+                                    <p className="text-micro font-bold mb-1" style={{ color: 'var(--warning)' }}>
+                                        {pending} ta baho tasdiq kutmoqda (oylikka kirmagan)
+                                    </p>
+                                )}
                                 <div className="flex flex-wrap gap-1">
                                     <Badge tone="neutral">INN: {c.inn}</Badge>
                                     {nameOf(c.accountantId, c.accountantName) && <Badge tone="neutral">{nameOf(c.accountantId, c.accountantName)}</Badge>}
@@ -282,9 +300,15 @@ const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentU
                                                 ? `${autoPending.length} ta avtomatik baho tasdiq kutmoqda`
                                                 : `${autoPending.length} авто-оценок ждут подтверждения`}
                                         </span>
-                                        <Button variant="primary" size="sm" disabled={busy} onClick={approveAllAuto}>
-                                            {lang === 'uz' ? 'Barchasini tasdiqlash' : 'Подтвердить все'}
-                                        </Button>
+                                        {/* Ommaviy tasdiq serverda chief+ ga cheklangan
+                                            (server/kpi.ts approveAutoPerformance) — tugma
+                                            nazoratchiga ko'rinib, bosilganda "Forbidden"
+                                            qaytarmasin. */}
+                                        {canBulkApprove && (
+                                            <Button variant="primary" size="sm" disabled={busy} onClick={approveAllAuto}>
+                                                {lang === 'uz' ? 'Barchasini tasdiqlash' : 'Подтвердить все'}
+                                            </Button>
+                                        )}
                                     </>
                                 ) : (
                                     <span className="text-micro font-bold" style={{ color: 'var(--text-muted)' }}>

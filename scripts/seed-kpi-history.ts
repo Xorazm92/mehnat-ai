@@ -1,15 +1,38 @@
 /**
- * Seed a compact 5-month KPI history so the leaderboard's 6-month dynamics
- * line has real data. Duplicates ~25% of the current month's performances into
- * each of the 5 prior months with a small score drift (a realistic upward
- * trend). source='system', status='approved'. Idempotent: clears prior-month
- * system rows first (keeps the current month intact).
+ * DEMO ma'lumot: reyting grafigi bo'sh turmasligi uchun 5 oylik KPI tarixi.
+ *
+ * DIQQAT — BU SOXTA MA'LUMOT. Ilgari u `status='approved', source='system'`
+ * yozardi, ya'ni `Math.random()` bilan buzilgan qatorlar OYLIK O'QIYDIGAN
+ * ma'lumotga aylanardi (lib/kpiLogic.ts faqat `approved` ni oladi) va haqiqiy
+ * bahodan farq qilmasdi. Endi:
+ *
+ *   - `status='draft'`, `source='demo'` — oylik bunday qatorni ko'rmaydi;
+ *   - prod bazada umuman ishga tushmaydi (pastdagi qo'riqchi);
+ *   - tozalash ham faqat O'ZI yozgan `source='demo'` qatorlarni o'chiradi
+ *     (avval `source='system'` ni o'chirardi — ya'ni haqiqiy avtomatik
+ *     takliflarni ham yo'q qilardi).
+ *
+ * Eski ishga tushirishlardan qolgan soxta qatorlarni tozalash uchun:
+ *   npx tsx scripts/purge-demo-kpi-history.ts
  *
  * Run: npx tsx scripts/seed-kpi-history.ts
  */
 import "./load-env"; // must be first: loads DATABASE_URL before Prisma is used
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+
+/** Soxta ma'lumot prod bazaga tushmasin. */
+function assertNotProduction() {
+  const url = process.env.DATABASE_URL ?? "";
+  const host = url.match(/@([^:/?]+)/)?.[1] ?? "";
+  const local = host === "localhost" || host === "127.0.0.1" || host === "";
+  if (process.env.NODE_ENV === "production" || !local) {
+    console.error(
+      `✖ seed-kpi-history DEMO skripti: faqat lokal baza. Hozirgi xost: ${host || "(noma'lum)"}`
+    );
+    process.exit(1);
+  }
+}
 
 function monthKey(offset: number) {
   const d = new Date();
@@ -19,10 +42,11 @@ function monthKey(offset: number) {
 }
 
 async function main() {
+  assertNotProduction();
   const current = monthKey(0);
   const priorMonths = [1, 2, 3, 4, 5].map(monthKey);
 
-  const cleared = await prisma.monthlyPerformance.deleteMany({ where: { month: { in: priorMonths }, source: "system" } });
+  const cleared = await prisma.monthlyPerformance.deleteMany({ where: { month: { in: priorMonths }, source: "demo" } });
 
   const cur = await prisma.monthlyPerformance.findMany({
     where: { month: current, status: "approved" },
@@ -45,11 +69,12 @@ async function main() {
       return {
         month, companyId: p.companyId, employeeId: p.employeeId, ruleId: p.ruleId,
         selectedOption: option, value: new Prisma.Decimal(sc > 0 ? 1 : sc < 0 ? -1 : 0),
-        calculatedScore: new Prisma.Decimal(sc), source: "system", status: "approved",
-        submittedAt: now, approvedAt: now, recordedAt: now,
+        // draft + demo: oylik faqat `approved` ni o'qiydi, ya'ni bu qator pulga tegmaydi.
+        calculatedScore: new Prisma.Decimal(sc), source: "demo", status: "draft",
+        submittedAt: now, recordedAt: now,
       };
     });
-    // skipDuplicates: the clear above only removes source='system' rows, so a real
+    // skipDuplicates: the clear above only removes source='demo' rows, so a real
     // entry on the same natural key must survive — and that key is UNIQUE since ADR-0004.
     const res = await prisma.monthlyPerformance.createMany({ data: rows, skipDuplicates: true });
     total += res.count;

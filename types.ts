@@ -620,6 +620,9 @@ export interface CompanyBreakdown {
   // nolga qisiladi (`lib/kpiLogic.ts` finalAmount = max(0, raw)), ya'ni oshgan
   // jarima jimgina yo'qoladi. Bu — yo'qolgan miqdor; 0 bo'lsa qisish bo'lmagan.
   clampedLoss: number;
+  // Qoidada so'mda kiritilgan jarima (`amount_penalty` — masalan noto'g'ri pul
+  // o'tkazma). Foiz emas, shuning uchun `kpiPenalty` dan alohida ko'rsatiladi.
+  fixedPenalty: number;
   // Ulush QAYSI summadan hisoblangani. 'accrual' rejimida contractAmount ga
   // teng, 'cash' da esa shu davrda haqiqatda tushgan pul (`collectedAmount`
   // shartnomadan oshsa, shartnoma bilan cheklanadi).

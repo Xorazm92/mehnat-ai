@@ -81,10 +81,14 @@ describe("projectResponseKpiToPerformance", () => {
 
     const row = await perfRow();
     expect(row).not.toBeNull();
-    expect(row!.selectedOption).toBe("red");
+    // `acc_group_response` — `counter` qoidasi ("хар сафар −0.5%"), uch holatli
+    // tanlov emas; shuning uchun `selectedOption` YOZILMAYDI, jarima esa har bir
+    // kechikkan javob uchun alohida sanaladi (3 × −0.5 = −1.5%).
+    // Qarang: test/kpi-group-response-counter.test.ts va seed izohi.
+    expect(row!.selectedOption).toBeNull();
+    expect(Number(row!.calculatedScore)).toBe(-1.5);
     expect(row!.status).toBe("submitted");
     expect(row!.source).toBe("bot");
-    expect(Number(row!.calculatedScore)).toBeLessThan(0); // penalty
   });
 
   it("never overwrites a supervisor-approved row", async () => {

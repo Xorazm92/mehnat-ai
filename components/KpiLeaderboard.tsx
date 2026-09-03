@@ -13,8 +13,11 @@ import { MonthPicker } from "./ui/MonthPicker";
 interface Props { lang: Language; hideBonus?: boolean; }
 
 interface LeaderRow {
-  employeeId: string; name: string; role: string; ball: number;
-  daraja: "excellent" | "good" | "fair" | "poor"; green: number; red: number; entries: number; bonus: number;
+  employeeId: string; name: string; role: string;
+  /** `null` — bu oyda baholanmagan (0 ham, 100 ham emas). */
+  ball: number | null;
+  daraja: "excellent" | "good" | "fair" | "poor" | null;
+  green: number; red: number; entries: number; bonus: number;
   byCategory?: { category: string; passPercent: number }[];
 }
 interface Data {
@@ -24,7 +27,7 @@ interface Data {
   monthlyTrend?: { month: string; avgBall: number }[];
 }
 
-const DARAJA: Record<LeaderRow["daraja"], { label: string; fg: string; bg: string; bd: string }> = {
+const DARAJA: Record<NonNullable<LeaderRow["daraja"]>, { label: string; fg: string; bg: string; bd: string }> = {
   excellent: { label: "A'lo", fg: "var(--success)", bg: "var(--success-bg)", bd: "var(--success-border)" },
   good: { label: "Yaxshi", fg: "var(--accent-blue)", bg: "var(--accent-blue-light)", bd: "var(--accent-blue)" },
   fair: { label: "Qoniqarli", fg: "var(--warning)", bg: "var(--warning-bg)", bd: "var(--warning-border)" },
@@ -121,7 +124,7 @@ const KpiLeaderboard: React.FC<Props> = ({ lang, hideBonus = false }) => {
               </div>
             ) : (
               data!.leaderboard.map((r, i) => {
-                const d = DARAJA[r.daraja];
+                const d = r.daraja ? DARAJA[r.daraja] : null;
                 return (
                   <div key={r.employeeId} className={`px-5 py-3 grid ${hideBonus ? "grid-cols-[40px_1fr_120px_90px]" : "grid-cols-[40px_1fr_120px_90px_110px]"} gap-2 items-center`} style={{ borderBottom: "1px solid var(--card-border)" }}>
                     <span className="font-mono text-xs font-semibold tabular-nums flex items-center" style={{ color: i < 3 ? "var(--brand)" : "var(--text-muted)" }}>{i === 0 ? <Trophy size={14} aria-label="Birinchi o'rin" /> : i + 1}</span>
@@ -144,11 +147,19 @@ const KpiLeaderboard: React.FC<Props> = ({ lang, hideBonus = false }) => {
                       )}
                     </div>
                     <div className="rounded-full h-2" style={{ background: "var(--input-bg)" }}>
-                      <div className="h-2 rounded-full transition-all duration-700" style={{ width: `${r.ball}%`, background: barColor(r.ball) }} />
+                      {/* O'lchanmagan xodimda chiziq umuman chizilmaydi — bo'sh
+                          chiziq "0%" deb o'qilmasligi uchun ball o'rnida "—" turadi. */}
+                      {r.ball !== null && (
+                        <div className="h-2 rounded-full transition-all duration-700" style={{ width: `${r.ball}%`, background: barColor(r.ball) }} />
+                      )}
                     </div>
                     <div className="flex items-center justify-center gap-1.5">
-                      <span className="text-body font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{r.ball}</span>
-                      <span className="text-2xs font-bold px-1.5 py-0.5 rounded-lg" style={{ background: d.bg, color: d.fg, border: `1px solid ${d.bd}` }}>{d.label}</span>
+                      <span className="text-body font-bold tabular-nums" style={{ color: r.ball === null ? "var(--text-muted)" : "var(--text-primary)" }}>{r.ball ?? "—"}</span>
+                      {d ? (
+                        <span className="text-2xs font-bold px-1.5 py-0.5 rounded-lg" style={{ background: d.bg, color: d.fg, border: `1px solid ${d.bd}` }}>{d.label}</span>
+                      ) : (
+                        <span className="text-2xs font-bold px-1.5 py-0.5 rounded-lg" style={{ background: "var(--input-bg)", color: "var(--text-muted)", border: "1px solid var(--card-border)" }}>Baholanmagan</span>
+                      )}
                     </div>
                     {!hideBonus && (
                       <span className="text-xs font-bold tabular-nums text-right" style={{ color: r.bonus > 0 ? "var(--success)" : "var(--text-muted)" }}>{r.bonus > 0 ? "+" + fmt(r.bonus) : "—"}</span>

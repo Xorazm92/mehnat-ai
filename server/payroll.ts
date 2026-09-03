@@ -347,6 +347,10 @@ async function computeEmployeeSalary(employeeId: string, month: string) {
     }),
     prisma.monthlyPerformance.findMany({
       where: { month, employeeId, status: "approved" },
+      // Qoidaning ROLI ham kerak: `lib/kpiLogic.ts` har oylik rolига faqat
+      // o'sha rolning qoidalarini qo'llaydi (`ruleRole`). Busiz filtr jimgina
+      // ochilib qolardi — qarang server/kpi.ts findPerformance izohi.
+      include: { rule: { select: { role: true } } },
     }),
     prisma.kpiRule.findMany({ where: { isActive: true } }),
     prisma.companyKpiRule.findMany({ where: { isActive: true } }),
@@ -394,7 +398,9 @@ async function computeEmployeeSalary(employeeId: string, month: string) {
     employee: { id: employee.id, name: employee.fullName, role: employee.role } as Staff,
     companies: serialize(companies) as unknown as Company[],
     operations: reports.map(mapMonthlyReportToOperationEntry),
-    performances: serialize(performances) as unknown as MonthlyPerformance[],
+    performances: serialize(
+      performances.map((p) => ({ ...p, ruleRole: p.rule.role }))
+    ) as unknown as MonthlyPerformance[],
     rules: serialize(rules) as unknown as KPIRule[],
     overrides: serialize(overrides) as unknown as CompanyKPIRule[],
     month: month.slice(0, 7),

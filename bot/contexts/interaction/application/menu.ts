@@ -104,22 +104,43 @@ export async function renderMyKpi(
     where: { employeeId: user.id, periodMonth: period },
     select: { type: true, points: true },
   });
-  const roll = rollupLedger(events.map((e) => ({ type: e.type, points: Number(e.points) })));
   const head = `${b("📊 KPI ballarim")} ${i(`— ${period}`)}`;
-  if (roll.count === 0) {
+  if (events.length === 0) {
     return [head, "", "Bu oyda hali KPI hodisasi yo'q."].join("\n");
   }
-  const breakdown = Object.entries(roll.byType).map(
-    ([t, v]) => `${v >= 0 ? "🟢" : "🔴"} ${esc(KPI_TYPE_LABEL[t] ?? t)} — ${v >= 0 ? "+" : ""}${v}`,
-  );
-  return [
-    head,
-    "",
-    // Sof ball — ekrandagi YAGONA muhim raqam, shuning uchun yolg'iz turadi.
-    `${b(`Sof ball: ${roll.net >= 0 ? "+" : ""}${roll.net}`)} ${i(`· ${roll.count} ta hodisa`)}`,
-    "",
-    ...breakdown,
-  ].join("\n");
+
+  // BIRLIKLAR ARALASHMAYDI.
+  //
+  // `KpiEvent.points` ikki xil narsani anglatadi (domain/kpi-event.ts): avtomatik
+  // hodisada bu SANOQ (+1 / −1), qo'lda tuzatishda esa FOIZ (+0.5% / −0.5%).
+  // Ilgari ikkalasi bitta "Sof ball" ga qo'shilardi — ya'ni donani foizga
+  // qo'shgan raqam chiqardi va u na oylik foiziga, na dashboard ballига mos edi.
+  const counted = events.filter((e) => e.type !== "manual");
+  const manual = events.filter((e) => e.type === "manual");
+
+  const countRoll = rollupLedger(counted.map((e) => ({ type: e.type, points: Number(e.points) })));
+  const manualRoll = rollupLedger(manual.map((e) => ({ type: e.type, points: Number(e.points) })));
+
+  const lines: string[] = [head, ""];
+
+  if (countRoll.count > 0) {
+    lines.push(
+      `${b(`Hodisalar: ${countRoll.net >= 0 ? "+" : ""}${countRoll.net}`)} ${i(`· ${countRoll.count} ta`)}`,
+    );
+    for (const [t, v] of Object.entries(countRoll.byType)) {
+      lines.push(`${v >= 0 ? "🟢" : "🔴"} ${esc(KPI_TYPE_LABEL[t] ?? t)} — ${v >= 0 ? "+" : ""}${v}`);
+    }
+  }
+
+  if (manualRoll.count > 0) {
+    if (lines.length > 2) lines.push("");
+    lines.push(`${b(`Qo'lda tuzatish: ${manualRoll.net >= 0 ? "+" : ""}${manualRoll.net}%`)} ${i(`· ${manualRoll.count} ta`)}`);
+    // Yolg'on va'da bermaymiz: bu hodisalar oylikka O'ZIDAN tushmaydi —
+    // ular ledgerda turadi va nazoratchi ERP'da alohida kiritadi (ADR-0001).
+    lines.push(i("Oylikka avtomatik tushmaydi — nazoratchi tasdig'i kerak."));
+  }
+
+  return lines.join("\n");
 }
 
 /** The caller's open obligations, soonest first, overdue ones flagged. */

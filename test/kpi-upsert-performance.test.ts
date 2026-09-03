@@ -38,8 +38,11 @@ beforeAll(async () => {
     },
     select: { id: true },
   });
+  // Firma AYNAN shu nazoratchining portfelida: `upsertPerformance` endi
+  // xodim/firma scope'ini ham tekshiradi (ilgari faqat rol tekshirilardi va
+  // begona firmaga tasdiqlangan KPI yozish mumkin edi).
   const company = await prisma.company.create({
-    data: { name: `${TAG} company`, inn: "000000000" },
+    data: { name: `${TAG} company`, inn: "000000000", supervisorId: employee.id },
     select: { id: true },
   });
   // A counter rule: this is the shape the checklist increments per click.

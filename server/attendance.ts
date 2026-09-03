@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/platform/permissions";
 import { staffScopeFilter } from "@/lib/platform/access";
 import { serialize } from "@/lib/serialize";
-import { classifyArrival, aggregateMonthlyAttendance } from "@/lib/attendance";
+import { classifyArrival, aggregateMonthlyAttendance, countWorkdays } from "@/lib/attendance";
 
 // =====================================================
 // ATTENDANCE (Davomat)
@@ -166,8 +166,12 @@ export async function deriveAttendanceKpi(employeeId: string, month: string) {
 
   const [y, m] = month.split("-").map(Number);
   if (!y || !m) throw new Error("Noto'g'ri oy formati (YYYY-MM kutiladi)");
-  const from = new Date(y, m - 1, 1);
-  const to = new Date(y, m, 1);
+  // `Attendance.date` UTC yarim tunda saqlanadi (schema izohi), shuning uchun oy
+  // oynasi ham UTC bo'lishi SHART. Lokal (Toshkent) oyna oyning chegara kunlarini
+  // bir kunga siljitardi va bu ekran `lib/kpiEvidence.ts` yozgan raqamdan farq
+  // qilardi — bir xil oy, ikki xil "erta kelgan kun".
+  const from = new Date(Date.UTC(y, m - 1, 1));
+  const to = new Date(Date.UTC(y, m, 1));
 
   const rows = await prisma.attendance.findMany({
     where: { userId: employeeId, date: { gte: from, lt: to } },
@@ -175,7 +179,10 @@ export async function deriveAttendanceKpi(employeeId: string, month: string) {
     orderBy: { date: "asc" },
   });
 
-  return aggregateMonthlyAttendance(rows);
+  // `countWorkdays` — "uzilishsiz oy" (to'liq bonus) shartini kpiEvidence bilan
+  // bir xil hisoblash uchun; busiz ekran to'liq bonus va'da qilib, proyeksiya
+  // uni bermasdi.
+  return aggregateMonthlyAttendance(rows, undefined, countWorkdays(y, m));
 }
 
 /**

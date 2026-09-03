@@ -115,6 +115,63 @@ export function computeRuleScore(rule: KpiRuleLike, input: KpiEntryInput): KpiSc
   return { percent: r2(percent), fixedPenalty: 0, color: opt.color ?? null };
 }
 
+/**
+ * Firma bo'yicha qoida override'i (`CompanyKpiRule`).
+ *
+ * NEGA KERAK: admin/nazoratchi bitta firmaga alohida mukofot/jarima foizi
+ * qo'yishi mumkin va bu `CompanyKpiRule` ga yoziladi. Lekin v2 hisobi faqat
+ * global `KpiRule.options` ni o'qirdi — ya'ni override JIM ISHLAMASDI: ekranda
+ * turardi, hisobga esa umuman kirmasdi.
+ */
+export interface KpiRuleOverride {
+  isActive?: boolean;
+  rewardPercent?: number | null;
+  penaltyPercent?: number | null;
+}
+
+/**
+ * Override'ni qoidaga qo'llaydi. SOF funksiya — qoidani o'zgartirmaydi, nusxa qaytaradi.
+ *
+ *  - `isActive === false` → qoida bu firmaga TEGISHLI EMAS: hamma koeffitsiyent 0.
+ *  - `select` / `checkbox_*` → yashil variant koeffitsiyenti `+rewardPercent`,
+ *    qizil variantniki `-|penaltyPercent|` bo'ladi (eski model aynan shu ikki
+ *    raqamdan iborat edi).
+ *  - `counter` va `amount_penalty` → override QO'LLANMAYDI: birinchisida bitta
+ *    koeffitsiyent yo'q (kun/marta bo'yicha), ikkinchisi umuman foiz emas.
+ *    Bunday qoidada override o'rniga qoidaning o'zi tahrirlanadi.
+ */
+export function applyRuleOverride<T extends KpiRuleLike>(rule: T, o?: KpiRuleOverride | null): T {
+  if (!o) return rule;
+  const options = asOptions(rule.options);
+
+  if (o.isActive === false) {
+    return {
+      ...rule,
+      options: options.map((opt) => ({ ...opt, coeff: 0, coeff_per_unit: 0, max_coeff: 0 })),
+      maxBonus: 0,
+      maxPenalty: 0,
+    };
+  }
+
+  if (rule.inputTypeV2 === "counter" || rule.inputTypeV2 === "amount_penalty") return rule;
+
+  const reward = o.rewardPercent === null || o.rewardPercent === undefined ? null : num(o.rewardPercent);
+  const penalty = o.penaltyPercent === null || o.penaltyPercent === undefined ? null : -Math.abs(num(o.penaltyPercent));
+  if (reward === null && penalty === null) return rule;
+
+  return {
+    ...rule,
+    options: options.map((opt) => {
+      const coeff = num(opt.coeff);
+      if (reward !== null && (opt.color === "green" || coeff > 0)) return { ...opt, coeff: reward };
+      if (penalty !== null && (opt.color === "red" || coeff < 0)) return { ...opt, coeff: penalty };
+      return opt;
+    }),
+    maxBonus: reward !== null ? reward : rule.maxBonus,
+    maxPenalty: penalty !== null ? penalty : rule.maxPenalty,
+  };
+}
+
 /** Clamp a percent to the rule-level [maxPenalty, maxBonus] envelope when present. */
 function clampEnvelope(percent: number, rule: KpiRuleLike): number {
   let p = percent;
@@ -174,4 +231,30 @@ export function stateToInput(state: {
     },
     penaltyAmount: num(state.penalty_amount),
   };
+}
+
+// =====================================================
+// REYTING BALI (0-100) — ko'rsatish uchun, pulga tegmaydi
+// =====================================================
+
+/**
+ * Baholangan qatorlardan 0-100 ball.
+ *
+ * `null` — O'LCHANMAGAN: bu oyda yashil ham, qizil ham yo'q. Nol EMAS va yuz
+ * EMAS. Ilgari `getKpiLeaderboard` bunday holatda 100 qaytarardi, ya'ni butun
+ * oyi neytral bo'lgan xodim reytingda a'lochi bo'lib turardi va ma'lumot
+ * bermaslik eng foydali strategiya edi (ADR-0013).
+ */
+export function kpiBall(green: number, red: number): number | null {
+  const scored = green + red;
+  if (scored <= 0) return null;
+  return Math.round((green / scored) * 100);
+}
+
+export type KpiDaraja = "excellent" | "good" | "fair" | "poor";
+
+/** Ball → daraja. Chegaralar: 85 / 70 / 60 (chegaraning O'ZI yuqori darajaga tegishli). */
+export function kpiDaraja(ball: number | null): KpiDaraja | null {
+  if (ball === null) return null;
+  return ball >= 85 ? "excellent" : ball >= 70 ? "good" : ball >= 60 ? "fair" : "poor";
 }

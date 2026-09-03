@@ -5,6 +5,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { staffScopeFilter } from "@/lib/platform/access";
 
 export interface CompanyBalanceResult {
   companyId: string;
@@ -165,9 +166,12 @@ export interface KpiTrendResult {
   userName: string;
   months: Array<{
     month: string;
+    /** Avtomatik hodisalar sof SANOG'I (dona) — foiz emas. */
     score: number;
     bonus: number;
     penalty: number;
+    /** Qo'lda kiritilgan tuzatishlar yig'indisi — FOIZDA, alohida birlik. */
+    manualPercent: number;
   }>;
 }
 
@@ -177,6 +181,9 @@ export async function getKpiTrend(
 ): Promise<KpiTrendResult | { error: string }> {
   const session = await auth();
   if (!session) return { error: "Avtorizatsiya kerak" };
+
+  // Begona xodimning KPI tarixini o'qish — portfelga cheklangan.
+  await staffScopeFilter(prisma, { id: session.user.id as string, role: session.user.role as string }, userId);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -197,12 +204,16 @@ export async function getKpiTrend(
     orderBy: { periodMonth: "desc" },
   });
 
-  // Group by month
-  const monthMap = new Map<string, { bonus: number; penalty: number }>();
+  // Group by month.
+  //
+  // BIRLIKLAR ARALASHMAYDI: avtomatik hodisada `points` — sanoq (+1/−1), qo'lda
+  // tuzatishda esa foiz. Ilgari ikkalasi bitta `score` ga qo'shilardi.
+  const monthMap = new Map<string, { bonus: number; penalty: number; manualPercent: number }>();
   for (const e of events) {
-    const existing = monthMap.get(e.periodMonth) ?? { bonus: 0, penalty: 0 };
+    const existing = monthMap.get(e.periodMonth) ?? { bonus: 0, penalty: 0, manualPercent: 0 };
     const pts = Number(e.points);
-    if (pts >= 0) existing.bonus += pts;
+    if (e.type === "manual") existing.manualPercent += pts;
+    else if (pts >= 0) existing.bonus += pts;
     else existing.penalty += Math.abs(pts);
     monthMap.set(e.periodMonth, existing);
   }
@@ -219,6 +230,7 @@ export async function getKpiTrend(
       score: Math.round((data.bonus - data.penalty) * 100) / 100,
       bonus: data.bonus,
       penalty: data.penalty,
+      manualPercent: Math.round(data.manualPercent * 100) / 100,
     })),
   };
 }

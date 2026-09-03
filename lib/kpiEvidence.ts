@@ -10,7 +10,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { toPerformanceMonth, toYearMonthKey, toObligationMonthKey } from "@/lib/periods";
-import { computeRuleScore } from "@/lib/kpiScoring";
+import { computeRuleScore, applyRuleOverride, type KpiRuleLike } from "@/lib/kpiScoring";
 import { aggregateMonthlyAttendance, countWorkdays } from "@/lib/attendance";
 import { responseColorFromCounts, RESPONSE_RULE_BY_ROLE } from "@/lib/kpiProjection";
 import { Prisma } from "@prisma/client";
@@ -199,6 +199,46 @@ async function flushProposals(
 }
 
 /**
+ * Firma bo'yicha override'larni bir so'rovda o'qib, `companyId|ruleId` xaritasini beradi.
+ *
+ * Sikl ichida `findUnique` qilinsa 2 000+ majburiyatli oyda N+1 bo'lardi.
+ * Davomat qoidalari (`scope: 'global'`) ataylab bu yerdan o'tmaydi — ular
+ * firmaga emas, odamning oyiga tegishli.
+ */
+async function loadOverrides(ruleIds: string[]) {
+  if (ruleIds.length === 0) return new Map<string, KpiRuleOverrideRow>();
+  const rows = await prisma.companyKpiRule.findMany({
+    where: { ruleId: { in: ruleIds } },
+    select: { companyId: true, ruleId: true, isActive: true, rewardPercent: true, penaltyPercent: true },
+  });
+  return new Map(
+    rows.map((r) => [
+      `${r.companyId}|${r.ruleId}`,
+      {
+        isActive: r.isActive,
+        rewardPercent: r.rewardPercent === null ? null : Number(r.rewardPercent),
+        penaltyPercent: r.penaltyPercent === null ? null : Number(r.penaltyPercent),
+      },
+    ])
+  );
+}
+
+type KpiRuleOverrideRow = {
+  isActive: boolean;
+  rewardPercent: number | null;
+  penaltyPercent: number | null;
+};
+
+/** Qoida + firma override'i → hisobga tayyor qoida. */
+const ruleFor = (
+  rule: unknown,
+  overrides: Map<string, KpiRuleOverrideRow>,
+  companyId: string,
+  ruleId: string
+): KpiRuleLike =>
+  applyRuleOverride(rule as KpiRuleLike, overrides.get(`${companyId}|${ruleId}`) ?? null);
+
+/**
  * Bir nechta majburiyat BITTA qoidaga tushganda yakuniy baho.
  *
  * Masalan QQS, INPS, daromad-agent va soliq-jadvali — to'rttasi ham
@@ -296,6 +336,8 @@ export async function evaluateObligationEvidence(
     buckets.set(k, bucket);
   }
 
+  const overrides = await loadOverrides(rules.map((r) => r.id));
+
   const proposals: Proposal[] = [];
   for (const bucket of buckets.values()) {
     const verdict = combineVerdicts(bucket.verdicts);
@@ -303,7 +345,10 @@ export async function evaluateObligationEvidence(
     const rule = rules.find((r) => r.id === bucket.ruleId);
     if (!rule) continue;
 
-    const score = computeRuleScore(rule as never, { selectedOption: verdict });
+    const score = computeRuleScore(
+      ruleFor(rule, overrides, bucket.key.companyId, rule.id),
+      { selectedOption: verdict }
+    );
     proposals.push({
       key: bucket.key,
       payload: {
@@ -521,6 +566,8 @@ export async function evaluateResponseEvidence(
   const rules = await prisma.kpiRule.findMany({ where: { name: { in: ruleNames } } });
   const ruleByName = new Map(rules.map((r) => [r.name, r]));
 
+  const overrides = await loadOverrides(rules.map((r) => r.id));
+
   const proposals: Proposal[] = [];
   let skippedNeutral = 0;
 
@@ -550,7 +597,7 @@ export async function evaluateResponseEvidence(
         }
       : { selectedOption: color };
 
-    const score = computeRuleScore(rule as never, input);
+    const score = computeRuleScore(ruleFor(rule, overrides, g.companyId, rule.id), input);
     proposals.push({
       key: { month: perfMonth, companyId: g.companyId, employeeId: g.employeeId, ruleId: rule.id },
       payload: {

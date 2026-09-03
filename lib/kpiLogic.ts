@@ -73,6 +73,8 @@ export interface SalaryResult {
     // this person's entire base pay" into an ordinary-looking zero — that is how
     // ADR-0004's defect stayed invisible. Callers check this to see the clamp fire.
     rawAmount: number;
+    /** `amount_penalty` qoidalaridan yig'ilgan so'mli jarima (musbat son). */
+    fixedPenalty: number;
     details: string[];
 }
 
@@ -180,6 +182,14 @@ export const calculateCompanySalaries = (
         return p.status === 'approved';
     });
 
+    // BITTA KPI QATORI BITTA MARTA SANALADI.
+    //
+    // Bir odam bitta firmada ikki o'rinda turishi mumkin (prodda 17 ta juftlik:
+    // buxgalter + bank-klient, nazoratchi + kontroller). Har o'rin uchun
+    // `calculateForRole` alohida chaqiriladi va rolsiz ('all') qator ikkala
+    // chaqiruvda ham mos kelib, foiz ikki barobar bo'lib ketardi.
+    const consumedPerfIds = new Set<string>();
+
     const calculateForRole = (
         role: SalaryResult['role'],
         staffId?: string,
@@ -217,6 +227,8 @@ export const calculateCompanySalaries = (
 
         // KPI Calculation (percent-based)
         let sumPercent = 0;
+        // So'mda kiritilgan jarimalar (foizga aylanmaydi — to'g'ridan-to'g'ri ayiriladi).
+        let fixedPenalty = 0;
         // True once v2 performance records drive this role — makes the legacy
         // operation-status path below a no-op so nothing is double-counted.
         let hasPerfRecords = false;
@@ -240,16 +252,39 @@ export const calculateCompanySalaries = (
                                 : (role as any);
 
             const myRolePerfFiltered = myRolePerf.filter(p => {
-                // If ruleRole is missing (old data), or explicitly 'all' - apply it.
+                // `ruleRole` — qoidaning O'Z roli (KpiRule.role). Uni o'qiydigan
+                // yozuvlar server/kpi.ts findPerformance va server/payroll.ts da
+                // to'ldiriladi. Ilgari hech kim to'ldirmagani uchun bu filtr
+                // ochiq turardi va (a) ikki rolli xodimga foiz ikki marta
+                // to'lanardi, (b) nazoratchiga buxgalter jarimasi tushardi.
+                //
+                // Rolsiz eski qator ('all' ham) hamma rolga tegishli, lekin
+                // pastdagi `consumed` qo'riqchisi uni FAQAT BIR MARTA sanaydi.
                 if (!p.ruleRole || p.ruleRole === 'all') return true;
-                // Don't apply accountant/bank_client/supervisor rules to chief_accountant.
+                // Reglament uchta rol uchun yozilgan — bosh buxgalter (va
+                // reglamentda yo'q rollar) bu qoidalardan hech narsa olmaydi.
                 if (typedRole === 'chief_accountant') return false;
-                // Standard role match
                 return p.ruleRole === typedRole;
             });
 
             const kpiPercents: number[] = [];
             for (const p of myRolePerfFiltered) {
+                if (p.id) {
+                    if (consumedPerfIds.has(p.id)) continue;
+                    consumedPerfIds.add(p.id);
+                }
+
+                // SO'MLI JARIMA (`amount_penalty`, masalan bank_wrong_transfer).
+                // `computeRuleScore` uni `fixedPenalty` sifatida qaytaradi, lekin
+                // butun kod bazasida uni hech kim o'qimasdi: nazoratchi jarima
+                // summasini kiritardi, ekranda ko'rinardi va OYLIKKA UMUMAN
+                // TA'SIR QILMASDI (FINANCE_KPI_AUDIT §6.1). Endi u foizdan
+                // alohida, so'mda ayiriladi.
+                const pen = Math.max(0, toNum((p as { penaltyAmount?: number }).penaltyAmount));
+                if (pen > 0) {
+                    fixedPenalty += pen;
+                    details.push(`Jarima: −${formatNum(pen)} so'm — ${(p as any).rule?.nameUz || (p as any).rule?.name || p.ruleId}`);
+                }
                 // Prefer the v2 precomputed percent (calculatedScore); fall back to the
                 // legacy binary value×override model only when it is absent.
                 const cs = (p as { calculatedScore?: number }).calculatedScore;
@@ -312,7 +347,7 @@ export const calculateCompanySalaries = (
         // emas, firmaning butun summasidan olinadi — 'cash' rejimida esa
         // to'langan qismidan.
         const kpiBonus = (basis.basisAmount * sumPercent) / 100;
-        const rawAmount = base + kpiBonus;
+        const rawAmount = base + kpiBonus - fixedPenalty;
         const finalAmount = Math.max(0, rawAmount);
 
         results.push({
@@ -323,6 +358,7 @@ export const calculateCompanySalaries = (
             kpiScore: sumPercent,
             finalAmount,
             rawAmount,
+            fixedPenalty,
             details: [
                 ...details,
                 `KPI bonus: ${formatNum(kpiBonus)} so'm (${basisLabel}ning ${sumPercent.toFixed(2)}% i)`
@@ -522,6 +558,7 @@ export const calculateEmployeeSalary = ({
                     companyId: c.id,
                     companyName: c.name,
                     contractAmount,
+                    fixedPenalty: res.fixedPenalty,
                     basisAmount: basis === 'cash' ? Math.min(collected, contractAmount || collected) : contractAmount,
                     collectedAmount: collected,
                     role: res.role,
@@ -540,7 +577,9 @@ export const calculateEmployeeSalary = ({
         companyCount: mine.size,
         baseSalary,
         kpiBonus,
-        kpiPenalty: -kpiPenalty,
+        // `-0` chiqmasin: kod bazasida ishora konvensiyasi `r2` da ham shunday
+        // (lib/kpiScoring.ts) — nol nol bo'lib ko'rinishi kerak.
+        kpiPenalty: kpiPenalty === 0 ? 0 : -kpiPenalty,
         totalSalary: baseSalary - kpiPenalty + kpiBonus,
         rawTotal,
         companyBreakdowns,

@@ -6,7 +6,7 @@ import { isSeniorRole, isAdminRole } from "@/lib/platform/permissions";
 import { companyScopeWhere, staffScopeFilter, assertCompanyPermission } from "@/lib/platform/access";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { serialize } from "@/lib/serialize";
-import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
+import { computeRuleScore, applyRuleOverride, capKpiPercent, kpiBall, kpiDaraja, type KpiEntryInput, type KpiRuleLike } from "@/lib/kpiScoring";
 import { toPerformanceMonth } from "@/lib/periods";
 import { Prisma } from "@prisma/client";
 
@@ -169,20 +169,28 @@ async function findPerformance(opts: {
   approvedOnly: boolean;
 }) {
   const monthKey = toPerformanceMonth(opts.month) || opts.month;
-  return serialize(
-    await prisma.monthlyPerformance.findMany({
-      where: {
-        month: monthKey,
-        ...(opts.employeeId ? { employeeId: opts.employeeId } : {}),
-        ...(opts.approvedOnly ? { status: "approved" } : {}),
-      },
-      include: {
-        rule: true,
-        employee: { select: { id: true, fullName: true, role: true } },
-      },
-      orderBy: { recordedAt: "desc" },
-    })
-  );
+  const rows = await prisma.monthlyPerformance.findMany({
+    where: {
+      month: monthKey,
+      ...(opts.employeeId ? { employeeId: opts.employeeId } : {}),
+      ...(opts.approvedOnly ? { status: "approved" } : {}),
+    },
+    include: {
+      rule: true,
+      employee: { select: { id: true, fullName: true, role: true } },
+    },
+    orderBy: { recordedAt: "desc" },
+  });
+
+  // QOIDANING ROLI QATOR BILAN BIRGA CHIQADI.
+  //
+  // `lib/kpiLogic.ts` har bir oylik roli uchun faqat O'SHA rolning qoidalarini
+  // olishi kerak va buni `p.ruleRole` orqali qiladi. Lekin bu maydonni hech kim
+  // to'ldirmagani uchun filtrning birinchi shoxi (`if (!p.ruleRole) return true`)
+  // doim ishlab, qoida rolidan qat'i nazar HAMMASI qo'llanardi. Ikkita oqibati
+  // bo'lgan: (1) bitta firmada ikki rolda turgan odamga KPI foizi ikki marta
+  // to'langan, (2) nazoratchiga buxgalter jarimasi (acc_absence -1%/kun) tushgan.
+  return serialize(rows.map((r) => ({ ...r, ruleRole: r.rule.role })));
 }
 
 /**
@@ -265,9 +273,10 @@ export async function upsertPerformance(data: {
   source?: string;
   notes?: string;
   status?: string; // 'submitted' (default) | 'approved' — supervisor entries are authoritative
-  // Legacy fallbacks (used only if the rule has no v2 options)
-  value?: number;
-  calculatedScore?: number;
+  // DIQQAT: `value` / `calculatedScore` ATAYLAB YO'Q. Ilgari ular so'rovdan
+  // olinardi (qoidada `options` bo'lmasa) — ya'ni klient o'z balini o'zi aytib,
+  // to'g'ridan-to'g'ri oylikka yozdira olardi. Ball faqat SHU YERDA, qoidaning
+  // `options` JSON'idan hisoblanadi.
 }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -294,8 +303,34 @@ export async function upsertPerformance(data: {
     }
   }
 
-  const rule = await prisma.kpiRule.findUnique({ where: { id: data.ruleId } });
-  if (!rule) throw new Error("KPI qoidasi topilmadi");
+  // SCOPE — ROL YETARLI EMAS.
+  //
+  // Bu yerda faqat rol tekshirilardi, holbuki senior chaqiruv `status:'approved'`
+  // yozishi mumkin (NazoratchiChecklist aynan shunday qiladi). Ya'ni
+  // `approvePerformance` dagi portfel qo'riqchisi CHETLAB O'TILARDI: nazoratchi
+  // begona xodimga, begona firmada tasdiqlangan KPI yozib, uning oyligini
+  // o'zgartira olardi. Ikkala yo'l endi bir xil scope'dan o'tadi.
+  const actor = { id: submittedBy, role: callerRole };
+  await staffScopeFilter(prisma, actor, data.employeeId);
+  await assertCompanyPermission(prisma, actor, data.companyId, "company:kpi-entry");
+
+  const [ruleRow, override] = await Promise.all([
+    prisma.kpiRule.findUnique({ where: { id: data.ruleId } }),
+    // Firma bo'yicha override — v2 yo'lida e'tiborsiz qolib ketgandi.
+    prisma.companyKpiRule.findUnique({
+      where: { companyId_ruleId: { companyId: data.companyId, ruleId: data.ruleId } },
+      select: { isActive: true, rewardPercent: true, penaltyPercent: true },
+    }),
+  ]);
+  if (!ruleRow) throw new Error("KPI qoidasi topilmadi");
+
+  const rule = applyRuleOverride(ruleRow as unknown as KpiRuleLike, override
+    ? {
+        isActive: override.isActive,
+        rewardPercent: override.rewardPercent === null ? null : Number(override.rewardPercent),
+        penaltyPercent: override.penaltyPercent === null ? null : Number(override.penaltyPercent),
+      }
+    : null);
 
   // Compute the score from the v2 rule options when available.
   const opts = Array.isArray(rule.options) ? rule.options : [];
@@ -312,10 +347,9 @@ export async function upsertPerformance(data: {
   };
   const score = useV2 ? computeRuleScore(rule as never, input) : null;
 
-  const calculatedScore = score ? score.percent : data.calculatedScore ?? 0;
-  const value =
-    data.value ??
-    (score ? (score.color === "green" ? 1 : score.color === "red" ? -1 : 0) : 0);
+  // Sozlanmagan qoida (options bo'sh) pul harakatlantirmaydi — 0 yoziladi.
+  const calculatedScore = score ? score.percent : 0;
+  const value = score ? (score.color === "green" ? 1 : score.color === "red" ? -1 : 0) : 0;
 
   const monthKey = toPerformanceMonth(data.month) || data.month;
 
@@ -360,6 +394,29 @@ export async function upsertPerformance(data: {
     select: { id: true, status: true, source: true },
   });
 
+  // Tasdiqlangan KPI to'g'ridan-to'g'ri maoshga kiradi — approvePerformance dagi
+  // kabi bu yo'l ham auditda qolsin. Aks holda "kim bu jarimani qo'ydi" savoliga
+  // javob faqat qatorning `submittedBy` ustunida qolardi, o'zgarish tarixi esa yo'q.
+  const auditApproved = async (recordId: string) => {
+    if (payload.status !== "approved") return;
+    await recordAuditLog({
+      userId: submittedBy,
+      action: "update",
+      tableName: "MonthlyPerformance",
+      recordId,
+      newData: {
+        status: "approved",
+        month: monthKey,
+        employeeId: data.employeeId,
+        companyId: data.companyId,
+        ruleId: data.ruleId,
+        calculatedScore,
+        penaltyAmount: data.penaltyAmount ?? 0,
+        source: payload.source,
+      },
+    });
+  };
+
   if (existing) {
     const writerIsSystem = payload.source === "system";
     // The bot proposes; it never overrides a human. It may only revise a draft it owns.
@@ -372,23 +429,25 @@ export async function upsertPerformance(data: {
     if (!isSeniorRole(callerRole) && existing.status === "approved") {
       throw new Error("Tasdiqlangan KPI yozuvini o'zgartirib bo'lmaydi");
     }
-    return serialize(
-      await prisma.monthlyPerformance.update({ where: { id: existing.id }, data: payload })
-    );
+    const updated = await prisma.monthlyPerformance.update({ where: { id: existing.id }, data: payload });
+    await auditApproved(updated.id);
+    return serialize(updated);
   }
 
   try {
-    return serialize(await prisma.monthlyPerformance.create({ data: payload }));
+    const created = await prisma.monthlyPerformance.create({ data: payload });
+    await auditApproved(created.id);
+    return serialize(created);
   } catch (e) {
     // Two concurrent clicks can both miss the findUnique above and race to insert;
     // the constraint rejects the loser, which then behaves as the update it meant to be.
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return serialize(
-        await prisma.monthlyPerformance.update({
-          where: { month_companyId_employeeId_ruleId: naturalKey },
-          data: payload,
-        })
-      );
+      const updated = await prisma.monthlyPerformance.update({
+        where: { month_companyId_employeeId_ruleId: naturalKey },
+        data: payload,
+      });
+      await auditApproved(updated.id);
+      return serialize(updated);
     }
     throw e;
   }
@@ -399,7 +458,12 @@ export async function approvePerformance(id: string) {
   if (!session) throw new Error("Unauthorized");
 
   const role = session.user.role as string;
-  if (!["super_admin", "admin", "chief_accountant"].includes(role)) {
+  // Nazoratchi ham TASDIQLAY OLADI — u allaqachon `upsertPerformance` orqali
+  // `status:'approved'` yozadi (NazoratchiChecklist) va ekranda ham "Tasdiqlash"
+  // tugmasi unga chizilgan. Bu ro'yxatda uning yo'qligi ikki yo'lni bir-biriga
+  // zid qilib qo'ygandi: bir joyda ruxsat, boshqasida "Forbidden". OMMAVIY
+  // tasdiq (approveAutoPerformance) esa ataylab chief+ bo'lib qoladi.
+  if (!["super_admin", "admin", "chief_accountant", "supervisor"].includes(role)) {
     throw new Error("Forbidden");
   }
 
@@ -552,18 +616,26 @@ export interface KpiLeaderRow {
   employeeId: string;
   name: string;
   role: string;
-  ball: number; // 0-100
-  daraja: "excellent" | "good" | "fair" | "poor";
+  /**
+   * 0-100 ball, yoki `null` — O'LCHANMAGAN.
+   *
+   * Ilgari baholanmagan xodim 100 ball olardi (`scored === 0` bo'lsa fallback
+   * 100 edi): butun oyi neytral bo'lgan odam reytingda a'lochi bo'lib turardi va
+   * ma'lumot bermaslik eng foydali strategiyaga aylanardi. ADR-0013:
+   * "o'lchanmagan — sog'lom degani emas".
+   */
+  ball: number | null;
+  daraja: "excellent" | "good" | "fair" | "poor" | null;
   green: number;
   red: number;
   entries: number;
-  bonus: number; // so'm
+  bonus: number; // so'm — TAXMINIY (pastdagi izohga qarang)
   // Xodimning mezonlar kesimi (javob tezligi, ishga kelish, ...) — har biri 0-100%
   byCategory: { category: string; passPercent: number }[];
 }
 
-const darajaOf = (ball: number): KpiLeaderRow["daraja"] =>
-  ball >= 85 ? "excellent" : ball >= 70 ? "good" : ball >= 60 ? "fair" : "poor";
+// Ball va daraja qoidasi `lib/kpiScoring.ts` da (kpiBall / kpiDaraja) — sof va
+// test qilingan, shu sababli bu yerda takrorlanmaydi.
 
 export async function getKpiLeaderboard(month: string) {
   const session = await auth();
@@ -577,7 +649,15 @@ export async function getKpiLeaderboard(month: string) {
   // shuning uchun avval portfeldagi firma id'lari olinadi.
   const companies = await prisma.company.findMany({
     where: scope,
-    select: { id: true, contractAmount: true },
+    select: {
+      id: true,
+      contractAmount: true,
+      // Bonus faqat xodim HAQIQATAN ulushga ega firmadan hisoblanadi.
+      accountantId: true,
+      bankClientId: true,
+      supervisorId: true,
+      chiefAccountantId: true,
+    },
   });
   // Admin uchun scope bo'sh — id ro'yxati bilan cheklamaymiz (213 ta IN o'rniga).
   const companyFilter =
@@ -601,17 +681,40 @@ export async function getKpiLeaderboard(month: string) {
       selectedOption: true,
       calculatedScore: true,
       employee: { select: { fullName: true, role: true } },
-      rule: { select: { category: true } },
+      // `role` ham kerak: bonus rol konvertiga (5% / 2.5% / 1%) qirqiladi.
+      rule: { select: { category: true, role: true } },
     },
   });
 
   const contractOf = new Map(companies.map((c) => [c.id, Number(c.contractAmount) || 0]));
+
+  // BONUS QAYSI FIRMADAN HISOBLANADI.
+  //
+  // Ilgari bonus har qanday musbat baho uchun `contract × ball / 100` deb
+  // qo'shilardi: rol konverti yo'q, xodim o'sha firmada ulushga ega ekani
+  // tekshirilmasdi. Natijada "Bonus fondi" oylik bilan hech qachon yarashmasdi.
+  // Endi u oylikdagi kabi `capKpiPercent` dan o'tadi va faqat biriktirilgan
+  // firmalar sanaladi. TAXMINIY bo'lib qoladi: oylik bazasi (accrual/cash) va
+  // ulush foizi bu yerda hisobga olinmaydi — yagona haqiqat server/payroll.ts.
+  const assignments = await prisma.contractAssignment.findMany({
+    where: { isActive: true, companyId: { in: companies.map((c) => c.id) } },
+    select: { companyId: true, userId: true },
+  });
+  const bonusable = new Set<string>();
+  for (const c of companies) {
+    for (const uid of [c.accountantId, c.bankClientId, c.supervisorId, c.chiefAccountantId]) {
+      if (uid) bonusable.add(`${c.id}|${uid}`);
+    }
+  }
+  for (const a of assignments) bonusable.add(`${a.companyId}|${a.userId}`);
 
   type Agg = { name: string; role: string; green: number; red: number; entries: number; bonus: number };
   const byEmp = new Map<string, Agg>();
   const catAgg = new Map<string, { green: number; scored: number }>();
   // Har xodim uchun mezon kesimi: employeeId → (category → {green, scored})
   const byEmpCat = new Map<string, Map<string, { green: number; scored: number }>>();
+  // Bonus uchun: employeeId → firma → qoida roli → foizlar (capKpiPercent kutadi).
+  const percentsByEmp = new Map<string, Map<string, Map<string, number[]>>>();
 
   for (const p of perfs) {
     const a =
@@ -619,10 +722,15 @@ export async function getKpiLeaderboard(month: string) {
       byEmp.set(p.employeeId, { name: p.employee.fullName, role: p.employee.role, green: 0, red: 0, entries: 0, bonus: 0 }).get(p.employeeId)!;
     a.entries++;
     const sc = Number(p.calculatedScore);
-    if (sc > 0) {
-      a.green++;
-      a.bonus += ((contractOf.get(p.companyId) ?? 0) * sc) / 100;
-    } else if (sc < 0 || p.selectedOption === "red") a.red++;
+    if (sc > 0) a.green++;
+    else if (sc < 0 || p.selectedOption === "red") a.red++;
+
+    if (sc !== 0 && bonusable.has(`${p.companyId}|${p.employeeId}`)) {
+      const byCompany = percentsByEmp.get(p.employeeId) ?? percentsByEmp.set(p.employeeId, new Map()).get(p.employeeId)!;
+      const byRole = byCompany.get(p.companyId) ?? byCompany.set(p.companyId, new Map()).get(p.companyId)!;
+      const list = byRole.get(p.rule.role) ?? byRole.set(p.rule.role, []).get(p.rule.role)!;
+      list.push(sc);
+    }
 
     const cat = p.rule.category || "other";
     const c = catAgg.get(cat) ?? catAgg.set(cat, { green: 0, scored: 0 }).get(cat)!;
@@ -636,20 +744,54 @@ export async function getKpiLeaderboard(month: string) {
     else if (sc < 0 || p.selectedOption === "red") ec.scored++;
   }
 
+  for (const [employeeId, byCompany] of percentsByEmp) {
+    const a = byEmp.get(employeeId);
+    if (!a) continue;
+    let bonus = 0;
+    for (const [companyId, byRole] of byCompany) {
+      const contract = contractOf.get(companyId) ?? 0;
+      for (const [ruleRole, percents] of byRole) {
+        const net = capKpiPercent(percents, ruleRole);
+        if (net > 0) bonus += (contract * net) / 100;
+      }
+    }
+    a.bonus = bonus;
+  }
+
   const leaderboard: KpiLeaderRow[] = [...byEmp.entries()].map(([employeeId, a]) => {
-    const scored = a.green + a.red;
-    const ball = scored > 0 ? Math.round((a.green / scored) * 100) : a.entries > 0 ? 100 : 0;
+    // O'lchanmagan — nol ham, yuz ham emas.
+    const ball = kpiBall(a.green, a.red);
     const byCategory = [...(byEmpCat.get(employeeId)?.entries() ?? [])]
       .filter(([, c]) => c.scored > 0)
       .map(([category, c]) => ({ category, passPercent: Math.round((c.green / c.scored) * 100) }))
       .sort((x, y) => y.passPercent - x.passPercent);
     const finalBonus = isSenior ? Math.round(a.bonus) : 0;
-    return { employeeId, name: a.name, role: a.role, ball, daraja: darajaOf(ball), green: a.green, red: a.red, entries: a.entries, bonus: finalBonus, byCategory };
+    return {
+      employeeId,
+      name: a.name,
+      role: a.role,
+      ball,
+      daraja: kpiDaraja(ball),
+      green: a.green,
+      red: a.red,
+      entries: a.entries,
+      bonus: finalBonus,
+      byCategory,
+    };
   });
-  leaderboard.sort((x, y) => y.ball - x.ball || y.bonus - x.bonus);
+  // Tartib DETERMINISTIK: bir xil ballda har safar bir xil ketma-ketlik chiqishi
+  // uchun oxirgi mezon — employeeId. O'lchanmaganlar ro'yxat oxirida.
+  leaderboard.sort(
+    (x, y) =>
+      (y.ball ?? -1) - (x.ball ?? -1) ||
+      y.bonus - x.bonus ||
+      x.employeeId.localeCompare(y.employeeId)
+  );
 
-  const withScores = leaderboard.filter((l) => l.entries > 0);
-  const avgBall = withScores.length ? Math.round(withScores.reduce((s, l) => s + l.ball, 0) / withScores.length) : 0;
+  const withScores = leaderboard.filter((l) => l.ball !== null);
+  const avgBall = withScores.length
+    ? Math.round(withScores.reduce((s, l) => s + (l.ball ?? 0), 0) / withScores.length)
+    : 0;
 
   const criteria = [...catAgg.entries()]
     .map(([category, c]) => ({ category, passPercent: c.scored > 0 ? Math.round((c.green / c.scored) * 100) : 0, scored: c.scored }))
@@ -665,7 +807,10 @@ export async function getKpiLeaderboard(month: string) {
   }
   const trendPerfs = await prisma.monthlyPerformance.findMany({
     // Approved only — the 6-month trend must match what was actually paid.
-    where: { month: { in: months }, status: "approved" },
+    // `companyFilter` — ustidagi jadval bilan BIR XIL qamrov: ilgari grafik
+    // butun tizim o'rtachasini chizardi, jadval esa faqat portfelni, ya'ni
+    // bitta ekranda ikki xil "jamoa" ko'rsatilardi.
+    where: { month: { in: months }, status: "approved", ...companyFilter },
     select: { month: true, employeeId: true, calculatedScore: true, selectedOption: true },
   });
   const perMonthEmp = new Map<string, Map<string, { green: number; red: number }>>();
@@ -679,9 +824,17 @@ export async function getKpiLeaderboard(month: string) {
   const monthlyTrend = months.map((mo) => {
     const em = perMonthEmp.get(mo);
     if (!em || em.size === 0) return { month: mo, avgBall: 0 };
+    // Baholanmagan xodim o'rtachaga KIRMAYDI (ilgari 100 deb qo'shilardi va
+    // ma'lumot yo'q oy eng yaxshi oy bo'lib chizilardi — ADR-0013).
     let sum = 0;
-    for (const a of em.values()) { const sc2 = a.green + a.red; sum += sc2 > 0 ? (a.green / sc2) * 100 : 100; }
-    return { month: mo, avgBall: Math.round(sum / em.size) };
+    let counted = 0;
+    for (const a of em.values()) {
+      const sc2 = a.green + a.red;
+      if (sc2 === 0) continue;
+      sum += (a.green / sc2) * 100;
+      counted++;
+    }
+    return { month: mo, avgBall: counted > 0 ? Math.round(sum / counted) : 0 };
   });
 
   return serialize({
