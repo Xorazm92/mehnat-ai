@@ -83,9 +83,6 @@ export interface NotifyResult {
   budgetSkipped: boolean;
 }
 
-const isUniqueViolation = (e: unknown): boolean =>
-  e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
-
 /** Havola ilova ichida ekanini tekshiradi (ochiq redirect'ning oldini oladi). */
 function safeLink(link: string | null | undefined): string | null {
   const value = link?.trim();

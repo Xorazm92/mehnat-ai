@@ -13,7 +13,6 @@ import {
   Download,
   Maximize2,
   Minimize2,
-  RefreshCw,
   Move,
 } from "lucide-react";
 

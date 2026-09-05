@@ -19,7 +19,7 @@ import { prisma } from "@/lib/prisma";
 import { formatNum as som } from "@/lib/platform/format";
 import fs from "node:fs";
 import path from "node:path";
-import { findImportFile, requireImportFile } from "./import-source";
+import { findImportFile } from "./import-source";
 import { parseDebtReport, type DebtLine } from "@/lib/debtReport";
 import { readLooseJsonArray } from "@/lib/bank/parsePlastik";
 

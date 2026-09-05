@@ -7,7 +7,6 @@ import {
   Settings,
   ScrollText,
   FileText,
-  KeyRound,
   Boxes,
   FileSignature,
   Landmark,

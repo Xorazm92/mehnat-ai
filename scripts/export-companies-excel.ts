@@ -21,7 +21,13 @@
 // qarzdorlik/payroll hisobiga kirmaydi.
 import "./load-env";
 import { prisma } from "@/lib/prisma";
-import { utils, writeFile } from "xlsx";
+import ExcelJS from "exceljs";
+// Formula-injection himoyasi YAGONA manbadan. Bu skript firma nomi, direktor
+// ismi va izohlarni — ya'ni foydalanuvchi kiritgan matnni — jadvalga yozadi;
+// `=cmd|...` bilan boshlangan katak Excel'da BUYRUQ sifatida bajarilishi
+// mumkin. Ilgari bu yo'l `xlsx` ustida edi va himoyasi umuman yo'q edi,
+// holbuki ekrandagi eksport (`lib/exportTable.ts`) allaqachon himoyalangan.
+import { neutralizeFormula } from "@/lib/exportTable";
 import { BASE_REPORT_COLUMNS, serviceEnabled } from "@/lib/reportColumns";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
 import { listDebtors } from "@/lib/debt";
@@ -58,17 +64,45 @@ const REGIME_LABEL: Record<string, string> = {
   nonresident: "Norezident",
 };
 
-/** Varaqni ustun kengligi bilan qo'shadi (aks holda hamma ustun 8 belgilik). */
-function addSheet(wb: ReturnType<typeof utils.book_new>, name: string, rows: Record<string, unknown>[]) {
-  const ws = utils.json_to_sheet(rows.length ? rows : [{ "Ma'lumot yo'q": "" }]);
-  const headers = Object.keys(rows[0] ?? { "Ma'lumot yo'q": "" });
-  ws["!cols"] = headers.map((h) => {
-    const longest = rows.reduce((m, r) => Math.max(m, String(r[h] ?? "").length), h.length);
-    return { wch: Math.min(Math.max(longest + 2, 10), 45) };
+/**
+ * Varaqni ustun kengligi, muzlatilgan sarlavha va filtr bilan qo'shadi.
+ *
+ * `exceljs` — loyihaning eksport kutubxonasi (`lib/exportTable.ts`). Bu skript
+ * yagona bo'lib `xlsx` (SheetJS 0.18.5) da qolgan edi; unda ikkita
+ * TUZATIB BO'LMAYDIGAN high CVE bor (prototype pollution + ReDoS) va npm'da
+ * yangi versiya yo'q. Yozuvchi yo'lda `xlsx` ning hech qanday afzalligi yo'q
+ * edi — o'qishda esa bor (eski `.xls`/BIFF va cp1251), shuning uchun
+ * `lib/bank/readWorkbook.ts` ATAYLAB tegilmadi.
+ *
+ * Raqam RAQAM bo'lib qoladi (yig'indi va saralash ishlashi uchun), matn esa
+ * formula neytrallashdan o'tadi.
+ */
+function addSheet(wb: ExcelJS.Workbook, name: string, rows: Record<string, unknown>[]) {
+  const data = rows.length ? rows : [{ "Ma'lumot yo'q": "" }];
+  const headers = Object.keys(data[0]);
+  // Excel varaq nomida `: \ / ? * [ ]` taqiqlangan va uzunligi 31 belgi.
+  const ws = wb.addWorksheet(name.replace(/[:\\/?*[\]]/g, " ").slice(0, 31) || "Sheet1");
+
+  ws.addRow(headers.map(neutralizeFormula));
+  for (const r of data) {
+    ws.addRow(
+      headers.map((h) => {
+        const v = r[h];
+        return typeof v === "number" ? v : neutralizeFormula(String(v ?? ""));
+      }),
+    );
+  }
+  ws.getRow(1).font = { bold: true };
+  ws.views = [{ state: "frozen", ySplit: 1 }];
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: data.length + 1, column: headers.length },
+  };
+  ws.columns.forEach((col, i) => {
+    const h = headers[i];
+    const longest = data.reduce((m, r) => Math.max(m, String(r[h] ?? "").length), h.length);
+    col.width = Math.min(Math.max(longest + 2, 10), 45);
   });
-  ws["!autofilter"] = { ref: ws["!ref"] as string };
-  ws["!freeze"] = { xSplit: 0, ySplit: 1 };
-  utils.book_append_sheet(wb, ws, name.slice(0, 31));
 }
 
 async function main() {
@@ -104,7 +138,7 @@ async function main() {
   const debtors = await listDebtors(prisma as never, { scope: "all", period: PERIOD });
   const debtBy = new Map(debtors.map((d) => [d.companyId, d]));
 
-  const wb = utils.book_new();
+  const wb = new ExcelJS.Workbook();
 
   // ── 1) FIRMALAR (pasport) ─────────────────────────────────
   addSheet(
@@ -295,7 +329,7 @@ async function main() {
   paymentRows.sort((a, b) => b.Davr.localeCompare(a.Davr) || a["Korxona nomi"].localeCompare(b["Korxona nomi"]));
   addSheet(wb, "To'lovlar", paymentRows);
 
-  writeFile(wb, OUT);
+  await wb.xlsx.writeFile(OUT);
   console.log(`\n✅ Tayyor: ${OUT}`);
   console.log(`   varaqlar: Firmalar(${companies.length}) · Mas'ullar · Moliya · Xizmatlar · Matritsa ${PERIOD} · Majburiyatlar(${obligationRows.length}) · To'lovlar(${paymentRows.length})`);
   await prisma.$disconnect();

@@ -21,7 +21,7 @@ const { clearColumnForPeriod, upsertMonthlyReport } = await import("@/server/ope
 
 const TAG = `vitest-clear-${Date.now()}`;
 const PERIOD = "1998-07"; // real ma'lumot bilan to'qnashmaydigan davr
-const ids = { company: "", user: "" };
+const ids = { company: "", user: "", template: "", obligation: "" };
 
 beforeAll(async () => {
   const company = await prisma.company.create({
@@ -44,6 +44,15 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // Tozalash SHU YERDA, `it` ichida EMAS: assertion yiqilsa `it` ning oxiri
+  // umuman bajarilmaydi va qolgan `DeadlineTemplate` butun bazani skanerlaydigan
+  // qo'riqchini (`test/matrix-template-coverage.test.ts`) keyingi yugurishlarda
+  // ham yiqitib turadi — aynan shunday bo'lgan.
+  if (ids.obligation) {
+    await prisma.obligationStatusEvent.deleteMany({ where: { obligationId: ids.obligation } });
+    await prisma.obligation.deleteMany({ where: { id: ids.obligation } });
+  }
+  if (ids.template) await prisma.deadlineTemplate.deleteMany({ where: { id: ids.template } });
   await prisma.reportProof.deleteMany({ where: { companyId: ids.company } });
   await prisma.monthlyReport.deleteMany({ where: { companyId: ids.company } });
   await prisma.company.deleteMany({ where: { id: ids.company } });
@@ -84,6 +93,59 @@ describe("clearColumnForPeriod", () => {
     expect(after?.pulOqimlari).toBeNull();
     // Qo'shni ustun tegilmaydi — tozalash faqat so'ralganini o'chiradi.
     expect(after?.didox).toBe("+");
+  });
+
+  it("DALILSIZ katakning majburiyati ham ortga qaytadi", async () => {
+    // REGRESSIYA. `clearColumnForPeriod` ilgari `clearCellEvidence` ni FAQAT
+    // `ReportProof` qatori bor firmalar uchun chaqirardi. Dalilsiz yozilgan
+    // katak ham majburiyatni harakatga keltiradi (`applyCellWrite`), ya'ni
+    // ustun tozalangach o'sha majburiyat `sent` bo'lib QOLIB KETARDI.
+    //
+    // Kodda buni tuzatish uchun `withValue` hisoblangan edi, lekin u hech
+    // qayerda ishlatilmasdi — eslint uni "ishlatilmagan o'zgaruvchi" deb
+    // ko'rsatib turardi va izoh xatoni tuzatilgan deb tasvirlardi.
+    const template = await prisma.deadlineTemplate.create({
+      data: {
+        code: `${TAG}-T`, matrixKey: "didox", name: "Tozalash sinovi",
+        obligationType: "internal", periodicity: "monthly",
+        anchorType: "fixed_day_of_month", dueDay: 20,
+        effectiveFrom: new Date(Date.UTC(1998, 0, 1)), lifecycle: "active",
+        // `approvedById` MAJBURIY: `test/matrix-template-coverage.test.ts`
+        // "generator ko'radigan har bir template tasdiqlangan" invariantini
+        // butun baza bo'yicha tekshiradi va bu qator (testlar parallel
+        // yurgani uchun) unga ko'rinadi. Tasdiqsiz qoldirilsa, o'sha
+        // qo'riqchi ADOLATLI ravishda yiqiladi.
+        approvedById: ids.user, approvedAt: new Date(),
+      },
+      select: { id: true },
+    });
+    ids.template = template.id;
+    const obligation = await prisma.obligation.create({
+      data: {
+        companyId: ids.company, templateId: template.id, templateVersion: 1,
+        periodKey: "1998-M07",
+        periodStart: new Date(Date.UTC(1998, 6, 1)),
+        periodEnd: new Date(Date.UTC(1998, 7, 1)),
+        dueAt: new Date(Date.UTC(1998, 7, 20)),
+        status: "sent",
+      },
+      select: { id: true },
+    });
+    ids.obligation = obligation.id;
+
+    // Katakda QIYMAT bor, DALIL yo'q — aynan tushib qolgan holat.
+    await prisma.monthlyReport.update({
+      where: { companyId_period: { companyId: ids.company, period: PERIOD } },
+      data: { didox: "+" },
+    });
+    expect(await prisma.reportProof.count({ where: { companyId: ids.company, colKey: "didox" } })).toBe(0);
+
+    await clearColumnForPeriod(PERIOD, "didox");
+
+    const after = await prisma.obligation.findUniqueOrThrow({
+      where: { id: obligation.id }, select: { status: true },
+    });
+    expect(after.status, "dalilsiz katak tozalandi, majburiyat qaytmadi").toBe("planned");
   });
 
   it("nomi bir xil ustunni ham tozalaydi", async () => {

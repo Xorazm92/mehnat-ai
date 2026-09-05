@@ -5,7 +5,6 @@ import { USE_SECURE_COOKIES, SESSION_MAX_AGE } from "@/lib/auth.config";
 import {
   canSeeViewWith,
   getHomeRoute,
-  type AppView,
   type CompanyRelation,
   type RoleViewOverrides,
   type UserRole,

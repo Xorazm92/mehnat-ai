@@ -330,6 +330,16 @@ const eslintConfig = defineConfig([
     files: ["proxy.ts", "instrumentation.ts"],
     rules: { "no-console": "off" },
   },
+  {
+    // `.cjs` — TA'RIFI bo'yicha CommonJS. `ecosystem.config.cjs` ni pm2 Node
+    // orqali `require()` bilan yuklaydi, ya'ni `import` u yerda ISHLAMAYDI.
+    // Qoida esa butun repo bo'yicha yoqilgan edi va shu bitta faylda YAGONA
+    // lint XATOSINI berardi — ya'ni "lint toza" holati hech qachon
+    // erishib bo'lmaydigan bo'lib turardi va yangi xato eskisidan
+    // ajralmasdi.
+    files: ["**/*.cjs"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
 ]);
 
 export default eslintConfig;

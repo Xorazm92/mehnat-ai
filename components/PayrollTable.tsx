@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Staff, Language, Company, OperationEntry, PayrollAdjustment, MonthlyPerformance, KPIRule, CompanyKPIRule } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
-import { Wallet, MinusCircle, Save, HandCoins, CheckCircle2, SlidersHorizontal, Users, Briefcase, TrendingUp, AlertTriangle, Clock, Trash2 } from 'lucide-react';
+import { Wallet, Save, HandCoins, CheckCircle2, SlidersHorizontal, Users, Briefcase, TrendingUp, AlertTriangle, Clock, Trash2 } from 'lucide-react';
 import { periodsEqual } from '@/lib/periods';
 import { getKpiRules, getMonthlyPerformance } from '@/server/kpi';
 import {

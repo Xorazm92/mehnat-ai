@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { X, Upload, Clipboard, Check, Ban, Loader2, ImageIcon, Clock, ZoomIn, ExternalLink } from "lucide-react";
-import { compressImageFile, compressDataUrl } from "@/lib/imageCompress";
+import { compressImageFile } from "@/lib/imageCompress";
 import { saveReportProof, getReportProof, reviewReportProof } from "@/server/proofs";
 import { formatUzDateNumeric, formatUzTime } from "@/lib/platform/format";
 import { ImageZoomModal } from "@/components/ImageZoomModal";

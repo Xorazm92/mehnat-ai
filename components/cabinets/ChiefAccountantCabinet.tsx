@@ -5,7 +5,6 @@ import {
   Building2,
   TrendingUp,
   Clock,
-  Award,
   DollarSign,
   FileCheck,
   ShieldCheck,

@@ -274,6 +274,7 @@ export async function clearColumnForPeriod(rawPeriod: string, colKey: string) {
   const withValue = await prisma.monthlyReport.findMany({
     where: { period, NOT: { [dbCol]: null } } as Prisma.MonthlyReportWhereInput,
     select: { companyId: true },
+    distinct: ["companyId"],
   });
   const withProof = await prisma.reportProof.findMany({
     where: { period, colKey },
@@ -288,16 +289,33 @@ export async function clearColumnForPeriod(rawPeriod: string, colKey: string) {
 
   // Katak tozalash bilan bir xil qoida: ustun bo'shatilsa, o'sha ustunga
   // biriktirilgan dalillar ham ketadi va majburiyatlar `planned` ga qaytadi.
-  // Aks holda bo'sh ustun ustida dalil nuqtalari qolib ketardi.
-  const affected = await prisma.reportProof.findMany({
-    where: { period, colKey },
-    select: { companyId: true },
-    distinct: ["companyId"],
-  });
-  for (const { companyId } of affected) {
+  //
+  // BIRLASHMA, `withProof` EMAS. Yuqoridagi izoh aynan shuni talab qiladi —
+  // dalilsiz yozilgan katak ham majburiyatni harakatga keltiradi — va
+  // `withValue` shu maqsadda hisoblanardi, LEKIN u hech qayerda
+  // ishlatilmasdi (eslint uni "ishlatilmagan" deb ko'rsatib turardi).
+  // Natijada tozalash faqat DALILI BOR firmalarga ta'sir qilardi: dalilsiz
+  // yozilgan katak bo'shab qolardi-yu, majburiyati `sent`/`accepted` bo'lib
+  // turaverardi — ya'ni izoh ogohlantirgan xatoning O'ZI amalda edi.
+  //
+  // Takroriy `reportProof.findMany` ham olib tashlandi: u `withProof` bilan
+  // bir xil so'rov edi.
+  const toRevert = new Set([
+    ...withValue.map((r) => r.companyId),
+    ...withProof.map((r) => r.companyId),
+  ]);
+  // Dalilsiz firmada `deleteMany` bo'sh o'tadi, `applyCellWrite` esa
+  // majburiyatni qaytaradi — ya'ni chaqiruv har ikki holatda ham to'g'ri.
+  for (const companyId of toRevert) {
     await clearCellEvidence(companyId, period, colKey);
   }
 
   updateTag("operations");
-  return { success: true, cleared: res.count, proofsRemoved: withProof.length };
+  return {
+    success: true,
+    cleared: res.count,
+    proofsRemoved: withProof.length,
+    // Majburiyati ortga qaytarilgan firmalar — dalilsizlari ham kiradi.
+    obligationsReverted: toRevert.size,
+  };
 }

@@ -9,7 +9,6 @@ import {
   Check,
   Ban,
   Clock,
-  Download,
   ExternalLink,
   Loader2,
   ZoomIn,

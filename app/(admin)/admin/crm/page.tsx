@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { listLeads, createLead, updateLeadStatus, assignLead } from "@/server/leads";
+import { listLeads, createLead, updateLeadStatus } from "@/server/leads";
 import { Badge, type BadgeTone } from "@/components/ui";
 import { formatUzDateNumeric } from "@/lib/platform/format";
 
