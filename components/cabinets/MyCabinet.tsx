@@ -214,9 +214,12 @@ export default function MyCabinet(props: MyCabinetProps & { initialTab?: TabId }
             onChanged={() => router.refresh()}
           />
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold tracking-tight truncate" style={{ color: "var(--text)" }}>
+            {/* `h1` — bu xodimning O'Z kabineti va ismi sahifaning
+                sarlavhasi. `h2` bo'lgani uchun `/cabinet` da (va unga
+                yo'naltiruvchi `/settings` da) `h1` UMUMAN yo'q edi. */}
+            <h1 className="text-sm font-semibold tracking-tight truncate" style={{ color: "var(--text)" }}>
               {profile.fullName}
-            </h2>
+            </h1>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <span
                 className="text-micro font-semibold uppercase tracking-widest px-2.5 py-1 rounded-lg"

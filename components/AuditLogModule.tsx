@@ -99,9 +99,13 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
                         <Shield size={28} />
                     </div>
                     <div>
-                        <h2 className="text-sm font-semibold leading-none" style={{ color: 'var(--text)' }}>
+                        {/* `h1`, `h2` EMAS — `OrganizationModule` bilan bir xil
+                            sabab: bu blok `/admin/audit` sahifasining yagona
+                            sarlavhasi, lekin `h2` bo'lgani uchun sahifada `h1`
+                            umuman yo'q edi. */}
+                        <h1 className="text-sm font-semibold leading-none" style={{ color: 'var(--text)' }}>
                             {t.auditLogs}
-                        </h2>
+                        </h1>
                         <p className="text-meta font-bold uppercase tracking-widest mt-2 leading-none" style={{ color: 'var(--text-muted)' }}>
                             {t.auditSub}
                         </p>

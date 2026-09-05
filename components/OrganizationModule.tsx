@@ -437,7 +437,12 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             <Building2 size={24} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold tracking-wider truncate" style={{ color: 'var(--text)' }}>{t.organizations}</h2>
+            {/* `h1`, `h2` EMAS: bu blok sahifaning O'Z sarlavhasi (ikonka +
+                nom + firmalar soni), ya'ni hujjatning eng yuqori darajasi.
+                `h2` bo'lgani uchun `/organizations` da `h1` UMUMAN yo'q edi —
+                ekran o'quvchi va brauzer tuzilmani topa olmasdi.
+                `PageHeader` shartnomasi: har sahifada AYNAN bitta `h1`. */}
+            <h1 className="text-sm font-semibold tracking-wider truncate" style={{ color: 'var(--text)' }}>{t.organizations}</h1>
             <p className="text-meta font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>
               {t.totalFirms}: <span className="tabular-nums" style={{ color: 'var(--accent-blue)' }}>{filtered.length}</span>
             </p>

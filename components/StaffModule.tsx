@@ -315,7 +315,8 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
             <UserPlus size={24} />
           </div>
           <div>
-            <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>{t.staff}</h2>
+            {/* `h1` — `/staff` sahifasining yagona sarlavhasi. */}
+            <h1 className="text-sm font-bold" style={{ color: 'var(--text)' }}>{t.staff}</h1>
             <p className="text-meta font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>
               {staff.length} ta xodim · {staff.filter(s => (s.status || 'active') === 'active').length} faol
             </p>
