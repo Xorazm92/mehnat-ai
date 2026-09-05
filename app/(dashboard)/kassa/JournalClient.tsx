@@ -20,17 +20,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowDownRight, ArrowUpRight, Download, Plus, Search, Trash2,
-  CheckCircle2, XCircle, Clock, NotebookPen, AlertTriangle,
-} from "lucide-react";
+  CheckCircle2, XCircle, Clock, NotebookPen, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
   Badge, DataTable, Money, StatStrip,
-  type BadgeTone, type DataColumn, type StatItem,
-} from "@/components/ui";
+  type BadgeTone, type DataColumn, type StatItem } from "@/components/ui";
 import { MoneyField } from "@/components/ui/MoneyField";
 import { Select } from "@/components/ui/Select";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
-import { useConfirm, usePrompt } from "@/components/ui/ConfirmDialog";
+import { usePrompt } from "@/components/ui/ConfirmDialog";
 import { todayKey, formatUzDate, formatNum } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { canApproveExpense } from "@/lib/expenseApproval";
@@ -39,8 +37,7 @@ import { exportRowsToExcel, type ExportColumn } from "@/lib/exportTable";
 import type { JournalRow } from "@/server/kassaJournal";
 import { getKassaJournal } from "@/server/kassaJournal";
 import {
-  createKassaEntry, deleteKassaEntry, approveExpense, rejectExpense,
-} from "@/server/kassa";
+  createKassaEntry, deleteKassaEntry, approveExpense, rejectExpense } from "@/server/kassa";
 import { DateField } from "@/components/ui/DateField";
 import { isSalaryCategory } from "@/lib/salaryCategory";
 
@@ -50,8 +47,7 @@ const PRESETS: RangePreset[] = ["month_to_date", "last_month", "today", "yesterd
 const SOURCE_TONE: Record<string, BadgeTone> = {
   kassa: "neutral",
   shartnoma: "info",
-  oylik: "warning",
-};
+  oylik: "warning" };
 
 interface Props {
   userRole: string;
@@ -63,7 +59,6 @@ interface Props {
 export default function JournalClient({ userRole, incomeCategories, expenseCategories }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const confirm = useConfirm();
   const prompt = usePrompt();
 
   const [preset, setPreset] = useState<RangePreset>("month_to_date");
@@ -140,8 +135,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
         preset,
         custom: preset === "custom" ? { from: customFrom, to: customTo } : undefined,
         kind,
-        channelId: channelId || null,
-      })
+        channelId: channelId || null })
         .then((res) => {
           if (cancelled) return;
           setRows(res.rows);
@@ -217,8 +211,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
         amount: amt,
         description: desc.trim() || undefined,
         date: new Date(date),
-        channelId: saveChannelId,
-      });
+        channelId: saveChannelId });
       toast.success(addKind === "kirim" ? "Kirim yozildi" : "Chiqim yozildi");
       // Exceldagidek: summa va izoh bo'shaydi, tur/kassa/sana/toifa QOLADI —
       // ketma-ket kiritishda har safar hammasini qayta tanlamaysiz.
@@ -243,8 +236,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       title: "Xarajat rad etilsinmi?",
       reasonLabel: "Rad etish sababi",
       confirmLabel: "Rad etish",
-      tone: "danger",
-    });
+      tone: "danger" });
     if (!reason) return;
     try { await rejectExpense(row.id, reason); load(); router.refresh(); }
     catch (e) { toast.error(friendlyError(e)); }
@@ -258,8 +250,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       description: `${formatUzDate(row.date)} · ${formatNum(row.amount)} so'm. Jurnal izi teskari yozuv bilan nolga tushadi.`,
       reasonLabel: "O'chirish sababi",
       confirmLabel: "O'chirish",
-      tone: "danger",
-    });
+      tone: "danger" });
     if (!reason) return;
     try { await deleteKassaEntry(row.id, reason); load(); router.refresh(); }
     catch (e) { toast.error(friendlyError(e)); }
@@ -287,8 +278,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       value: displayTotals.netto,
       tone: "auto",
       emphasis: true,
-      hint: "Tasdiq kutayotgan va rad etilgan yozuvlar hisobga olinmaydi",
-    },
+      hint: "Tasdiq kutayotgan va rad etilgan yozuvlar hisobga olinmaydi" },
   ];
 
   /**
@@ -305,8 +295,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       sortValue: (r) => r.date ?? "",
       exportValue: (r) => (r.date ? formatUzDate(r.date) : ""),
       width: "110px",
-      mobile: "meta",
-    },
+      mobile: "meta" },
     {
       key: "kind",
       header: "Turi",
@@ -318,8 +307,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
           {r.kind === "kirim" ? "Kirim" : "Chiqim"}
         </Badge>
       ),
-      sortValue: (r) => r.kind,
-    },
+      sortValue: (r) => r.kind },
     {
       key: "source",
       header: "Manba",
@@ -337,8 +325,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
           )}
         </span>
       ),
-      sortValue: (r) => r.sourceLabel,
-    },
+      sortValue: (r) => r.sourceLabel },
     {
       key: "who",
       header: "Kim / Toifa",
@@ -352,8 +339,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       ),
       sortValue: (r) => r.who ?? "",
       sticky: true,
-      mobile: "title",
-    },
+      mobile: "title" },
     {
       key: "description",
       header: "Izoh",
@@ -361,8 +347,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
         r.status === "rejected" && r.rejectedReason
           ? `Rad etildi: ${r.rejectedReason}`
           : r.description ?? "—",
-      sortValue: (r) => r.description ?? "",
-    },
+      sortValue: (r) => r.description ?? "" },
     {
       key: "status",
       header: "Holat",
@@ -376,8 +361,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
         return <Badge tone="success" dot>Hisobda</Badge>;
       },
       sortValue: (r) => r.status ?? "",
-      mobile: "status",
-    },
+      mobile: "status" },
     {
       key: "amount",
       header: "Summa",
@@ -392,8 +376,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       sortValue: (r) => (r.kind === "kirim" ? r.amount : -r.amount),
       exportValue: (r) => r.amount,
       numeric: true,
-      align: "right",
-    },
+      align: "right" },
     {
       key: "actions",
       header: "Amal",
@@ -416,8 +399,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
           </div>
         );
       },
-      mobile: "actions",
-    },
+      mobile: "actions" },
   ];
 
   return (
@@ -426,8 +408,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       style={{
         background: "var(--card-bg)",
         border: "1px solid var(--card-border)",
-        boxShadow: "var(--card-shadow)",
-      }}
+        boxShadow: "var(--card-shadow)" }}
     >
       {/* Ichki sarlavha OLIB TASHLANDI: sahifada endi `SectionHeader`
           ("03 · OPERATSIYALAR · Kassa jurnali") turadi va u aynan shu matnni

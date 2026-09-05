@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import OperationModule from "@/components/OperationModule";
 import HisobotlarModule from "@/components/HisobotlarModule";
-import { upsertMonthlyReport } from "@/server/operations";
 import { getPeriodPaymentStatus } from "@/server/invoices";
 import { Company, Staff, OperationEntry } from "@/types";
 import type { ReportColumn } from "@/lib/reportColumns";

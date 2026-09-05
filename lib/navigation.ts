@@ -1,9 +1,8 @@
 import {
-  LayoutDashboard, Building2, Users, FileText, Wallet, Receipt, CreditCard, Calendar, TrendingUp, Bell, ScrollText, UserCircle, Banknote, HandCoins, CalendarClock, ShieldCheck,
+  LayoutDashboard, Building2, Users, FileText, Wallet, Receipt, CreditCard, Calendar, TrendingUp, Bell, UserCircle, Banknote, HandCoins, CalendarClock, ShieldCheck,
   Grid3x3, Trophy, CheckSquare, Settings, User, AlarmClock, Calculator, History, Lock, type LucideIcon,
   Scale, Landmark, Link2, ListChecks,
-  Gauge, Package,
-} from "lucide-react";
+  Gauge } from "lucide-react";
 import type { AppView } from "@/lib/platform/permissions";
 import { KPI_CONFIG_ROLES, KPI_REVIEW_ROLES } from "@/lib/kpiTabs";
 
@@ -52,8 +51,7 @@ export const NAV_TINT_VAR: Record<NavTint, string> = {
   amber: "var(--nav-amber)",
   clay: "var(--nav-clay)",
   plum: "var(--nav-plum)",
-  indigo: "var(--nav-indigo)",
-};
+  indigo: "var(--nav-indigo)" };
 
 export interface NavItem {
   href: string;
@@ -218,8 +216,7 @@ export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
   moliya: "MOLIYA",
   boshqa: "BOSHQA",
   kabinet: "KABINET",
-  admin: "ADMIN",
-};
+  admin: "ADMIN" };
 
 /**
  * MOBIL PASTKI PANEL — muhimlik tartibi. Rol ko'ra oladigan birinchi TO'RTTASI
@@ -252,5 +249,4 @@ export const MOBILE_NAV_SHORT_LABELS: Partial<Record<AppView, string>> = {
   expenses: "Xarajat",
   notifications: "Xabar",
   kassa_income: "Kirim",
-  kassa_expense: "Chiqim",
-};
+  kassa_expense: "Chiqim" };

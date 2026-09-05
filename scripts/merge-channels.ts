@@ -104,7 +104,9 @@ async function main() {
   const duplicates = [...groups.entries()].filter(([, g]) => g.length > 1);
   const singles = [...groups.values()].filter((g) => g.length === 1).length;
 
-  console.log(`Kanal: ${channels.length} · noyob odam: ${groups.size} · birlashtiriladi: ${duplicates.length} guruh`);
+  // `singles` hisoblanardi, lekin chiqmasdi — "noyob odam" soni ichida
+  // nechtasi allaqachon yakka ekani ko'rinmasdi.
+  console.log(`Kanal: ${channels.length} · noyob odam: ${groups.size} (${singles} tasi yakka) · birlashtiriladi: ${duplicates.length} guruh`);
 
   if (duplicates.length === 0) {
     console.log("Takrorlanish topilmadi.");

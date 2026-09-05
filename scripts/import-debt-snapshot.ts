@@ -38,9 +38,6 @@ const SOURCES = [
   { file: "01.08.2026. qani qarzdorlik (2).json", asOf: new Date(Date.UTC(2026, 7, 1)), label: "hisoblanmadan keyin" },
 ];
 
-/** STIRni solishtirish shakli — bazada ham, faylda ham har xil yozilishi mumkin. */
-const innKey = (v: string | null | undefined) => (v ?? "").replace(/\D/g, "");
-
 /** Shartnoma raqamini solishtirish uchun — kirill/lotin aralash yoziladi. */
 const contractKey = (raw: string) =>
   raw

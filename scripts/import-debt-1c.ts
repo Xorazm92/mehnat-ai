@@ -18,7 +18,6 @@ import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
 import { formatNum as som } from "@/lib/platform/format";
 import fs from "node:fs";
-import path from "node:path";
 import { findImportFile } from "./import-source";
 import { parseDebtReport, type DebtLine } from "@/lib/debtReport";
 import { readLooseJsonArray } from "@/lib/bank/parsePlastik";
@@ -77,8 +76,7 @@ async function main() {
 
   const ownFirms = await prisma.company.findMany({
     where: { isOwnFirm: true },
-    select: { name: true },
-  });
+    select: { name: true } });
   // 1C dagi nom bazadagidan farq qiladi ("Seven`S Up" Mchj ↔ ЧП "SEVEN`S UP"),
   // shuning uchun kalit so'z bo'yicha ham taniymiz.
   const ownAliases = [
@@ -108,8 +106,7 @@ async function main() {
 
   // ── Moslashtirish ──────────────────────────────────────────────────────
   const contracts = await prisma.contract.findMany({
-    select: { id: true, number: true, companyId: true, company: { select: { name: true } } },
-  });
+    select: { id: true, number: true, companyId: true, company: { select: { name: true } } } });
   const byKey = new Map<string, typeof contracts>();
   for (const c of contracts) {
     const k = contractKey(c.number);
@@ -118,8 +115,7 @@ async function main() {
 
   const companies = await prisma.company.findMany({
     where: { isOwnFirm: false },
-    select: { id: true, name: true, contracts: { select: { id: true, number: true } } },
-  });
+    select: { id: true, name: true, contracts: { select: { id: true, number: true } } } });
   const companyByName = new Map<string, (typeof companies)[number]>();
   for (const c of companies) {
     const k = normName(c.name);
@@ -195,9 +191,7 @@ async function main() {
           rawContract: r.line.contractRaw ?? "",
           // Bo'sh satr, NULL emas — Postgres unikal indeksda NULL'larni
           // farqli deb hisoblaydi va kalit ishlamay qolardi.
-          ownFirmName: r.line.ownFirmName ?? "",
-        },
-      },
+          ownFirmName: r.line.ownFirmName ?? "" } },
       create: {
         asOf,
         companyId: r.companyId,
@@ -206,10 +200,8 @@ async function main() {
         rawContract: r.line.contractRaw ?? "",
         ownFirmName: r.line.ownFirmName ?? "",
         debt: r.line.debt,
-        advance: r.line.advance,
-      },
-      update: { debt: r.line.debt, advance: r.line.advance, companyId: r.companyId, contractId: r.contractId },
-    });
+        advance: r.line.advance },
+      update: { debt: r.line.debt, advance: r.line.advance, companyId: r.companyId, contractId: r.contractId } });
     written++;
   }
   console.log(`\n✓ ${written} ta kesim yozildi (${asOf.toISOString().slice(0, 10)})`);
@@ -220,8 +212,7 @@ async function main() {
       if (!r.contractId) continue;
       await prisma.contract.update({
         where: { id: r.contractId },
-        data: { openingDebt: r.line.debt, openingDebtAt: asOf },
-      });
+        data: { openingDebt: r.line.debt, openingDebtAt: asOf } });
       opened++;
     }
     console.log(`✓ ${opened} ta shartnomaga BOSHLANG'ICH qarz yozildi`);

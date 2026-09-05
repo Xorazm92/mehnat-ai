@@ -26,11 +26,19 @@ function pruneIfLarge(now: number): void {
   for (const [k, b] of store) if (now >= b.resetAt) store.delete(k);
 }
 
-/** Urinishga ruxsat bormi (limitdan oshmaganmi). Hisoblagichni O'ZGARTIRMAYDI. */
+/**
+ * Urinishga ruxsat bormi (limitdan oshmaganmi). Hisoblagichni O'ZGARTIRMAYDI.
+ *
+ * `windowMs` PARAMETRI OLIB TASHLANDI. U qabul qilinardi-yu, tanada
+ * ishlatilmasdi: oyna `recordFailure` da ochiladi va `b.resetAt` ga
+ * yoziladi, ya'ni tekshiruv paytida uzunlikni qayta berishning ma'nosi
+ * yo'q. Imzo esa chaqiruvchiga "oynani men belgilayman" degan noto'g'ri
+ * taassurot berardi — turli joyda turli qiymat berilsa ham hech narsa
+ * o'zgarmasdi.
+ */
 export function checkRateLimit(
   key: string,
   limit: number,
-  windowMs: number,
 ): { allowed: boolean; retryAfterMs: number } {
   const now = Date.now();
   const b = store.get(key);
@@ -148,7 +156,7 @@ export function loginRateLimitRules(ip: string, login: string): RateLimitRule[] 
 
 function checkInMemory(rules: RateLimitRule[]): RateLimitOutcome {
   for (const r of rules) {
-    const res = checkRateLimit(r.key, r.limit, r.windowMs);
+    const res = checkRateLimit(r.key, r.limit);
     if (!res.allowed) {
       return { allowed: false, retryAfterMs: res.retryAfterMs, backend: "memory", blockedScope: r.scope };
     }

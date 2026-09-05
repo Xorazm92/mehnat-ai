@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Language } from "@/types";
 import { getKpiLeaderboard } from "@/server/kpi";
 import { Trophy, TrendingUp, Award, AlertTriangle, Wallet, Activity } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
@@ -10,7 +9,10 @@ import { KPI_CATEGORY_UZ } from "@/lib/kpiLabels";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { MonthPicker } from "./ui/MonthPicker";
 
-interface Props { lang: Language; hideBonus?: boolean; }
+// `lang` propi OLIB TASHLANDI: komponent uni hech qayerda ishlatmasdi
+// (UI o'zbekcha — `lib/i18n` siyosati), lekin ikkala chaqiruvchi ham uni
+// uzatib turardi va u "tarjima bor" degan taassurot berardi.
+interface Props { hideBonus?: boolean; }
 
 interface LeaderRow {
   employeeId: string; name: string; role: string;
@@ -43,7 +45,7 @@ const CAT_UZ = KPI_CATEGORY_UZ;
 const fmt = (v: number) => formatNum(Math.round(v));
 const barColor = (b: number) => (b >= 85 ? "var(--success)" : b >= 70 ? "var(--accent-blue)" : b >= 60 ? "var(--warning)" : "var(--danger)");
 
-const KpiLeaderboard: React.FC<Props> = ({ lang, hideBonus = false }) => {
+const KpiLeaderboard: React.FC<Props> = ({ hideBonus = false }) => {
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);

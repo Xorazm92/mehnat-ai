@@ -185,12 +185,11 @@ const SalaryKPIModule: React.FC<Props> = ({
                         operations={operations}
                         staff={staff}
                         lang={lang}
-                        currentUserId={currentUserId}
                         currentUserRole={currentUserRole}
                     />
                 )}
                 {active === 'reyting' && (
-                    <KpiLeaderboard lang={lang} hideBonus={!isSenior} />
+                    <KpiLeaderboard hideBonus={!isSenior} />
                 )}
                 {active === 'rules' && <KPIRulesManager lang={lang} />}
             </TabPanel>

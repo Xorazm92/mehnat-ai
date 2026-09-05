@@ -27,7 +27,6 @@ import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import fs from "node:fs";
-import path from "node:path";
 import { findImportFile } from "./import-source";
 import { phoneKey } from "@/lib/phone";
 import { SYSTEM_SETTING_DEFAULTS } from "@/lib/admin/system-settings-config";
@@ -40,8 +39,7 @@ const CEO = {
   telegramUsername: "otabek_FinCo",
   department: "Rahbariyat",
   status: "active",
-  avatarColor: "#7c3aed",
-};
+  avatarColor: "#7c3aed" };
 
 /** Bu hisobga TEGILMAYDI — u boshqa odam (buxgalter). */
 const ACCOUNTANT_EMAIL = "otabek_e419@mehnat.uz";
@@ -55,8 +53,7 @@ async function main() {
   // ── 0. Buxgalter Otabek tegilmaganini tasdiqlaymiz ─────────────────────
   const accountant = await prisma.user.findUnique({
     where: { email: ACCOUNTANT_EMAIL },
-    select: { fullName: true, role: true, telegramUsername: true },
-  });
+    select: { fullName: true, role: true, telegramUsername: true } });
   if (accountant) {
     console.log(
       `Buxgalter (tegilmaydi): ${accountant.fullName} [${accountant.role}] @${accountant.telegramUsername ?? "—"}`
@@ -71,8 +68,7 @@ async function main() {
   // ── 1. Rahbar hisobi ───────────────────────────────────────────────────
   const existing = await prisma.user.findUnique({
     where: { email: CEO.email },
-    select: { id: true, fullName: true, role: true, telegramUserId: true },
-  });
+    select: { id: true, fullName: true, role: true, telegramUserId: true } });
 
   const settings = await prisma.systemSetting.findUnique({ where: { key: "defaultUserPassword" } });
   const password =
@@ -99,15 +95,13 @@ async function main() {
         // "FININFO BEST" → "HOME SPOT STORY".
         inn: String(row["INN"] ?? "").trim() || null,
         founder: String(row["Ta'sischi"] ?? "").trim() || null,
-        director: String(row["Direktor"] ?? "").trim() || null,
-      });
+        director: String(row["Direktor"] ?? "").trim() || null });
     }
   }
 
   const ownFirms = await prisma.company.findMany({
     where: { isOwnFirm: true },
-    select: { id: true, name: true, inn: true, founderName: true, directorName: true },
-  });
+    select: { id: true, name: true, inn: true, founderName: true, directorName: true } });
   const norm = (s: string) => s.toLowerCase().replace(/[`'‘’"]/g, "").replace(/\s+/g, " ").trim();
 
   const firmUpdates: { id: string; name: string; founder: string | null; director: string | null }[] = [];
@@ -152,8 +146,7 @@ async function main() {
     department: CEO.department,
     status: CEO.status,
     avatarColor: CEO.avatarColor,
-    isActive: true,
-  };
+    isActive: true };
 
   if (existing) {
     // Parol ATAYIN yangilanmaydi — qayta ishga tushirish rahbarni tizimdan
@@ -162,8 +155,7 @@ async function main() {
     console.log(`\n✓ Profil yangilandi (parol tegilmadi)`);
   } else {
     await prisma.user.create({
-      data: { ...profile, email: CEO.email, passwordHash: await bcrypt.hash(password, 12) },
-    });
+      data: { ...profile, email: CEO.email, passwordHash: await bcrypt.hash(password, 12) } });
     console.log(`\n✓ Hisob yaratildi`);
     console.log(`   login : ${CEO.email}`);
     console.log(`   parol : ${password}   ← birinchi kirishdan keyin o'zgartirilsin`);
@@ -172,8 +164,7 @@ async function main() {
   for (const f of firmUpdates) {
     await prisma.company.update({
       where: { id: f.id },
-      data: { founderName: f.founder, directorName: f.director },
-    });
+      data: { founderName: f.founder, directorName: f.director } });
   }
   if (firmUpdates.length > 0) console.log(`✓ ${firmUpdates.length} ta firmada ta'sischi/direktor yozildi`);
 
@@ -181,8 +172,7 @@ async function main() {
   const directors = await prisma.user.findMany({
     where: { isActive: true, role: { in: ["super_admin", "admin"] } },
     select: { fullName: true, email: true, role: true, telegramUserId: true },
-    orderBy: { fullName: "asc" },
-  });
+    orderBy: { fullName: "asc" } });
   console.log(`\nKunlik hisobotni oladiganlar (${directors.length}):`);
   for (const d of directors) {
     console.log(
@@ -192,8 +182,7 @@ async function main() {
 
   const after = await prisma.user.findUnique({
     where: { email: ACCOUNTANT_EMAIL },
-    select: { fullName: true, role: true },
-  });
+    select: { fullName: true, role: true } });
   if (after) console.log(`\nBuxgalter o'z holida: ${after.fullName} [${after.role}] ✓`);
 
   console.log(

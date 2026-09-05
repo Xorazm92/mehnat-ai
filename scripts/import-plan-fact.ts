@@ -10,7 +10,6 @@ import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
 import { formatNum as som } from "@/lib/platform/format";
 import fs from "node:fs";
-import path from "node:path";
 import { findImportFileByPrefix, importDirs, requireImportFile } from "./import-source";
 import { parsePlanFact } from "@/lib/planFact";
 
@@ -49,8 +48,7 @@ async function main() {
     await prisma.monthlyTarget.upsert({
       where: { period_metric: { period: r.period, metric: r.metric } },
       create: { period: r.period, metric: r.metric, plan: r.plan, fact: r.fact },
-      update: { plan: r.plan, fact: r.fact },
-    });
+      update: { plan: r.plan, fact: r.fact } });
     written++;
   }
   console.log(`\n✓ ${written} ta reja/fakt qatori yozildi`);

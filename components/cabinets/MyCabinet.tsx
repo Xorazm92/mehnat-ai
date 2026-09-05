@@ -256,7 +256,7 @@ export default function MyCabinet(props: MyCabinetProps & { initialTab?: TabId }
         {tab === "kpi" && (
           <KpiTab kpi={kpi} adjustments={adjustments} payrollSummary={payrollSummary} monthLabel={monthLabel} />
         )}
-        {tab === "leaderboard" && <KpiLeaderboard lang="uz" hideBonus={true} />}
+        {tab === "leaderboard" && <KpiLeaderboard hideBonus={true} />}
         {tab === "attendance" && <AttendanceTab attendance={attendance} summary={attendanceSummary} />}
         {tab === "security" && <SecurityTab userId={profile.id} />}
       </TabPanel>
@@ -519,7 +519,7 @@ function CompaniesTab({ companies }: { companies: CabinetCompany[] }) {
               </tr>
             </thead>
             <tbody>
-              {companies.map((c, i) => {
+              {companies.map((c) => {
                 const roleC = ROLE_COLORS[c.myRole as UserRole] || "var(--text-muted)";
                 return (
                   <tr key={c.id} onClick={() => setSelectedCompany(c)} className="row-hover group cursor-pointer" style={{ borderBottom: "1px solid var(--card-border)" }}>

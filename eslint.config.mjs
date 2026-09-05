@@ -331,6 +331,25 @@ const eslintConfig = defineConfig([
     rules: { "no-console": "off" },
   },
   {
+    // ATAYLAB TASHLAB YUBORILGAN qiymat `_` bilan boshlanadi.
+    //
+    // Bu shunchaki qulaylik emas — qoidaning ANIQLIGINI oshiradi. `_` siz
+    // "men buni ataylab olmadim" degan niyatni ifodalashning yo'li yo'q edi
+    // va shu sababli ro'yxatda haqiqiy o'lik kod bilan ataylab tashlangan
+    // qiymat aralashib turardi (masalan `lib/directorReport.ts` dagi
+    // `const { byCompany: _byCompany, ...totals } = debts` — u Telegram
+    // qatlamiga Map yubormaslik uchun ATAYLAB ajratiladi).
+    files: ["**/*.{js,jsx,mjs,ts,tsx,mts,cts}"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+        destructuredArrayIgnorePattern: "^_",
+      }],
+    },
+  },
+  {
     // `.cjs` — TA'RIFI bo'yicha CommonJS. `ecosystem.config.cjs` ni pm2 Node
     // orqali `require()` bilan yuklaydi, ya'ni `import` u yerda ISHLAMAYDI.
     // Qoida esa butun repo bo'yicha yoqilgan edi va shu bitta faylda YAGONA

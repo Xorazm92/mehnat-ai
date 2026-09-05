@@ -24,7 +24,6 @@ import {
 } from "@/lib/tariffPresets";
 import { overlayObligations, type ObligationCell } from "@/lib/domains/accounting/matrixRead";
 import { getMigrationFlags } from "@/lib/featureFlags";
-import { toObligationMonthKey } from "@/lib/periods";
 
 // Firma ro'yxati BIRIKTIRUV bo'yicha cheklanadi (lib/access.ts). Ilgari bu yerda
 // rol bo'yicha uch tarmoq bor edi va "senior" tarmog'i argumentsiz cache'langani

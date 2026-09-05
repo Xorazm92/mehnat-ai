@@ -144,7 +144,7 @@ describe("Redis yo'q bo'lganda zaxira yo'l", () => {
     for (let i = 0; i < RATE_LIMIT.LOGIN_ATTEMPTS; i++) await recordLoginFailure(rules);
 
     const { checkRateLimit } = await import("@/lib/rateLimit");
-    const mem = checkRateLimit(rules[0].key, rules[0].limit, rules[0].windowMs);
+    const mem = checkRateLimit(rules[0].key, rules[0].limit);
     expect(mem.allowed).toBe(false);
   });
 });

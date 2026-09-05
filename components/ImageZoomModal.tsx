@@ -12,9 +12,7 @@ import {
   ExternalLink,
   Download,
   Maximize2,
-  Minimize2,
-  Move,
-} from "lucide-react";
+  Minimize2 } from "lucide-react";
 
 interface ImageZoomModalProps {
   src: string;
@@ -31,8 +29,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
   title = "Skrinshotni ko'rish va kattalashtirish",
   subtitle,
   proofId,
-  onClose,
-}) => {
+  onClose }) => {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [rotation, setRotation] = useState(0);
@@ -130,8 +127,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
     e.preventDefault();
     setPosition({
       x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
-    });
+      y: e.clientY - dragStart.y });
   };
 
   const handleMouseUp = () => {
@@ -152,9 +148,6 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
       }
     }
   };
-
-  // Direct image URL for downloading or opening in new window
-  const rawImageUrl = proofId ? `/api/proofs/${proofId}/image` : src;
 
   const handleDownload = () => {
     const link = document.createElement("a");
@@ -266,8 +259,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
           className="transition-transform duration-75 ease-out flex items-center justify-center max-w-full max-h-full p-4"
           style={{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
-            transformOrigin: "center center",
-          }}
+            transformOrigin: "center center" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

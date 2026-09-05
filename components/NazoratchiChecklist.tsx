@@ -25,12 +25,16 @@ interface Props {
     staff: Staff[];
     lang: Language;
     currentUserRole?: string;
-    currentUserId?: string;
+    // `currentUserId` OLIB TASHLANDI — komponent uni hech qayerda
+    // ishlatmasdi. "O'z firmasini o'zi tasdiqlay olmaydi" qoidasi
+    // SERVERDA majburlanadi (`server/proofs.ts` → `isCompanyReviewer`),
+    // ya'ni xavfsizlik teshigi yo'q; UI shu qoidani KO'ZDA aks
+    // ettirmasligi esa alohida UX masalasi.
 }
 
 type RoleGroup = { key: KpiSalaryRole; ruleRole: string; label: string; accent: string; employeeId?: string; employeeName?: string; base: number };
 
-const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentUserRole, currentUserId }) => {
+const NazoratchiChecklist: React.FC<Props> = ({ companies, staff, lang, currentUserRole }) => {
     const prompt = usePrompt();
     const staffById = useMemo(() => new Map(staff.map(s => [s.id, s.name])), [staff]);
     const nameOf = (id?: string | null, fallback?: string) => (id ? staffById.get(id) || fallback || '' : fallback || '');

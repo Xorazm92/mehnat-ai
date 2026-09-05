@@ -21,16 +21,6 @@ const PERIOD_RE =
   // "c" bu yerda ba'zan LOTIN (Hamkorbank shunday yozadi) — ikkala alifbo.
   /Сведения о работе счета.*?[сc]\s+(\d{2}\.\d{2}\.\d{4})\s+по\s+(\d{2}\.\d{2}\.\d{4})/i;
 
-function* cells(rows: SheetRow[]): Generator<string> {
-  for (const row of rows ?? []) {
-    if (!row || typeof row !== "object") continue;
-    for (const v of Object.values(row)) {
-      const t = String(v ?? "").replace(/\s+/g, " ").trim();
-      if (t) yield t;
-    }
-  }
-}
-
 /** Tranzaksiya jadvalining sarlavhasini topadi (Дебет+Кредит bir qatorda). */
 function findTxHeader(
   workbook: Workbook

@@ -8,21 +8,16 @@ import {
   ScrollText,
   FileText,
   Boxes,
-  FileSignature,
-  Landmark,
-  Receipt,
   CheckSquare,
   CalendarCheck2,
   CalendarClock,
   CalendarDays,
   Coins,
-  UserPlus,
-} from "lucide-react";
+  UserPlus } from "lucide-react";
 import {
   hasPermission,
   type Capability,
-  type UserRole,
-} from "@/lib/platform/permissions";
+  type UserRole } from "@/lib/platform/permissions";
 
 export type AdminModuleGroup = "tizim" | "moliya" | "integratsiya";
 
@@ -48,8 +43,7 @@ export interface AdminModule {
 export const ADMIN_GROUP_LABELS: Record<AdminModuleGroup, string> = {
   tizim: "TIZIM",
   moliya: "MOLIYA",
-  integratsiya: "INTEGRATSIYALAR",
-};
+  integratsiya: "INTEGRATSIYALAR" };
 
 // ---------------------------------------------------------------------------
 // THE REGISTRY — the single source of truth for the admin panel.

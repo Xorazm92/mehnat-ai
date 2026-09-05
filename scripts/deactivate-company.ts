@@ -65,7 +65,9 @@ async function main(): Promise<void> {
     console.log(`     holat: isActive=${c.isActive} companyStatus=${c.companyStatus ?? "-"}`);
     console.log(`     majburiyat: ${open} ochiq → bekor qilinadi | ${done} yakunlangan → tegilmaydi`);
   }
-  console.log(`\n  JAMI: ${companies.length} firma, ${totalOpen} ochiq majburiyat bekor qilinadi.`);
+  // `totalDone` hisoblanardi, lekin bu satrga tushmasdi — operator nechta
+  // majburiyat TEGILMASLIGINI ko'rmasdi, holbuki qaror aynan shunga bog'liq.
+  console.log(`\n  JAMI: ${companies.length} firma, ${totalOpen} ochiq majburiyat bekor qilinadi, ${totalDone} yakunlangan majburiyatga tegilmaydi.`);
 
   if (!apply) {
     console.log(`\n— Quruq ishlash, hech narsa o'zgarmadi.\n  Yozish uchun: --apply qo'shing.`);

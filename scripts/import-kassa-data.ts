@@ -18,7 +18,6 @@ import "./load-env"; // birinchi bo'lishi shart
 import { prisma } from "@/lib/prisma";
 import { formatNum as som } from "@/lib/platform/format";
 import fs from "node:fs";
-import path from "node:path";
 import { findImportFile, findImportFileByPrefix, requireImportFile } from "./import-source";
 import { parseMealWorkbook } from "@/lib/mealExpenses";
 import { KASSA_CATEGORIES_KEY } from "@/lib/kassaCategories";
@@ -112,8 +111,7 @@ async function main() {
     await prisma.systemSetting.upsert({
       where: { key: KASSA_CATEGORIES_KEY },
       create: { key: KASSA_CATEGORIES_KEY, value: categories },
-      update: { value: categories },
-    });
+      update: { value: categories } });
     console.log(`\n✓ Toifalar sozlamaga yozildi (${KASSA_CATEGORIES_KEY})`);
   }
 
@@ -124,8 +122,7 @@ async function main() {
       const key = `obed:${e.date.toISOString().slice(0, 10)}:${e.category}`;
       const existing = await prisma.kassaEntry.findFirst({
         where: { description: { startsWith: key }, deletedAt: null },
-        select: { id: true },
-      });
+        select: { id: true } });
       let entryId: string;
       if (existing) {
         await prisma.kassaEntry.update({ where: { id: existing.id }, data: { amount: e.amount } });
@@ -134,8 +131,7 @@ async function main() {
           sourceTable: "KassaEntry",
           sourceId: entryId,
           createdBy: "import_kassa_data",
-          reason: "import xarajat yangilandi",
-        });
+          reason: "import xarajat yangilandi" });
       } else {
         const created = await prisma.kassaEntry.create({
           data: {
@@ -144,9 +140,7 @@ async function main() {
             amount: e.amount,
             date: e.date,
             description: `${key} — ${e.category}`,
-            status: "approved",
-          },
-        });
+            status: "approved" } });
         entryId = created.id;
       }
       await postLedger(prisma, {
@@ -158,8 +152,7 @@ async function main() {
         sourceTable: "KassaEntry",
         sourceId: entryId,
         createdBy: "import_kassa_data",
-        description: `${key} — ${e.category}`,
-      });
+        description: `${key} — ${e.category}` });
       written++;
     }
   }

@@ -12,11 +12,9 @@ import {
   ExternalLink,
   Loader2,
   ZoomIn,
-  Building2,
   Calendar,
   UserCheck,
-  FileCheck,
-} from "lucide-react";
+  FileCheck } from "lucide-react";
 import { reviewReportProof } from "@/server/proofs";
 import { formatUzDateNumeric, formatUzTime } from "@/lib/platform/format";
 import { ImageZoomModal } from "@/components/ImageZoomModal";
@@ -74,15 +72,19 @@ export default function ProofViewClient({ proof: initialProof, canReview }: Prop
         period: proof.period,
         colKey: proof.colKey,
         decision,
-        rejectReason: decision === "rejected" ? rejectReason.trim() || undefined : undefined,
-      });
+        rejectReason: decision === "rejected" ? rejectReason.trim() || undefined : undefined });
       toast.success(decision === "approved" ? "Tasdiqlandi ✅" : "Rad etildi ❌");
       setProof((prev) => ({
         ...prev,
         status: decision,
-        rejectReason: decision === "rejected" ? rejectReason.trim() || null : null,
-      }));
+        rejectReason: decision === "rejected" ? rejectReason.trim() || null : null }));
       setShowReject(false);
+      // SERVER qismini ham yangilaymiz. Sahifada endi "Topshirish tarixi"
+      // bloki bor va u SERVERDA chiziladi (`ObligationSubmission`) — lokal
+      // `setProof` unga yetmaydi, ya'ni tasdiqdan keyin tarix "Yuborildi"
+      // bo'lib qotib qolardi. `router` shu paytgacha ishlatilmasdi
+      // (eslint uni "ishlatilmagan" deb ko'rsatib turardi).
+      router.refresh();
     } catch (e) {
       console.error(e);
       toast.error("Amalni bajarishda xatolik");
