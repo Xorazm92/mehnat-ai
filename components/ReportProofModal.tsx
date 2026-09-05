@@ -55,6 +55,23 @@ const fmtDate = (iso?: string | null) => {
   }
 };
 
+/**
+ * Fayl chegaralari — MODUL darajasida.
+ *
+ * Ilgari ular komponent TANASIDA e'lon qilinardi, ya'ni har renderda yangi
+ * massiv/son yaratilardi va `useCallback` ularni bog'liqlik sifatida ko'ra
+ * olmasdi (eslint aynan shuni ko'rsatib turardi). Qiymatlar o'zgarmas —
+ * joyi shu yerda. Chegara serverda ham majburlanadi (`server/proofs.ts`).
+ */
+const FILE_MAX = 2 * 1024 * 1024;
+const FILE_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+];
+
 const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, onSubmitted, onReviewed }) => {
   const [imgPreview, setImgPreview] = useState<string>("");
   const [note, setNote] = useState("");
@@ -102,15 +119,6 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
   // HISOBOT FAYLI — ixtiyoriy, skrinshotga qo'shimcha. Nazoratchi skrinshotdan
   // o'qiy olmasa asl hujjatni ochadi.
   const [docFile, setDocFile] = useState<{ data: string; name: string; type: string } | null>(null);
-
-  const FILE_MAX = 2 * 1024 * 1024;
-  const FILE_TYPES = [
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-excel",
-  ];
 
   const handleDoc = useCallback(async (file: File | null | undefined) => {
     if (!file) { setDocFile(null); return; }

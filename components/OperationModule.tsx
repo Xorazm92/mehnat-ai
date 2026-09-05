@@ -308,7 +308,10 @@ const OperationModule: React.FC<Props> = ({
     } catch (e) {
       console.error('Proof meta load error:', e);
     }
-  }, [selectedPeriod]);
+    // `currentUserId` ham kerak: u dalil "meniki"mi yo'qmi degan bayroqni
+    // belgilaydi (`mine`), ya'ni ikki rolli xodim rolni almashtirganda
+    // eski bayroq bilan qolib ketardi.
+  }, [selectedPeriod, currentUserId]);
 
   useEffect(() => { reloadProofMeta(); }, [reloadProofMeta]);
 

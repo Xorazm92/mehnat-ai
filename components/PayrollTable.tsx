@@ -312,7 +312,11 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                 performanceDetails: []
             } as any;
         }).filter(s => s.companyCount > 0);
-    }, [staff, companies, operations, month, adjustmentsList, performanceList, kpiRules, companyOverrides, basis, collectedByCompany, assignmentsByCompany]);
+    // `payoutsList` BOG'LIQLIKLARDA YETISHMASDI. Memo uni O'QIYDI (`totalPaid`),
+    // lekin qayta hisoblanmasdi: to'lovlar so'rovi kechroq tugagani uchun
+    // "To'langan" va "Qoldiq" ustunlari eski (ko'pincha nol) qiymat bilan
+    // qolib ketardi va boshqa bir bog'liqlik o'zgarmaguncha shunday turardi.
+    }, [staff, companies, operations, month, adjustmentsList, performanceList, kpiRules, companyOverrides, basis, collectedByCompany, assignmentsByCompany, payoutsList]);
 
     type PayrollRow = (typeof summaries)[number];
 
