@@ -26,6 +26,35 @@ module.exports = {
       exec_mode: "fork",
       autorestart: true,
       max_memory_restart: "700M",
+      // ── QAYTA ISHGA TUSHISH TARTIBI ────────────────────────────────────
+      //
+      // NEGA KERAK. Prod jurnalida 2026-09-05 da o'lchandi: `asro-web` da
+      // 225 ta qayta ishga tushish, `unstable_restarts: 0`, va xato
+      // jurnalida 66 ta "Could not find a production build" + 91 ta
+      // "Cannot find module". Ya'ni bu HALOKAT emas — bu DEPLOY OYNASI:
+      // `npm run build` `.next` ni JONLI server ostidan almashtiradi,
+      // ishlab turgan protsess yo'q bo'lgan chunk'ni so'raydi va chiqib
+      // ketadi. `min_uptime`/`restart_delay` berilmagani uchun pm2 uni
+      // DARHOL qayta ko'tarardi va build tugagunicha shu sikl aylanardi —
+      // hisoblagich shunday shishgan.
+      //
+      // `min_uptime` — shu muddatdan tez o'lgan protsess "beqaror" deb
+      // sanaladi, ya'ni `unstable_restarts` endi HAQIQIY signal beradi
+      // (ilgari u har doim 0 edi va nosozlikni yashirardi).
+      //
+      // `restart_delay` — build oynasi (~60s) endi ~20 ta urinishga tushadi,
+      // minglab emas.
+      //
+      // `max_restarts` ATAYLAB baland: chegaraga yetganda pm2 protsessni
+      // `errored` da QOLDIRADI, ya'ni past qiymat build tugagach saytni
+      // o'zi ko'tarilmaydigan holatga solib qo'yardi.
+      //
+      // ILDIZ SABAB BU YERDA TUZATILMAYDI. To'g'ri yechim — `.next` ni
+      // boshqa joyda yig'ib, tayyorini almashtirish (`output: "standalone"`);
+      // Dockerfile sharhi ham buni "documented follow-up" deb yozgan.
+      min_uptime: "30s",
+      restart_delay: 3000,
+      max_restarts: 100,
       // TZ aniq belgilanadi: server UTC bo'lsa davomat chegaralari (08:30/09:00)
       // va cron soatlari 5 soatga surilib ketardi.
       env: { NODE_ENV: "production", PORT: "3000", TZ: "Asia/Tashkent", ASRO_FILES_ROOT: FILES_ROOT },
@@ -40,6 +69,11 @@ module.exports = {
       exec_mode: "fork",
       autorestart: true,
       max_memory_restart: "500M",
+      // Web bilan bir xil qoida (yuqoridagi izohga qarang). Bot ham deploy
+      // paytida `tsx` orqali qayta yuklanadi.
+      min_uptime: "30s",
+      restart_delay: 3000,
+      max_restarts: 100,
       // Billing cron (09:00) va deadline sweep lokal vaqtga tayanadi.
       env: { NODE_ENV: "production", TZ: "Asia/Tashkent", ASRO_FILES_ROOT: FILES_ROOT },
     },
