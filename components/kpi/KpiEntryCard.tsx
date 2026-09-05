@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { KPIRule, KpiRuleOption, Language, MonthlyPerformance } from "@/types";
 import { computeRuleScore, type KpiEntryInput } from "@/lib/kpiScoring";
@@ -40,13 +40,25 @@ const KpiEntryCard: React.FC<Props> = ({ rule, perf, base, lang, disabled, onSav
   const [absentDays, setAbsentDays] = useState<number>(perf?.absentDays ?? 0);
   const [penaltyAmount, setPenaltyAmount] = useState<number>(perf?.penaltyAmount ?? 0);
 
-  useEffect(() => {
+  // BOSHQA YOZUVGA O'TILGANDA qayta urug'lanadi — render paytida, effektda
+  // emas (React'ning "prop o'zgarganda holatni tiklash" naqshi).
+  //
+  // NEGA `perf?.id` GINA. Ilgari bog'liqliklar ro'yxatida BARCHA maydonlar
+  // turardi va effekt beshalasini birdan tiklardi. `/kpi` ekrani esa
+  // `useAutoRefresh()` bilan davriy so'rov yuboradi (`KPIClient.tsx`): server
+  // javobida bitta maydon o'zgarsa yetardi — nazoratchining hali
+  // SAQLANMAGAN qolgan to'rt kiritmasi jimgina yo'qolardi. Endi tiklash
+  // faqat yozuv ALMASHGANDA bo'ladi, ya'ni davriy yangilanish terilayotgan
+  // qiymatga tegmaydi.
+  const [seededFor, setSeededFor] = useState(perf?.id);
+  if (perf?.id !== seededFor) {
+    setSeededFor(perf?.id);
     setSelectedOption(perf?.selectedOption ?? null);
     setEarlyDays(perf?.earlyDays ?? 0);
     setLateMinutes(perf?.lateMinutes ?? 0);
     setAbsentDays(perf?.absentDays ?? 0);
     setPenaltyAmount(perf?.penaltyAmount ?? 0);
-  }, [perf?.id, perf?.selectedOption, perf?.earlyDays, perf?.lateMinutes, perf?.absentDays, perf?.penaltyAmount]);
+  }
 
   const input: KpiEntryInput = useMemo(
     () => ({

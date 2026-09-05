@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import OrganizationModule from "@/components/OrganizationModule";
@@ -48,11 +48,14 @@ export default function OrganizationsClient({ companies, staff, operations, user
 
   // router.refresh() dan keyin drawer'dagi ma'lumot server holati bilan
   // sinxron bo'lsin — aks holda tahrirdan keyin eski qiymatlar ko'rinadi.
-  useEffect(() => {
+  // Render paytida: effekt bilan drawer bir kadr eski qiymat bilan chizilardi.
+  const [lastCompanies, setLastCompanies] = useState(companies);
+  if (companies !== lastCompanies) {
+    setLastCompanies(companies);
     setSelectedCompany(prev =>
       prev ? companies.find(c => c.id === prev.id) ?? prev : prev
     );
-  }, [companies]);
+  }
 
   const handleSave = async (company: Partial<Company>, assignments?: any[]) => {
     const isExisting = companies.some(c => c.id === company.id);

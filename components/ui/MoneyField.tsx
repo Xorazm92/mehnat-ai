@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { groupDigits, ungroupDigits } from "@/lib/platform/format";
 
 /**
@@ -49,15 +49,20 @@ export function MoneyField({
 }: MoneyFieldProps) {
   const [text, setText] = useState(() => (value == null ? "" : groupDigits(value)));
 
-  useEffect(() => {
-    // Tashqi qiymat o'zgarganda sinxron — lekin foydalanuvchi terayotgan
-    // paytdagi oraliq holatni buzmaslik uchun faqat son farq qilsa.
+  // Tashqi qiymat o'zgarganda sinxron — RENDER paytida, effektda emas.
+  // Effekt bilan brauzer avval ESKI matnni chizar, keyin yangisini qo'yardi:
+  // formadagi qiymat almashganda raqam bir lahza sakrab ko'rinardi.
+  //
+  // Foydalanuvchi terayotgan oraliq holat baribir buzilmaydi: solishtiruv
+  // matnda emas, SONDA — "1 200" va "1200" bir xil qiymat.
+  const [lastValue, setLastValue] = useState(value);
+  if (value !== lastValue) {
+    setLastValue(value);
     const current = Number(ungroupDigits(text));
     if ((value ?? null) !== (Number.isFinite(current) ? current : null)) {
       setText(value == null ? "" : groupDigits(value));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }
 
   const handle = (raw: string) => {
     // Faqat raqamlar qoladi — foydalanuvchi bo'shliq yoki vergul qo'ysa ham.

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { Calendar } from "lucide-react";
 import { formatUzDateNumeric } from "@/lib/platform/format";
 
@@ -95,9 +95,14 @@ export function DateField({
   const [touched, setTouched] = useState(false);
 
   // Tashqaridan kelgan qiymat o'zgarsa (masalan formani tozalash) — sinxron.
-  useEffect(() => {
+  // Render paytida, effektda emas: effekt bilan maydon bir kadr davomida
+  // eski sanani ko'rsatib turardi. Terish buzilmaydi — `value` faqat
+  // `blur` dagi `commit` orqali o'zgaradi.
+  const [lastValue, setLastValue] = useState(value);
+  if (value !== lastValue) {
+    setLastValue(value);
     setText(isoToUz(value));
-  }, [value]);
+  }
 
   const invalid = useMemo(() => touched && text.length > 0 && uzToIso(text) === null, [touched, text]);
 
