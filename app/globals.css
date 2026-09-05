@@ -1464,7 +1464,7 @@ button.metric-rail-cell:hover {
    ustidagi oq matn rasm ustida o'qilishi kerak. Yorug' rejimda ham to'q
    qolishi ataylab: bu yuza rasmga tegishli, temaga emas.
 
-   `--auth-hero-ground` — rasm (`public/abs.jpg`) hali yuklanmagan yoki
+   `--auth-hero-ground` — rasm (`public/login-hero.jpg`) hali yuklanmagan yoki
    umuman yo'q holatda ko'rinadigan zamin. Ya'ni rasmsiz ham panel
    buzilmaydi, shunchaki to'q ASRO-ko'k bo'lib qoladi. */
 :root {

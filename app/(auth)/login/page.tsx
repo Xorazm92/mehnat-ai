@@ -114,7 +114,7 @@ export default function LoginPage() {
             `sizes` da mobil uchun `0px`: panel `lg` dan pastda umuman
             chizilmaydi, ya'ni telefonga bu rasm hech qachon yuklanmaydi. */}
         <Image
-          src="/abs.jpg"
+          src="/login-hero.jpg"
           alt=""
           fill
           priority
