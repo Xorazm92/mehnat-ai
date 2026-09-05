@@ -112,9 +112,18 @@ const RULES: Rule[] = [
     channel: "humo",
     test: (p) => /HUMO/i.test(p) && /(Перечисление на счет клиента инкассированной выручки|Взаиморасчеты с ТСП)/i.test(p),
     extract: (p) => {
-      const gross = parseMoney(/На (?:общую )?сумму:?\s*([\d  .,]+?)\s*,\s*[вВ] том числ/i.exec(p)?.[1]);
-      const comm = parseMoney(/комисси[яи]:?\s*([\d  .,]+?)(?:\s|$|\.)/i.exec(p)?.[1]);
-      const term = /Терм(?:инал)?:?\s*(\w+)/i.exec(p)?.[1] ?? "?";
+      // HUMO summani ikki xil yozadi:
+      //   "На общую сумму:4,200,000.00, в том числе комиссия:42,000.00"
+      //   "На сумму:  29000.00, В т ч комис:  58.00"
+      const gross = parseMoney(/На (?:общую )?сумму:?\s*([\d  .,]+?)\s*,\s*(?:[вВ] том числ|[вВ] т ч)/i.exec(p)?.[1]);
+      // Ochko'z olinadi va oxiridagi ajratgich kesiladi: nokamtar shakl
+      // "42,000.00" ni birinchi vergulda uzib, 42 deb o'qib qo'yardi.
+      const comm = parseMoney(/комис(?:сия|си[яи])?:?\s*([\d  .,]+)/i.exec(p)?.[1]?.replace(/[.,\s ]+$/, ""));
+      // Terminal "Терм: X" yoki "при оплате с: X" ko'rinishida keladi.
+      const term =
+        /Терм(?:инал)?:?\s*(\w+)/i.exec(p)?.[1] ??
+        /при оплате с:?\s*(\w+)/i.exec(p)?.[1] ??
+        "?";
       return {
         terminalCode: `HUMO ${term}`,
         opDate: /выручки за (\d{2}\.\d{2}\.\d{4})/i.exec(p)
@@ -152,12 +161,15 @@ const RULES: Rule[] = [
   },
   {
     channel: "click",
-    test: (p) => /AO CLICK/i.test(p),
+    // Kontragent nomi ikki xil yoziladi ("AO CLICK", "CLICK AJ"), matn esa
+    // ba'zi vipiskalarda BOSH HARFDA keladi — shuning uchun registrga
+    // bog'liq bo'lmagan tekshiruv.
+    test: (p) => /\bCLICK\b/i.test(p),
     extract: (p) => ({
-      terminalCode: `CLICK ${/сервису №(\d+)/i.exec(p)?.[1] ?? "?"}`,
+      terminalCode: `CLICK ${/сервису\s*№\s*(\d+)/i.exec(p)?.[1] ?? "?"}`,
       opDate: parseDetailDate(/услуги за (\d{2}\.\d{2}\.\d{4})/i.exec(p)?.[1] ?? ""),
       grossAmount: parseMoney(/Сумма продаж\s*([\d  .,]+?)\s*сум/i.exec(p)?.[1]),
-      commissionAmount: null,
+      commissionAmount: parseMoney(/комиссия с платежа\s*([\d  .,]+?)\s*сум/i.exec(p)?.[1]),
     }),
   },
   {
@@ -191,6 +203,47 @@ const RULES: Rule[] = [
       grossAmount: null, // "100%" — komissiya ushlanmagan
       commissionAmount: 0,
     }),
+  },
+  // ── QR Online: "зачисление 99.75% на счет клиента владельца QR-кода 12.05.2026".
+  //    Yalpi summa matnda YO'Q — foiz ko'rsatilgan, shuning uchun undan tiklanadi.
+  {
+    channel: "qr",
+    test: (p) => /QR[- ]?Online/i.test(p) || /владельца QR-кода/i.test(p),
+    extract: (p) => {
+      const pct = Number(/зачисление\s*([\d.]+)\s*%/i.exec(p)?.[1] ?? "100");
+      const dates = [...p.matchAll(/(\d{2}\.\d{2}\.\d{4})/g)];
+      return {
+        terminalCode: "QR Online",
+        opDate: dates.length ? parseDetailDate(dates[dates.length - 1][1]) : null,
+        // Yalpi summa chaqiruvchida `fakt / (pct/100)` bilan tiklanadi —
+        // bu yerda faqat foiz ma'lum, summa esa vipiska qatorida.
+        grossAmount: null,
+        commissionAmount: null,
+        creditedPercent: Number.isFinite(pct) && pct > 0 ? pct : null,
+      };
+    },
+  },
+  // ── UZUM BANK (UzumCard, FastPay): "за вычетом комиссии 1.0% от суммы
+  //    34000.00 за период 23.06.2026 02:00:00 - 25.06.2026 15:25:39".
+  //    Yalpi summa ochiq yozilgan, sana esa DAVR — oxirgi kun olinadi.
+  {
+    channel: "uzum",
+    test: (p) => /UZUM\s*BANK/i.test(p) || /UZUMCARD|FASTPAY/i.test(p),
+    extract: (p) => {
+      const gross = parseMoney(/от суммы\s*([\d  .,]+?)(?:\s|$)/i.exec(p)?.[1]);
+      const dates = [...p.matchAll(/(\d{2}\.\d{2}\.\d{4})/g)];
+      const range = /за период[^\d]*(\d{2}\.\d{2}\.\d{4})[^-]*-[^\d]*(\d{2}\.\d{2}\.\d{4})/i.exec(p);
+      return {
+        terminalCode: /FASTPAY\s*(\w+)/i.exec(p)?.[1]
+          ? `UZUM FASTPAY ${/FASTPAY\s*(\w+)/i.exec(p)![1].toUpperCase()}`
+          : "UZUM",
+        // Hisob-kitob bir necha kunni qamraydi; savdo sanasi sifatida davr
+        // OXIRI olinadi — u yopilish kuni va bankdagi sanaga eng yaqini.
+        opDate: parseDetailDate(range?.[2] ?? (dates.length ? dates[dates.length - 1][1] : "")),
+        grossAmount: gross,
+        commissionAmount: null,
+      };
+    },
   },
   // ── UZCARD, 23510 (transit hisobvaraq): "тер:ТЕР:50219; за 31.12.2024"
   {
@@ -237,6 +290,8 @@ export function classifySettlement(
 
 /** Kanalning o'zbekcha nomi — ekran va hisobotlar uchun yagona manba. */
 export const CHANNEL_LABELS: Record<PosChannel, string> = {
+  qr: "QR Online",
+  uzum: "Uzum Bank",
   uzcard: "UzCard",
   humo: "HUMO",
   humo_epos: "HUMO EPOS",

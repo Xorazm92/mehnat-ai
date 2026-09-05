@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { BankStatementParseError, type ParsedStatement, type SheetRow, type Workbook } from "./types";
 import { isLitsevoyFormat, parseLitsevoy, readStatementHeader } from "./parseLitsevoy";
 import { isSvedeniyaFormat, parseSvedeniya } from "./parseSvedeniya";
+import { isVypiskaFormat, parseVypiska } from "./parseVypiska";
 import { looksLikeHamkorbank, parseHamkorbankWorkbook } from "./parseHamkorbank";
 
 export * from "./types";
@@ -28,10 +29,11 @@ export function parseStatementRows(rows: SheetRow[]): ParsedStatement {
   }
   if (isSvedeniyaFormat(rows)) return parseSvedeniya(rows);
   if (isLitsevoyFormat(rows)) return parseLitsevoy(rows);
+  if (isVypiskaFormat(rows)) return parseVypiska(rows);
 
   throw new BankStatementParseError(
     "Vipiska formati tanilmadi. Qo'llab-quvvatlanadigan formatlar: " +
-      '"Лицевой счет" va "Сведения о работе счета".'
+      '"Лицевой счет", "Выписка лицевых счетов" va "Сведения о работе счета".'
   );
 }
 

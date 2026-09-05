@@ -310,7 +310,14 @@ export async function rebuildSettlements(input?: { from?: string; to?: string })
     }
 
     const fact = sign * Number(tx.amount);
-    const gross = info.grossAmount != null ? sign * info.grossAmount : fact;
+    // Kanal yalpi summani bermay, faqat o'tkazilgan ulushni yozgan bo'lsa
+    // ("зачисление 99.75%") — yalpi shu foizdan tiklanadi.
+    const gross =
+      info.grossAmount != null
+        ? sign * info.grossAmount
+        : info.creditedPercent
+          ? fact / (info.creditedPercent / 100)
+          : fact;
     const commission = info.commissionAmount != null ? sign * info.commissionAmount : gross - fact;
     const opDate = info.opDate ?? dayStart(tx.valueDate);
 

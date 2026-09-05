@@ -184,3 +184,59 @@ describe("kanal nomi kontragent ustunida bo'lsa ham tanilishi kerak", () => {
     expect(r.terminalCode).toBe("UZCARD 100113154");
   });
 });
+
+describe("HUMO — qisqartirilgan shakl (\"На сумму / В т ч комис\")", () => {
+  // 20208 asosiy hisobvaraqqa HUMO tushumi shu ko'rinishda keladi: terminal
+  // "Терм:" prefiksisiz, komissiya esa "В т ч комис" deb qisqartirilgan.
+  const p =
+    "0063451601HUMO: Взаиморасчеты с ТСП при оплате с: 17D1023B, с ПК др банка: 98601201***1871, " +
+    "На сумму:       29000.00, В т ч комис:         58.00, Файл: B1766362.GL, от: 12.06.2026 RRN 616307590553";
+  const r = classifySettlement(p, "MCHJ OPTIMART HUMO");
+  it("kanal", () => expect(r.channel).toBe("humo"));
+  it("terminal prefikssiz ham topiladi", () => expect(r.terminalCode).toBe("HUMO 17D1023B"));
+  it("yalpi summa", () => expect(r.grossAmount).toBe(29000));
+  it("komissiya 0,2 %", () => expect(r.commissionAmount).toBe(58));
+  it("savdo sanasi \"от:\" dan", () => expect(r.opDate).toEqual(new Date(Date.UTC(2026, 5, 12))));
+});
+
+describe("QR Online — yalpi summa foizdan tiklanadi", () => {
+  const r = classifySettlement(
+    "00634QR Online: зачисление 99.75% на счет клиента владельца QR-кода 12.05.2026",
+    "ООО OPTIMART",
+  );
+  it("kanal", () => expect(r.channel).toBe("qr"));
+  it("savdo sanasi", () => expect(r.opDate).toEqual(new Date(Date.UTC(2026, 4, 12))));
+  it("yalpi matnda yo'q — faqat foiz beriladi", () => {
+    expect(r.grossAmount).toBeNull();
+    expect(r.creditedPercent).toBe(99.75);
+  });
+});
+
+describe("Uzum Bank (UzumCard / FastPay)", () => {
+  const r = classifySettlement(
+    "00667За прием платежей в UZUM BANK за вычетом комиссии 1.0% от суммы 34000.00 " +
+      "за период 23.06.2026 02:00:00 - 25.06.2026 15:25:39. Номер документа: 1143831/2026 от 23.06.2026.",
+    "MCHJ OPTIMART UZUMCARD",
+  );
+  it("kanal", () => expect(r.channel).toBe("uzum"));
+  it("yalpi summa matndan", () => expect(r.grossAmount).toBe(34000));
+  it("davr OXIRI savdo sanasi sifatida olinadi", () =>
+    expect(r.opDate).toEqual(new Date(Date.UTC(2026, 5, 25))));
+  it("FastPay alohida terminal", () =>
+    expect(
+      classifySettlement("За прием платежей в UZUM BANK от суммы 18000.00", "MCHJ OPTIMART FASTPAY UZCARD").terminalCode,
+    ).toBe("UZUM FASTPAY UZCARD"));
+});
+
+describe("CLICK — bosh harfli va \"CLICK AJ\" shakli", () => {
+  const r = classifySettlement(
+    "00111П/О, ОПЛАТА ЗА ТОВАРЫ, УСЛУГИ ЗА 12.06.2026 ПО СЕРВИСУ №104815 ... ЧЕРЕЗ CLICK. " +
+      "СУММА ПРОДАЖ 1148100.00 СУМ. УДЕРЖАНО ОТ СУММЫ ПЛАТЕЖА: -КОМИССИЯ С ПЛАТЕЖА 11481.00 СУМ;",
+    "CLICK AJ",
+  );
+  it("kanal", () => expect(r.channel).toBe("click"));
+  it("servis raqami", () => expect(r.terminalCode).toBe("CLICK 104815"));
+  it("savdo sanasi", () => expect(r.opDate).toEqual(new Date(Date.UTC(2026, 5, 12))));
+  it("yalpi summa", () => expect(r.grossAmount).toBe(1148100));
+  it("komissiya 1 %", () => expect(r.commissionAmount).toBe(11481));
+});

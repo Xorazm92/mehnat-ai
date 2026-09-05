@@ -12,7 +12,9 @@ function cells(rows: SheetRow[], limit = 25): string[] {
   const out: string[] = [];
   for (const r of rows.slice(0, limit)) {
     for (const v of Object.values(r)) {
-      const s = String(v ?? "").trim();
+      // Sarlavhalarda `\r\n` va qo'sh bo'shliq uchraydi ("Махсулот \r\nИдси") —
+      // tanish uchun bo'shliqlar bittaga keltiriladi.
+      const s = String(v ?? "").replace(/\s+/g, " ").trim();
       if (s) out.push(s);
     }
   }

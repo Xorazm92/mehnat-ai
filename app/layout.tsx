@@ -96,7 +96,14 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Toaster richColors position="top-right" />
+          {/*
+            `richColors` yoqilgan, LEKIN palitra loyihanikiga qaytarilgan:
+            `app/globals.css` dagi `[data-sonner-toaster]` bloki sonner
+            ranglarini `--success` / `--danger` / `--warning` / `--info`
+            tokenlariga bog'laydi. `closeButton` — uzun xato matni o'zi
+            yo'qolib ketmasin (bank vipiskasi xatolari ko'p qatorli).
+          */}
+          <Toaster richColors closeButton position="top-right" />
         </ThemeProvider>
       </body>
     </html>

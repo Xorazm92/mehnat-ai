@@ -15,6 +15,8 @@ export type PosChannel =
   | "payme"
   | "click"
   | "paynet"
+  | "qr"
+  | "uzum"
   | "other";
 
 /** Vipiska qatoridan ajratilgan sverka ma'lumoti. */
@@ -33,6 +35,12 @@ export interface SettlementInfo {
   commissionAmount: number | null;
   /** Bekor qilingan (Отмена / сторно / reversal) operatsiya. */
   isReversal: boolean;
+  /**
+   * Ba'zi kanallar yalpi summani emas, O'TKAZILGAN ULUSHNI yozadi
+   * ("зачисление 99.75%"). Bunda yalpi summa faqat vipiskadagi haqiqiy
+   * summadan tiklanadi: `fakt / (creditedPercent / 100)`.
+   */
+  creditedPercent?: number | null;
 }
 
 /** Kunlik fiskal hisobotning bitta qatori. */

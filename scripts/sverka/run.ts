@@ -22,11 +22,12 @@ import { readWorkbook } from "@/lib/bank/readWorkbook";
 import { parseWorkbook } from "@/lib/bank/parseStatement";
 import { detectKind, type FileKind } from "./detect";
 import { parseFiscalWorkbook, fmHintFromFileName } from "@/lib/pos/parseFiscalReport";
+import { parseChecksWorkbook } from "@/lib/pos/parseChecksList";
 import { classifySettlement, settlementSign, defaultInScope, CHANNEL_LABELS } from "@/lib/pos/classifySettlement";
 import { reconcile, dayKey, type DeviceDay, type SettlementDay } from "@/lib/pos/reconcile";
 import { formatNum } from "@/lib/platform/format";
 
-interface Args { dir: string; from?: string; to?: string; out: string }
+interface Args { dir: string; from?: string; to?: string; out: string; ignoreConfig: boolean }
 
 function parseArgs(): Args {
   const a = process.argv.slice(2);
@@ -36,10 +37,20 @@ function parseArgs(): Args {
   };
   const dir = get("dir");
   if (!dir) {
-    console.error("Ishlatish: npx tsx scripts/sverka/run.ts --dir <papka> [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <papka>]");
+    console.error(
+      "Ishlatish: npx tsx scripts/sverka/run.ts --dir <papka> [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <papka>] [--ignore-config]",
+    );
     process.exit(1);
   }
-  return { dir: resolve(dir), from: get("from"), to: get("to"), out: resolve(get("out") ?? join(dir, "sverka-natija")) };
+  return {
+    dir: resolve(dir),
+    from: get("from"),
+    to: get("to"),
+    out: resolve(get("out") ?? join(dir, "sverka-natija")),
+    // Doira qarorini vaqtincha e'tiborsiz qoldirib, SUKUT holatini ko'rish —
+    // "config qancha o'zgartiryapti" degan savolga javob.
+    ignoreConfig: a.includes("--ignore-config"),
+  };
 }
 
 interface Config { inScope?: string[]; outOfScope?: string[] }
@@ -55,7 +66,7 @@ interface FileReport {
 async function main() {
   const args = parseArgs();
   const cfgPath = join(args.dir, "sverka.config.json");
-  const cfg: Config = existsSync(cfgPath) ? JSON.parse(readFileSync(cfgPath, "utf8")) : {};
+  const cfg: Config = !args.ignoreConfig && existsSync(cfgPath) ? JSON.parse(readFileSync(cfgPath, "utf8")) : {};
 
   const files = readdirSync(args.dir)
     .filter((f) => [".xlsx", ".xls", ".json"].includes(extname(f).toLowerCase()))
@@ -70,7 +81,15 @@ async function main() {
   mkdirSync(jsonDir, { recursive: true });
 
   const reports: FileReport[] = [];
-  const deviceDays: DeviceDay[] = [];
+  // Xom kassa qatorlari. YAKUNIY yig'indi fayllar o'qilib bo'lgach hisoblanadi:
+  // bitta kunni ikki manba berishi mumkin (chek reestri FM bilan, kunlik
+  // hisobot esa faqat STIR bilan) va ularni qo'shish savdoni ikki marta
+  // sanardi. Kim ustun ekani fayllar TARTIBIGA bog'liq bo'lmasligi kerak.
+  interface RawKassaRow { fm: string | null; inn: string | null; id: string; date: string; card: number; cash: number }
+  const rawKassa: RawKassaRow[] = [];
+  const dupWarnings: string[] = [];
+  /** Kanal kesimi (Click/Payme/Uzum kabinetidan) — kassa yig'indisiga KIRMAYDI. */
+  const channelDays: Record<string, Map<string, number>> = {};
   const deviceLabels = new Map<string, string>();
   const cashByDay = new Map<string, number>();
   const rawSettlements: {
@@ -96,7 +115,12 @@ async function main() {
           const sign = settlementSign(tx.direction, info);
           if (sign === 0) continue;
           const fact = sign * tx.amount;
-          const gross = info.grossAmount != null ? sign * info.grossAmount : fact;
+          const gross =
+            info.grossAmount != null
+              ? sign * info.grossAmount
+              : info.creditedPercent
+                ? fact / (info.creditedPercent / 100)
+                : fact;
           const commission = info.commissionAmount != null ? sign * info.commissionAmount : gross - fact;
           rawSettlements.push({
             terminalCode: info.terminalCode,
@@ -113,20 +137,41 @@ async function main() {
           file: f, kind, why,
           detail: `${parsed.format} · hisob ${parsed.accountNumber ?? "?"} · ${parsed.transactions.length} qator · ekvayring ${used}`,
         });
-      } else if (kind === "kassa_daily") {
+      } else if (kind === "kassa_daily" || kind === "checks") {
+        // Ikki manba ham AYNI natijani beradi: kun + apparat kesimidagi karta
+        // summasi. Cheklar ro'yxati chekma-chek keladi va yig'ilishi kerak,
+        // kunlik hisobot esa allaqachon yig'ilgan.
         const hint = fmHintFromFileName(f);
-        const parsed = parseFiscalWorkbook(workbook, hint);
+        const parsed = kind === "checks" ? parseChecksWorkbook(workbook) : parseFiscalWorkbook(workbook, hint);
         writeFileSync(join(jsonDir, `${basename(f, extname(f))}.kassa.json`), JSON.stringify(parsed, null, 1));
         const id = parsed.rows.find((r) => r.fmNumber)?.fmNumber ?? hint ?? f;
-        deviceLabels.set(id, id);
+        // KANAL KESIMI: soliq kabineti to'lov turi bo'yicha filtrlangan
+        // hisobotni beradi — unda naqd ham, terminal ham NOL, summa esa
+        // "Жами" ustunida turadi. Bu ASOSIY hisobotning ichki bo'lagi;
+        // uni kassa yig'indisiga qo'shish savdoni ikki marta sanardi.
+        const channel = /click|payme|uzum|humo|uzcard/i.exec(f)?.[0]?.toLowerCase() ?? null;
+        const isBreakdown =
+          channel !== null && parsed.rows.every((r) => r.cardAmount === 0 && r.cashAmount === 0 && r.totalAmount > 0);
+        if (isBreakdown) {
+          const m = (channelDays[channel] ??= new Map());
+          for (const r of parsed.rows) m.set(dayKey(r.date), (m.get(dayKey(r.date)) ?? 0) + r.totalAmount);
+          reports.push({
+            file: f, kind, why: `${why} — ${channel} kanali kesimi`,
+            detail: `${parsed.rows.length} kun · ${formatNum(parsed.rows.reduce((s2, r) => s2 + r.totalAmount, 0))} (kassa yig'indisiga kirmaydi)`,
+          });
+          continue;
+        }
         for (const r of parsed.rows) {
-          const d = dayKey(r.date);
-          deviceDays.push({ deviceId: id, date: d, cardAmount: r.cardAmount, cashAmount: r.cashAmount });
-          cashByDay.set(d, (cashByDay.get(d) ?? 0) + r.cashAmount);
+          rawKassa.push({
+            fm: r.fmNumber, inn: r.inn, id,
+            date: dayKey(r.date), card: r.cardAmount, cash: r.cashAmount,
+          });
         }
         reports.push({
           file: f, kind, why,
-          detail: `apparat ${id} · ${parsed.rows.length} kun · karta ${formatNum(parsed.rows.reduce((s, r) => s + r.cardAmount, 0))}`,
+          detail:
+            `apparat ${id} · ${parsed.rows.length} kun · karta ${formatNum(parsed.rows.reduce((s, r) => s + r.cardAmount, 0))}` +
+            (parsed.rows.some((r) => r.receiptCount) ? ` · ${parsed.rows.reduce((s, r) => s + r.receiptCount, 0)} chek` : ""),
         });
       } else {
         reports.push({ file: f, kind, why, detail: kind === "kassa_monthly" ? "OYLIK hisobot — kunma-kun sverkaga yaramaydi" : "" });
@@ -136,8 +181,47 @@ async function main() {
     }
   }
 
+  // ── Kassa qatorlarini yagonalashtirish.
+  //
+  // Bitta STIR va bitta kun uchun apparati ANIQ manba (chek reestrida FM bor)
+  // ustun turadi; apparatini ayta olmaydigan kunlik hisobot esa o'sha kunni
+  // TAKRORLAYDI, qo'shimcha savdo emas. Turli FM lar — turli apparat, ular
+  // qo'shiladi.
+  const deviceDays: DeviceDay[] = [];
+  const byInnDay = new Map<string, RawKassaRow[]>();
+  for (const r of rawKassa) {
+    const k = `${r.inn ?? r.id}|${r.date}`;
+    (byInnDay.get(k) ?? byInnDay.set(k, []).get(k)!).push(r);
+  }
+  for (const group of byInnDay.values()) {
+    const identified = group.filter((r) => r.fm);
+    const chosen = identified.length ? identified : group;
+    const dropped = group.filter((r) => !chosen.includes(r));
+    if (dropped.length) {
+      const a = chosen.reduce((s2, r) => s2 + r.card, 0);
+      const b = dropped.reduce((s2, r) => s2 + r.card, 0);
+      if (Math.abs(a - b) > 1 && dupWarnings.length < 20) {
+        dupWarnings.push(`${chosen[0].date}: manbalar har xil (${formatNum(a)} ≠ ${formatNum(b)})`);
+      }
+    }
+    // Bir kunda bir apparatning ikki nusxasi ham bo'lishi mumkin — FM bo'yicha
+    // yagonalashtiramiz.
+    const seen = new Set<string>();
+    for (const r of chosen) {
+      const key = r.fm ?? r.id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deviceLabels.set(key, key);
+      deviceDays.push({ deviceId: key, date: r.date, cardAmount: r.card, cashAmount: r.cash });
+      cashByDay.set(r.date, (cashByDay.get(r.date) ?? 0) + r.cash);
+    }
+  }
+
   // ── Terminal doirasi. Sukut: POS kanallari kiradi, EPOS va onlayn — yo'q.
   //    Papkadagi config qarorni bekor qiladi (bir marta yozib qo'yiladi).
+  const range = args.from && args.to ? { from: args.from, to: args.to } : undefined;
+  const inRange = (d: string) => !range || (d >= range.from && d <= range.to);
+
   const terminals = new Map<string, { channel: string; inScope: boolean; total: number }>();
   for (const s of rawSettlements) {
     let t = terminals.get(s.terminalCode);
@@ -147,7 +231,10 @@ async function main() {
       t = { channel: s.channel, inScope: forced, total: 0 };
       terminals.set(s.terminalCode, t);
     }
-    t.total += s.gross;
+    // Yig'indi DAVR ichida hisoblanadi: aks holda hisobotdagi "doiradan
+    // tashqarida" raqami sverka davri bilan solishtirib bo'lmaydigan
+    // (kattaroq) bo'lib chiqadi.
+    if (inRange(s.date)) t.total += s.gross;
   }
 
   const settlements: SettlementDay[] = rawSettlements
@@ -161,12 +248,29 @@ async function main() {
       fromDocumentDate: s.fromDoc,
     }));
 
-  const range = args.from && args.to ? { from: args.from, to: args.to } : undefined;
   const result = reconcile(deviceDays, settlements, range);
 
+  // ── Kanal kesimi: kassa kabinetining to'lov turi bo'yicha hisoboti ↔
+  //    bankdagi o'sha kanal. Faqat IKKALA tomonda ham ma'lumot bor oylar
+  //    solishtiriladi — kanal fayllari odatda bir necha oyni qamraydi,
+  //    vipiska esa butun davrni, va aralashtirilsa farq soxta chiqadi.
+  const bankByChannel = new Map<string, Map<string, number>>();
+  for (const s2 of rawSettlements) {
+    const m = bankByChannel.get(s2.channel) ?? new Map<string, number>();
+    m.set(s2.date, (m.get(s2.date) ?? 0) + s2.gross);
+    bankByChannel.set(s2.channel, m);
+  }
+  const channelRows: ChannelRow[] = Object.entries(channelDays).map(([ch, days]) => {
+    const months = new Set([...days.keys()].filter(inRange).map((d) => d.slice(0, 7)));
+    const pick = (d: string) => inRange(d) && months.has(d.slice(0, 7));
+    const kassa = [...days].filter(([d]) => pick(d)).reduce((a, [, v]) => a + v, 0);
+    const bank = [...(bankByChannel.get(ch) ?? [])].filter(([d]) => pick(d)).reduce((a, [, v]) => a + v, 0);
+    return { channel: ch, months: [...months].sort().join(", "), kassa, bank, diff: kassa - bank };
+  });
+
   writeFileSync(join(args.out, "sverka.json"), JSON.stringify({ range, result, terminals: [...terminals] }, null, 1));
-  await writeExcel(args, result, deviceLabels, terminals, reports, cashByDay);
-  writeMarkdown(args, result, terminals, reports);
+  await writeExcel(args, result, deviceLabels, terminals, reports, cashByDay, channelRows);
+  writeMarkdown(args, result, terminals, reports, channelRows, dupWarnings);
 
   console.log(`\nTayyor: ${args.out}`);
   console.log(`  sverka.xlsx · XULOSA.md · json/ (${files.length} fayl)`);
@@ -181,9 +285,11 @@ async function main() {
 type Recon = ReturnType<typeof reconcile>;
 type Terminals = Map<string, { channel: string; inScope: boolean; total: number }>;
 
+interface ChannelRow { channel: string; months: string; kassa: number; bank: number; diff: number }
+
 async function writeExcel(
   args: Args, r: Recon, devices: Map<string, string>, terminals: Terminals,
-  reports: FileReport[], cashByDay: Map<string, number>,
+  reports: FileReport[], cashByDay: Map<string, number>, channels: ChannelRow[],
 ) {
   const XLSX = await import("xlsx");
   const wb = XLSX.utils.book_new();
@@ -224,15 +330,25 @@ async function writeExcel(
     ]),
   ]), "3. Terminallar");
 
+  if (channels.length) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+      ["Kanal", "Oylar", "Kassa kabineti", "Bank", "Farq"],
+      ...channels.map((c) => [c.channel, c.months, c.kassa, c.bank, c.diff]),
+    ]), "4. Kanal kesimi");
+  }
+
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
     ["Fayl", "Tur", "Izoh", "Xato"],
     ...reports.map((x) => [x.file, x.why, x.detail, x.error ?? ""]),
-  ]), "4. Fayllar");
+  ]), "5. Fayllar");
 
   writeFileSync(join(args.out, "sverka.xlsx"), XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
 }
 
-function writeMarkdown(args: Args, r: Recon, terminals: Terminals, reports: FileReport[]) {
+function writeMarkdown(
+  args: Args, r: Recon, terminals: Terminals, reports: FileReport[],
+  channels: ChannelRow[], dupWarnings: string[],
+) {
   const t = r.totals;
   const n = (v: number) => formatNum(v);
   const outside = [...terminals.entries()].filter(([, x]) => !x.inScope).sort((a, b) => b[1].total - a[1].total);
@@ -270,7 +386,16 @@ ${outside.length === 0 ? "Yo'q — barcha kanal solishtiruvga kirdi." : `Bu kana
 |---|---|---|
 ${outside.map(([code, x]) => `| ${code} | ${CHANNEL_LABELS[x.channel as keyof typeof CHANNEL_LABELS] ?? x.channel} | ${n(x.total)} |`).join("\n")}`}
 
-## O'qilgan fayllar
+${channels.length ? `## Kanal kesimi (kassa kabineti ↔ bank)
+
+Kassa kabinetining to'lov turi bo'yicha hisoboti bilan bankdagi o'sha kanal.
+Faqat ikkala tomonda ham ma'lumot bor oylar olingan.
+
+| Kanal | Oylar | Kassa | Bank | Farq |
+|---|---|---|---|---|
+${channels.map((c) => `| ${c.channel} | ${c.months} | ${n(c.kassa)} | ${n(c.bank)} | ${n(c.diff)} |`).join("\n")}
+
+` : ""}${dupWarnings.length ? `> ⚠ Bir kunni ikki manba har xil ko'rsatdi:\n${dupWarnings.map((w) => `> - ${w}`).join("\n")}\n\n` : ""}## O'qilgan fayllar
 
 | Fayl | Tur | Izoh |
 |---|---|---|

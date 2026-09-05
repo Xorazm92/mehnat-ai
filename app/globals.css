@@ -1638,3 +1638,47 @@ button.metric-rail-cell:hover {
 .mobile-card-cell :where(.text-right) {
   text-align: left;
 }
+
+/* =============================================
+   TOAST (sonner) — loyihaning rang tokenlarida
+
+   `<Toaster richColors />` sonner'ning O'Z palitrasini yoqadi:
+   `hsl(143 85% 96%)` yashil, `hsl(360 100% 45%)` qizil va h.k. Ular
+   `--success` / `--danger` / `--warning` / `--info` tokenlariga BO'YSUNMAYDI,
+   ya'ni ilovadagi yagona xabar rangi ikkiga bo'linadi: ekrandagi banner
+   ASRO yashilida, o'sha ma'nodagi toast esa sonner yashilida chiqadi.
+
+   Sonner o'z qiymatlarini `[data-sonner-toaster][data-sonner-theme='light']`
+   da e'lon qiladi (og'irlik 0,2,0). Bu yerda `html` prefiksi bilan 0,2,1
+   olinadi — uslublar bundle'ga qaysi tartibda tushishidan qat'i nazar
+   ustun turadi.
+
+   DIQQAT: nom to'qnashuvi bor — sonner ham `--success-bg`, `--warning-bg`,
+   `--success-border` ni ISHLATADI. Shuning uchun bu yerda loyihaning
+   `--success-bg` i EMAS, uning manbasi (`--success`) `color-mix` bilan
+   qayta aralashtiriladi: `var(--success-bg)` yozilsa o'ziga o'zi murojaat
+   qilib, qiymat butunlay yo'qolardi.
+   ============================================= */
+html [data-sonner-toaster][data-sonner-theme] {
+  --normal-bg: var(--card-bg);
+  --normal-bg-hover: var(--bg-sunken);
+  --normal-border: var(--card-border);
+  --normal-border-hover: var(--rule-strong);
+  --normal-text: var(--text-primary);
+
+  --success-bg: color-mix(in srgb, var(--success) 12%, var(--card-bg));
+  --success-border: color-mix(in srgb, var(--success) 40%, var(--card-bg));
+  --success-text: var(--success);
+
+  --info-bg: color-mix(in srgb, var(--info) 12%, var(--card-bg));
+  --info-border: color-mix(in srgb, var(--info) 40%, var(--card-bg));
+  --info-text: var(--info);
+
+  --warning-bg: color-mix(in srgb, var(--warning) 12%, var(--card-bg));
+  --warning-border: color-mix(in srgb, var(--warning) 40%, var(--card-bg));
+  --warning-text: var(--warning);
+
+  --error-bg: color-mix(in srgb, var(--danger) 12%, var(--card-bg));
+  --error-border: color-mix(in srgb, var(--danger) 40%, var(--card-bg));
+  --error-text: var(--danger);
+}
