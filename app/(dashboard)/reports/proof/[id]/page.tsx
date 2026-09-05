@@ -4,6 +4,8 @@ import { assertCompanyPermission, companyRelations } from "@/lib/platform/access
 import { isCompanyReviewer } from "@/lib/reportPermissions";
 import { notFound, redirect } from "next/navigation";
 import ProofViewClient from "./ProofViewClient";
+import { SubmissionTrail, type TrailAttempt } from "./SubmissionTrail";
+import { PROOF_REF_PREFIX } from "@/lib/evidenceConsistency";
 
 export default async function ProofViewPage({
   params,
@@ -60,11 +62,45 @@ export default async function ProofViewPage({
   // Tasdiqlash — faqat shu firmaning nazoratchisi (o'z-o'zini nazorat bloki)
   const canReview = isCompanyReviewer(role, companyRelations(proof.company, userId));
 
+  // TOPSHIRISH TARIXI. `SubmissionEvidence` dalilga `storageRef` satri orqali
+  // ishora qiladi (chet kalit emas — u tashqi omborga ham ishora qilishi
+  // mumkin), shuning uchun bog'lanish shu prefiks bilan quriladi.
+  //
+  // Ruxsat YUQORIDA tekshirilgan: bu qator faqat `proof:read` o'tgandan keyin
+  // o'qiladi va faqat SHU dalilga tegishli urinishlarni qaytaradi.
+  const evidence = await prisma.submissionEvidence.findMany({
+    where: { storageRef: `${PROOF_REF_PREFIX}${proof.id}` },
+    select: {
+      submission: {
+        select: {
+          id: true, attemptNo: true, status: true, sentAt: true,
+          acceptedAt: true, rejectedAt: true, rejectionNote: true, sourceSystem: true,
+        },
+      },
+    },
+  });
+
+  const attempts: TrailAttempt[] = evidence
+    .map((e) => ({
+      id: e.submission.id,
+      attemptNo: e.submission.attemptNo,
+      status: e.submission.status as string,
+      sentAt: e.submission.sentAt?.toISOString() ?? null,
+      acceptedAt: e.submission.acceptedAt?.toISOString() ?? null,
+      rejectedAt: e.submission.rejectedAt?.toISOString() ?? null,
+      rejectionNote: e.submission.rejectionNote,
+      sourceSystem: e.submission.sourceSystem,
+    }))
+    .sort((a, b) => a.attemptNo - b.attemptNo);
+
   return (
-    <ProofViewClient
-      proof={JSON.parse(JSON.stringify(proof))}
-      userRole={role}
-      canReview={canReview}
-    />
+    <div className="space-y-4">
+      <ProofViewClient
+        proof={JSON.parse(JSON.stringify(proof))}
+        userRole={role}
+        canReview={canReview}
+      />
+      <SubmissionTrail attempts={attempts} />
+    </div>
   );
 }

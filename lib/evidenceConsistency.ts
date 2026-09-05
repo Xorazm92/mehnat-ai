@@ -161,13 +161,20 @@ export async function runEvidenceConsistency(db: Db): Promise<ReconCheck[]> {
   // (`onDelete: Cascade`), `SubmissionEvidence` esa ketmaydi — u
   // majburiyatga bog'langan. Ya'ni firma arxivlanganda dalil tarixi
   // manbasiz qolishi MUMKIN va buni hech kim ko'rmaydi.
+  //
+  // `substring(ref from $n)` ISHLATILMAYDI: Prisma uzunlikni bog'langan
+  // parametr sifatida yuboradi va Postgres bunda NULL qaytaradi — natijada
+  // HAR BIR havola osilgan bo'lib ko'rinardi. Bu yolg'on qizil jonli
+  // topshirishda ushlandi. Shuning uchun solishtiruv teskari yo'nalishda:
+  // prefiks + id qurilib, satr bilan tenglashtiriladi (1-tekshiruv bilan
+  // bir xil uslub).
   const danglingRows = await db.$queryRaw<{ total: bigint }[]>`
     SELECT count(*)::bigint AS total
       FROM "SubmissionEvidence" e
      WHERE e."storageRef" LIKE ${PROOF_REF_PREFIX + "%"}
        AND NOT EXISTS (
          SELECT 1 FROM "ReportProof" p
-          WHERE p.id = substring(e."storageRef" from ${PROOF_REF_PREFIX.length + 1}))`;
+          WHERE ${PROOF_REF_PREFIX} || p.id = e."storageRef")`;
   const dangling = Number(danglingRows[0]?.total ?? 0);
 
   checks.push({

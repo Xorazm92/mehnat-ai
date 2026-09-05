@@ -231,6 +231,14 @@ describe("runEvidenceConsistency", () => {
           const after = find(await runEvidenceConsistency(tx), "evidence-status-agrees");
           expect(after?.value, "to'g'ri juftliklar nomuvofiq deb sanaldi").toBe(baseline);
 
+          // TO'G'RI bog'langan havola OSILGAN deb sanalmasligi ham shu yerda
+          // qulflanadi. Ilgari `evidence-ref-resolves` `substring(ref from $n)`
+          // ishlatardi va Prisma parametri tufayli Postgres NULL qaytarardi —
+          // ya'ni har bir haqiqiy havola qizil bo'lardi. Buni faqat jonli
+          // topshirish ochdi, chunki eski testda bitta ham havola yo'q edi.
+          const ref = find(await runEvidenceConsistency(tx), "evidence-ref-resolves");
+          expect(ref?.status, "haqiqiy havola osilgan deb sanaldi").toBe("ok");
+
           throw new Rollback();
         },
         { timeout: 60_000 },
