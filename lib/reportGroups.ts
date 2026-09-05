@@ -4,7 +4,7 @@
 // Muhim: bu fayl hech qanday ustunni o'chirmaydi va o'zgartirmaydi — u faqat
 // har bir mavjud ustunga "bu qanday majburiyat?" degan belgini qo'shadi.
 // Hafta 7-8 dagi UnifiedObligation migratsiyasi shu belgidan `category`
-// maydonini to'ldirish uchun foydalanadi (docs/OBLIGATION_UNIFICATION_PLAN.md).
+// maydonini to'ldirish uchun foydalanadi (docs/plan/OBLIGATION_UNIFICATION_PLAN.md).
 //
 // Kalit maydoni: snake_case `OperationFieldKey` — loyihadagi YAGONA kanonik
 // ustun kalit fazosi. DB ustuni (camelCase) kerak bo'lsa FIELD_TO_DB_COLUMN

@@ -386,7 +386,7 @@ doesn't match what was registered.
 
 ## 11. Production hardening still open
 
-These are tracked in `PRODUCTION_REPORT.md` and are **not** deploy-blockers but
+These are tracked in [`audit/PRODUCTION_REPORT.md`](./audit/PRODUCTION_REPORT.md) and are **not** deploy-blockers but
 should be scheduled: login rate limiting, encrypting `Company.password`, Prisma
 migrations, Sentry/structured logging, and enabling the documented CSP.
 ```

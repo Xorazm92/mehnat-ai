@@ -74,4 +74,5 @@ Issues live in GitHub Issues on `Xorazm92/mehnat-ai`, driven by the `gh` CLI. Se
 The five canonical triage roles, each label string equal to its name. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
-Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: `CONTEXT.md` at the repo root, ADRs in `docs/adr/`. See `docs/agents/domain.md`.
+Which document is current and which is history: `docs/README.md`.

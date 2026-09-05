@@ -433,7 +433,7 @@ export async function getTrialBalance(db: Db, period?: string) {
  *
  *   1. SHIRIN SUPER TAOM / 2026-07 — bitta to'lovning ikkita allocation'idan
  *      biri (2 mln) `postLedger` kodidan OLDIN kirgan va jurnalga tushmagan
- *      edi (docs/BALANS_ASOSLASH.md, 5-bo'lim). Ma'lumot darajasida
+ *      edi (docs/audit/BALANS_ASOSLASH.md, 5-bo'lim). Ma'lumot darajasida
  *      tuzatilgan — bu qator endi mavjud emas (2026-09-03 da lokal va
  *      prodda tasdiqlangan).
  *   2. Moliyaviy yordam (LOAN_GIVEN/LOAN_RECEIVED) CASH harakati

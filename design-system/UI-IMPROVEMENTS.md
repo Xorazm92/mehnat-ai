@@ -1,5 +1,12 @@
 # UI Improvement Report — Prioritized
 
+> **Holat: TARIX** · 2026-07-16 — bu hisobot redizayndan OLDINGI daraxtni tasvirlaydi.
+> Amaldagi dizayn tizimi kodda: `components/ui/` primitivlari va `app/globals.css`
+> tokenlari. [`docs/audit/UI_AUDIT_2026-07.md`](../docs/audit/UI_AUDIT_2026-07.md) §E10
+> aynan shu beshta faylni “eskirgan va zarar keltiruvchi” deb belgilagan — ular
+> qaror tarixi uchun saqlanadi, mo'ljal sifatida emas.
+> Hujjatlar xaritasi: [`docs/README.md`](../docs/README.md)
+
 **Audited** 2026-07-16 · 94 `.tsx` files, 803-line token system · Read-only audit, no code changed
 **Companion reports** [MASTER.md](./MASTER.md) · [ACCESSIBILITY.md](./ACCESSIBILITY.md) · [RESPONSIVE.md](./RESPONSIVE.md) · [CONSISTENCY.md](./CONSISTENCY.md)
 

@@ -1,5 +1,12 @@
 # Component Consistency Report — Mehnat ERP
 
+> **Holat: TARIX** · 2026-07-16 — bu hisobot redizayndan OLDINGI daraxtni tasvirlaydi.
+> Amaldagi dizayn tizimi kodda: `components/ui/` primitivlari va `app/globals.css`
+> tokenlari. [`docs/audit/UI_AUDIT_2026-07.md`](../docs/audit/UI_AUDIT_2026-07.md) §E10
+> aynan shu beshta faylni “eskirgan va zarar keltiruvchi” deb belgilagan — ular
+> qaror tarixi uchun saqlanadi, mo'ljal sifatida emas.
+> Hujjatlar xaritasi: [`docs/README.md`](../docs/README.md)
+
 **Audited** 2026-07-16 · 94 `.tsx` files (~16,500 LOC) against the token system in `app/globals.css`
 **Method** exhaustive grep; every count below is reproducible from the working tree.
 

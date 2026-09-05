@@ -1,5 +1,12 @@
 # Mehnat ERP — Design System (Master)
 
+> **Holat: TARIX** · 2026-07-16 — bu hisobot redizayndan OLDINGI daraxtni tasvirlaydi.
+> Amaldagi dizayn tizimi kodda: `components/ui/` primitivlari va `app/globals.css`
+> tokenlari. [`docs/audit/UI_AUDIT_2026-07.md`](../docs/audit/UI_AUDIT_2026-07.md) §E10
+> aynan shu beshta faylni “eskirgan va zarar keltiruvchi” deb belgilagan — ular
+> qaror tarixi uchun saqlanadi, mo'ljal sifatida emas.
+> Hujjatlar xaritasi: [`docs/README.md`](../docs/README.md)
+
 > **⚠️ Superseded 2026-07-24 by the "Ledger" redesign, then softened the same day.**
 > `app/globals.css` was rewritten: the accent is the ASRO mark's **azure `--brand`**, not `#2563EB`;
 > chartreuse **`--live`** is the signature marker; hierarchy is carried by **`--rule` hairlines,

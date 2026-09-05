@@ -6,7 +6,7 @@ shares one Prisma/Postgres with the Next.js app. The bot is a *signal source* +
 (`KpiRule`, `CompanyKpiRule`, `MonthlyPerformance`, `PayrollAdjustment`,
 `Payment`, `Notification`, `AuditLog`, `Attendance`).
 
-Full design: [`KPI_BOT_BLUEPRINT.md`](../KPI_BOT_BLUEPRINT.md).
+Full design: [`docs/plan/KPI_BOT_BLUEPRINT.md`](../docs/plan/KPI_BOT_BLUEPRINT.md).
 Regulament/roadmap: the platform doc pasted into the tracking issue.
 
 ---
@@ -76,7 +76,7 @@ Contexts are created when their phase lands — no empty placeholder folders.
 
 ## Resolved architecture decisions
 
-These close the open questions in `KPI_BOT_BLUEPRINT.md` §18. Flag any you disagree with.
+These close the open questions in `docs/plan/KPI_BOT_BLUEPRINT.md` §18. Flag any you disagree with.
 
 - **D1 — Framework:** plain-TS DDD layers, **not NestJS**. The bot runs as a
   `tsx bot/main.ts` process next to Next.js; BullMQ is the real backbone, and the

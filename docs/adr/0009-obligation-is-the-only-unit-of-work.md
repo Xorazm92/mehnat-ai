@@ -1,5 +1,8 @@
 # Obligation is the only unit of work
 
+> Bu qarorning AMALGA OSHIRILISH yozuvi — [ADR-0015](./0015-the-obligation-is-the-work-the-matrix-is-a-view.md).
+> (0015 ilgari xato bilan `0008-` raqami bilan turgan edi: repoda ikkita 0008 va ikkita 0009 bor edi.)
+
 "Did the client's filing happen?" had three answers in this database, and they did not agree.
 
 `MonthlyReport` (`prisma/schema.prisma:259`) holds ~65 nullable `String?` columns, one per matrix

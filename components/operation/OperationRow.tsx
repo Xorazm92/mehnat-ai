@@ -5,7 +5,7 @@
  *
  * `React.memo` — qator faqat o'z ma'lumoti o'zgarganda qayta chiziladi.
  * Muzlatilgan (sticky) ustun offsetlari shu yerda qotirilgan piksel; ularni
- * o'lchanadigan qilish M8 ishiga bog'liq (UI_AUDIT_2026-07.md).
+ * o'lchanadigan qilish M8 ishiga bog'liq (docs/audit/UI_AUDIT_2026-07.md).
  */
 import React, { useMemo } from "react";
 import { formatNum } from "@/lib/platform/format";

@@ -1,9 +1,15 @@
-# ASRO — Korporativ Boshqaruv Tizimi
+# ASRO — Operations OS for accounting firms
 
-Accounting-firm ERP: companies, staff, KPI, kassa/expenses, payroll, monthly
-report tracking, and a Telegram KPI bot. Built on **Next.js 16** (App Router,
-Server Actions), **Prisma 7 + PostgreSQL**, **next-auth v5**, **BullMQ + Redis**,
-and **grammY** for the bot.
+> **1C keeps the books. ASRO runs the business.**
+> This is deliberately **not** an ERP — no warehouse, no manufacturing, no sales,
+> no CRM. See [`docs/PRODUCT.md`](docs/PRODUCT.md), which governs: if the code
+> disagrees with it, the code is wrong.
+
+It tracks the client companies the firm keeps books for, the staff assigned to
+each, the obligations and deadlines they owe, the cash that moves, and the
+monthly KPI that decides what those staff are paid — plus a Telegram bot that
+delivers it. Built on **Next.js 16** (App Router, Server Actions),
+**Prisma 7 + PostgreSQL**, **next-auth v5**, **BullMQ + Redis**, and **grammY**.
 
 > ⚠️ This repo pins a **breaking** Next.js version. Read the bundled guides in
 > `node_modules/next/dist/docs/` before changing framework-level code, and note
@@ -59,8 +65,16 @@ Tip: DB-free domain specs only → `npx vitest run bot/`.
 - `Dockerfile` + `docker-compose.yml` provide a Postgres + Redis + web + bot
   stack (scaffolding — verify `docker compose build`).
 - Health probe: `GET /api/health` (200 = app+DB healthy, 503 = DB down).
-- See `PRODUCTION_REPORT.md` for the production-readiness checklist.
+- See [`docs/audit/PRODUCTION_REPORT.md`](docs/audit/PRODUCTION_REPORT.md) for the (2026-07) production-readiness checklist.
 
 ## Docs
 
-`CONTEXT.md`, `docs/adr/`, `AGENTS.md`, `KPI_BOT_BLUEPRINT.md`.
+Start at **[`docs/README.md`](docs/README.md)** — it says which document is
+current and which is history, in reading order.
+
+The short version: [`docs/PRODUCT.md`](docs/PRODUCT.md) governs ·
+[`docs/CONSTITUTION.md`](docs/CONSTITUTION.md) is enforced by tests ·
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) says where code lives ·
+[`docs/adr/`](docs/adr/) records decisions · [`CONTEXT.md`](CONTEXT.md) fixes the
+domain vocabulary · [`AGENTS.md`](AGENTS.md) is the agent contract.
+Anything under [`docs/audit/`](docs/audit/) is a dated snapshot, not a target.

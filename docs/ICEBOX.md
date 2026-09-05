@@ -78,7 +78,7 @@ arifmetika, tarix talab qilmaydi).
 **Nima o'zgarsa:** ≥ 12 oy majburiyat natijasi **va** ≥ 50 belgilangan xavf o'tishi.
 
 ### UI arxitektura — auditdan qolganlar
-**Sana:** 2026-08-07 · **Manba:** [`AUDIT_REBASELINE.md`](./AUDIT_REBASELINE.md)
+**Sana:** 2026-08-07 · **Manba:** [`AUDIT_REBASELINE.md`](./audit/AUDIT_REBASELINE.md)
 
 **Matritsa virtualizatsiyasi** (~5 700 katak bir vaqtda mount qilinadi).
 *Nega hozir emas:* B blokda `OperationModule` `MonthlyReport` jadvalidan

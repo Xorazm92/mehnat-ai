@@ -4,7 +4,7 @@
 > Kod bilan ziddiyat chiqsa — **bu hujjat haq**, kod tuzatiladi.
 
 **Holat:** amaldagi · **Sana:** 2026-08-06 · **Versiya:** 2
-**Almashtiradi:** `ASRO_CPO_AUDIT.md`, `ASRO_PRODUCT_BLUEPRINT_2.0.md`, `PROJECT_REVIEW.md`
+**Almashtiradi:** [`audit/ASRO_CPO_AUDIT.md`](./audit/ASRO_CPO_AUDIT.md), [`audit/ASRO_PRODUCT_BLUEPRINT_2.0.md`](./audit/ASRO_PRODUCT_BLUEPRINT_2.0.md), [`audit/PROJECT_REVIEW.md`](./audit/PROJECT_REVIEW.md)
 
 ---
 

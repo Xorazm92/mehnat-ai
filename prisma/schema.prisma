@@ -1362,7 +1362,7 @@ model SystemSetting {
 // Signal-capture + question/answer + immutable KPI ledger.
 // The bot writes here; the existing KPI engine (KpiRule /
 // MonthlyPerformance / PayrollAdjustment) and dashboards read it.
-// See KPI_BOT_BLUEPRINT.md and bot/README.md.
+// See docs/plan/KPI_BOT_BLUEPRINT.md and bot/README.md.
 // =====================================================
 
 // Firma ↔ Telegram guruh. One company may map to several chats.
@@ -1753,7 +1753,7 @@ enum SyncRunStatus {
 /// `test/evidence-landing.test.ts` shu jadvallar ustida ishlaydi.
 ///
 /// Yangi kod yozayotgan bo'lsangiz: bu qatlam hali ishlamaydi. Qaror
-/// `ARCHITECTURE_DEBT.md` §D3 da.
+/// `docs/audit/ARCHITECTURE_DEBT.md` §D3 da.
 /// ─────────────────────────────────────────────────────────────────────────
 model OneCConnection {
   id         String    @id @default(uuid())

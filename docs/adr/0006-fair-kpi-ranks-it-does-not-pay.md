@@ -11,7 +11,7 @@
 
 Three KPI mechanisms coexist: `KpiRule`/`MonthlyPerformance` (the reglament, wired to payroll),
 `FairKpiScore` (a 0–100 weighted composite, built in "shadow mode"), and `KpiEvent` (the bot's signal
-ledger). `ASRO_CPO_AUDIT.md` reads this as sprawl and recommends retiring the first and taking Fair
+ledger). [`../audit/ASRO_CPO_AUDIT.md`](../audit/ASRO_CPO_AUDIT.md) reads this as sprawl and recommends retiring the first and taking Fair
 KPI live. We are keeping all three and giving each one job, because the audit's recommendation would
 break something it did not weigh.
 

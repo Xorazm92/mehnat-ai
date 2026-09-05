@@ -1,5 +1,12 @@
 # Accessibility Report — Mehnat ERP
 
+> **Holat: TARIX** · 2026-07-16 — bu hisobot redizayndan OLDINGI daraxtni tasvirlaydi.
+> Amaldagi dizayn tizimi kodda: `components/ui/` primitivlari va `app/globals.css`
+> tokenlari. [`docs/audit/UI_AUDIT_2026-07.md`](../docs/audit/UI_AUDIT_2026-07.md) §E10
+> aynan shu beshta faylni “eskirgan va zarar keltiruvchi” deb belgilagan — ular
+> qaror tarixi uchun saqlanadi, mo'ljal sifatida emas.
+> Hujjatlar xaritasi: [`docs/README.md`](../docs/README.md)
+
 **Audited** 2026-07-16 · 94 `.tsx` files (`app/**`, `components/**`) + `app/globals.css` · WCAG 2.1 AA
 **Method** static analysis; every finding carries a `file:line`. No automated axe run (no browser harness in repo).
 

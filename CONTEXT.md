@@ -1,7 +1,12 @@
-# Mehnat ERP
+# ASRO — domain language
 
-An accounting firm's ERP. It tracks the client companies the firm keeps books for, the staff
-assigned to each, and the monthly KPI that determines what those staff are paid.
+The one place a concept gets its name. If two words mean the same thing, only the one
+listed here is written in code, in the UI and in commits.
+
+ASRO is the operations system of an accounting outsourcing firm: the client companies it
+keeps books for, the staff assigned to each, the obligations they owe, and the monthly KPI
+that determines what those staff are paid. It is not an ERP — see
+[`docs/PRODUCT.md`](docs/PRODUCT.md).
 
 ## Language
 

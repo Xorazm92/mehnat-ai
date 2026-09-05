@@ -1,5 +1,12 @@
 # Responsive Report — Mehnat ERP
 
+> **Holat: TARIX** · 2026-07-16 — bu hisobot redizayndan OLDINGI daraxtni tasvirlaydi.
+> Amaldagi dizayn tizimi kodda: `components/ui/` primitivlari va `app/globals.css`
+> tokenlari. [`docs/audit/UI_AUDIT_2026-07.md`](../docs/audit/UI_AUDIT_2026-07.md) §E10
+> aynan shu beshta faylni “eskirgan va zarar keltiruvchi” deb belgilagan — ular
+> qaror tarixi uchun saqlanadi, mo'ljal sifatida emas.
+> Hujjatlar xaritasi: [`docs/README.md`](../docs/README.md)
+
 **Audited** 2026-07-16 · `components/**`, `app/**`, `app/globals.css` · Tailwind v4, default breakpoints
 **Reference viewports** 375 (small phone) · 768 (tablet) · 1024 (laptop) · 1440 (desktop)
 
