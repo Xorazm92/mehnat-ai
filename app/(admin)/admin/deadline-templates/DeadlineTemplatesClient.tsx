@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -153,15 +154,15 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
             <input className={input} style={inputStyle} value={f.obligationType} onChange={(e) => setF({ ...f, obligationType: e.target.value })} />
           </label>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Davriylik
-            <select className={input} style={inputStyle} value={f.periodicity} onChange={(e) => setF({ ...f, periodicity: e.target.value as Periodicity })}>
+            <Select size="sm" value={f.periodicity} onChange={(e) => setF({ ...f, periodicity: e.target.value as Periodicity })}>
               {Object.entries(PERIODICITY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
+            </Select>
           </label>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Muddat turi
-            <select className={input} style={inputStyle} value={f.anchorType} onChange={(e) => setF({ ...f, anchorType: e.target.value as DeadlineAnchorType })}>
+            <Select size="sm" value={f.anchorType} onChange={(e) => setF({ ...f, anchorType: e.target.value as DeadlineAnchorType })}>
               <option value="fixed_day_of_month">Oy kuni</option>
               <option value="period_end_offset">Davr oxiridan offset</option>
-            </select>
+            </Select>
           </label>
           {f.anchorType === "fixed_day_of_month" ? (
             <div className="flex gap-2">
@@ -178,9 +179,9 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
             </label>
           )}
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Ish kuniga surish
-            <select className={input} style={inputStyle} value={f.adjustmentPolicy} onChange={(e) => setF({ ...f, adjustmentPolicy: e.target.value as WorkdayAdjustmentPolicy })}>
+            <Select size="sm" value={f.adjustmentPolicy} onChange={(e) => setF({ ...f, adjustmentPolicy: e.target.value as WorkdayAdjustmentPolicy })}>
               {Object.entries(ADJUST).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
+            </Select>
           </label>
           <label className="text-xs" style={{ color: "var(--text-muted)" }}>Kuchga kirish
             <DateField inputClassName={input} inputStyle={inputStyle} value={f.effectiveFrom} onChange={(v) => setF({ ...f, effectiveFrom: v })} />
@@ -310,9 +311,9 @@ export default function DeadlineTemplatesClient({ initial }: { initial: Template
                   ))}
                   {t.lifecycle === "draft" && (
                     <span className="flex items-center gap-1">
-                      <select value={a.type} onChange={(e) => setAppl({ ...appl, [t.id]: { ...a, type: e.target.value } })} className="text-meta px-1 py-0.5 rounded-lg border" style={inputStyle}>
+                      <Select size="sm" fullWidth={false} value={a.type} onChange={(e) => setAppl({ ...appl, [t.id]: { ...a, type: e.target.value } })} className="text-meta">
                         {CRITERIA_TYPES.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                      </Select>
                       <input value={a.value} onChange={(e) => setAppl({ ...appl, [t.id]: { ...a, value: e.target.value } })} placeholder="qiymat" className="text-meta px-1 py-0.5 rounded-lg border w-24" style={inputStyle} />
                       <Button variant="primary" size="md" disabled={pending || !a.value.trim()} onClick={() => { run(() => addTemplateApplicability(t.id, a.type, a.value), "Qamrov qo'shildi"); setAppl({ ...appl, [t.id]: { ...a, value: "" } }); }}>+</Button>
                     </span>

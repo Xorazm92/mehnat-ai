@@ -1,3 +1,4 @@
+import { Select } from "@/components/ui";
 import React, { useState } from 'react';
 import { ALL_SERVICE_KEYS as ALL_SERVICE_KEYS_SRC, SERVICE_LABELS as SERVICE_LABELS_SRC, serviceGroups, serviceFullLabel } from '@/lib/reportColumns';
 import { Company, Staff, TaxType, ServerInfo } from '@/types';
@@ -495,8 +496,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Ichki Shartnoma Tomoni</label>
-                                <select
-                                    className="erp-input"
+                                <Select
                                     value={partyValue}
                                     onChange={e => {
                                         // Bazaga ID yoziladi (firma nomi o'zgarsa bog'lanish
@@ -526,7 +526,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                             <option key={o.id} value={`kanal:${o.id}`}>{o.label}</option>
                                         ))}
                                     </optgroup>
-                                </select>
+                                </Select>
                                 {contractorOptions.length === 0 && (
                                     <p className="text-2xs ml-1" style={{ color: 'var(--text-muted)' }}>
                                         O&apos;z firmalar ro&apos;yxati bo&apos;sh — bazada `isOwnFirm` belgilangan firma yo&apos;q.
@@ -729,8 +729,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="space-y-1.5">
                                 <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>1C Server</label>
-                                <select
-                                    className="erp-input cursor-pointer"
+                                <Select
                                     value={formData.serverInfo || 'CR1'}
                                     onChange={e => setFormData({ ...formData, serverInfo: e.target.value as ServerInfo })}
                                 >
@@ -741,7 +740,7 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                     <option value="srv1c2">srv1c2 (2-server)</option>
                                     <option value="srv1c3">srv1c3 (3-server)</option>
                                     <option value="srv2">srv2 (Asosiy server)</option>
-                                </select>
+                                </Select>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>1C Baza Nomi</label>
@@ -994,20 +993,18 @@ const OnboardingWizard: React.FC<Props> = ({ staff, initialData, initialAssignme
                                             {label}
                                             {isRequired && <span style={{ color: 'var(--danger)' }}> *</span>}
                                         </label>
-                                        <select
-                                            className="erp-input font-bold"
+                                        <Select
+                                            className="font-bold"
                                             value={asgn.userId || ''}
                                             disabled={options.length === 0}
-                                            style={showErrors && isRequired && noPerson
-                                                ? { borderColor: 'var(--danger)' }
-                                                : undefined}
+                                            invalid={showErrors && isRequired && noPerson}
                                             onChange={e => updateAssignment(asgn.role, 'userId', e.target.value)}
                                         >
                                             <option value="">
                                                 {options.length === 0 ? 'Bu rolda faol xodim yo\'q' : 'Tanlang...'}
                                             </option>
                                             {options.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </select>
+                                        </Select>
                                     </div>
                                     <div className="col-span-6 lg:col-span-3 space-y-1">
                                         <label className="text-micro font-semibold uppercase tracking-widest ml-1" style={fieldLabelStyle}>Hisob turi</label>

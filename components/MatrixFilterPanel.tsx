@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown, Filter, X } from "lucide-react";
+import { Select } from "@/components/ui";
+import { Filter, X } from "lucide-react";
 import { useDismissable } from "@/hooks/useDismissable";
 import {
   COL_STATUS_OPTIONS,
@@ -63,16 +64,6 @@ interface Props {
   total: number;
 }
 
-const selectClass =
-  "w-full pl-3 pr-8 py-1.5 rounded-lg text-meta font-bold uppercase tracking-widest outline-none " +
-  "appearance-none cursor-pointer transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20";
-
-const selectStyle: React.CSSProperties = {
-  background: "var(--surface-2)",
-  border: "1px solid var(--border)",
-  color: "var(--text)",
-};
-
 /**
  * Bitta "yorliq + tanlagich" juftligi.
  *
@@ -121,25 +112,22 @@ function Field({
           </button>
         )}
       </span>
-      <div className="relative">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={selectClass}
-          style={{
-            ...selectStyle,
-            borderColor: active ? "var(--primary)" : "var(--border)",
-            color: active ? "var(--primary)" : "var(--text)",
-          }}
-        >
-          {children}
-        </select>
-        <ChevronDown
-          size={13}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-          style={{ color: "var(--text-3)" }}
-        />
-      </div>
+      {/* `Select` g'ildirakni O'ZI chizadi — bu yerdagi `ChevronDown` va
+          `relative` o'ram olib tashlandi, aks holda ikkita strelka bo'lardi.
+          Faol filtr rangi `style` orqali qoladi: primitiv `...rest` ni
+          o'zining uslubidan KEYIN qo'yadi, ya'ni bu ustun turadi. */}
+      <Select
+        size="sm"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="text-meta font-bold uppercase tracking-widest"
+        style={{
+          borderColor: active ? "var(--primary)" : undefined,
+          color: active ? "var(--primary)" : undefined,
+        }}
+      >
+        {children}
+      </Select>
       {hint && (
         <span className="block text-micro mt-1" style={{ color: "var(--text-3)" }}>
           {hint}

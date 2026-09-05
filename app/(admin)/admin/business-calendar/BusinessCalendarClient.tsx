@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { formatUzDate } from "@/lib/platform/format";
@@ -97,9 +98,9 @@ export default function BusinessCalendarClient({ initial, initialYear }: { initi
           <DateField inputClassName="block px-2.5 py-1.5 rounded-lg border text-sm" inputStyle={inputStyle} value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
         </label>
         <label className="text-xs" style={{ color: "var(--text-muted)" }}>Turi
-          <select className="block px-2.5 py-1.5 rounded-lg border text-sm" style={inputStyle} value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as keyof typeof KINDS })}>
+          <Select size="sm" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as keyof typeof KINDS })}>
             {Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
+          </Select>
         </label>
         <label className="text-xs flex-1 min-w-[160px]" style={{ color: "var(--text-muted)" }}>Nomi (ixt.)
           <input className="block px-2.5 py-1.5 rounded-lg border text-sm w-full" style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Mustaqillik kuni" />

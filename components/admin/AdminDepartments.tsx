@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { ModalLayer } from "@/components/ui/ModalLayer";
 import { Plus, Pencil, Power, X, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui";
 
 export interface ChiefOption {
   id: string;
@@ -100,10 +101,10 @@ export function AdminDepartments({ departments, chiefs, busy, onCreate, onUpdate
               </label>
               <label className="block">
                 <span className="text-micro font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Bosh buxgalter</span>
-                <select className={inputCls + " mt-1"} style={inputStyle} value={form.chiefAccountantId ?? ""} onChange={(e) => setForm({ ...form, chiefAccountantId: e.target.value || null })}>
+                <Select className="mt-1" value={form.chiefAccountantId ?? ""} onChange={(e) => setForm({ ...form, chiefAccountantId: e.target.value || null })}>
                   <option value="">— tayinlanmagan —</option>
                   {chiefs.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
-                </select>
+                </Select>
               </label>
             </div>
             <div className="flex items-center justify-end gap-2 mt-5">

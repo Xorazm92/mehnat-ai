@@ -7,6 +7,7 @@
 // ishni bajargan xodimga o'tadi (ta'tilda — yarmi). Bu panel o'sha kunni
 // belgilaydi va pul o'tkazmasini ishga tushiradi.
 
+import { Select } from "@/components/ui";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeftRight } from "lucide-react";
@@ -139,37 +140,34 @@ const ShiftCoverPanel: React.FC<Props> = ({ staff, canEdit }) => {
             inputClassName="rounded-lg px-3 py-2 text-xs font-bold outline-none"
             inputStyle={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }}
           />
-          <select
+          <Select
             value={form.absentUserId}
             onChange={(e) => setForm({ ...form, absentUserId: e.target.value })}
-            className="rounded-lg px-3 py-2 text-xs font-bold outline-none"
-            style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }}
+            className="text-xs font-bold"
           >
             <option value="">Kelmagan xodim…</option>
             {staff.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
             value={form.coverUserId}
             onChange={(e) => setForm({ ...form, coverUserId: e.target.value })}
-            className="rounded-lg px-3 py-2 text-xs font-bold outline-none"
-            style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }}
+            className="text-xs font-bold"
           >
             <option value="">O&apos;rinbosar…</option>
             {staff.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
             value={form.kind}
             onChange={(e) => setForm({ ...form, kind: e.target.value as "absence" | "vacation" })}
-            className="rounded-lg px-3 py-2 text-xs font-bold outline-none"
-            style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", color: "var(--text-primary)" }}
+            className="text-xs font-bold"
           >
             <option value="absence">Uzrsiz kelmadi</option>
             <option value="vacation">Mehnat ta&apos;tili</option>
-          </select>
+          </Select>
           <Button variant="primary" size="sm" disabled={busy} onClick={submit}>
             Qo&apos;shish
           </Button>

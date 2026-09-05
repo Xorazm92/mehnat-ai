@@ -1,4 +1,5 @@
 "use client";
+import { Select } from "@/components/ui";
 import React, { useState, useEffect, useMemo } from "react";
 import { ModalLayer } from "@/components/ui/ModalLayer";
 import { Company, Staff, Language } from "@/types";
@@ -308,9 +309,9 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff, userRole }) => {
                 ))}
               </div>
               <div><label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: "var(--text-muted)" }}>Firma</label>
-                <select className="erp-input font-bold" value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })}>
+                <Select className="font-bold" value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })}>
                   <option value="">Tanlang…</option>{companies.slice(0, 300).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: "var(--text-muted)" }}>Davr</label>
@@ -319,9 +320,9 @@ const HisobotlarModule: React.FC<Props> = ({ companies, staff, userRole }) => {
                   <DateField inputClassName="erp-input font-bold" value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} /></div>
               </div>
               <div><label className="text-micro font-bold uppercase tracking-widest mb-1 block" style={{ color: "var(--text-muted)" }}>Mas&apos;ul</label>
-                <select className="erp-input font-bold" value={form.assignedTo} onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}>
+                <Select className="font-bold" value={form.assignedTo} onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}>
                   <option value="">—</option>{staff.slice(0, 200).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                </Select>
               </div>
             </div>
             <div className="p-4 flex gap-3" style={{ borderTop: "1px solid var(--card-border)", background: "var(--table-header-bg)" }}>

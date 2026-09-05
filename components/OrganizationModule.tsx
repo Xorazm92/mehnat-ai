@@ -1,4 +1,5 @@
 "use client";
+import { Select } from "@/components/ui";
 import React, { useState, useMemo, useCallback } from 'react';
 import { ModalLayer } from '@/components/ui';
 import { useViewMode } from '@/hooks/useViewMode';
@@ -596,13 +597,14 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             ].map((f, idx) => (
               <div key={idx} className="space-y-1">
                 <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{f.label}</label>
-                <select
+                <Select
+                  size="sm"
                   value={f.value}
                   onChange={(e) => f.onChange(e.target.value)}
-                  className="c1-input text-micro font-bold uppercase tracking-tight"
+                  className="text-micro font-bold uppercase tracking-tight"
                 >
                   {f.options.map((o, i) => <option key={i} value={o.val}>{o.label}</option>)}
-                </select>
+                </Select>
               </div>
             ))}
           </div>

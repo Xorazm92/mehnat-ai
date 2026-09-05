@@ -33,9 +33,27 @@ export type SelectSize = "sm" | "md";
 
 const SIZE: Record<SelectSize, string> = {
   // Jadval ichidagi zich tanlagich (`WorkInboxColumns`, filtr panellari).
-  sm: "text-xs py-1 pl-2 pr-7",
+  sm: "text-xs",
   // Formadagi standart maydon — `.erp-input` ning o'z o'lchami.
-  md: "text-body py-2 pl-3 pr-9",
+  md: "text-body",
+};
+
+/**
+ * TO'LDIRISH INLINE STYLE BILAN, Tailwind sinfi bilan EMAS.
+ *
+ * `.erp-input` (globals.css) `padding: 0.5rem 0.75rem` degan QISQARTMA
+ * beradi va u kaskadda Tailwind'ning `pr-9` yordamchisidan keyin turadi —
+ * ya'ni sinf bilan berilgan o'ng to'ldirish JIMGINA yo'qolardi va
+ * g'ildirak uchun joy HECH QACHON ajratilmasdi. Kenglik `w-full` bo'lganda
+ * bo'sh joy hisobiga ko'rinmasdi, `fullWidth={false}` da esa strelka
+ * matnning oxirgi harfi ustiga tushardi (jonli o'lchov: o'ng to'ldirish
+ * 12px, kerak — 36px).
+ *
+ * Inline style kaskaddan yuqorida turadi, shuning uchun o'lcham shu yerda.
+ */
+const PAD: Record<SelectSize, React.CSSProperties> = {
+  sm: { paddingTop: "0.25rem", paddingBottom: "0.25rem", paddingLeft: "0.5rem", paddingRight: "1.75rem" },
+  md: { paddingTop: "0.5rem", paddingBottom: "0.5rem", paddingLeft: "0.75rem", paddingRight: "2.25rem" },
 };
 
 const ICON_OFFSET: Record<SelectSize, string> = { sm: "right-1.5", md: "right-2.5" };
@@ -74,6 +92,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(function 
     disabled,
     children,
     className = "",
+    // `style` ATAYLAB ajratiladi: u `...rest` ichida qolsa, chaqiruvchining
+    // uslubi (masalan `MatrixFilterPanel` dagi faol filtr ramkasi)
+    // to'ldirishni butunlay o'chirib yuborardi. Endi ular BIRLASHTIRILADI.
+    style,
     ...rest
   },
   ref,
@@ -96,11 +118,13 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(function 
         ]
           .filter(Boolean)
           .join(" ")}
-        style={
-          invalid
+        style={{
+          ...PAD[size],
+          ...(invalid
             ? { borderColor: "var(--danger)", boxShadow: "0 0 0 3px var(--danger-bg)" }
-            : undefined
-        }
+            : null),
+          ...style,
+        }}
         {...rest}
       >
         {placeholder !== undefined && <option value="">{placeholder}</option>}

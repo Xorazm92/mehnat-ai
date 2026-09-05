@@ -112,32 +112,8 @@ const RAW_TABLE_BASELINE = [
 ];
 
 const RAW_SELECT_BASELINE = [
-  "app/(admin)/admin/business-calendar/BusinessCalendarClient.tsx",
-  "app/(admin)/admin/crm/page.tsx",
-  "app/(admin)/admin/deadline-templates/DeadlineTemplatesClient.tsx",
-  "app/(admin)/admin/services/ServiceCatalogClient.tsx",
-  "app/(admin)/admin/settings/AdminSettingsClient.tsx",
-  "app/(dashboard)/kassa/chiqim/ChiqimKassaClient.tsx",
-  "app/(dashboard)/kassa/JournalClient.tsx",
-  "app/(dashboard)/kassa/qarzdorlik/DebtStatement.tsx",
-  "app/(dashboard)/kassa/sverka/SverkaClient.tsx",
   "app/telegram-app/proof/ProofUploader.tsx",
-  "components/admin/AdminDepartments.tsx",
-  "components/admin/AdminUserManager.tsx",
-  "components/AttendanceModule.tsx",
-  "components/BulkAssignModal.tsx",
-  "components/CompanyDocumentsPanel.tsx",
-  "components/CompanyDrawer.tsx",
-  "components/CompanyServicesPanel.tsx",
   "components/DocumentsModule.tsx",
-  "components/ExpenseModule.tsx",
-  "components/HisobotlarModule.tsx",
-  "components/KassaModule.tsx",
-  "components/MatrixFilterPanel.tsx",
-  "components/OnboardingWizard.tsx",
-  "components/OrganizationModule.tsx",
-  "components/ReportInsightModal.tsx",
-  "components/ShiftCoverPanel.tsx",
   "components/StaffModule.tsx",
 ];
 

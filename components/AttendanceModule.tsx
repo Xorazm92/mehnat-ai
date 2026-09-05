@@ -12,7 +12,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
-import { Badge, IdentityCell, TONE_COLORS, type BadgeTone } from "@/components/ui";
+import { Badge, IdentityCell, TONE_COLORS, type BadgeTone, Select } from "@/components/ui";
 import { useTableState } from "@/hooks/useTableState";
 import { usePageSize } from "@/hooks/usePageSize";
 import { friendlyError } from "@/lib/actionError";
@@ -343,18 +343,18 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
 
             {/* Controls */}
             <div className="flex flex-col md:flex-row gap-4">
-                <select
+                <Select
+                    fullWidth={false}
                     value={month}
                     onChange={(e) => onMonthChange(e.target.value)}
-                    className="rounded-xl py-3 px-4 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
-                    style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
+                    className="text-xs font-bold"
                 >
                     {/* Joriy oy ro'yxatda bo'lmasligi mumkin (hali yozuv yo'q) —
                         u holda ham tanlangan qiymat ko'rinib turishi kerak. */}
                     {(months.includes(month) ? months : [month, ...months]).map(m => (
                         <option key={m} value={m}>{monthLabel(m)}</option>
                     ))}
-                </select>
+                </Select>
                 <div className="relative">
                     <DateField
                         className="w-auto"
@@ -475,11 +475,10 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-2 md:col-span-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Xodim' : 'Сотрудник'}</label>
-                                    <select value={form.userId} onChange={(e) => setForm(f => ({ ...f, userId: e.target.value }))} required
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}>
+                                    <Select value={form.userId} onChange={(e) => setForm(f => ({ ...f, userId: e.target.value }))} required
+                                        className="text-xs font-bold tracking-tight">
                                         {staff.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
-                                    </select>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
@@ -489,13 +488,12 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.status}</label>
-                                    <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}>
+                                    <Select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
+                                        className="text-xs font-bold tracking-tight">
                                         {Object.entries(STATUS_META).map(([key, meta]) => (
                                             <option key={key} value={key}>{(lang === 'uz' ? meta.labelUz : meta.labelRu).toUpperCase()}</option>
                                         ))}
-                                    </select>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{lang === 'uz' ? 'Kelish vaqti' : 'Приход'}</label>

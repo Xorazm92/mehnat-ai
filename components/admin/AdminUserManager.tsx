@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { Plus, Search, Pencil, KeyRound, UserCheck, UserX, X } from "lucide-react";
 import { ROLES, ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import { Button } from "@/components/ui/Button";
-import { Pagination, pageSlice } from "@/components/ui";
+import { Pagination, pageSlice, Select } from "@/components/ui";
 import { usePageSize } from "@/hooks/usePageSize";
 
 import { DateField } from "../ui/DateField";
@@ -157,12 +157,12 @@ export function AdminUserManager({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <select className={inputCls + " max-w-[200px]"} style={inputStyle} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+        <Select className="max-w-[200px]" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
           <option value="all">Barcha rollar</option>
           {ROLE_OPTIONS.map((r) => (
             <option key={r} value={r}>{ROLE_LABELS[r as UserRole]}</option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <div className="rounded-xl" style={card}>
@@ -240,28 +240,28 @@ export function AdminUserManager({
                 <input className={inputCls} style={inputStyle} value={form.department || ""} onChange={(e) => setForm({ ...form, department: e.target.value })} />
               </Field>
               <Field label="Jinsi">
-                <select className={inputCls} style={inputStyle} value={form.gender || ""} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+                <Select value={form.gender || ""} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
                   <option value="">—</option>
                   <option value="erkak">Erkak</option>
                   <option value="ayol">Ayol</option>
-                </select>
+                </Select>
               </Field>
               <Field label="Ma'lumoti">
-                <select className={inputCls} style={inputStyle} value={form.education || ""} onChange={(e) => setForm({ ...form, education: e.target.value })}>
+                <Select value={form.education || ""} onChange={(e) => setForm({ ...form, education: e.target.value })}>
                   <option value="">—</option>
                   <option value="orta">O&apos;rta</option>
                   <option value="orta_maxsus">O&apos;rta maxsus</option>
                   <option value="oliy">Oliy</option>
                   <option value="magistratura">Magistratura</option>
-                </select>
+                </Select>
               </Field>
               <Field label="Malaka darajasi">
-                <select className={inputCls} style={inputStyle} value={form.skillLevel || ""} onChange={(e) => setForm({ ...form, skillLevel: e.target.value })}>
+                <Select value={form.skillLevel || ""} onChange={(e) => setForm({ ...form, skillLevel: e.target.value })}>
                   <option value="">—</option>
                   <option value="stajyor">Stajyor</option>
                   <option value="orta">O&apos;rta malakali</option>
                   <option value="tajribali">Tajribali</option>
-                </select>
+                </Select>
               </Field>
               <Field label="Tug'ilgan sana">
                 <DateField inputClassName={inputCls} inputStyle={inputStyle} value={form.birthDate || ""} onChange={(v) => setForm({ ...form, birthDate: v })} />
@@ -271,18 +271,18 @@ export function AdminUserManager({
               </Field>
             </div>
             <Field label="Holati">
-              <select className={inputCls} style={inputStyle} value={form.status || "active"} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              <Select value={form.status || "active"} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                 <option value="active">Faol (ishda)</option>
                 <option value="vacation">Ta&apos;tilda</option>
                 <option value="sick">Kasallik</option>
-              </select>
+              </Select>
             </Field>
             <Field label="Rol">
-              <select className={inputCls} style={inputStyle} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+              <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
                 {ROLE_OPTIONS.map((r) => (
                   <option key={r} value={r}>{ROLE_LABELS[r as UserRole]}</option>
                 ))}
-              </select>
+              </Select>
             </Field>
             {!form.id && (
               <Field label="Parol">

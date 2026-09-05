@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -125,15 +126,15 @@ export default function AdminSettingsClient({
         </p>
         <label className="block">
           <span className="text-meta font-semibold" style={{ color: "var(--text-secondary)" }}>Hisoblash bazasi</span>
-          <select
-            className={inputCls + " mt-1"}
-            style={inputStyle}
-            value={payrollBasis}
-            onChange={(e) => setPayrollBasis(e.target.value as PayrollBasis)}
-          >
+          <Select
+ className="mt-1"
+
+ value={payrollBasis}
+ onChange={(e) => setPayrollBasis(e.target.value as PayrollBasis)}
+ >
             <option value="accrual">{PAYROLL_BASIS_LABELS.accrual}</option>
             <option value="cash">{PAYROLL_BASIS_LABELS.cash}</option>
-          </select>
+          </Select>
         </label>
       </div>
 

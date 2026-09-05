@@ -1,3 +1,4 @@
+import { Select } from "@/components/ui";
 import React, { useState, useEffect } from 'react';
 import CompanyServicesPanel from '@/components/CompanyServicesPanel';
 import CompanyDocumentsPanel from '@/components/CompanyDocumentsPanel';
@@ -772,17 +773,18 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="sm:col-span-2">
                               <label className="text-micro font-bold text-[var(--text-muted)] uppercase block mb-1 tracking-widest">Xodim</label>
-                              <select
+                              <Select
+                                size="sm"
                                 value={asgn.userId || ''}
                                 disabled={roleOptions.length === 0}
                                 onChange={e => setEditAssignments(prev => prev.map((a, i) => i === idx ? { ...a, userId: e.target.value } : a))}
-                                className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-lg px-2 py-1.5 text-micro font-bold uppercase outline-none focus:border-[var(--accent-blue)] transition-colors"
+                                className="text-micro font-bold uppercase"
                               >
                                 <option value="">
                                   {roleOptions.length === 0 ? '— BU ROLDA FAOL XODIM YO\'Q —' : '— Tanlanmagan —'}
                                 </option>
                                 {roleOptions.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
-                              </select>
+                              </Select>
                             </div>
                             <div className="flex flex-col">
                               <label className="text-micro font-bold text-[var(--text-muted)] uppercase block mb-1 tracking-widest whitespace-nowrap">

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { formatNum } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { upsertService, archiveService } from "@/server/services";
+import { Select } from "@/components/ui";
 
 interface ServiceRow {
   id: string;
@@ -190,16 +191,16 @@ export default function ServiceCatalogClient({
             </label>
             <label className="block">
               <span className="text-meta font-semibold" style={{ color: "var(--text-secondary)" }}>Davriylik</span>
-              <select
-                className={inputCls + " mt-1"}
-                style={inputStyle}
-                value={draft.periodicity}
-                onChange={(e) => setDraft({ ...draft, periodicity: e.target.value })}
-              >
+              <Select
+ className="mt-1"
+
+ value={draft.periodicity}
+ onChange={(e) => setDraft({ ...draft, periodicity: e.target.value })}
+ >
                 {Object.entries(PERIODICITY_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block sm:col-span-2">
               <span className="text-meta font-semibold" style={{ color: "var(--text-secondary)" }}>Izoh</span>

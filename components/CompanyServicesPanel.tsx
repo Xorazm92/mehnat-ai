@@ -7,6 +7,7 @@
 // ekranda turadi, chunki foydalanuvchi uchun ikkalasi ham "xizmat" — lekin
 // biri ish rejasi, ikkinchisi hisob-kitob.
 
+import { Select } from "@/components/ui";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
@@ -215,9 +216,9 @@ export default function CompanyServicesPanel({ companyId }: { companyId: string 
 
           {unassigned.length > 0 && (
             <div className="flex items-center gap-2">
-              <select
-                className="px-3 py-2 rounded-lg text-body outline-none flex-1"
-                style={inputStyle}
+              <Select
+                fullWidth={false}
+                className="flex-1"
                 value={addId}
                 onChange={(e) => setAddId(e.target.value)}
               >
@@ -225,7 +226,7 @@ export default function CompanyServicesPanel({ companyId }: { companyId: string 
                 {unassigned.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
-              </select>
+              </Select>
               <button
                 onClick={add}
                 disabled={busy || !addId}

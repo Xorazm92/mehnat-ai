@@ -12,6 +12,7 @@ import { Upload, Download, Trash2, FileText, AlertTriangle } from "lucide-react"
 import { formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { listDocuments, uploadDocument, deleteDocument } from "@/server/documents";
+import { Select } from "@/components/ui";
 
 interface DocRow {
   id: string;
@@ -157,16 +158,16 @@ export default function CompanyDocumentsPanel({
           <div className="grid sm:grid-cols-2 gap-3">
             <label className="block">
               <span className="text-meta font-semibold" style={{ color: "var(--text-secondary)" }}>Turi</span>
-              <select
-                className={inputCls + " mt-1"}
-                style={inputStyle}
-                value={form.docType}
-                onChange={(e) => setForm({ ...form, docType: e.target.value })}
-              >
+              <Select
+ className="mt-1"
+
+ value={form.docType}
+ onChange={(e) => setForm({ ...form, docType: e.target.value })}
+ >
                 {Object.entries(TYPE_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="text-meta font-semibold" style={{ color: "var(--text-secondary)" }}>Nomi</span>

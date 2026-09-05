@@ -11,6 +11,7 @@ import { previewBulkRecipients, sendBulkAssignment, type BulkAudience, type Bulk
 import type { CompanyRelation } from "@/lib/platform/permissions";
 import type { TaskPriority } from "@prisma/client";
 import { DateField } from "./ui/DateField";
+import { Select } from "@/components/ui";
 
 /**
  * OMMAVIY TOPSHIRIQ OYNASI.
@@ -228,9 +229,9 @@ export default function BulkAssignModal({ open, onClose, onSent }: {
               </div>
               <div>
                 <span className={label} style={labelStyle}>Muhimlik</span>
-                <select className={input} style={inputStyle} value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+                <Select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
                   {PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
+                </Select>
               </div>
             </div>
           )}

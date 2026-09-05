@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { listLeads, createLead, updateLeadStatus } from "@/server/leads";
-import { Badge, type BadgeTone } from "@/components/ui";
+import { Badge, type BadgeTone, Select } from "@/components/ui";
 import { formatUzDateNumeric } from "@/lib/platform/format";
 
 interface Lead {
@@ -136,10 +136,9 @@ export default function LeadsPage() {
             onChange={(e) => setForm({ ...form, inn: e.target.value })}
             style={FIELD}
           />
-          <select
+          <Select
             value={form.source}
             onChange={(e) => setForm({ ...form, source: e.target.value ?? "" })}
-            style={FIELD}
           >
             <option value="">Manba</option>
             <option value="telegram">Telegram</option>
@@ -147,7 +146,7 @@ export default function LeadsPage() {
             <option value="website">Veb-sayt</option>
             <option value="referal">Tavsiya</option>
             <option value="other">Boshqa</option>
-          </select>
+          </Select>
           <textarea
             placeholder="Izoh"
             value={form.note}
@@ -182,24 +181,17 @@ export default function LeadsPage() {
                       Ilgari bitta rangli <select> ikkalasini ham qilardi va
                       `<option>` foni `#1a1a2e` ga qotirilgani uchun yorug'
                       temada qora ro'yxat ochilardi. */}
-                  <select
+                  <Select
+                    size="sm"
+                    fullWidth={false}
                     value={lead.status}
                     onChange={(e) => handleStatus(lead.id, e.target.value)}
                     aria-label={`${lead.name} — holatni o'zgartirish`}
-                    style={{
-                      background: "var(--input-bg)",
-                      border: "1px solid var(--card-border)",
-                      borderRadius: "6px",
-                      color: "var(--text-secondary)",
-                      fontSize: "12px",
-                      padding: "2px 4px",
-                      cursor: "pointer",
-                    }}
                   >
                     {Object.entries(STATUS_LABELS).map(([k, v]) => (
                       <option key={k} value={k}>{v}</option>
                     ))}
-                  </select>
+                  </Select>
                 </span>
               </div>
               {lead.phone && <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>📞 {lead.phone}</div>}
