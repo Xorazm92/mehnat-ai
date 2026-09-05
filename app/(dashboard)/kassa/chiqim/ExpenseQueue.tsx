@@ -17,12 +17,13 @@
 // qoida `lib/bank/classifyExpense.ts` da yashaydi va ikki joyda ikki xil
 // bo'lib ketmasligi kerak.
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, CreditCard, Building2 } from "lucide-react";
+import { ArrowUpRight, CreditCard, Building2, CheckCheck } from "lucide-react";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
-import { Money, Pagination, StatStrip, pageSlice, type StatItem } from "@/components/ui";
+import { DataTable, Money, StatStrip, type DataColumn, type StatItem } from "@/components/ui";
 import { usePageSize } from "@/hooks/usePageSize";
+import { useTableState } from "@/hooks/useTableState";
 
 import { Button } from "@/components/ui/Button";
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from "@/lib/bank/classifyExpense";
@@ -89,17 +90,19 @@ export default function ExpenseQueue({ queue }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  // Saralash/sahifa/zichlik `useTableState` da — jadval endi `DataTable`
+  // ustida va u shu holatni kutadi.
+  const table = useTableState({ ns: "navbat", defaultSortKey: "date", defaultSortDir: "desc" });
   const [pageSize, setPageSize] = usePageSize("expense-queue");
 
   // Navbatda 349 qator bo'lishi mumkin. Hammasini birdan chiqarish sahifani
   // o'qib bo'lmaydigan qilib cho'zadi — ommaviy tugmalar baribir hammasini
   // qamrab oladi, ya'ni to'liq ro'yxat ish uchun shart emas.
-  const allRows = queue.rows.filter((r) => r.group === tab);
-  const rows = pageSlice(allRows, page, pageSize);
+  const allRows = useMemo(() => queue.rows.filter((r) => r.group === tab), [queue.rows, tab]);
   // Guruh (tab) almashganda ro'yxat butunlay boshqa bo'ladi — eski sahifada
   // qolib ketish "bo'sh navbat" degan yolg'on taassurot berardi.
-  useEffect(() => { setPage(1); }, [tab]);
+  const { setPage } = table;
+  useEffect(() => { setPage(1); }, [tab, setPage]);
   const meta = GROUP_META[tab];
   const bulkCats = queue.byCategory.filter((c) => c.postable && c.count > 1);
 
@@ -116,6 +119,101 @@ export default function ExpenseQueue({ queue }: Props) {
       setBusy(null);
     }
   };
+
+  /**
+   * USTUNLAR — jadval ham, telefondagi kartochka ham shundan yasaladi.
+   * Amal tugmasi guruhga qarab boshqacha: uch guruh — uch xil yakun.
+   */
+  const columns: DataColumn<QueueRow>[] = [
+    {
+      key: "date",
+      header: "Sana",
+      cell: (r) => formatUzDate(r.valueDate),
+      sortValue: (r) => r.valueDate,
+      width: "110px",
+      mobile: "meta",
+    },
+    {
+      key: "account",
+      header: "Hisob",
+      cell: (r) => r.accountLabel,
+      sortValue: (r) => r.accountLabel,
+    },
+    {
+      key: "party",
+      header: "Kontragent",
+      cell: (r) => (
+        <span title={r.purpose ?? ""}>{r.counterpartyName ?? "—"}</span>
+      ),
+      sortValue: (r) => r.counterpartyName ?? "",
+      sticky: true,
+      mobile: "title",
+    },
+    {
+      key: "category",
+      header: "Toifa",
+      cell: (r) => EXPENSE_CATEGORY_LABELS[r.expenseCategory as ExpenseCategory] ?? r.expenseCategory,
+      sortValue: (r) => EXPENSE_CATEGORY_LABELS[r.expenseCategory as ExpenseCategory] ?? r.expenseCategory,
+      mobile: "status",
+    },
+    {
+      key: "amount",
+      header: "Summa",
+      cell: (r) => <Money value={r.amount} tone={r.group === "xarajat" ? "out" : "muted"} bold />,
+      sortValue: (r) => r.amount,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "actions",
+      header: "Amal",
+      align: "right",
+      cell: (r) => {
+        if (r.group === "xarajat") {
+          return (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() =>
+                run(r.id, async () => {
+                  await postExpenseTransaction({
+                    transactionId: r.id,
+                    category: r.expenseCategory as ExpenseCategory,
+                  });
+                })
+              }
+            >
+              {busy === r.id ? "..." : "Kassaga yozish"}
+            </Button>
+          );
+        }
+        if (r.group === "ichki") {
+          return (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() => run(r.id, async () => { await ignoreExpenseTransaction({ transactionId: r.id }); })}
+            >
+              {busy === r.id ? "..." : "Ichki — yopish"}
+            </Button>
+          );
+        }
+        return (
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={busy !== null}
+            onClick={() => run(r.id, async () => { await postSalaryFromTransaction({ transactionId: r.id }); })}
+          >
+            {busy === r.id ? "..." : "Oylik yozish"}
+          </Button>
+        );
+      },
+      mobile: "actions",
+    },
+  ];
 
   return (
     // "Chiqim navbati" sarlavhali karta ATAYLAB olib tashlangan — bu blok
@@ -190,7 +288,7 @@ export default function ExpenseQueue({ queue }: Props) {
       )}
 
       {/* Kartaga o'tkazmalar — OYLIK: bir tugmada hammasi */}
-      {tab === "karta" && rows.length > 0 && (
+      {tab === "karta" && allRows.length > 0 && (
         <div className="px-3 pb-2">
           <Button
             variant="primary"
@@ -212,109 +310,32 @@ export default function ExpenseQueue({ queue }: Props) {
         </div>
       )}
 
-      <div className="overflow-auto rounded-t-xl" style={{ maxHeight: "calc(100vh - 300px)" }}>
-        {rows.length === 0 ? (
-          <p className="px-3 py-6 text-meta text-center" style={{ color: "var(--text-muted)" }}>
-            Bu guruhda kutayotgan qator yo&apos;q.
-          </p>
-        ) : (
-          <table className="table-sticky-head w-full text-meta">
-            <thead>
-              <tr style={{ background: "var(--input-bg)" }}>
-                <th className="text-left p-2">Sana</th>
-                <th className="text-left p-2">Hisob</th>
-                <th className="text-left p-2">Kontragent</th>
-                <th className="text-left p-2">Toifa</th>
-                <th className="text-right p-2">Summa</th>
-                <th className="text-right p-2">Amal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} style={{ borderTop: "1px solid var(--card-border)" }}>
-                  <td className="p-2 whitespace-nowrap">{formatUzDate(r.valueDate)}</td>
-                  <td className="p-2 whitespace-nowrap">{r.accountLabel}</td>
-                  <td className="p-2 max-w-[240px] truncate" title={r.purpose ?? ""}>
-                    {r.counterpartyName ?? "—"}
-                  </td>
-                  <td className="p-2 whitespace-nowrap">
-                    {EXPENSE_CATEGORY_LABELS[r.expenseCategory as ExpenseCategory] ?? r.expenseCategory}
-                  </td>
-                  <td className="p-2 text-right whitespace-nowrap">
-                    <Money value={r.amount} tone={r.group === "xarajat" ? "out" : "muted"} bold />
-                  </td>
-                  <td className="p-2 text-right whitespace-nowrap">
-                    {r.group === "xarajat" && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={busy !== null}
-                        onClick={() =>
-                          run(r.id, async () => {
-                            await postExpenseTransaction({
-                              transactionId: r.id,
-                              category: r.expenseCategory as ExpenseCategory,
-                            });
-                          })
-                        }
-                      >
-                        {busy === r.id ? "..." : "Kassaga yozish"}
-                      </Button>
-                    )}
-                    {r.group === "ichki" && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={busy !== null}
-                        onClick={() =>
-                          run(r.id, async () => {
-                            await ignoreExpenseTransaction({ transactionId: r.id });
-                          })
-                        }
-                      >
-                        {busy === r.id ? "..." : "Ichki — yopish"}
-                      </Button>
-                    )}
-                    {r.group === "karta" && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        disabled={busy !== null}
-                        onClick={() =>
-                          run(r.id, async () => {
-                            await postSalaryFromTransaction({ transactionId: r.id });
-                          })
-                        }
-                      >
-                        {busy === r.id ? "..." : "Oylik yozish"}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      <div
-        className="px-3 py-2 flex items-center justify-between gap-3 flex-wrap text-micro"
+      <p
+        className="px-3 py-2 text-micro"
         style={{ borderTop: "1px solid var(--card-border)", color: "var(--text-muted)" }}
       >
-        <span>
-          {queue.truncated > 0 && `Serverda yana ${queue.truncated} ta · `}
-          Ommaviy tugmalar SAHIFANI emas, butun navbatni qamrab oladi
-        </span>
-      </div>
+        {queue.truncated > 0 && `Serverda yana ${queue.truncated} ta · `}
+        Ommaviy tugmalar SAHIFANI emas, butun navbatni qamrab oladi
+      </p>
 
-      <Pagination
-        page={page}
+      <DataTable
+        rows={allRows}
+        columns={columns}
+        rowKey={(r) => r.id}
+        caption={`Chiqim navbati — ${meta.label} guruhi`}
+        sortKey={table.sortKey}
+        sortDir={table.sortDir}
+        onToggleSort={table.toggleSort}
+        density={table.density}
+        page={table.page}
         pageSize={pageSize}
-        total={allRows.length}
-        onPageChange={setPage}
+        onPageChange={table.setPage}
         onPageSizeChange={setPageSize}
-        unit="qator"
+        emptyIcon={<CheckCheck size={28} />}
+        emptyTitle="Bu guruhda kutayotgan qator yo'q"
+        emptyDescription="Vipiskadan kelgan barcha chiqim shu guruhda yopilgan."
       />
+
     </div>
   );
 }

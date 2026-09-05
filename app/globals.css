@@ -444,6 +444,7 @@
   --z-backdrop: 100; /* modal ortidagi qorayish */
   --z-panel: 110;    /* modal paneli, drawer paneli */
   --z-popover: 200;  /* popover, tooltip, toast */
+  --z-lightbox: 300; /* to'liq ekranli rasm ko'rgichi — hammasidan ustida */
 }
 
 /* =============================================
@@ -804,6 +805,87 @@ input[type="radio"] {
   line-height: 1.1;
   color: var(--text-primary);
   white-space: nowrap;
+}
+
+/* Ko'p ustunli / o'raladigan tasma — `MetricRail`. `.stat-strip` bitta
+   qatorga qotib qolgan (`grid-auto-flow: column`), 5-6 ko'rsatkich 1024px da
+   siqilib ketadi. Bu yerda chiziqlar `gap` + ostidagi fon orqali chiziladi:
+   o'raladigan gridda `border-left/top` bilan chetki chiziqlarni olib tashlab
+   bo'lmaydi, chunki `nth-child` ustunlar sonini bilmaydi. */
+.metric-rail {
+  /* Ustunlar soni — `MetricRail` uni inline qiymat bilan almashtiradi.
+     Bu yerdagi e'lon MAJBURIY: `lib/designTokens.spec.ts` koddagi har bir
+     `var(--x)` uchun CSS da `--x:` ta'rifi borligini talab qiladi, aks holda
+     zaxirasiz `var()` e'lonni butunlay yaroqsiz qilib qo'yishi mumkin. */
+  --rail-cols: 4;
+  --rail-cols-md: 3;
+  --rail-cols-lg: 4;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+/* Ajratgichlar KATAKNING o'z soyasi orqali (`gap` + ostidagi fon EMAS).
+   `gap` usuli tasma o'ralganda oxirgi qatorda TO'LDIRILMAGAN katak qoldirardi
+   va u yerdan konteynerning kulrang foni katta blok bo'lib ko'rinardi.
+   Soya o'ng va past tomonga 1px chizadi; chetdagi ortiqcha chiziqni
+   konteynerning `overflow: hidden` i kesib tashlaydi. */
+.metric-rail-cell {
+  background: var(--card-bg);
+  box-shadow: 1px 0 0 0 var(--card-border), 0 1px 0 0 var(--card-border);
+}
+
+a.metric-rail-cell,
+button.metric-rail-cell {
+  transition: background-color 0.12s ease;
+}
+
+a.metric-rail-cell:hover,
+button.metric-rail-cell:hover {
+  background: var(--bg-hover);
+}
+
+/* USTUNLAR SONI BOSQICHMA-BOSQICH OCHILADI.
+   Beshta ko'rsatkichni 1024px da darrov beshta ustunga bo'lish har katakka
+   ~105px qoldiradi — o'shanda ham yorliq ("TASDIQ KUTM…"), ham SUMMA
+   ("1,380,5…") kesiladi. Moliyaviy ekranda kesilgan summa yolg'on raqam,
+   shuning uchun tasma o'ralishni afzal ko'radi: 2 → 3 → 4 → to'liq. */
+@media (min-width: 768px) {
+  .metric-rail {
+    grid-template-columns: repeat(var(--rail-cols-md, 3), minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .metric-rail {
+    grid-template-columns: repeat(var(--rail-cols-lg, 4), minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1536px) {
+  .metric-rail {
+    grid-template-columns: repeat(var(--rail-cols, 4), minmax(0, 1fr));
+  }
+}
+
+/* Taqsimot o'lchagichi — balans qismlarini bitta gorizontal shkalada
+   ko'rsatadi (naqd / tranzit). Ikkita raqamni yonma-yon yozishdan farqi:
+   NISBAT ko'rinadi. */
+.alloc-meter {
+  display: flex;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-sunken);
+}
+
+.alloc-meter > span {
+  display: block;
+  min-width: 2px;
 }
 
 /* Suzuvchi qatlamlar — modal, drawer, popover. Faqat shular ko'tariladi. */

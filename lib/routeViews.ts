@@ -26,6 +26,12 @@ export function pathToView(path: string): AppView | null {
   if (path.startsWith("/kassa/kirim")) return "kassa_income";
   if (path.startsWith("/kassa/chiqim")) return "kassa_expense";
   if (path.startsWith("/kassa/qarzdorlik")) return "kassa_debt";
+  // Sverka ham ALOHIDA view. Bu satr yo'q edi va `/kassa/sverka` umumiy
+  // `kassa` ga tushardi: bosh buxgalterda `kassa` bor, `kassa_sverka` yo'q —
+  // proxy uni KIRITAR, sahifaning o'z darvozasi esa `/cabinet` ga QAYTARAR,
+  // yon panel o'sha havolani qayta prefetch qilar edi. Faylning tepasidagi
+  // izoh aynan shu halqadan ogohlantiradi.
+  if (path.startsWith("/kassa/sverka")) return "kassa_sverka";
   if (path.startsWith("/kassa")) return "kassa";
   if (path.startsWith("/expenses")) return "expenses";
   if (path.startsWith("/payroll")) return "payroll";

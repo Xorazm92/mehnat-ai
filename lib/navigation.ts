@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Building2, Users, FileText, Wallet, Receipt, CreditCard, Calendar, TrendingUp, Bell, ScrollText, UserCircle, Banknote, HandCoins, CalendarClock, ShieldCheck,
   Grid3x3, Trophy, CheckSquare, Settings, User, AlarmClock, Calculator, History, Lock, type LucideIcon,
-  Scale,
+  Scale, Landmark, Link2, ListChecks,
   Gauge, Package,
 } from "lucide-react";
 import type { AppView } from "@/lib/platform/permissions";
@@ -169,6 +169,26 @@ export const NAV_SECTIONS: NavSection[] = [
   { href: "/kpi?tab=nazoratchi",     view: "kpi",       parentLabel: "KPI",        label: "Baholash",             icon: CheckSquare,  keywords: "nazoratchi baho tasdiqlash checklist", roles: KPI_REVIEW_ROLES },
   { href: "/kpi?tab=reyting",        view: "kpi",       parentLabel: "KPI",        label: "Reyting",              icon: Trophy,       keywords: "reyting leaderboard o'rin" },
   { href: "/kpi?tab=rules",          view: "kpi",       parentLabel: "KPI",        label: "KPI qoidalari",        icon: Settings,     keywords: "qoida koeffitsient sozlash rule", roles: KPI_CONFIG_ROLES },
+
+  // KASSA SUB-YORLIQLARI. Ular `?tab=` da yashaydi va SERVERDA o'qiladi
+  // (`readTabParam`), ya'ni havola qilinadigan holat — lekin global
+  // qidiruvda topilmasdi: "bog'lash kerak" yoki "undirish" deb qidirgan
+  // foydalanuvchi avval bo'limni, keyin yorliqni qo'lda topishi kerak edi.
+  { href: "/kassa/kirim?tab=reyestr",       view: "kassa_income",  parentLabel: "Kirim kassa",  label: "Barcha tushum",     icon: Banknote,   keywords: "reyestr tushum kirim ro'yxat bank plastik naqd" },
+  { href: "/kassa/kirim?tab=hisoblar",      view: "kassa_income",  parentLabel: "Kirim kassa",  label: "Firma hisoblari",   icon: Landmark,   keywords: "hisob schyot bank o'z firma vipiska" },
+  { href: "/kassa/kirim?tab=navbat",        view: "kassa_income",  parentLabel: "Kirim kassa",  label: "Bog'lash kerak",    icon: Link2,      keywords: "moslashtirilmagan bog'lanmagan navbat nomsiz tushum" },
+
+  { href: "/kassa/chiqim?tab=navbat",       view: "kassa_expense", parentLabel: "Chiqim kassa", label: "Yopish kerak",      icon: ListChecks, keywords: "navbat toifalash vipiska chiqim yopish" },
+  { href: "/kassa/chiqim?tab=kartalar",     view: "kassa_expense", parentLabel: "Chiqim kassa", label: "Xodim kartalari",   icon: CreditCard, keywords: "tranzit karta kanal qoldiq xodim" },
+  { href: "/kassa/chiqim?tab=xojalik",      view: "kassa_expense", parentLabel: "Chiqim kassa", label: "Xo'jalik xarajati", icon: Receipt,    keywords: "ovqat taksi non kundalik xo'jalik" },
+
+  { href: "/kassa/qarzdorlik?tab=undirish", view: "kassa_debt",    parentLabel: "Qarzdorlik",   label: "Undirish",          icon: HandCoins,  keywords: "undirish qarzdor gaplashish navbat qo'ng'iroq" },
+  { href: "/kassa/qarzdorlik?tab=holat",    view: "kassa_debt",    parentLabel: "Qarzdorlik",   label: "Hisob-kitob",       icon: Scale,      keywords: "hisob kitob varaqa 1c kesim qarz avans" },
+  { href: "/kassa/qarzdorlik?tab=tolovlar", view: "kassa_debt",    parentLabel: "Qarzdorlik",   label: "To'lovlar",         icon: Wallet,     keywords: "to'lov oylik firma payment" },
+  { href: "/kassa/qarzdorlik?tab=tekshiruv",view: "kassa_debt",    parentLabel: "Qarzdorlik",   label: "Tekshiruv",         icon: ShieldCheck,keywords: "sverka import nomuvofiqlik 1c solishtirish reja fakt" },
+
+  { href: "/kassa/sverka?tab=terminals",    view: "kassa_sverka",  parentLabel: "Sverka",       label: "Terminallar",       icon: CreditCard, keywords: "terminal doira ekvayring uzcard humo" },
+  { href: "/kassa/sverka?tab=devices",      view: "kassa_sverka",  parentLabel: "Sverka",       label: "Kassa apparatlari", icon: Receipt,    keywords: "apparat fiskal fm raqam kunlik hisobot" },
 
   { href: "/payroll?tab=drafts",     view: "payroll",   parentLabel: "Oylik",      label: "Oylik hisoblash",      icon: Calculator,   keywords: "qoralama hisoblash maosh draft" },
   { href: "/payroll?tab=history",    view: "payroll",   parentLabel: "Oylik",      label: "To'lovlar tarixi",     icon: History,      keywords: "tarix to'lov to'langan" },

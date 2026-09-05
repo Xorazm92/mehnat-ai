@@ -216,8 +216,10 @@ export const StatusCell = React.memo<StatusCellProps>(({ value, onUpdate, readOn
       {noteOpen && createPortal(
         // Dialog EMAS: izoh popover'i. Escape, tashqi bosish va fokusni
         // qaytarish yuqoridagi `useEffect` da allaqachon bor ("M9" izohi).
+        // `z-[120]` QO'LDA terilgan edi — shkalada bunday pog'ona yo'q.
+        // Bu popover, ya'ni `--z-popover` qavati.
         // eslint-disable-next-line no-restricted-syntax
-        <div className="fixed inset-0 z-[120]" onClick={() => setNoteOpen(false)}>
+        <div className="fixed inset-0" style={{ zIndex: "var(--z-popover, 200)" }} onClick={() => setNoteOpen(false)}>
           <div className="absolute inset-0" style={{ background: 'color-mix(in srgb, var(--surface-2) 45%, transparent)' }} />
           <div
             className="absolute p-4 rounded-xl shadow-2xl max-w-[420px]"

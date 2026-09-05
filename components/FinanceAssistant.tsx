@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { Sparkles, X, Send, Bot, User as UserIcon, Loader2 } from "lucide-react";
 import { askFinanceAssistant } from "@/server/assistant";
-import { useModalA11y } from "@/hooks/useModalA11y";
+import { DrawerLayer } from "@/components/ui";
 
 interface Msg { role: "user" | "assistant"; content: string }
 
@@ -24,7 +23,6 @@ export default function FinanceAssistant() {
   // Yon panel — fokus tuzog'i, Escape va yopilganda fokusni tugmaga qaytarish.
   // Ilgari panel ekranni to'sardi, lekin Tab bosilsa ortidagi ko'rinmaydigan
   // sahifaga o'tib ketardi.
-  const panelRef = useModalA11y<HTMLDivElement>({ open, onClose: () => setOpen(false) });
   const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: WELCOME }]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -72,23 +70,21 @@ export default function FinanceAssistant() {
         <span className="hidden lg:inline">AI yordamchi</span>
       </button>
 
-      {open && mounted && createPortal(
-        <>
-          {/* Qatlam qo'lda, xulq primitivda: panel `useModalA11y` bilan. */}
-          <div
-            // eslint-disable-next-line no-restricted-syntax
-            className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            ref={panelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Moliya yordamchisi"
-            tabIndex={-1}
-            className="fixed right-0 top-0 h-full w-full max-w-[420px] z-[200] flex flex-col shadow-2xl outline-none animate-in slide-in-from-right duration-300"
-            style={{ background: "var(--card-bg)", borderLeft: "1px solid var(--card-border)" }}
-          >
+      {/*
+        Qatlam `DrawerLayer` da. Ilgari fon `z-[110]` (= `--z-panel`), panel
+        esa `z-[200]` (= `--z-popover`) edi — ya'ni yordamchi paneli toast va
+        popoverlar bilan bir qavatda turardi va ular ustidan chizilardi.
+      */}
+      {mounted && (
+        <DrawerLayer
+          open={open}
+          onClose={() => setOpen(false)}
+          label="Moliya yordamchisi"
+          widthClass="max-w-[420px]"
+          className="shadow-2xl"
+          style={{ background: "var(--card-bg)", borderLeft: "1px solid var(--card-border)" }}
+        >
+          <>
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--card-border)", background: "linear-gradient(135deg, color-mix(in srgb, var(--accent-purple) 12%, transparent), color-mix(in srgb, var(--brand) 12%, transparent))" }}>
               <div className="flex items-center gap-3">
@@ -163,9 +159,8 @@ export default function FinanceAssistant() {
               </form>
               <p className="text-micro text-center mt-2" style={{ color: "var(--text-muted)" }}>Moliyachi AI xatolarga yo&apos;l qo&apos;yishi mumkin · beta</p>
             </div>
-          </div>
-        </>,
-        document.body
+          </>
+        </DrawerLayer>
       )}
     </>
   );

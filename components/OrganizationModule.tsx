@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useMemo, useCallback } from 'react';
-import { useModalA11y } from '@/hooks/useModalA11y';
+import { ModalLayer } from '@/components/ui';
 import { useViewMode } from '@/hooks/useViewMode';
 import { Company, Staff, TaxType, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
@@ -99,12 +99,6 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
     setEditingAssignments(undefined);
   }, [isSaving]);
 
-  const wizardRef = useModalA11y<HTMLDivElement>({
-    open: isAdding,
-    onClose: closeWizard,
-    // Saqlash ketayotganda Escape yopmasin — yarim yozilgan firma qolib ketadi.
-    dismissable: !isSaving,
-  });
   // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
   // Ilgari 'table' deb atalardi — endi qolgan ekranlar bilan bir xil nom.
   const [viewMode, setViewMode] = useViewMode('firmalar');
@@ -638,23 +632,22 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
 
       <div className="space-y-4">
         {isAdding && (
-          <div
-            // `Modal` bu yerda ishlatilmaydi: u o'z sarlavhasi va `px-5 py-4`
-            // ichki bo'shlig'ini qo'shadi, `OnboardingWizard` esa to'liq
-            // kenglikdagi o'z qadam-sarlavhasini chizadi. Shu sababdan tartib
-            // qo'lda qoladi, XULQ esa `useModalA11y` dan olinadi — bu hook
-            // aynan shu holat uchun yozilgan (uning izohiga qarang).
-            // eslint-disable-next-line no-restricted-syntax
-            className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 sm:p-8 bg-black/60 backdrop-blur-sm animate-fade-in"
-            onMouseDown={(e) => { if (e.target === e.currentTarget) closeWizard(); }}
+          // Qatlam `ModalLayer` da (`align="start"` — sehrgar uzun, yuqoridan
+          // boshlanadi). `OnboardingWizard` ning to'liq kenglikdagi qadam
+          // sarlavhasi saqlanadi; ilgari `z-[100]` va `bg-black/60` qo'lda
+          // terilgan edi, ya'ni z-shkalasi ham, rang tokenlari ham chetlab
+          // o'tilardi.
+          <ModalLayer
+            open
+            onClose={closeWizard}
+            label={editingId ? "Firmani tahrirlash" : "Yangi firma qo'shish"}
+            align="start"
+            // Saqlash ketayotganda Escape va fon bosilishi yopmasin — yarim
+            // yozilgan firma qolib ketadi.
+            dismissable={!isSaving}
           >
             <div
-              ref={wizardRef}
-              role="dialog"
-              aria-modal="true"
-              aria-label={editingId ? "Firmani tahrirlash" : "Yangi firma qo'shish"}
-              tabIndex={-1}
-              className="relative w-full max-w-4xl my-auto rounded-xl shadow-2xl overflow-hidden outline-none"
+              className="relative w-full max-w-4xl rounded-xl shadow-2xl overflow-hidden outline-none"
               style={{ background: 'var(--bg-primary)', border: '1px solid var(--card-border)' }}
             >
               <OnboardingWizard
@@ -668,12 +661,15 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                 onCancel={closeWizard}
               />
               {isSaving && (
-                <div className="absolute inset-0 z-[110] flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--bg-primary) 60%, transparent)' }}>
+                <div
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ zIndex: "var(--z-panel, 110)", background: 'color-mix(in srgb, var(--bg-primary) 60%, transparent)' }}
+                >
                   <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-blue)', borderTopColor: 'transparent' }}></div>
                 </div>
               )}
             </div>
-          </div>
+          </ModalLayer>
         )}
 
         {/* Kartochkalar — mobilda doim, desktopda faqat 'grid' rejimida */}

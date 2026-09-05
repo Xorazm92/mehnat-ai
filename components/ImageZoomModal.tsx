@@ -200,8 +200,13 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
       aria-label={`Rasm: ${title}`}
       tabIndex={-1}
       // Konteynerning o'zi dialog: `useModalA11y` ref'i, role va aria yuqorida.
+      //
+      // `z-[300]` QO'LDA terilgan edi — `--z-*` shkalasidan tashqarida.
+      // Rasm ko'rgichi ataylab HAMMASIDAN ustida (u modal ichidan ham
+      // ochiladi), shuning uchun shkalaga o'z pog'onasi qo'shildi.
       // eslint-disable-next-line no-restricted-syntax
-      className="fixed inset-0 z-[300] flex flex-col justify-between bg-black/90 backdrop-blur-md select-none outline-none animate-in fade-in duration-200"
+      className="fixed inset-0 flex flex-col justify-between bg-black/90 backdrop-blur-md select-none outline-none animate-in fade-in duration-200"
+      style={{ zIndex: "var(--z-lightbox, 300)" }}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >

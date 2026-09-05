@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { currentUserViews } from "@/server/rbac";
 import { getBankAccountsOverview, getUnmatchedIncome } from "@/server/bankImport";
+import { getAvailableBalance, getDayMovement, getMonthBreakdown } from "@/lib/balance";
 import { prisma } from "@/lib/prisma";
 import KirimKassaClient from "./KirimKassaClient";
 import { readTabParam } from "@/lib/tabs";
@@ -35,9 +36,19 @@ export default async function KirimKassaPage({
   // stat kartani to'ldirardi, kartalar esa reyestr kartalari bilan
   // takrorlanib, boshqa davrni ko'rsatgani uchun olib tashlandi. So'rov
   // qolganda har ochilishda 200 qator bekorga o'qilib klientga jo'natilardi.
-  const [accounts, unmatched] = await Promise.all([
+  //
+  // Sahifa tepasidagi plitkalar uchun QAT'IY davrli raqamlar: bugun, joriy
+  // oy va hozirgi qoldiq. Ular `lib/balance.ts` dagi mavjud agregatlardan
+  // keladi — yangi so'rov turi kiritilmadi.
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const [accounts, unmatched, dayMovement, monthBreakdown, balance] = await Promise.all([
     getBankAccountsOverview(),
     getUnmatchedIncome(),
+    getDayMovement(today),
+    getMonthBreakdown(now.getFullYear(), now.getMonth() + 1),
+    getAvailableBalance(),
   ]);
 
   // Mijozlar ro'yxati — moslashtirilmagan tranzaksiyani qo'lda bog'lash uchun.
@@ -58,6 +69,11 @@ export default async function KirimKassaPage({
         accounts={JSON.parse(JSON.stringify(accounts))}
         unmatched={JSON.parse(JSON.stringify(unmatched))}
         companies={JSON.parse(JSON.stringify(companies))}
+        kpi={{
+          todayIncome: dayMovement.income,
+          monthIncome: monthBreakdown.income,
+          balance: balance.balance,
+        }}
         initialTab={readTabParam<KirimTab>(sp.tab, KIRIM_TAB_IDS, "reyestr")}
       />
     </div>

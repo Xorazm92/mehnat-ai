@@ -8,24 +8,39 @@
 // ko'rinmasdi, sana filtri yo'q edi va eksport ham yo'q edi. Ya'ni "1–19
 // avgust holatini ko'rsat" degan savolga ekran javob bera olmasdi.
 //
-// Yuqoridagi bank kartochkalari va vipiska yuklash bloki O'ZGARMAYDI — bu
-// bo'lim ularning ostiga qo'shiladi.
+// JADVAL ENDI `DataTable` USTIDA. Ilgari bu yerda qo'lda yozilgan `<table>`
+// turardi: saralash yo'q, `<caption>` yo'q, `aria-sort` yo'q, telefonda esa
+// yetti ustun qisilib o'qilmasdi. Kassa modulida shunday jadvallardan 16 ta
+// bor edi va har biri boshqacha xulq ko'rsatardi — foydalanuvchi "nomuvofiq"
+// deb ataydigan narsa aynan shu. Ustun ta'riflari endi BITTA manba: jadval,
+// mobil kartochka va Excel eksporti hammasi shundan oziqlanadi.
 
 import React, { useEffect, useState, useTransition, useMemo } from "react";
-import { Pagination, pageSlice } from "@/components/ui";
-import { usePageSize } from "@/hooks/usePageSize";
-
-import { Search, Download, AlertTriangle } from "lucide-react";
+import { AlertTriangle, Inbox } from "lucide-react";
+import {
+  Badge,
+  DataTable,
+  Drawer,
+  IdentityCell,
+  Money,
+  StatStrip,
+  TableToolbar,
+  type BadgeTone,
+  type DataColumn,
+  type StatItem,
+} from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { CompanySelect } from "@/components/ui/CompanySelect";
 import { Select } from "@/components/ui/Select";
-import { Money } from "@/components/ui";
+import { DateField } from "@/components/ui/DateField";
+import { Field } from "@/components/ui/Field";
+import { usePageSize } from "@/hooks/usePageSize";
+import { useTableState } from "@/hooks/useTableState";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
-import { exportRowsToExcel, type ExportColumn } from "@/lib/exportTable";
+import { exportRowsToExcel } from "@/lib/exportTable";
 import { RANGE_LABELS, type RangePreset } from "@/lib/dateRange";
 import { getIncomeRegister } from "@/server/incomeRegister";
-import { DateField } from "@/components/ui/DateField";
 
 type Row = Awaited<ReturnType<typeof getIncomeRegister>>["rows"][number];
 type Totals = Awaited<ReturnType<typeof getIncomeRegister>>["totals"];
@@ -40,17 +55,6 @@ interface Props {
    */
   refreshKey?: number;
 }
-
-const card: React.CSSProperties = {
-  background: "var(--card-bg)",
-  border: "1px solid var(--card-border)",
-};
-
-const inputStyle: React.CSSProperties = {
-  background: "var(--input-bg)",
-  border: "1px solid var(--card-border)",
-  color: "var(--text)",
-};
 
 // Foydalanuvchi eng ko'p so'ragan ikkitasi oldinda.
 const PRESETS: RangePreset[] = [
@@ -70,36 +74,44 @@ const SOURCE_LABELS: Record<string, string> = {
   naqd: "Naqd",
 };
 
-const SOURCE_COLORS: Record<string, { bg: string; fg: string }> = {
-  bank: { bg: "var(--accent-blue-light)", fg: "var(--accent-blue)" },
-  plastik: { bg: "var(--accent-blue-light)", fg: "var(--accent-blue)" },
-  naqd: { bg: "var(--success-bg)", fg: "var(--success)" },
+/** Nishon toni — `Badge` ning umumiy `TONE_COLORS` xaritasidan. */
+const SOURCE_TONE: Record<string, BadgeTone> = {
+  bank: "info",
+  plastik: "brand",
+  naqd: "success",
 };
 
-const columns: ExportColumn<Row>[] = [
-  { key: "date", header: "Sana", exportValue: (r) => (r.receivedAt ? formatUzDate(r.receivedAt) : "") },
-  { key: "company", header: "Firma", exportValue: (r) => r.companyName ?? "Nomsiz tushum" },
-  { key: "inn", header: "STIR", exportValue: (r) => r.companyInn ?? "" },
-  { key: "contract", header: "Shartnoma", exportValue: (r) => r.contractNumber ?? "" },
-  { key: "source", header: "To'lov turi", exportValue: (r) => SOURCE_LABELS[r.source] ?? r.source },
-  { key: "channel", header: "Kassa", exportValue: (r) => r.channelLabel ?? "" },
-  { key: "amount", header: "Summa", exportValue: (r) => r.amount },
-  { key: "doc", header: "Hujjat", exportValue: (r) => r.docRef ?? "" },
-  { key: "note", header: "Izoh", exportValue: (r) => r.note ?? "" },
+const sourceLabel = (s: string) => SOURCE_LABELS[s] ?? s;
+
+/** Yon paneldagi maydonlar — jadval ustunlaridan mustaqil (u yerda yashiringanlari ham bor). */
+const detailFields = (r: Row): { label: string; value: React.ReactNode }[] => [
+  { label: "To'lov turi", value: <Badge tone={SOURCE_TONE[r.source] ?? "neutral"}>{sourceLabel(r.source)}</Badge> },
+  { label: "STIR", value: r.companyInn ?? "—" },
+  { label: "Shartnoma", value: r.contractNumber ?? "—" },
+  { label: "Kassa", value: r.channelLabel ?? "—" },
+  { label: "Hujjat", value: r.docRef ?? "—" },
+  { label: "Izoh", value: r.note ?? "—" },
 ];
 
 export default function IncomeRegister({ companies, refreshKey }: Props) {
+  // Serverga boradigan kesimlar — bular yig'indini o'zgartiradi.
   const [preset, setPreset] = useState<RangePreset>("month_to_date");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [source, setSource] = useState("");
-  const [search, setSearch] = useState("");
+
+  // Qidiruv, saralash, sahifa va zichlik — `useTableState` da. U holatni
+  // `history.replaceState` bilan URL'ga yozadi (server so'rovi yo'q), ya'ni
+  // "shu saralashda ochilgan reyestr" havolasi ishlaydi.
+  const table = useTableState({ ns: "kirim", defaultSortKey: "date", defaultSortDir: "desc" });
+  const [pageSize, setPageSize] = usePageSize("income");
 
   const [rows, setRows] = useState<Row[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [detail, setDetail] = useState<Row | null>(null);
 
   // Qidiruv MIJOZDA filtrlanadi (serverga har harf uchun so'rov yubormaslik
   // uchun); oraliq va kesimlar esa serverda — ular yig'indini o'zgartiradi.
@@ -128,7 +140,7 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
   }, [preset, customFrom, customTo, companyId, source, refreshKey]);
 
   const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = table.debouncedSearch.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter(
       (r) =>
@@ -138,19 +150,14 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
         (r.docRef ?? "").toLowerCase().includes(q) ||
         (r.note ?? "").toLowerCase().includes(q)
     );
-  }, [rows, search]);
+  }, [rows, table.debouncedSearch]);
 
-  /**
-   * SAHIFALASH. Reyestr davr bo'yicha yuzlab qator qaytaradi va hammasi
-   * bitta ro'yxatda chizilardi.
-   *
-   * DIQQAT: pastdagi yig'indilar (`shown`) SAHIFADAN emas, butun filtrdan
-   * hisoblanadi — "Jami tushum" sahifa almashganda o'zgarmasligi kerak.
-   */
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = usePageSize("income");
-  const paged = useMemo(() => pageSlice(visible, page, pageSize), [visible, page]);
-  useEffect(() => { setPage(1); }, [preset, customFrom, customTo, companyId, source, search]);
+  // Kesim o'zgarsa birinchi sahifaga. (Qidiruv va sahifa `useTableState` ning
+  // o'z ichida allaqachon bog'langan.)
+  const { setPage } = table;
+  useEffect(() => {
+    setPage(1);
+  }, [preset, customFrom, customTo, companyId, source, setPage]);
 
   // Ekrandagi jami HAR DOIM ko'rinib turgan qatorlardan hisoblanadi — qidiruv
   // qo'yilganda serverdan kelgan yig'indi noto'g'ri bo'lib qolardi.
@@ -166,128 +173,192 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
     return t;
   }, [visible]);
 
-  const stats = search.trim() ? shown : (totals ?? shown);
+  const stats = table.debouncedSearch.trim() ? shown : (totals ?? shown);
 
-  const kpis: { label: string; value: number; color?: string }[] = [
+  /**
+   * DAVR YIG'INDISI — sahifa tepasidagi KPI plitkalari EMAS, `StatStrip`.
+   *
+   * Ataylab boshqa komponent: tepadagi plitkalar qat'iy davrni ko'rsatadi
+   * (bugun / shu oy / qoldiq), bu qator esa TANLANGAN filtrga bo'ysunadi.
+   * Ilgari ikkalasi ham bir xil kartochka bo'lgani uchun raqamlar ziddek
+   * ko'rinardi va qaysi biri "haqiqiy" ekani ekrandan bilinmasdi.
+   */
+  const summary: StatItem[] = [
     // PUL YO'NALISHI — `--accent-green` (`--success` holat rangi emas).
-    { label: "Jami kirim", value: stats.total, color: "var(--accent-green)" },
-    { label: "Naqd", value: stats.naqd },
-    { label: "Plastik", value: stats.plastik },
-    { label: "Bank o'tkazmasi", value: stats.bank },
+    { label: "Jami kirim", value: stats.total, tone: "in", meta: `${stats.count} ta`, emphasis: true },
+    { label: "Naqd", value: stats.naqd, tone: "neutral" },
+    { label: "Plastik", value: stats.plastik, tone: "neutral" },
+    { label: "Bank o'tkazmasi", value: stats.bank, tone: "neutral" },
   ];
+
+  /**
+   * USTUNLAR — jadval, mobil kartochka va Excel uchun YAGONA manba.
+   * `DataColumn` tuzilishi `ExportColumn` bilan mos, shuning uchun eksport
+   * shu ro'yxatni to'g'ridan-to'g'ri oladi (ilgari ikkita alohida ro'yxat
+   * bor edi va ular bir-biridan ajralib ketishi mumkin edi).
+   */
+  const columns: DataColumn<Row>[] = useMemo(
+    () => [
+      {
+        key: "date",
+        header: "Sana",
+        cell: (r) => (r.receivedAt ? formatUzDate(r.receivedAt) : "—"),
+        sortValue: (r) => r.receivedAt ?? "",
+        exportValue: (r) => (r.receivedAt ? formatUzDate(r.receivedAt) : ""),
+        width: "110px",
+        mobile: "meta",
+      },
+      {
+        key: "company",
+        header: "Firma",
+        cell: (r) =>
+          r.companyName ? (
+            <IdentityCell name={r.companyName} secondary={r.companyInn ?? undefined} size="sm" />
+          ) : (
+            <span style={{ color: "var(--text-muted)" }}>Nomsiz tushum</span>
+          ),
+        sortValue: (r) => r.companyName ?? "",
+        exportValue: (r) => r.companyName ?? "Nomsiz tushum",
+        sticky: true,
+        mobile: "title",
+      },
+      {
+        key: "inn",
+        header: "STIR",
+        cell: (r) => r.companyInn ?? "—",
+        sortValue: (r) => r.companyInn ?? "",
+        // Firma katagi STIRni allaqachon ikkinchi qatorda ko'rsatadi —
+        // ustun faqat eksport uchun turadi.
+        hidden: true,
+      },
+      {
+        key: "contract",
+        header: "Shartnoma",
+        cell: (r) => r.contractNumber ?? "—",
+        sortValue: (r) => r.contractNumber ?? "",
+      },
+      {
+        key: "source",
+        header: "To'lov turi",
+        cell: (r) => <Badge tone={SOURCE_TONE[r.source] ?? "neutral"}>{sourceLabel(r.source)}</Badge>,
+        sortValue: (r) => sourceLabel(r.source),
+        mobile: "status",
+      },
+      {
+        key: "channel",
+        header: "Kassa",
+        cell: (r) => r.channelLabel ?? "—",
+        sortValue: (r) => r.channelLabel ?? "",
+      },
+      {
+        key: "doc",
+        header: "Hujjat",
+        cell: (r) => r.docRef ?? "—",
+        sortValue: (r) => r.docRef ?? "",
+      },
+      {
+        key: "note",
+        header: "Izoh",
+        cell: (r) => r.note ?? "—",
+        sortValue: (r) => r.note ?? "",
+        hidden: true,
+      },
+      {
+        key: "amount",
+        header: "Summa",
+        cell: (r) => <Money value={r.amount} tone="in" showSign bold />,
+        sortValue: (r) => r.amount,
+        exportValue: (r) => r.amount,
+        numeric: true,
+        align: "right",
+      },
+    ],
+    []
+  );
+
+  const filterCount = (companyId ? 1 : 0) + (source ? 1 : 0);
+  const clearFilters = () => {
+    setCompanyId("");
+    setSource("");
+    table.setSearch("");
+  };
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
-          Kirim reyestri ({stats.count})
-        </h2>
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={visible.length === 0}
-          onClick={() =>
-            exportRowsToExcel(visible, columns, `kirim-reyestri-${RANGE_LABELS[preset]}`, "Kirim")
-          }
-        >
-          <Download size={14} /> Excel
-        </Button>
-      </div>
-
-      {/* Davr tanlagich */}
+      {/* DAVR — reyestrning asosiy boshqaruvi, shuning uchun asboblar
+          panelining ichiga yashirilmaydi. */}
       <div className="flex items-center gap-2 flex-wrap">
-        {PRESETS.map((p) => (
-          <button
-            key={p}
-            onClick={() => setPreset(p)}
-            className="px-2.5 py-1.5 rounded-lg text-meta"
-            style={
-              preset === p
-                ? { background: "var(--accent-blue)", color: "#fff", border: "1px solid var(--accent-blue)" }
-                : { ...inputStyle }
-            }
-          >
-            {RANGE_LABELS[p]}
-          </button>
-        ))}
+        {PRESETS.map((p) => {
+          const active = preset === p;
+          return (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPreset(p)}
+              aria-pressed={active}
+              className="px-2.5 py-1.5 rounded-lg text-meta transition-colors"
+              style={
+                active
+                  ? { background: "var(--accent-blue)", color: "var(--on-brand)", border: "1px solid var(--accent-blue)" }
+                  : { background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }
+              }
+            >
+              {RANGE_LABELS[p]}
+            </button>
+          );
+        })}
       </div>
 
       {preset === "custom" && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <DateField
-            className="w-auto"
-            inputClassName="px-3 py-1.5 rounded-lg text-meta outline-none"
-            inputStyle={inputStyle}
-            value={customFrom}
-            onChange={setCustomFrom}
-          />
-          <span className="text-meta" style={{ color: "var(--text-muted)" }}>—</span>
-          <DateField
-            className="w-auto"
-            inputClassName="px-3 py-1.5 rounded-lg text-meta outline-none"
-            inputStyle={inputStyle}
-            value={customTo}
-            onChange={setCustomTo}
-          />
+        <div className="flex items-end gap-2 flex-wrap">
+          <Field label="Boshlanishi" className="w-auto">
+            <DateField className="w-auto" value={customFrom} onChange={setCustomFrom} />
+          </Field>
+          <Field label="Tugashi" className="w-auto">
+            <DateField className="w-auto" value={customTo} onChange={setCustomTo} />
+          </Field>
         </div>
       )}
 
-      {/* Kesimlar */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* Reyestr filtri — 269 firma. Qidiruvsiz ro'yxatda kerakli
-            firmani topish uchun aylantirish kerak edi. */}
-        <CompanySelect
-          className="min-w-[200px]"
-          size="sm"
-          fullWidth={false}
-          companies={companies}
-          value={companyId}
-          onChange={setCompanyId}
-          emptyLabel="Barcha firmalar"
-          placeholder="Barcha firmalar"
-        />
-        <Select
-          size="sm"
-          fullWidth={false}
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-          placeholder="Barcha to'lov turlari"
-          aria-label="To'lov turi bo'yicha filtr"
-        >
-          <option value="naqd">Naqd</option>
-          <option value="plastik">Plastik</option>
-          <option value="bank">Bank o&apos;tkazmasi</option>
-        </Select>
-        <div className="relative">
-          <Search
-            size={14}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2"
-            style={{ color: "var(--text-muted)" }}
-          />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Firma, STIR, shartnoma yoki hujjat"
-            className="pl-8 pr-3 py-1.5 rounded-lg text-meta outline-none"
-            style={inputStyle}
-          />
-        </div>
-      </div>
-
-      {/* Yig'indi */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {kpis.map((k) => (
-          <div key={k.label} className="p-3 rounded-xl" style={card}>
-            <div className="text-micro" style={{ color: "var(--text-secondary)" }}>{k.label}</div>
-            <div
-              className="text-h3 font-bold tabular-nums mt-0.5"
-              style={{ color: k.color ?? "var(--text)" }}
-            >
-              {formatNum(k.value)} <span className="text-meta">so&apos;m</span>
-            </div>
+      <TableToolbar
+        search={table.search}
+        onSearchChange={table.setSearch}
+        searchPlaceholder="Firma, STIR, shartnoma yoki hujjat"
+        density={table.density}
+        onDensityChange={table.setDensity}
+        onExport={() =>
+          exportRowsToExcel(visible, columns, `kirim-reyestri-${RANGE_LABELS[preset]}`, "Kirim")
+        }
+        filterCount={filterCount}
+        filter={
+          <div className="space-y-3 min-w-[240px]">
+            <Field label="Firma">
+              {/* 269 ta firma — nom ham, STIR ham qidiriladi. */}
+              <CompanySelect
+                companies={companies}
+                value={companyId}
+                onChange={setCompanyId}
+                emptyLabel="Barcha firmalar"
+                placeholder="Barcha firmalar"
+              />
+            </Field>
+            <Field label="To'lov turi">
+              <Select value={source} onChange={(e) => setSource(e.target.value)} placeholder="Barchasi">
+                <option value="naqd">Naqd</option>
+                <option value="plastik">Plastik</option>
+                <option value="bank">Bank o&apos;tkazmasi</option>
+              </Select>
+            </Field>
+            {filterCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Filtrni tozalash
+              </Button>
+            )}
           </div>
-        ))}
-      </div>
+        }
+      />
+
+      <StatStrip items={summary} />
 
       {stats.anonymousTotal > 0 && (
         <div
@@ -302,95 +373,104 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
         </div>
       )}
 
+      {/* Server `limit` ga kesgan qatorlar — aks holda ro'yxat "hammasi shu"
+          degan yolg'on taassurot qoldirardi. */}
+      {(totals?.truncated ?? 0) > 0 && (
+        <p className="text-micro" style={{ color: "var(--warning)" }}>
+          Davr bo&apos;yicha jami {totals!.count + totals!.truncated} ta qator;{" "}
+          {totals!.truncated} tasi ko&apos;rsatilmagan — davrni qisqartiring yoki firmani tanlab
+          toraytiring.
+        </p>
+      )}
+
       {error ? (
-        <p className="p-4 rounded-xl text-meta" style={{ ...card, color: "var(--danger)" }}>{error}</p>
-      ) : visible.length === 0 ? (
-        <p className="p-4 rounded-xl text-meta" style={{ ...card, color: "var(--text-muted)" }}>
-          {pending ? "Yuklanmoqda…" : "Tanlangan davrda kirim yo'q."}
+        <p
+          className="p-4 rounded-xl text-meta"
+          style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--danger)" }}
+        >
+          {error}
         </p>
       ) : (
-        <>
-        <div className="overflow-auto rounded-xl" style={{ ...card, opacity: pending ? 0.6 : 1, maxHeight: "calc(100vh - 300px)" }}>
-          <table className="table-sticky-head w-full text-meta">
-            <thead>
-              <tr style={{ background: "var(--input-bg)" }}>
-                <th className="text-left p-2">Sana</th>
-                <th className="text-left p-2">Firma</th>
-                <th className="text-left p-2">Shartnoma</th>
-                <th className="text-left p-2">To&apos;lov turi</th>
-                <th className="text-left p-2">Kassa</th>
-                <th className="text-left p-2">Hujjat</th>
-                <th className="text-right p-2">Summa</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paged.map((r) => {
-                const c = SOURCE_COLORS[r.source] ?? SOURCE_COLORS.bank;
-                return (
-                  <tr key={r.id} className="transition-colors hover:bg-[var(--input-bg)]" style={{ borderTop: "1px solid var(--card-border)" }}>
-                    <td className="p-2 whitespace-nowrap">
-                      {r.receivedAt ? formatUzDate(r.receivedAt) : "—"}
-                    </td>
-                    <td className="p-2 max-w-[280px] truncate">
-                      {r.companyName ?? (
-                        <span style={{ color: "var(--text-muted)" }}>Nomsiz tushum</span>
-                      )}
-                      {r.companyInn && (
-                        <span className="text-micro ml-1" style={{ color: "var(--text-muted)" }}>
-                          {r.companyInn}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-2 whitespace-nowrap">{r.contractNumber ?? "—"}</td>
-                    <td className="p-2">
-                      <span
-                        className="text-micro font-semibold px-1.5 py-0.5 rounded whitespace-nowrap"
-                        style={{ background: c.bg, color: c.fg }}
-                      >
-                        {SOURCE_LABELS[r.source] ?? r.source}
-                      </span>
-                    </td>
-                    <td className="p-2 max-w-[200px] truncate">{r.channelLabel ?? "—"}</td>
-                    <td className="p-2">{r.docRef ?? "—"}</td>
-                    <td className="p-2 text-right tabular-nums font-semibold whitespace-nowrap">
-                      <Money value={r.amount} tone="in" showSign bold />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr style={{ background: "var(--input-bg)", borderTop: "2px solid var(--card-border)" }}>
-                <td className="p-2 font-semibold" colSpan={6}>Jami</td>
-                <td className="p-2 text-right tabular-nums font-bold">
-                  <Money value={shown.total} tone="in" bold />
-                </td>
-              </tr>
-              {/* Server `limit` ga kesgan qatorlar — aks holda ro'yxat
-                  "hammasi shu" degan yolg'on taassurot qoldirardi. */}
-              {(totals?.truncated ?? 0) > 0 && (
-                <tr style={{ background: "var(--input-bg)" }}>
-                  <td className="p-2 text-micro" colSpan={7} style={{ color: "var(--warning)" }}>
-                    Davr bo&apos;yicha jami {totals!.count + totals!.truncated} ta qator;{" "}
-                    {totals!.truncated} tasi ko&apos;rsatilmagan — davrni qisqartiring yoki
-                    firman tanlab toraytiring.
-                  </td>
-                </tr>
-              )}
-            </tfoot>
-          </table>
-        </div>
-
-        <Pagination
-          page={page}
+        <DataTable
+          rows={visible}
+          columns={columns}
+          rowKey={(r) => r.id}
+          caption="Kirim reyestri — davr bo'yicha barcha tushumlar"
+          sortKey={table.sortKey}
+          sortDir={table.sortDir}
+          onToggleSort={table.toggleSort}
+          density={table.density}
+          page={table.page}
           pageSize={pageSize}
-          total={visible.length}
-          onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-          unit="qator"
+          onPageChange={table.setPage}
+          onPageSizeChange={setPageSize}
+          loading={pending && rows.length === 0}
+          onRowClick={setDetail}
+          rowLabel={(r) => `${r.companyName ?? "Nomsiz tushum"} — ${formatNum(r.amount)} so'm`}
+          emptyIcon={<Inbox size={28} />}
+          emptyTitle="Tanlangan davrda kirim yo'q"
+          emptyDescription={
+            filterCount > 0 || table.debouncedSearch.trim()
+              ? "Filtr yoki qidiruv natijani nolga tushirdi."
+              : "Davrni kengaytiring yoki vipiska yuklang."
+          }
+          emptyAction={
+            filterCount > 0 || table.debouncedSearch.trim() ? (
+              <Button variant="secondary" size="sm" onClick={clearFilters}>
+                Filtrni tozalash
+              </Button>
+            ) : undefined
+          }
+          className={pending ? "opacity-60" : undefined}
         />
-        </>
       )}
+
+      {/* QATOR DETALI — yon panel, markazlashgan modal emas: kassir ro'yxatni
+          yopmasdan qator ketidan qator ko'rib chiqadi. */}
+      <Drawer
+        open={detail !== null}
+        onClose={() => setDetail(null)}
+        title={detail?.companyName ?? "Nomsiz tushum"}
+        description={detail?.receivedAt ? formatUzDate(detail.receivedAt) : undefined}
+      >
+        {detail && (
+          <div className="space-y-4">
+            <div>
+              <div className="text-meta font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+                Summa
+              </div>
+              <div className="text-2xl font-mono font-semibold tabular-nums mt-1">
+                <Money value={detail.amount} tone="in" showSign unit bold />
+              </div>
+            </div>
+
+            <dl className="grid grid-cols-1 gap-3">
+              {detailFields(detail).map(({ label, value }) => (
+                <div key={label} className="flex items-start justify-between gap-4">
+                  <dt className="text-meta" style={{ color: "var(--text-muted)" }}>
+                    {label}
+                  </dt>
+                  <dd className="text-body text-right min-w-0" style={{ color: "var(--text-primary)" }}>
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
+            {detail.anonymous && (
+              <div
+                className="p-3 rounded-lg flex items-start gap-2"
+                style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}
+              >
+                <AlertTriangle size={15} style={{ color: "var(--warning)" }} className="mt-0.5 shrink-0" />
+                <p className="text-meta" style={{ color: "var(--text-secondary)" }}>
+                  Bu tushum firmaga bog&apos;lanmagan — hech kimning qarzini kamaytirmayapti.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }

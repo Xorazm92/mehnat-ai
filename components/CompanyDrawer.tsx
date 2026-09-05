@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import CompanyServicesPanel from '@/components/CompanyServicesPanel';
 import CompanyDocumentsPanel from '@/components/CompanyDocumentsPanel';
 import { ALL_SERVICE_KEYS, SERVICE_LABELS, serviceGroups, serviceFullLabel } from '@/lib/reportColumns';
-import { createPortal } from 'react-dom';
 import { Company, OperationEntry, Payment, Language, ClientCredential, ClientHistory, Staff } from '@/types';
 import {
   X,
@@ -38,7 +37,7 @@ import { formatUzDate, formatUzDateTime, formatNum } from '@/lib/platform/format
 import { kpiCategoryLabel } from '@/lib/kpiLabels';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { taxRegimeLabel } from '@/lib/taxRegimes';
-import { useModalA11y } from '@/hooks/useModalA11y';
+import { DrawerLayer } from '@/components/ui';
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -108,7 +107,6 @@ const SERVICE_TITLES: Record<string, string> = {
 const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, onSave }) => {
   // Dialog semantikasi + fokus tuzog'i + Escape (avval hech biri yo'q edi:
   // klaviatura bilan bu paneldan chiqib bo'lmasdi).
-  const panelRef = useModalA11y<HTMLDivElement>({ open: Boolean(company), onClose });
   const confirm = useConfirm();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -287,24 +285,20 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
     { id: 'tarix', label: 'Tarix', icon: History },
   ];
 
-  return createPortal(
-    <>
-      {/* Qatlam qo'lda, lekin XULQ primitivda: panel `useModalA11y` bilan
-          o'ralgan (fokus tuzog'i + Escape + fokusni qaytarish). */}
-      <div
-        // eslint-disable-next-line no-restricted-syntax
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity"
-        onClick={onClose}
-      />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${company.name} — firma kartasi`}
-        tabIndex={-1}
-        className="fixed right-0 top-0 h-full w-full max-w-[850px] z-[110] overflow-y-auto overflow-x-hidden animate-in slide-in-from-right duration-300 flex flex-col shadow-2xl outline-none"
-        style={{ background: 'var(--input-bg)' }}
-      >
+  // Qatlam (fon, `--z-*` shkalasi, fokus tuzog'i, Escape) `DrawerLayer` da;
+  // panelning O'Z tartibi — rangli chiziq, avatar, yettita ichki tab — shu
+  // yerda qoladi. Ilgari `z-[100]`/`z-[110]` va `bg-black/60` qo'lda
+  // terilardi, ya'ni na z-shkalasi, na rang tokenlari qo'llanardi.
+  return (
+    <DrawerLayer
+      open
+      onClose={onClose}
+      label={`${company.name} — firma kartasi`}
+      widthClass="max-w-[850px]"
+      className="overflow-y-auto overflow-x-hidden shadow-2xl"
+      style={{ background: 'var(--input-bg)' }}
+    >
+      <>
         <div className="dashboard-card shrink-0 z-20 shadow-md !rounded-none !border-0 !border-b border-[var(--border)] relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
           <div className="p-4 sm:p-6 flex justify-between items-start gap-3">
@@ -1265,9 +1259,8 @@ const CompanyDrawer: React.FC<DrawerProps> = ({ company, staff = [], onClose, on
             </div>
           )}
         </TabPanel>
-      </div>
-    </>,
-    document.body
+      </>
+    </DrawerLayer>
   );
 };
 

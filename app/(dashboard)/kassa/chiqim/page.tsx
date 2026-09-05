@@ -8,6 +8,8 @@ import { getExpenses } from "@/server/kassa";
 import { getAvailableBalance } from "@/lib/balance";
 import { KASSA_CATEGORIES_KEY, resolveKassaCategories } from "@/lib/kassaCategories";
 import ChiqimKassaClient from "./ChiqimKassaClient";
+import { readTabParam } from "@/lib/tabs";
+import { CHIQIM_TAB_IDS, type ChiqimTab } from "@/lib/chiqimTabs";
 
 export const metadata = { title: "Chiqim kassa" };
 
@@ -79,11 +81,13 @@ export default async function ChiqimKassaPage({
         expenseCategories={expenseCategories}
         userRole={(session.user.role as string) || ""}
         canManageChannels={canManageChannels}
-        initialTab={
-          tab === "navbat" || tab === "kartalar" || tab === "xojalik" || tab === "xarajat"
-            ? tab
-            : undefined
-        }
+        initialTab={readTabParam<ChiqimTab>(
+          tab,
+          CHIQIM_TAB_IDS,
+          // `kassa_expense` yo'q foydalanuvchi uchun "Xarajat" YAGONA tab —
+          // standart yorliq shu, aks holda u bo'sh bo'limga tushardi.
+          canManageChannels ? "navbat" : "xarajat"
+        )}
       />
     </div>
   );

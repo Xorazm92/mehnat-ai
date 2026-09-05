@@ -25,6 +25,7 @@
     "verify:clean-start": "tsx scripts/verify-clean-start.ts",
     "verify:kassa": "tsx scripts/verify-kassa.ts",
     "smoke:telegram": "tsx scripts/smoke-telegram-app.ts",
+    "smoke:kassa": "tsx scripts/smoke-kassa.ts",
     "backup": "bash scripts/backup.sh",
     "preflight": "tsx scripts/preflight.ts",
     "deploy": "bash scripts/deploy.sh",

@@ -11,10 +11,10 @@ import { PAYROLL_BASIS_DEFAULT, PAYROLL_BASIS_LABELS, type PayrollBasis } from '
 import type { CompanyAssignment } from '@/lib/kpiLogic';
 import { toast } from 'sonner';
 import { formatNum } from "@/lib/platform/format";
-import { TableToolbar, type ViewMode } from "@/components/ui/TableToolbar";
+import { TableToolbar } from "@/components/ui/TableToolbar";
 import { exportObjectsToExcel } from "@/lib/exportTable";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui";
+import { Badge, DataTable, IdentityCell, Money, type DataColumn } from "@/components/ui";
 import { friendlyError } from "@/lib/actionError";
 import { ROLE_LABELS, ASSIGNMENT_ROLE_LABELS, type UserRole, type AssignmentRole } from "@/lib/platform/permissions";
 import { MonthPicker } from "./ui/MonthPicker";
@@ -27,6 +27,41 @@ import { ModalLayer } from "./ui/ModalLayer";
 // qaytadi, ya'ni hech narsa yo'qolmaydi.
 const userRoleLabel = (r: string) => ROLE_LABELS[r as UserRole] ?? r;
 const assignmentRoleLabel = (r: string) => ASSIGNMENT_ROLE_LABELS[r as AssignmentRole] ?? ROLE_LABELS[r as UserRole] ?? r;
+
+/** Tafsilot oynasidagi "asosiy oylik" jadvali. */
+const BASE_DETAIL_COLUMNS: DataColumn<CompanyBreakdown>[] = [
+    {
+        key: 'company',
+        header: 'Korxona',
+        cell: (b) => <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{b.companyName}</span>,
+        sortValue: (b) => b.companyName,
+        sticky: true,
+        mobile: 'title',
+    },
+    {
+        key: 'role',
+        header: 'Rol',
+        cell: (b) => <Badge tone="neutral">{assignmentRoleLabel(b.role)}</Badge>,
+        sortValue: (b) => assignmentRoleLabel(b.role),
+        mobile: 'status',
+    },
+    {
+        key: 'contract',
+        header: 'Shartnoma',
+        cell: (b) => <Money value={b.contractAmount} tone="muted" />,
+        sortValue: (b) => b.contractAmount,
+        numeric: true,
+        align: 'right',
+    },
+    {
+        key: 'base',
+        header: 'Summa',
+        cell: (b) => <Money value={b.baseAmount} tone="neutral" bold />,
+        sortValue: (b) => b.baseAmount,
+        numeric: true,
+        align: 'right',
+    },
+];
 
 interface Props {
     staff: Staff[];
@@ -225,6 +260,116 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
         return [{ s, draft, isApproved }];
     });
 
+    /**
+     * USTUNLAR — jadval va telefondagi kartochka bitta manbadan.
+     *
+     * Uchta pul katagi BOSILADI: asosiy/bonus/jarima tafsiloti oynada
+     * ochiladi. Ilgari bu `cursor-pointer hover:underline` bilan qilingan
+     * `<td>` edi — sichqonchasiz foydalanuvchi uni umuman ocha olmasdi.
+     * Endi ular haqiqiy `<button>`.
+     */
+    const draftColumns: DataColumn<{ s: Staff; draft: EmployeeSalarySummary; isApproved: boolean }>[] = [
+        {
+            key: 'employee',
+            header: 'Xodim',
+            cell: ({ s }) => <IdentityCell name={s.name} secondary={userRoleLabel(s.role)} size="sm" />,
+            sortValue: ({ s }) => s.name,
+            exportValue: ({ s }) => s.name,
+            sticky: true,
+            mobile: 'title',
+        },
+        {
+            key: 'base',
+            header: 'Asosiy',
+            cell: ({ s, draft }) => (
+                <button
+                    type="button"
+                    className="tabular-nums font-bold hover:underline"
+                    style={{ color: 'var(--text-primary)' }}
+                    onClick={() => setDetailModal({ type: 'base', employeeId: s.id, employeeName: s.name })}
+                >
+                    {formatNum(draft.baseSalary)}
+                </button>
+            ),
+            sortValue: ({ draft }) => draft.baseSalary,
+            exportValue: ({ draft }) => Math.round(draft.baseSalary),
+            numeric: true,
+            align: 'right',
+        },
+        {
+            key: 'bonus',
+            header: 'Bonus',
+            cell: ({ s, draft }) => (
+                <button
+                    type="button"
+                    className="tabular-nums font-bold hover:underline"
+                    style={{ color: 'var(--success)' }}
+                    onClick={() => setDetailModal({ type: 'bonus', employeeId: s.id, employeeName: s.name })}
+                >
+                    +{formatNum(draft.kpiBonus)}
+                </button>
+            ),
+            sortValue: ({ draft }) => draft.kpiBonus,
+            exportValue: ({ draft }) => Math.round(draft.kpiBonus),
+            numeric: true,
+            align: 'right',
+        },
+        {
+            key: 'penalty',
+            header: 'Jarima',
+            cell: ({ s, draft }) => (
+                <button
+                    type="button"
+                    className="tabular-nums font-bold hover:underline"
+                    style={{ color: 'var(--danger)' }}
+                    onClick={() => setDetailModal({ type: 'penalty', employeeId: s.id, employeeName: s.name })}
+                >
+                    {formatNum(draft.kpiPenalty)}
+                </button>
+            ),
+            sortValue: ({ draft }) => draft.kpiPenalty,
+            exportValue: ({ draft }) => Math.round(draft.kpiPenalty),
+            numeric: true,
+            align: 'right',
+        },
+        {
+            key: 'total',
+            header: "Jami to'lov",
+            cell: ({ draft }) => <Money value={draft.totalSalary} tone="neutral" bold />,
+            sortValue: ({ draft }) => draft.totalSalary,
+            exportValue: ({ draft }) => Math.round(draft.totalSalary),
+            numeric: true,
+            align: 'right',
+        },
+        {
+            key: 'status',
+            header: 'Holat',
+            cell: ({ isApproved }) =>
+                isApproved ? (
+                    <Badge tone="success" icon={<CheckCircle2 size={11} />}>Tasdiqlandi</Badge>
+                ) : (
+                    <Badge tone="warning">Qoralama</Badge>
+                ),
+            sortValue: ({ isApproved }) => (isApproved ? 1 : 0),
+            exportValue: ({ isApproved }) => (isApproved ? 'Tasdiqlandi' : 'Qoralama'),
+            mobile: 'status',
+        },
+        {
+            key: 'actions',
+            header: 'Amal',
+            align: 'right',
+            cell: ({ s, isApproved }) =>
+                isApproved ? (
+                    <span className="text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>Saqlangan</span>
+                ) : (
+                    <Button variant="primary" size="sm" onClick={() => handleApprove(s.id)} disabled={savingId === s.id}>
+                        {savingId === s.id ? '...' : (<><DollarSign size={11} />Tasdiqlash</>)}
+                    </Button>
+                ),
+            mobile: 'actions',
+        },
+    ];
+
     const handleExport = () => {
         void exportObjectsToExcel(
             rows.map(({ s, draft, isApproved }) => ({
@@ -408,80 +553,16 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                 })}
             </div>
             ) : (
-            <div className="rounded-xl overflow-x-auto" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-                <table className="w-full text-left text-xs border-collapse min-w-[720px]">
-                    <thead>
-                        <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--card-border)" }}>
-                            {["Xodim", "Asosiy", "Bonus", "Jarima", "Jami To'lov", "Holat", ""].map((h, i) => (
-                                <th key={i} className={`px-4 py-3 text-micro font-semibold uppercase tracking-widest ${i === 0 || i === 5 || i === 6 ? "text-left" : "text-right"}`}
-                                    style={{ color: "var(--text-muted)" }}>{h}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows.map(({ s, draft, isApproved }) => (
-                            <tr key={s.id} className="transition-colors"
-                                style={{ borderBottom: "1px solid var(--card-border)", background: isApproved ? "var(--success-bg)" : "transparent" }}>
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                                            style={{ background: `hsl(${(s.name.charCodeAt(0) * 37) % 360}, 60%, 50%)` }}>
-                                            {s.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-body leading-none" style={{ color: "var(--text-primary)" }}>{s.name}</p>
-                                            <p className="text-micro mt-0.5 font-medium" style={{ color: "var(--text-muted)" }}>{userRoleLabel(s.role)}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3 text-right font-bold tabular-nums cursor-pointer hover:underline"
-                                    style={{ color: "var(--text-primary)" }}
-                                    onClick={() => setDetailModal({ type: 'base', employeeId: s.id, employeeName: s.name })}>
-                                    {formatNum(draft.baseSalary)}
-                                </td>
-                                <td className="px-4 py-3 text-right font-bold tabular-nums cursor-pointer hover:underline"
-                                    style={{ color: "var(--success)" }}
-                                    onClick={() => setDetailModal({ type: 'bonus', employeeId: s.id, employeeName: s.name })}>
-                                    +{formatNum(draft.kpiBonus)}
-                                </td>
-                                <td className="px-4 py-3 text-right font-bold tabular-nums cursor-pointer hover:underline"
-                                    style={{ color: "var(--danger)" }}
-                                    onClick={() => setDetailModal({ type: 'penalty', employeeId: s.id, employeeName: s.name })}>
-                                    {formatNum(draft.kpiPenalty)}
-                                </td>
-                                <td className="px-4 py-3 text-right font-semibold tabular-nums text-sm" style={{ color: "var(--text-primary)" }}>
-                                    {formatNum(draft.totalSalary)}
-                                </td>
-                                <td className="px-4 py-3">
-                                    {isApproved ? (
-                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro font-bold"
-                                            style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
-                                            <CheckCircle2 size={11} /> Tasdiqlandi
-                                        </span>
-                                    ) : (
-                                        <span className="px-2.5 py-1 rounded-lg text-micro font-bold"
-                                            style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>
-                                            Qoralama
-                                        </span>
-                                    )}
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                    {isApproved ? (
-                                        <span className="text-micro font-bold uppercase" style={{ color: "var(--text-muted)" }}>Saqlangan</span>
-                                    ) : (
-                                        <Button variant="primary" size="sm" onClick={() => handleApprove(s.id)} disabled={savingId === s.id}>
-                                            {savingId === s.id ? '...' : (<><DollarSign size={11} />Tasdiqlash</>)}
-                                        </Button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                {rows.length === 0 && !loading && (
-                    <div className="py-12 text-center text-xs font-bold" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot yo&apos;q</div>
-                )}
-            </div>
+            <DataTable
+                rows={rows}
+                columns={draftColumns}
+                rowKey={({ s }) => s.id}
+                caption={`${month} oyi uchun oylik qoralamalari`}
+                loading={loading && rows.length === 0}
+                emptyIcon={<DollarSign size={28} />}
+                emptyTitle="Ma'lumot yo'q"
+                emptyDescription="Tanlangan oyda biriktiruvi bor xodim topilmadi."
+            />
             )}
 
             {loading && (
@@ -542,33 +623,15 @@ const PayrollDrafts: React.FC<Props> = ({ staff, companies, operations, lang, us
                             {/* Modal Body */}
                             <div className="flex-1 overflow-y-auto p-5" style={{ background: "var(--card-bg)" }}>
                                 {detailModal.type === 'base' && (
-                                    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--card-border)" }}>
-                                        <table className="w-full text-left text-meta border-collapse">
-                                            <thead>
-                                                <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--table-border)" }}>
-                                                    <th className="px-3 py-2 text-micro font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Korxona</th>
-                                                    <th className="px-3 py-2 text-micro font-bold uppercase tracking-wider text-center" style={{ color: "var(--text-muted)", borderLeft: "1px solid var(--table-border)" }}>Rol</th>
-                                                    <th className="px-3 py-2 text-micro font-bold uppercase tracking-wider text-right" style={{ color: "var(--text-muted)", borderLeft: "1px solid var(--table-border)" }}>Shartnoma</th>
-                                                    <th className="px-3 py-2 text-micro font-bold uppercase tracking-wider text-right" style={{ color: "var(--text-muted)", borderLeft: "1px solid var(--table-border)" }}>Summa</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {modalData.filter(b => b.baseAmount > 0).map((b, i) => (
-                                                    <tr key={i} style={{ borderBottom: "1px solid var(--table-border)" }} className="row-hover">
-                                                        <td className="px-3 py-2 font-bold text-meta uppercase" style={{ color: "var(--text-primary)" }}>{b.companyName}</td>
-                                                        <td className="px-3 py-2 text-center" style={{ borderLeft: "1px solid var(--table-border)" }}>
-                                                            <span className="text-micro font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{assignmentRoleLabel(b.role)}</span>
-                                                        </td>
-                                                        <td className="px-3 py-2 text-right text-meta tabular-nums" style={{ color: "var(--text-secondary)", borderLeft: "1px solid var(--table-border)" }}>{formatNum(b.contractAmount)}</td>
-                                                        <td className="px-3 py-2 text-right font-bold tabular-nums" style={{ color: "var(--text-primary)", borderLeft: "1px solid var(--table-border)" }}>{formatNum(b.baseAmount)}</td>
-                                                    </tr>
-                                                ))}
-                                                {modalData.filter(b => b.baseAmount > 0).length === 0 && (
-                                                    <tr><td colSpan={4} className="empty-state py-8" style={{ color: "var(--text-muted)" }}>Ma&apos;lumot topilmadi</td></tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <DataTable
+                                        rows={modalData.filter(b => b.baseAmount > 0)}
+                                        columns={BASE_DETAIL_COLUMNS}
+                                        rowKey={(b) => `${b.companyName}-${b.role}`}
+                                        caption="Asosiy oylikning korxonalar bo'yicha taqsimoti"
+                                        maxBodyHeight={null}
+                                        density="compact"
+                                        emptyTitle="Ma'lumot topilmadi"
+                                    />
                                 )}
 
                                 {detailModal.type === 'bonus' && (

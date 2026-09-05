@@ -5,6 +5,10 @@ import { REPORTS_TAB_IDS } from "./reportsTabs";
 import { PAYROLL_TAB_IDS } from "./payrollTabs";
 import { CABINET_TAB_IDS } from "./cabinetTabs";
 import { WORK_TAB_IDS } from "./workTabs";
+import { KIRIM_TAB_IDS } from "./kirimTabs";
+import { CHIQIM_TAB_IDS } from "./chiqimTabs";
+import { QARZDORLIK_TAB_IDS } from "./qarzdorlikTabs";
+import { SVERKA_TAB_IDS } from "./sverkaTabs";
 
 /**
  * Navigatsiya endi YAGONA manba: yon panel, mobil panel va qidiruv shu
@@ -20,6 +24,10 @@ const TAB_REGISTRY: Record<string, readonly string[]> = {
   "/payroll": PAYROLL_TAB_IDS,
   "/cabinet": CABINET_TAB_IDS,
   "/deadlines": WORK_TAB_IDS,
+  "/kassa/kirim": KIRIM_TAB_IDS,
+  "/kassa/chiqim": CHIQIM_TAB_IDS,
+  "/kassa/qarzdorlik": QARZDORLIK_TAB_IDS,
+  "/kassa/sverka": SVERKA_TAB_IDS,
 };
 
 describe("NAV_SECTIONS", () => {

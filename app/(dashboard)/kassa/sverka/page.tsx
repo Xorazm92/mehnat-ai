@@ -14,15 +14,17 @@ import { redirect } from "next/navigation";
 import { currentUserViews } from "@/server/rbac";
 import { getSverkaData } from "@/server/posSverka";
 import SverkaClient from "./SverkaClient";
+import { readTabParam } from "@/lib/tabs";
+import { SVERKA_TAB_IDS, type SverkaTab } from "@/lib/sverkaTabs";
 
 export const metadata = { title: "Kassa–bank sverka" };
 
 export default async function SverkaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dan?: string; gacha?: string }>;
+  searchParams: Promise<{ dan?: string; gacha?: string; tab?: string }>;
 }) {
-  const { dan, gacha } = await searchParams;
+  const { dan, gacha, tab } = await searchParams;
   const session = await auth();
   if (!session) redirect("/login?expired=1");
 
@@ -34,7 +36,12 @@ export default async function SverkaPage({
 
   return (
     <div className="space-y-4">
-      <SverkaClient data={data} />
+      <SverkaClient
+        data={data}
+        // Yorliq SERVERDA o'qiladi: mijozda `window.location` dan olinsa
+        // hidratsiya mos kelmaydi (`lib/tabs.ts` izohiga qarang).
+        initialTab={readTabParam<SverkaTab>(tab, SVERKA_TAB_IDS, "sverka")}
+      />
     </div>
   );
 }

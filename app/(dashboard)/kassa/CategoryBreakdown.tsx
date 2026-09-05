@@ -68,37 +68,42 @@ function Side({
           Bu oyda yozuv yo&apos;q.
         </p>
       ) : (
-        <table className="w-full text-micro">
-          <tbody>
-            {rows.map((r) => {
-              // Ulush chizig'i — eng katta moddaga nisbatan, jamiga emas:
-              // jamiga nisbatan olinsa 20 ta modda bo'lganda hammasi
-              // ko'rinmas ingichka chiziqqa aylanardi.
-              const share = total > 0 ? (r.amount / total) * 100 : 0;
-              return (
-                <tr key={r.category} style={{ borderBottom: "1px solid var(--card-border)" }}>
-                  <td className="px-3 py-1.5" style={{ color: "var(--text-secondary)" }}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span>{r.category}</span>
-                      <span className="text-micro tabular-nums" style={{ color: "var(--text-muted)" }}>
-                        {r.count} ta
-                      </span>
-                    </div>
-                    <div
-                      className="mt-1 h-1 rounded-full overflow-hidden"
-                      style={{ background: "var(--input-bg)" }}
-                    >
-                      <div className="h-full rounded-full" style={{ width: `${share}%`, background: tone }} />
-                    </div>
-                  </td>
-                  <td className="px-3 py-1.5 text-right whitespace-nowrap align-top">
+        // JADVAL EMAS, RO'YXAT. Ilgari bu `<table>` edi, lekin unda `<thead>`
+        // yo'q va ustunlar ham yo'q — bu ulush chizig'i bilan chizilgan
+        // ro'yxat. Ekran o'quvchi uni "2 ustunli jadval" deb e'lon qilardi
+        // va har qator uchun bo'sh ustun nomlarini o'qishga urinardi.
+        <ul className="text-micro">
+          {rows.map((r) => {
+            // Ulush chizig'i — eng katta moddaga nisbatan, jamiga emas:
+            // jamiga nisbatan olinsa 20 ta modda bo'lganda hammasi
+            // ko'rinmas ingichka chiziqqa aylanardi.
+            const share = total > 0 ? (r.amount / total) * 100 : 0;
+            return (
+              <li
+                key={r.category}
+                className="px-3 py-1.5"
+                style={{ borderBottom: "1px solid var(--card-border)" }}
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span style={{ color: "var(--text-secondary)" }}>{r.category}</span>
+                  <span className="flex items-baseline gap-2 whitespace-nowrap">
+                    <span className="text-micro tabular-nums" style={{ color: "var(--text-muted)" }}>
+                      {r.count} ta
+                    </span>
                     <Money value={r.amount} tone={tone === "var(--accent-green)" ? "in" : "out"} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                  </span>
+                </div>
+                <div
+                  className="mt-1 h-1 rounded-full overflow-hidden"
+                  style={{ background: "var(--input-bg)" }}
+                  role="presentation"
+                >
+                  <div className="h-full rounded-full" style={{ width: `${share}%`, background: tone }} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

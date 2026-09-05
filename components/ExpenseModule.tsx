@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { useModalA11y } from '@/hooks/useModalA11y';
 import { useViewMode } from '@/hooks/useViewMode';
 import { Expense, Language } from '@/types';
 import { translations } from '@/lib/translations';
@@ -11,18 +10,24 @@ import { canApproveExpense } from '@/lib/expenseApproval';
 import BalanceOverview from '@/components/BalanceOverview';
 import { TableToolbar } from '@/components/ui/TableToolbar';
 import { formatUzDateNumeric, formatNum } from '@/lib/platform/format';
-import { groupDigits, ungroupDigits, todayKey } from '@/lib/platform/format';
+import { todayKey, submitOnCtrlEnter } from '@/lib/platform/format';
 import type { BalanceBreakdown } from '@/types';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
 import { useTableState } from '@/hooks/useTableState';
 import { usePageSize } from "@/hooks/usePageSize";
 import { StatStrip } from "@/components/ui/StatStrip";
-import { Badge, type BadgeTone } from "@/components/ui";
+import { Badge, EmptyState, Modal, type BadgeTone } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
+import { MoneyField } from "@/components/ui/MoneyField";
+import { Select } from "@/components/ui/Select";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 import { periodKeyOf } from '@/lib/periods';
 import { DateField } from './ui/DateField';
+
+/** Modal pastidagi tugma formadan tashqarida — `form` atributi bog'laydi. */
+const EXPENSE_FORM_ID = 'expense-form';
 
 const EXP_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
     approved: { label: 'Tasdiqlangan', tone: 'success' },
@@ -71,16 +76,6 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
     const [viewMode, setViewMode] = useViewMode('xarajatlar');
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // DIALOG XULQI — fokus tuzog'i, Escape, scroll qulfi, fokusni qaytarish.
-    //
-    // Bu oyna `fixed inset-0` bilan qo'lda yozilgan va DOM'da `role="dialog"`
-    // umuman yo'q edi: ekran o'quvchi uni oyna deb e'lon qilmasdi, Tab esa
-    // foydalanuvchini oyna ORTIDAGI sahifaga olib chiqib ketardi va u yerdan
-    // klaviatura bilan qaytib bo'lmasdi. Tartib o'zgarmaydi — faqat xulq.
-    const modalRef = useModalA11y<HTMLDivElement>({
-        open: isModalOpen,
-        onClose: () => setIsModalOpen(false),
-    });
     const [editingExpense, setEditingExpense] = useState<Partial<Expense> | null>(null);
 
     const filteredExpenses = useMemo(() => {
@@ -199,13 +194,18 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
         void exportObjectsToExcel(rows, `xarajatlar-${new Date().toISOString().slice(0, 10)}`, 'Xarajatlar');
     };
 
+    // Saqlash hodisadan AJRATILDI: tugma modal pastida (forma ichida emas)
+    // va Ctrl+Enter ham shu yo'ldan o'tadi.
+    const saveExpense = async () => {
+        if (!editingExpense) return;
+        await onSaveExpense(editingExpense);
+        setIsModalOpen(false);
+        setEditingExpense(null);
+    };
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (editingExpense) {
-            await onSaveExpense(editingExpense);
-            setIsModalOpen(false);
-            setEditingExpense(null);
-        }
+        await saveExpense();
     };
 
     // Korxona lug'ati (sozlamadan). Eski qattiq inglizcha ro'yxat
@@ -300,20 +300,14 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     onExport={filteredExpenses.length ? handleExport : undefined}
                     filterCount={statusFilter !== 'all' ? 1 : 0}
                     filter={
-                        <div className="flex flex-col gap-1.5">
-                            <span className="text-micro font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Holat</span>
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => table.setFilter('status', e.target.value)}
-                                className="rounded-lg py-2 px-3 text-xs font-bold outline-none"
-                                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                            >
+                        <Field label="Holat" className="min-w-[180px]">
+                            <Select value={statusFilter} onChange={(e) => table.setFilter('status', e.target.value)}>
                                 <option value="all">Barcha holat</option>
                                 <option value="approved">Tasdiqlangan</option>
                                 <option value="pending">Kutilmoqda</option>
                                 <option value="rejected">Rad etilgan</option>
-                            </select>
-                        </div>
+                            </Select>
+                        </Field>
                     }
                 />
                 {/* "Yangi xarajat" — YARATISH amali, `danger` (qizil) emas:
@@ -371,9 +365,15 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     );
                 })}
                 {filteredExpenses.length === 0 && (
-                    <div className="dashboard-card p-5 text-center">
-                        <Search size={36} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--text-muted)' }} />
-                        <span className="text-meta font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Ma&apos;lumot topilmadi</span>
+                    <div className="dashboard-card !p-0 md:col-span-2 lg:col-span-3">
+                        <EmptyState
+                            icon={<Search size={28} />}
+                            title="Xarajat topilmadi"
+                            description={table.isDirty ? "Qidiruv yoki filtrni o'zgartirib ko'ring." : undefined}
+                            action={table.isDirty ? (
+                                <Button variant="secondary" size="sm" onClick={table.reset}>Filtrni tozalash</Button>
+                            ) : undefined}
+                        />
                     </div>
                 )}
             </div>
@@ -449,117 +449,87 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         );
                     } : undefined}
                 />
-            )}            {isModalOpen && (
-                <div
-                    // `Modal` bu yerda ishlatilmaydi: u o'z sarlavhasi va ichki
-                    // bo'shlig'ini qo'shadi, bu oyna esa o'z yuqori rangli
-                    // chizig'i va tartibiga ega. Shu sababdan tartib qo'lda
-                    // qoladi, XULQ esa `useModalA11y` dan olinadi — hook aynan
-                    // shu holat uchun yozilgan.
-                    // eslint-disable-next-line no-restricted-syntax
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-                    onMouseDown={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
-                >
-                    <div
-                        ref={modalRef}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="Xarajat oynasi"
-                        tabIndex={-1}
-                        className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0 outline-none"
-                    >
-                        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--danger)' }}></div>
-                        <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                            <div>
-                                <h3 className="text-body font-bold" style={{ color: 'var(--text)' }}>Xarajatni kiritish</h3>
-                                <p className="text-micro font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
-                            </div>
-                            <button onClick={() => setIsModalOpen(false)} className="icon-btn-sm transition-all icon-btn-danger" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }}>
-                                <Plus size={20} className="rotate-45" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleSave} className="p-6 space-y-5"
-                            onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); e.currentTarget.requestSubmit(); } }}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div className="space-y-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</label>
-                                    <div className="relative">
-                                        <input
-                                            type="text" inputMode="numeric"
-                                            value={groupDigits(editingExpense?.amount || '')}
-                                            onChange={(e) => setEditingExpense(prev => ({ ...prev, amount: Number(ungroupDigits(e.target.value)) }))}
-                                            className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
-                                            style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-                                            required
-                                        />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>so&apos;m</div>
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
-                                    <DateField
-                                        value={editingExpense?.date || ''}
-                                        onChange={(v) => setEditingExpense(prev => ({ ...prev, date: v }))}
-                                        inputClassName="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
-                                        inputStyle={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--danger)' }}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.category}</label>
-                                    <select
-                                        value={editingExpense?.category || categoryOptions[0] || ''}
-                                        onChange={(e) => setEditingExpense(prev => ({ ...prev, category: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-                                    >
-                                        {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                                {/* Pul MANBAI — "to'lov usuli" dan farqli: manba
-                                    KIMNING hisobidan chiqqanini beradi. Eski
-                                    "To'lov usuli" selecti bazada yo'q maydonni
-                                    tahrirlardi va olib tashlandi. */}
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                                        Pul manbai <span style={{ color: 'var(--danger)' }}>*</span>
-                                    </label>
-                                    <FundingSourceSelect
-                                        value={editingExpense?.channelId || ''}
-                                        onChange={(channelId) => setEditingExpense(prev => ({ ...prev, channelId }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
-                                    />
-                                </div>
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
-                                    <input
-                                        type="text"
-                                        placeholder="IXTIYORIY IZOH..."
-                                        value={editingExpense?.description || ''}
-                                        onChange={(e) => setEditingExpense(prev => ({ ...prev, description: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--danger)] focus:ring-opacity-20 tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-                                    />
-                                </div>
-                            </div>
+            )}            {/*
+                OYNA endi `Modal` primitivida. Ilgari bu yerda qo'lda yozilgan
+                `fixed inset-0 z-[100] bg-black/60` qatlami turardi — u
+                `--z-*` shkalasini chetlab o'tar va fonni Tailwind palitrasidan
+                olardi (loyihada rang faqat tokenlardan keladi). Har maydon
+                esa 100 belgilik bir xil klass satrini takrorlardi.
 
-                            <div className="flex gap-3 pt-6 mt-6" style={{ borderTop: '1px solid var(--card-border)' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-meta uppercase tracking-widest transition-all shadow-sm"
-                                    style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
-                                >
-                                    {t.cancel}
-                                </button>
-                                <Button variant="danger" size="md" type="submit" className="flex-1">
-                                    SAQLASH
-                                </Button>
-                            </div>
-                        </form>
+                Yuqoridagi qizil chiziq olib tashlandi: oynaning MAVZUSI
+                sarlavhadan bilinadi, chiziq esa qolgan oynalardan farq
+                qilardi.
+            */}
+            <Modal
+                open={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                size="lg"
+                title={editingExpense?.id ? 'Xarajatni tahrirlash' : 'Xarajatni kiritish'}
+                description="Tranzaksiya tafsilotlarini kiriting."
+                footer={
+                    <>
+                        <Button type="button" variant="secondary" size="md" onClick={() => setIsModalOpen(false)}>
+                            {t.cancel}
+                        </Button>
+                        <Button type="submit" form={EXPENSE_FORM_ID} variant="primary" size="md">
+                            Saqlash
+                        </Button>
+                    </>
+                }
+            >
+                <form
+                    id={EXPENSE_FORM_ID}
+                    onSubmit={handleSave}
+                    onKeyDown={submitOnCtrlEnter(() => { void saveExpense(); })}
+                    className="space-y-3"
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <Field label={t.amount} required>
+                            <MoneyField
+                                value={editingExpense?.amount ?? null}
+                                onChange={(v) => setEditingExpense(prev => ({ ...prev, amount: v ?? 0 }))}
+                                required
+                            />
+                        </Field>
+                        <Field label={t.date} required>
+                            <DateField
+                                value={editingExpense?.date || ''}
+                                onChange={(v) => setEditingExpense(prev => ({ ...prev, date: v }))}
+                                required
+                            />
+                        </Field>
+                        <Field label={t.category} required>
+                            <Select
+                                value={editingExpense?.category || categoryOptions[0] || ''}
+                                onChange={(e) => setEditingExpense(prev => ({ ...prev, category: e.target.value }))}
+                            >
+                                {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                            </Select>
+                        </Field>
+                        {/* Pul MANBAI — "to'lov usuli" dan farqli: manba
+                            KIMNING hisobidan chiqqanini beradi. Eski
+                            "To'lov usuli" selecti bazada yo'q maydonni
+                            tahrirlardi va olib tashlandi. */}
+                        <Field label="Pul manbai" required>
+                            <FundingSourceSelect
+                                value={editingExpense?.channelId || ''}
+                                onChange={(channelId) => setEditingExpense(prev => ({ ...prev, channelId }))}
+                            />
+                        </Field>
+                        <div className="md:col-span-2">
+                            <Field label={t.comment}>
+                                <input
+                                    type="text"
+                                    placeholder="Ixtiyoriy izoh…"
+                                    value={editingExpense?.description || ''}
+                                    onChange={(e) => setEditingExpense(prev => ({ ...prev, description: e.target.value }))}
+                                    className="erp-input w-full"
+                                />
+                            </Field>
+                        </div>
                     </div>
-                </div>
-            )}
+                </form>
+            </Modal>
         </div>
     );
 };

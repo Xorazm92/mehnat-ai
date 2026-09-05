@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { setDebtContact } from "@/server/debt";
+import { Field } from "@/components/ui/Field";
 import { DateField } from "@/components/ui/DateField";
 
 interface QueueRow {
@@ -42,6 +43,14 @@ interface Props {
 
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
 
+/**
+ * Boshida nechta firma ko'rsatiladi. 12 — ekranning bir "sahifasi": undan
+ * pastdagi bloklar (eskirish matritsasi, to'lovlar) ko'rinish maydonidan
+ * chiqib ketmaydi. Ro'yxat eng katta qarzdan saralangani uchun birinchi
+ * o'nlik aynan bugungi ish.
+ */
+const PREVIEW_COUNT = 12;
+
 export default function CollectionQueue({ rows, totals }: Props) {
   const router = useRouter();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -49,6 +58,7 @@ export default function CollectionQueue({ rows, totals }: Props) {
   const [nextAt, setNextAt] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const submit = async (companyId: string) => {
     setBusy(true);
@@ -79,6 +89,16 @@ export default function CollectionQueue({ rows, totals }: Props) {
     );
   }
 
+  // KO'RSATILADIGAN QATORLAR SONI.
+  //
+  // Ilgari bu ro'yxat BARCHA qatorni (prodda 228 ta) to'liq kartochka
+  // ko'rinishida chizardi — har biri ~70px, ya'ni 16 000px lik devor. Sahifada
+  // undan pastda yana ikkita blok bor edi va ularga umuman yetib bo'lmasdi;
+  // undirish navbati esa PRIORITET ro'yxati — u eng katta qarzdan boshlab
+  // saralangan, ya'ni pastki 200 tasi bugungi ish emas.
+  const visible = showAll ? rows : rows.slice(0, PREVIEW_COUNT);
+  const hidden = rows.length - visible.length;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -107,7 +127,7 @@ export default function CollectionQueue({ rows, totals }: Props) {
 
       <div className="rounded-xl overflow-hidden" style={card}>
         <div className="divide-y" style={{ borderColor: "var(--card-border)" }}>
-          {rows.map((r) => (
+          {visible.map((r) => (
             <div key={r.companyId} className="p-3">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
@@ -161,28 +181,17 @@ export default function CollectionQueue({ rows, totals }: Props) {
                   style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)" }}
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <label className="block">
-                      <span className="text-micro" style={{ color: "var(--text-muted)" }}>
-                        Keyingi suhbat (bo&apos;sh qoldirilsa — 7 kundan keyin)
-                      </span>
-                      <DateField
-                        className="mt-1"
-                        inputClassName="w-full px-2 py-1.5 rounded text-meta outline-none"
-                        inputStyle={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
-                        value={nextAt}
-                        onChange={setNextAt}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="text-micro" style={{ color: "var(--text-muted)" }}>Nima kelishildi</span>
+                    <Field label="Keyingi suhbat" hint="Bo'sh qoldirilsa — 7 kundan keyin">
+                      <DateField value={nextAt} onChange={setNextAt} />
+                    </Field>
+                    <Field label="Nima kelishildi">
                       <input
-                        className="w-full mt-1 px-2 py-1.5 rounded text-meta outline-none"
-                        style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+                        className="erp-input w-full"
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         placeholder="15-sanagacha to'laydi"
                       />
-                    </label>
+                    </Field>
                   </div>
                   <Button variant="primary" size="sm" disabled={busy} onClick={() => submit(r.companyId)}>
                     {busy ? "Saqlanmoqda…" : "Saqlash"}
@@ -192,6 +201,16 @@ export default function CollectionQueue({ rows, totals }: Props) {
             </div>
           ))}
         </div>
+
+        {(hidden > 0 || showAll) && rows.length > PREVIEW_COUNT && (
+          <div style={{ borderTop: "1px solid var(--card-border)" }}>
+            <Button variant="ghost" fullWidth onClick={() => setShowAll(!showAll)}>
+              {showAll
+                ? `Faqat birinchi ${PREVIEW_COUNT} tasini ko'rsatish`
+                : `Yana ${hidden} ta firmani ko'rsatish`}
+            </Button>
+          </div>
+        )}
       </div>
 
       <p className="text-micro flex items-center gap-1" style={{ color: "var(--text-muted)" }}>

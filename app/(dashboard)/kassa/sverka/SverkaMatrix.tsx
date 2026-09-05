@@ -12,9 +12,9 @@
 // qoldirardi. Buxgalterga ikkalasi ham kerak.
 
 import React from "react";
-import { Money } from "@/components/ui";
+import { EmptyState, Money } from "@/components/ui";
 import { formatUzDate } from "@/lib/platform/format";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Scale } from "lucide-react";
 
 export interface MatrixDay {
   date: string;
@@ -41,38 +41,51 @@ const head = "px-2 py-2 text-micro font-semibold uppercase tracking-wide whitesp
 
 export default function SverkaMatrix({ days, devices, terminals, totals }: Props) {
   if (days.length === 0) {
+    // Bo'sh holat `EmptyState` bilan: ilgari bu bitta kulrang jumla edi va
+    // "sahifa yuklanmadi" bilan "bu davrda ma'lumot yo'q" farqi bilinmasdi.
+    // KASSA_START_PERIOD dan oldingi davr uchun ma'lumot BO'LMASLIGI normal —
+    // bu xato emas.
     return (
-      <p className="text-meta py-8 text-center" style={{ color: "var(--text-secondary)" }}>
-        Bu davr uchun ma'lumot yo'q. Kassa hisobotini yuklang va vipiskadan tushumni ajrating.
-      </p>
+      <div className="rounded-xl" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+        <EmptyState
+          icon={<Scale size={28} />}
+          title="Bu davr uchun solishtiruv ma'lumoti yo'q"
+          description="Kassa (fiskal) hisobotini yuklang va vipiskadan tushumni ajrating — shundan keyin kunma-kun jadval shu yerda chiziladi. Yuqoridagi sana oralig'ini kengaytirib ham ko'ring."
+        />
+      </div>
     );
   }
 
   return (
     <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid var(--card-border)" }}>
       <table className="w-full text-meta border-collapse">
+        {/* `DataTable` da `caption` majburiy; bu jadval dinamik ustunli
+            pivot bo'lgani uchun qo'lda qoladi — lekin nomsiz qolmaydi. */}
+        <caption className="sr-only">
+          Kunlar bo&apos;yicha kassa apparatlari va terminallar sverkasi
+        </caption>
         <thead style={{ background: "var(--input-bg)" }}>
           <tr style={{ color: "var(--text-secondary)" }}>
-            <th className={`${head} text-left sticky left-0 z-10`} style={{ background: "var(--input-bg)" }}>
+            <th scope="col" className={`${head} text-left sticky left-0 z-10`} style={{ background: "var(--input-bg)" }}>
               Sana
             </th>
             {devices.map((d) => (
-              <th key={d.id} className={`${head} text-right`} title={d.label}>
+              <th key={d.id} scope="col" className={`${head} text-right`} title={d.label}>
                 {d.label}
               </th>
             ))}
-            <th className={`${head} text-right`} style={{ color: "var(--accent-blue)" }}>
+            <th scope="col" className={`${head} text-right`} style={{ color: "var(--accent-blue)" }}>
               Jami kassa
             </th>
             {terminals.map((t) => (
-              <th key={t.id} colSpan={2} className={`${head} text-center`} style={{ borderLeft: "1px solid var(--card-border)" }}>
+              <th key={t.id} scope="colgroup" colSpan={2} className={`${head} text-center`} style={{ borderLeft: "1px solid var(--card-border)" }}>
                 {t.label || t.code}
               </th>
             ))}
-            <th className={`${head} text-right`}>Bank fakt</th>
-            <th className={`${head} text-right`}>Bank brutto</th>
-            <th className={`${head} text-right`}>Komissiya</th>
-            <th className={`${head} text-right`} style={{ color: "var(--accent-blue)" }}>
+            <th scope="col" className={`${head} text-right`}>Bank fakt</th>
+            <th scope="col" className={`${head} text-right`}>Bank brutto</th>
+            <th scope="col" className={`${head} text-right`}>Komissiya</th>
+            <th scope="col" className={`${head} text-right`} style={{ color: "var(--accent-blue)" }}>
               Farq
             </th>
           </tr>
@@ -85,10 +98,10 @@ export default function SverkaMatrix({ days, devices, terminals, totals }: Props
               <th className={head} />
               {terminals.map((t) => (
                 <React.Fragment key={t.id}>
-                  <th className={`${head} text-right`} style={{ borderLeft: "1px solid var(--card-border)" }}>
+                  <th scope="col" className={`${head} text-right`} style={{ borderLeft: "1px solid var(--card-border)" }}>
                     fakt
                   </th>
-                  <th className={`${head} text-right`}>brutto</th>
+                  <th scope="col" className={`${head} text-right`}>brutto</th>
                 </React.Fragment>
               ))}
               <th className={head} />
@@ -101,7 +114,7 @@ export default function SverkaMatrix({ days, devices, terminals, totals }: Props
         <tbody>
           {days.map((d) => (
             <tr key={d.date} style={{ borderTop: "1px solid var(--card-border)" }}>
-              <td className="px-2 py-1.5 whitespace-nowrap sticky left-0 z-10" style={{ background: "var(--card-bg)" }}>
+              <th scope="row" className="px-2 py-1.5 whitespace-nowrap text-left font-normal sticky left-0 z-10" style={{ background: "var(--card-bg)" }}>
                 <span className="inline-flex items-center gap-1">
                   {formatUzDate(d.date)}
                   {/* Sanasi tafsilotda YO'Q tushum shu kunga hujjat sanasi
@@ -110,7 +123,7 @@ export default function SverkaMatrix({ days, devices, terminals, totals }: Props
                     <AlertTriangle size={12} style={{ color: "var(--accent-amber)" }} aria-label="Sana hujjatdan olingan" />
                   )}
                 </span>
-              </td>
+              </th>
               {devices.map((dev) => (
                 <td key={dev.id} className={cell}>
                   <Money value={d.byDevice[dev.id] ?? 0} dashIfZero tone="muted" />
@@ -149,9 +162,9 @@ export default function SverkaMatrix({ days, devices, terminals, totals }: Props
         </tbody>
         <tfoot>
           <tr style={{ borderTop: "2px solid var(--text-primary)", background: "var(--input-bg)" }}>
-            <td className="px-2 py-2 font-semibold sticky left-0 z-10" style={{ background: "var(--input-bg)" }}>
+            <th scope="row" className="px-2 py-2 font-semibold text-left sticky left-0 z-10" style={{ background: "var(--input-bg)" }}>
               Jami
-            </td>
+            </th>
             {devices.map((dev) => (
               <td key={dev.id} className={`${cell} font-semibold`}>
                 <Money value={days.reduce((s, d) => s + (d.byDevice[dev.id] ?? 0), 0)} dashIfZero />

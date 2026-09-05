@@ -7,8 +7,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Scale, Upload, RefreshCw, AlertTriangle, Plus, Check, X } from "lucide-react";
-import { Tabs, type TabItem, Button, Field, Badge, StatStrip, PageHeader, Money } from "@/components/ui";
+import { Scale, Upload, RefreshCw, AlertTriangle, Plus, Check, X, CalendarRange } from "lucide-react";
+import {
+  Tabs, type TabItem, Button, Field, Badge, MetricRail, PageHeader, Money,
+  DataTable, DateField, displayDate, Select, type DataColumn,
+} from "@/components/ui";
 import {
   uploadFiscalReport,
   rebuildSettlements,
@@ -17,6 +20,9 @@ import {
   type FiscalUploadResult,
 } from "@/server/posSverka";
 import SverkaMatrix, { type MatrixDay } from "./SverkaMatrix";
+import { formatNum } from "@/lib/platform/format";
+import { useTabParam } from "@/hooks/useTabParam";
+import { SVERKA_TAB_IDS, type SverkaTab } from "@/lib/sverkaTabs";
 
 interface Device { id: string; fmNumber: string; label: string; inn: string; siteKey: string | null }
 interface Terminal {
@@ -37,12 +43,82 @@ export interface SverkaData {
   months: { month: string; totals: Totals }[];
 }
 
-type TabId = "sverka" | "terminals" | "devices";
+// Yorliq ro'yxati `lib/sverkaTabs.ts` da — sahifa uni SERVERDA tekshiradi.
+type TabId = SverkaTab;
+
+/** Oylik yakun ustunlari — `MonthlySummary` uchun. */
+const MONTH_COLUMNS: DataColumn<{ month: string; totals: Totals }>[] = [
+  { key: "month", header: "Oy", cell: (m) => m.month, sortValue: (m) => m.month, sticky: true, mobile: "title" },
+  {
+    key: "kassa",
+    header: "Kassa",
+    cell: (m) => <Money value={m.totals.kassaCard} />,
+    sortValue: (m) => m.totals.kassaCard,
+    numeric: true,
+    align: "right",
+  },
+  {
+    key: "bankFact",
+    header: "Bank fakt",
+    cell: (m) => <Money value={m.totals.bankFact} />,
+    sortValue: (m) => m.totals.bankFact,
+    numeric: true,
+    align: "right",
+  },
+  {
+    key: "bankGross",
+    header: "Bank brutto",
+    cell: (m) => <Money value={m.totals.bankGross} />,
+    sortValue: (m) => m.totals.bankGross,
+    numeric: true,
+    align: "right",
+  },
+  {
+    key: "commission",
+    header: "Komissiya",
+    cell: (m) => <Money value={m.totals.commission} tone="muted" />,
+    sortValue: (m) => m.totals.commission,
+    numeric: true,
+    align: "right",
+  },
+  {
+    key: "diff",
+    header: "Farq",
+    cell: (m) => <Money value={m.totals.diff} bold showSign tone={m.totals.diff > 0 ? "out" : "in"} />,
+    sortValue: (m) => m.totals.diff,
+    numeric: true,
+    align: "right",
+    mobile: "status",
+  },
+];
+
+/** Kassa apparatlari ro'yxati. */
+const DEVICE_COLUMNS: DataColumn<Device>[] = [
+  { key: "label", header: "Nom", cell: (d) => d.label, sortValue: (d) => d.label, sticky: true, mobile: "title" },
+  {
+    key: "fm",
+    header: "FM raqami",
+    cell: (d) => <span className="font-mono">{d.fmNumber}</span>,
+    sortValue: (d) => d.fmNumber,
+  },
+  { key: "inn", header: "STIR", cell: (d) => d.inn, sortValue: (d) => d.inn },
+];
 type Msg = { tone: "ok" | "err"; text: string } | null;
 
-export default function SverkaClient({ data }: { data: SverkaData }) {
+export default function SverkaClient({
+  data,
+  /** `?tab=` dan SERVERDA o'qilgan boshlang'ich yorliq (hidratsiya uchun). */
+  initialTab = "sverka",
+}: {
+  data: SverkaData;
+  initialTab?: SverkaTab;
+}) {
   const router = useRouter();
-  const [tab, setTab] = useState<TabId>("sverka");
+  // Yorliq URL'da: F5 bosilganda holat saqlanadi va "terminallar doirasini
+  // ko'r" deb havola yuborish mumkin (`/kassa/sverka?tab=terminals`).
+  // Ilgari oddiy `useState` edi — global qidiruvdagi yorliq havolasi
+  // har doim birinchi tabni ochardi.
+  const [tab, setTab] = useTabParam<TabId>("tab", SVERKA_TAB_IDS, initialTab);
   const [from, setFrom] = useState(data.range.from);
   const [to, setTo] = useState(data.range.to);
   const [pending, startTransition] = useTransition();
@@ -50,6 +126,16 @@ export default function SverkaClient({ data }: { data: SverkaData }) {
 
   const inScope = data.terminals.filter((t) => t.inScope);
   const outside = data.terminals.filter((t) => !t.inScope);
+
+  // Farq NOLGA TENG deb hisoblanadigan chegara. 1 so'm — Decimal
+  // yaxlitlanishi (`lib/ledger.ts` dagi 0.01 chegarasi bilan bir mantiq);
+  // undan kattasi haqiqiy nomuvofiqlik va u qizil bo'lib chiqadi.
+  //
+  // MA'LUMOT YO'QLIGI "MOS KELDI" EMAS. Bo'sh davrda farq ham nol bo'ladi,
+  // ya'ni oddiy `diff < 1` tekshiruvi "solishtiruv o'tdi, ish tugadi" degan
+  // YOLG'ON yashil xulosani chizardi — holbuki hech narsa solishtirilmagan.
+  const hasData = data.days.length > 0;
+  const matched = hasData && Math.abs(data.totals.diff) < 1;
 
   const tabs: TabItem<TabId>[] = [
     { id: "sverka", label: "Sverka jadvali", icon: Scale },
@@ -91,12 +177,18 @@ export default function SverkaClient({ data }: { data: SverkaData }) {
           </Button>
         }
       >
+        {/*
+          `className="input"` ISHLATILARDI, lekin `.input` sinfi
+          `app/globals.css` da e'lon qilinmagan — ya'ni bu maydonlar
+          brauzerning standart ko'rinishida, dizayn tizimidan tashqarida
+          chizilardi. Endi `DateField`/`Select` primitivlari.
+        */}
         <div className="flex flex-wrap items-end gap-2">
           <Field label="Dan">
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input" />
+            <DateField value={from} onChange={setFrom} />
           </Field>
           <Field label="Gacha">
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input" />
+            <DateField value={to} onChange={setTo} />
           </Field>
           <Button variant="secondary" onClick={() => router.push(`/kassa/sverka?dan=${from}&gacha=${to}`)}>
             Ko&apos;rsatish
@@ -119,17 +211,70 @@ export default function SverkaClient({ data }: { data: SverkaData }) {
 
       {tab === "sverka" && (
         <div className="space-y-3">
-          <StatStrip
+          {/* SOLISHTIRUV O'QILISH TARTIBI: DAVR → KUTILGAN → FAKT →
+              KOMISSIYA → FARQ → HOLAT. Ilgari bu qator beshta teng
+              og'irlikdagi raqam edi va qaysi ikkitasi bir-biriga
+              solishtirilayotgani (kassa ↔ bank brutto) ekrandan
+              ko'rinmasdi — "Farq" ustuni nimadan chiqqanini faqat
+              yorlig'idagi qavs aytardi. Endi tartib o'qilishning o'zi
+              tenglamani ko'rsatadi va farq nolga tengmi degan savolga
+              oxirgi katak SO'Z bilan javob beradi. */}
+          <MetricRail
+            columns={6}
             items={[
-              { label: "Kassa (karta)", value: data.totals.kassaCard, tone: "neutral" },
-              { label: "Bank (fakt)", value: data.totals.bankFact, tone: "neutral" },
-              { label: "Bank (brutto)", value: data.totals.bankGross, tone: "neutral", hint: "Komissiya ushlanishidan oldingi summa" },
-              { label: "Komissiya", value: data.totals.commission, tone: "muted" },
               {
-                label: "Farq (kassa − brutto)",
-                value: data.totals.diff,
-                tone: data.totals.diff > 0 ? "out" : "in",
-                meta: data.totals.diff > 0 ? "bankka yetib bormagan" : "bankda ortiqcha",
+                label: "Davr",
+                // Sana ORALIG'I qiymat sifatida katakka sig'masdi va
+                // "01.08.2026 —…" bo'lib kesilardi. Qiymat — kunlar soni
+                // (mono, tabular), oraliqning o'zi izohda: u yerda 10px
+                // matn bilan to'liq sig'adi.
+                value: data.days.length,
+                unit: "kun",
+                hint: `${displayDate(from)} — ${displayDate(to)}`,
+                icon: <CalendarRange size={13} />,
+              },
+              {
+                label: "Kutilgan · kassa",
+                value: formatNum(Math.round(data.totals.kassaCard)),
+                unit: "so'm",
+                hint: "fiskal apparat urgan",
+              },
+              {
+                label: "Fakt · bank brutto",
+                value: formatNum(Math.round(data.totals.bankGross)),
+                unit: "so'm",
+                hint: "komissiya ushlanishidan oldin",
+              },
+              {
+                label: "Komissiya",
+                value: formatNum(Math.round(data.totals.commission)),
+                unit: "so'm",
+                hint: `bankka tushgan: ${formatNum(Math.round(data.totals.bankFact))}`,
+              },
+              {
+                label: "Farq",
+                value: `${data.totals.diff > 0 ? "+" : data.totals.diff < 0 ? "−" : ""}${formatNum(Math.abs(Math.round(data.totals.diff)))}`,
+                unit: "so'm",
+                hint: !hasData
+                  ? "solishtirish uchun ma'lumot yo'q"
+                  : data.totals.diff > 0
+                    ? "bankka yetib bormagan"
+                    : data.totals.diff < 0
+                      ? "bankda ortiqcha"
+                      : "og'ish yo'q",
+                tone: !hasData ? "neutral" : matched ? "success" : "danger",
+                emphasis: true,
+              },
+              {
+                label: "Holat",
+                value: !hasData ? "Ma'lumot yo'q" : matched ? "Mos keldi" : "Nomuvofiq",
+                hint: !hasData
+                  ? "kassa hisobotini yuklang"
+                  : matched
+                    ? "qo'shimcha ish talab qilinmaydi"
+                    : "kunlik jadvaldan farqli kunni toping",
+                icon: !hasData ? <AlertTriangle size={13} /> : matched ? <Check size={13} /> : <AlertTriangle size={13} />,
+                tone: !hasData ? "neutral" : matched ? "success" : "danger",
               },
             ]}
           />
@@ -158,32 +303,15 @@ function MonthlySummary({ months }: { months: { month: string; totals: Totals }[
   return (
     <div className="rounded-xl p-3" style={{ border: "1px solid var(--card-border)" }}>
       <h3 className="text-meta font-semibold mb-2">Oylik yakun</h3>
-      <table className="w-full text-meta">
-        <thead style={{ color: "var(--text-secondary)" }}>
-          <tr>
-            <th className="text-left py-1">Oy</th>
-            <th className="text-right py-1">Kassa</th>
-            <th className="text-right py-1">Bank fakt</th>
-            <th className="text-right py-1">Bank brutto</th>
-            <th className="text-right py-1">Komissiya</th>
-            <th className="text-right py-1">Farq</th>
-          </tr>
-        </thead>
-        <tbody>
-          {months.map((m) => (
-            <tr key={m.month} style={{ borderTop: "1px solid var(--card-border)" }}>
-              <td className="py-1">{m.month}</td>
-              <td className="text-right tabular-nums"><Money value={m.totals.kassaCard} /></td>
-              <td className="text-right tabular-nums"><Money value={m.totals.bankFact} /></td>
-              <td className="text-right tabular-nums"><Money value={m.totals.bankGross} /></td>
-              <td className="text-right tabular-nums"><Money value={m.totals.commission} tone="muted" /></td>
-              <td className="text-right tabular-nums">
-                <Money value={m.totals.diff} bold showSign tone={m.totals.diff > 0 ? "out" : "in"} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        rows={months}
+        columns={MONTH_COLUMNS}
+        rowKey={(m) => m.month}
+        caption="Oylar bo'yicha kassa va bank yakuni"
+        maxBodyHeight={null}
+        density="compact"
+        emptyTitle="Oylik yakun yo'q"
+      />
     </div>
   );
 }
@@ -207,21 +335,53 @@ function TerminalScope({ terminals, onDone }: { terminals: Terminal[]; onDone: (
       onDone();
     });
 
-  const row = (t: Terminal) => (
-    <tr key={t.id} style={{ borderTop: "1px solid var(--card-border)" }}>
-      <td className="py-2 pr-2 font-mono text-meta">{t.code}</td>
-      <td className="py-2 pr-2"><Badge tone="neutral">{t.channelLabel}</Badge></td>
-      <td className="py-2 pr-2 text-right tabular-nums">
-        <Money value={t.outsideAmount} dashIfZero tone="muted" />
-      </td>
-      <td className="py-2 pr-2 text-micro" style={{ color: "var(--text-secondary)" }}>{t.scopeNote ?? ""}</td>
-      <td className="py-2 text-right">
+  /**
+   * Ustunlar ikkala jadval uchun bir xil — ilgari bu `<tbody>` ga to'g'ridan
+   * qo'yiladigan `<tr>` qaytaruvchi funksiya edi, ya'ni jadvalda SARLAVHA
+   * umuman yo'q edi: "bu ustun nima?" degan savolga ekran javob bermasdi.
+   */
+  const columns: DataColumn<Terminal>[] = [
+    {
+      key: "code",
+      header: "Terminal kodi",
+      cell: (t) => <span className="font-mono">{t.code}</span>,
+      sortValue: (t) => t.code,
+      sticky: true,
+      mobile: "title",
+    },
+    {
+      key: "channel",
+      header: "Kanal",
+      cell: (t) => <Badge tone="neutral">{t.channelLabel}</Badge>,
+      sortValue: (t) => t.channelLabel,
+      mobile: "status",
+    },
+    {
+      key: "amount",
+      header: "Summa",
+      cell: (t) => <Money value={t.outsideAmount} dashIfZero tone="muted" />,
+      sortValue: (t) => t.outsideAmount,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "note",
+      header: "Izoh",
+      cell: (t) => t.scopeNote ?? "—",
+      sortValue: (t) => t.scopeNote ?? "",
+    },
+    {
+      key: "actions",
+      header: "Amal",
+      align: "right",
+      cell: (t) => (
         <Button size="sm" variant={t.inScope ? "secondary" : "primary"} onClick={() => toggle(t)} disabled={pending}>
           {t.inScope ? "Doiradan chiqarish" : "Doiraga qo'shish"}
         </Button>
-      </td>
-    </tr>
-  );
+      ),
+      mobile: "actions",
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -229,19 +389,31 @@ function TerminalScope({ terminals, onDone }: { terminals: Terminal[]; onDone: (
         <h3 className="text-meta font-semibold mb-1">
           Doirada — kassa apparatlari bilan solishtiriladi ({inScope.length})
         </h3>
-        <table className="w-full text-meta"><tbody>{inScope.map(row)}</tbody></table>
-        {inScope.length === 0 && (
-          <p className="text-micro py-2" style={{ color: "var(--text-secondary)" }}>
-            Hali birorta terminal doiraga kiritilmagan — sverka bo&apos;sh chiqadi.
-          </p>
-        )}
+        <DataTable
+          rows={inScope}
+          columns={columns}
+          rowKey={(t) => t.id}
+          caption="Sverka doirasidagi terminallar"
+          maxBodyHeight={null}
+          density="compact"
+          emptyTitle="Doirada terminal yo'q"
+          emptyDescription="Hali birorta terminal doiraga kiritilmagan — sverka bo'sh chiqadi."
+        />
       </div>
       <div className="rounded-xl p-3" style={{ border: "1px solid var(--card-border)" }}>
         <h3 className="text-meta font-semibold mb-1">Doiradan tashqarida ({outside.length})</h3>
         <p className="text-micro mb-2" style={{ color: "var(--text-secondary)" }}>
           Bu tushumlar sverkaga KIRMAYDI. Agar ular ham shu kassa apparatlariga tegishli bo&apos;lsa — doiraga qo&apos;shing.
         </p>
-        <table className="w-full text-meta"><tbody>{outside.map(row)}</tbody></table>
+        <DataTable
+          rows={outside}
+          columns={columns}
+          rowKey={(t) => t.id}
+          caption="Sverka doirasidan tashqaridagi terminallar"
+          maxBodyHeight={null}
+          density="compact"
+          emptyTitle="Hammasi doirada"
+        />
       </div>
     </div>
   );
@@ -290,15 +462,15 @@ function DeviceTab({
           }
         >
           <Field label="Apparat (ixtiyoriy)">
-            <select className="input" value={uploadFor} onChange={(e) => setUploadFor(e.target.value)}>
+            <Select value={uploadFor} onChange={(e) => setUploadFor(e.target.value)}>
               <option value="">O&apos;zi aniqlansin</option>
               {devices.map((d) => (
                 <option key={d.id} value={d.id}>{d.label}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="Fayl">
-            <input type="file" name="file" accept=".xlsx,.xls" required className="input" />
+            <input type="file" name="file" accept=".xlsx,.xls" required className="erp-input" />
           </Field>
           <Button type="submit" disabled={pending}>
             <Upload size={14} />
@@ -314,34 +486,26 @@ function DeviceTab({
 
       <div className="rounded-xl p-3" style={{ border: "1px solid var(--card-border)" }}>
         <h3 className="text-meta font-semibold mb-2">Apparatlar ({devices.length})</h3>
-        <table className="w-full text-meta">
-          <thead style={{ color: "var(--text-secondary)" }}>
-            <tr>
-              <th className="text-left py-1">Nom</th>
-              <th className="text-left py-1">FM raqami</th>
-              <th className="text-left py-1">STIR</th>
-            </tr>
-          </thead>
-          <tbody>
-            {devices.map((d) => (
-              <tr key={d.id} style={{ borderTop: "1px solid var(--card-border)" }}>
-                <td className="py-1.5">{d.label}</td>
-                <td className="py-1.5 font-mono">{d.fmNumber}</td>
-                <td className="py-1.5">{d.inn}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          rows={devices}
+          columns={DEVICE_COLUMNS}
+          rowKey={(d) => d.id}
+          caption="Ro'yxatga olingan kassa apparatlari"
+          maxBodyHeight={null}
+          density="compact"
+          emptyTitle="Apparat qo'shilmagan"
+          emptyDescription="Quyidagi maydonlar orqali kassa apparatini qo'shing."
+        />
 
         <div className="flex flex-wrap items-end gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--card-border)" }}>
           <Field label="Nom">
-            <input className="input" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="1-savdo nuqtasi" />
+            <input className="erp-input" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="1-savdo nuqtasi" />
           </Field>
           <Field label="FM raqami">
-            <input className="input font-mono" value={form.fmNumber} onChange={(e) => setForm({ ...form, fmNumber: e.target.value })} placeholder="VG343420023218" />
+            <input className="erp-input font-mono" value={form.fmNumber} onChange={(e) => setForm({ ...form, fmNumber: e.target.value })} placeholder="VG343420023218" />
           </Field>
           <Field label="STIR">
-            <input className="input font-mono" value={form.inn} onChange={(e) => setForm({ ...form, inn: e.target.value })} placeholder="308229886" />
+            <input className="erp-input font-mono" value={form.inn} onChange={(e) => setForm({ ...form, inn: e.target.value })} placeholder="308229886" />
           </Field>
           <Button
             variant="secondary"

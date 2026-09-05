@@ -89,12 +89,20 @@ export function DashboardSidebar({ userRole, allowedViews: allowedViewsProp }: D
             className="w-8 h-8 object-contain shrink-0"
           />
           <div className={collapsed ? "md:hidden" : ""}>
-            <h1
-              className="text-base font-bold tracking-tight leading-none"
+            {/*
+              `<h1>` EMAS. Yon panel har sahifada bir xil chiziladi, ya'ni
+              `<h1>` bo'lsa HAR sahifada ikkita birinchi darajali sarlavha
+              bo'lardi: "ASRO" va sahifaning o'z nomi. Ekran o'quvchida
+              hujjat tuzilmasi shundan buziladi va `PageHeader` ning
+              "sahifada bitta `h1`" shartnomasi ham bajarilmaydi.
+              Logotip matni — brend belgisi, sarlavha emas.
+            */}
+            <span
+              className="block text-base font-bold tracking-tight leading-none"
               style={{ color: "var(--text-primary)" }}
             >
               ASRO
-            </h1>
+            </span>
             <p
               className="font-mono text-micro font-medium uppercase leading-none mt-1"
               style={{ color: "var(--text-muted)", letterSpacing: "0.14em" }}

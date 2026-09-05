@@ -22,7 +22,7 @@
 
 import React, { useMemo, useState } from "react";
 import { formatNum } from "@/lib/platform/format";
-import { Money } from "@/components/ui";
+import { DataTable, Money, StatStrip, type DataColumn, type StatItem } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/exportTable";
 import { Wallet, AlertTriangle, Eye, EyeOff, Download } from "lucide-react";
@@ -51,6 +51,92 @@ interface Props {
 }
 
 const card = { background: "var(--card-bg)", border: "1px solid var(--card-border)" };
+
+/**
+ * USTUNLAR. Karta uchun jurnal va tranzit daftari MUSTAQIL ikki o'lchov —
+ * farq bo'lsa karta xarajati kassaga bog'lanmagan, shuning uchun u nom
+ * katagida ogohlantirish bo'lib chiqadi.
+ */
+const COLUMNS: DataColumn<Row>[] = [
+  {
+    key: "label",
+    header: "Kassa",
+    cell: (r) => {
+      const orphan = r.channelId === null;
+      const mismatch = r.transitBalance !== null && Math.abs(r.transitBalance - r.closing) > 1;
+      return (
+        <div className="min-w-0">
+          <div className="font-semibold" style={{ color: orphan ? "var(--warning)" : "var(--text)" }}>
+            {r.label}
+            {!r.isActive && !orphan && (
+              <span className="ml-1.5 text-micro" style={{ color: "var(--text-muted)" }}>(muzlatilgan)</span>
+            )}
+          </div>
+          {r.detail && (
+            <div className="text-micro" style={{ color: "var(--text-muted)" }}>{r.detail}</div>
+          )}
+          {mismatch && (
+            <div className="text-micro" style={{ color: "var(--danger)" }}>
+              Tranzit daftari: {formatNum(r.transitBalance ?? 0)} — farq{" "}
+              {formatNum((r.transitBalance ?? 0) - r.closing)}
+            </div>
+          )}
+        </div>
+      );
+    },
+    sortValue: (r) => r.label,
+    exportValue: (r) => r.label,
+    sticky: true,
+    mobile: "title",
+  },
+  {
+    key: "type",
+    header: "Turi",
+    cell: (r) => <span style={{ color: "var(--text-muted)" }}>{r.typeLabel}</span>,
+    sortValue: (r) => r.typeLabel,
+    mobile: "status",
+  },
+  {
+    key: "opening",
+    header: "Ochilish",
+    cell: (r) => <Money value={r.opening} tone="muted" dashIfZero />,
+    sortValue: (r) => r.opening,
+    numeric: true,
+    align: "right",
+  },
+  // PUL YO'NALISHI — `--accent-*` tokenlari (`Money` tone). `--danger` va
+  // `--success` holat ranglari; ularni bu yerdan olib tashlaganda qizil
+  // faqat xato ma'nosida qoladi.
+  {
+    key: "income",
+    header: "Kirim",
+    cell: (r) => <Money value={r.income} tone="in" showSign dashIfZero />,
+    sortValue: (r) => r.income,
+    numeric: true,
+    align: "right",
+  },
+  {
+    key: "outflow",
+    header: "Chiqim",
+    cell: (r) => <Money value={r.outflow} tone="out" showSign dashIfZero />,
+    sortValue: (r) => r.outflow,
+    numeric: true,
+    align: "right",
+  },
+  {
+    key: "closing",
+    header: "Qoldiq",
+    cell: (r) => (
+      <span className="font-semibold tabular-nums" style={{ color: r.closing < 0 ? "var(--danger)" : "var(--text)" }}>
+        {formatNum(r.closing)}
+      </span>
+    ),
+    sortValue: (r) => r.closing,
+    exportValue: (r) => r.closing,
+    numeric: true,
+    align: "right",
+  },
+];
 
 type TabKey = "main" | "cards" | "orphan";
 
@@ -106,6 +192,12 @@ export default function CashDeskTable({ report }: Props) {
   const dormantCount = active.rows.filter(isDormant).length;
   const visible = showDormant ? active.rows : active.rows.filter((r) => !isDormant(r));
   const subtotal = sumOf(active.rows);
+  const subtotalItems: StatItem[] = [
+    { label: `${active.label} — ochilish`, value: subtotal.opening, tone: "muted" },
+    { label: "Kirim", value: subtotal.income, tone: "in" },
+    { label: "Chiqim", value: subtotal.outflow, tone: "out" },
+    { label: "Qoldiq", value: subtotal.closing, tone: "neutral", emphasis: true },
+  ];
 
   return (
     <div className="rounded-xl overflow-hidden" style={card}>
@@ -184,7 +276,7 @@ export default function CashDeskTable({ report }: Props) {
               className="px-2.5 py-1 rounded-lg text-micro font-semibold whitespace-nowrap"
               style={
                 t.key === active.key
-                  ? { background: "var(--accent-blue)", color: "#fff" }
+                  ? { background: "var(--accent-blue)", color: "var(--on-brand)" }
                   : { background: "var(--input-bg)", color: "var(--text-secondary)" }
               }
             >
@@ -216,125 +308,27 @@ export default function CashDeskTable({ report }: Props) {
         </p>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-meta">
-          <thead>
-            <tr style={{ background: "var(--table-header-bg)" }}>
-              {["Kassa", "Turi", "Ochilish", "Kirim", "Chiqim", "Qoldiq"].map((h, i) => (
-                <th
-                  key={h}
-                  className={`px-3 py-2 text-micro font-semibold uppercase tracking-wider whitespace-nowrap ${
-                    i >= 2 ? "text-right" : "text-left"
-                  }`}
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-3 py-4 text-center" style={{ color: "var(--text-muted)" }}>
-                  {active.rows.length === 0
-                    ? "Bu bo'limda kassa yo'q."
-                    : "Hamma kassa harakatsiz — ko'rish uchun yuqoridagi tugmani bosing."}
-                </td>
-              </tr>
-            ) : (
-              visible.map((r) => {
-                const orphan = r.channelId === null;
-                // Karta uchun jurnal va tranzit daftari MUSTAQIL ikki o'lchov.
-                // Farq bo'lsa — karta xarajati kassaga bog'lanmagan.
-                const mismatch =
-                  r.transitBalance !== null && Math.abs(r.transitBalance - r.closing) > 1;
-                return (
-                  <tr
-                    key={r.channelId ?? "none"}
-                    className="transition-colors hover:bg-[var(--input-bg)]"
-                    style={{
-                      borderTop: "1px solid var(--card-border)",
-                      background: orphan ? "var(--warning-bg)" : undefined,
-                      opacity: r.isActive || orphan ? 1 : 0.55,
-                    }}
-                  >
-                    <td className="px-3 py-2">
-                      <div className="font-semibold" style={{ color: "var(--text)" }}>
-                        {r.label}
-                        {!r.isActive && !orphan && (
-                          <span className="ml-1.5 text-micro" style={{ color: "var(--text-muted)" }}>
-                            (muzlatilgan)
-                          </span>
-                        )}
-                      </div>
-                      {r.detail && (
-                        <div className="text-micro" style={{ color: "var(--text-muted)" }}>
-                          {r.detail}
-                        </div>
-                      )}
-                      {mismatch && (
-                        <div className="text-micro" style={{ color: "var(--danger)" }}>
-                          Tranzit daftari: {formatNum(r.transitBalance ?? 0)} — farq{" "}
-                          {formatNum((r.transitBalance ?? 0) - r.closing)}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-2" style={{ color: "var(--text-muted)" }}>
-                      {r.typeLabel}
-                    </td>
-                    <td
-                      className="px-3 py-2 text-right tabular-nums"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      <Money value={r.opening} tone="muted" dashIfZero />
-                    </td>
-                    {/* PUL YO'NALISHI — `--accent-*` tokenlari (Money tone).
-                        `--danger/--success` holat ranglari; ularni bu yerdan
-                        olib tashlaganda qizil faqat xato ma'nosida qoladi. */}
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      <Money value={r.income} tone="in" showSign dashIfZero />
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      <Money value={r.outflow} tone="out" showSign dashIfZero />
-                    </td>
-                    <td
-                      className="px-3 py-2 text-right tabular-nums font-semibold"
-                      style={{ color: r.closing < 0 ? "var(--danger)" : "var(--text)" }}
-                    >
-                      <Money value={r.closing} tone="neutral" bold />
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-          <tfoot>
-            <tr
-              style={{ borderTop: "2px solid var(--card-border)", background: "var(--table-header-bg)" }}
-            >
-              <td className="px-3 py-2 font-semibold" style={{ color: "var(--text)" }} colSpan={2}>
-                {active.label} — jami
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums" style={{ color: "var(--text-muted)" }}>
-                <Money value={subtotal.opening} tone="muted" dashIfZero />
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums font-semibold">
-                <Money value={subtotal.income} tone="in" showSign dashIfZero bold />
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums font-semibold">
-                <Money value={subtotal.outflow} tone="out" showSign dashIfZero bold />
-              </td>
-              <td
-                className="px-3 py-2 text-right tabular-nums font-semibold"
-                style={{ color: "var(--text)" }}
-              >
-                {formatNum(subtotal.closing)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      <DataTable
+        rows={visible}
+        columns={COLUMNS}
+        rowKey={(r) => r.channelId ?? "none"}
+        caption={`${active.label} — kassalar bo'yicha ochilish, harakat va qoldiq`}
+        // Bu jadval `<details>` ichidagi oy yakuni hisoboti — o'z ichida
+        // aylanmaydi, chunki ochilgan bo'lim baribir to'liq o'qiladi.
+        maxBodyHeight={null}
+        density="compact"
+        emptyTitle={active.rows.length === 0 ? "Bu bo'limda kassa yo'q" : "Hamma kassa harakatsiz"}
+        emptyDescription={
+          active.rows.length === 0
+            ? undefined
+            : "Ko'rish uchun yuqoridagi \"Harakatsiz\" tugmasini bosing."
+        }
+      />
+
+      {/* BO'LIM JAMI — ilgari `<tfoot>` da edi. `DataTable` da oyoq qatori
+          yo'q (u saralash va sahifalashda ma'nosini yo'qotadi), shuning
+          uchun yig'indi jadval OSTIDA, boshqa ekranlardagi kabi. */}
+      <StatStrip items={subtotalItems} minWidth={120} />
     </div>
   );
 }

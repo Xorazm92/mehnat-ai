@@ -23,14 +23,19 @@
 // bir ekranda o'qib bo'lmaydi; rahbarning savoli esa MIJOZ haqida.
 // Shartnoma tafsiloti qatorni bosganda ochiladi.
 
-import React, { useEffect, useMemo, useState } from "react";
-import { Pagination, pageSlice } from "@/components/ui";
+import React, { useMemo, useState } from "react";
 import { usePageSize } from "@/hooks/usePageSize";
+import { useTableState } from "@/hooks/useTableState";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
-import { Money, StatStrip, type StatItem } from "@/components/ui";
-import { Scale, Search, AlertTriangle, ChevronRight } from "lucide-react";
+import {
+  Badge, DataTable, Drawer, EmptyState, IdentityCell, Money, StatStrip, TableToolbar,
+  type DataColumn, type StatItem,
+} from "@/components/ui";
+import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
+import { Scale, AlertTriangle, ChevronRight } from "lucide-react";
 
 type Kind = "BK" | "RK" | "unknown";
 
@@ -76,16 +81,74 @@ const KIND_TONE: Record<Kind, string> = {
   unknown: "var(--text-muted)",
 };
 
+/** Yon paneldagi shartnoma qatorlari. */
+const LINE_COLUMNS: DataColumn<Line>[] = [
+  {
+    key: "contract",
+    header: "Shartnoma",
+    cell: (l) => (
+      <span className="inline-flex items-center gap-1.5 flex-wrap">
+        <span style={{ color: "var(--text-primary)" }}>{l.contractNumber ?? "Shartnomasiz"}</span>
+        <span
+          className="px-1.5 py-0.5 rounded text-micro font-semibold"
+          style={{ background: "var(--bg-sunken)", color: KIND_TONE[l.kind] }}
+        >
+          {l.kindLabel}
+        </span>
+        {l.ownFirmName && (
+          <span className="text-micro" style={{ color: "var(--text-muted)" }}>{l.ownFirmName}</span>
+        )}
+      </span>
+    ),
+    sortValue: (l) => l.contractNumber ?? "",
+    sticky: true,
+    mobile: "title",
+  },
+  {
+    key: "opening",
+    header: "Boshi",
+    cell: (l) => <Money value={l.opening} tone="muted" dashIfZero />,
+    sortValue: (l) => l.opening,
+    numeric: true,
+    align: "right",
+  },
+  {
+    key: "accrued",
+    header: "Hisoblandi",
+    cell: (l) => <Money value={l.accrued} tone="auto" dashIfZero />,
+    sortValue: (l) => l.accrued,
+    numeric: true,
+    align: "right",
+  },
+  {
+    key: "debt",
+    header: "Qarz",
+    cell: (l) => <Money value={l.debt} tone="out" dashIfZero bold />,
+    sortValue: (l) => l.debt,
+    numeric: true,
+    align: "right",
+  },
+  {
+    key: "advance",
+    header: "Avans",
+    cell: (l) => <Money value={l.advance} tone="in" dashIfZero bold />,
+    sortValue: (l) => l.advance,
+    numeric: true,
+    align: "right",
+  },
+];
+
 export default function DebtStatement({ statement: s }: { statement: DebtStatementData }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
-  const [q, setQ] = useState("");
   const [kind, setKind] = useState<Kind | "all">("all");
-  const [open, setOpen] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  /** Ochilgan mijoz — shartnoma tafsiloti yon panelda. */
+  const [detail, setDetail] = useState<Customer | null>(null);
+  const table = useTableState({ ns: "hk", defaultSortKey: "debt", defaultSortDir: "desc" });
   const [pageSize, setPageSize] = usePageSize("debt");
+  const q = table.debouncedSearch;
 
   const setDate = (which: "dan" | "gacha", value: string) => {
     const next = new URLSearchParams(params.toString());
@@ -106,18 +169,14 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
     });
   }, [s.customers, q, kind]);
 
-  const shown = pageSlice(rows, page, pageSize);
-  // Qidiruv yoki kesim ro'yxatni qisqartirsa joriy sahifa yo'qolishi mumkin.
-  useEffect(() => { setPage(1); }, [q, kind]);
-
   if (!s.closingAsOf) {
     return (
-      <div className="rounded-xl p-4 text-meta" style={{ ...card, color: "var(--text-muted)" }}>
-        Qarzdorlik kesimi hali import qilinmagan.
-        <div className="text-micro mt-1">
-          1C faylini <b>kassa/</b> ga qo&apos;ying va{" "}
-          <b>npx tsx scripts/import-debt-snapshot.ts --apply</b> ni ishga tushiring.
-        </div>
+      <div className="rounded-xl" style={card}>
+        <EmptyState
+          icon={<Scale size={28} />}
+          title="Qarzdorlik kesimi hali import qilinmagan"
+          description="1C faylini kassa/ ga qo'ying va `npx tsx scripts/import-debt-snapshot.ts --apply` ni ishga tushiring."
+        />
       </div>
     );
   }
@@ -133,6 +192,75 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
       : []),
     { label: "Qarz", value: s.totals.debt, tone: "out", hint: "Davr oxirida bizga qarzdor" },
     { label: "Avans", value: s.totals.advance, tone: "in", hint: "Davr oxirida oldindan to'langan" },
+  ];
+
+  /**
+   * "To'landi" ustuni `hidden` orqali o'chiriladi — sarlavha, kataklar va
+   * eksport BITTA ro'yxatdan kelib chiqadi. Ilgari `{s.hasPayments && <th>}`
+   * ko'rinishida ikki joyda takrorlanardi.
+   */
+  const columns: DataColumn<Customer>[] = [
+    {
+      key: "customer",
+      header: "Mijoz",
+      cell: (c) => (
+        <IdentityCell
+          name={c.customerName}
+          size="sm"
+          secondary={
+            <span className="inline-flex items-center gap-1.5">
+              {c.companyInn ? c.companyInn : <Badge tone="warning">STIR yo&apos;q</Badge>}
+              {c.lines.length > 1 && <span>{c.lines.length} shartnoma</span>}
+            </span>
+          }
+        />
+      ),
+      sortValue: (c) => c.customerName,
+      exportValue: (c) => c.customerName,
+      sticky: true,
+      mobile: "title",
+    },
+    {
+      key: "opening",
+      header: "Boshi",
+      cell: (c) => <Money value={c.opening} tone="muted" dashIfZero />,
+      sortValue: (c) => c.opening,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "accrued",
+      header: "Hisoblandi",
+      cell: (c) => <Money value={c.accrued} tone="auto" dashIfZero />,
+      sortValue: (c) => c.accrued,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "paid",
+      header: "To'landi",
+      cell: (c) => <Money value={c.paid} tone="in" dashIfZero />,
+      sortValue: (c) => c.paid,
+      numeric: true,
+      align: "right",
+      hidden: !s.hasPayments,
+    },
+    {
+      key: "debt",
+      header: "Qarz",
+      cell: (c) => <Money value={c.debt} tone="out" dashIfZero bold />,
+      sortValue: (c) => c.debt,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "advance",
+      header: "Avans",
+      cell: (c) => <Money value={c.advance} tone="in" dashIfZero bold />,
+      sortValue: (c) => c.advance,
+      numeric: true,
+      align: "right",
+    },
   ];
 
   return (
@@ -153,28 +281,30 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 text-micro" style={{ color: "var(--text-muted)" }}>
-          <select
+        <div className="flex items-center gap-1.5">
+          <Select
+            size="sm"
+            fullWidth={false}
+            aria-label="Davr boshi"
             value={s.openingAsOf?.slice(0, 10) ?? ""}
             onChange={(e) => setDate("dan", e.target.value)}
-            className="px-2 py-1 rounded-lg"
-            style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
           >
             {s.availableDates.map((d) => (
               <option key={d} value={d.slice(0, 10)}>{formatUzDate(d)}</option>
             ))}
-          </select>
-          <ChevronRight size={12} />
-          <select
+          </Select>
+          <ChevronRight size={12} style={{ color: "var(--text-muted)" }} aria-hidden="true" />
+          <Select
+            size="sm"
+            fullWidth={false}
+            aria-label="Davr oxiri"
             value={s.closingAsOf.slice(0, 10)}
             onChange={(e) => setDate("gacha", e.target.value)}
-            className="px-2 py-1 rounded-lg"
-            style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
           >
             {s.availableDates.map((d) => (
               <option key={d} value={d.slice(0, 10)}>{formatUzDate(d)}</option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -194,146 +324,129 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
       )}
 
       {/* Filtr */}
-      <div className="px-3 py-2 flex flex-wrap items-center gap-1.5" style={{ borderBottom: "1px solid var(--card-border)" }}>
-        <button
-          onClick={() => setKind("all")}
-          className="px-2.5 py-1 rounded-lg text-micro font-semibold"
-          style={kind === "all"
-            ? { background: "var(--accent-blue)", color: "#fff" }
-            : { background: "var(--input-bg)", color: "var(--text-secondary)" }}
-        >
-          Hammasi
-        </button>
-        {s.byKind.map((k) => (
-          <button
-            key={k.kind}
-            onClick={() => setKind(k.kind)}
-            className="px-2.5 py-1 rounded-lg text-micro font-semibold"
-            style={kind === k.kind
-              ? { background: KIND_TONE[k.kind], color: "#fff" }
-              : { background: "var(--input-bg)", color: "var(--text-secondary)" }}
-            title={`qarz ${formatNum(k.debt)} · avans ${formatNum(k.advance)}`}
-          >
-            {k.label} ({k.count})
-          </button>
-        ))}
-        <div className="flex items-center gap-1.5 ml-auto">
-          <Search size={13} style={{ color: "var(--text-muted)" }} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Mijoz, STIR yoki shartnoma"
-            className="px-2 py-1 rounded-lg text-micro w-56"
-            style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
-          />
-        </div>
-      </div>
-
-      <div className="overflow-auto rounded-t-xl" style={{ maxHeight: "calc(100vh - 300px)" }}>
-        <table className="table-sticky-head w-full text-meta">
-          <thead>
-            <tr style={{ background: "var(--input-bg)" }}>
-              <th className="text-left p-2">Mijoz</th>
-              <th className="text-right p-2">Boshi</th>
-              <th className="text-right p-2">Hisoblandi</th>
-              {s.hasPayments && <th className="text-right p-2">To&apos;landi</th>}
-              <th className="text-right p-2">Qarz</th>
-              <th className="text-right p-2">Avans</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((c) => {
-              const id = c.companyId ?? c.customerName;
-              const isOpen = open === id;
-              return (
-                <React.Fragment key={id}>
-                  <tr
-                    onClick={() => setOpen(isOpen ? null : id)}
-                    className="cursor-pointer transition-colors hover:bg-[var(--input-bg)]"
-                    style={{ borderTop: "1px solid var(--card-border)", background: isOpen ? "var(--input-bg)" : undefined }}
-                  >
-                    <td className="p-2">
-                      <div className="flex items-center gap-1.5">
-                        <ChevronRight
-                          size={13}
-                          style={{
-                            color: "var(--text-muted)",
-                            transform: isOpen ? "rotate(90deg)" : undefined,
-                            transition: "transform .15s",
-                          }}
-                        />
-                        <span className="truncate max-w-[280px]" title={c.customerName}>{c.customerName}</span>
-                        {c.companyInn ? (
-                          <span className="text-micro tabular-nums" style={{ color: "var(--text-muted)" }}>
-                            {c.companyInn}
-                          </span>
-                        ) : (
-                          <span className="text-micro" style={{ color: "var(--warning)" }} title="Bazadagi firmaga bog'lanmagan">
-                            ●
-                          </span>
-                        )}
-                        {c.lines.length > 1 && (
-                          <span className="text-micro" style={{ color: "var(--text-muted)" }}>
-                            {c.lines.length} shartnoma
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-2 text-right"><Money value={c.opening} tone="muted" dashIfZero /></td>
-                    <td className="p-2 text-right"><Money value={c.accrued} tone="auto" dashIfZero /></td>
-                    {s.hasPayments && (
-                      <td className="p-2 text-right"><Money value={c.paid} tone="in" dashIfZero /></td>
-                    )}
-                    <td className="p-2 text-right"><Money value={c.debt} tone="out" dashIfZero bold /></td>
-                    <td className="p-2 text-right"><Money value={c.advance} tone="in" dashIfZero bold /></td>
-                  </tr>
-
-                  {isOpen &&
-                    c.lines.map((l, i) => (
-                      <tr key={i} style={{ background: "var(--input-bg)" }}>
-                        <td className="py-1.5 pl-9 pr-2">
-                          <span style={{ color: "var(--text-secondary)" }}>{l.contractNumber ?? "Shartnomasiz"}</span>
-                          <span
-                            className="ml-1.5 px-1.5 py-0.5 rounded text-micro"
-                            style={{ background: "var(--card-bg)", color: KIND_TONE[l.kind] }}
-                          >
-                            {l.kindLabel}
-                          </span>
-                          {l.ownFirmName && (
-                            <span className="ml-1.5 text-micro" style={{ color: "var(--text-muted)" }}>
-                              {l.ownFirmName}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-1.5 px-2 text-right text-micro"><Money value={l.opening} tone="muted" dashIfZero /></td>
-                        <td className="py-1.5 px-2 text-right text-micro"><Money value={l.accrued} tone="muted" dashIfZero /></td>
-                        {s.hasPayments && <td className="py-1.5 px-2 text-right text-micro" style={{ color: "var(--text-muted)" }}>—</td>}
-                        <td className="py-1.5 px-2 text-right text-micro"><Money value={l.debt} tone="muted" dashIfZero /></td>
-                        <td className="py-1.5 px-2 text-right text-micro"><Money value={l.advance} tone="muted" dashIfZero /></td>
-                      </tr>
-                    ))}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
       <div
-        className="px-3 py-2 flex items-center justify-between gap-3 flex-wrap text-micro"
+        className="px-3 py-2 flex flex-wrap items-center gap-2"
+        style={{ borderBottom: "1px solid var(--card-border)" }}
+      >
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setKind("all")}
+            aria-pressed={kind === "all"}
+            className="px-2.5 py-1 rounded-lg text-micro font-semibold transition-colors"
+            style={kind === "all"
+              // `#fff` EMAS: `--on-brand` dark rejimda qorayadi, qattiq oq esa
+              // rangli fon ustida o'qilmay qolardi.
+              ? { background: "var(--accent-blue)", color: "var(--on-brand)" }
+              : { background: "var(--input-bg)", color: "var(--text-secondary)" }}
+          >
+            Hammasi
+          </button>
+          {s.byKind.map((k) => (
+            <button
+              key={k.kind}
+              type="button"
+              onClick={() => setKind(k.kind)}
+              aria-pressed={kind === k.kind}
+              className="px-2.5 py-1 rounded-lg text-micro font-semibold transition-colors"
+              style={kind === k.kind
+                ? { background: KIND_TONE[k.kind], color: "var(--on-brand)" }
+                : { background: "var(--input-bg)", color: "var(--text-secondary)" }}
+              title={`qarz ${formatNum(k.debt)} · avans ${formatNum(k.advance)}`}
+            >
+              {k.label} ({k.count})
+            </button>
+          ))}
+        </div>
+        <TableToolbar
+          className="ml-auto"
+          search={table.search}
+          onSearchChange={table.setSearch}
+          searchPlaceholder="Mijoz, STIR yoki shartnoma"
+          density={table.density}
+          onDensityChange={table.setDensity}
+        />
+      </div>
+
+      <DataTable
+        rows={rows}
+        columns={columns}
+        rowKey={(c) => c.companyId ?? c.customerName}
+        caption="Mijozlar bo'yicha hisob-kitob varaqasi"
+        sortKey={table.sortKey}
+        sortDir={table.sortDir}
+        onToggleSort={table.toggleSort}
+        density={table.density}
+        page={table.page}
+        pageSize={pageSize}
+        onPageChange={table.setPage}
+        onPageSizeChange={setPageSize}
+        onRowClick={setDetail}
+        rowLabel={(c) => `${c.customerName} shartnomalarini ochish`}
+        emptyIcon={<Scale size={28} />}
+        emptyTitle="Mijoz topilmadi"
+        emptyDescription={
+          kind !== "all" || q.trim() ? "Qidiruv yoki kesimni o'zgartirib ko'ring." : undefined
+        }
+        emptyAction={
+          kind !== "all" || q.trim() ? (
+            <Button variant="secondary" size="sm" onClick={() => { setKind("all"); table.setSearch(""); }}>
+              Filtrni tozalash
+            </Button>
+          ) : undefined
+        }
+      />
+
+      <p
+        className="px-3 py-2 text-micro"
         style={{ borderTop: "1px solid var(--card-border)", color: "var(--text-muted)" }}
       >
-        <span>● belgisi bazadagi firmaga bog&apos;lanmaganini bildiradi</span>
-      </div>
+        Qatorni bosing — mijozning shartnomalari bo&apos;yicha tafsilot yon panelda ochiladi.
+        &quot;STIR yo&apos;q&quot; nishoni bazadagi firmaga bog&apos;lanmaganini bildiradi.
+      </p>
 
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={rows.length}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        unit="mijoz"
-      />
+      {/*
+        SHARTNOMA TAFSILOTI — YON PANELDA.
+
+        Ilgari u jadval ICHIGA qo'shimcha qator bo'lib ochilardi va o'sha
+        qatorlar asosiy ustunlar bilan bir xil kenglikda emas edi: "To'landi"
+        katagi har doim "—" turardi, chunki to'lov shartnoma darajasida
+        taqsimlanmaydi. Yon panel ustun tuzilmasini buzmaydi va ro'yxatni
+        yopmaydi — kassir mijozdan mijozga o'ta oladi.
+      */}
+      <Drawer
+        open={detail !== null}
+        onClose={() => setDetail(null)}
+        width="lg"
+        title={detail?.customerName ?? ""}
+        description={detail ? `${detail.lines.length} ta shartnoma · ${detail.companyInn ? `STIR ${detail.companyInn}` : "bazadagi firmaga bog'lanmagan"}` : undefined}
+      >
+        {detail && (
+          <div className="space-y-3">
+            <StatStrip
+              items={[
+                { label: "Boshi", value: detail.opening, tone: "neutral" },
+                { label: "Hisoblandi", value: detail.accrued, tone: "auto" },
+                ...(s.hasPayments ? [{ label: "To'landi", value: detail.paid, tone: "in" as const }] : []),
+                { label: "Qarz", value: detail.debt, tone: "out" },
+                { label: "Avans", value: detail.advance, tone: "in" },
+              ]}
+              minWidth={110}
+            />
+
+            <DataTable
+              rows={detail.lines}
+              columns={LINE_COLUMNS}
+              rowKey={(l) => `${l.contractNumber ?? "yo'q"}-${l.kind}-${l.ownFirmName ?? ""}`}
+              caption={`${detail.customerName} shartnomalari`}
+              maxBodyHeight={null}
+              density="compact"
+              emptyTitle="Shartnoma topilmadi"
+            />
+          </div>
+        )}
+      </Drawer>
+
     </div>
   );
 }

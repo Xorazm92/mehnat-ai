@@ -1,12 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AlertTriangle, Search, TrendingUp, CheckCircle2, XCircle } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { AlertTriangle, TrendingUp, CheckCircle2, XCircle, HandCoins, Scale, Users, CalendarClock, Ban } from "lucide-react";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import CollectionQueue from "./CollectionQueue";
 import DebtStatement, { type DebtStatementData } from "./DebtStatement";
-import { Tabs, StatStrip, type TabItem } from "@/components/ui";
+import {
+  Badge, DataTable, EmptyState, IdentityCell, MetricRail, Money, PageHeader,
+  TableToolbar, Tabs, type DataColumn, type TabItem,
+} from "@/components/ui";
+import { Button } from "@/components/ui/Button";
+import { useTableState } from "@/hooks/useTableState";
+import { usePageSize } from "@/hooks/usePageSize";
 import { useTabParam, useUrlParam } from "@/hooks/useTabParam";
 import { QARZDORLIK_TAB_IDS, QARZDORLIK_DEFAULT_TAB, type QarzdorlikTab } from "@/lib/qarzdorlikTabs";
 import { DEBT_AGING_STAGES, debtAgingStage, type DebtAgingStage } from "@/lib/debtAging";
@@ -212,6 +218,199 @@ export default function QarzdorlikClient({
       );
   }, [debtors.rows, debtorQuery, stageFilter, focus]);
 
+  // Saralash/sahifa/zichlik — `DataTable` shu holatni kutadi. Qidiruv va
+  // kesim filtrlari URL'da alohida yashaydi (`q`, `bosqich`, `kesim`),
+  // shuning uchun bu yerda faqat jadval holati.
+  const debtorTable = useTableState({ ns: "qd", defaultSortKey: "overdue", defaultSortDir: "desc" });
+  const [debtorPageSize, setDebtorPageSize] = usePageSize("debtors");
+  const svTable = useTableState({ ns: "sv", defaultSortKey: "debt1C", defaultSortDir: "desc" });
+  const [svPageSize, setSvPageSize] = usePageSize("debt-1c");
+
+  const clearDebtorFilters = () => {
+    setStageFilter(null);
+    setFocusParam("");
+    setDebtorQuery("");
+  };
+
+  const emptyDebtorReason =
+    debtors.rows.length === 0
+      ? "Hech bir firmada to'lanmagan qoldiq yo'q."
+      : stageFilter
+        ? `${DEBT_AGING_STAGES.find((x) => x.key === stageFilter)?.label} oralig'ida qarzdor topilmadi.`
+        : focus === "overdue"
+          ? "Muddati o'tgan qarzdor topilmadi."
+          : focus === "neverPaid"
+            ? "Hech to'lamagan qarzdor topilmadi."
+            : "Qidiruvga mos firma topilmadi.";
+
+  const debtorColumns: DataColumn<DebtorRow>[] = [
+    {
+      key: "name",
+      header: "Firma",
+      cell: (r) => <IdentityCell name={r.name} secondary={`STIR ${r.inn}`} size="sm" />,
+      sortValue: (r) => r.name,
+      sticky: true,
+      mobile: "title",
+    },
+    {
+      key: "contract",
+      header: "Shartnoma",
+      cell: (r) => <Money value={r.contractAmount} tone="muted" dashIfZero />,
+      sortValue: (r) => r.contractAmount,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "dueNow",
+      header: "Bu oy yig'iladi",
+      cell: (r) => <Money value={r.dueNow} tone="in" dashIfZero bold />,
+      sortValue: (r) => r.dueNow,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "overdue",
+      header: "Muddati o'tgan",
+      cell: (r) => <Money value={r.overdue} tone="out" dashIfZero bold />,
+      sortValue: (r) => r.overdue,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "days",
+      header: "Kun",
+      // Rang eskirish BOSQICHIDAN — 60 kunlik 10 mln 10 kunlik 50 mln dan
+      // xavfliroq, va bu farq summada umuman ko'rinmaydi.
+      cell: (r) =>
+        r.overdue > 0 ? (
+          <span
+            className="font-semibold tabular-nums"
+            style={{ color: DEBT_AGING_STAGES.find((x) => x.key === debtAgingStage(r.overdueDays))!.color }}
+          >
+            {r.overdueDays}
+          </span>
+        ) : (
+          "—"
+        ),
+      sortValue: (r) => (r.overdue > 0 ? r.overdueDays : -1),
+      numeric: true,
+      align: "right",
+      mobile: "status",
+    },
+    {
+      key: "lastPaid",
+      header: "Oxirgi to'lov",
+      cell: (r) =>
+        r.lastPaidPeriod ? (
+          <span style={{ color: "var(--text-muted)" }}>{r.lastPaidPeriod}</span>
+        ) : (
+          <Badge tone="warning">hech qachon</Badge>
+        ),
+      sortValue: (r) => r.lastPaidPeriod ?? "",
+    },
+    {
+      key: "accountant",
+      header: "Mas'ul",
+      cell: (r) => r.accountantName ?? "—",
+      sortValue: (r) => r.accountantName ?? "",
+    },
+  ];
+
+  /** 1C ↔ ASRO solishtiruvi. */
+  const svColumns: DataColumn<DebtRow>[] = [
+    {
+      key: "customer",
+      header: "Mijoz",
+      cell: (r) => (
+        <span className="inline-flex items-center gap-2">
+          {r.customer}
+          {!r.linked && <Badge tone="warning">bazada yo&apos;q</Badge>}
+        </span>
+      ),
+      sortValue: (r) => r.customer,
+      sticky: true,
+      mobile: "title",
+    },
+    { key: "contract", header: "Shartnoma", cell: (r) => r.contract ?? "—", sortValue: (r) => r.contract ?? "" },
+    { key: "ownFirm", header: "Bizning firma", cell: (r) => r.ownFirm ?? "—", sortValue: (r) => r.ownFirm ?? "" },
+    {
+      key: "debt1C",
+      header: "1C",
+      cell: (r) => <Money value={r.debt1C} tone="neutral" bold />,
+      sortValue: (r) => r.debt1C,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "debtAsro",
+      header: "ASRO",
+      cell: (r) => (r.debtAsro == null ? "—" : <Money value={r.debtAsro} tone="muted" />),
+      sortValue: (r) => r.debtAsro ?? 0,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "diff",
+      header: "Farq",
+      cell: (r) =>
+        r.diff == null ? (
+          "—"
+        ) : (
+          <span
+            className="font-semibold tabular-nums"
+            style={{ color: Math.abs(r.diff) > 1 ? "var(--warning)" : "var(--success)" }}
+          >
+            {r.diff > 0 ? "+" : ""}
+            {formatNum(r.diff)}
+          </span>
+        ),
+      sortValue: (r) => r.diff ?? 0,
+      numeric: true,
+      align: "right",
+      mobile: "status",
+    },
+  ];
+
+  /** Reja/fakt — bajarilish foizi qatorda hisoblanadi. */
+  const planFactColumns: DataColumn<PlanFactRow>[] = [
+    { key: "period", header: "Davr", cell: (p) => p.period, sortValue: (p) => p.period, sticky: true, mobile: "title" },
+    {
+      key: "plan",
+      header: "Reja",
+      cell: (p) => <Money value={Number(p.plan ?? 0)} tone="neutral" dashIfZero />,
+      sortValue: (p) => Number(p.plan ?? 0),
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "fact",
+      header: "Fakt",
+      cell: (p) => <Money value={Number(p.fact ?? 0)} tone="neutral" dashIfZero />,
+      sortValue: (p) => Number(p.fact ?? 0),
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "pct",
+      header: "Bajarilishi",
+      cell: (p) => {
+        const plan = Number(p.plan ?? 0);
+        const fact = Number(p.fact ?? 0);
+        const pct = plan > 0 ? Math.round((fact / plan) * 100) : null;
+        if (pct == null) return "—";
+        return (
+          <Badge tone={pct >= 100 ? "success" : pct >= 90 ? "warning" : "danger"}>{pct}%</Badge>
+        );
+      },
+      sortValue: (p) => {
+        const plan = Number(p.plan ?? 0);
+        return plan > 0 ? Math.round((Number(p.fact ?? 0) / plan) * 100) : -1;
+      },
+      align: "right",
+      mobile: "status",
+    },
+  ];
+
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return debt.rows
@@ -227,15 +426,14 @@ export default function QarzdorlikClient({
 
   return (
     <div className="p-4 md:p-6 space-y-5">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-semibold" style={{ color: "var(--text)" }}>Qarzdorlik</h1>
-          <p className="text-meta" style={{ color: "var(--text-muted)" }}>
-            1C hisoboti va ASRO hisobi yonma-yon
-            {debt.asOf ? ` · 1C holati: ${formatUzDate(debt.asOf)}` : ""}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Qarzdorlik"
+        description={
+          "1C hisoboti va ASRO hisobi yonma-yon" +
+          (debt.asOf ? ` · 1C holati: ${formatUzDate(debt.asOf)}` : "")
+        }
+        icon={<HandCoins size={20} />}
+      />
 
       <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} ariaLabel="Qarzdorlik bo'limlari" />
 
@@ -243,8 +441,12 @@ export default function QarzdorlikClient({
         statement ? (
           <DebtStatement statement={statement} />
         ) : (
-          <div className="rounded-xl p-4 text-meta" style={{ ...card, color: "var(--text-muted)" }}>
-            Qarzdorlik kesimi hali import qilinmagan.
+          <div className="rounded-xl" style={card}>
+            <EmptyState
+              icon={<Scale size={28} />}
+              title="Qarzdorlik kesimi hali import qilinmagan"
+              description="1C dan hisob-kitob varaqasi yuklangach shu yerda ko'rinadi."
+            />
           </div>
         )
       )}
@@ -258,17 +460,18 @@ export default function QarzdorlikClient({
         Rahbar "umuman qancha qarz bor?" degan savolga javob olish uchun
         228 qatorni aylantirishi kerak edi.
       */}
-      <StatStrip
+      <MetricRail
+        columns={4}
         items={[
           {
             label: "Jami qarz",
-            value: debtors.totals.outstanding,
-            tone: "neutral",
+            value: formatNum(debtors.totals.outstanding),
+            unit: "so'm",
             // Bu sahifaning asosiy raqami — qolgan ko'rsatkichlar uning
             // kesimlari, shuning uchun yagona urg'u shu yerda.
             emphasis: true,
-            meta: `${debtors.totals.companies} firma`,
-            hint: "Barcha to'lanmagan qoldiq — muddati kelgani ham, kelmagani ham",
+            hint: `${debtors.totals.companies} firma · muddati kelgani ham, kelmagani ham`,
+            icon: <HandCoins size={13} />,
           },
           {
             // BOSILADIGAN: sarlavhadagi raqamdan to'g'ridan-to'g'ri o'sha
@@ -276,30 +479,33 @@ export default function QarzdorlikClient({
             // foydalanuvchi "199 firma" ni ko'rib, ularni topish uchun
             // eskirish bosqichlarini birma-bir bosishi kerak edi.
             label: "Muddati o'tgan",
-            value: debtors.totals.overdue,
-            tone: "out",
-            meta: `${debtors.totals.overdueCompanies} firma`,
-            hint: "To'lov oynasi yopilgan, hali to'lanmagan. Bosing — faqat shular qoladi",
+            value: formatNum(debtors.totals.overdue),
+            unit: "so'm",
+            hint: `${debtors.totals.overdueCompanies} firma · bosing, faqat shular qoladi`,
+            icon: <AlertTriangle size={13} />,
+            tone: debtors.totals.overdue > 0 ? "danger" : "success",
             onClick: () => toggleFocus("overdue"),
             active: focus === "overdue",
           },
           {
             label: "Bu oy yig'iladi",
-            value: debtors.totals.dueNow,
-            tone: "in",
-            hint: "Shu oy uchun hisoblangan, muddati hali o'tmagan",
+            value: formatNum(debtors.totals.dueNow),
+            unit: "so'm",
+            hint: "shu oy uchun hisoblangan, muddati hali o'tmagan",
+            icon: <CalendarClock size={13} />,
+            tone: "brand",
           },
           {
             label: "Hech to'lamagan",
             value: debtors.totals.neverPaid,
-            tone: "muted",
-            meta: "firma",
-            hint: "Muddati o'tgan va tizimda birorta ham to'lovi qayd etilmagan",
+            unit: "firma",
+            hint: "muddati o'tgan va birorta to'lovi qayd etilmagan",
+            icon: <Ban size={13} />,
+            tone: debtors.totals.neverPaid > 0 ? "warning" : "neutral",
             onClick: () => toggleFocus("neverPaid"),
             active: focus === "neverPaid",
           },
         ]}
-        className="rounded-xl overflow-hidden"
       />
 
 
@@ -359,13 +565,10 @@ export default function QarzdorlikClient({
           eng tepada. Direktorning kunlik Telegram hisoboti aynan shu
           ro'yxatning birinchi 5 tasini ko'rsatadi (lib/debt.ts listDebtors),
           ya'ni ikkovi hech qachon ajralmaydi. */}
-      <div className="rounded-xl overflow-hidden" style={card}>
-        <div
-          className="px-3 py-2 flex items-center justify-between gap-3 flex-wrap"
-          style={{ background: "var(--input-bg)", borderBottom: "1px solid var(--card-border)" }}
-        >
+      <section className="space-y-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h2 className="text-meta font-semibold" style={{ color: "var(--text)" }}>
+            <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
               To&apos;lov kutilayotgan firmalar
             </h2>
             <p className="text-micro" style={{ color: "var(--text-muted)" }}>
@@ -373,119 +576,59 @@ export default function QarzdorlikClient({
               &quot;bu oy yig&apos;iladi&quot; va &quot;muddati o&apos;tgan&quot; alohida
             </p>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-meta tabular-nums font-semibold" style={{ color: "var(--accent-blue)" }}>
-              Bu oy: {formatNum(debtors.totals.dueNow)} so&apos;m
-            </span>
-            {debtors.totals.overdue > 0 && (
-              <span className="text-meta tabular-nums font-semibold" style={{ color: "var(--danger)" }}>
-                Muddati o&apos;tgan: {debtors.totals.overdueCompanies} ta ·{" "}
-                {formatNum(debtors.totals.overdue)} so&apos;m
-              </span>
-            )}
-            {debtors.totals.neverPaid > 0 && (
-              <span className="text-micro tabular-nums" style={{ color: "var(--warning)" }}>
-                {debtors.totals.neverPaid} tasi bir marta ham to&apos;lamagan
-              </span>
-            )}
-            <div className="relative">
-              <Search
-                size={13}
-                className="absolute left-2 top-1/2 -translate-y-1/2"
-                style={{ color: "var(--text-muted)" }}
-              />
-              <input
-                value={debtorQuery}
-                onChange={(e) => setDebtorQuery(e.target.value)}
-                placeholder="Firma, STIR yoki buxgalter"
-                className="pl-7 pr-2 py-1 rounded-lg text-meta w-56"
-                style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
-              />
-            </div>
-          </div>
+          <TableToolbar
+            search={debtorQuery}
+            onSearchChange={setDebtorQuery}
+            searchPlaceholder="Firma, STIR yoki buxgalter"
+            density={debtorTable.density}
+            onDensityChange={debtorTable.setDensity}
+            filterCount={(stageFilter ? 1 : 0) + (focus ? 1 : 0)}
+            filter={
+              <div className="space-y-2 min-w-[200px]">
+                <p className="text-micro" style={{ color: "var(--text-muted)" }}>
+                  Filtr yuqoridagi ko&apos;rsatkich va bosqich kartochkalari orqali qo&apos;yiladi.
+                </p>
+                {(stageFilter || focus) && (
+                  <Button variant="ghost" size="sm" onClick={clearDebtorFilters}>
+                    Filtrni tozalash
+                  </Button>
+                )}
+              </div>
+            }
+          />
         </div>
 
-        {debtorRows.length === 0 ? (
-          <div className="px-3 py-8 text-center text-meta" style={{ color: "var(--text-muted)" }}>
-            {/*
-              SABABNI AYTADI. Ilgari filtr natijasi bo'sh bo'lganda ham
-              "Qidiruvga mos firma topilmadi" deb yozilardi — holbuki
-              qidiruv umuman kiritilmagan bo'lishi va sabab eskirish
-              bosqichi bo'lishi mumkin edi. Foydalanuvchi nimani
-              o'zgartirishni bilmasdi.
-            */}
-            {debtors.rows.length === 0
-              ? "To'lov kutilayotgan firma yo'q"
-              : stageFilter
-                ? `${DEBT_AGING_STAGES.find((x) => x.key === stageFilter)?.label} oralig'ida qarzdor topilmadi`
-                : focus === "overdue"
-                  ? "Muddati o'tgan qarzdor topilmadi"
-                  : focus === "neverPaid"
-                    ? "Hech to'lamagan qarzdor topilmadi"
-                    : "Qidiruvga mos firma topilmadi"}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-meta">
-              <thead>
-                <tr style={{ background: "var(--table-header-bg)" }}>
-                  {["Firma", "Shartnoma", "Bu oy yig'iladi", "Muddati o'tgan", "Kun", "Oxirgi to'lov", "Mas'ul"].map((h, i) => (
-                    <th
-                      key={h}
-                      className={`px-3 py-2 text-micro font-semibold uppercase tracking-wider whitespace-nowrap ${i >= 1 && i <= 4 ? "text-right" : "text-left"}`}
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {debtorRows.map((r) => (
-                  <tr key={r.companyId} className="transition-colors hover:bg-[var(--input-bg)]" style={{ borderTop: "1px solid var(--card-border)" }}>
-                    <td className="px-3 py-2">
-                      <div className="font-semibold" style={{ color: "var(--text)" }}>{r.name}</div>
-                      <div className="text-micro" style={{ color: "var(--text-muted)" }}>STIR {r.inn}</div>
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: "var(--text-muted)" }}>
-                      {formatNum(r.contractAmount)}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: "var(--accent-blue)" }}>
-                      {r.dueNow > 0 ? formatNum(r.dueNow) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: "var(--danger)" }}>
-                      {r.overdue > 0 ? formatNum(r.overdue) : "—"}
-                    </td>
-                    <td
-                      className="px-3 py-2 text-right tabular-nums font-semibold"
-                      style={{
-                        color:
-                          r.overdue > 0
-                            ? DEBT_AGING_STAGES.find((s) => s.key === debtAgingStage(r.overdueDays))!.color
-                            : "var(--text-muted)",
-                      }}
-                    >
-                      {r.overdue > 0 ? r.overdueDays : "—"}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {r.lastPaidPeriod ? (
-                        <span style={{ color: "var(--text-muted)" }}>{r.lastPaidPeriod}</span>
-                      ) : (
-                        <span className="font-semibold" style={{ color: "var(--warning)" }}>
-                          hech qachon
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2" style={{ color: "var(--text-muted)" }}>
-                      {r.accountantName ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        <DataTable
+          rows={debtorRows}
+          columns={debtorColumns}
+          rowKey={(r) => r.companyId}
+          caption="To'lov kutilayotgan firmalar"
+          sortKey={debtorTable.sortKey}
+          sortDir={debtorTable.sortDir}
+          onToggleSort={debtorTable.toggleSort}
+          density={debtorTable.density}
+          page={debtorTable.page}
+          pageSize={debtorPageSize}
+          onPageChange={debtorTable.setPage}
+          onPageSizeChange={setDebtorPageSize}
+          emptyIcon={<Users size={28} />}
+          emptyTitle={debtors.rows.length === 0 ? "To'lov kutilayotgan firma yo'q" : "Qarzdor topilmadi"}
+          /*
+            SABABNI AYTADI. Ilgari filtr natijasi bo'sh bo'lganda ham
+            "Qidiruvga mos firma topilmadi" deb yozilardi — holbuki qidiruv
+            umuman kiritilmagan va sabab eskirish bosqichi bo'lishi mumkin
+            edi. Foydalanuvchi nimani o'zgartirishni bilmasdi.
+          */
+          emptyDescription={emptyDebtorReason}
+          emptyAction={
+            stageFilter || focus || debtorQuery.trim() ? (
+              <Button variant="secondary" size="sm" onClick={clearDebtorFilters}>
+                Filtrni tozalash
+              </Button>
+            ) : undefined
+          }
+        />
+      </section>
 
       </>)}
 
@@ -524,34 +667,38 @@ export default function QarzdorlikClient({
         </div>
       )}
 
-      {/* Uchta raqam */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-4 rounded-xl" style={card}>
-          <div className="text-meta" style={{ color: "var(--text-muted)" }}>1C bo&apos;yicha (jamg&apos;arilgan)</div>
-          <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
-            {formatNum(debt.totals.debt1C)} <span className="text-meta">so&apos;m</span>
-          </div>
-          <div className="text-micro" style={{ color: "var(--text-muted)" }}>{debt.rows.length} shartnoma</div>
-        </div>
-        <div className="p-4 rounded-xl" style={card}>
-          <div className="text-meta" style={{ color: "var(--text-muted)" }}>ASRO hisobi (jamg&apos;arilgan)</div>
-          <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: "var(--text)" }}>
-            {formatNum(debt.totals.debtAsro)} <span className="text-meta">so&apos;m</span>
-          </div>
-        </div>
-        <div className="p-4 rounded-xl" style={card}>
-          <div className="text-meta" style={{ color: "var(--text-muted)" }}>Farq</div>
-          <div
-            className="text-xl font-semibold tabular-nums mt-1"
-            style={{ color: Math.abs(debt.totals.diff) > 1 ? "var(--warning)" : "var(--success)" }}
-          >
-            {debt.totals.diff > 0 ? "+" : ""}{formatNum(debt.totals.diff)} <span className="text-meta">so&apos;m</span>
-          </div>
-          <div className="text-micro" style={{ color: "var(--text-muted)" }}>
-            ikkalasi jamg&apos;arilgan — farq nomuvofiqlik belgisi
-          </div>
-        </div>
-      </div>
+      {/* IKKI MANBA VA ULARNING FARQI — solishtirish qatori.
+          `KpiCard` gridi o'rniga `MetricRail`: bu uchta raqam mustaqil
+          ko'rsatkich emas, balki BITTA tenglamaning uch a'zosi
+          (1C − ASRO = farq) va ular bir yuzada turgani shuni ko'rsatadi. */}
+      <MetricRail
+        columns={3}
+        items={[
+          {
+            label: "1C bo'yicha (jamg'arilgan)",
+            value: formatNum(debt.totals.debt1C),
+            unit: "so'm",
+            hint: `${debt.rows.length} shartnoma`,
+            icon: <Scale size={13} />,
+          },
+          {
+            label: "ASRO hisobi (jamg'arilgan)",
+            value: formatNum(debt.totals.debtAsro),
+            unit: "so'm",
+            hint: "tizimdagi hisoblanma",
+            icon: <HandCoins size={13} />,
+          },
+          {
+            label: "Farq",
+            value: `${debt.totals.diff > 0 ? "+" : ""}${formatNum(debt.totals.diff)}`,
+            unit: "so'm",
+            hint: "ikkalasi jamg'arilgan — farq nomuvofiqlik belgisi",
+            icon: <AlertTriangle size={13} />,
+            tone: Math.abs(debt.totals.diff) > 1 ? "warning" : "success",
+            emphasis: true,
+          },
+        ]}
+      />
 
       {debt.unlinked > 0 && (
         <div className="p-3 rounded-xl flex items-start gap-3" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning)" }}>
@@ -570,98 +717,52 @@ export default function QarzdorlikClient({
             <TrendingUp size={15} style={{ color: "var(--accent-blue)" }} />
             <h2 className="text-meta font-semibold" style={{ color: "var(--text)" }}>Tushum: reja va fakt</h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-meta">
-              <thead>
-                <tr style={{ background: "var(--input-bg)" }}>
-                  <th className="text-left p-2">Davr</th>
-                  <th className="text-right p-2">Reja</th>
-                  <th className="text-right p-2">Fakt</th>
-                  <th className="text-right p-2">Bajarilishi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {planFact.map((p) => {
-                  const plan = Number(p.plan ?? 0);
-                  const fact = Number(p.fact ?? 0);
-                  const pct = plan > 0 ? Math.round((fact / plan) * 100) : null;
-                  const color = pct == null ? "var(--text-muted)" : pct >= 100 ? "var(--success)" : pct >= 90 ? "var(--warning)" : "var(--danger)";
-                  return (
-                    <tr key={p.period} style={{ borderTop: "1px solid var(--card-border)" }}>
-                      <td className="p-2 whitespace-nowrap">{p.period}</td>
-                      <td className="p-2 text-right tabular-nums">{plan ? formatNum(plan) : "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{fact ? formatNum(fact) : "—"}</td>
-                      <td className="p-2 text-right tabular-nums font-semibold" style={{ color }}>
-                        {pct == null ? "—" : `${pct}%`}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            rows={planFact}
+            columns={planFactColumns}
+            rowKey={(p) => p.period}
+            caption="Tushum rejasi va fakti davrlar bo'yicha"
+            // Karta ICHIDA — o'z aylantirishini qo'shmaydi.
+            maxBodyHeight={null}
+            density="compact"
+            emptyTitle="Reja kiritilmagan"
+          />
         </div>
       )}
 
       {/* Qatorlar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
-          <input
-            className="w-full pl-9 pr-3 py-2 rounded-lg text-meta outline-none"
-            style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
-            placeholder="Mijoz, shartnoma yoki firma bo'yicha qidirish…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <label className="flex items-center gap-2 text-meta cursor-pointer" style={{ color: "var(--text-secondary)" }}>
-          <input type="checkbox" checked={onlyDiff} onChange={(e) => setOnlyDiff(e.target.checked)} />
-          Faqat farqi borlar
-        </label>
-        <span className="text-meta" style={{ color: "var(--text-muted)" }}>{rows.length} qator</span>
-      </div>
+      <TableToolbar
+        search={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Mijoz, shartnoma yoki firma"
+        density={svTable.density}
+        onDensityChange={svTable.setDensity}
+        filterCount={onlyDiff ? 1 : 0}
+        filter={
+          <label className="flex items-center gap-2 text-meta cursor-pointer whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>
+            <input type="checkbox" checked={onlyDiff} onChange={(e) => setOnlyDiff(e.target.checked)} />
+            Faqat farqi borlar
+          </label>
+        }
+      />
 
-      <div className="overflow-x-auto rounded-xl" style={card}>
-        <table className="w-full text-meta">
-          <thead>
-            <tr style={{ background: "var(--input-bg)" }}>
-              <th className="text-left p-2">Mijoz</th>
-              <th className="text-left p-2">Shartnoma</th>
-              <th className="text-left p-2">Bizning firma</th>
-              <th className="text-right p-2">1C</th>
-              <th className="text-right p-2">ASRO</th>
-              <th className="text-right p-2">Farq</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.key} style={{ borderTop: "1px solid var(--card-border)" }}>
-                <td className="p-2 max-w-[260px] truncate">
-                  {r.customer}
-                  {!r.linked && (
-                    <span className="ml-2 text-micro px-1.5 py-0.5 rounded" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
-                      bazada yo&apos;q
-                    </span>
-                  )}
-                </td>
-                <td className="p-2 whitespace-nowrap">{r.contract ?? "—"}</td>
-                <td className="p-2 max-w-[180px] truncate">{r.ownFirm ?? "—"}</td>
-                <td className="p-2 text-right tabular-nums font-semibold">{formatNum(r.debt1C)}</td>
-                <td className="p-2 text-right tabular-nums" style={{ color: "var(--text-muted)" }}>
-                  {r.debtAsro == null ? "—" : formatNum(r.debtAsro)}
-                </td>
-                <td
-                  className="p-2 text-right tabular-nums font-semibold"
-                  style={{ color: r.diff == null ? "var(--text-muted)" : Math.abs(r.diff) > 1 ? "var(--warning)" : "var(--success)" }}
-                >
-                  {r.diff == null ? "—" : `${r.diff > 0 ? "+" : ""}${formatNum(r.diff)}`}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        rows={rows}
+        columns={svColumns}
+        rowKey={(r) => r.key}
+        caption="1C va ASRO qarz qoldiqlarining solishtiruvi"
+        sortKey={svTable.sortKey}
+        sortDir={svTable.sortDir}
+        onToggleSort={svTable.toggleSort}
+        density={svTable.density}
+        page={svTable.page}
+        pageSize={svPageSize}
+        onPageChange={svTable.setPage}
+        onPageSizeChange={setSvPageSize}
+        emptyIcon={<Scale size={28} />}
+        emptyTitle="Solishtiriladigan qator yo'q"
+        emptyDescription={onlyDiff ? "Farqi bor qator topilmadi — ikkala hisob mos." : "1C kesimi hali import qilinmagan."}
+      />
 
       </>)}
 

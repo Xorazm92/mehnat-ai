@@ -73,6 +73,8 @@ export interface DateFieldProps {
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
   "aria-required"?: boolean;
+  /** Ko'rinadigan yorliqsiz joyda (filtr qatori) — `Field` ishlatilmaganda. */
+  "aria-label"?: string;
 }
 
 export function DateField({
@@ -128,6 +130,7 @@ export function DateField({
         aria-invalid={invalid || aria["aria-invalid"] || undefined}
         aria-describedby={aria["aria-describedby"]}
         aria-required={aria["aria-required"] ?? required}
+        aria-label={aria["aria-label"]}
         className={`${inputClassName} w-full pr-10 tabular-nums`}
         style={invalid ? { ...inputStyle, borderColor: "var(--danger)" } : inputStyle}
       />

@@ -27,6 +27,15 @@ interface Props {
   allowEmpty?: boolean;
   className?: string;
   disabled?: boolean;
+  /**
+   * `Field` primitivi bilan bog'lash uchun. Field yorliqqa `htmlFor` qo'yadi
+   * va bolasiga shu `id` ni uzatadi — tanlagich uni qabul qilmasa yorliq
+   * hech qayerga ishora qilmay qoladi (`CompanySelect` da ham shu naqsh).
+   */
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-required"?: boolean;
+  "aria-invalid"?: boolean;
 }
 
 export const FundingSourceSelect: React.FC<Props> = ({
@@ -35,6 +44,8 @@ export const FundingSourceSelect: React.FC<Props> = ({
   allowEmpty = false,
   className = "",
   disabled,
+  id,
+  ...aria
 }) => {
   const [groups, setGroups] = useState<FundingSourceGroups | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,11 +85,15 @@ export const FundingSourceSelect: React.FC<Props> = ({
     // u `--card-border` ni ishlatardi, `.erp-input` esa `--input-border` ni —
     // ikkita tanlagich yonma-yon turganda ramka rangi farq qilardi.
     <Select
+      id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled || !groups}
       className={className}
       placeholder={allowEmpty ? "— Tanlanmagan —" : "Manbani tanlang…"}
+      aria-describedby={aria["aria-describedby"]}
+      aria-required={aria["aria-required"]}
+      invalid={aria["aria-invalid"]}
     >
       {groups &&
         CHANNEL_TYPE_ORDER.filter((t) => (groups[t]?.length ?? 0) > 0).map((t) => (

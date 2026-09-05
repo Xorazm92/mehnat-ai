@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { useModalA11y } from '@/hooks/useModalA11y';
 import { useViewMode } from '@/hooks/useViewMode';
 import { Company, Payment, PaymentStatus, Language } from '@/types';
 import { translations } from '@/lib/translations';
-import { Wallet, Search, Plus, CheckCircle2, Clock, Trash2, CreditCard, Loader2 } from 'lucide-react';
+import { Wallet, Search, CheckCircle2, Clock, Trash2, CreditCard } from 'lucide-react';
 import { TableToolbar } from "@/components/ui/TableToolbar";
 import { toast } from 'sonner';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, PAYMENT_METHOD_COLORS } from '@/lib/constants';
@@ -13,12 +12,18 @@ import { formatNum } from "@/lib/platform/format";
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Button } from "@/components/ui/Button";
 import { DataTable, type DataColumn } from "@/components/ui/DataTable";
-import { Badge } from "@/components/ui";
+import { Badge, Modal } from "@/components/ui";
+import { Field } from "@/components/ui/Field";
+import { MoneyField } from "@/components/ui/MoneyField";
+import { Select } from "@/components/ui/Select";
 import { useTableState } from "@/hooks/useTableState";
 import { usePageSize } from "@/hooks/usePageSize";
 import { MonthPicker } from './ui/MonthPicker';
 import { DateField } from './ui/DateField';
 import FundingSourceSelect from './ui/FundingSourceSelect';
+
+/** Modal pastidagi tugma formadan tashqarida — `form` atributi bog'laydi. */
+const PAYMENT_FORM_ID = 'payment-form';
 
 interface KassaModuleProps {
     companies: Company[];
@@ -49,16 +54,6 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
     const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // DIALOG XULQI — fokus tuzog'i, Escape, scroll qulfi, fokusni qaytarish.
-    //
-    // Bu oyna `fixed inset-0` bilan qo'lda yozilgan va DOM'da `role="dialog"`
-    // umuman yo'q edi: ekran o'quvchi uni oyna deb e'lon qilmasdi, Tab esa
-    // foydalanuvchini oyna ORTIDAGI sahifaga olib chiqib ketardi va u yerdan
-    // klaviatura bilan qaytib bo'lmasdi. Tartib o'zgarmaydi — faqat xulq.
-    const modalRef = useModalA11y<HTMLDivElement>({
-        open: isModalOpen,
-        onClose: () => setIsModalOpen(false),
-    });
     const [editingPayment, setEditingPayment] = useState<Partial<Payment> | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -305,13 +300,13 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
             </div>
 
             <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" size={18} style={{ color: 'var(--text-muted)' }} />
+                <div className="flex-1 relative">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
                     <input
                         type="text"
-                        placeholder="INN YOKI FIRMA NOMI..."
-                        className="w-full rounded-xl py-3 pl-12 pr-4 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-opacity-20"
-                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-primary)' }}
+                        placeholder="STIR yoki firma nomi…"
+                        aria-label="Firmalar ichidan qidirish"
+                        className="erp-input w-full pl-10"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -399,136 +394,93 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                 </div>
             </div>
 
-            {isModalOpen && (
-                <div
-                    // `Modal` bu yerda ishlatilmaydi: u o'z sarlavhasi va ichki
-                    // bo'shlig'ini qo'shadi, bu oyna esa o'z yuqori rangli
-                    // chizig'i va tartibiga ega. Shu sababdan tartib qo'lda
-                    // qoladi, XULQ esa `useModalA11y` dan olinadi — hook aynan
-                    // shu holat uchun yozilgan.
-                    // eslint-disable-next-line no-restricted-syntax
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-                    onMouseDown={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
-                >
-                    <div
-                        ref={modalRef}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="To'lov oynasi"
-                        tabIndex={-1}
-                        className="w-full max-w-lg shadow-2xl relative overflow-hidden dashboard-card !p-0 outline-none"
-                    >
-                        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'var(--accent-blue)' }}></div>
-                        <div className="px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                            <div>
-                                <h3 className="text-body font-bold" style={{ color: 'var(--text)' }}>To&apos;lovni tasdiqlash</h3>
-                                <p className="text-micro font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--text-muted)' }}>TRANZAKSIYA TAFSILOTLARINI KIRITING</p>
+            {/*
+                OYNA `Modal` primitivida. Ilgari qo'lda yozilgan
+                `fixed inset-0 z-[100] bg-black/60` qatlami turardi — u
+                `--z-*` shkalasini chetlab o'tar va fonni Tailwind
+                palitrasidan olardi (rang faqat tokenlardan kelishi kerak).
+            */}
+            <Modal
+                open={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                dismissable={!isSaving}
+                size="lg"
+                title="To'lovni tasdiqlash"
+                description="Tranzaksiya tafsilotlarini kiriting."
+                footer={
+                    <>
+                        <Button type="button" variant="secondary" size="md" disabled={isSaving} onClick={() => setIsModalOpen(false)}>
+                            {t.cancel}
+                        </Button>
+                        <Button type="submit" form={PAYMENT_FORM_ID} variant="primary" size="md" loading={isSaving} disabled={isSaving}>
+                            {isSaving ? 'Saqlanmoqda…' : 'Tasdiqlash'}
+                        </Button>
+                    </>
+                }
+            >
+                <form id={PAYMENT_FORM_ID} onSubmit={handleSave} className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <Field label={t.amount} required>
+                            <MoneyField
+                                value={editingPayment?.amount ?? null}
+                                onChange={(v) => setEditingPayment(prev => ({ ...prev, amount: v ?? 0 }))}
+                                required
+                            />
+                        </Field>
+                        <Field label={t.date} required>
+                            <DateField
+                                value={editingPayment?.paymentDate || ''}
+                                onChange={(v) => setEditingPayment(prev => ({ ...prev, paymentDate: v }))}
+                                required
+                            />
+                        </Field>
+                        <Field label="To'lov holati" required>
+                            <Select
+                                value={editingPayment?.status || PaymentStatus.PENDING}
+                                onChange={(e) => setEditingPayment(prev => ({ ...prev, status: e.target.value as PaymentStatus }))}
+                            >
+                                <option value={PaymentStatus.PAID}>To&apos;landi</option>
+                                <option value={PaymentStatus.PENDING}>Kutilmoqda</option>
+                                <option value={PaymentStatus.PARTIAL}>Qisman</option>
+                                <option value={PaymentStatus.OVERDUE}>Muddati o&apos;tgan</option>
+                            </Select>
+                        </Field>
+                        <Field label="To'lov usuli">
+                            <Select
+                                value={editingPayment?.paymentMethod || 'naqd'}
+                                onChange={(e) => setEditingPayment(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                            >
+                                {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                            </Select>
+                        </Field>
+                        {/* KIRIM MANBASIZ YOZILMAYDI — server ham rad etadi
+                            (`server/kassa.ts upsertPayment`), lekin so'rov
+                            ketishidan oldin to'xtatgan yaxshiroq. */}
+                        {paymentPostsCash(editingPayment?.status) && (
+                            <div className="md:col-span-2">
+                                <Field label="Qaysi hisobga tushdi" required>
+                                    <FundingSourceSelect
+                                        value={editingPayment?.channelId || ''}
+                                        onChange={(channelId) => setEditingPayment(prev => ({ ...prev, channelId }))}
+                                        allowEmpty={!!editingPayment?.id}
+                                    />
+                                </Field>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="icon-btn-sm transition-all icon-btn-danger" style={{ color: 'var(--text-muted)', background: 'var(--input-bg)' }}>
-                                <Plus size={20} className="rotate-45" />
-                            </button>
+                        )}
+                        <div className="md:col-span-2">
+                            <Field label={t.comment}>
+                                <input
+                                    type="text"
+                                    placeholder="Ixtiyoriy izoh…"
+                                    value={editingPayment?.comment || ''}
+                                    onChange={(e) => setEditingPayment(prev => ({ ...prev, comment: e.target.value }))}
+                                    className="erp-input w-full"
+                                />
+                            </Field>
                         </div>
-                        <form onSubmit={handleSave} className="p-6 space-y-5">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div className="space-y-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.amount}</label>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            value={editingPayment?.amount || ''}
-                                            onChange={(e) => setEditingPayment(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                                            className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 tracking-tight"
-                                            style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-                                            required
-                                        />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-micro font-bold uppercase" style={{ color: 'var(--text-muted)' }}>so&apos;m</div>
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.date}</label>
-                                    <DateField
-                                        value={editingPayment?.paymentDate || ''}
-                                        onChange={(v) => setEditingPayment(prev => ({ ...prev, paymentDate: v }))}
-                                        inputClassName="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 tracking-tight"
-                                        inputStyle={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--accent-blue)' }}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov Holati</label>
-                                    <select
-                                        value={editingPayment?.status || PaymentStatus.PENDING}
-                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, status: e.target.value as PaymentStatus }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-                                    >
-                                        <option value={PaymentStatus.PAID}>To&apos;landi</option>
-                                        <option value={PaymentStatus.PENDING}>Kutilmoqda</option>
-                                        <option value={PaymentStatus.PARTIAL}>Qisman</option>
-                                        <option value={PaymentStatus.OVERDUE}>Muddati o&apos;tgan</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>To&apos;lov usuli</label>
-                                    <select
-                                        value={editingPayment?.paymentMethod || 'naqd'}
-                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-                                    >
-                                        {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label.toUpperCase()}</option>)}
-                                    </select>
-                                </div>
-                                {paymentPostsCash(editingPayment?.status) && (
-                                    <div className="space-y-2 md:col-span-2">
-                                        <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                                            Qaysi hisobga tushdi <span style={{ color: 'var(--danger)' }}>*</span>
-                                        </label>
-                                        <FundingSourceSelect
-                                            value={editingPayment?.channelId || ''}
-                                            onChange={(channelId) => setEditingPayment(prev => ({ ...prev, channelId }))}
-                                            className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 tracking-tight"
-                                            allowEmpty={!!editingPayment?.id}
-                                        />
-                                    </div>
-                                )}
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{t.comment}</label>
-                                    <input
-                                        type="text"
-                                        placeholder="IXTIYORIY IZOH..."
-                                        value={editingPayment?.comment || ''}
-                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, comment: e.target.value }))}
-                                        className="w-full rounded-lg px-4 py-3 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 tracking-tight"
-                                        style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text)' }}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex gap-3 pt-6 mt-6" style={{ borderTop: '1px solid var(--card-border)' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-meta uppercase tracking-widest transition-all shadow-sm"
-                                    style={{ background: 'var(--input-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
-                                >
-                                    {t.cancel}
-                                </button>
-                                <Button variant="primary" size="md" type="submit" disabled={isSaving} className="flex-1">
-                                    {isSaving ? (
-                                        <>
-                                            <Loader2 size={16} className="animate-spin" />
-                                            SAQLANMOQDA...
-                                        </>
-                                    ) : (
-                                        'TASDIQLASH'
-                                    )}
-                                </Button>
-                            </div>
-                        </form>
                     </div>
-                </div>
-            )}
+                </form>
+            </Modal>
         </div>
     );
 };

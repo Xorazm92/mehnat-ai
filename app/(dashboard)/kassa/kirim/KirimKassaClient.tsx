@@ -3,11 +3,19 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Upload, Link2, EyeOff, CreditCard, Wallet, Search, AlertTriangle, Plus } from "lucide-react";
+import {
+  Upload, Link2, EyeOff, CreditCard, Wallet, Search, AlertTriangle, Plus,
+  Banknote, CalendarDays, Landmark, Inbox,
+} from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { groupDigits, ungroupDigits, todayKey, formatNum, formatUzDate } from "@/lib/platform/format";
-import { Money } from "@/components/ui";
+import { todayKey, formatNum, formatUzDate, submitOnCtrlEnter } from "@/lib/platform/format";
+import {
+  Badge, DataTable, EmptyState, MetricRail, Modal, Money, PageHeader,
+  type DataColumn,
+} from "@/components/ui";
 import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
+import { MoneyField } from "@/components/ui/MoneyField";
 import {
   previewStatement,
   commitStatementUpload,
@@ -69,6 +77,13 @@ interface Props {
   accounts: AccountRow[];
   unmatched: UnmatchedRow[];
   companies: CompanyOption[];
+  /**
+   * Sahifa tepasidagi ko'rsatkichlar — QAT'IY davrlar (bugun / shu oy /
+   * hozirgi qoldiq). Reyestrning o'z yig'indisi TANLANGAN davrga bo'ysunadi
+   * va u boshqa komponent (`StatStrip`) bilan chiziladi: ilgari ikkala
+   * to'plam ham bir xil kartochka bo'lgani uchun raqamlar ziddek ko'rinardi.
+   */
+  kpi: { todayIncome: number; monthIncome: number; balance: number };
   /** `?tab=` dan SERVERDA o'qilgan boshlang'ich yorliq (hidratsiya uchun). */
   initialTab?: KirimTab;
 }
@@ -78,7 +93,54 @@ const card: React.CSSProperties = {
   border: "1px solid var(--card-border)",
 };
 
-export default function KirimKassaClient({ accounts, unmatched, companies, initialTab = "reyestr" }: Props) {
+/**
+ * Vipiska namunasi. Qatorlarning o'z id'si yo'q (ular hali bazaga yozilmagan),
+ * shuning uchun oldindan ko'rish uchun tartib raqami qo'shiladi.
+ */
+type PreviewRow = StatementPreview["sample"][number] & { _i: number };
+
+/**
+ * Namuna ustunlari — SARALANMAYDI (`sortValue` berilmagan): bu vipiskaning
+ * o'z tartibi va uni o'zgartirish faylni tekshirishni qiyinlashtiradi.
+ */
+const PREVIEW_COLUMNS: DataColumn<PreviewRow>[] = [
+  { key: "date", header: "Sana", cell: (t) => formatUzDate(t.valueDate), width: "110px", mobile: "meta" },
+  { key: "doc", header: "Hujjat", cell: (t) => t.docNumber ?? "—" },
+  { key: "party", header: "Kontragent", cell: (t) => t.counterpartyName ?? "—", sticky: true, mobile: "title" },
+  { key: "inn", header: "STIR", cell: (t) => t.counterpartyInn ?? "—" },
+  { key: "contract", header: "Shartnoma", cell: (t) => t.contractHint ?? "—" },
+  {
+    key: "amount",
+    header: "Summa",
+    cell: (t) => <Money value={t.amount} tone={t.direction === "income" ? "in" : "out"} showSign bold />,
+    numeric: true,
+    align: "right",
+  },
+];
+
+/** Modal pastidagi tugma formadan tashqarida — `form` atributi orqali bog'lanadi. */
+const MANUAL_FORM_ID = "manual-receipt-form";
+
+/**
+ * Formadagi mantiqiy bo'lim sarlavhasi. Uzun forma bo'limlarga ajratilmasa
+ * o'n bitta maydon bir tekis oqim bo'lib ko'rinadi va "qaysi maydon nimaga
+ * tegishli" degan savol har safar qaytadan tug'iladi.
+ */
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h3
+        className="text-meta font-bold uppercase tracking-widest pb-1.5"
+        style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--rule)" }}
+      >
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+export default function KirimKassaClient({ accounts, unmatched, companies, kpi, initialTab = "reyestr" }: Props) {
   const router = useRouter();
 
   // TABLAR. Sahifada 10 ta firma kartochkasi, 133 qatorli reyestr va
@@ -121,7 +183,7 @@ export default function KirimKassaClient({ accounts, unmatched, companies, initi
   const [manualContractId, setManualContractId] = useState("");
   const [manualDocRef, setManualDocRef] = useState("");
   /** Takroriylik ogohlantirishi — foydalanuvchi tasdiqlagach saqlanadi. */
-  const [manualAmount, setManualAmount] = useState("");
+  const [manualAmount, setManualAmount] = useState<number | null>(null);
   const [manualNote, setManualNote] = useState("");
   // Toshkent kalendari — UTC `toISOString` kechki tunda KECCHA sanani
   // berib qo'yardi (prod server UTC da yuradi).
@@ -185,16 +247,9 @@ export default function KirimKassaClient({ accounts, unmatched, companies, initi
     </p>
   );
 
-  // Tushum formasi ochilganda ko'rinadigan joyga suring — ilgari u sahifa
-  // o'rtasida paydo bo'lib, foydalanuvchi uni qidirib topishi kerak edi.
-  const formRef = useRef<HTMLFormElement>(null);
-  useEffect(() => {
-    if (manualType) formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [manualType]);
-
   const resetManual = () => {
     setManualType(null);
-    setManualAmount("");
+    setManualAmount(null);
     setManualNote("");
     setManualChannelId("");
     setManualCompanyId("");
@@ -204,8 +259,8 @@ export default function KirimKassaClient({ accounts, unmatched, companies, initi
 
   const submitManual = async (opts?: { force?: boolean }) => {
     if (!manualType) return;
-    // Kirishda probellar bilan guruhlangan ("1 500 000") — yechib olinadi.
-    const amount = Number(ungroupDigits(manualAmount));
+    // `MoneyField` tashqariga har doim SON beradi (ajratkich faqat ko'rinishda).
+    const amount = manualAmount ?? 0;
     if (!Number.isFinite(amount) || amount <= 0) {
       setManualError("Summa musbat son bo'lishi kerak");
       return;
@@ -389,16 +444,12 @@ export default function KirimKassaClient({ accounts, unmatched, companies, initi
 
   return (
     <div className="p-4 md:p-6 space-y-5">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-semibold" style={{ color: "var(--text)" }}>
-            Kirim kassa
-          </h1>
-          <p className="text-meta" style={{ color: "var(--text-muted)" }}>
-            Bank vipiskasi, plastik karta va naqd pul kirimlari
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        title="Kirim kassa"
+        description="Bank vipiskasi, plastik karta va naqd pul kirimlari"
+        icon={<Banknote size={20} />}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
           {/*
             TUR ENDI TUGMANING O'ZIDA.
 
@@ -449,8 +500,66 @@ export default function KirimKassaClient({ accounts, unmatched, companies, initi
           <Button variant="secondary" size="md" disabled={busy} onClick={() => fileInput.current?.click()}>
             <Upload size={15} /> Vipiska yuklash
           </Button>
-        </div>
-      </div>
+          </div>
+        }
+      />
+
+      {/*
+        QAT'IY DAVRLI KO'RSATKICHLAR.
+
+        Ilgari bu yerda "shu oy" bo'yicha uchta karta turardi, reyestr ustida
+        esa yana to'rtta — lekin ular TANLANGAN davrga bo'ysunardi. Ikki
+        to'plam bir xil ko'rinar, boshqa davrni ko'rsatar va qaysi biri
+        "haqiqiy" ekani ekrandan bilinmasdi.
+
+        Endi ular AJRATILGAN: bu yerdagi plitkalar har doim bugun/shu oy/
+        qoldiqni beradi va yorlig'i davrni AYTADI; reyestrning yig'indisi esa
+        jadval ustida, filtr bilan bir joyda, boshqa ko'rinishda turadi.
+      */}
+      {/* `KpiCard` gridi o'rniga `MetricRail`: to'rtta TO'LIQ BO'YALGAN quti
+          (yashil, ko'k, oq, sariq) yonma-yon turganda ekran gradient panelga
+          o'xshab qolardi va ko'z avval rangni, keyin raqamni o'qirdi. Bu
+          to'rt raqam esa bir o'lchovning kesimlari — bitta panel, ichida
+          soch-chiziq, ton faqat tepadagi 2px chiziqda. */}
+      <MetricRail
+        columns={4}
+        items={[
+          {
+            label: "Bugungi kirim",
+            value: formatNum(kpi.todayIncome),
+            unit: "so'm",
+            hint: "bugun",
+            icon: <CalendarDays size={13} />,
+            tone: kpi.todayIncome > 0 ? "success" : "neutral",
+          },
+          {
+            label: "Shu oy kirimi",
+            value: formatNum(kpi.monthIncome),
+            unit: "so'm",
+            hint: "joriy oy",
+            icon: <Wallet size={13} />,
+            tone: "brand",
+            emphasis: true,
+          },
+          {
+            label: "Hozirgi qoldiq",
+            value: formatNum(kpi.balance),
+            unit: "so'm",
+            hint: "kassa va hisoblarda",
+            icon: <Landmark size={13} />,
+            tone: kpi.balance < 0 ? "danger" : "neutral",
+          },
+          {
+            label: "Bog'lash kerak",
+            value: totalUnmatched,
+            unit: "ta",
+            hint: totalUnmatched > 0 ? "qaysi firmadan ekani aniqlanmagan" : "hammasi bog'langan",
+            icon: <Link2 size={13} />,
+            tone: totalUnmatched > 0 ? "warning" : "neutral",
+            href: totalUnmatched > 0 ? "/kassa/kirim?tab=navbat" : undefined,
+          },
+        ]}
+      />
 
       <Tabs
         items={[
@@ -463,156 +572,163 @@ export default function KirimKassaClient({ accounts, unmatched, companies, initi
         ariaLabel="Kirim kassa bo'limlari"
       />
 
-      {/* Qo'lda kirim formasi */}
-      {manualType && (
-        // ILGARI bu oddiy `<div>` edi: butun kassa modulida bitta ham
-        // `<form onSubmit>` yo'q edi (`grep -c onSubmit` → 0), ya'ni Enter
-        // hech qayerda saqlamasdi. Alisher kunda o'nlab yozuv kiritadi —
-        // har safar sichqonchaga qo'l uzatish shu yerda tugadi.
+      {/*
+        QO'LDA KIRIM — MODALDA.
+
+        Ilgari forma sahifa oqimida ochilib, tablar bilan reyestrni pastga
+        surib yuborardi va uni ko'rinadigan joyga `scrollIntoView` bilan
+        majburan surish kerak bo'lardi. Endi u dialog: fokus tuzog'i, Escape
+        va fokusni qaytarish `Modal` ning xossasi.
+
+        Forma `<form onSubmit>` bo'lib qoladi (Enter saqlaydi) va Ctrl+Enter
+        ham ishlaydi — kassir kunda o'nlab yozuv kiritadi.
+      */}
+      <Modal
+        open={manualType !== null}
+        onClose={resetManual}
+        dismissable={!manualBusy}
+        size="lg"
+        title={
+          manualType === "naqd"
+            ? "Naqd tushum qo'shish"
+            : manualType === "plastik"
+              ? "Plastik tushum qo'shish"
+              : "Offset (vzaimozachyot) qo'shish"
+        }
+        description={
+          manualType === "offset"
+            ? "Pul hech qayerga tushmaydi — faqat tanlangan firmaning qarzini yopadi."
+            : "Vipiskada ko'rinmaydigan tushum: pul qaysi kassaga kirganini ko'rsating."
+        }
+        footer={
+          <>
+            <Button type="button" variant="secondary" size="md" disabled={manualBusy} onClick={resetManual}>
+              Bekor qilish
+            </Button>
+            <Button type="submit" form={MANUAL_FORM_ID} variant="primary" size="md" loading={manualBusy}>
+              {manualBusy ? "Yozilmoqda…" : "Saqlash"}
+            </Button>
+          </>
+        }
+      >
         <form
-          ref={formRef}
+          id={MANUAL_FORM_ID}
           onSubmit={(e) => { e.preventDefault(); void submitManual(); }}
-          className="p-4 rounded-xl space-y-3"
-          style={{ ...card, borderColor: "var(--accent-blue)" }}
+          onKeyDown={submitOnCtrlEnter(() => void submitManual())}
+          className="space-y-5"
         >
-          <div className="flex items-center justify-between">
-            <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
-              {manualType === "naqd" ? "Naqd tushum" : manualType === "plastik" ? "Plastik tushum" : "Offset (vzaimozachyot)"} qo&apos;shish
-            </h2>
-            <Button type="button" variant="secondary" size="sm" onClick={resetManual}>Yopish</Button>
-          </div>
           {manualError && (
-            <p className="text-meta" style={{ color: "var(--danger)" }}>{manualError}</p>
+            <p
+              className="text-meta p-3 rounded-lg"
+              style={{ background: "var(--danger-bg)", color: "var(--danger)" }}
+              role="alert"
+            >
+              {manualError}
+            </p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <label className="block">
-              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Sana</span>
-              <DateField
-                className="mt-1"
-                inputClassName="w-full px-3 py-2 rounded-lg text-meta outline-none"
-                inputStyle={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
-                value={manualDate}
-                onChange={setManualDate}
-              />
-            </label>
-            <label className="block">
-              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Summa (so&apos;m)</span>
-              <input
-                inputMode="numeric"
-                className="w-full mt-1 px-3 py-2 rounded-lg text-meta text-right tabular-nums outline-none"
-                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
-                value={manualAmount}
-                onChange={(e) => setManualAmount(groupDigits(e.target.value))}
-                placeholder="10 000 000"
-              />
-            </label>
-            <label className="block">
-              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Izoh</span>
-              <input
-                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
-                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
-                value={manualNote}
-                onChange={(e) => setManualNote(e.target.value)}
-                placeholder="kimdan / nima uchun"
-              />
-            </label>
-          </div>
-          {/* KIMDAN — eng muhim maydon. Firma tanlansa to'lov mijozning
-              qarzini kamaytiradi; tanlanmasa nomsiz tushum bo'lib qoladi. */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <label className="block">
-              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Kimdan (firma)</span>
-              {/*
-                269 ta firma. Ilgari bu tekis `<select>` edi va native
-                klaviatura qidiruvi faqat NOM boshidan mos kelardi — STIR
-                bo'yicha qidirib bo'lmasdi. `CompanySelect` ikkalasini ham
-                qidiradi.
-              */}
-              <CompanySelect
-                className="mt-1"
-                companies={companies}
-                value={manualCompanyId}
-                onChange={(next) => {
-                  setManualCompanyId(next);
-                  setManualContractId("");
-                              }}
-                placeholder="Firmani tanlang"
-                emptyLabel={
-                  manualType === "offset" ? undefined : "Nomsiz tushum (firmaga bog'lanmagan)"
-                }
-              />
-            </label>
-            <label className="block">
-              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Shartnoma</span>
-              <Select
-                className="mt-1"
-                value={manualContractId}
-                onChange={(e) => setManualContractId(e.target.value)}
-                disabled={!manualCompanyId || selectedContracts.length === 0}
-                placeholder={
-                  !manualCompanyId
-                    ? "Avval firmani tanlang"
-                    : selectedContracts.length === 0
-                      ? "Shartnoma kiritilmagan"
-                      : "Ko'rsatilmagan"
-                }
+
+          {/* ── ASOSIY ─────────────────────────────────────────────────── */}
+          <FormSection title="Asosiy">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Sana" required>
+                <DateField value={manualDate} onChange={setManualDate} />
+              </Field>
+              <Field label="Summa (so'm)" required>
+                <MoneyField value={manualAmount} onChange={setManualAmount} placeholder="10 000 000" />
+              </Field>
+            </div>
+            {manualType !== "offset" && (
+              <Field
+                label={manualType === "plastik" ? "Qaysi plastikka tushdi" : "Qaysi kassaga tushdi"}
+                required
+                hint="Manba majburiy: pul qaysi kassaga tushganini bilmasak, o'sha kassaning qoldig'i hech qachon to'g'ri chiqmaydi."
               >
-                {selectedContracts.map((ct) => (
-                  <option key={ct.id} value={ct.id}>{ct.number}</option>
-                ))}
-              </Select>
-            </label>
-            <label className="block">
-              <span className="text-meta" style={{ color: "var(--text-secondary)" }}>Chek / hujjat raqami</span>
-              <input
-                className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
-                style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
-                value={manualDocRef}
-                onChange={(e) => setManualDocRef(e.target.value)}
-                placeholder="ixtiyoriy"
-              />
-            </label>
-          </div>
-          {manualType === "offset" ? (
-            <>
-              <p className="text-micro" style={{ color: "var(--text-muted)" }}>
-                Offset — pul HECH QAYERGA tushmaydi (kanal so&apos;ralmaydi), faqat tanlangan firmaning
-                qarzini yopadi. Kassa balansiga ta&apos;sir qilmaydi.
-              </p>
-              {capNotice}
-            </>
-          ) : (
-            <>
-              {capNotice}
-              <label className="block">
-                <span className="text-meta" style={{ color: "var(--text-secondary)" }}>
-                  {manualType === "plastik" ? "Qaysi plastikka tushdi" : "Qaysi kassaga tushdi"}{" "}
-                  <span style={{ color: "var(--danger)" }}>*</span>
-                </span>
-                <FundingSourceSelect
-                  value={manualChannelId}
-                  onChange={setManualChannelId}
-                  className="w-full mt-1 px-3 py-2 rounded-lg text-meta outline-none"
+                <FundingSourceSelect value={manualChannelId} onChange={setManualChannelId} />
+              </Field>
+            )}
+          </FormSection>
+
+          {/* ── KIMDAN ────────────────────────────────────────────────────
+              Eng muhim bo'lim. Firma tanlansa to'lov mijozning qarzini
+              kamaytiradi; tanlanmasa nomsiz tushum bo'lib qoladi. */}
+          <FormSection title="Kimdan">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Firma" required={manualType === "offset"}>
+                {/*
+                  269 ta firma. Ilgari bu tekis `<select>` edi va native
+                  klaviatura qidiruvi faqat NOM boshidan mos kelardi — STIR
+                  bo'yicha qidirib bo'lmasdi. `CompanySelect` ikkalasini ham
+                  qidiradi.
+                */}
+                <CompanySelect
+                  companies={companies}
+                  value={manualCompanyId}
+                  onChange={(next) => {
+                    setManualCompanyId(next);
+                    setManualContractId("");
+                  }}
+                  placeholder="Firmani tanlang"
+                  emptyLabel={
+                    manualType === "offset" ? undefined : "Nomsiz tushum (firmaga bog'lanmagan)"
+                  }
                 />
-              </label>
-              {manualCompanyId ? (
+              </Field>
+              <Field label="Shartnoma">
+                <Select
+                  value={manualContractId}
+                  onChange={(e) => setManualContractId(e.target.value)}
+                  disabled={!manualCompanyId || selectedContracts.length === 0}
+                  placeholder={
+                    !manualCompanyId
+                      ? "Avval firmani tanlang"
+                      : selectedContracts.length === 0
+                        ? "Shartnoma kiritilmagan"
+                        : "Ko'rsatilmagan"
+                  }
+                >
+                  {selectedContracts.map((ct) => (
+                    <option key={ct.id} value={ct.id}>{ct.number}</option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            {capNotice}
+            {manualType !== "offset" && (
+              manualCompanyId ? (
                 <p className="text-micro" style={{ color: "var(--text-muted)" }}>
                   Bu to&apos;lov tanlangan firmaning qarzini kamaytiradi.
                 </p>
               ) : (
-                <p className="text-micro" style={{ color: "var(--warning, var(--text-muted))" }}>
+                <p className="text-micro" style={{ color: "var(--warning)" }}>
                   Firma tanlanmagan — tushum kassaga kiradi, lekin hech kimning qarzini kamaytirmaydi.
                 </p>
-              )}
-            </>
-          )}
-          {/* `type="submit"` — forma `onSubmit` ga ulangan, ya'ni istalgan
-              maydonda Enter ham shu tugmani bosgan bilan barobar. */}
-          <Button type="submit" variant="primary" size="md" loading={manualBusy}>
-            {manualBusy ? "Yozilmoqda…" : "Saqlash"}
-          </Button>
+              )
+            )}
+          </FormSection>
+
+          {/* ── IZOH ──────────────────────────────────────────────────── */}
+          <FormSection title="Izoh">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Chek / hujjat raqami">
+                <input
+                  className="erp-input w-full"
+                  value={manualDocRef}
+                  onChange={(e) => setManualDocRef(e.target.value)}
+                  placeholder="ixtiyoriy"
+                />
+              </Field>
+              <Field label="Izoh">
+                <input
+                  className="erp-input w-full"
+                  value={manualNote}
+                  onChange={(e) => setManualNote(e.target.value)}
+                  placeholder="kimdan / nima uchun"
+                />
+              </Field>
+            </div>
+          </FormSection>
         </form>
-      )}
+      </Modal>
 
       {/* Xato paneli — toast emas, chunki matn uzun va o'qilishi kerak */}
       {uploadError && (
@@ -727,38 +843,14 @@ export default function KirimKassaClient({ accounts, unmatched, companies, initi
                 </p>
               )}
 
-              <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid var(--card-border)" }}>
-                <table className="w-full text-meta">
-                  <thead>
-                    <tr style={{ background: "var(--input-bg)" }}>
-                      <th className="text-left p-2">Sana</th>
-                      <th className="text-left p-2">Hujjat</th>
-                      <th className="text-left p-2">Kontragent</th>
-                      <th className="text-left p-2">STIR</th>
-                      <th className="text-left p-2">Shartnoma</th>
-                      <th className="text-right p-2">Summa</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.sample.map((t, i) => (
-                      <tr key={i} style={{ borderTop: "1px solid var(--card-border)" }}>
-                        <td className="p-2 whitespace-nowrap">{formatUzDate(t.valueDate)}</td>
-                        <td className="p-2">{t.docNumber ?? "—"}</td>
-                        <td className="p-2 max-w-[240px] truncate">{t.counterpartyName ?? "—"}</td>
-                        <td className="p-2">{t.counterpartyInn ?? "—"}</td>
-                        <td className="p-2">{t.contractHint ?? "—"}</td>
-                        <td
-                          className="p-2 text-right tabular-nums font-semibold whitespace-nowrap"
-                          style={{ color: t.direction === "income" ? "var(--success)" : "var(--danger)" }}
-                        >
-                          {t.direction === "income" ? "+" : "−"}
-                          {formatNum(t.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                rows={preview.sample.map((t, i) => ({ ...t, _i: i }))}
+                columns={PREVIEW_COLUMNS}
+                rowKey={(t) => String(t._i)}
+                caption="Vipiskadan namuna qatorlar"
+                maxBodyHeight={null}
+                density="compact"
+              />
 
               <div className="flex items-center gap-2">
                 <Button variant="primary" size="md" disabled={busy} onClick={onConfirm}>
@@ -852,23 +944,39 @@ export default function KirimKassaClient({ accounts, unmatched, companies, initi
           <div className="relative">
             <Search
               size={14}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
               style={{ color: "var(--text-muted)" }}
+              aria-hidden="true"
             />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Nom, STIR yoki shartnoma"
-              className="pl-8 pr-3 py-1.5 rounded-lg text-meta outline-none"
-              style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+              aria-label="Moslashtirilmagan kirimlar ichidan qidirish"
+              className="erp-input pl-8"
             />
           </div>
         </div>
 
         {filteredUnmatched.length === 0 ? (
-          <p className="p-4 rounded-xl text-meta" style={{ ...card, color: "var(--text-muted)" }}>
-            Moslashtirilmagan kirim yo&apos;q.
-          </p>
+          <div className="rounded-xl" style={card}>
+            <EmptyState
+              icon={<Inbox size={28} />}
+              title={search.trim() ? "Qidiruvga mos kirim topilmadi" : "Moslashtirilmagan kirim yo'q"}
+              description={
+                search.trim()
+                  ? "Boshqa nom, STIR yoki shartnoma raqamini kiriting."
+                  : "Vipiskadagi barcha kirimlar firmalarga bog'langan."
+              }
+              action={
+                search.trim() ? (
+                  <Button variant="secondary" size="sm" onClick={() => setSearch("")}>
+                    Qidiruvni tozalash
+                  </Button>
+                ) : undefined
+              }
+            />
+          </div>
         ) : (
           <div className="space-y-2">
             {filteredUnmatched.map((tx) => (
@@ -980,14 +1088,7 @@ function UnmatchedCard({
                 STIR {tx.counterpartyInn}
               </span>
             )}
-            {tx.contractHint && (
-              <span
-                className="text-micro font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: "var(--accent-blue-light)", color: "var(--accent-blue)" }}
-              >
-                {tx.contractHint}
-              </span>
-            )}
+            {tx.contractHint && <Badge tone="info">{tx.contractHint}</Badge>}
           </div>
           <div className="text-micro mt-0.5" style={{ color: "var(--text-muted)" }}>
             {formatUzDate(tx.valueDate)} · {tx.account.label}
@@ -1030,11 +1131,11 @@ function UnmatchedCard({
             </Select>
             <input
               placeholder="Kimga / nima uchun (ixtiyoriy)"
+              aria-label="Kimga / nima uchun"
               value={expNote}
               onChange={(e) => setExpNote(e.target.value)}
               disabled={busy}
-              className="px-3 py-1.5 rounded-lg text-meta outline-none min-w-0"
-              style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }}
+              className="erp-input min-w-0"
             />
             <Button variant="primary" size="sm" disabled={busy} onClick={() => void saveAsExpense(expCategory === "oylik")}>
               Yozish

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Staff, Company } from "@/types";
 import { ROLE_LABELS, ROLE_COLORS, type UserRole } from "@/lib/platform/permissions";
@@ -9,7 +8,7 @@ import {
   CalendarDays, User as UserIcon, Award, CheckCircle2, Hash, Building2, Percent,
   KeyRound, Copy, Check, RefreshCw, Loader2,
 } from "lucide-react";
-import { useModalA11y } from "@/hooks/useModalA11y";
+import { DrawerLayer } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { Tabs, TabPanel, type TabItem } from "@/components/ui/Tabs";
 import { friendlyError } from "@/lib/actionError";
@@ -64,7 +63,6 @@ type TabId = "login" | "shaxsiy" | "ish" | "firmalar";
 
 export default function StaffDrawer({ person, companies, onClose, onEdit, onResetPassword }: Props) {
   // Dialog semantikasi + fokus tuzog'i + Escape.
-  const panelRef = useModalA11y<HTMLDivElement>({ open: Boolean(person), onClose });
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -87,24 +85,20 @@ export default function StaffDrawer({ person, companies, onClose, onEdit, onRese
 
   if (!mounted) return null;
 
-  return createPortal(
-    <>
-      {/* Qatlam qo'lda, lekin XULQ primitivda: panel `useModalA11y` bilan
-          o'ralgan (fokus tuzog'i + Escape + fokusni qaytarish). */}
-      <div
-        // eslint-disable-next-line no-restricted-syntax
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity"
-        onClick={onClose}
-      />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${person.name} — xodim kartasi`}
-        tabIndex={-1}
-        className="fixed right-0 top-0 h-full w-full max-w-[560px] z-[110] overflow-hidden animate-in slide-in-from-right duration-300 flex flex-col shadow-2xl outline-none"
-        style={{ background: "var(--input-bg)" }}
-      >
+  // Qatlam (fon, `--z-*` shkalasi, fokus tuzog'i, Escape) `DrawerLayer` da;
+  // panelning O'Z tartibi — rangli chiziq, 64px avatar, ichki tablar — shu
+  // yerda qoladi. Ilgari `z-[100]`/`z-[110]` va `bg-black/60` qo'lda terilgan
+  // edi, ya'ni na z-shkalasi, na rang tokenlari qo'llanardi.
+  return (
+    <DrawerLayer
+      open
+      onClose={onClose}
+      label={`${person.name} — xodim kartasi`}
+      widthClass="max-w-[560px]"
+      className="overflow-hidden shadow-2xl"
+      style={{ background: "var(--input-bg)" }}
+    >
+      <>
         <div className="absolute top-0 left-0 right-0 h-1 z-20" style={{ background: roleColor }} />
 
         {/* Header */}
@@ -242,9 +236,8 @@ export default function StaffDrawer({ person, companies, onClose, onEdit, onRese
             </div>
           )}
         </TabPanel>
-      </div>
-    </>,
-    document.body
+      </>
+    </DrawerLayer>
   );
 }
 

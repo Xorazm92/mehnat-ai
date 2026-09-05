@@ -13,8 +13,8 @@
 // 10 ta xarajat kiritish uchun har safar formani ochib-yopish shart emas.
 
 import React, { useEffect, useMemo, useState, useTransition } from "react";
-import { Pagination, pageSlice } from "@/components/ui";
 import { usePageSize } from "@/hooks/usePageSize";
+import { useTableState } from "@/hooks/useTableState";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -23,10 +23,15 @@ import {
   CheckCircle2, XCircle, Clock, NotebookPen, AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Money } from "@/components/ui";
+import {
+  Badge, DataTable, Money, StatStrip,
+  type BadgeTone, type DataColumn, type StatItem,
+} from "@/components/ui";
+import { MoneyField } from "@/components/ui/MoneyField";
+import { Select } from "@/components/ui/Select";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 import { useConfirm, usePrompt } from "@/components/ui/ConfirmDialog";
-import { groupDigits, ungroupDigits, todayKey, formatUzDate, formatNum } from "@/lib/platform/format";
+import { todayKey, formatUzDate, formatNum } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { canApproveExpense } from "@/lib/expenseApproval";
 import { RANGE_LABELS, type RangePreset } from "@/lib/dateRange";
@@ -41,10 +46,11 @@ import { isSalaryCategory } from "@/lib/salaryCategory";
 
 const PRESETS: RangePreset[] = ["month_to_date", "last_month", "today", "yesterday", "this_week", "year_to_date", "custom"];
 
-const SOURCE_BADGE: Record<string, { bg: string; fg: string }> = {
-  kassa: { bg: "var(--input-bg)", fg: "var(--text-secondary)" },
-  shartnoma: { bg: "var(--accent-blue-light)", fg: "var(--accent-blue)" },
-  oylik: { bg: "var(--warning-bg)", fg: "var(--warning)" },
+/** Manba nishoni — `Badge` ning umumiy `TONE_COLORS` xaritasidan. */
+const SOURCE_TONE: Record<string, BadgeTone> = {
+  kassa: "neutral",
+  shartnoma: "info",
+  oylik: "warning",
 };
 
 interface Props {
@@ -80,7 +86,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
   const addParam = searchParams.get("add");
   const [addOpen, setAddOpen] = useState(addParam === "kirim" || addParam === "chiqim");
   const [addKind, setAddKind] = useState<"kirim" | "chiqim">(addParam === "kirim" ? "kirim" : "chiqim");
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState<number | null>(null);
   const [cat, setCat] = useState("");
   const [desc, setDesc] = useState("");
   const [date, setDate] = useState(todayKey());
@@ -174,13 +180,15 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
    * hisoblanadi — pastdagi "Kirim/Chiqim/Sof" qatori sahifa almashganda
    * o'zgarmasligi kerak, aks holda u hisobot emas, tasodifiy bo'lak bo'lardi.
    */
-  const [page, setPage] = useState(1);
+  // Saralash/sahifa/zichlik — `DataTable` shu holatni kutadi. Qidiruv va
+  // davr filtrlari yuqorida, o'z holatida qoladi.
+  const table = useTableState({ ns: "jr", defaultSortKey: "date", defaultSortDir: "desc" });
   const [pageSize, setPageSize] = usePageSize("journal");
-  const paged = useMemo(() => pageSlice(visible, page, pageSize), [visible, page]);
 
   // Filtr yoki qidiruv ro'yxatni qisqartirsa, joriy sahifa mavjud bo'lmay
   // qolishi mumkin — o'shanda boshiga qaytamiz, bo'sh ekran ko'rsatmaymiz.
-  useEffect(() => { setPage(1); }, [preset, customFrom, customTo, kind, channelId, search]);
+  const { setPage } = table;
+  useEffect(() => { setPage(1); }, [preset, customFrom, customTo, kind, channelId, search, setPage]);
 
   // Ekrandagi jami HAR DOIM ko'rinayotgan qatorlardan (pending/rejected jamga
   // kirmaydi — manba bilan bir xil qoida).
@@ -197,7 +205,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
   const displayTotals = search.trim() ? shown : totals;
 
   const saveNew = async () => {
-    const amt = Number(ungroupDigits(amount));
+    const amt = amount ?? 0;
     if (!Number.isFinite(amt) || amt <= 0) { toast.error("Summani kiriting"); return; }
     if (!saveChannelId) { toast.error("Kassani tanlang — pul qayerdan chiqdi/kirdi"); return; }
     if (!cat) { toast.error("Toifani tanlang"); return; }
@@ -214,7 +222,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       toast.success(addKind === "kirim" ? "Kirim yozildi" : "Chiqim yozildi");
       // Exceldagidek: summa va izoh bo'shaydi, tur/kassa/sana/toifa QOLADI —
       // ketma-ket kiritishda har safar hammasini qayta tanlamaysiz.
-      setAmount("");
+      setAmount(null);
       setDesc("");
       load();
       router.refresh();
@@ -271,33 +279,166 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
 
   const inputStyle = { background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" } as const;
 
-  return (
-    <div className="rounded-xl" style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-      {/* Sarlavha */}
-      <div className="px-3 py-2 flex items-center justify-between gap-3 flex-wrap" style={{ background: "var(--input-bg)", borderBottom: "1px solid var(--card-border)" }}>
-        <div className="flex items-center gap-2">
-          <NotebookPen size={15} style={{ color: "var(--text-muted)" }} />
-          <div>
-            <h2 className="text-meta font-semibold" style={{ color: "var(--text)" }}>
-              Operatsiyalar jurnali
-            </h2>
-            <p className="text-micro" style={{ color: "var(--text-muted)" }}>
-              Barcha pul harakati bitta jadvalda · Excel dagidek filtr va eksport
-            </p>
+  const journalTotals: StatItem[] = [
+    { label: "Kirim", value: displayTotals.kirim, tone: "in" },
+    { label: "Chiqim", value: displayTotals.chiqim, tone: "out" },
+    {
+      label: "Sof",
+      value: displayTotals.netto,
+      tone: "auto",
+      emphasis: true,
+      hint: "Tasdiq kutayotgan va rad etilgan yozuvlar hisobga olinmaydi",
+    },
+  ];
+
+  /**
+   * USTUNLAR — jadval, mobil kartochka va Excel uchun bitta manba.
+   * Qator holati (`pending` / `rejected`) endi ALOHIDA ustunda nishon bilan
+   * ko'rsatiladi: ilgari u qatorning fon rangi va chizib tashlashida edi,
+   * ya'ni faqat rangdan bilinardi.
+   */
+  const journalColumns: DataColumn<JournalRow>[] = [
+    {
+      key: "date",
+      header: "Sana",
+      cell: (r) => (r.date ? formatUzDate(r.date) : "—"),
+      sortValue: (r) => r.date ?? "",
+      exportValue: (r) => (r.date ? formatUzDate(r.date) : ""),
+      width: "110px",
+      mobile: "meta",
+    },
+    {
+      key: "kind",
+      header: "Turi",
+      cell: (r) => (
+        <Badge
+          tone={r.kind === "kirim" ? "success" : "danger"}
+          icon={r.kind === "kirim" ? <ArrowDownRight size={11} /> : <ArrowUpRight size={11} />}
+        >
+          {r.kind === "kirim" ? "Kirim" : "Chiqim"}
+        </Badge>
+      ),
+      sortValue: (r) => r.kind,
+    },
+    {
+      key: "source",
+      header: "Manba",
+      cell: (r) => (
+        <span className="inline-flex items-center gap-1">
+          <Badge tone={SOURCE_TONE[r.sourceType] ?? "neutral"}>{r.sourceLabel}</Badge>
+          {!r.editable && (
+            <span
+              className="text-micro"
+              style={{ color: "var(--text-muted)" }}
+              title="Bu yozuv manba hisobidan kelgan — bu yerda tahrirlanmaydi"
+            >
+              🔒
+            </span>
+          )}
+        </span>
+      ),
+      sortValue: (r) => r.sourceLabel,
+    },
+    {
+      key: "who",
+      header: "Kim / Toifa",
+      cell: (r) => (
+        <div className="min-w-0">
+          <div className="font-semibold truncate" style={{ color: "var(--text)" }}>{r.who ?? "—"}</div>
+          <div className="text-micro truncate" style={{ color: "var(--text-muted)" }}>
+            {[r.channelLabel, r.category].filter(Boolean).join(" · ") || "—"}
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-meta tabular-nums font-semibold" style={{ color: "var(--accent-green)" }}>
-            +{formatNum(displayTotals.kirim)}
-          </span>
-          <span className="text-meta tabular-nums font-semibold" style={{ color: "var(--accent-red)" }}>
-            −{formatNum(displayTotals.chiqim)}
-          </span>
-          <span className="text-meta tabular-nums font-bold" style={{ color: displayTotals.netto >= 0 ? "var(--text)" : "var(--danger)" }}>
-            Sof: {formatNum(displayTotals.netto)} so&apos;m
-          </span>
-        </div>
-      </div>
+      ),
+      sortValue: (r) => r.who ?? "",
+      sticky: true,
+      mobile: "title",
+    },
+    {
+      key: "description",
+      header: "Izoh",
+      cell: (r) =>
+        r.status === "rejected" && r.rejectedReason
+          ? `Rad etildi: ${r.rejectedReason}`
+          : r.description ?? "—",
+      sortValue: (r) => r.description ?? "",
+    },
+    {
+      key: "status",
+      header: "Holat",
+      cell: (r) => {
+        if (r.status === "pending") {
+          return <Badge tone="warning" icon={<Clock size={11} />}>Tasdiq kutmoqda</Badge>;
+        }
+        if (r.status === "rejected") {
+          return <Badge tone="danger" icon={<AlertTriangle size={11} />}>Rad etildi</Badge>;
+        }
+        return <Badge tone="success" dot>Hisobda</Badge>;
+      },
+      sortValue: (r) => r.status ?? "",
+      mobile: "status",
+    },
+    {
+      key: "amount",
+      header: "Summa",
+      cell: (r) => (
+        <Money
+          value={r.kind === "kirim" ? r.amount : -r.amount}
+          tone={r.kind === "kirim" ? "in" : "out"}
+          showSign
+          bold={r.status !== "pending" && r.status !== "rejected"}
+        />
+      ),
+      sortValue: (r) => (r.kind === "kirim" ? r.amount : -r.amount),
+      exportValue: (r) => r.amount,
+      numeric: true,
+      align: "right",
+    },
+    {
+      key: "actions",
+      header: "Amal",
+      align: "right",
+      cell: (r) => {
+        const canApr = r.status === "pending" && r.editable && canApproveExpense(userRole, r.amount);
+        const canDel = r.editable && ["super_admin", "admin"].includes(userRole);
+        if (!canApr && !canDel) return null;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            {canApr && (
+              <>
+                <button onClick={() => void onApprove(r)} className="icon-btn-sm rounded-lg" style={{ color: "var(--success)" }} aria-label="Tasdiqlash"><CheckCircle2 size={14} /></button>
+                <button onClick={() => void onReject(r)} className="icon-btn-sm rounded-lg" style={{ color: "var(--danger)" }} aria-label="Rad etish"><XCircle size={14} /></button>
+              </>
+            )}
+            {canDel && (
+              <button onClick={() => void onDelete(r)} className="icon-btn-sm rounded-lg opacity-40 hover:opacity-100 transition-opacity" style={{ color: "var(--danger)" }} aria-label="O'chirish"><Trash2 size={14} /></button>
+            )}
+          </div>
+        );
+      },
+      mobile: "actions",
+    },
+  ];
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: "var(--card-bg)",
+        border: "1px solid var(--card-border)",
+        boxShadow: "var(--card-shadow)",
+      }}
+    >
+      {/* Ichki sarlavha OLIB TASHLANDI: sahifada endi `SectionHeader`
+          ("03 · OPERATSIYALAR · Kassa jurnali") turadi va u aynan shu matnni
+          aytardi. Ikkita sarlavha ketma-ket kelganda ko'z qaysi biri
+          jadvalga tegishli ekanini ajrata olmasdi. */}
+
+      {/* Davr yakuni — `StatStrip`: sarlavhaga tiqilgan uchta raqam
+          o'qilmasdi va sahifa boshqa joylaridagi ko'rsatkichlardan boshqacha
+          ko'rinardi. Jami tasdiq kutayotgan va rad etilganlarni HISOBGA
+          OLMAYDI — manba bilan bir xil qoida. */}
+      <StatStrip items={journalTotals} minWidth={140} />
 
       {/* Filtrlar */}
       <div className="px-3 py-2 space-y-2" style={{ borderBottom: "1px solid var(--card-border)" }}>
@@ -308,7 +449,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
               onClick={() => setPreset(p)}
               className="px-2.5 py-1 rounded-lg text-micro font-semibold transition-colors"
               style={preset === p
-                ? { background: "var(--accent-blue)", color: "#fff" }
+                ? { background: "var(--accent-blue)", color: "var(--on-brand)" }
                 : inputStyle}
             >
               {RANGE_LABELS[p]}
@@ -316,9 +457,9 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
           ))}
           {preset === "custom" && (
             <>
-              <DateField className="w-auto" inputClassName="px-2 py-1 rounded-lg text-micro outline-none" inputStyle={inputStyle} value={customFrom} onChange={setCustomFrom} />
+              <DateField className="w-auto" value={customFrom} onChange={setCustomFrom} aria-label="Boshlanish sanasi" />
               <span className="text-micro" style={{ color: "var(--text-muted)" }}>—</span>
-              <DateField className="w-auto" inputClassName="px-2 py-1 rounded-lg text-micro outline-none" inputStyle={inputStyle} value={customTo} onChange={setCustomTo} />
+              <DateField className="w-auto" value={customTo} onChange={setCustomTo} aria-label="Tugash sanasi" />
             </>
           )}
           <div className="flex items-center gap-1.5 ml-auto">
@@ -343,7 +484,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
                 onClick={() => setKind(k)}
                 className="px-3 py-1.5 text-micro font-semibold"
                 style={kind === k
-                  ? { background: "var(--accent-blue)", color: "#fff" }
+                  ? { background: "var(--accent-blue)", color: "var(--on-brand)" }
                   : { background: "var(--input-bg)", color: "var(--text-secondary)" }}
               >
                 {label}
@@ -351,16 +492,21 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
             ))}
           </div>
           <div className="w-56">
-            <FundingSourceSelect value={channelId} onChange={setChannelId} allowEmpty className="w-full px-2 py-1.5 rounded-lg text-micro outline-none" />
+            <FundingSourceSelect value={channelId} onChange={setChannelId} allowEmpty />
           </div>
           <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
+            <Search
+              size={13}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ color: "var(--text-muted)" }}
+              aria-hidden="true"
+            />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Kim, toifa yoki izoh…"
-              className="pl-8 pr-3 py-1.5 rounded-lg text-meta w-56 outline-none"
-              style={inputStyle}
+              aria-label="Jurnal ichidan qidirish"
+              className="erp-input w-56 pl-8"
             />
           </div>
           <span className="text-micro ml-auto" style={{ color: "var(--text-muted)" }}>
@@ -402,7 +548,7 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
                   onClick={() => setAddKind(k)}
                   className="px-3 py-1.5 text-micro font-semibold inline-flex items-center gap-1"
                   style={addKind === k
-                    ? { background: k === "kirim" ? "var(--accent-green)" : "var(--accent-red)", color: "#fff" }
+                    ? { background: k === "kirim" ? "var(--accent-green)" : "var(--accent-red)", color: "var(--on-brand)" }
                     : { background: "var(--input-bg)", color: "var(--text-secondary)" }}
                 >
                   {k === "kirim" ? <ArrowDownRight size={12} /> : <ArrowUpRight size={12} />}
@@ -410,25 +556,27 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
                 </button>
               ))}
             </div>
-            <input
-              inputMode="numeric"
-              placeholder="Summa"
+            <MoneyField
+              className="w-40"
               value={amount}
-              onChange={(e) => setAmount(groupDigits(e.target.value))}
-              className="px-3 py-1.5 rounded-lg text-meta text-right tabular-nums w-36 outline-none"
-              style={inputStyle}
+              onChange={setAmount}
+              placeholder="Summa"
+              suffix={null}
+              aria-required
             />
-            <select
+            <Select
+              size="sm"
+              fullWidth={false}
+              className="max-w-[220px]"
+              aria-label="Toifa"
               value={cat}
               onChange={(e) => setCat(e.target.value)}
-              className="px-2 py-1.5 rounded-lg text-meta outline-none max-w-[220px]"
-              style={inputStyle}
             >
               {categoryOptions.length === 0 && <option value="">Toifa yo&apos;q</option>}
               {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            </Select>
             <div className="w-52">
-              <FundingSourceSelect value={saveChannelId} onChange={setSaveChannelId} className="w-full px-2 py-1.5 rounded-lg text-meta outline-none" />
+              <FundingSourceSelect value={saveChannelId} onChange={setSaveChannelId} />
             </div>
             <Button type="submit" variant="primary" size="sm" loading={saving}>
               {saving ? "Yozilmoqda…" : "Saqlash"}
@@ -446,19 +594,13 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
 
           {showAdvanced && (
             <div className="flex items-center gap-2 flex-wrap">
-              <DateField
-                className="w-auto"
-                value={date}
-                onChange={setDate}
-                inputClassName="px-2 py-1.5 rounded-lg text-meta outline-none"
-                inputStyle={inputStyle}
-              />
+              <DateField className="w-auto" value={date} onChange={setDate} aria-label="Sana" />
               <input
                 placeholder="Izoh (ixtiyoriy)"
+                aria-label="Izoh"
                 value={desc}
                 onChange={(e) => setDesc(e.target.value)}
-                className="px-3 py-1.5 rounded-lg text-meta flex-1 min-w-[220px] outline-none"
-                style={inputStyle}
+                className="erp-input flex-1 min-w-[220px]"
               />
             </div>
           )}
@@ -481,141 +623,32 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       )}
 
       {/* JADVAL */}
-      <div className="overflow-auto rounded-t-xl" style={{ maxHeight: "calc(100vh - 300px)" }}>
-        <table className="table-sticky-head w-full text-meta">
-          <thead>
-            <tr style={{ background: "var(--table-header-bg)" }}>
-              {["Sana", "Turi", "Manba", "Kim / Toifa", "Izoh", "Holat", "Summa"].map((h, i) => (
-                <th
-                  key={h}
-                  className={`px-3 py-2 text-micro font-semibold uppercase tracking-wider whitespace-nowrap ${i >= 6 ? "text-right" : i === 1 || i === 2 ? "" : "text-left"}`}
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {h}
-                </th>
-              ))}
-              <th className="px-2 py-2 text-right text-micro font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Amal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visible.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-3 py-8 text-center" style={{ color: "var(--text-muted)" }}>
-                  {pending ? "Yuklanmoqda…" : "Tanlangan davrda harakat yo'q."}
-                </td>
-              </tr>
-            ) : (
-              paged.map((r) => {
-                const isPending = r.status === "pending";
-                const isRejected = r.status === "rejected";
-                const canApr = isPending && r.editable && canApproveExpense(userRole, r.amount);
-                return (
-                  <tr
-                    key={`${r.sourceType}-${r.id}`}
-                    className={`transition-colors hover:bg-[var(--input-bg)] ${isRejected ? "opacity-50 line-through decoration-[var(--danger)]" : ""}`}
-                    style={{
-                      borderTop: "1px solid var(--card-border)",
-                      background: isPending ? "var(--warning-bg)" : undefined,
-                    }}
-                  >
-                    <td className="px-3 py-1.5 whitespace-nowrap tabular-nums" style={{ color: "var(--text-secondary)" }}>
-                      {r.date ? formatUzDate(r.date) : "—"}
-                    </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap">
-                      <span
-                        className="inline-flex items-center gap-1 text-micro font-semibold px-1.5 py-0.5 rounded"
-                        style={{
-                          background: r.kind === "kirim" ? "var(--accent-green-light)" : "var(--accent-red-light)",
-                          color: r.kind === "kirim" ? "var(--accent-green)" : "var(--accent-red)",
-                        }}
-                      >
-                        {r.kind === "kirim" ? <ArrowDownRight size={11} /> : <ArrowUpRight size={11} />}
-                        {r.kind === "kirim" ? "Kirim" : "Chiqim"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap">
-                      <span
-                        className="text-micro font-semibold px-1.5 py-0.5 rounded"
-                        style={{ background: SOURCE_BADGE[r.sourceType].bg, color: SOURCE_BADGE[r.sourceType].fg }}
-                      >
-                        {r.sourceLabel}
-                      </span>
-                      {!r.editable && (
-                        <span className="ml-1 text-micro" style={{ color: "var(--text-muted)" }} title="Bu yozuv manba hisobidan kelgan — bu yerda tahrirlanmaydi">🔒</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-1.5 max-w-[260px]">
-                      <div className="font-semibold truncate" style={{ color: "var(--text)" }}>{r.who ?? "—"}</div>
-                      <div className="text-micro truncate" style={{ color: "var(--text-muted)" }}>
-                        {[r.channelLabel, r.category].filter(Boolean).join(" · ") || "—"}
-                      </div>
-                    </td>
-                    <td className="px-3 py-1.5 max-w-[240px] truncate" title={r.rejectedReason ?? undefined} style={{ color: "var(--text-secondary)" }}>
-                      {isRejected && r.rejectedReason ? `Rad etildi: ${r.rejectedReason}` : r.description ?? "—"}
-                    </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap">
-                      {isPending && (
-                        <span className="inline-flex items-center gap-1 text-micro font-semibold" style={{ color: "var(--warning)" }}>
-                          <Clock size={11} /> Tasdiq kutmoqda — jamiga kirmagan
-                        </span>
-                      )}
-                      {isRejected && (
-                        <span className="inline-flex items-center gap-1 text-micro font-semibold" style={{ color: "var(--danger)" }}>
-                          <AlertTriangle size={11} /> Rad etildi
-                        </span>
-                      )}
-                      {r.status === "approved" && null}
-                    </td>
-                    <td className="px-3 py-1.5 text-right tabular-nums font-semibold whitespace-nowrap">
-                      <Money
-                        value={r.kind === "kirim" ? r.amount : -r.amount}
-                        tone={r.kind === "kirim" ? "in" : "out"}
-                        showSign
-                        bold={!isPending && !isRejected}
-                      />
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <div className="flex items-center justify-end gap-1" onClick={(ev) => ev.stopPropagation()}>
-                        {canApr && (
-                          <>
-                            <button onClick={() => void onApprove(r)} className="icon-btn-sm rounded-lg" style={{ color: "var(--success)" }} aria-label="Tasdiqlash"><CheckCircle2 size={14} /></button>
-                            <button onClick={() => void onReject(r)} className="icon-btn-sm rounded-lg" style={{ color: "var(--danger)" }} aria-label="Rad etish"><XCircle size={14} /></button>
-                          </>
-                        )}
-                        {r.editable && ["super_admin", "admin"].includes(userRole) && (
-                          <button onClick={() => void onDelete(r)} className="icon-btn-sm rounded-lg opacity-40 hover:opacity-100 transition-opacity" style={{ color: "var(--danger)" }} aria-label="O'chirish"><Trash2 size={14} /></button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        rows={visible}
+        columns={journalColumns}
+        rowKey={(r) => `${r.sourceType}-${r.id}`}
+        caption="Operatsiyalar jurnali — tanlangan davrdagi barcha pul harakati"
+        sortKey={table.sortKey}
+        sortDir={table.sortDir}
+        onToggleSort={table.toggleSort}
+        density={table.density}
+        page={table.page}
+        pageSize={pageSize}
+        onPageChange={table.setPage}
+        onPageSizeChange={setPageSize}
+        loading={pending && visible.length === 0}
+        emptyIcon={<NotebookPen size={28} />}
+        emptyTitle="Tanlangan davrda harakat yo'q"
+        emptyDescription="Davrni kengaytiring yoki filtrni tozalang."
+      />
 
       {/* Footer */}
       <div className="px-3 py-2 flex items-center justify-between gap-3 flex-wrap text-micro" style={{ borderTop: "1px solid var(--card-border)", color: "var(--text-muted)" }}>
-        <span>
-          Kirim <b className="tabular-nums" style={{ color: "var(--accent-green)" }}>+{formatNum(displayTotals.kirim)}</b>
-          {" · "}Chiqim <b className="tabular-nums" style={{ color: "var(--accent-red)" }}>−{formatNum(displayTotals.chiqim)}</b>
-          {" · "}Sof <b className="tabular-nums" style={{ color: "var(--text)" }}>{formatNum(displayTotals.netto)}</b> so&apos;m
-          {" · "}tasdiq kutayotgan va rad etilganlar jamga kirmaydi
-        </span>
+        <span>Tasdiq kutayotgan va rad etilgan yozuvlar yuqoridagi jamga kirmaydi</span>
         {truncated !== 0 && (
           <span style={{ color: "var(--warning)" }}>Jurnal katta — davrni qisqartiring</span>
         )}
       </div>
-
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={visible.length}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        unit="yozuv"
-      />
     </div>
   );
 }
