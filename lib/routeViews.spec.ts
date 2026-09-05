@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { pathToView, pathToViews } from "@/lib/routeViews";
+import { readdirSync, statSync } from "node:fs";
+import path from "node:path";
+import {
+  pathToView,
+  pathToViews,
+  isProtectedPath,
+  PROTECTED_ROUTES,
+  PUBLIC_ROUTES,
+} from "@/lib/routeViews";
 import { NAV_ITEMS } from "@/lib/navigation";
 
 /**
@@ -55,5 +63,92 @@ describe("pathToViews", () => {
       const path = item.href.split("?")[0];
       expect(pathToViews(path), `${item.href} → ${item.view}`).toContain(item.view);
     }
+  });
+});
+
+/**
+ * FAIL-CLOSED DARVOZA QO'RIQCHISI.
+ *
+ * `proxy.ts#isAllowed` ilgari xaritada moslik topmasa RUXSAT berardi.
+ * Oqibati o'lchangan: `/director` sahifasi `lib/navigation.ts` da ham,
+ * bu xaritada ham, `PROTECTED_ROUTES` da ham yo'q edi va sahifada faqat
+ * `auth()` turardi — ya'ni RBAC ning uchala qavati ham uni o'tkazib
+ * yuborardi va istalgan rol firma oylik fondini ko'ra olardi.
+ *
+ * Endi darvoza fail-closed. Buning narxi bor: xaritadan tushib qolgan
+ * HAQIQIY sahifa ham 403 beradi. Shuning uchun to'liqlik shu yerda,
+ * fayl tizimiga qarab majburlanadi — nosozlik ishlab chiqarishda emas,
+ * testda chiqadi.
+ */
+describe("himoyalangan marshrutlar xaritasi to'liq", () => {
+  it("har bir himoyalangan prefiks kamida bitta view beradi", () => {
+    for (const r of PROTECTED_ROUTES) {
+      expect(pathToViews(r), `${r} xaritada yo'q`).not.toHaveLength(0);
+    }
+  });
+
+  it("ochiq va himoyalangan ro'yxatlar kesishmaydi", () => {
+    for (const p of PUBLIC_ROUTES) {
+      if (p === "/") continue; // ildiz alohida ishlanadi (token bo'lsa yo'naltiriladi)
+      expect(isProtectedPath(p), `${p} ikkala ro'yxatda`).toBe(false);
+    }
+  });
+
+  it("har bir sahifa yo ochiq, yo himoyalangan VA xaritalangan", () => {
+    const appDir = path.resolve(__dirname, "..", "app");
+    const routes: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        const full = path.join(dir, entry);
+        if (statSync(full).isDirectory()) {
+          if (entry === "api") continue; // API o'z avtorizatsiyasini o'zi qiladi
+          walk(full);
+        } else if (entry === "page.tsx") {
+          // `(dashboard)` kabi guruhlar manzilga kirmaydi.
+          const rel = path.relative(appDir, dir).split(path.sep)
+            .filter((seg) => !(seg.startsWith("(") && seg.endsWith(")")))
+            .join("/");
+          routes.push("/" + rel);
+        }
+      }
+    };
+    walk(appDir);
+
+    expect(routes.length).toBeGreaterThan(30); // skanner ishlayotganini tasdiqlash
+
+    const bad: string[] = [];
+    for (const r of routes) {
+      const normalized = r === "/" ? "/" : r.replace(/\/$/, "");
+      if (PUBLIC_ROUTES.includes(normalized)) continue;
+      if (!isProtectedPath(normalized)) {
+        bad.push(`${normalized} — na ochiqlar ro'yxatida, na PROTECTED_ROUTES da`);
+        continue;
+      }
+      if (pathToViews(normalized).length === 0) {
+        bad.push(`${normalized} — himoyalangan, lekin pathToView xaritasida yo'q (fail-closed 403 beradi)`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it("xaritalanmagan himoyalangan manzil ruxsat BERMAYDI", () => {
+    // Aynan `/director` ni yiqitgan holat: himoyalangan daraxt ostida, lekin
+    // xaritada yo'q. `pathToViews` bo'sh qaytaradi → proxy rad etadi.
+    const unknown = "/telegram-app/hali-yozilmagan-ekran";
+    expect(isProtectedPath(unknown)).toBe(true);
+    expect(pathToViews(unknown)).toHaveLength(0);
+  });
+
+  it("handshake sahifasining o'zi ochiq qoladi", () => {
+    // Sessiya AYNAN shu yerda tug'iladi — qo'riqlansa Mini App umuman kirolmaydi.
+    expect(isProtectedPath("/telegram-app")).toBe(false);
+    expect(isProtectedPath("/telegram-app/dashboard")).toBe(true);
+  });
+
+  it("prefiks yarim so'zga yopishmaydi", () => {
+    // `startsWith("/settings")` `/settings-eksport` ni ham ushlardi.
+    expect(isProtectedPath("/settings")).toBe(true);
+    expect(isProtectedPath("/settings/profil")).toBe(true);
+    expect(isProtectedPath("/settings-eksport")).toBe(false);
   });
 });

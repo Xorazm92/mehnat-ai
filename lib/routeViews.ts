@@ -1,6 +1,65 @@
 import type { AppView } from "@/lib/platform/permissions";
 
 /**
+ * HIMOYALANGAN YO'L PREFIKSLARI.
+ *
+ * Ilgari bu ro'yxat `proxy.ts` ichida edi va shu sababli TEST QILINMASDI:
+ * ro'yxatga sahifa qo'shilmasa ham, xaritaga (`pathToView`) qo'shilmasa ham
+ * hech narsa qichqirmasdi. Endi ro'yxat ham, xarita ham bitta faylda va
+ * `lib/routeViews.spec.ts` ikkalasining `app/**\/page.tsx` bilan
+ * kelishishini majburlaydi.
+ *
+ * Har bir prefiks `pathToViews` da MOSLIK berishi shart — aks holda
+ * fail-closed darvoza haqiqiy foydalanuvchini ham to'sib qo'yadi.
+ */
+export const PROTECTED_ROUTES: readonly string[] = [
+  "/admin",
+  "/cockpit",
+  "/dashboard",
+  "/organizations",
+  "/reports",
+  "/deadlines",
+  "/tasks",
+  "/kpi",
+  "/payroll",
+  "/staff",
+  "/cabinet",
+  "/expenses",
+  "/kassa",
+  "/attendance",
+  "/notifications",
+  "/settings",
+];
+
+/**
+ * ATAYLAB OCHIQ sahifalar — sessiyasiz ham ochiladi.
+ *
+ * Bu ro'yxat qisqa va har bandi sababi bilan yozilgan, chunki fail-closed
+ * darvozaning yagona teshigi shu yerda: yangi sahifa bexosdan bu ro'yxatga
+ * tushib qolsa, u umuman qo'riqlanmaydi.
+ */
+export const PUBLIC_ROUTES: readonly string[] = [
+  "/",              // token bo'lsa bosh sahifaga yo'naltiriladi
+  "/login",
+  "/403",           // rad javobi sahifasining O'ZI qo'riqlansa — cheksiz sikl
+  "/portal",        // mijoz portali: kirish bir martalik token bilan (/api/portal/<token>)
+  "/telegram-app",  // Mini App handshake: sessiya AYNAN shu yerda initData bilan tug'iladi
+];
+
+/**
+ * Bu manzil sessiya talab qiladimi?
+ *
+ * `/telegram-app` ning O'ZI ochiq (handshake), ostidagi hamma narsa esa
+ * himoyalangan — Mini App ekranlari veb sahifalar bilan bir xil RBAC ostida.
+ */
+export function isProtectedPath(path: string): boolean {
+  if (path === "/telegram-app") return false;
+  if (path.startsWith("/telegram-app/")) return true;
+  return PROTECTED_ROUTES.some((r) => path === r || path.startsWith(r + "/"));
+}
+
+
+/**
  * MANZIL → EKRAN (view) XARITASI — yagona manba.
  *
  * Ilgari bu xarita faqat `proxy.ts` ichida edi. Natijada UI ning boshqa

@@ -13,28 +13,8 @@ import {
 import { parseRelations } from "@/lib/userRelations";
 // Manzil → ekran xaritasi YAGONA manbada: `Breadcrumbs` ham shu javobga
 // tayanadi, aks holda UI ocholmaydigan havolani taklif qilardi.
-import { pathToViews } from "@/lib/routeViews";
+import { pathToViews, isProtectedPath } from "@/lib/routeViews";
 import { getPrisma } from "@/lib/prisma";
-
-// Himoyalangan yo'llar
-const PROTECTED_ROUTES = [
-  "/admin",
-  "/cockpit",
-  "/dashboard",
-  "/organizations",
-  "/reports",
-  "/deadlines",
-  "/tasks",
-  "/kpi",
-  "/payroll",
-  "/staff",
-  "/cabinet",
-  "/expenses",
-  "/kassa",
-  "/attendance",
-  "/notifications",
-  "/settings",
-];
 
 
 // Admin tahrirlagan rol→view override'lari (SystemSetting: "roleViews").
@@ -78,7 +58,23 @@ async function isAllowed(
   // Ba'zi sahifalar ikki ko'rinishdan BIRI bilan ochiladi (`lib/routeViews.ts`
   // dagi `pathToViews` izohiga qarang) — shuning uchun bitta emas, ro'yxat.
   const views = pathToViews(path);
-  if (views.length === 0) return true; // moslik topilmasa to'sib qo'ymaymiz
+  if (views.length === 0) {
+    // FAIL-CLOSED. Ilgari bu yerda `return true` turardi va oqibati o'lchandi:
+    // `/director` sahifasi xaritaning uchala qavatidan ham tushib qolgan edi,
+    // shuning uchun proxy uni HAR QANDAY rolga ochib berardi — buxgalter ham,
+    // bank-klient ham firma oylik fondi bilan so'nggi to'lovlarni ko'rardi.
+    //
+    // Bu yerga faqat HIMOYALANGAN manzil keladi (`isProtectedPath`), ya'ni
+    // ochiq sahifalarga ta'sir yo'q. Xaritada yo'q himoyalangan manzil endi
+    // "hali yozilmagan" deb emas, "ruxsat berilmagan" deb o'qiladi.
+    //
+    // Xarita to'liqligini `lib/routeViews.spec.ts` majburlaydi: har bir
+    // `app/**/page.tsx` yo ochiqlar ro'yxatida, yo himoyalangan VA
+    // xaritalangan bo'lishi shart. Ya'ni bu shox ishlab chiqarishda emas,
+    // testda ushlanadi.
+    console.error(`[proxy] xaritada yo'q himoyalangan manzil — rad etildi: ${path}`);
+    return false;
+  }
   const overrides = await getRoleViewOverridesCached();
   return views.some((v) => canSeeViewWith(role as UserRole, v, overrides, relations));
 }
@@ -88,12 +84,9 @@ export async function proxy(req: NextRequest) {
 
   // `/telegram-app` — Mini App handshake sahifasi: u ATAYIN ochiq, chunki
   // sessiya aynan o'sha yerda `initData` orqali yaratiladi. Uning ostidagi
-  // ekranlar esa oddiy himoyalangan sahifalar.
+  // ekranlar esa oddiy himoyalangan sahifalar (`isProtectedPath`).
   const isTelegramApp = path.startsWith("/telegram-app");
-  const isTelegramHandshake = path === "/telegram-app";
-  const isProtected =
-    (isTelegramApp && !isTelegramHandshake) ||
-    PROTECTED_ROUTES.some((r) => path.startsWith(r));
+  const isProtected = isProtectedPath(path);
 
   // `secureCookie` MUST match how next-auth set the cookie (see USE_SECURE_COOKIES
   // in lib/auth.config.ts). It drives both the cookie name (`__Secure-` prefix)

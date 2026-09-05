@@ -201,30 +201,44 @@ describe("roleViews overrides", () => {
   });
 });
 
-describe("fail-open on unmapped paths", () => {
-  it("pathToView moslik topmasa to'sib qo'yilmaydi", async () => {
-    // Qasddan shunday: yangi sahifa qo'shilganda u avtomatik 403 bo'lmaydi.
-    // Narxi — PROTECTED_ROUTES ga qo'shilgan, lekin pathToView'ga qo'shilmagan
-    // yo'l har qanday rol uchun ochiq qoladi. Ikkala ro'yxat birga o'zgarsin.
+describe("fail-closed on unmapped protected paths", () => {
+  it("himoyalanmagan manzil proxy'dan bemalol o'tadi", async () => {
+    // `/some-new-page` `PROTECTED_ROUTES` da ham, ochiqlar ro'yxatida ham
+    // yo'q — proxy uni umuman tekshirmaydi (sahifaning O'ZI mavjud bo'lsa,
+    // o'z darvozasini o'zi qo'yadi). Fail-closed FAQAT himoyalangan
+    // daraxtga tegishli.
     staff("accountant");
     expect(await go("/some-new-page")).toBeNull();
   });
 
+  it("himoyalangan, lekin xaritalanmagan manzil → /403", async () => {
+    // BU AVVAL TESKARI ISHLARDI. `isAllowed` moslik topmasa `true` qaytarardi
+    // va o'sha "fail-open" `/director` ni HAR QANDAY rolga ochib qo'ygan edi:
+    // sahifa `lib/navigation.ts` da ham, `lib/routeViews.ts` da ham,
+    // `PROTECTED_ROUTES` da ham yo'q edi, o'zida esa faqat `auth()` turardi.
+    //
+    // `/telegram-app/*` — bugungi yagona "himoyalangan lekin xaritada
+    // bo'lmasligi mumkin" tarmoq: ostidagi HAMMA narsa himoyalangan, ammo
+    // xaritada faqat `dashboard` va `proof` bor.
+    staff("super_admin");
+    expect(await go("/telegram-app/hali-yozilmagan-ekran")).toBe("/403");
+  });
+
+  it("xaritalangan Mini App ekrani ochiq qoladi", async () => {
+    staff("super_admin");
+    expect(await go("/telegram-app/dashboard")).toBeNull();
+  });
+
   it("PROTECTED_ROUTES va pathToView bir xil to'plamni qamraydi", async () => {
-    // Yuqoridagi fail-open shu invariant buzilmagunicha xavfsiz.
-    // IKKI FAYL, BITTA EMAS. `pathToView` `proxy.ts` dan `lib/routeViews.ts`
-    // ga ko'chirilgan (uni `Breadcrumbs` ham o'qiydi), bu tekshiruv esa
-    // ikkala ro'yxatni ham `proxy.ts` dan qidiraverardi. Natijada `mapped`
-    // bo'sh chiqib, HAMMA yo'l "qoplanmagan" bo'lib ko'rinardi — 16 ta soxta
-    // ogohlantirish yagona haqiqiy bo'shliqni (`/cockpit`) ko'mib tashlagan edi.
-    const fs = await import("node:fs");
-    const proxySrc = fs.readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
-    const viewsSrc = fs.readFileSync(new URL("../lib/routeViews.ts", import.meta.url), "utf8");
-    const protectedList = [...proxySrc.matchAll(/^\s+"(\/[a-z-]+)",$/gm)].map((m) => m[1]);
-    const mapped = new Set([...viewsSrc.matchAll(/path\.startsWith\("(\/[a-z-]+)/g)].map((m) => m[1]));
-    expect(protectedList.length, "PROTECTED_ROUTES topilmadi — regexp eskirgan").toBeGreaterThan(5);
-    expect(mapped.size, "pathToView topilmadi — regexp eskirgan").toBeGreaterThan(5);
-    const unmapped = protectedList.filter((p) => !mapped.has(p));
+    // Fail-closed darvozaning narxi: xaritadan tushib qolgan HAQIQIY sahifa
+    // ham 403 beradi. Shuning uchun to'liqlik majburlanadi.
+    //
+    // Ilgari bu tekshiruv ikkala ro'yxatni ham manba MATNIDAN regexp bilan
+    // qidirardi va ro'yxat ko'chgach jim yiqildi. Endi ikkalasi ham bitta
+    // moduldan EKSPORT qilinadi — regexp ham, ikki fayl ham yo'q.
+    // Fayl tizimi bo'yicha to'liq skanerlash `lib/routeViews.spec.ts` da.
+    const { PROTECTED_ROUTES, pathToViews } = await import("@/lib/routeViews");
+    const unmapped = PROTECTED_ROUTES.filter((p) => pathToViews(p).length === 0);
     expect(unmapped, "PROTECTED_ROUTES da bor, pathToView da yo'q").toEqual([]);
   });
 });
