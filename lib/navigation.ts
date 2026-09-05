@@ -91,8 +91,13 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard",     view: "dashboard",     label: "Boshqaruv paneli", icon: LayoutDashboard, group: "asosiy",  tint: "blue",  keywords: "dashboard bosh sahifa asosiy" },
-  { href: "/cockpit",       view: "cockpit",       label: "Kabina",           icon: Gauge,           group: "asosiy",  tint: "indigo",  keywords: "cockpit kabina direktor umumiy" },
+  // `/cockpit` menyudan olib tashlandi — u shu ekranning "Kokpit" yorlig'i
+  // bo'ldi. Ilgari menyuda IKKITA "uy" turardi ("Boshqaruv paneli" va
+  // "Kabina") va foydalanuvchi qaysi biridan boshlashni bilmasdi; ustiga
+  // "Kabina" nomi "Mening kabinetim" bilan chalkashardi. Manzil o'z kuchida
+  // qoladi va `/dashboard?tab=kokpit` ga yo'naltiradi (eski havolalar va
+  // `cockpit` RBAC view'i ishlaydi). Yorliqlar `NAV_SECTIONS` da.
+  { href: "/dashboard",     view: "dashboard",     label: "Boshqaruv paneli", icon: LayoutDashboard, group: "asosiy",  tint: "blue",  keywords: "dashboard bosh sahifa asosiy kabina kokpit" },
   { href: "/organizations", view: "organizations", label: "Firmalar",         icon: Building2,       group: "asosiy",  tint: "teal",  keywords: "korxona kompaniya mijoz tashkilot" },
   { href: "/staff",         view: "staff",         label: "Xodimlar",         icon: Users,           group: "asosiy",  tint: "plum",  keywords: "hodim kadr jamoa xizmatchi" },
   { href: "/kpi",           view: "kpi",           label: "KPI",              icon: TrendingUp,      group: "asosiy",  tint: "olive",  keywords: "reyting ball ko'rsatkich" },
@@ -162,6 +167,9 @@ export interface NavSection {
 }
 
 export const NAV_SECTIONS: NavSection[] = [
+  { href: "/dashboard?tab=holat",    view: "dashboard", parentLabel: "Boshqaruv paneli", label: "Holat",  icon: LayoutDashboard, keywords: "bosh sahifa kabinet ko'rsatkich kunlik" },
+  { href: "/dashboard?tab=kokpit",   view: "cockpit",   parentLabel: "Boshqaruv paneli", label: "Kokpit", icon: Gauge,           keywords: "cockpit kabina direktor xavf yuklama timeline twin sig'im" },
+
   { href: "/reports?tab=matrix",     view: "reports",   parentLabel: "Hisobotlar", label: "Amallar matritsasi",   icon: Grid3x3,      keywords: "matritsa amallar jadval topshirish holat" },
   { href: "/reports?tab=reports",    view: "reports",   parentLabel: "Hisobotlar", label: "Moliyaviy hisobotlar", icon: FileText,     keywords: "foyda zarar hujjat balans" },
 

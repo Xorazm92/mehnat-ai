@@ -24,7 +24,10 @@ const RAW_BUTTON_BASELINE = [
   "app/(admin)/admin/settings/AdminSettingsClient.tsx",
   "app/(admin)/error.tsx",
   "app/(auth)/login/page.tsx",
-  "app/(dashboard)/cockpit/CockpitClient.tsx",
+  // Koʻchirildi: `/cockpit` mustaqil marshrut boʻlishdan toʻxtadi va
+  // "Boshqaruv paneli"ning yorligʻiga aylandi. Fayl MAZMUNI oʻzgarmadi —
+  // faqat yoʻli, shuning uchun roʻyxat UZUNLIGI ham oʻzgarmaydi.
+  "components/cockpit/CockpitPanel.tsx",
   "app/(dashboard)/error.tsx",
   "app/(dashboard)/kassa/CashDeskTable.tsx",
   "app/(dashboard)/kassa/chiqim/ExpenseQueue.tsx",

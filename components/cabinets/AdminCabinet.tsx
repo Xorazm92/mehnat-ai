@@ -12,11 +12,13 @@ import {
   UserPlus,
   Wallet,
   Database,
+  LayoutDashboard,
 } from "lucide-react";
 import { CashFlowChart } from "./CashFlowChart";
 import BalanceOverview from "@/components/BalanceOverview";
 import DeadlinesWidget, { type DeadlineRow } from "@/components/DeadlinesWidget";
 import { KpiCard } from "@/components/ui/KpiCard";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { formatUzDateTime, formatNum } from "@/lib/platform/format";
 import { ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import type { BalanceBreakdown } from "@/types";
@@ -79,6 +81,7 @@ const actionLabels: Record<string, string> = {
 };
 
 export function AdminCabinet({
+  userName,
   userRole,
   userStats,
   recentAudit,
@@ -89,6 +92,7 @@ export function AdminCabinet({
 }: AdminCabinetProps) {
   const isSuperAdmin = userRole === "super_admin";
   const totalUsers = userStats.reduce((s, r) => s + r._count, 0);
+  const firstName = userName.split(" ")[0] || userName;
 
   const quickLinks = [
     { href: "/staff", label: "Xodimlar", icon: Users, color: "blue" },
@@ -106,6 +110,19 @@ export function AdminCabinet({
 
   return (
     <div className="space-y-6">
+      {/* SARLAVHA. Bu kabinet yagona edi va `<h1>` umuman chizmasdi — ya'ni
+          admin uchun bosh ekran sarlavhasiz ochilardi va ekran o'quvchi
+          hujjat tuzilmasini topa olmasdi (`PageHeader` shartnomasi: har
+          sahifada AYNAN bitta `h1`). Qo'shni kabinetlar — Nazoratchi va
+          Bosh buxgalter — buni allaqachon to'g'ri qiladi. */}
+      {/* Ism BO'SH bo'lishi mumkin (sessiyada `name` yo'q profil) — o'shanda
+          `Xush kelibsiz, ` osilib qolgan vergul bilan chiqardi. */}
+      <PageHeader
+        icon={<LayoutDashboard size={20} />}
+        title={firstName ? `Xush kelibsiz, ${firstName}` : "Xush kelibsiz"}
+        description={isSuperAdmin ? "Super admin kabineti" : "Administrator kabineti"}
+      />
+
       {/* Yagona kassa balansi (butun tizim) */}
       {balance && <BalanceOverview breakdown={balance} />}
 

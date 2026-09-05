@@ -14,10 +14,22 @@ import {
   getAccountantCabinetData,
   getDashboardDeadlines,
 } from "@/server/cabinet";
+import { currentUserViews } from "@/server/rbac";
+import { getOperationsTimeline } from "@/server/timeline";
+import { getCompanyTwins, getStaffCapacity } from "@/server/twin";
+import { getCurrentPeriodKey } from "@/lib/periods";
+import { readTabParam } from "@/lib/tabs";
+import {
+  DASHBOARD_TAB_IDS,
+  DASHBOARD_DEFAULT_TAB,
+  type DashboardTab,
+} from "@/lib/dashboardTabs";
 import { AdminCabinet } from "@/components/cabinets/AdminCabinet";
 import { SupervisorCabinet } from "@/components/cabinets/SupervisorCabinet";
 import { ChiefAccountantCabinet } from "@/components/cabinets/ChiefAccountantCabinet";
 import { AccountantCabinet } from "@/components/cabinets/AccountantCabinet";
+import CockpitPanel from "@/components/cockpit/CockpitPanel";
+import DashboardTabs from "./DashboardTabs";
 
 export const metadata = { title: "Boshqaruv paneli" };
 
@@ -26,8 +38,21 @@ export const metadata = { title: "Boshqaruv paneli" };
 // yiqilganda ekran nollar bilan to'lardi — buxgalterga esa `percent: 100`,
 // ya'ni "hammasi topshirilgan" deb ko'rsatardi. Muddat nazorati tizimida bu
 // eng xavfli holat: yolg'on xotirjamlik. Endi xato `error.tsx` ga chiqadi.
+//
+// YAGONA BOSH EKRAN. Ilgari menyuda ikkita "uy" turardi — bu sahifa va
+// `/cockpit` — va uchinchisi (`/director`) umuman menyusiz, darvozasiz
+// osilib qolgan edi. Endi bitta manzil, ichida ikki yorliq:
+//   `holat`  — rolga qarab kabinet (bu fayldagi eski mantiq, o'zgarmagan)
+//   `kokpit` — muddatlar oqimi, xavf va yuklama (`components/cockpit`)
+// Yorliq ma'lumoti SERVERDA olinadi, shuning uchun `kokpit` uchun kerakli
+// uchta og'ir so'rov faqat o'sha yorliq faol bo'lgandagina yuguradi.
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   const session = await auth();
   if (!session) redirect("/login?expired=1");
 
@@ -38,7 +63,56 @@ export default async function DashboardPage() {
   // Bank-klient o'z maxsus kabinetiga yo'naltirilsin
   if (userRole === "bank_manager") redirect("/cabinet/bank");
 
+  // Kokpit yorlig'i ALOHIDA ruxsat talab qiladi. Darvoza YORLIQDA, marshrutda
+  // emas — marshrut endi umumiy. Ruxsatsiz foydalanuvchi `?tab=kokpit` deb
+  // qo'lda yozsa `readTabParam` uni jimgina `holat` ga qaytaradi, chunki
+  // o'sha yorliq ruxsat etilganlar ro'yxatiga umuman kiritilmaydi.
+  //
+  // Statik ro'yxatda bu shart bugun hech kimni to'smaydi: `/dashboard` ga
+  // kira oladigan to'rtala rolda (`super_admin`, `admin`, `chief_accountant`,
+  // `supervisor`) `cockpit` ham bor. Shart baribir kerak, chunki rol→ko'rinish
+  // xaritasini admin tahrirlaydi (`SystemSetting: "roleViews"`).
+  const views = await currentUserViews();
+  const canCockpit = views.includes("cockpit");
+  const allowedTabs: readonly DashboardTab[] = canCockpit
+    ? DASHBOARD_TAB_IDS
+    : [DASHBOARD_DEFAULT_TAB];
+  const activeTab = readTabParam<DashboardTab>(tab, allowedTabs, DASHBOARD_DEFAULT_TAB);
+
+  // Yorliq almashtirgich faqat tanlov BOR bo'lganda chiziladi: bitta yorliqli
+  // almashtirgich foydalanuvchiga hech narsa bermaydi, faqat joy egallaydi.
+  const tabsBar = canCockpit ? (
+    <div className="mb-4">
+      <DashboardTabs active={activeTab} />
+    </div>
+  ) : null;
+
+  if (activeTab === "kokpit") {
+    const period = getCurrentPeriodKey();
+    const [timeline, twins, capacity] = await Promise.all([
+      getOperationsTimeline(),
+      getCompanyTwins(period),
+      getStaffCapacity(period),
+    ]);
+
+    return (
+      <div className="space-y-4">
+        {tabsBar}
+        <CockpitPanel
+          period={period}
+          timeline={JSON.parse(JSON.stringify(timeline))}
+          twins={JSON.parse(JSON.stringify(twins))}
+          capacity={JSON.parse(JSON.stringify(capacity))}
+        />
+      </div>
+    );
+  }
+
   // ─── BUXGALTER — operatsion dashboard ─────────────────────
+  // Statik ro'yxatda buxgalterda `dashboard` ko'rinishi YO'Q (uyi —
+  // `/cabinet`), ya'ni bu shox odatda ishlamaydi. O'chirilmaydi: admin
+  // `roleViews` orqali `dashboard` ni buxgalterga berishi mumkin va o'shanda
+  // u ekranni sarlavhasiz emas, o'z kabineti bilan ochishi kerak.
   if (userRole === "accountant") {
     const [data, deadlines] = await Promise.all([
       getAccountantCabinetData(),
@@ -46,15 +120,18 @@ export default async function DashboardPage() {
     ]);
 
     return (
-      <AccountantCabinet
-        userName={userName}
-        companies={data.companies as any}
-        companiesCount={data.companiesCount}
-        reportSummary={(data as any).reportSummary}
-        kpi={(data as any).kpi}
-        currentMonth={data.currentMonth}
-        deadlines={deadlines as any}
-      />
+      <>
+        {tabsBar}
+        <AccountantCabinet
+          userName={userName}
+          companies={data.companies as any}
+          companiesCount={data.companiesCount}
+          reportSummary={(data as any).reportSummary}
+          kpi={(data as any).kpi}
+          currentMonth={data.currentMonth}
+          deadlines={deadlines as any}
+        />
+      </>
     );
   }
 
@@ -66,16 +143,19 @@ export default async function DashboardPage() {
     ]);
 
     return (
-      <SupervisorCabinet
-        userName={userName}
-        supervisedCompanies={data.supervisedCompanies as any}
-        companiesCount={data.companiesCount}
-        accountants={data.accountants as any}
-        pendingKpi={data.pendingKpi as any}
-        riskStats={data.riskStats as any}
-        currentMonth={data.currentMonth}
-        deadlines={deadlines as any}
-      />
+      <>
+        {tabsBar}
+        <SupervisorCabinet
+          userName={userName}
+          supervisedCompanies={data.supervisedCompanies as any}
+          companiesCount={data.companiesCount}
+          accountants={data.accountants as any}
+          pendingKpi={data.pendingKpi as any}
+          riskStats={data.riskStats as any}
+          currentMonth={data.currentMonth}
+          deadlines={deadlines as any}
+        />
+      </>
     );
   }
 
@@ -87,17 +167,20 @@ export default async function DashboardPage() {
     ]);
 
     return (
-      <ChiefAccountantCabinet
-        userName={userName}
-        chiefCompanies={data.chiefCompanies as any}
-        companiesCount={data.companiesCount}
-        teamMembers={data.teamMembers as any}
-        pendingApprovals={data.pendingApprovals as any}
-        payrollSummary={data.payrollSummary as any}
-        totalTeamScore={data.totalTeamScore}
-        currentMonth={data.currentMonth}
-        deadlines={deadlines as any}
-      />
+      <>
+        {tabsBar}
+        <ChiefAccountantCabinet
+          userName={userName}
+          chiefCompanies={data.chiefCompanies as any}
+          companiesCount={data.companiesCount}
+          teamMembers={data.teamMembers as any}
+          pendingApprovals={data.pendingApprovals as any}
+          payrollSummary={data.payrollSummary as any}
+          totalTeamScore={data.totalTeamScore}
+          currentMonth={data.currentMonth}
+          deadlines={deadlines as any}
+        />
+      </>
     );
   }
 
@@ -109,17 +192,20 @@ export default async function DashboardPage() {
     ]);
 
     return (
-      <AdminCabinet
-        userName={userName}
-        userRole={userRole}
-        userStats={data.userStats as any}
-        companyStats={data.companyStats}
-        recentAudit={data.recentAudit as any}
-        systemHealth={data.systemHealth}
-        balance={data.balance}
-        monthlyCashFlow={(data as any).monthlyCashFlow ?? []}
-        deadlines={deadlines as any}
-      />
+      <>
+        {tabsBar}
+        <AdminCabinet
+          userName={userName}
+          userRole={userRole}
+          userStats={data.userStats as any}
+          companyStats={data.companyStats}
+          recentAudit={data.recentAudit as any}
+          systemHealth={data.systemHealth}
+          balance={data.balance}
+          monthlyCashFlow={(data as any).monthlyCashFlow ?? []}
+          deadlines={deadlines as any}
+        />
+      </>
     );
   }
 
@@ -137,6 +223,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {tabsBar}
       <div className="page-header">
         <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>
           Xush kelibsiz, {userName.split(" ")[0]}

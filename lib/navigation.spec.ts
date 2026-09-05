@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { NAV_ITEMS, NAV_SECTIONS, MOBILE_NAV_ORDER, MOBILE_NAV_SHORT_LABELS } from "./navigation";
+import { DASHBOARD_TAB_IDS } from "./dashboardTabs";
 import { KPI_TAB_IDS } from "./kpiTabs";
 import { REPORTS_TAB_IDS } from "./reportsTabs";
 import { PAYROLL_TAB_IDS } from "./payrollTabs";
@@ -19,6 +20,7 @@ import { SVERKA_TAB_IDS } from "./sverkaTabs";
 
 /** Qaysi ekranning `?tab=` qiymatlari qaysi reyestrda. */
 const TAB_REGISTRY: Record<string, readonly string[]> = {
+  "/dashboard": DASHBOARD_TAB_IDS,
   "/kpi": KPI_TAB_IDS,
   "/reports": REPORTS_TAB_IDS,
   "/payroll": PAYROLL_TAB_IDS,

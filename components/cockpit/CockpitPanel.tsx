@@ -102,7 +102,7 @@ function ItemRow({ item }: { item: TimelineItem }) {
   );
 }
 
-export default function CockpitClient({ period, timeline, twins, capacity }: {
+export default function CockpitPanel({ period, timeline, twins, capacity }: {
   period: string;
   timeline: TimelineBucket[];
   twins: CompanyTwin[];
@@ -150,9 +150,9 @@ export default function CockpitClient({ period, timeline, twins, capacity }: {
   const idle = capacity.filter((c) => (c.score.value ?? 0) < 60);
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4">
       <div className="flex items-baseline gap-3">
-        <h1 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Kabina</h1>
+        <h1 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Kokpit</h1>
         <span className="text-meta" style={{ color: "var(--text-muted)" }}>{period} · {twins.length} firma</span>
         <span className="ml-auto">
           <Button variant="secondary" size="sm" disabled={pending} onClick={syncRisk}>
