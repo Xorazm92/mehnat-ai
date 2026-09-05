@@ -1458,32 +1458,57 @@ button.metric-rail-cell:hover {
 
 .c1-btn-danger:hover { filter: brightness(0.92); }
 
-/* Login sahifasi kirish maydoni. Login tema tokenlariga bog'lanmaydi:
-   u tema tanlanishidan oldin ko'rinadi va doim to'q qoladi. */
-.login-input {
-  width: 100%;
-  height: 3rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: #E4E9EF;
-  font-size: 14px;
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+/* ─── Kirish sahifasi: chap "hero" paneli ───
+   Fotosurat ustidagi qatlam. Bu ranglar TEMAGA ERGASHMAYDI va `.dark` da
+   qayta ta'riflanmaydi — panel har doim to'q bo'lishi shart, chunki
+   ustidagi oq matn rasm ustida o'qilishi kerak. Yorug' rejimda ham to'q
+   qolishi ataylab: bu yuza rasmga tegishli, temaga emas.
+
+   `--auth-hero-ground` — rasm (`public/abs.jpg`) hali yuklanmagan yoki
+   umuman yo'q holatda ko'rinadigan zamin. Ya'ni rasmsiz ham panel
+   buzilmaydi, shunchaki to'q ASRO-ko'k bo'lib qoladi. */
+:root {
+  --auth-hero-ground: #0A2338;
+  --auth-hero-veil-top: rgba(8, 26, 43, 0.78);
+  --auth-hero-veil-bottom: rgba(5, 18, 31, 0.93);
+  --auth-hero-text: #FFFFFF;
+  --auth-hero-text-dim: rgba(255, 255, 255, 0.76);
+  --auth-hero-chip-bg: rgba(255, 255, 255, 0.10);
+  --auth-hero-chip-border: rgba(255, 255, 255, 0.17);
 }
 
-.login-input::placeholder { color: #5A6979; }
+/* KIRISH SAHIFASI MAYDONI — `.erp-input` ning kengroq varianti.
+   Avval bu yerda qattiq yozilgan to'q ranglar turardi ("login tema
+   tanlanishidan oldin ko'rinadi" degan izoh bilan). Bu next-themes bilan
+   to'g'ri emas: u klassni bo'yashdan OLDIN qo'yadi. Endi maydon ilovaning
+   o'z `.erp-input` sinfi ustiga qo'yiladi va faqat ZICHLIKNI o'zgartiradi:
+   kirish sahifasi jadval emas, u yerda 48px balandlik va 14px matn kerak.
+   Ranglar, fokus halqasi va o'tishlar — hammasi `.erp-input` dan. */
+.auth-input {
+  height: 3rem;
+  padding: 0 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
 
-.login-input:focus {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: #4FA3E3;
-  box-shadow: 0 0 0 3px rgba(79, 163, 227, 0.22);
+/* Xato holati rang bilan YOLG'IZ ko'rsatilmaydi: `Field` maydon ostida
+   matnli xabar ham chiqaradi va uni `aria-describedby` bilan bog'laydi. */
+.auth-input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.auth-input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px var(--danger-border);
+}
+
+.auth-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* iOS 16px dan kichik maydonda sahifani kattalashtiradi. */
 @media (max-width: 767px) {
-  .login-input { font-size: 16px; }
+  .auth-input { font-size: 16px; }
 }
 
 /* Belgili tugma — 44×44 teginish maydoni (Apple HIG / Material 48dp).

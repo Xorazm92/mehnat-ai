@@ -1,34 +1,86 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
+import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Mail, Lock, Loader2, ArrowRight, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Moon,
+  Sun,
+  CalendarClock,
+  FileText,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
+// To'g'ridan-to'g'ri modulidan — `@/components/ui` to'plagichi orqali emas:
+// u DataTable, Modal, Drawer va boshqa og'ir mijoz komponentlarini ham
+// eksport qiladi va kirish sahifasining to'plamiga ular kerak emas.
+import { Field } from "@/components/ui/Field";
 
-// Login sahifasi ataylab har doim to'q: u tema tanlanishidan oldin ko'rinadi,
-// shuning uchun tema tokenlariga bog'lanmaydi. Qiymatlar dark palitradan.
-const LOGIN_INK = "#0D1014";
-const LOGIN_DEEP = "#0C2C49";
-const LOGIN_BRAND = "#4FA3E3";
-const LOGIN_TEXT_DIM = "#9BA7B4";
+/**
+ * KIRISH SAHIFASI.
+ *
+ * Uchta qaror shu yerda yozib qo'yiladi:
+ *
+ * 1) CHAP PANEL — FOTOSURAT USTIDAGI "HERO". Rasm `next/image` orqali
+ *    beriladi, CSS foni sifatida emas: shunda Next uni AVIF/WebP ga
+ *    o'giradi va ekran kengligiga qarab kerakli o'lchamini uzatadi.
+ *    Panel zamini (`--auth-hero-ground`) rasm yuklanguncha ko'rinadi,
+ *    ya'ni sahifa hech qachon oq yaltirab turmaydi.
+ *
+ * 2) PANEL RANGLARI TEMAGA ERGASHMAYDI. `--auth-hero-*` tokenlari `.dark`
+ *    da qayta ta'riflanmagan: rasm ustidagi oq matn yorug' rejimda ham
+ *    o'qilishi kerak, ya'ni bu yuza rasmga tegishli, temaga emas.
+ *
+ * 3) O'NG TOMON — TEMA TOKENLARIDA. Forma, karta va zamin ilovaning o'z
+ *    `--card-*`, `--input-*`, `--bg-*` tokenlaridan oziqlanadi va tema
+ *    bilan birga aylanadi. Sahifada birorta xom hex yo'q.
+ */
+
+/** Chap paneldagi imkoniyatlar — har biri HAQIQIY modulga to'g'ri keladi. */
+const FEATURES: { icon: LucideIcon; label: string }[] = [
+  { icon: CalendarClock, label: "Muddat, topshiriq va majburiyat nazorati" },
+  { icon: FileText, label: "Hisobot matritsasi, dalil va tasdiqlash" },
+  { icon: Wallet, label: "Kassa, qarzdorlik, oylik va KPI" },
+];
+
+const COPYRIGHT = "© 2026 ASRO — Barcha huquqlar himoyalangan";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Forma `noValidate`: brauzerning o'z pufakchasi o'rniga sahifaning
+    // o'z xato satri ishlatiladi (u ekran o'quvchiga ham bog'langan).
+    // Bo'sh maydon serverga umuman yuborilmaydi — bekorga so'rov qilib,
+    // keyin "email yoki parol noto'g'ri" deyish chalg'ituvchi bo'lardi.
+    if (!email.trim() || !password) {
+      setError("Email va parolni kiriting");
+      return;
+    }
     setLoading(true);
+    setError(null);
     try {
       const result = await signIn("credentials", { email, password, redirect: false });
       // BITTA generik xabar — barcha muvaffaqiyatsizlik sabablari uchun (hisob
       // yo'q / parol xato / bloklangan hisob / rate limit). Aks holda hujumchi
       // xabar farqidan hisob mavjudligini yoki bloklanganini bilib olardi.
       if (result?.error || result?.ok === false) {
-        toast.error("Noto'g'ri email yoki parol");
+        // Xabar IKKI joyda: forma ichida (qoladi, ekran o'quvchi o'qiydi,
+        // maydonga `aria-describedby` bilan bog'lanadi) va toast'da
+        // (darhol ko'zga tashlanadi). Faqat toast yetarli emas edi — u
+        // o'zi yo'qoladi va fokus formada qolganda hech qanday iz qolmasdi.
+        setError("Email yoki parol noto'g'ri");
+        toast.error("Email yoki parol noto'g'ri");
       } else {
         toast.success("Xush kelibsiz!");
         // callbackUrl bo'lsa o'sha yerga, aks holda "/" ga — proxy rolga mos
@@ -39,6 +91,7 @@ export default function LoginPage() {
         window.location.href = target;
       }
     } catch {
+      setError("Xatolik yuz berdi. Qayta urinib ko'ring.");
       toast.error("Xatolik yuz berdi");
     } finally {
       setLoading(false);
@@ -47,221 +100,261 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-dvh w-full flex overflow-hidden"
-      style={{ background: LOGIN_INK, color: "#E4E9EF" }}
+      className="min-h-dvh w-full flex flex-col lg:flex-row"
+      style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
     >
-      {/* Chap / brend paneli.
-          Avvalgi ko'k "orb" radial gradientlari o'rniga — ASRO belgisining
-          o'z azure→cyan qanoti va uning ostidagi chartreuse barg chizig'i.
-          Fon esa daftar chizig'i: qat'iy, sanaladigan gorizontal chiziqlar. */}
-      <div
-        className="hidden lg:flex flex-col justify-between w-[46%] relative p-12 overflow-hidden"
-        // Panel qirrasi — tasodifiy chok emas, ataylab tortilgan chiziq.
-        style={{ borderRight: "1px solid rgba(255,255,255,.10)" }}
+      {/* ── CHAP: fotosurat ustidagi hero ──────────────────────────────
+          Kichik ekranda umuman chizilmaydi: telefonda kirish sahifasining
+          yagona vazifasi — kirish, va rasm forma uchun joyni o'g'irlaydi. */}
+      <aside
+        className="hidden lg:block lg:w-[56%] xl:w-[58%] relative overflow-hidden"
+        style={{ backgroundColor: "var(--auth-hero-ground)" }}
       >
+        {/* `priority` — bu sahifadagi eng katta element (LCP), kechiktirilmaydi.
+            `sizes` da mobil uchun `0px`: panel `lg` dan pastda umuman
+            chizilmaydi, ya'ni telefonga bu rasm hech qachon yuklanmaydi. */}
+        <Image
+          src="/abs.jpg"
+          alt=""
+          fill
+          priority
+          sizes="(min-width: 1024px) 58vw, 0px"
+          className="object-cover"
+        />
+        {/* Parda — rasm ustidagi matn kontrastini KAFOLATLAYDI. Pastga
+            tomon quyuqlashadi: imkoniyatlar ro'yxati eng pastda turadi va
+            rasmning yorug' joyiga tushib qolsa o'qilmay qolardi. */}
         <div
+          aria-hidden="true"
           className="absolute inset-0"
           style={{
-            background: `linear-gradient(155deg, ${LOGIN_DEEP} 0%, #0A1622 62%, ${LOGIN_INK} 100%)`,
+            background:
+              "linear-gradient(to bottom, var(--auth-hero-veil-top), var(--auth-hero-veil-bottom))",
           }}
         />
-        {/* Daftar chizig'i — 28px qadamda, sanaladigan, lekin baqirmaydigan */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0 1px, transparent 1px 28px)",
-          }}
-        />
-        {/* Belgining qanoti — yagona yorug'lik manbai */}
-        <div
-          className="absolute -right-40 top-1/4 w-[34rem] h-[34rem] rounded-full blur-3xl opacity-25"
-          style={{ background: "radial-gradient(circle, #0090E0, transparent 68%)" }}
-        />
-
-        <div className="relative animate-rise-in" style={{ animationDelay: "60ms" }}>
-          <Logo />
-        </div>
-
-        <div className="relative">
-          {/* Chartreuse chiziq — sahifadagi yagona "jonli" belgi */}
-          <div
-            className="w-10 h-0.5 mb-7 animate-rise-in"
-            style={{ background: "#9FBE1C", animationDelay: "140ms" }}
-          />
-          <h2
-            className="text-4xl font-semibold leading-[1.15] tracking-tight animate-rise-in"
-            style={{ animationDelay: "200ms" }}
-          >
-            Muddat, hisobot va
-            <br />
-            oylik — bitta joyda.
-          </h2>
-          <p
-            className="mt-5 text-sm leading-relaxed max-w-sm animate-rise-in"
-            style={{ color: "#9FB0C2", animationDelay: "260ms" }}
-          >
-            Firmalar, xodimlar, KPI, kassa va hisobotlar — ASRO korporativ
-            boshqaruv platformasida yagona, xavfsiz tizimda.
-          </p>
-          <div
-            className="mt-10 flex items-center gap-2 font-mono text-meta uppercase animate-rise-in"
-            style={{ color: "#7A8A9B", letterSpacing: "0.1em", animationDelay: "320ms" }}
-          >
-            <ShieldCheck size={15} style={{ color: LOGIN_BRAND }} />
-            Ma&apos;lumotlaringiz shifrlangan
-          </div>
-        </div>
 
         <div
-          className="relative font-mono text-meta"
-          style={{ color: "#5A6979" }}
+          className="relative h-full flex flex-col justify-between p-12 xl:p-16"
+          style={{ color: "var(--auth-hero-text)" }}
         >
-          © 2026 ASRO — Barcha huquqlar himoyalangan
-        </div>
-      </div>
-
-      {/* O'ng / forma paneli */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-sm animate-rise-in" style={{ animationDelay: "120ms" }}>
-          <div className="lg:hidden flex justify-center mb-10">
-            <Logo />
+          {/* Brend */}
+          <div className="flex items-center gap-3">
+            <span
+              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: "var(--auth-hero-chip-bg)",
+                border: "1px solid var(--auth-hero-chip-border)",
+              }}
+            >
+              <Image
+                src="/asro-logo-192.png"
+                alt=""
+                width={28}
+                height={28}
+                priority
+                className="w-7 h-7 object-contain"
+              />
+            </span>
+            <span className="text-lg font-bold tracking-tight">ASRO</span>
           </div>
 
-          <h1 className="text-xl font-semibold tracking-tight">Tizimga kirish</h1>
-          <p className="mt-2 text-body" style={{ color: LOGIN_TEXT_DIM }}>
-            Davom etish uchun hisobingizga kiring.
-          </p>
-          {/* Sarlavhani formadan ajratuvchi chiziq — chap paneldagi daftar
-              chizig'ining shu tomondagi javobi. */}
-          <div className="mt-7 h-px" style={{ background: "rgba(255,255,255,.10)" }} />
+          {/* Sarlavha */}
+          <div className="max-w-[32rem]">
+            <h2 className="text-4xl xl:text-[2.875rem] font-bold leading-[1.14] tracking-tight">
+              Bitta tizim.
+              <br />
+              Har bir firma.
+              <br />
+              To&apos;liq nazorat.
+            </h2>
+            <p
+              className="mt-6 text-[0.9375rem] leading-relaxed"
+              style={{ color: "var(--auth-hero-text-dim)" }}
+            >
+              Muddat, hisobot, kassa, oylik va KPI — hammasi yagona xavfsiz ish maydonida.
+              Har bir yozuv izlanadi, har bir topshiriq egasiga biriktiriladi.
+            </p>
+          </div>
 
-          <form onSubmit={handleSubmit} className="mt-7 space-y-4">
-            <Field label="Email manzil" htmlFor="email">
-              <div className="relative">
-                <Mail
-                  size={16}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: "#5A6979" }}
-                />
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="ism@asro.uz"
-                  required
-                  className="login-input pl-10 pr-4"
-                />
+          {/* Imkoniyatlar */}
+          <ul className="flex flex-col gap-4">
+            {FEATURES.map(({ icon: Icon, label }) => (
+              <li key={label} className="flex items-center gap-3.5">
+                <span
+                  className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: "var(--auth-hero-chip-bg)",
+                    border: "1px solid var(--auth-hero-chip-border)",
+                  }}
+                >
+                  <Icon size={17} />
+                </span>
+                <span className="text-sm font-semibold">{label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
+
+      {/* ── O'NG: kirish ───────────────────────────────────────────────── */}
+      <main className="flex-1 flex flex-col justify-center items-center px-6 py-10 sm:px-10">
+        <div className="w-full max-w-[26rem] animate-rise-in">
+          {/* Karta ustidagi brend satri */}
+          <div className="flex items-center gap-3 mb-5">
+            <Image
+              src="/asro-logo-192.png"
+              alt=""
+              width={40}
+              height={40}
+              priority
+              className="w-10 h-10 object-contain"
+            />
+            <div>
+              <div className="text-[0.9375rem] font-bold tracking-tight leading-none">ASRO</div>
+              <div
+                className="font-mono text-micro font-medium uppercase leading-none mt-1.5"
+                style={{ color: "var(--text-muted)", letterSpacing: "0.14em" }}
+              >
+                Boshqaruv tizimi
               </div>
-            </Field>
+            </div>
+          </div>
 
-            <Field label="Parol" htmlFor="password">
-              <div className="relative">
-                <Lock
-                  size={16}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: "#5A6979" }}
-                />
+          <div
+            className="p-8"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--card-border)",
+              borderRadius: "var(--card-radius)",
+              boxShadow: "var(--card-shadow)",
+            }}
+          >
+            <h1 className="text-[1.625rem] font-semibold tracking-tight leading-tight">
+              Xush kelibsiz
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+              Hisobingizga kirish uchun ma&apos;lumotlaringizni kiriting.
+            </p>
+
+            <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-5" noValidate>
+              <Field label="Email manzil">
                 <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  type="email"
+                  name="email"
+                  autoComplete="username"
+                  inputMode="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  placeholder="ism@kompaniya.uz"
+                  disabled={loading}
                   required
-                  className="login-input pl-10 pr-12"
+                  autoFocus
+                  className="erp-input auth-input"
                 />
+              </Field>
+
+              {/* Ko'rsatish tugmasi Field'ning ICHIGA emas, ustiga qo'yiladi:
+                  Field o'z `id` sini BEVOSITA bolasiga beradi, ya'ni input
+                  o'ram ichiga solinsa `htmlFor` bog'lanishi yo'qoladi.
+                  `top: 22px` — yorliq (16px) + Field'ning `gap-1.5` (6px). */}
+              <div className="relative">
+                <Field label="Parol" error={error}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    placeholder="••••••••"
+                    disabled={loading}
+                    required
+                    className="erp-input auth-input pr-12"
+                  />
+                </Field>
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
                   aria-pressed={showPassword}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-lg transition-colors"
-                  style={{ color: "#5A6979" }}
+                  className="absolute right-0 w-12 h-12 flex items-center justify-center rounded-lg transition-colors hover:opacity-70"
+                  style={{ top: 22, color: "var(--text-muted)" }}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-            </Field>
 
-            <button
-              id="login-btn"
-              type="submit"
-              disabled={loading}
-              className="group w-full h-12 px-4 rounded-lg text-sm font-semibold transition-colors duration-100 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ background: LOGIN_BRAND, color: LOGIN_INK }}
+              <button
+                id="login-btn"
+                type="submit"
+                disabled={loading}
+                aria-busy={loading || undefined}
+                className="mt-1 w-full h-12 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ background: "var(--brand)", color: "var(--on-brand)" }}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Kirilmoqda…
+                  </>
+                ) : (
+                  "Kirish"
+                )}
+              </button>
+            </form>
+
+            <div
+              className="mt-7 pt-5 flex items-center justify-between"
+              style={{ borderTop: "1px solid var(--rule)" }}
             >
-              {loading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" /> Kirilmoqda...
-                </>
-              ) : (
-                <>
-                  Kirish
-                  <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
-                </>
-              )}
-            </button>
-          </form>
+              <span className="text-meta font-medium" style={{ color: "var(--text-muted)" }}>
+                Rolga asoslangan xavfsiz kirish
+              </span>
+              <ThemeToggle />
+            </div>
+          </div>
 
-          <p
-            className="mt-10 text-center font-mono text-meta lg:hidden"
-            style={{ color: "#5A6979" }}
-          >
-            © 2026 ASRO — Barcha huquqlar himoyalangan
+          <p className="mt-6 text-center font-mono text-meta" style={{ color: "var(--text-muted)" }}>
+            {COPYRIGHT}
           </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
 
-function Logo() {
-  return (
-    <div className="flex items-center gap-3">
-      <Image
-        src="/asro-logo-192.png"
-        alt="ASRO"
-        width={44}
-        height={44}
-        priority
-        className="w-11 h-11 object-contain"
-      />
-      <div>
-        <div className="text-xl font-semibold tracking-tight leading-none">ASRO</div>
-        <div
-          className="font-mono text-micro font-medium uppercase mt-1.5"
-          style={{ color: LOGIN_BRAND, letterSpacing: "0.2em" }}
-        >
-          Boshqaruv tizimi
-        </div>
-      </div>
-    </div>
-  );
-}
+/**
+ * TEMA TUGMASI — mavjud funksiya, o'ylab topilgan emas: ilovaning ustki
+ * panelida (`DashboardTopBar`) xuddi shu tugma bor va shu holatni boshqaradi.
+ *
+ * `mounted` qo'riqchisi shart: server temani bilmaydi, shuning uchun
+ * birinchi renderda ikonka tanlansa mijoz bilan mos kelmay hidratsiya
+ * ogohlantirishi chiqadi. Shu sababli u faqat mijozda chiziladi.
+ */
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-// Yorliq inputga `htmlFor` orqali dasturiy bog'lanadi — ekran o'quvchi
-// maydonni nomi bilan e'lon qiladi, yorliq bosilganda fokus maydonga o'tadi.
-function Field({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  children: React.ReactNode;
-}) {
+  // O'lchamni band qilib turadi: tugma paydo bo'lganda qator sakramaydi.
+  if (!mounted) return <span className="w-9 h-9" aria-hidden="true" />;
+
+  const dark = theme === "dark";
   return (
-    <div>
-      <label
-        htmlFor={htmlFor}
-        className="block font-mono text-micro font-semibold uppercase"
-        style={{ color: LOGIN_TEXT_DIM, letterSpacing: "0.12em" }}
-      >
-        {label}
-      </label>
-      <div className="mt-2">{children}</div>
-    </div>
+    <button
+      type="button"
+      onClick={() => setTheme(dark ? "light" : "dark")}
+      aria-label={dark ? "Yorug' rejim" : "Qorong'u rejim"}
+      title={dark ? "Yorug' rejim" : "Qorong'u rejim"}
+      className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
+      style={{ border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}
+    >
+      {dark ? <Sun size={16} /> : <Moon size={16} />}
+    </button>
   );
 }
