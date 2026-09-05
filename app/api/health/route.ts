@@ -23,6 +23,26 @@ export const dynamic = "force-dynamic";
  * draining it from the load balancer would turn a background-job outage into a
  * user-facing one. Read the `redis` field to alert on it instead.
  */
+/**
+ * Ishga tushish imtiyozi — protsess ko'tarilgandan keyingi shu muddat ichida
+ * hali ULANMAGAN Redis "o'lgan" deb sanalmaydi.
+ *
+ * NEGA. ioredis `enableOfflineQueue: false` bilan ishlaydi, ya'ni ulanish
+ * tugamaguncha har `ping()` "Stream isn't writeable" bilan tashlaydi.
+ * Prodda o'lchandi: `pm2 reload` dan keyin 44-soniyada `/api/health`
+ * `"redis":"down","status":"degraded"` derdi, 62-soniyada esa `"ok"`.
+ * Ya'ni HAR BIR deploy monitoringga yolg'on ogohlantirish yuborardi va
+ * haqiqiy nosozlik shu shovqin ichida ko'rinmay qolardi.
+ *
+ * Imtiyoz FAQAT `connecting`/`reconnecting` holatiga tegishli: Redis
+ * haqiqatan o'lgan bo'lsa ioredis abadiy `reconnecting` da qoladi, shuning
+ * uchun muddat tugagach u baribir `down` bo'ladi — signal yo'qolmaydi.
+ */
+const REDIS_STARTUP_GRACE_S = 90;
+
+/** ioredis hali ulanish jarayonidagi holatlar. */
+const CONNECTING = new Set(["connecting", "connect", "reconnecting"]);
+
 async function probeRedis(): Promise<{ redis: string; redisDetail?: string }> {
   if (!REDIS_URL) return { redis: "disabled" };
 
@@ -35,8 +55,11 @@ async function probeRedis(): Promise<{ redis: string; redisDetail?: string }> {
     await client.ping();
     return { redis: "ok" };
   } catch (e) {
-    // `status` distinguishes "still connecting right after boot" from "down".
-    return { redis: "down", redisDetail: `${client.status}: ${(e as Error)?.message ?? e}` };
+    const detail = `${client.status}: ${(e as Error)?.message ?? e}`;
+    if (CONNECTING.has(client.status) && process.uptime() < REDIS_STARTUP_GRACE_S) {
+      return { redis: "starting", redisDetail: detail };
+    }
+    return { redis: "down", redisDetail: detail };
   }
 }
 
@@ -59,6 +82,7 @@ export async function GET(): Promise<NextResponse> {
   try {
     const [, redisState] = await Promise.all([prisma.$queryRaw`SELECT 1`, probeRedis()]);
     return NextResponse.json({
+      // `starting` ATAYLAB `ok` deb sanaladi — yuqoridagi izohga qarang.
       status: redisState.redis === "down" ? "degraded" : "ok",
       auth: "ok",
       db: "ok",
