@@ -1,5 +1,9 @@
 # UI/UX audit — qayta bazalash
 
+> **Holat: TARIX** · 2026-08-07 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> `UI_AUDIT_2026-07.md` ning qayta bazalashi.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Sana:** 2026-08-07 · **Asl audit:** 2026-07-26, `hardening/sprint-1` shoxi
 
 Asl audit `product/constitution` shoxidagi ishdan **oldin** yozilgan. Uning taxminan
@@ -34,7 +38,7 @@ Asl audit `product/constitution` shoxidagi ishdan **oldin** yozilgan. Uning taxm
 
 ## Qolgan — modal migratsiyasi
 
-**Holat: 16 → 15.** Ratchet: [`lib/modalSemantics.spec.ts`](../lib/modalSemantics.spec.ts).
+**Holat: 16 → 15.** Ratchet: [`lib/modalSemantics.spec.ts`](../../lib/modalSemantics.spec.ts).
 Yangi semantikasiz modal qo'shib bo'lmaydi.
 
 Bu faqat a11y masalasi emas. `hooks/useAutoRefresh.ts` ochiq dialog ustida
@@ -55,7 +59,7 @@ ustiga `amount: 0` validatsiyasiz yozilardi).
 ## Qolgan — arxitektura, qasddan kechiktirilgan
 
 Hammasi matritsa yoki Cockpit hududida, ya'ni B va C bloklarga tegishli.
-Batafsil sabab va ochilish sharti: [`ICEBOX.md`](./ICEBOX.md).
+Batafsil sabab va ochilish sharti: [`ICEBOX.md`](../ICEBOX.md).
 
 | | Holat | Qaysi blokda |
 |---|---|---|

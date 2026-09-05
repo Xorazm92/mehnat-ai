@@ -1,5 +1,8 @@
 # A module earns its tables
 
+> Raqami `0009` dan `0016` ga o'zgartirildi — 0009 raqami
+> [ADR-0009](./0009-obligation-is-the-only-unit-of-work.md) da band edi.
+
 A survey of all 68 Prisma models against the live database found that **26 had code but not a single
 row**, and two — `Operation` and `InventoryItem` — had a model and working code paths but *no table
 at all*: opening `/inventory` was a 500, and thirteen references to `Operation` pointed at something
@@ -36,7 +39,7 @@ KPI already reads. Both were live in the schema; one had never been configured.
 
 Keeping both meant a task could breach its SLA while its obligation was comfortably on time, or the
 reverse — and each answer had its own screen. Now that a task hangs off an obligation
-([ADR-0008](./0008-the-obligation-is-the-work-the-matrix-is-a-view.md)), the SLA layer was measuring
+([ADR-0008](./0015-the-obligation-is-the-work-the-matrix-is-a-view.md)), the SLA layer was measuring
 a deadline the task no longer owns. It is gone, along with `Task.responseDueAt`,
 `resolutionDueAt` and `firstResponseAt`. Lateness has one definition.
 

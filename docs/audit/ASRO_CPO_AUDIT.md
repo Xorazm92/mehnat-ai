@@ -1,5 +1,9 @@
 # ASRO ERP — Chief Product Officer Audit & Product Strategy
 
+> **Holat: TARIX** · 2026-07-23 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> [`docs/PRODUCT.md`](../PRODUCT.md) buni **almashtiradi** (PRODUCT.md §Almashtiradi). Mahsulot yo'nalishi bo'yicha bu hujjatga tayanmang.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Author:** CPO / ERP Architect (audit)
 **Date:** 2026-07-23
 **Basis:** Read of the actual source — `prisma/schema.prisma` (1,722 lines, 55+ models), 42 app routes, 39 server-action files, 49 lib modules, the DDD Telegram bot, and the two internal strategy docs (`PROJECT_REVIEW.md`, `ASRO_PRODUCT_BLUEPRINT_2.0.md`).

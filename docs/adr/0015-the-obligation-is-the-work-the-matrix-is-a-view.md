@@ -1,5 +1,9 @@
 # The obligation is the work; the matrix is a view
 
+> Qaror [ADR-0009](./0009-obligation-is-the-only-unit-of-work.md) da qabul qilingan; bu hujjat uning
+> qurilishini yozadi. Raqami `0008` dan `0015` ga o'zgartirildi — 0008 raqami
+> [ADR-0008](./0008-imported-evidence-proposes-it-never-accepts.md) da band edi.
+
 ASRO carried three places where the same piece of accounting work was recorded, and none of them
 knew about the other two.
 

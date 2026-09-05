@@ -1,5 +1,9 @@
 # Obligation Unification — Arxitektura va Migratsiya Rejasi
 
+> **Holat: REJA** · 2026-07-26 — bajarilmagan yoki qisman bajarilgan ish.
+> Migratsiya hali bajarilmagan. Mahsulot yaxlitligi rejasining 3-to'lqini.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 > **Holat:** REJA. Hech qanday migratsiya bajarilmagan va bu hujjat bo'yicha
 > schema o'zgartirilmaydi. Faza 0 dagi qarorlar tasdiqlanmaguncha kod yozilmaydi.
 >

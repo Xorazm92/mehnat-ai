@@ -1,5 +1,9 @@
 # Kassa moduli — takroriylik ko'rigi
 
+> **Holat: TARIX** · 2026-08-18 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> Asosiy topilma yopilgan — `KASSA_GAP_441M.md` ga qarang.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 > **HOLAT (2026-09-01):** §1 dagi asosiy topilma — 441,7 mln so'mlik karta
 > xarajati — **YOPILDI**. Dalil va tuzatish tafsiloti: `KASSA_GAP_441M.md`.
 > Tuzatish jarayonida yana ikkita teshik chiqdi va ular ham yopildi:

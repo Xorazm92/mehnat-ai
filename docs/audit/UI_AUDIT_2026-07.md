@@ -1,5 +1,9 @@
 # ASRO — Enterprise UI / UX / ERP Audit
 
+> **Holat: TARIX** · 2026-07-26 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> Davomi va hisobkitobi — [`docs/plan/UI_DEBT_MAP.md`](../plan/UI_DEBT_MAP.md).
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Date:** 2026-07-26 · **Branch:** `hardening/sprint-1` · **Scope:** 44 routes, 39 components, 16,442 LOC in `components/`
 **Benchmark:** Stripe Dashboard, Linear, Notion, Vercel, SAP Fiori, Oracle Fusion, Odoo Enterprise, ClickUp
 **Method:** static analysis of the shipped tree. Every quantitative claim in this document was produced by direct `grep`/`find` against the working tree and is re-runnable. Every finding carries a `file:line` citation.

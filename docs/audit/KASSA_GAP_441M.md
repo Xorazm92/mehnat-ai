@@ -1,5 +1,9 @@
 # KASSA_GAP_441M — 441,7 mln so'mlik karta xarajati
 
+> **Holat: TARIX** · 2026-09-01 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> Yopilgan tekshiruvning dalil hujjati.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Sana:** 2026-09-01 · **Manba:** `KASSA_REVIEW.md` §1 ("Oqibati — 441,7 mln
 balansdan tushib qolgan") · **Qamrov:** prod bazasi (`inbola`), `TransitEntry`,
 `KassaEntry`, `LedgerEntry`, `BankTransaction` · **Usul:** faqat o'qish, har

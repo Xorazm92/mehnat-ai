@@ -1,5 +1,9 @@
 # ASRO ERP 2.0 — Accounting Operations Platform Master Blueprint & Product Architecture
 
+> **Holat: TARIX** · 2026-07-23 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> [`docs/PRODUCT.md`](../PRODUCT.md) buni **almashtiradi**. Sarlavhasidagi “ERP” atamasi ham eskirgan — PRODUCT.md §1 uni ochiq rad etadi.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Muallif:** Product Management & Lead Architecture Team  
 **Sana:** 2026-07-23  
 **Status:** Mahsulot Arxitekturasi va Operatsion Blueprint  

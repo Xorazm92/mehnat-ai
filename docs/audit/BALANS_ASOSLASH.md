@@ -1,5 +1,9 @@
 # 1 331 391 067 so'm — balans qayerdan kelyapti
 
+> **Holat: TARIX** · 2026-08-20 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> Bitta raqamning (1 331 391 067) manbagacha yoyilishi.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Sana:** 2026-08-20 · **Manba:** prod (16.192.135.23) · **Usul:** faqat o'qish so'rovlari
 
 Bu hujjat `/kassa` va direktor hisobotida ko'rinadigan **1 331 391 067 so'm** raqamining har bir tiyinini manbasigacha ochadi.

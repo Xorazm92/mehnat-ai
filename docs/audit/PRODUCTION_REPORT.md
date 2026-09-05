@@ -1,5 +1,9 @@
 # ASRO — Production Readiness Audit
 
+> **Holat: TARIX** · 2026-07-17 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> Deploy tartibi endi [`docs/DEPLOYMENT.md`](../DEPLOYMENT.md) da.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Date:** 2026-07-17 · **Branch:** `nextjs-v2` · **Auditor:** Senior architecture review (automated)
 **Stack:** Next.js 16.2.7 (App Router + Server Actions) · Prisma 7 + PostgreSQL · next-auth v5 · BullMQ + Redis · grammY (Telegram bot) · React 19 · Tailwind v4
 

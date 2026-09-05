@@ -1,5 +1,9 @@
 # Pul qoldig'i — to'liq solishtirma
 
+> **Holat: TARIX** · 2026-09-01 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> Bir martalik solishtirma; raqamlar o'sha kungi prod kesimi.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Sana:** 2026-09-01 (2-tahrir) · **Manba:** prod bazasi + `kassa/` fayllari
 **Usul:** har raqam SQL yoki fayl natijasi bilan ko'rsatilgan.
 

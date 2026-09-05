@@ -1,6 +1,10 @@
 # UI DEBT MAP — ASRO
 
-**Sana:** 2026-08-31 · **Shox:** `nextjs-v2` · **Asos:** `docs/UI_AUDIT_2026-07.md` (4.2/10)
+> **Holat: REJA** · 2026-08-31 — bajarilmagan yoki qisman bajarilgan ish.
+> Qarz hisobkitobi; raqamlar `grep` bilan qayta o'lchanadi.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
+**Sana:** 2026-08-31 · **Shox:** `nextjs-v2` · **Asos:** [`../audit/UI_AUDIT_2026-07.md`](../audit/UI_AUDIT_2026-07.md) (4.2/10)
 
 Bu hujjat auditning davomi emas, uning **hisobkitob varag'i**: har bir qarz turi
 qaysi faylda, qanchaligi, qaysi primitiv bilan yopilishi va navbati.

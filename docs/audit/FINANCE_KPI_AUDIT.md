@@ -1,5 +1,9 @@
 # Moliya va KPI yadrosi — to'liq ko'rik
 
+> **Holat: TARIX** · 2026-08-15 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> Moliya yadrosi shundan keyin qayta qurildi (Payout/ledger/period-lock).
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Sana:** 2026-08-15 · **Qamrov:** kassa (kirim/chiqim), oylik, o'zini-o'zi band qilganlar,
 shartnoma bo'yicha to'lovchilar, plastik orqali to'lovchilar, KPI.
 

@@ -1,5 +1,9 @@
 # Mehnat ERP (ASRO) — To'liq Loyiha Auditi va Review Hujjati
 
+> **Holat: TARIX** · 2026-07-23 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> [`docs/PRODUCT.md`](../PRODUCT.md) buni **almashtiradi**. Ichidagi versiya va test raqamlari o'sha kungi.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Sana:** 2026-07-23  
 **Status:** Ishlab chiqilgan (Production-Ready Core, 304/304 Testlar Passed, `tsc` Clean)  
 **Texnologiyalar Steki:** Next.js 16.2.10 (App Router, Server Actions) · React 19.2.4 · Prisma 7.8 + PostgreSQL · NextAuth v5 (JWT) · BullMQ + Redis · grammY (Telegram Bot) · `@google/genai` (Gemini 2.12) · Vitest 4.1 · Tailwind CSS v4  

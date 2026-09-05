@@ -1,4 +1,9 @@
 # Mehnat-AI ERP Moliyaviy va Kassa Modulining Chuqur Kodi Audit Hujjati va Redizayn Spetsifikatsiyasi
+
+> **Holat: TARIX** · 2026-08-19 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> Tashqi generator yozgan; “ERP” ramkasi [`docs/PRODUCT.md`](../PRODUCT.md) bilan ziddiyatda.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Loyiha:** Mehnat-AI ERP (`Xorazm92/mehnat-ai`)  
 **Rol:** Senior Enterprise ERP Architect & Financial Systems Analyst  
 **Sana:** 19-Avgust, 2026  

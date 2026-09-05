@@ -1,11 +1,15 @@
 # Kassa moduli — UX review va qayta loyihalash rejasi
 
+> **Holat: REJA** · 2026-08-25 — bajarilmagan yoki qisman bajarilgan ish.
+> Katta qismi bajarildi (kassa redizayni, `MetricRail`); qolgani ro'yxatda.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Sana:** 2026-08-25 · **Shox:** `nextjs-v2` · **Qamrov:** 4 ta sahifa (~5 200 qator UI),
 `server/kassa.ts`, `server/kassaReport.ts`, `server/bankImport.ts`, eski modullar
 (`KassaModule`, `ExpenseModule`)
 
 Bu hujjat kassa modulining ISHLATISH QULAYLIGINI ko'rib chiqadi. Ma'lumot qatlami
-holati alohida yozilgan: `KASSA_REVIEW.md` (takroriylik, 2026-08-18) — undagi
+holati alohida yozilgan: [`../audit/KASSA_REVIEW.md`](../audit/KASSA_REVIEW.md) (takroriylik, 2026-08-18) — undagi
 og'ir ishlar bajarilgan, bu yerda takrorlanmaydi.
 
 ---
@@ -71,7 +75,7 @@ degan his-tuyg'uning asosiy manbalaridan biri shu.
    - Qarzdorlik tablari: `QarzdorlikClient.tsx:150`
    - Jurnal preset/kind/kassa/qidiruvi: hammasi lokal state
    Faqat chiqim `?tab=` ni biladi. F5 → holat yo'qoladi, havola ulashib
-   bo'lmaydi. (`UI_AUDIT_2026-07.md` da ham xuddi shu topilgan edi.)
+   bo'lmaydi. ([`../audit/UI_AUDIT_2026-07.md`](../audit/UI_AUDIT_2026-07.md) da ham xuddi shu topilgan edi.)
 
 5. **Duplikat ogohlantirishi 2 bosqichli** — avval "Saqlash", keyin inline
    warning, keyin "Baribir saqlash" (`KirimKassaClient.tsx:215-229`).
@@ -99,7 +103,7 @@ degan his-tuyg'uning asosiy manbalaridan biri shu.
 - Kassa sahifasi ~8 ta so'rov tugmaguncha butunlay bloklanadi — route-level
   `loading.tsx` / `<Suspense>` yo'q (faqat `(dashboard)` umumiy darajada).
 - Inline `style={{ }}` kassa fayllarida ~500 ta (butun loyihada 2 049 —
-  qarang `docs/UI_AUDIT_2026-07.md`).
+  qarang [`../audit/UI_AUDIT_2026-07.md`](../audit/UI_AUDIT_2026-07.md)).
 - `useAutoRefresh` har 15s da butun sahifani refresh qiladi — og'ir oylik
   hisobotlar bilan birga DB yukini oshiradi.
 

@@ -1,5 +1,9 @@
 # KPI Telegram Bot — mehnat-ai integratsiya blueprinti
 
+> **Holat: REJA** · 2026-07-16 — bajarilmagan yoki qisman bajarilgan ish.
+> Faza 1 bajarildi; qolgan fazalar reja bo'lib turibdi.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 > **Holat (2026-07-16):** Faza A **to'liq bajarildi va tekshirildi** — (poydevor) domain kernel
 > + 8 Prisma model dev DB'da; (infra) BullMQ `message` navbati · webhook route (`app/api/telegram/webhook`) ·
 > `bot/main.ts` (worker + polling ingress) · Monitoring **Message worker** (dedup + atomik capture).
@@ -21,14 +25,14 @@
 > `rollupLedger` read-model. **97 test yashil.** Ledger **additiv** — jonli payroll `MonthlyPerformance`
 > ga yozmaydi (bu — alohida, tasdiqlash-siyosati qarori). Keyingi: **payroll proyeksiya qarori** →
 > **Faza F** (Notifications + to'lov eslatmalari).
-> Batafsil: [`bot/README.md`](bot/README.md).
+> Batafsil: [`bot/README.md`](../../bot/README.md).
 > **Qarorlar (qat'iy):** Integratsiya (bitta repo + bitta Postgres/Prisma) · sof-TS DDD
 > (NestJS **emas**) · Prisma (TypeORM **emas**) · Webhook `app/api/telegram/webhook` · BullMQ+Redis.
 > **Maqsad:** Telegram bot mehnat-ai ichidagi KPI tizimining ma'lumot manbai bo'ladi —
 > u xabar/savol/davomat/hisobot signallarini yig'adi, mavjud KPI dvigatelini oziqlantiradi.
 > **Qo'shimcha rol:** (a) ma'lumotlarni tahlil qiladi, (b) Telegram guruhlarni nazorat qiladi,
 > (c) **to'lovni to'lamagan korxonalar guruhlariga to'lov eslatmasini** yuboradi (mavjud
-> `Payment` + [balans tizimi](lib/balance.ts) bilan bog'lanadi).
+> `Payment` + [balans tizimi](../../lib/balance.ts) bilan bog'lanadi).
 
 ---
 
@@ -368,7 +372,7 @@ Barcha yozish async (navbat orqali) — webhook handler hech qachon bloklanmaydi
   (`calculatedScore`, `earlyDays`, `lateMinutes`, `absentDays`) ni **qayta hisoblaydi** (idempotent).
 - **Qo'lda tuzatish** (`/kpi_award`, `/kpi_penalty`) → `KpiEvent` (type=manual, createdBy) + `AuditLog`.
 - **To'lovga bog'lanish:** oylik yakunda `PayrollAdjustment` (mavjud) yoziladi → mavjud
-  Payroll/Kassa oqimi ([unified balance](lib/balance.ts) qo'riqchisi bilan).
+  Payroll/Kassa oqimi ([unified balance](../../lib/balance.ts) qo'riqchisi bilan).
 
 ---
 
@@ -378,12 +382,12 @@ Barcha yozish async (navbat orqali) — webhook handler hech qachon bloklanmaydi
 > (ejurnal.uz — Hikvision yuz-skaneri)** dan keladi. Botда attendance konteksti/queue
 > YO'Q. KPI dvigateli `Attendance` jadvalini manbaidan qat'i nazar iste'mol qiladi.
 
-- **Manba:** [`server/ejurnal.ts`](server/ejurnal.ts) `syncEjurnalAttendance(date)` (senior-only) →
+- **Manba:** [`server/ejurnal.ts`](../../server/ejurnal.ts) `syncEjurnalAttendance(date)` (senior-only) →
   e-jurnaldan kunlik davomatni oladi, xodimга (telefon → ism) moslaydi, `Attendance` jadvaliga
   yozadi (`source='ejurnal'`, `checkIn/checkOut`, `lateMinutes`).
-- **Sof mantiq (test qilingan):** [`lib/attendance.ts`](lib/attendance.ts) — 08:30 (erta bonus) /
+- **Sof mantiq (test qilingan):** [`lib/attendance.ts`](../../lib/attendance.ts) — 08:30 (erta bonus) /
   09:00 (kechikish) chegaralari, `classifyArrival`, `aggregateMonthlyAttendance`;
-  [`lib/ejurnal.ts`](lib/ejurnal.ts) — status xaritasi, normalizatsiya, moslashtirish.
+  [`lib/ejurnal.ts`](../../lib/ejurnal.ts) — status xaritasi, normalizatsiya, moslashtirish.
 - **KPI ga ko'prik:** `deriveAttendanceKpi(employeeId, month)` `Attendance`dan `earlyDays /
   lateMinutes / absentDays` ni HISOBLAB beradi — nazoratchi qo'lда sanamaydi. Read-only;
   supervisor KPI kiritishда pre-fill qiladi (jonli payroll write yo'liга tegmaydi).
@@ -416,7 +420,7 @@ mehnat-ai da allaqachon boy hisobot tizimi bor: `MonthlyReport` (soliq ustunlari
 "report_types/deadline/on-time-late" bular bilan **qisman ustma-ust tushadi**.
 
 **Ikki xil "hisobot" mavjud:**
-1. **Soliq hisobotlari** (mavjud) — didox, QQS, balans... — [OperationModule](components/OperationModule.tsx) matritsasi, ReportProof dalili.
+1. **Soliq hisobotlari** (mavjud) — didox, QQS, balans... — [OperationModule](../../components/OperationModule.tsx) matritsasi, ReportProof dalili.
 2. **Bot "report deadline"** (yo'l xarita) — xodim biror hisobotни o'z vaqtida topshirdimi (SLA/KPI uchun).
 
 **Tavsiya:** yangi ustun/model qo'shmaslik uchun bot report-SLA sini **mavjud `ReportProof`
@@ -428,7 +432,7 @@ period, dueAt) qo'shib, `KpiEvent` generatsiya qilish. **Bu — ochiq qaror (§1
 ## 11-B. Billing / To'lov eslatmalari workflow (yangi talab)
 
 Bot to'lovni to'lamagan korxonalar guruhiga avtomatik eslatma yuboradi. Bu **mavjud `Payment`
-modeli** va [balans tizimi](lib/balance.ts) bilan to'g'ridan-to'g'ri bog'lanadi.
+modeli** va [balans tizimi](../../lib/balance.ts) bilan to'g'ridan-to'g'ri bog'lanadi.
 
 **Qarzni aniqlash (kunlik cron):** har faol `Company` uchun:
 ```
@@ -462,10 +466,10 @@ Cron (kunlik) → to'lamagan firmalar ro'yxati → 'payment-reminder' queue
 - **Idempotentlik:** `@@unique([companyId, period, level])` — bir firma+davr+daraja uchun bir marta.
   To'lov kelsa (`status='paid'`) — keyingi darajalar yuborilmaydi.
 - **Chat yo'q bo'lsa:** `TelegramGroup` mapping bo'lmasa → `status='skipped'` + admin'ga signal.
-- **Balans bog'liqligi:** to'lov = kirim; bu inkasso oqimini kuchaytiradi ([unified balance](lib/balance.ts)
+- **Balans bog'liqligi:** to'lov = kirim; bu inkasso oqimini kuchaytiradi ([unified balance](../../lib/balance.ts)
   bilan izchil — Payment.status='paid' balansga kirimni qo'shadi).
 - **Konfiguratsiya:** eskalatsiya kunlari (3/5/7/10) va matn shablonlari `SystemSetting`да
-  (admin tahrirlaydi, kod deploy yo'q — [operation-matrix editori](app/(admin)/admin/operation-matrix) namunasidek).
+  (admin tahrirlaydi, kod deploy yo'q — [operation-matrix editori](<../../app/(admin)/admin/operation-matrix>) namunasidek).
 
 **Tahlil (analytics):** bot inkasso ko'rsatkichini hisoblaydi — to'langan/kutilayotgan firmalar,
 o'rtacha kechikish, top qarzdorlar → Next.js dashboard (mavjud Kassa sahifasi) o'qiydi.
@@ -504,7 +508,7 @@ bot/contexts/ai/
 - Telegram rollari → mehnat-ai `UserRole` (accountant, bank_manager, supervisor, chief_accountant).
   (Eslatma: `KpiRule.role` 'bank_client' deydi, `UserRole` 'bank_manager' — mapping qatlami.)
 - `/assign_role`, `/kpi_award` kabi buyruqlar: `TelegramIdentity` → `User` → **mavjud RBAC**
-  ([lib/permissions.ts](lib/permissions.ts)) bilan avtorizatsiya. Yaqinda qurilgan tahrirlanadigan
+  ([lib/permissions.ts](../../lib/platform/permissions.ts)) bilan avtorizatsiya. Yaqinda qurilgan tahrirlanadigan
   RBAC (`SystemSetting.roleViews`) UI ko'rinishini boshqaradi; bot buyruqlari server-side rol
   massivlari bilan tekshiriladi (backstop).
 - Har qo'lda tuzatish/rol o'zgarishi → `AuditLog` (kim/qachon/eski/yangi/sabab).

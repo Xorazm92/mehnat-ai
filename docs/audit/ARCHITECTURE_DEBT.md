@@ -1,5 +1,9 @@
 # Arxitektura va texnik qarz — ko'rik
 
+> **Holat: TARIX** · 2026-09-01 — o'sha kungi tashxis — bugungi kod bilan qayta solishtirilmagan.
+> Tashxis, reja emas. Qarz ro'yxati eng yangisi — lekin qayta o'lchanmagan.
+> Amaldagi hujjatlar xaritasi: [`docs/README.md`](../README.md)
+
 **Sana:** 2026-09-01 · **Qamrov:** arxitektura, qatlamlar, saqlash, texnik qarz
 · **O'lchov manbasi:** prod bazasi (faqat o'qish, `16.192.135.23`) + manba kodi
 (90 859 qator TS/TSX, 71 Prisma modeli)
@@ -95,7 +99,7 @@ Notification          17 MB
 Obligation           6.6 MB
 ```
 
-Sabab: [`prisma/schema.prisma`](prisma/schema.prisma) — `ReportProof.imageData`
+Sabab: [`prisma/schema.prisma`](../../prisma/schema.prisma) — `ReportProof.imageData`
 (`@db.Text`, majburiy) va `ReportProof.fileData`, hamda `Document.fileData`
 `data:<mime>;base64,...` satrini to'g'ridan-to'g'ri saqlaydi. Schema'dagi izoh
 buni ataylab qilinganini aytadi ("`pg_dump` zaxirasi ikkalasini ham qamraydi").
@@ -107,7 +111,7 @@ bir yugurishini shuncha shishiradi. `Document` hozir bo'sh (§D3) — ya'ni bu
 tomon hali ochilmagan, ochilsa yana shuncha qo'shiladi.
 
 **Taklif.** Diskdagi saqlash qatlamiga ko'chirish. **Yechim reponing o'zida
-allaqachon yozilgan:** [`lib/engines/evidence/store.ts`](lib/engines/evidence/store.ts)
+allaqachon yozilgan:** [`lib/engines/evidence/store.ts`](../../lib/engines/evidence/store.ts)
 — `createDiskEvidenceStore`, `refToPath`, `sha256Of`, `extForMime`. Bazada
 faqat `storageRef` qoladi. Bu D4 ni ham yopadi.
 
@@ -137,7 +141,7 @@ klassik yo'l.
 
 **Taklif.** Saqlash muddati: o'qilgan bildirishnoma 90 kundan keyin, o'qilmagani
 180 kundan keyin o'chadi (`deletedAt` emas — bu moliyaviy yozuv emas, jismonan
-o'chsa bo'ladi). Joyi: [`bot/cron/scheduler.ts`](bot/cron/scheduler.ts) —
+o'chsa bo'ladi). Joyi: [`bot/cron/scheduler.ts`](../../bot/cron/scheduler.ts) —
 kunlik vazifa sifatida.
 
 **Mehnat.** ~2-3 soat.
@@ -219,7 +223,7 @@ yozuv sifatida qoladi (FK yo'q edi).
 ### D11 · Pul ikki joyda, ikki xil hisoblanadi 🔴
 
 **Qanday topildi.** Jurnaldagi `CASH` hisobi tuzatilgandan keyin ekranda
-HECH NARSA o'zgarmadi. Sabab: [`lib/balance.ts`](lib/balance.ts)
+HECH NARSA o'zgarmadi. Sabab: [`lib/balance.ts`](../../lib/balance.ts)
 `getAvailableBalance` — ekrandagi barcha balans raqamlarining manbasi —
 **jurnalni umuman o'qimaydi**. U `Payment`, `KassaEntry`, `Payout`
 jadvallaridan to'g'ridan-to'g'ri yig'adi.
