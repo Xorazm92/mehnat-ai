@@ -123,9 +123,16 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
 
     // Oy almashsa tanlangan kun eski oyda qolib ketardi va ekran bo'sh
     // ko'rinardi. Yangi oyning yozuvi bor oxirgi kuniga o'tamiz.
-    React.useEffect(() => {
-        setSelectedDate(latestRecordDate || `${month}-01`);
-    }, [month, latestRecordDate]);
+    //
+    // Render paytida: effektda bo'lganida oy almashgan kadrda ESKI kun bilan
+    // bir marta chizilardi — ya'ni aynan o'zi tuzatmoqchi bo'lgan bo'sh ekran
+    // bir lahza baribir ko'rinardi.
+    const nextDate = latestRecordDate || `${month}-01`;
+    const [lastDateSeed, setLastDateSeed] = React.useState(nextDate);
+    if (nextDate !== lastDateSeed) {
+        setLastDateSeed(nextDate);
+        setSelectedDate(nextDate);
+    }
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const [isSaving, setIsSaving] = useState(false);

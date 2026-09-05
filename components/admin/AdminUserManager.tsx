@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Plus, Search, Pencil, KeyRound, UserCheck, UserX, X } from "lucide-react";
 import { ROLES, ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
 import { Button } from "@/components/ui/Button";
@@ -94,9 +94,18 @@ export function AdminUserManager({
   const [page, setPage] = useState(1);
 
   const [pageSize, setPageSize] = usePageSize("admin-users");
+
+  // Qidiruv yoki rol filtri ro'yxatni qisqartirsa joriy sahifa yo'qolishi
+  // mumkin. Tiklash RENDER paytida va `pageSlice` dan OLDIN — effektda
+  // bo'lganida filtr o'zgargan kadrda jadval bir marta BO'SH chizilardi.
+  const filterKey = `${search}\u0000${roleFilter}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (filterKey !== lastFilterKey) {
+    setLastFilterKey(filterKey);
+    setPage(1);
+  }
+
   const paged = pageSlice(filtered, page, pageSize);
-  // Qidiruv yoki rol filtri ro'yxatni qisqartirsa joriy sahifa yo'qolishi mumkin.
-  useEffect(() => { setPage(1); }, [search, roleFilter]);
 
   const openCreate = () =>
     setForm({ fullName: "", email: "", phone: "", role: ROLES.ACCOUNTANT, password: "", department: "", pinfl: "", gender: "", birthDate: "", education: "", skillLevel: "", hiredAt: "", status: "active" });

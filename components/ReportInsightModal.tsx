@@ -95,9 +95,17 @@ function ColumnPicker({
   const ref = useDismissable<HTMLDivElement>(open, () => setOpen(false));
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Fokus — HAQIQIY effekt (DOM ga tegadi), shuning uchun effektda qoladi.
+  // Qidiruv matnini tozalash esa holat hosilasi: u render paytida bajariladi,
+  // aks holda oyna yopilgan kadrda eski matn bir lahza ko'rinib turardi.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (!open) setQ("");
+  }
+
   useEffect(() => {
     if (open) inputRef.current?.focus();
-    else setQ("");
   }, [open]);
 
   const current =

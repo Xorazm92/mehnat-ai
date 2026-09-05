@@ -74,9 +74,20 @@ const AuditLogModule: React.FC<Props> = ({ lang }) => {
     const [page, setPage] = useState(1);
 
     const [pageSize, setPageSize] = usePageSize("audit");
-    const pagedLogs = pageSlice(filteredLogs, page, pageSize);
+
     // Qidiruv ro'yxatni qisqartirsa joriy sahifa yo'qolishi mumkin.
-    useEffect(() => { setPage(1); }, [search]);
+    //
+    // Tiklash RENDER paytida va `pageSlice` dan OLDIN. Effektda bo'lganida
+    // tartib teskari edi: qidiruv o'zgargan kadrda ro'yxat allaqachon yangi,
+    // `page` esa hali eski — 5-sahifada turgan foydalanuvchi ikki natijaga
+    // filtrlaganda bir kadr BO'SH jadval ko'rardi, keyin u sakrab to'lardi.
+    const [lastSearch, setLastSearch] = useState(search);
+    if (search !== lastSearch) {
+        setLastSearch(search);
+        setPage(1);
+    }
+
+    const pagedLogs = pageSlice(filteredLogs, page, pageSize);
 
     return (
         <div className="space-y-6 animate-fade-in p-6 bg-[var(--bg-primary)] min-h-dvh">

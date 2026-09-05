@@ -185,7 +185,14 @@ export default function GlobalSearch({
     return out;
   }, [pages, remote, debounced, canSee, normalizedRole]);
 
-  useEffect(() => { setActive(0); }, [items.length]);
+  // Natijalar soni o'zgarsa klaviatura tanlovi boshiga qaytadi — render
+  // paytida, aks holda yangi ro'yxat bir kadr ESKI indeks bilan chizilar va
+  // pastdagi element yorib turardi.
+  const [lastCount, setLastCount] = useState(items.length);
+  if (items.length !== lastCount) {
+    setLastCount(items.length);
+    setActive(0);
+  }
 
   const go = useCallback((href: string) => {
     setOpen(false);
