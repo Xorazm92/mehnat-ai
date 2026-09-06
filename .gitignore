@@ -89,3 +89,7 @@ storage/
 # ishlayveradi; git ularni kuzatmaydi. Qaysi skill o'rnatilgani
 # `skills-lock.json` da qayd etiladi, ya'ni kerak bo'lsa qayta tiklanadi.
 /.agents/skills/
+
+# Migratsiya rollback yozuvlari — prod qator IDlari; zaxira bilan birga saqlanadi,
+# git ga tushmaydi (docs/plan/service-key-migration-runbook.md ga qarang).
+.migrations/
