@@ -12,9 +12,9 @@
 // Bu fayl faqat kim so'rayotganini aniqlaydi va natijani seriyalaydi.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { serialize } from "@/lib/serialize";
 import type { Actor } from "@/lib/platform/access";
+import { runPersistRiskLevels } from "@/lib/domains/accounting/twinPersistRun";
 import {
   computeCompanyTwins,
   computeStaffCapacity,
@@ -37,41 +37,15 @@ export async function getCompanyTwins(period: string): Promise<CompanyTwin[]> {
 }
 
 /**
- * Hisoblangan xavfni `Company.riskLevel` ga yozadi.
+ * Hisoblangan xavfni `Company.riskLevel` ga yozadi — ekrandagi tugma yo'li.
  *
- * O'ZGARGANLARNIGINA yozadi — 213 ta yozuv o'rniga bir nechta, va audit izi
- * shovqinga aylanmaydi. `unknown` (majburiyati yo'q firma) TEGILMAYDI: uni
- * `low` ga tushirish "xavfsiz" degan yolg'on bo'lardi.
+ * Mantiqning O'ZI `lib/domains/accounting/twinPersistRun.ts` da: u kechalik
+ * BullMQ ishchisidan ham chaqiriladi va u yerda sessiya YO'Q. Ikki nusxa kod
+ * yozilsa, biri o'zgarganda ikkinchisi jimgina eskirardi va ekrandagi tugma
+ * bilan kechalik yurish boshqa-boshqa natija berardi.
  */
 export async function persistRiskLevels(period: string) {
   const actor = await requireActor();
-  const twins = await computeCompanyTwins(prisma, actor, period);
-
-  const current = await prisma.company.findMany({
-    where: { id: { in: twins.map((t) => t.companyId) } },
-    select: { id: true, riskLevel: true },
-  });
-  const was = new Map(current.map((c) => [c.id, c.riskLevel]));
-
-  let updated = 0;
-  for (const t of twins) {
-    if (t.risk.level === "unknown") continue;
-    if (was.get(t.companyId) === t.risk.level) continue;
-    await prisma.company.update({
-      where: { id: t.companyId },
-      data: { riskLevel: t.risk.level, riskNotes: t.explanation },
-    });
-    updated++;
-  }
-
-  if (updated > 0) {
-    await recordAuditLog({
-      userId: actor.id,
-      action: "update",
-      tableName: "Company",
-      recordId: `twin:${period}`,
-      newData: { period, updated },
-    });
-  }
-  return serialize({ period, considered: twins.length, updated });
+  // `auditUserId` berilmaydi ⇒ `actor.id`: tugmani bosgan odam.
+  return serialize(await runPersistRiskLevels(prisma, { actor, period }));
 }

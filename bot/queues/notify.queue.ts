@@ -51,6 +51,17 @@ export type NotifyJob =
     }
   | {
       /**
+       * Hisoblangan xavfni `Company.riskLevel` ustuniga yozadi.
+       *
+       * Ustun 7 joyda o'qiladi, lekin bugungacha uni faqat kokpitdagi QO'LDA
+       * bosiladigan tugma yangilardi — ya'ni u jimgina eskirardi va buni hech
+       * kim sezmasdi. Ballarning o'zi har renderda jonli hisoblanadi; bu job
+       * ULARNI USTUNGA muhrlaydi.
+       */
+      kind: "twin-persist-risk-levels";
+    }
+  | {
+      /**
        * Kunlik uy ishlari: tasdiq kutayotgan dalillar yig'masi + eski
        * bildirishnomalarni tozalash.
        *
@@ -114,6 +125,14 @@ export async function registerNotifySchedulers(
     "notify-escalate-questions",
     { pattern: "*/5 * * * *", tz: "Asia/Tashkent" },
     { name: "escalate-questions", data: { kind: "escalate-questions" } },
+  );
+  // 02:00 — riskLevel har kechasi yoziladi; 09:10 alert o'sha qiymatga
+  // nisbatan ishga tushadi. Tun tanlangani ataylab: yurish 213 firma uchun
+  // ball hisoblaydi va u ish vaqtidagi so'rovlar bilan raqobatlashmasin.
+  await q.upsertJobScheduler(
+    "twin-persist-risk-levels",
+    { pattern: "0 2 * * *", tz: "Asia/Tashkent" },
+    { name: "twin-persist-risk-levels", data: { kind: "twin-persist-risk-levels" } },
   );
   // 09:10 — kunlik digest tarqalgandan keyin. Tartib muhim: digest "bugun
   // nima qilaman", ogohlantirish esa "nimaga e'tibor beraman" — ikkinchisi

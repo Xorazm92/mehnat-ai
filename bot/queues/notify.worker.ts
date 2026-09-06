@@ -5,6 +5,7 @@ import { sweepQuestionEscalations } from "../../lib/engines/automation/escalatio
 import { runDailyDigest } from "../../lib/engines/automation/dailyDigest";
 import { runDirectorReport } from "../../lib/directorReport";
 import { runTwinAlerts } from "../../lib/domains/accounting/twinAlertRun";
+import { runPersistRiskLevels } from "../../lib/domains/accounting/twinPersistRun";
 import { runObligationRollup } from "../../lib/engines/automation/obligationRollup";
 import { runDailyChores, runBillingCron } from "../cron/chores";
 import { createRedisConnection } from "./connection";
@@ -84,6 +85,35 @@ export function startNotifyWorker(): Worker<NotifyJob> {
         const send = hasTelegramToken() ? makeAlertSender() : undefined;
         const res = await runTwinAlerts(prisma, { send, now });
         console.log(`[notify.worker] twin alerts:`, res);
+        return res;
+      }
+
+      if (job.data.kind === "twin-persist-risk-levels") {
+        const now = new Date();
+        const period = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+
+        // DOIRA UCHUN ADMIN KERAK. `companyScopeWhere` faqat super_admin/admin
+        // uchun "hamma firma" qaytaradi; boshqa rol bilan yurish portfelga
+        // qisqarib, ustunning yarmi eskirgan holda qolardi. Aktyor bazadan
+        // olinadi — soxta `{ id: "system" }` doirani NOLGA tushirardi.
+        const admin = await prisma.user.findFirst({
+          where: { isActive: true, role: { in: ["super_admin", "admin"] } },
+          select: { id: true, role: true },
+          orderBy: { createdAt: "asc" },
+        });
+        if (!admin) {
+          logServerError("twinPersist.noAdmin", new Error("faol admin topilmadi"), { period });
+          return { skipped: "no-admin" };
+        }
+
+        // `auditUserId: null` — doira o'sha adminniki, LEKIN yozuv ortida odam
+        // yo'q. Uni adminga yozish audit izida yolg'on qoldirardi.
+        const res = await runPersistRiskLevels(prisma, {
+          actor: { id: admin.id, role: admin.role },
+          period,
+          auditUserId: null,
+        });
+        console.log(`[notify.worker] twin persist:`, res);
         return res;
       }
 
