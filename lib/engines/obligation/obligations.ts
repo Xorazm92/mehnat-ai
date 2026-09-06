@@ -7,9 +7,10 @@
 // qayta ishga tushirilsa dublikat yaratmaydi (P2002 → skip). Mas'ul va
 // templateVersion snapshot qilinadi. Status/assignment EVENT'lari keyin
 // workflow qatlamida (server/obligations.ts) yoziladi.
-import { Prisma } from "@prisma/client";
+import { Prisma, type Periodicity } from "@prisma/client";
 import {
   periodWindowFor,
+  periodKeyMatchesPeriodicity,
   computeDueAt,
   rawDueDate,
   adjustForWorkday,
@@ -57,12 +58,65 @@ export interface GenerateResult {
   skippedNotApplicable: number;
   /** Rejim o'zgargani uchun bekor qilingan (faqat `planned` bo'lganlari). */
   cancelledNotApplicable: number;
+  /**
+   * Template DAVRIYLIGI o'zgargani uchun bekor qilingan — eski qoida bo'yicha
+   * yaratilgan, hali yopilmagan davrdagi `planned` majburiyatlar.
+   */
+  cancelledStaleRule: number;
 }
 
 const ovKey = (companyId: string, templateId: string) => `${companyId}::${templateId}`;
 
 function isUniqueViolation(e: unknown): boolean {
   return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+}
+
+/**
+ * TEMPLATE DAVRIYLIGI O'ZGARGANDA ESKI QOIDA QATORLARINI YOPADI.
+ *
+ * Generator mavjud majburiyatni FAQAT joriy oyna kaliti bilan qidiradi
+ * (`companyId_templateId_periodStart_periodEnd`). Template `quarterly` dan
+ * `monthly` ga o'tsa oyna butunlay boshqa bo'ladi, ya'ni eski qatorlar shu
+ * qidiruvga umuman tushmaydi: ular na yangilanadi, na bekor qilinadi.
+ *
+ * PRODDA O'LCHANGAN (2026-09-06, lokal `inbola`): 1 004 ta shunday qator —
+ * `AYLANMA_SOLIQ`/`AYLANMA_TOLOV` (choraklik→oylik, 2×233) va
+ * `FOYDA_YILLIK`/`FOYDA_TOLOV` (yillik→choraklik, 2×269). Hammasi `planned`,
+ * muddatlari 2026-10-15 va 2027-03-01 — ya'ni ular hali ogohlantirish
+ * bermagan, lekin `obligationSweep` D-5 bosqichida bera boshlar edi.
+ *
+ * FAQAT HALI YOPILMAGAN DAVR (`periodEnd > ref`) bekor qilinadi. Yopilgan
+ * davrdagi `planned` qator — HAQIQIY bajarilmagan ish tarixi bo'lishi mumkin
+ * (masalan o'tgan chorak topshirilmagan); uni jimgina bekor qilish dalilni
+ * yo'q qilardi. Bunday qatorlar odam ko'rigiga qoldiriladi.
+ *
+ * `planned` dan nariga o'tgani (`sent`, `accepted`, …) hech qachon tegilmaydi —
+ * `cancelledNotApplicable` dagi bilan bir xil qoida.
+ */
+async function cancelStaleRuleObligations(
+  db: Db,
+  template: { id: string; periodicity: Periodicity },
+  ref: Date,
+): Promise<number> {
+  const open = await db.obligation.findMany({
+    where: { templateId: template.id, status: "planned", periodEnd: { gt: ref } },
+    select: { id: true, periodKey: true },
+  });
+  const stale = open.filter((o) => !periodKeyMatchesPeriodicity(o.periodKey, template.periodicity));
+  if (stale.length === 0) return 0;
+
+  const ids = stale.map((o) => o.id);
+  await db.obligation.updateMany({ where: { id: { in: ids } }, data: { status: "cancelled" } });
+  await db.obligationStatusEvent.createMany({
+    data: ids.map((obligationId) => ({
+      obligationId,
+      fromStatus: "planned" as const,
+      toStatus: "cancelled" as const,
+      byUserId: null,
+      note: "Shablon davriyligi o'zgardi — bu majburiyat eski qoida bo'yicha yaratilgan edi",
+    })),
+  });
+  return stale.length;
 }
 
 /**
@@ -113,10 +167,14 @@ export async function generateObligations(db: Db, opts: GenerateOptions): Promis
     skippedExisting: 0,
     skippedNotApplicable: 0,
     cancelledNotApplicable: 0,
+    cancelledStaleRule: 0,
   };
 
   for (const t of templates) {
     const window = periodWindowFor(t.periodicity, ref);
+    // Firma tsiklidan OLDIN: eski davriylik qoidasining qoldiqlari yopiladi,
+    // aks holda ular yangi qatorlar YONIDA turib ishni ikki marta ko'rsatardi.
+    res.cancelledStaleRule += await cancelStaleRuleObligations(db, t, ref);
     for (const c of eligible) {
       const f = facts.get(c.id)!;
       if (!templateApplies(t.applicability, f)) {

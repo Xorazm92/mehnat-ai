@@ -57,6 +57,27 @@ export function periodWindowFor(periodicity: Periodicity, ref: Date): PeriodWind
   return { periodStart: utcDate(y, 1, 1), periodEnd: utcDate(y + 1, 1, 1), periodKey: `${y}-Y` };
 }
 
+/**
+ * `periodKey` shu davriylik qoidasidan chiqqanmi?
+ *
+ * Shakl `periodWindowFor` ning O'ZI yozadigan uchta ko'rinish bilan qat'iy
+ * bog'langan ("2026-M07" | "2026-Q3" | "2026-Y"). Ikkalasi yonma-yon tursin:
+ * bittasi o'zgarsa ikkinchisi ham o'zgarishi ko'rinib qoladi.
+ *
+ * NEGA KERAK. Template davriyligi o'zgarishi mumkin (prodda `AYLANMA_SOLIQ`
+ * choraklikdan oylikka, `FOYDA_YILLIK` yillikdan choraklikka o'tgan). Eski
+ * qoida bo'yicha yaratilgan majburiyatlar esa o'z oynasi bilan qolib ketadi va
+ * generator ularni KO'RMAYDI — u faqat joriy oynani kalit bilan qidiradi
+ * (`@@unique([companyId, templateId, periodStart, periodEnd])`). Natijada ular
+ * abadiy `planned` bo'lib turadi, `/deadlines` da ish bo'lib ko'rinadi va
+ * `obligationSweep` ular uchun Telegram eskalatsiyasi yuboradi.
+ */
+export function periodKeyMatchesPeriodicity(periodKey: string, periodicity: Periodicity): boolean {
+  if (periodicity === "monthly") return /^\d{4}-M(0[1-9]|1[0-2])$/.test(periodKey);
+  if (periodicity === "quarterly") return /^\d{4}-Q[1-4]$/.test(periodKey);
+  return /^\d{4}-Y$/.test(periodKey);
+}
+
 type DueRule = Pick<DeadlineTemplate, "anchorType" | "dueDay" | "dueMonth" | "offsetDays">;
 
 /**

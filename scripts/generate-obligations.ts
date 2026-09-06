@@ -66,7 +66,7 @@ async function main(): Promise<void> {
     console.log(`  ref=${r.ref.slice(0, 10)}`);
     console.log(`    shablon=${r.templatesConsidered}  yaroqli firma=${r.companiesEligible}`);
     console.log(
-      `    yaratildi=${r.created}  mavjud(skip)=${r.skippedExisting}  mos emas(skip)=${r.skippedNotApplicable}  bekor=${r.cancelledNotApplicable}`,
+      `    yaratildi=${r.created}  mavjud(skip)=${r.skippedExisting}  mos emas(skip)=${r.skippedNotApplicable}  bekor=${r.cancelledNotApplicable}  eski-qoida=${r.cancelledStaleRule}`,
     );
   }
 
