@@ -24,15 +24,33 @@
 //      soliq uchun muddat yaratadi, kechiktiradi, eskalatsiya qiladi va
 //      buxgalterga KPI jarimasi yozadi.
 //
-// KELIB CHIQARISH MANBASI YO'Q. Tekshirildi: `requiredReports` 0/269 ta
-// firmada to'ldirilgan, `activeServices` 1/269 da. Yagona ishonchli signal —
-// `taxRegime` (224 turnover / 35 vat), lekin u allaqachon `tax_regime`
-// qoidalari orqali ishlaydi. Ya'ni qaysi firma qaysi hisobotni topshirishi
-// bazada YO'Q va uni taxmin qilib bo'lmaydi — bu bosh buxgalterning bilimi
-// (docs/plan/deadline-templates-v2.md §5.1, 3-savol).
+// ⚠️ TUZATISH (2026-09-06). Yuqoridagi 3-band DASTLAB "kelib chiqarish
+// manbasi yo'q, `activeServices` 1/259 da to'ldirilgan" deb yozilgan edi.
+// BU LOKAL BAZANING holati; PRODDA boshqacha:
 //
-// Shuning uchun bu skript o'sha savolni TAYYORLAYDI: kim nima olayotganini
-// ko'rsatadi va to'ldiriladigan jadval chiqaradi.
+//     activeServices to'ldirilgan : 239 / 270 firma (88%)
+//     MonthlyReport qatorlari     : 323 (277 firma)
+//     majburiyatlar               : 14 159
+//
+// Ya'ni "qaysi firma qaysi hisobotni topshiradi" ma'lumoti BOR. Xato
+// AGENTS.md/xotiradagi qoidani buzganimdan kelib chiqdi: qamrov tahlili
+// PROD ma'lumotiga qarshi o'lchanadi, lokal nusxaga emas.
+//
+// BO'SHLIQ TESKARI TOMONDA. Firmada kalit bor, lekin SHABLONDA unga
+// ko'rsatuvchi `TemplateApplicability` qatori yo'q — shuning uchun o'sha
+// shablon UNIVERSAL bo'lib qoladi va kaliti yo'q firmalarga ham tushadi.
+// Ko'prik allaqachon mavjud: `DeadlineTemplate.matrixKey` matritsa ustunini
+// nomlaydi va `Company.activeServices` xuddi shu lug'atdan.
+//
+// PRODDA O'LCHANGAN: 14 159 majburiyatdan 2 737 tasi firmaning O'Z kaliti
+// "bu hisobotni topshirmayman" deyayotgan holatda yaratilgan. Ulardan
+// 2 096 tasi (239 firma) ishonchli — firmada boshqa kalitlar BOR, faqat shu
+// yo'q; 1 897 tasi hali `planned`, ya'ni kechikadi, eskalatsiya qiladi va
+// KPI ga tushadi. Qolgan 641 tasi kaliti umuman yo'q 19 firmaniki — ular
+// haqida hech narsa deyish mumkin emas.
+//
+// Shuning uchun bu skript ikkita bo'shliqni ham o'lchaydi: kalitsiz firma
+// (kam) va qoidasiz shablon (ko'p).
 //
 //   npx tsx scripts/audit-active-services.ts
 //   npx tsx scripts/audit-active-services.ts --csv=/tmp/xizmat-kalitlari.csv
@@ -45,7 +63,7 @@ const CSV = process.argv.find((a) => a.startsWith("--csv="))?.split("=")[1];
 
 async function main(): Promise<void> {
   const templates = await prisma.deadlineTemplate.findMany({
-    select: { code: true, name: true, lifecycle: true, applicability: true },
+    select: { code: true, name: true, lifecycle: true, matrixKey: true, applicability: true },
     orderBy: { code: "asc" },
   });
   const companies = await prisma.company.findMany({
@@ -84,6 +102,33 @@ async function main(): Promise<void> {
     );
   }
 
+  // ── matrixKey ko'prigi: shablonda qoida bormi? ───────────────────────
+  // Bu bo'lim asosiy bo'shliqni ko'rsatadi. `matrixKey` firma kalitlari
+  // bilan bir lug'atdan, ya'ni "qaysi firma bu shablonni oladi" allaqachon
+  // ma'lum — faqat qoida yozilmagan.
+  console.log("\nMATRIXKEY KO'PRIGI — qoidasiz shablonlar\n");
+  let overreach = 0;
+  for (const t of templates) {
+    if (!t.matrixKey) continue;
+    const hasServiceRule = t.applicability.some((a) => a.criteriaType === "service_key");
+    if (hasServiceRule) continue;
+    const withKey = companies.filter((c) => c.activeServices.includes(t.matrixKey!)).length;
+    const extra = companies.length - withKey;
+    if (extra <= 0) continue;
+    overreach++;
+    console.log(
+      `  ${t.code.padEnd(24)} matrixKey=${t.matrixKey!.padEnd(22)} ` +
+        `kaliti bor: ${String(withKey).padStart(3)}  ORTIQCHA: ${String(extra).padStart(3)} firma`,
+    );
+  }
+  if (overreach === 0) console.log("  (yo'q — har shablonda qoida bor)");
+  else
+    console.log(
+      `\n  ⇒ ${overreach} ta shablon UNIVERSAL bo'lib ishlayapti, holbuki matritsa\n` +
+        "    kaliti kimga tegishli ekanini allaqachon aytadi. Yechim — firmaga emas,\n" +
+        "    SHABLONGA yozish: `TemplateApplicability(service_key = matrixKey)`.",
+    );
+
   console.log("\nKELIB CHIQARISH MANBALARI (tekshirildi)\n");
   const withRequired = await prisma.company.count({
     where: { isActive: true, requiredReports: { isEmpty: false } },
@@ -94,8 +139,8 @@ async function main(): Promise<void> {
   for (const c of companies) regimes.set(c.taxRegime, (regimes.get(c.taxRegime) ?? 0) + 1);
   console.log(`  taxRegime                    : ${[...regimes].map(([k, v]) => `${k}=${v}`).join(", ")}`);
   console.log(
-    "\n  ⇒ Qaysi firma qaysi hisobotni topshirishi BAZADA YO'Q. Uni taxmin qilish\n" +
-      "    mavjud bo'lmagan soliq uchun muddat yaratardi. Bu — intervyu savoli.",
+    "\n  ⇒ Lokal bazada bu ko'rsatkichlar bo'sh, PRODDA esa 239/270. Qamrovni\n" +
+      "    har doim prod ma'lumotiga qarshi o'lchang — lokal nusxa tozalangan.",
   );
 
   if (CSV) {

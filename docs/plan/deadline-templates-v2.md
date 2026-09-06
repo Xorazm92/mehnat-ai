@@ -3,7 +3,8 @@
 > **Holat:** QORALAMA. AI yordamida tayyorlangan, **tasdiqlanmagan**.
 > Bosh buxgalter tasdiqlaguncha hech bir shablon `active` ga o'tkazilmaydi.
 >
-> **O'lchangan:** 2026-09-06, lokal `inbola` bazasi.
+> **O'lchangan:** 2026-09-06, **prod** `inbola` (16.192.135.23) — faqat o'qish.
+> Lokal nusxa tozalangan; qamrov tahlili unga qarab o'lchanmaydi.
 > **Maqsad:** 2 hafta ichidagi uchrashuvga tayyor material.
 
 ---
@@ -11,12 +12,13 @@
 ## 0. Bir jumlada
 
 Kutilgani "21 ta shablon yetishmayapti" edi; o'lchov boshqasini ko'rsatdi —
-**shablonlar soni bugungi to'siq emas.** 40 ta shablon bor (30 faol, 10 tasi
-tasdiq kutmoqda), lekin ularning **hech birida normativ mehnat yozilmagan**,
-**ish kunlari kalendari bo'sh**, va 23 ta shablon bog'langan `activeServices`
-maydoni **259 firmadan bittasida** to'ldirilgan. Ya'ni bugun yana 21 ta
-shablon qo'shilsa ham, ularning deyarli hech biri bironta firmada
-ishlamaydi.
+**shablonlar soni bugungi to'siq emas.** Prodda 41 ta shablon (30 faol,
+11 tasi tasdiq kutmoqda) va 14 159 ta majburiyat bor.
+
+Uchta haqiqiy to'siq boshqa joyda: **normativ mehnat hech bir shablonda
+yozilmagan**, **kalendarda bayramlar yo'q**, va eng kattasi —
+**majburiyatlarning 19% i firma o'zi topshirmaydigan hisobot uchun
+yaratilgan** (§1.4).
 
 Shuning uchun intervyu tartibi teskari qilindi: avval **to'siqlar**, keyin
 **yangi shablonlar**.
@@ -27,18 +29,18 @@ Shuning uchun intervyu tartibi teskari qilindi: avval **to'siqlar**, keyin
 
 | O'lchov | Qiymat | Manba |
 |---|---|---|
-| Faol shablon (`lifecycle='active' AND active`) | **30** | `DeadlineTemplate` |
-| Tasdiq kutayotgan (`lifecycle='draft'`) | **10** | `DeadlineTemplate` |
-| Jami shablon | **40** | `DeadlineTemplate` |
-| `normativeMinutes` to'ldirilgan | **0 / 40** | `DeadlineTemplate` |
-| `TemplateApplicability` qoidasi bor shablon | **23 / 40** | `TemplateApplicability` |
-| Mezonsiz (universal) shablon | **17 / 40** | `TemplateApplicability` |
-| `service_key` bilan darvozalangan | **19 / 40** | `TemplateApplicability` |
-| Hech bir firmaga tushmaydigan shablon | **11** | `audit-active-services.ts` |
-| Mavjud majburiyat (jami) | **7 221** / 269 firma | `Obligation` |
+| Faol shablon (`lifecycle='active'`) | **30** | `DeadlineTemplate` |
+| Tasdiq kutayotgan (`draft`) | **11** | `DeadlineTemplate` |
+| Jami shablon | **41** | `DeadlineTemplate` |
+| `normativeMinutes` to'ldirilgan | **0 / 41** | `DeadlineTemplate` |
+| `service_key` qoidasi bor shablon | **9 / 41** | `TemplateApplicability` |
+| `matrixKey` bor, lekin qoidasi YO'Q | **14** | `DeadlineTemplate` |
+| Mavjud majburiyat | **14 159** / 277 firma | `Obligation` |
+| — firma kaliti "yo'q" deydigani | **2 737 (19%)** | `Obligation ⋈ Company` |
 | `BusinessCalendarDay` qatorlari | **0** | `BusinessCalendarDay` |
-| Faol mijoz firma | **259** | `Company` |
-| `activeServices` to'ldirilgan firma | **1 / 259** | `Company` |
+| Faol mijoz firma | **270** | `Company` |
+| `activeServices` to'ldirilgan | **239 / 270 (88%)** | `Company` |
+| `requiredReports` to'ldirilgan | **0 / 270** | `Company` |
 
 **Uchta to'siq, uchalasi ham shablon sonidan muhimroq:**
 
@@ -53,20 +55,56 @@ Shuning uchun intervyu tartibi teskari qilindi: avval **to'siqlar**, keyin
    Ya'ni **dam olish kunidan surish allaqachon ishlaydi**. Yetishmayotgani
    faqat bayramlar — 1-yanvar, Navro'z, hayitlar: ularni standart qoida
    bila olmaydi va bugun muddat o'sha kunlarda qolib ketadi.
-3. **`activeServices` qamrovi 1/259.** 19 ta shablon `service_key`
-   mezoniga bog'langan (`stat_4_moliya`, `mol_mulk_soligi`, `didox`…).
-   Firmada mos kalit yo'q bo'lsa majburiyat generatsiya qilinmaydi.
+3. **14 ta shablon UNIVERSAL bo'lib ishlayapti** — matritsa kaliti kimga
+   tegishli ekanini allaqachon aytsa ham. Bu eng katta to'siq; §1.4 da
+   alohida yozilgan.
 
-   ⚠️ Bu **firmalar hech narsa olmaydi** degani EMAS: 40 shablondan
-   17 tasida umuman mezon yo'q (universal) va asosiy soliqlar `tax_regime`
-   bilan darvozalangan, shuning uchun bazada bugun **7 221 ta majburiyat,
-   269 ta firma** bor. Haqiqiy bo'shliq aniqroq: **11 ta shablon hech
-   bir firmaga tushmaydi** — barcha yettita statistika shakli,
-   `DIVIDEND_DECL`, `DIVIDEND_TOLOV`, `EKOLOGIYA`.
-   (`npx tsx scripts/audit-active-services.ts` shu ro'yxatni chiqaradi.)
+### 1.4 Majburiyatlarning 19% i noto'g'ri firmada
+
+⚠️ **Bu bo'lim dastlab XATO yozilgan edi.** Birinchi tahlil lokal bazaga
+qarab "`activeServices` 259 firmadan bittasida to'ldirilgan, ya'ni qaysi
+firma qaysi hisobotni topshirishi bazada yo'q" degan xulosaga kelgan edi.
+Prodda o'lchanganda holat teskari chiqdi:
+
+| | Lokal (tozalangan) | **Prod** |
+|---|---|---|
+| `activeServices` to'ldirilgan | 1 / 259 | **239 / 270** |
+| `MonthlyReport` qatorlari | 8 | **323** (277 firma) |
+| Majburiyatlar | 7 221 | **14 159** |
+
+Ya'ni **ma'lumot bor**. Bo'shliq teskari tomonda: firmada kalit bor, lekin
+**shablonda o'sha kalitga ko'rsatuvchi `TemplateApplicability` qatori yo'q**.
+Qoidasi yo'q shablon UNIVERSAL bo'lib qoladi (`templateApplies` bo'sh
+mezonda `true`) va kaliti yo'q firmalarga ham tushaveradi.
+
+Ko'prik allaqachon mavjud: `DeadlineTemplate.matrixKey` matritsa ustunini
+nomlaydi, `Company.activeServices` esa xuddi shu lug'atdan. 14 ta shablonda
+`matrixKey` bor, lekin `service_key` qoidasi yo'q.
+
+**Narxi (prodda o'lchangan):**
+
+| | Majburiyat | Firma |
+|---|---|---|
+| Firma kaliti "bu hisobot menda yo'q" deydi | **2 737** | — |
+| — ishonchli (firmada boshqa kalitlar bor) | **2 096** | 239 |
+| — noaniq (firmada umuman kalit yo'q) | 641 | 19 |
+| Ishonchlilarning `planned` (hali ochiq) qismi | **1 897** | — |
+
+Eng og'irlari: `MATERIALS` (642 ortiqcha), `PNL_REPORT` (285),
+`CASHFLOW` (270), `AR_AP` (252), `ONEC_BASE` (213), `FOYDA_YILLIK` (190).
+Har biri kechikadi, eskalatsiya qiladi va buxgalterning KPI siga tushadi.
+
+**Yechim firmaga emas, SHABLONGA yoziladi** — 14 ta
+`TemplateApplicability(service_key = matrixKey)` qatori. 259 firmani
+tahrirlashdan kichikroq va qaytarib olinadigan.
+
+⚠️ Lekin bu **prod ma'lumotini o'zgartiradi**: qoida qo'shilishi bilan
+generator kaliti yo'q firmalarning ochiq majburiyatlarini bekor qiladi
+(`skippedNotApplicable` → `cancelStaleRuleObligations`). 1 897 ta yozuvga
+tegadi — avval bosh buxgalter tasdig'i va zaxira.
 
 > Intervyuning eng qimmatli natijasi — **yangi shablonlar emas**, shu
-> uchtasining javobi.
+> to'rttasining javobi.
 
 ---
 
@@ -176,10 +214,11 @@ turi migratsiyasiz qo'shiladi. Faqat `DeadlineTemplate` qatori va
    (`lib/domains/accounting/uzHolidays.ts`), lekin **Ramazon va Qurbon
    hayit sanalari TAXMINIY** — ular har yili hukumat qarori bilan e'lon
    qilinadi. Tasdiqlash kerak. Ko'chirilgan ish shanbalari ham shu savolda.
-3. **Xizmat kalitlari.** "Qaysi firma qaysi hisobotni topshiradi?" —
-   `activeServices` 259 firmadan bittasida to'ldirilgan. Bu ro'yxatni
-   firma-firma to'ldirish kimning ishi va qaysi manbadan (shartnoma?
-   1C? soliq kabineti?)
+3. **Ortiqcha majburiyatlar (§1.4).** Prodda 2 096 ta majburiyat firmaning
+   O'Z matritsa kaliti "yo'q" deb turgan holatda yaratilgan (239 firma,
+   1 897 tasi hali ochiq). Shablonga qoida qo'shilsa ular bekor bo'ladi.
+   Savol: matritsa kalitlari ishonchlimi? Kaliti umuman yo'q 19 ta firma
+   bilan nima qilamiz?
 
 ### 5.2 Ziddiyatlar — qaysi biri to'g'ri?
 
