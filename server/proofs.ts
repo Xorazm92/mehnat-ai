@@ -213,7 +213,9 @@ export async function saveReportProof(input: {
       colKey: input.colKey,
       imageRef: stored.storageRef,
       fileRef: storedFile?.storageRef ?? null,
-      imageData: "",
+      // `null`, bo'sh satr EMAS: baytlar diskda, bazada esa "ma'lumot yo'q".
+      // Ustun D1 da nullable qilindi aynan shuning uchun.
+      imageData: null,
       fileData: null,
       fileName: input.fileName ?? null,
       fileType: input.fileType ?? null,
@@ -227,7 +229,7 @@ export async function saveReportProof(input: {
       // Eski base64 qoldig'i qayta topshirishda tozalanadi — aks holda
       // ko'chirilmagan qator yangi rasm bilan eski baytlarni yonma-yon
       // saqlab qolardi va o'qish yo'li eskisini ko'rsatardi.
-      imageData: "",
+      imageData: null,
       // Qayta topshirishda fayl berilmasa ESKISI O'CHADI: aks holda yangi
       // skrinshot eski faylga yopishib qolib, nazoratchi mos kelmagan
       // hujjatni ko'rardi.

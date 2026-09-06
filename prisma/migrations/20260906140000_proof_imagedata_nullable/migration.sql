@@ -1,0 +1,28 @@
+-- =====================================================
+-- ReportProof.imageData NULLABLE — D1 (dalil diskka ko'chdi)
+-- =====================================================
+--
+-- MUAMMO. Skrinshotlar endi diskdagi omborga yoziladi
+-- (`lib/engines/evidence/store.ts`, `ReportProof.imageRef`), lekin `imageData`
+-- ustuni NOT NULL bo'lib qolgan edi. Natijada HAR YANGI qator unga BO'SH SATR
+-- qo'yishga majbur bo'lardi (`server/proofs.ts` `imageData: ""`) — ya'ni
+-- "ma'lumot yo'q" degan joyda soxta qiymat turardi.
+--
+-- Buning narxi faqat did emas: "bu qator ko'chirilganmi?" degan savolga
+-- `imageData IS NULL` bilan javob berib bo'lmasdi, chunki bo'shlik ikki xil
+-- ko'rinishda edi (`NULL` yo'q, `''` bor). Ko'chirish hisobotini yozadigan
+-- har bir so'rov `= ''` shartini QO'LDA eslashi kerak edi.
+--
+-- MA'LUMOTGA TEGILMAYDI. Faqat cheklov olib tashlanadi: mavjud `''` qatorlar
+-- o'z holicha qoladi (ularni `NULL` ga aylantirish ma'no jihatdan bir xil,
+-- lekin keraksiz yozuv bo'lardi va zaxirani kattalashtirardi). O'qish yo'li
+-- (`lib/evidenceStore.ts` `readStoredFile`) ikkalasini ham bo'sh deb biladi —
+-- u falsy tekshiradi, `!== null` emas.
+--
+-- ORQAGA QAYTARISH. Ustunni yana NOT NULL qilish uchun avval `NULL` larni
+-- `''` ga aylantirish kerak bo'ladi:
+--   UPDATE "ReportProof" SET "imageData" = '' WHERE "imageData" IS NULL;
+--   ALTER TABLE "ReportProof" ALTER COLUMN "imageData" SET NOT NULL;
+
+-- AlterTable
+ALTER TABLE "ReportProof" ALTER COLUMN "imageData" DROP NOT NULL;

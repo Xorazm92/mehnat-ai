@@ -121,9 +121,28 @@ zaxira/deploy yo'liga fayl katalogini qo'shish).
 
 ---
 
-### D2 · Bildirishnomalarga saqlash muddati yo'q 🔴
+### D2 · Bildirishnomalarga saqlash muddati yo'q — YOPILDI ✅
 
-**Dalil.**
+> **2026-09-06 yakun.** Saqlash muddati joriy qilindi va kunlik cron'da
+> yuradi. Qoida `lib/engines/automation/notificationRetention.ts`
+> (`purgeOldNotifications`) da — chegaralar argument, ya'ni sinovga ochiq
+> (`test/notification-cleanup.test.ts`, 89/91 va 179/181 kun). Cron chaqiruvi
+> `bot/cron/chores.ts` `runDailyChores` da (09:00 Asia/Tashkent,
+> `notify-daily-chores` BullMQ rejasi — restart'ga chidamli). Qo'lda birinchi
+> tozalash uchun `server/notifications.ts` `cleanupNotifications()` (admin,
+> audit izi bilan, eng kichik chegara 7 kun).
+>
+> **Auditda ko'rinmagan nuqson.** Birinchi tahrir `NotificationDelivery` dan
+> faqat OQ RO'YXATdagi statuslarni o'chirardi (`sent | queued | failed |
+> unreachable | skipped`). `claimed` unda YO'Q edi — holbuki 2026-09-06 da
+> lokal bazada **49 957 qatordan 47 824 tasi (96%, 42 MB) aynan `claimed`**:
+> soatlik `obligationSweep` har bosqich uchun token qatori yozadi
+> (`mode: "token"`). Ya'ni tozalash jadvalning 4% ini olardi. Sabab qoidaning
+> SHAKLIda edi: oq ro'yxat "yangi status qo'shilsa buni ham yangilang" degan
+> yashirin shart yaratadi. Endi filtr YOSHGA bog'langan — status qanday
+> bo'lishidan qat'i nazar 180 kundan eski qator ketadi.
+
+**Dalil (yopilishdan oldingi holat).**
 
 | Jadval | Qatorlar | Hajm |
 |---|---|---|
@@ -139,12 +158,12 @@ jadval uchun **hech qanday tozalash yo'lini topmadi** (yagona mos joy —
 bir yildan keyin `Notification` ro'yxati va hisoblagichlari sekinlashadigan
 klassik yo'l.
 
-**Taklif.** Saqlash muddati: o'qilgan bildirishnoma 90 kundan keyin, o'qilmagani
-180 kundan keyin o'chadi (`deletedAt` emas — bu moliyaviy yozuv emas, jismonan
-o'chsa bo'ladi). Joyi: [`bot/cron/scheduler.ts`](../../bot/cron/scheduler.ts) —
-kunlik vazifa sifatida.
+**Taklif (bajarildi).** Saqlash muddati: o'qilgan bildirishnoma 90 kundan
+keyin, o'qilmagani 180 kundan keyin o'chadi (`deletedAt` emas — bu moliyaviy
+yozuv emas, jismonan o'chsa bo'ladi). Yetkazish daftari — 180 kun, statusdan
+qat'i nazar.
 
-**Mehnat.** ~2-3 soat.
+**Mehnat.** ~2-3 soat (bajarildi).
 
 ---
 

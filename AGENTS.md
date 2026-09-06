@@ -55,6 +55,19 @@ Har biri allaqachon yuz bergan xato.
 - **`KassaEntry(income)` mijoz qarzini kamaytirmaydi.** Qarz `Payment` + `PaymentAllocation` (`applyAllocation`) orqali yopiladi. Ikkalasiga yozish bitta pulni ikki marta sanaydi.
 - **Oylik tushum uchun `getMonthBreakdown`, `getAvailableBalance` emas.** Ikkinchisi ataylab yig'ma (boshidan beri); uni "Kirim" yorlig'i ostida ko'rsatish rahbarni chalg'itadi.
 - **Matritsa kalitlari `snake_case`, DB ustunlari `camelCase`** — `monthlyReport` ga yozishdan oldin `FIELD_TO_DB_COLUMN` orqali o'giriladi.
+- **Dalil fayllari bazada EMAS, diskda.** Skrinshot va hujjat
+  `lib/engines/evidence/store.ts` orqali `storage/files/` ga yoziladi, bazada
+  faqat havola (`ReportProof.imageRef` / `fileRef`). `imageData` / `fileData`
+  ustunlari orqaga moslik uchun saqlanadi va yangi qatorlarda `null`; ularga
+  YOZMANG. O'qish ikki yo'lli — `readStoredFile(ref, legacy)`.
+- **Bildirishnomalarning saqlash muddati bor.** `Notification` (o'qilgan 90
+  kun, o'qilmagan 180) va `NotificationDelivery` (180 kun, **statusdan qat'i
+  nazar**) kunlik cron'da jismonan o'chadi —
+  `lib/engines/automation/notificationRetention.ts`. Yangi delivery statusi
+  qo'shsangiz tozalashga tegmang: filtr yoshga bog'langan, oq ro'yxat emas.
+- **`pg_dump` yolg'iz o'zi to'liq zaxira EMAS.** Baytlar diskda, dump'da faqat
+  havola. `scripts/backup.sh` ikkalasini ham oladi (baza + `storage/files`
+  arxivi) — faqat `pg_dump` bilan tiklangan tizimda dalillar ochilmaydi.
 - **`kassa/` va `others_json_files/` repozitoriyaga tushmaydi** — ichida xodimlarning karta raqami va JSHSHIR bor.
 - **Prod va lokal baza bir xil nomlanadi (`inbola`)** — ulanish satrini tekshirmasdan skript ishga tushirmang.
 

@@ -64,7 +64,9 @@ async function migrateProofs() {
       if (APPLY) {
         await prisma.reportProof.update({
           where: { id: r.id },
-          data: { imageRef, fileRef, imageData: "", fileData: null },
+          // `imageData: null` — ustun D1 da nullable qilindi, ya'ni
+          // ko'chirilgan qator bo'shligini bo'sh satr bilan taqlid qilmaydi.
+          data: { imageRef, fileRef, imageData: null, fileData: null },
         });
       }
       moved++;
@@ -117,6 +119,14 @@ async function main() {
   const total = await prisma.reportProof.count({ where: { imageRef: null } });
   const totalDocs = await prisma.document.count({ where: { storageRef: null } });
   console.log(`ko'chirilmagan: ReportProof ${total} · Document ${totalDocs}`);
+
+  // ALLAQACHON KO'CHIRILGAN — bu XATO EMAS. Skript idempotent, ya'ni uni
+  // deploy'dan keyin ham, ikkinchi marta ham yurgizish normal. Bo'sh natijani
+  // xato bilan tugatish CI yoki deploy zanjirini bekorga yiqitardi.
+  if (total === 0 && totalDocs === 0) {
+    console.log("\n✓ Ko'chiriladigan qator yo'q — hammasi allaqachon omborda.");
+    return;
+  }
 
   const p = await migrateProofs();
   console.log(`ReportProof: ko'chdi=${p.moved} buzuq=${p.broken} hajm=${mb(p.bytes)}`);

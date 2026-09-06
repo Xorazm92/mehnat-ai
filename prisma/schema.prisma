@@ -526,7 +526,14 @@ model ReportProof {
   /// ESKI YO'L — base64 data URL bevosita bazada. Ko'chirish tugagach bo'sh
   /// qoladi va alohida migratsiyada tashlanadi; hozircha o'qish ikki yo'lli
   /// (`imageRef ?? imageData`), aks holda ko'chirilmagan qator ochilmasdi.
-  imageData String @db.Text
+  ///
+  /// NULLABLE — D1. Ustun NOT NULL bo'lgani uchun yangi (diskka yozilgan)
+  /// qatorlar unga BO'SH SATR qo'yishga majbur edi: ma'nosi "ma'lumot yo'q"
+  /// bo'lgan joyda soxta qiymat turardi va "ko'chirilganmi?" degan savolga
+  /// `IS NULL` bilan javob berib bo'lmasdi. Endi bo'shligi rost `NULL` bilan
+  /// ifodalanadi; mavjud `''` qatorlari o'z holicha qoladi va o'qish yo'li
+  /// ikkalasini ham bo'sh deb biladi (`readStoredFile` falsy tekshiruvi).
+  imageData String? @db.Text
 
   // HISOBOTNING O'ZI — skrinshotga qo'shimcha, IXTIYORIY.
   // Skrinshot majburiy bo'lib qoladi (tez ko'z yugurtirish uchun), fayl esa

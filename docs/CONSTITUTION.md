@@ -128,6 +128,11 @@ Dashboard ham, AI ham. Ball ko'rsatilsa — sababi ham ko'rsatiladi
 
 Sababsiz raqam ishonchni oshirmaydi — kamaytiradi, chunki uni tekshirib bo'lmaydi.
 
+**Dalil ham manba.** Matritsadagi "topshirildi" skrinshotga tayanadi va u
+`storage/files/` da mazmun-adresli saqlanadi (`ReportProof.imageRef` →
+`lib/engines/evidence/store.ts`): fayl nomi — baytlarning `sha256` i, ya'ni
+dalil almashtirilsa havola ham o'zgaradi.
+
 **O'lchanmagan raqam ham ko'rsatilmaydi.** Ma'lumot yo'q bo'lsa ball `null`
 bo'ladi va ekranda `—` chiqadi — 0 ham, 100 ham EMAS. Yo'q o'lchovni "a'lo" deb
 ko'rsatish e'tibor kerak bo'lgan mijozni ro'yxatning xavfsiz uchiga saralaydi.

@@ -27,6 +27,7 @@ vi.mock("next/cache", () => ({ revalidateTag: () => {}, updateTag: () => {} }));
 const { prisma } = await import("@/lib/prisma");
 const { saveReportProof } = await import("@/server/proofs");
 const { evidenceStore, readStoredFile } = await import("@/lib/evidenceStore");
+const { sha256Of } = await import("@/lib/engines/evidence/store");
 
 const TAG = `vitest-storage-${Date.now()}`;
 const PERIOD = "2024-07";
@@ -77,6 +78,44 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+describe("ombor — mazmun-adresli saqlash", () => {
+  it("put — sha256 baytlardan hisoblanadi, byteSize mos keladi", async () => {
+    const stored = await evidenceStore.put(PNG_BYTES, "image/png");
+
+    expect(stored.sha256).toBe(sha256Of(PNG_BYTES));
+    expect(stored.byteSize).toBe(PNG_BYTES.byteLength);
+    // Havola ichida AYNAN o'sha sha256 turadi — fayl nomi mazmundan chiqadi,
+    // ya'ni dalil almashtirilsa havola ham o'zgaradi (Konstitutsiya, 7-modda).
+    expect(stored.storageRef).toContain(stored.sha256);
+  });
+
+  it("put ikki marta — bir xil baytlar bir xil havola beradi", async () => {
+    const a = await evidenceStore.put(PNG_BYTES, "image/png");
+    const b = await evidenceStore.put(PNG_BYTES, "image/png");
+    // Mazmun-adresli: takror yuklash joy egallamaydi.
+    expect(b.storageRef).toBe(a.storageRef);
+  });
+
+  it("get — havola bo'yicha AYNAN o'sha baytlar qaytadi", async () => {
+    const stored = await evidenceStore.put(PNG_BYTES, "image/png");
+    const back = await evidenceStore.get(stored.storageRef);
+
+    expect(back.bytes.equals(PNG_BYTES)).toBe(true);
+    expect(back.byteSize).toBe(PNG_BYTES.byteLength);
+  });
+
+  it("head — yo'q fayl uchun null, bor fayl uchun o'lcham", async () => {
+    const missing = `disk://2099/01/${"0".repeat(64)}.png`;
+    // Yiqilmaydi, `null` qaytaradi: yo'q fayl — kutilgan holat, hodisa emas.
+    expect(await evidenceStore.head(missing)).toBeNull();
+
+    const stored = await evidenceStore.put(PNG_BYTES, "image/png");
+    const head = await evidenceStore.head(stored.storageRef);
+    expect(head?.sha256).toBe(stored.sha256);
+    expect(head?.byteSize).toBe(PNG_BYTES.byteLength);
+  });
+});
+
 describe("dalil saqlash", () => {
   it("skrinshot omborga tushadi, bazada faqat havola qoladi", async () => {
     await saveReportProof({
@@ -90,7 +129,10 @@ describe("dalil saqlash", () => {
     });
 
     expect(proof.imageRef).toMatch(/^disk:\/\/\d{4}\/\d{2}\/[a-f0-9]{64}\.png$/);
-    expect(proof.imageData).toBe(""); // base64 bazada QOLMAYDI
+    // `null`, bo'sh satr EMAS (D1: ustun nullable qilindi). Bo'sh satr
+    // "ma'lumot yo'q" degan joyda soxta qiymat bo'lardi va "ko'chirilganmi?"
+    // savoliga `IS NULL` bilan javob berib bo'lmasdi.
+    expect(proof.imageData).toBeNull();
 
     const back = await evidenceStore.get(proof.imageRef!);
     expect(back.bytes.equals(PNG_BYTES)).toBe(true);

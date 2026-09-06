@@ -9,6 +9,7 @@
 // Redis'da yashaydi va bu uchtasini ham hal qiladi.
 import { prisma } from "../../lib/prisma";
 import { notifyUsers } from "../../lib/notify";
+import { purgeOldNotifications } from "../../lib/engines/automation/notificationRetention";
 import { SENIOR_REVIEW_ROLES } from "../../lib/reportPermissions";
 import { runBillingReminders } from "../contexts/billing/application/run-reminders";
 import { receiptButton } from "../contexts/billing/application/receipt-flow";
@@ -16,7 +17,6 @@ import { callbackSecret, hasTelegramToken } from "../config";
 import { sendMessage } from "../telegram/bot";
 import type { ReplyMarkup } from "../telegram/keyboard";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Current accounting period, "YYYY-MM" (local). */
 export function currentPeriod(now = new Date()): string {
@@ -59,30 +59,16 @@ export async function runProofDigest(): Promise<void> {
 /**
  * BILDIRISHNOMA SAQLASH MUDDATI.
  *
- * Iyulda 424, avgustda 35 938 qator — hech qanday tozalash yo'q edi.
- * Bular moliyaviy yozuv emas, shuning uchun jismonan o'chadi.
- *
- * `NotificationDelivery` da EHTIYOT SHART: `dedupKey` shu jadvalda
- * idempotentlik qulfi (lib/notify.ts). Qator o'chsa o'sha kalit bo'shaydi va
- * xabar QAYTA yuborilishi mumkin. Shuning uchun oyna 180 kun — har qanday
- * jonli majburiyat eslatmasidan uzunroq, ya'ni bo'shagan kalitni hech kim
- * qayta ishlatmaydi.
+ * Qoidaning O'ZI `lib/engines/automation/notificationRetention.ts` da: u
+ * `db` va `now` ni argument sifatida oladi, ya'ni chegaralar (90/180 kun)
+ * sinovga ochiq va bir xil mantiq ekrandan ham chaqiriladi
+ * (`server/notifications.ts`). Bu yerda faqat cron chaqiruvi qoladi.
  */
 export async function runNotificationRetention(): Promise<void> {
-  const now = Date.now();
-  const daysAgo = (n: number) => new Date(now - n * DAY_MS);
-
-  const read = await prisma.notification.deleteMany({
-    where: { isRead: true, createdAt: { lt: daysAgo(90) } },
-  });
-  const unread = await prisma.notification.deleteMany({
-    where: { isRead: false, createdAt: { lt: daysAgo(180) } },
-  });
-  const delivery = await prisma.notificationDelivery.deleteMany({
-    where: { createdAt: { lt: daysAgo(180) }, status: { in: ["sent", "queued", "failed", "unreachable", "skipped"] } },
-  });
+  const res = await purgeOldNotifications(prisma);
   console.log(
-    `[cron] retention: notification read=${read.count} unread=${unread.count} delivery=${delivery.count}`
+    `[cron] retention: notification read=${res.notifications.read} ` +
+      `unread=${res.notifications.unread} delivery=${res.deliveries}`
   );
 }
 

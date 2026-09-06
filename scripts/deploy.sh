@@ -54,6 +54,18 @@ npm run build
 
 # 7) FINAL readiness gate — env + DB + schema + non-empty User table + admin.
 #    Deployment aborts here (non-zero exit) if the system can't accept logins.
+# Dalil ombori — DALILLAR ENDI BAZADA EMAS, DISKDA (D1).
+#
+# `pg_dump` YOLG'IZ O'ZI to'liq zaxira emas va bu katalog deploy bilan birga
+# kelmaydi: u serverning o'zida yashaydi va relizlar orasida saqlanadi.
+# Yo'q bo'lsa birinchi skrinshot yuklashda ENOENT bilan yiqilardi — ya'ni
+# nosozlik deploy paytida emas, buxgalter ish qilayotganda ko'rinardi.
+# Shuning uchun mavjudligi SHU YERDA kafolatlanadi.
+FILES_ROOT="${ASRO_FILES_ROOT:-./storage/files}"
+echo "▶ Ensuring evidence store exists ($FILES_ROOT)…"
+mkdir -p "$FILES_ROOT"
+[ -w "$FILES_ROOT" ] || { echo "✗ Evidence store is not writable: $FILES_ROOT"; exit 5; }
+
 echo "▶ [7/7] Preflight verification (DB + schema + admin)…"
 npx tsx scripts/preflight.ts
 
