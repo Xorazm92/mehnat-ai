@@ -102,6 +102,7 @@ model User {
   supervisedCompanies Company[]             @relation("SupervisorCompanies")
   chiefCompanies      Company[]             @relation("ChiefAccountantCompanies")
   auditLogs           AuditLog[]
+  analyticsEvents     AnalyticsEvent[]
   notifications       Notification[]
   contractAssignments ContractAssignment[]
   performanceRecords  MonthlyPerformance[]
@@ -1237,6 +1238,46 @@ model KassaEntry {
 // =====================================================
 // AUDIT LOG
 // =====================================================
+
+/// FOYDALANISH O'LCHOVI — "kim, qachon, qaysi ekranni ochdi".
+///
+/// NEGA AUDIT EMAS. `AuditLog` O'ZGARISHNI yozadi (`AuditAction` = create /
+/// update / delete / login / logout) va unda `read` ataylab yo'q: har ochilgan
+/// sahifani audit jurnaliga yozish uni o'qib bo'lmaydigan qilardi va moliyaviy
+/// o'zgarishlar shovqin ichida yo'qolardi. Foydalanish esa boshqa savol va
+/// boshqa saqlash muddatiga ega, shuning uchun alohida jadval.
+///
+/// NIMANI O'LCHAYDI. M4 gacha "direktor kokpitga kiradimi?" degan savolga
+/// javob beradigan hech narsa yo'q edi — na model, na hodisa. Mahsulot
+/// va'dasi (P3) esa aynan shu bilan tekshiriladi.
+///
+/// `actorRole` — SNAPSHOT. Xodim keyin boshqa rolga o'tsa ham, o'sha paytda
+/// KIM sifatida kirgani saqlanadi; aks holda tarixiy hisob rol o'zgarishi
+/// bilan qayta yozilardi.
+model AnalyticsEvent {
+  id String @id @default(uuid())
+
+  /// "cockpit_visit" | "director_cockpit_visit" | … — erkin satr, chunki
+  /// yangi o'lchov qo'shish migratsiya talab qilmasligi kerak.
+  kind String
+
+  /// `AuditLog` bilan bir xil qoida: xodim o'chirilsa hodisa QOLADI
+  /// (o'lchov tarixi yo'qolmaydi), faqat egasi uziladi.
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  /// Hodisa paytidagi rol — yuqoridagi izohga qarang.
+  actorRole String
+
+  /// Qo'shimcha kontekst (yorliq, davr). Sxema talab qilmaydi.
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  /// "Shu haftada nechta direktor tashrifi bo'ldi" — asosiy so'rov shakli.
+  @@index([kind, createdAt])
+  @@index([actorId])
+}
 
 model AuditLog {
   id        String      @id @default(uuid())

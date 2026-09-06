@@ -15,6 +15,21 @@ export type UserRole = (typeof ROLES)[keyof typeof ROLES];
 export type AppView =
   | "dashboard"
   | "cockpit"
+  /**
+   * DIREKTOR KOKPITI — `cockpit` ning ustidagi QATLAM, uning o'rnini
+   * bosuvchi emas.
+   *
+   * `cockpit` to'rt rolga berilgan (nazoratchi va bosh buxgalter ham ish
+   * oqimini ko'radi), moliyaviy manzara va bir bosishli harakat esa
+   * direktorniki. Ilgari bu farq faqat `server/directorCockpit.ts` dagi rol
+   * shartida yashardi — ya'ni RBAC matritsasida ko'rinmasdi va admin uni
+   * boshqara olmasdi.
+   *
+   * DARVOZA IKKI QAVATLI (`canDirectorCockpit`): rol MAJBURIY, ko'rinish esa
+   * qo'shimcha. Shuning uchun admin bu ko'rinishni nazoratchiga bersa ham,
+   * u moliyaviy blokni ochmaydi — rol sharti baribir to'sadi.
+   */
+  | "director_cockpit"
   | "organizations"
   | "staff"
   | "reports"
@@ -111,6 +126,7 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
   [ROLES.SUPER_ADMIN]: [
     "dashboard",
     "cockpit",
+    "director_cockpit",
     "organizations",
     "staff",
     "reports",
@@ -129,6 +145,9 @@ export const ALLOWED_VIEWS: Record<UserRole, AppView[]> = {
   [ROLES.ADMIN]: [
     "dashboard",
     "cockpit",
+    // Faqat direktor rollarida. Bosh buxgalter va nazoratchi ro'yxatiga
+    // ATAYLAB qo'shilmaydi — moliyaviy manzara ularniki emas.
+    "director_cockpit",
     "organizations",
     "staff",
     "reports",
@@ -257,6 +276,7 @@ export const ROLE_COLORS: Record<UserRole, string> = {
 export const ALL_VIEWS: AppView[] = [
   "dashboard",
   "cockpit",
+  "director_cockpit",
   "organizations",
   "staff",
   "reports",
@@ -281,6 +301,7 @@ export const ALL_VIEWS: AppView[] = [
 export const VIEW_LABELS: Record<AppView, string> = {
   dashboard: "Boshqaruv paneli",
   cockpit: "Kabina",
+  director_cockpit: "Direktor kokpiti",
   organizations: "Firmalar",
   staff: "Xodimlar",
   reports: "Hisobotlar",
@@ -419,6 +440,22 @@ export const isFinanceRole = (role: string): boolean => FINANCE_ROLES.includes(r
 export const isSeniorRole = (role: string): boolean => {
   return (["super_admin", "admin", "chief_accountant", "supervisor"] as string[]).includes(role);
 };
+
+/**
+ * DIREKTOR KOKPITI DARVOZASI — rol VA ko'rinish, ikkalasi ham.
+ *
+ * Rol sharti qat'iy: `super_admin | admin` (`lib/directorReport.ts` dagi
+ * `DIRECTOR_ROLES` bilan bir xil konvensiya, ikkinchi nusxa yozilmaydi).
+ * Ko'rinish sharti esa admin tahrirlaydigan qatlam — u ruxsatni TORAYTIRA
+ * oladi, lekin KENGAYTIRA olmaydi: nazoratchiga `director_cockpit` berilsa
+ * ham rol sharti to'sadi.
+ *
+ * Nega ikkalasi: ko'rinishlar matritsasi admin uchun boshqaruv vositasi
+ * (direktor "menga kerak emas" desa o'chirsin), rol esa xavfsizlik chegarasi
+ * — uni tahrirlanadigan sozlamaga bog'lab bo'lmaydi.
+ */
+export const canDirectorCockpit = (role: string, views: readonly string[]): boolean =>
+  isAdminRole(role) && views.includes("director_cockpit");
 
 /** Firma ro'yxati cheklanmaydigan rollar — faqat admin. */
 export const canSeeAllCompanies = (role: string): boolean => isAdminRole(role);

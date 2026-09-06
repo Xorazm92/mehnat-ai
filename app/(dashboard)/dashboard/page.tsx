@@ -17,6 +17,8 @@ import {
 import { currentUserViews } from "@/server/rbac";
 import { getOperationsTimeline } from "@/server/timeline";
 import { getCompanyTwins, getStaffCapacity } from "@/server/twin";
+import { getCockpitFinance } from "@/server/directorCockpit";
+import { canDirectorCockpit } from "@/lib/platform/permissions";
 import { getCurrentPeriodKey } from "@/lib/periods";
 import { readTabParam } from "@/lib/tabs";
 import {
@@ -89,10 +91,14 @@ export default async function DashboardPage({
 
   if (activeTab === "kokpit") {
     const period = getCurrentPeriodKey();
-    const [timeline, twins, capacity] = await Promise.all([
+    // `getCockpitFinance` direktor bo'lmasa `null` qaytaradi (xato EMAS):
+    // nazoratchi va bosh buxgalter ham shu yorliqni ko'radi, lekin moliyaviy
+    // blok ularniki emas. Darvoza `server/directorCockpit.ts` da.
+    const [timeline, twins, capacity, finance] = await Promise.all([
       getOperationsTimeline(),
       getCompanyTwins(period),
       getStaffCapacity(period),
+      getCockpitFinance(),
     ]);
 
     return (
@@ -103,6 +109,8 @@ export default async function DashboardPage({
           timeline={JSON.parse(JSON.stringify(timeline))}
           twins={JSON.parse(JSON.stringify(twins))}
           capacity={JSON.parse(JSON.stringify(capacity))}
+          finance={finance ? JSON.parse(JSON.stringify(finance)) : null}
+          isDirector={canDirectorCockpit(session.user.role as string, views)}
         />
       </div>
     );

@@ -54,6 +54,13 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "task", why: "vazifalar" },
 
   // Xabarnomalar
+  {
+    model: "analyticsEvent",
+    // Foydalanish o'lchovi — kim qaysi ekranni ochdi. Spravochnik EMAS: u
+    // hech qanday qoida yoki biriktiruvni saqlamaydi, faqat tarix to'playdi.
+    why: "foydalanish hodisalari (kokpit tashriflari)",
+    refillsWhenLive: true,
+  },
   { model: "notificationDelivery", why: "yetkazish jurnali (eskalatsiya dedup)", refillsWhenLive: true },
   { model: "notification", why: "ilova ichidagi xabarlar", refillsWhenLive: true },
   { model: "paymentReminder", why: "to'lov eslatmalari tarixi" },
