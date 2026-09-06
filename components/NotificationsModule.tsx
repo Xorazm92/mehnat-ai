@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { friendlyError } from "@/lib/actionError";
+import { formatUzDateTime } from "@/lib/platform/format";
 
 export interface NotificationRecord {
     id: string;
@@ -27,19 +28,22 @@ interface Props {
     onMarkRead: (ids?: string[]) => Promise<void>;
 }
 
-// Deterministic across server and client: an explicit timeZone makes the
-// SSR output and the client re-render identical, avoiding hydration mismatch.
-const DATE_FMT = new Intl.DateTimeFormat("ru-RU", {
-    timeZone: "Asia/Tashkent",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-});
+// Sana `lib/platform/format.ts` orqali — AGENTS.md qoidasi.
+//
+// Ilgari bu yerda `Intl.DateTimeFormat("ru-RU", { timeZone: "Asia/Tashkent" })`
+// turardi va izohi "server bilan mijozda bir xil" derdi. Vaqt mintaqasi
+// qadalgani ROST, lekin yetarli emas: `ru-RU` NAQSHI ICU ma'lumotidan
+// o'qiladi. `small-icu` bilan qurilgan Node'da faqat `en-US` bo'ladi va
+// format jimgina unga tushadi — server "09/06/2026, 14:30", brauzer esa
+// "06.09.2026, 14:30" chizadi. Bu — gidratatsiya nomuvofiqligi, ya'ni React
+// butun daraxtni qayta chizadi (yoki prodda xato beradi).
+//
+// `formatUzDateTime` locale NOMLARIGA umuman tayanmaydi: `Intl` dan faqat
+// RAQAMLI qismlarni o'qiydi (har ICU qurilishida bir xil) va oy nomini o'zi
+// qo'yadi. Ustiga ekrandagi qolgan sanalar bilan bitta shaklga tushadi.
 function formatCreatedAt(iso: string): string {
     const d = new Date(iso);
-    return isNaN(d.getTime()) ? "" : DATE_FMT.format(d);
+    return isNaN(d.getTime()) ? "" : formatUzDateTime(d);
 }
 
 // Turi bu ro'yxatda bo'lmagan xabar kulrang qo'ng'iroq bilan chiziladi. Shu

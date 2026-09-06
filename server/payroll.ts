@@ -12,6 +12,7 @@ import { ACCOUNTS, postLedger } from "@/lib/ledger";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { adjustmentMagnitude } from "@/lib/adjustments";
 import { serialize } from "@/lib/serialize";
+import { formatNum } from "@/lib/platform/format";
 import { calculateEmployeeSalary, type CompanyAssignment } from "@/lib/kpiLogic";
 import { getCollectedByCompany, readPayrollBasis } from "@/lib/payrollCollected";
 import type { PayrollBasis } from "@/lib/payrollBasis";
@@ -457,7 +458,10 @@ export async function approveEmployeeSalary(data: { employeeId: string; month: s
   if (draft.rawTotal < 0) {
     throw new Error(
       `${draft.employeeName} uchun ${data.month} oyida jarimalar asosiy oylikdan oshib ketdi ` +
-        `(${Math.round(draft.rawTotal).toLocaleString()} so'm). Oylik nolga tushirilmadi — ` +
+        // `toLocaleString()` ARGUMENTSIZ edi: ajratgich server muhitining
+        // `LANG` iga bog'liq bo'lib qolardi (1,234,567 / 1 234 567 / 1.234.567).
+        // `formatNum` — loyihaning yagona shakli (vergul).
+        `(${formatNum(draft.rawTotal)} so'm). Oylik nolga tushirilmadi — ` +
         `KPI yozuvlarini tekshiring.`
     );
   }

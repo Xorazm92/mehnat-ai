@@ -17,10 +17,43 @@ Loyiha odatiy taxminlardan farq qiladigan joylar:
 
 - **Interfeys tili — faqat o'zbek (lotin).** `lang` kodda `'uz'` ga qotirilgan, RU shoxlari o'lik kod. `Login`, `Email`, `Admin` kabi o'zlashmalar qoladi. `<option value=...>` kalitlariga tegilmaydi — ular bazaga yoziladi.
 - **Izoh NEGA ni yozadi, NIMA ni emas.** Kod o'zi nima qilishini ko'rsatadi; izoh kod ifodalay olmaydigan cheklovni yozadi va o'zgarishni ko'rmagan o'quvchi uchun ham to'g'ri qolishi kerak.
-- **Sana va son `lib/format.ts` orqali** (`formatUzDate`, `formatNum`). `toLocaleString` / `Intl.NumberFormat` ishlatilmaydi — ular serverda va brauzerda har xil natija berib gidratatsiyani buzadi.
+- **Sana va son `lib/platform/format.ts` orqali** (`formatUzDate`, `formatUzDateTime`, `formatNum`). `Intl.DateTimeFormat` va argumentsiz `toLocaleString()` ishlatilmaydi: naqsh ICU ma'lumotidan o'qiladi va `small-icu` qurilishida jimgina `en-US` ga tushadi — server bilan brauzer har xil chizadi, gidratatsiya buziladi. `timeZone` ni qadash yetarli emas (u devor soatini to'g'rilaydi, naqshni emas). `test/date-format-guard.test.ts` buni majburlaydi.
 - **Moliyaviy yozuv jismonan o'chirilmaydi** — `deletedAt` bilan yumshoq o'chiriladi, jurnal esa `reverseLedger` bilan bekor qilinadi.
 - **Pul chiqimi `lib/balance.ts` dagi `assertSufficientFunds` dan o'tadi.**
 - **Ekranga darvoza `server/rbac.ts` `currentUserViews()` orqali** — proxy bilan aynan bir manba. Server action'lar o'z tekshiruvini saqlaydi; UI hech qachon yagona to'siq emas.
+
+## `lib/` qatlam qoidasi
+
+`lib/` da 146 ta tekis `.ts` fayl va 8 ta nomlangan qatlam yonma-yon turibdi.
+Qoida yozilmagani uchun yangi fayl odatiy holda ildizga tushardi va bir mavzu
+bir necha joyga sochilardi (`debt.ts` / `debtAging.ts` / `debtReport.ts`;
+beshta `kpi*.ts`).
+
+| Papka | Nima tushadi |
+|---|---|
+| `lib/platform/` | rol, ruxsat, doira (scope), audit, format — domendan MUSTAQIL |
+| `lib/domains/<nom>/` | bitta domenning qoidalari (`accounting/`, keyin `marketing/`…) |
+| `lib/engines/<nom>/` | holat mashinasi yoki hisoblagich — domen-NEYTRAL (Modda 4a) |
+| `lib/ai/`, `lib/bank/`, `lib/pos/`, `lib/integrations/` | aniq platforma yoki adapter |
+| `lib/admin/` | tizim sozlamalari (registry, system-settings) |
+| `lib/*.ts` (tekis) | FAQAT sof yordamchi: `format`, `serialize`, `dateRange`, `collate`… |
+
+**Yangi fayl sof yordamchi bo'lmasa, tekis ildizga tushmaydi.**
+
+Ikki chegara testlar bilan majburlanadi, ya'ni ular tavsiya emas:
+
+- **Modda 4a** (`test/constitution.test.ts`): `lib/engines/**` FAQAT
+  `@/lib/engines/` va `@/lib/platform/` dan import qila oladi. Domen
+  qatlamini chaqirgan modul `engines/` da tura olmaydi — u
+  `lib/domains/<nom>/` ga tushadi. (`leadingIndicator.ts` aynan shu sababdan
+  `engines/analytics/` dan `domains/accounting/` ga ko'chirilgan.)
+- **Sana/son formati** (`test/date-format-guard.test.ts`): yuqoridagi
+  "Uy qoidalari" bandiga qarang.
+
+**Mavjud fayllar ommaviy ko'chirilmaydi.** Qoida YANGI kodga tegishli:
+146 faylni qayta joylashtirish git tarixini (`git log --follow`, `blame`)
+buzadi va bironta nuqsonni tuzatmaydi. Ko'chirish faqat fayl allaqachon
+boshqa sabab bilan qayta yozilayotganda qilinadi.
 
 ## Buyruqlar
 

@@ -24,7 +24,7 @@ birlashdi) va zaxira ikki qismli.
 **D5 yopildi (2026-09-01)** — pastga qarang. **D3 qayta baholandi** — u ham
 pastda. **D11 va D12 ochildi va yopildi (2026-09-01)** — bank vipiskasidagi
 postlanmagan chiqim va noto'g'ri sanali xo'jalik yozuvlari.
-Qolgan ochiq: D6-D10.
+Qolgan ochiq: D7-D10.
 
 ## 0. Bir jumlada
 
@@ -290,20 +290,49 @@ bilmaydi. Bugungi holat aynan shu.
 
 ---
 
-### D6 · `lib/` da qatlam chegarasi yo'q 🟡
+### D6 · `lib/` da qatlam chegarasi yo'q — YOPILDI ✅
 
-**Dalil.** `lib/` ichida **138 ta tekis `.ts` fayl** va 4 ta nomlangan qatlam
-(`platform/`, `domains/`, `engines/`, `pos/` — jami 61 fayl) yonma-yon turibdi.
-Nima qayerga tushishini aytadigan qoida hech qayerda yozilmagan, shuning uchun
-yangi fayl odatda tekis ildizga tushadi.
+> **2026-09-06 yakun.** Qoida `AGENTS.md` → "`lib/` qatlam qoidasi" bo'limiga
+> yozildi: sakkizta papkaning har biri nimani qabul qilishi va tekis ildiz
+> FAQAT sof yordamchi uchun ekani. Mavjud fayllar **ko'chirilmadi** —
+> quyidagi tavsiyaning o'zi shuni aytadi va 146 faylni qayta joylashtirish
+> `git log --follow` bilan `blame` ni buzib, bironta nuqsonni tuzatmasdi.
+>
+> Qoida hujjat bo'lib qolmasligi uchun ikki chegara TEST bilan bog'landi:
+> `test/constitution.test.ts` (Modda 4a — `engines/**` domen qatlamini
+> import qila olmaydi) va yangi `test/date-format-guard.test.ts`
+> (sana/son yagona manbadan).
+>
+> **Qoida yozilishi bilanoq ikkita chetga chiqish topildi** —
+> `components/NotificationsModule.tsx` va `components/admin/AdminOverview.tsx`
+> `Intl.DateTimeFormat("ru-RU", { timeZone: "Asia/Tashkent" })` ishlatardi.
+> Birinchisining izohi "server bilan mijozda bir xil" derdi va bu YOLG'ON edi:
+> vaqt mintaqasi qadalgani naqshni qadamaydi — `ru-RU` naqshi ICU dan
+> o'qiladi va `small-icu` qurilishida jimgina `en-US` ga tushadi
+> ("09/06/2026, 14:30" ↔ "06.09.2026, 14:30"). `NotificationsModule` mijoz
+> komponenti, ya'ni bu gidratatsiya nomuvofiqligi edi. Uchinchisi —
+> `server/payroll.ts` da locale ARGUMENTSIZ `toLocaleString()`: ajratgich
+> server muhitining `LANG` iga bog'liq bo'lib qolardi.
+
+**Dalil (yopilishdan oldingi holat).** `lib/` ichida **138 ta tekis `.ts` fayl**
+va 4 ta nomlangan qatlam (`platform/`, `domains/`, `engines/`, `pos/` — jami 61
+fayl) yonma-yon turibdi. Nima qayerga tushishini aytadigan qoida hech qayerda
+yozilmagan, shuning uchun yangi fayl odatda tekis ildizga tushadi.
 
 Natijada bir mavzu bir necha joyga sochilgan: `lib/debt.ts`, `lib/debtAging.ts`,
 `lib/debtReport.ts`; `lib/kpiLogic.ts`, `lib/kpiScoring.ts`, `lib/kpiEvidence.ts`,
 `lib/kpiProjection.ts`, `lib/kpiLabels.ts`, `lib/fairKpi.ts`.
 
-**Taklif.** §5 dagi chegara qoidasini `AGENTS.md` ga qo'shish va **yangi kod
-yozilganda** amal qilish. Mavjud fayllarni ommaviy ko'chirish tavsiya
+**Taklif (bajarildi).** §5 dagi chegara qoidasini `AGENTS.md` ga qo'shish va
+**yangi kod yozilganda** amal qilish. Mavjud fayllarni ommaviy ko'chirish tavsiya
 etilmaydi — u faqat git tarixini buzadi.
+
+**Qolgan (D6 doirasidan tashqari).** Server ichidagi xato matnlarida
+`toLocaleString("en-US")` va `toLocaleString("ru-RU")` aralash ishlatilgan
+9 ta joy bor (`lib/transit.ts`, `lib/reconciliation.ts`, `server/payouts.ts`,
+`server/bankImport.ts`, `server/transit.ts`). Gidratatsiya xavfi yo'q —
+ular faqat serverda quriladi — lekin bitta ilova ikki xil ajratgich
+ko'rsatadi. `formatNum` ga o'tkazish alohida tozalash ishi.
 
 ---
 

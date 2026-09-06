@@ -7,6 +7,11 @@ import {
   type AdminModuleGroup,
 } from "@/lib/admin/registry";
 import { ROLE_LABELS, type UserRole } from "@/lib/platform/permissions";
+// Sana `lib/platform/format.ts` orqali. Bu server komponenti, ya'ni
+// gidratatsiya xavfi yo'q — lekin `Intl.DateTimeFormat("ru-RU")` chiqishi
+// ICU qurilishiga bog'liq va audit jurnali ekranning qolgan qismidan
+// boshqacha shaklda ko'rinardi ("06.09.2026, 14:30" ↔ "6-sen, 14:30").
+import { formatUzDateTime } from "@/lib/platform/format";
 
 interface AuditRow {
   id: string;
@@ -29,14 +34,6 @@ interface Props {
 }
 
 const GROUP_ORDER: AdminModuleGroup[] = ["tizim", "moliya", "integratsiya"];
-
-const AUDIT_FMT = new Intl.DateTimeFormat("ru-RU", {
-  timeZone: "Asia/Tashkent",
-  day: "2-digit",
-  month: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-});
 
 export function AdminOverview({ role, stats, recentAudit }: Props) {
   const modules = visibleAdminModules(role as UserRole);
@@ -167,7 +164,7 @@ export function AdminOverview({ role, stats, recentAudit }: Props) {
                     <span className="font-bold" style={{ color: "var(--text-primary)" }}>{a.action}</span> · {a.tableName}
                   </div>
                   <div style={{ color: "var(--text-muted)" }}>
-                    {a.user?.fullName ?? "Tizim"} — {AUDIT_FMT.format(new Date(a.createdAt))}
+                    {a.user?.fullName ?? "Tizim"} — {formatUzDateTime(a.createdAt)}
                   </div>
                 </div>
               ))}
