@@ -32,6 +32,10 @@ Shuning uchun intervyu tartibi teskari qilindi: avval **to'siqlar**, keyin
 | Jami shablon | **40** | `DeadlineTemplate` |
 | `normativeMinutes` to'ldirilgan | **0 / 40** | `DeadlineTemplate` |
 | `TemplateApplicability` qoidasi bor shablon | **23 / 40** | `TemplateApplicability` |
+| Mezonsiz (universal) shablon | **17 / 40** | `TemplateApplicability` |
+| `service_key` bilan darvozalangan | **19 / 40** | `TemplateApplicability` |
+| Hech bir firmaga tushmaydigan shablon | **11** | `audit-active-services.ts` |
+| Mavjud majburiyat (jami) | **7 221** / 269 firma | `Obligation` |
 | `BusinessCalendarDay` qatorlari | **0** | `BusinessCalendarDay` |
 | Faol mijoz firma | **259** | `Company` |
 | `activeServices` to'ldirilgan firma | **1 / 259** | `Company` |
@@ -43,15 +47,23 @@ Shuning uchun intervyu tartibi teskari qilindi: avval **to'siqlar**, keyin
    (`computeStaffCapacity`) — bo'sh bo'lgani uchun yuklama "taxminiy"
    bayrog'i bilan chiqadi va kokpitdagi "kim ko'milgan?" bloki taxminga
    tayanadi.
-2. **Ish kunlari kalendari bo'sh.** 40 shablondan aksariyati
-   `adjustmentPolicy = next_workday` bilan yozilgan, lekin
-   `BusinessCalendarDay` da bironta qator yo'q — ya'ni **surish hech
-   qachon ishlamaydi**. Muddat dam olish kuniga yoki bayramga tushsa
-   o'sha kunda qoladi.
-3. **`activeServices` qamrovi 1/259.** 23 ta shablon `service_key`
+2. **Kalendarda BAYRAMLAR yo'q** (hafta oxiri esa ishlaydi).
+   `BusinessCalendarDay` bo'sh, lekin `makeWorkdayPredicate` aniq yozuv
+   topmasa standart qoidaga tushadi: shanba va yakshanba ish kuni emas.
+   Ya'ni **dam olish kunidan surish allaqachon ishlaydi**. Yetishmayotgani
+   faqat bayramlar — 1-yanvar, Navro'z, hayitlar: ularni standart qoida
+   bila olmaydi va bugun muddat o'sha kunlarda qolib ketadi.
+3. **`activeServices` qamrovi 1/259.** 19 ta shablon `service_key`
    mezoniga bog'langan (`stat_4_moliya`, `mol_mulk_soligi`, `didox`…).
-   Firmada mos kalit yo'q bo'lsa majburiyat GENERATSIYA QILINMAYDI.
-   Bugun bu 258 firma uchun jim ishlamaslikni anglatadi.
+   Firmada mos kalit yo'q bo'lsa majburiyat generatsiya qilinmaydi.
+
+   ⚠️ Bu **firmalar hech narsa olmaydi** degani EMAS: 40 shablondan
+   17 tasida umuman mezon yo'q (universal) va asosiy soliqlar `tax_regime`
+   bilan darvozalangan, shuning uchun bazada bugun **7 221 ta majburiyat,
+   269 ta firma** bor. Haqiqiy bo'shliq aniqroq: **11 ta shablon hech
+   bir firmaga tushmaydi** — barcha yettita statistika shakli,
+   `DIVIDEND_DECL`, `DIVIDEND_TOLOV`, `EKOLOGIYA`.
+   (`npx tsx scripts/audit-active-services.ts` shu ro'yxatni chiqaradi.)
 
 > Intervyuning eng qimmatli natijasi — **yangi shablonlar emas**, shu
 > uchtasining javobi.
@@ -158,9 +170,12 @@ turi migratsiyasiz qo'shiladi. Faqat `DeadlineTemplate` qatori va
    daqiqa ketadi?" — 40 shablonning hammasi uchun kerak. Aniq raqam
    bo'lmasa, oraliq ham bo'ladi (masalan "20-40 daqiqa"), lekin `NULL`
    qolmasin: Twin yuklamani shundan hisoblaydi.
-2. **Ish kunlari kalendari.** "2026-yilning bayram kunlari va ko'chirilgan
-   dam olish kunlari qaysilar?" — `BusinessCalendarDay` bo'sh, ya'ni bugun
-   muddat yakshanbaga tushsa ham surilmaydi. Rasmiy qaror manbasi kim?
+2. **Bayram kunlari.** "2026-2027 bayram sanalari va ko'chirilgan dam olish
+   kunlari qaysilar?" Hafta oxiri allaqachon ishlaydi; kerak bo'lgani —
+   bayramlar. Yettita qat'iy sana kodda bor
+   (`lib/domains/accounting/uzHolidays.ts`), lekin **Ramazon va Qurbon
+   hayit sanalari TAXMINIY** — ular har yili hukumat qarori bilan e'lon
+   qilinadi. Tasdiqlash kerak. Ko'chirilgan ish shanbalari ham shu savolda.
 3. **Xizmat kalitlari.** "Qaysi firma qaysi hisobotni topshiradi?" —
    `activeServices` 259 firmadan bittasida to'ldirilgan. Bu ro'yxatni
    firma-firma to'ldirish kimning ishi va qaysi manbadan (shartnoma?
