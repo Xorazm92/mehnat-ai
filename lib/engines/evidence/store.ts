@@ -81,12 +81,18 @@ export function createDiskEvidenceStore(root: string, now: () => Date = () => ne
     },
 
     async get(storageRef) {
+      // refToPath natijasi storageRef'dan deterministik, ammo bundler statik
+      // tahlil ko'rmaydi — Turbopack butun loyihani nft trace'ga qo'shadi.
+      // Prodda output: "standalone" yoqilmagan, nft ishlatilmaydi; bu yo'l
+      // moliyaviy-muvofiqlik dalillarini o'qiydi, suppress qilinmaydi.
       const path = refToPath(root, storageRef);
       const bytes = await readFile(path);
       return { bytes, byteSize: bytes.byteLength };
     },
 
     async head(storageRef) {
+      // Yuqoridagi sabab: statik tahlil ko'rmaydigan disk-yo'li, ataylab
+      // bundler trace'ga qo'shmaslik uchun izohsiz.
       const path = refToPath(root, storageRef);
       try {
         const s = await stat(path);

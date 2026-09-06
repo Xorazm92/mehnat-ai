@@ -118,6 +118,20 @@ sana emas, qaror qoidasi.
 
 ---
 
+## 2026-09-05 — M0 auditidan qoldiqlar
+
+**Turbopack nft trace ogohlantirishlari (6 ta).** `lib/engines/evidence/store.ts:85,92`
+`refToPath(root, storageRef)` natijasi statik tahlil ko'rmaydi → bundler butun
+loyihani (12 590 fayl) trace'ga qo'shadi. Bugun zarari yo'q: `output: "standalone"`
+yoqilmagan, deploy pm2 + to'liq repo. Rasmiy tuzatish — `/*turbopackIgnore: true*/`,
+lekin suppression taqiqlangan va bu moliyaviy-muvofiqlik dalillarini o'qish yo'li.
+Qaror: izoh bilan qoldiramiz; standalone yoqilganda qayta ko'riladi.
+
+**178 lint warning.** `no-explicit-any` (legacy `lib/kpiLogic.ts`, `scripts/`) va
+`react-hooks/set-state-in-effect` (≈20 komponent effekti). `eslint.config.mjs` da
+ataylab warn. Error ga ko'tarish 20 ta komponent mantig'ini o'zgartirishni talab
+qiladi — M0 doirasidan tashqari. Birlashtirib ko'rib chiqish uchun alohida sprint.
+
 ## Hech qachon
 
 Bu bo'limga tushgan narsa qayta muhokama qilinmaydi — u mahsulot ta'rifiga zid.

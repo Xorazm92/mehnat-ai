@@ -127,3 +127,37 @@ jobs:
 
       - name: Integration tests
         run: npm test
+
+  # ── Production build ──────────────────────────────────────────────────────
+  # `next build` was the one link of the local quality chain (typecheck → lint →
+  # test → build) that CI never ran, so a change could merge green and only fail
+  # at deploy time — where `scripts/deploy.sh` builds ON the prod server.
+  #
+  # No database: every route is server-rendered on demand (`ƒ`), so the build
+  # touches no DATABASE_URL. The auth variables are here because next-auth reads
+  # them while the module graph is evaluated; they are throwaway CI values.
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      AUTH_SECRET: ci-test-secret-not-for-production
+      NEXTAUTH_SECRET: ci-test-secret-not-for-production
+      AUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `npm run build` = prisma generate && next build.
+      - name: Build
+        run: npm run build

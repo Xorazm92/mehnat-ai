@@ -1,6 +1,8 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  // Driver adapter (@prisma/adapter-pg) — Prisma 7 da GA, preview bayrog'i
+  // kerak emas. `previewFeatures = ["driverAdapters"]` yozilsa har
+  // `prisma generate` deprecation ogohlantirishi beradi.
+  provider = "prisma-client-js"
 }
 
 datasource db {
