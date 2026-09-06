@@ -70,6 +70,52 @@ export function runCashTx<T>(fn: (db: Db) => Promise<T>): Promise<T> {
   return serializable(fn);
 }
 
+/**
+ * MANBA BO'YICHA QOLDIQ NAZORATI — chiqimning IKKINCHI darvozasi.
+ *
+ * Chiqim TANLANGAN manbadan yoziladi: "Naqd" tanlansa faqat Naqd balansidan,
+ * aniq firma hisobi tanlansa faqat shu firmanikidan chegiriladi. Umumiy balans
+ * yetarli bo'lib, tanlangan manbada pul yo'q bo'lsa — bu MANBA xatosi va
+ * bloklanadi (admin chetlab o'tadi, izi jurnal reversal'ida ko'rinadi).
+ *
+ * NEGA EKSPORT QILINADI. Bu tekshiruv shu faylda, `recordKassaMovement` ichida
+ * yopiq turardi — ya'ni u FAQAT import/skript yo'lida ishlardi. Ekrandan
+ * yoziladigan chiqim esa (`server/kassa.ts` `createKassaEntry` /
+ * `approveExpense` / `updateExpense`) manba qatorini va jurnalni O'ZI yozadi va
+ * bu darvozadan umuman o'tmasdi. Natijada qo'riqchi teskari tomonga qarab
+ * turardi: mart oyidagi vipiska qatori bloklanardi, bugun jonli foydalanuvchi
+ * bo'sh hisobdan yozgan chiqim esa o'tib ketardi va kanal qoldig'ini manfiyga
+ * tushirardi ("Kassalar hisoboti" o'sha manfiyni ko'rsatardi).
+ *
+ * Endi qoida bitta joyda va ikkala yo'l ham shu yerdan o'tadi.
+ *
+ * @param excludeKassaEntryId Tahrirlashda yozuvning O'Z eski izi qoldiqdan
+ *   chiqarib tashlanadi — aks holda summa ikki marta sanalardi.
+ */
+export async function assertChannelFunds(
+  db: Db,
+  params: { channelId: string; amount: number; role: string; excludeKassaEntryId?: string }
+): Promise<void> {
+  // Admin/superadmin ataylab chetlab o'tadi — `assertSufficientFunds` dagi
+  // bilan bir xil qoida (minus qoldiqqa ruxsat, izi jurnalda qoladi).
+  if (isAdminRole(params.role)) return;
+
+  const channelBalance = await getChannelCashBalance(db, params.channelId, {
+    excludeKassaEntryId: params.excludeKassaEntryId,
+  });
+  if (params.amount <= channelBalance) return;
+
+  const ch = await db.disbursementChannel.findUnique({
+    where: { id: params.channelId },
+    select: { label: true },
+  });
+  throw new Error(
+    `"${ch?.label ?? "Tanlangan manba"}"da yetarli mablag' yo'q. ` +
+      `Manba qoldig'i: ${formatNum(channelBalance)} so'm, so'ralgan: ${formatNum(params.amount)} so'm. ` +
+      `Boshqa manbadan yozing yoki avval o'sha manbaga kirim qiling.`
+  );
+}
+
 interface CommitSpec {
   /** Jurnal davri manbasi. */
   date: Date;
@@ -196,29 +242,12 @@ export async function recordKassaMovement(
   const expenseAccount = input.expenseAccount ?? ACCOUNTS.OPERATING_EXPENSE;
 
   // ── MANBA BO'YICHA QOLDIQ NAZORATI ────────────────────────────────────
-  // Chiqim TANLANGAN manbadan yoziladi: "Naqd" tanlansa faqat Naqd
-  // balansidan, aniq firma hisobi tanlansa faqat shu firmanikidan
-  // chegiriladi. Umumiy balans yetarli bo'lib, tanlangan manbada pul
-  // yo'q bo'lsa — bu MANBA xatosi va bloklanadi (admin chetlab o'tadi,
-  // izi jurnal reversal'ida ko'rinadi).
-  if (
-    input.type === "expense" &&
-    input.channelId &&
-    needsFundsCheck(actor) &&
-    !isAdminRole(actor.role)
-  ) {
-    const channelBalance = await getChannelCashBalance(db, input.channelId);
-    if (input.amount > channelBalance) {
-      const ch = await db.disbursementChannel.findUnique({
-        where: { id: input.channelId },
-        select: { label: true },
-      });
-      throw new Error(
-        `"${ch?.label ?? "Tanlangan manba"}"da yetarli mablag' yo'q. ` +
-          `Manba qoldig'i: ${formatNum(channelBalance)} so'm, so'ralgan: ${formatNum(input.amount)} so'm. ` +
-          `Boshqa manbadan yozing yoki avval o'sha manbaga kirim qiling.`
-      );
-    }
+  if (input.type === "expense" && input.channelId && needsFundsCheck(actor)) {
+    await assertChannelFunds(db, {
+      channelId: input.channelId,
+      amount: input.amount,
+      role: actor.role,
+    });
   }
 
   // OYLIK OPERATSION XARAJAT EMAS. Qoida atayin "kassaga oylik yozilmasin"

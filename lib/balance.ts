@@ -197,12 +197,18 @@ async function movementInRange(
   range: MovementRange
 ): Promise<{ income: number; outflow: number; loanCashMovement: number }> {
   const dateWhere = { gte: range.from ?? KASSA_START_DATE, lt: range.to };
-  const periodWhere =
-    typeof range.paymentPeriod === "string" ? range.paymentPeriod : range.paymentPeriod;
+  const periodWhere = range.paymentPeriod;
   const [payments, kassaIn, kassaOut, payouts, loan] = await Promise.all([
-    db.payment.aggregate({
-      where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: periodWhere, ...(typeof periodWhere === "string" ? { gte: undefined } : {}) },
-      _sum: { amount: true },
+    // `aggregate(_sum.amount)` EMAS — `cashFromPaymentRows`. Sabab
+    // `getAvailableBalance` dagi bilan AYNAN BIR XIL: `Payment.amount` ga
+    // "offset" (vzaimozachyot) ham kiradi, jurnalga esa kirmaydi
+    // (`applyAllocation` CASH oyog'ini `NOT: { source: "offset" }` bo'yicha
+    // yig'adi). Ya'ni yig'indi olinsa oy yopish figuralari jurnaldan aynan
+    // offset summasiga oshib ketardi va `ledger_source_balance_match` bandi
+    // SOXTA qizil bo'lib oyni yopishga yo'l bermasdi.
+    db.payment.findMany({
+      where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: periodWhere },
+      select: { amount: true, allocations: { select: { source: true, amount: true } } },
     }),
     db.kassaEntry.aggregate({
       where: { type: "income", deletedAt: null, date: dateWhere },
@@ -223,7 +229,7 @@ async function movementInRange(
     loanCashMovement(db, periodWhere),
   ]);
   return {
-    income: n(payments._sum.amount) + n(kassaIn._sum.amount),
+    income: cashFromPaymentRows(payments) + n(kassaIn._sum.amount),
     outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
     loanCashMovement: loan,
   };
@@ -323,9 +329,12 @@ export async function getDayMovement(
   const dateWhere = { gte: from, lt: to };
 
   const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
-    db.payment.aggregate({
+    // NAQD ULUSH — `cashFromPaymentRows` (yagona ta'rif). Xom
+    // `_sum(amount)` offsetni ham naqd deb sanaydi va shu ekranni
+    // `getAvailableBalance` bilan ziddiyatga solib qo'yadi.
+    db.payment.findMany({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, paymentDate: dateWhere },
-      _sum: { amount: true },
+      select: { amount: true, allocations: { select: { source: true, amount: true } } },
     }),
     db.kassaEntry.aggregate({
       where: { type: "income", deletedAt: null, date: dateWhere },
@@ -339,7 +348,7 @@ export async function getDayMovement(
   ]);
 
   return {
-    income: n(payments._sum.amount) + n(kassaIn._sum.amount),
+    income: cashFromPaymentRows(payments) + n(kassaIn._sum.amount),
     outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
   };
 }
@@ -368,9 +377,10 @@ export async function getWeeklyMovement(
     ranges.map(async ({ from, to }) => {
       const dateWhere = { gte: from, lt: to };
       const [payments, kassaIn, kassaOut, payouts] = await Promise.all([
-        db.payment.aggregate({
+        // NAQD ULUSH — `cashFromPaymentRows`; sabab `getDayMovement` dagidek.
+        db.payment.findMany({
           where: { status: { in: ["paid", "partial"] }, deletedAt: null, paymentDate: dateWhere },
-          _sum: { amount: true },
+          select: { amount: true, allocations: { select: { source: true, amount: true } } },
         }),
         db.kassaEntry.aggregate({
           where: { type: "income", deletedAt: null, date: dateWhere },
@@ -384,7 +394,7 @@ export async function getWeeklyMovement(
       ]);
       return {
         weekStart: from.toISOString(),
-        income: n(payments._sum.amount) + n(kassaIn._sum.amount),
+        income: cashFromPaymentRows(payments) + n(kassaIn._sum.amount),
         outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
       };
     })
@@ -415,9 +425,11 @@ export async function getYearMovement(
   const from = new Date(year, 0, 1);
   const to = new Date(year + 1, 0, 1);
   const [payments, kassaIn, kassaOut, payouts, loan] = await Promise.all([
-    prisma.payment.aggregate({
+    // NAQD ULUSH — `cashFromPaymentRows`; yil yopish figurasi ham jurnal
+    // CASH qoldig'i bilan solishtiriladi, ya'ni offset kirsa farq beradi.
+    prisma.payment.findMany({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { startsWith: `${year}-` } },
-      _sum: { amount: true },
+      select: { amount: true, allocations: { select: { source: true, amount: true } } },
     }),
     prisma.kassaEntry.aggregate({
       where: { type: "income", deletedAt: null, date: { gte: from, lt: to } },
@@ -435,7 +447,7 @@ export async function getYearMovement(
     loanCashMovement(prisma, { startsWith: `${year}-` }),
   ]);
   return {
-    income: n(payments._sum.amount) + n(kassaIn._sum.amount),
+    income: cashFromPaymentRows(payments) + n(kassaIn._sum.amount),
     outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
     loanCashMovement: loan,
   };
@@ -447,9 +459,10 @@ export async function getMovementBefore(
 ): Promise<{ income: number; outflow: number; loanCashMovement: number }> {
   const to = new Date(year, 0, 1);
   const [payments, kassaIn, kassaOut, payouts, loan] = await Promise.all([
-    prisma.payment.aggregate({
+    // NAQD ULUSH — `cashFromPaymentRows`; sabab `getYearMovement` dagidek.
+    prisma.payment.findMany({
       where: { status: { in: ["paid", "partial"] }, deletedAt: null, period: { lt: `${year}-01` } },
-      _sum: { amount: true },
+      select: { amount: true, allocations: { select: { source: true, amount: true } } },
     }),
     prisma.kassaEntry.aggregate({
       where: { type: "income", deletedAt: null, date: { lt: to } },
@@ -467,7 +480,7 @@ export async function getMovementBefore(
     loanCashMovement(prisma, { lt: `${year}-01` }),
   ]);
   return {
-    income: n(payments._sum.amount) + n(kassaIn._sum.amount),
+    income: cashFromPaymentRows(payments) + n(kassaIn._sum.amount),
     outflow: n(kassaOut._sum.amount) + n(payouts._sum.amount),
     loanCashMovement: loan,
   };

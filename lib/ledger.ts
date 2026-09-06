@@ -455,18 +455,46 @@ export async function getTrialBalance(db: Db, period?: string) {
  */
 export const LEDGER_DRIFT_TOLERANCE = 0.01;
 
+/**
+ * DAVR ORALIG'I — BITTA `period` FILTRI.
+ *
+ * Nega yordamchi: ikkala chegara ham alohida shartli spread bilan yozilgan edi
+ *
+ *     ...(throughPeriod ? { period: { lte: throughPeriod } } : {}),
+ *     ...(fromPeriod    ? { period: { gte: fromPeriod } } : {}),
+ *
+ * va ikkalasi berilganda ikkinchi spread birinchisini USTIDAN YOZARDI — `lte`
+ * jimgina yo'qolib, so'rov "shu oy oxirigacha" o'rniga "boshidan hozirgacha"
+ * ni qaytarardi. `server/kassaReport.ts` aynan ikkalasini beradi, ya'ni
+ * "Kassalar hisoboti" har oy uchun bir xil yig'ma qoldiqni ko'rsatib,
+ * kirim/chiqim ustunlarini doim NOL qilib qo'yardi (joriy va oldingi oy
+ * qiymati bir xil chiqqani uchun ayirma nolga teng edi).
+ *
+ * Chegaralar endi bitta obyektga yig'iladi, ya'ni ustma-ust tushish imkonsiz.
+ */
+export function ledgerPeriodFilter(
+  fromPeriod?: string,
+  throughPeriod?: string
+): { gte?: string; lte?: string } | undefined {
+  if (!fromPeriod && !throughPeriod) return undefined;
+  return {
+    ...(fromPeriod ? { gte: fromPeriod } : {}),
+    ...(throughPeriod ? { lte: throughPeriod } : {}),
+  };
+}
+
 export async function getLedgerCashBalance(
   db: Db,
   throughPeriod?: string,
   opts: { channelId?: string; fromPeriod?: string } = {}
 ): Promise<number> {
+  // KASSA START: `fromPeriod` berilsa loyiha ishga tushishidan oldingi
+  // harakatlar hisobga kirmaydi (lib/constants.ts KASSA_START_PERIOD).
+  const period = ledgerPeriodFilter(opts.fromPeriod, throughPeriod);
   const agg = await db.ledgerEntry.aggregate({
     where: {
       accountId: ACCOUNTS.CASH,
-      ...(throughPeriod ? { period: { lte: throughPeriod } } : {}),
-      // KASSA START: loyiha ishga tushishidan oldingi harakatlar hisobga
-      // kirmaydi (lib/constants.ts KASSA_START_PERIOD).
-      ...(opts.fromPeriod ? { period: { gte: opts.fromPeriod } } : {}),
+      ...(period ? { period } : {}),
       ...(opts.channelId ? { channelId: opts.channelId } : {}),
     },
     _sum: { debit: true, credit: true },
@@ -498,13 +526,13 @@ export async function getCashByChannel(
   throughPeriod?: string,
   opts: { fromPeriod?: string } = {}
 ): Promise<{ channelId: string | null; balance: number; debit: number; credit: number }[]> {
+  // KASSA START — eski davr qatlamlari manba qoldiqlarini buzmasin.
+  const period = ledgerPeriodFilter(opts.fromPeriod, throughPeriod);
   const rows = await db.ledgerEntry.groupBy({
     by: ["channelId"],
     where: {
       accountId: ACCOUNTS.CASH,
-      ...(throughPeriod ? { period: { lte: throughPeriod } } : {}),
-      // KASSA START — eski davr qatlamlari manba qoldiqlarini buzmasin.
-      ...(opts.fromPeriod ? { period: { gte: opts.fromPeriod } } : {}),
+      ...(period ? { period } : {}),
     },
     _sum: { debit: true, credit: true },
   });

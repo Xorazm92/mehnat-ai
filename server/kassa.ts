@@ -21,7 +21,7 @@ import { assertFundingSource } from "@/server/fundingSources";
 // SALARY_CATEGORY_RE — oylik toifasini aniqlashning YAGONA manbasi
 // (`lib/cashGate.ts`). Bu yerda nusxasi bo'lganda qoida ikki joyda
  // turib qolardi va biri o'zgarganda ikkinchisi jimgina eskiqardi.
-import { SALARY_CATEGORY_RE } from "@/lib/cashGate";
+import { SALARY_CATEGORY_RE, assertChannelFunds } from "@/lib/cashGate";
 import { isFinanceRole } from "@/lib/platform/permissions";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { serialize } from "@/lib/serialize";
@@ -167,6 +167,12 @@ export async function createKassaEntry(data: {
       await assertSufficientFunds({
         amount: data.amount, role, userId, context: "expense", db: tx,
       });
+      // IKKINCHI DARVOZA — tanlangan manbaning O'Z qoldig'i (lib/cashGate.ts).
+      // Umumiy balans yetarli bo'lsa ham bo'sh hisobdan pul chiqarib
+      // bo'lmaydi; busiz ekran yo'li import yo'lidan zaifroq turardi.
+      if (data.channelId) {
+        await assertChannelFunds(tx, { channelId: data.channelId, amount: data.amount, role });
+      }
     }
     // MAYDONLAR ANIQ SANALADI, `...data` EMAS.
     //
@@ -348,6 +354,13 @@ export async function approveExpense(id: string) {
     await assertSufficientFunds({
       amount: Number(row.amount), role, userId: session.user.id, context: "expense", db: tx,
     });
+    // Manba qoldig'i — `createKassaEntry` dagi bilan bir xil darvoza. Pul
+    // aynan TASDIQ paytida chiqadi, ya'ni tekshiruv ham shu yerda turishi kerak.
+    if (row.channelId) {
+      await assertChannelFunds(tx, {
+        channelId: row.channelId, amount: Number(row.amount), role,
+      });
+    }
 
     const updated = await tx.kassaEntry.update({
       where: { id },
@@ -449,6 +462,13 @@ export async function updateExpense(id: string, data: {
       await assertSufficientFunds({
         amount: data.amount, role, userId, excludeKassaEntryId: id, context: "expense", db: tx,
       });
+      // Manba qoldig'i — YANGI kanal bo'yicha, yozuvning o'z eski izi
+      // chiqarib tashlangan holda (aks holda summa ikki marta sanalardi).
+      if (data.channelId) {
+        await assertChannelFunds(tx, {
+          channelId: data.channelId, amount: data.amount, role, excludeKassaEntryId: id,
+        });
+      }
     }
     // Eski jurnal izi netto nolga tushadi, so'ng (avto-tasdiqda) qayta yoziladi.
     await reverseLedger(tx, {
