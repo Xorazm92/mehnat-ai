@@ -30,6 +30,7 @@
 
 import "./load-env";
 import { prisma } from "@/lib/prisma";
+import { needsServiceKeyRule } from "@/lib/domains/accounting/serviceKeyGate";
 
 const EXAMPLES = Number(process.argv.find((a) => a.startsWith("--examples="))?.split("=")[1] ?? 2);
 
@@ -58,9 +59,7 @@ async function main(): Promise<void> {
   });
 
   // Faqat qoidasi YO'Q shablonlar — qoidasi borlarida o'zgarish bo'lmaydi.
-  const candidates = templates.filter(
-    (t) => !t.applicability.some((a) => a.criteriaType === "service_key"),
-  );
+  const candidates = templates.filter(needsServiceKeyRule);
 
   console.log("═".repeat(112));
   console.log("1) MOSLIK JADVALI — qoida qo'shilsa nima o'zgaradi");
