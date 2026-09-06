@@ -53,6 +53,12 @@ export const OPERATIONAL_TABLES: OperationalTable[] = [
   { model: "taskEvent", why: "vazifa hodisalari" },
   { model: "task", why: "vazifalar" },
 
+  // AI tavsiyalari va ular ustidagi qarorlar (M5.3). Yangi hisob davrida
+  // ular ma'nosiz: har biri o'sha paytdagi majburiyat/qarzdorlik holatiga
+  // bog'langan payload saqlaydi va tozalangan bazada bajarilib bo'lmaydi.
+  // Spravochnik EMAS — hech qanday qoida saqlamaydi.
+  { model: "recommendation", why: "AI/cron tavsiyalari va qarorlar", refillsWhenLive: true },
+
   // Xabarnomalar
   {
     model: "analyticsEvent",

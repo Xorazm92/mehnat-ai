@@ -29,7 +29,13 @@ export type AnalyticsKind = (typeof ANALYTICS_KINDS)[keyof typeof ANALYTICS_KIND
 
 export interface LogEventInput {
   kind: string;
-  actor: { id: string; role: string };
+  /**
+   * Kim. `id: null` — ODAM EMAS, cron/worker qarori (masalan javobsiz
+   * tavsiyaning muddati o'tishi). `AnalyticsEvent.actorId` allaqachon
+   * nullable; `role` esa har doim to'ldiriladi ("system"), aks holda
+   * hodisani rol kesimida sanab bo'lmasdi.
+   */
+  actor: { id: string | null; role: string };
   metadata?: Prisma.InputJsonValue;
 }
 

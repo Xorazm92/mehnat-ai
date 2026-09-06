@@ -31,6 +31,7 @@ import { SupervisorCabinet } from "@/components/cabinets/SupervisorCabinet";
 import { ChiefAccountantCabinet } from "@/components/cabinets/ChiefAccountantCabinet";
 import { AccountantCabinet } from "@/components/cabinets/AccountantCabinet";
 import CockpitPanel from "@/components/cockpit/CockpitPanel";
+import { getCockpitRecommendations } from "@/server/recommendations";
 import DashboardTabs from "./DashboardTabs";
 
 export const metadata = { title: "Boshqaruv paneli" };
@@ -94,11 +95,14 @@ export default async function DashboardPage({
     // `getCockpitFinance` direktor bo'lmasa `null` qaytaradi (xato EMAS):
     // nazoratchi va bosh buxgalter ham shu yorliqni ko'radi, lekin moliyaviy
     // blok ularniki emas. Darvoza `server/directorCockpit.ts` da.
-    const [timeline, twins, capacity, finance] = await Promise.all([
+    const [timeline, twins, capacity, finance, recs] = await Promise.all([
       getOperationsTimeline(),
       getCompanyTwins(period),
       getStaffCapacity(period),
       getCockpitFinance(),
+      // Tavsiyalar navbati (M5.3). `getCockpitFinance` kabi XATO TASHLAMAYDI:
+      // ruxsati yo'q rol bo'sh ro'yxat oladi, buzilgan ekran emas.
+      getCockpitRecommendations(),
     ]);
 
     return (
@@ -110,6 +114,8 @@ export default async function DashboardPage({
           twins={JSON.parse(JSON.stringify(twins))}
           capacity={JSON.parse(JSON.stringify(capacity))}
           finance={finance ? JSON.parse(JSON.stringify(finance)) : null}
+          recommendations={JSON.parse(JSON.stringify(recs.pending))}
+          adoption={recs.adoption ? JSON.parse(JSON.stringify(recs.adoption)) : null}
           isDirector={canDirectorCockpit(session.user.role as string, views)}
         />
       </div>

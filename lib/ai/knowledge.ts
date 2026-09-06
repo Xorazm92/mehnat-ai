@@ -18,11 +18,17 @@ export interface KnowledgeChunk {
 
 export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
   // ── ASRO ERP TIZIMI VA FOYDALANISH YO'RIQNOMASI ──
-  {
-    title: "ASRO Tizimi — Rentabellik modulining mantiqi va manbalari",
-    category: "SYSTEM",
-    content: "Rentabellik (Profitability / Contribution Margin) — har bir mijoz (firma) autsorsingdan qancha sof foyda keltirishini ko'rsatadi. Formula: Margin = Tushum (paid Payment) − Mehnat tannarxi (TimeEntry soati × xodim stavkasi). Qarzdorlik — chiqarilgan Invoys minus to'langan summa. Bu bo'lim zarar keltirayotgan va mehnat ko'p talab etadigan firmalarning narxini qayta ko'rib chiqishga yordam beradi."
-  },
+  // RENTABELLIK BO'LAGI OLIB TASHLANDI (M5.1).
+  //
+  // U "Margin = Tushum − TimeEntry × stavka" formulasini tushuntirardi, lekin
+  // uchala qismi ham MAVJUD EMAS: `server/profitability.ts` modul
+  // konsolidatsiyasida o'chirilgan (ADR-0016), `TimeEntry` va
+  // `EmployeeCostRate` sxemada yo'q, ball esa ICEBOX da (ADR-0010: tannarxsiz
+  // marja = daromad, ya'ni yolg'on raqam).
+  //
+  // Ya'ni AI mavjud bo'lmagan modulni ishonch bilan tushuntirardi. Bu 4-va'da
+  // ("har bir raqam tushuntiriladi") ning eng yomon buzilishi: raqam ham,
+  // tushuntirish ham to'qima edi. Modul qaytsa — bo'lak ham qaytadi.
   {
     title: "ASRO Tizimi — Oylik berish va tasdiqlash tartibi",
     category: "SYSTEM",
@@ -79,13 +85,13 @@ function buildKnowledgeBlock(): string {
 export const ASSISTANT_SYSTEM_INSTRUCTION = `Sen — "ASRO Moliyachi AI", O'zbekiston buxgalteriya autsorsing firmalarini boshqarish ERP tizimi ("ASRO Boshqaruv Tizimi") hamda moliyaviy masalalar bo'yicha aqlli yordamchisan.
 
 VAZIFANG:
-1. Xodimlarga ASRO tizimidan foydalanish, modullar (Oylik, Rentabellik, Kassa, Xarajatlar, KPI, Hisobotlar matritsasi) mantiqi va qoidalari bo'yicha tushuntirish berish.
+1. Xodimlarga ASRO tizimidan foydalanish, modullar (Oylik, Kassa, Xarajatlar, KPI, Muddatlar, Dalil, Hisobotlar matritsasi, Kokpit) mantiqi va qoidalari bo'yicha tushuntirish berish.
 2. BHMS (Buxgalteriya Hisobi Milliy Standartlari), Soliq Kodeksi va Mehnat Kodeksi bo'yicha savollarga amaliy va aniq javob berish.
 
 QOIDALAR:
 - HAR DOIM o'zbek tilida, do'stona, professional va aniq javob ber.
 - Tizim modullari va mantiqi bo'yicha savollarda quyidagi BILIM BAZASIdagi qoidalar va tartiblarga ko'ra tushuntirish ber:
-  • Rentabellik: Tushum (paid Payment) − Mehnat tannarxi (TimeEntry × stavka). Mijozlar marjasini va qarzdorlikni tahlil qiladi.
+  • Rentabellik (marja) moduli ASROda HOZIRDA YO'Q — xodim tannarxi kiritilmagani uchun u o'chirilgan. Bunday savolga "bu modul hozircha mavjud emas" deb javob ber, formula to'qima.
   • Oylik berish: 1) Oylik Xomcho't avto-hisoblanadi. 2) Admin/Bosh buxgalter '$ TASDIQLASH' tugmasi bilan majburiyatni tasdiqlaydi. 3) Kassa admini 'Payout' orqali real pul beradi (kassa kamayadi). 4) Avanslar chegiriladi.
   • Kassa / Xarajatlar: Xarajatlar fakt bo'yicha kiradi. Oddiy buxgalter uchun kassa yetmasa bloklanadi, Admin minus balans (overdraft) bera oladi. Qizil banner va audit log nazorat qiladi.
   • Hisobotlar matritsasi: Oy boshida avto-biriktiriladi. Guruhlar davriylik bo'yicha: Oylik ish (ko'k), Oylik soliq (yashil), Kvartal soliq (amber), Yillik hisobot (binafsha), Statistika (pushti), IT Park (sian), Komunalka (sariq), Maxsus (indigo).
@@ -105,7 +111,7 @@ export function heuristicReply(userText: string): string {
   const t = userText.toLowerCase();
   let body: string;
   if (t.includes("rentabell") || t.includes("marja") || t.includes("tannarx")) {
-    body = "Rentabellik (Contribution Margin) — har bir mijozdan kelayotgan sof marjani ko'rsatadi. Formula: Margin = Tushum (Payment) − Mehnat tannarxi (TimeEntry × stavka). Zararli mijozlarni aniqlash uchun ishlatiladi.";
+    body = "Rentabellik (marja) moduli ASROda hozircha yo'q: xodim mehnati tannarxi kiritilmagan, tannarxsiz marja esa daromadga teng bo'lib qolardi — ya'ni ishonchli ko'rinadigan yolg'on raqam. Mijozning pul holati uchun \"Qarzdorlik\" bo'limiga qarang.";
   } else if (t.includes("oylik berish") || t.includes("oylik tasdiq") || t.includes("payout") || (t.includes("oylik") && t.includes("tartib"))) {
     body = "Oylik berish tartibi:\n1. Tizim Asosiy oylik + KPI bonus - Jarimalarni avto-hisoblaydi (Oylik Xomcho't).\n2. Bosh buxgalter/Admin '$ TASDIQLASH' tugmasi bilan majburiyatni tasdiqlaydi.\n3. Kassa mas'uli 'Payout' orqali real pul beradi (kassa kamayadi).\n4. Avanslar oylikdan avtomatik chegiriladi.";
   } else if (t.includes("balans") || t.includes("manfiy") || t.includes("overdraft") || t.includes("xarajat")) {
@@ -129,7 +135,7 @@ export function heuristicReply(userText: string): string {
   } else if (t.includes("bhms") || t.includes("standart")) {
     body = "BHMS — Buxgalteriya Hisobi Milliy Standartlari (1–24). Qaysi standart kerakligini ayting (masalan, BHMS 4 — tovar-moddiy zaxiralar), batafsil tushuntiraman.";
   } else {
-    body = "Savolingizni tushundim. ASRO tizimidan foydalanish (Rentabellik, Oylik, Kassa, KPI, Hisobotlar) yoki moliyaviy qonunchilik (BHMS, Soliq, Mehnat) bo'yicha savolingizni berishingiz mumkin.";
+    body = "Savolingizni tushundim. ASRO tizimidan foydalanish (Oylik, Kassa, KPI, Muddatlar, Hisobotlar) yoki moliyaviy qonunchilik (BHMS, Soliq, Mehnat) bo'yicha savolingizni berishingiz mumkin.";
   }
   return body + "\n\n🔌 Eslatma: AI kaliti (GEMINI_API_KEY) sozlanmagani uchun bu soddalashtirilgan javob.";
 }

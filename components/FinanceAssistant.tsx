@@ -3,9 +3,53 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Sparkles, X, Send, Bot, User as UserIcon, Loader2 } from "lucide-react";
 import { askFinanceAssistant } from "@/server/assistant";
+import type { AiClaim } from "@/lib/ai/claim";
+import type { CreatedRecommendation } from "@/lib/ai/tools";
+import RecommendationList from "@/components/assistant/RecommendationList";
+import { formatNum } from "@/lib/platform/format";
 import { DrawerLayer } from "@/components/ui";
 
-interface Msg { role: "user" | "assistant"; content: string }
+interface Msg {
+  role: "user" | "assistant";
+  content: string;
+  /**
+   * Javobdagi raqamlarning pasporti (M5.1/M5.2).
+   *
+   * Matn ostida ALOHIDA ko'rsatiladi, matn ichidan qidirilmaydi: Modda 7
+   * bo'yicha raqam manbasi bilan birga turishi kerak, va model matnni
+   * har safar boshqacha yozadi — ro'yxat esa barqaror.
+   */
+  claims?: AiClaim[];
+  /**
+   * Shu javob davomida YARATILGAN tavsiyalar (M5.3).
+   *
+   * Da'vodan farqi: da'vo — o'qilgan raqam, tavsiya esa navbatga qo'yilgan
+   * qaror. Ikkalasi bir ro'yxatga qo'shilsa "18 500 000 so'm" bilan
+   * "mas'ulni almashtirish" bir xil og'irlikda ko'rinardi.
+   */
+  recommendations?: CreatedRecommendation[];
+}
+
+/** Da'vo raqami — birlikka qarab. `formatNum` faqat pulda ma'noli. */
+function claimValue(c: AiClaim): string {
+  if (c.unit === "so'm") return `${formatNum(Math.round(c.value))} so'm`;
+  if (c.unit === "foiz") return `${c.value}%`;
+  return `${formatNum(c.value)} ${c.unit}`;
+}
+
+/**
+ * Da'vo darajasi — vakolat (`confidence`) bo'yicha rang.
+ *
+ * `severity` da'voning O'ZIDA yo'q (u ko'rsatkich xossasi), shuning uchun
+ * bu yerda rang XAVFNI emas, ISHONCHNI bildiradi: operator kiritgan
+ * qiymat (0.4) sariq, tizim hisobi (0.7) va vakolatli manba (1.0) neytral.
+ * Xavf darajasi matnda — modelning o'z gapida.
+ */
+function claimTone(c: AiClaim): { bg: string; fg: string } {
+  return c.confidence < 0.7
+    ? { bg: "var(--warning-bg)", fg: "var(--warning)" }
+    : { bg: "var(--input-bg)", fg: "var(--text-secondary)" };
+}
 
 const WELCOME =
   "Assalomu alaykum! Men ASRO moliyachi yordamchisiman. Soliqlar, oylik, KPI, hisobotlar va moliyaviy savollaringizga yordam beraman. Nima bilan boshlaymiz?";
@@ -46,7 +90,12 @@ export default function FinanceAssistant() {
     setTyping(true);
     try {
       const res = await askFinanceAssistant(q, history);
-      setMessages((m) => [...m, { role: "assistant", content: res.reply }]);
+      // Raqamlar matndan AJRATIB keladi (`claims`) va shundayligicha
+      // saqlanadi — pastda manbasi bilan chiziladi.
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: res.text, claims: res.claims, recommendations: res.recommendations },
+      ]);
     } catch {
       setMessages((m) => [
         ...m,
@@ -115,6 +164,37 @@ export default function FinanceAssistant() {
                       : { background: "var(--input-bg)", color: "var(--text-primary)", border: "1px solid var(--card-border)", borderTopLeftRadius: 4 }}
                   >
                     {m.content}
+
+                    {/* MANBALI RAQAMLAR. Bo'sh `claims` — raqamsiz javob
+                        (bilim bazasidan tushuntirish); u holda hech narsa
+                        chizilmaydi, "0 ta manba" degan qator ham yo'q. */}
+                    {m.role === "assistant" && m.claims && m.claims.length > 0 && (
+                      <div className="mt-2.5 pt-2 space-y-1" style={{ borderTop: "1px solid var(--card-border)" }}>
+                        {m.claims.map((c, ci) => {
+                          const tone = claimTone(c);
+                          return (
+                            <div
+                              key={ci}
+                              className="flex items-baseline gap-2 px-2 py-1 rounded-lg"
+                              style={{ background: tone.bg }}
+                              title={`${c.sourceQuery} · ${c.asOf}`}
+                            >
+                              <span className="text-xs font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>
+                                {claimValue(c)}
+                              </span>
+                              <span className="text-micro truncate" style={{ color: tone.fg }}>
+                                {c.label} · {c.sourceTool}
+                                {c.conditions?.length ? ` · ${c.conditions.join(", ")}` : ""}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {m.role === "assistant" && m.recommendations && (
+                      <RecommendationList items={m.recommendations} />
+                    )}
                   </div>
                 </div>
               ))}

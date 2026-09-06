@@ -15,7 +15,7 @@ import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { AlertTriangle, Clock, Users, ShieldCheck, ArrowRight, RefreshCw, Check, UserCog } from "lucide-react";
+import { AlertTriangle, Clock, Users, ShieldCheck, ArrowRight, RefreshCw, Check, UserCog, ClipboardCheck, X } from "lucide-react";
 import { persistRiskLevels } from "@/server/twin";
 import {
   approveExpenseFromCockpit,
@@ -23,6 +23,7 @@ import {
   getReassignCandidates,
 } from "@/server/directorCockpit";
 import { recordCockpitVisit } from "@/server/analytics";
+import { decideRecommendation } from "@/server/recommendations";
 import { Button } from "@/components/ui/Button";
 import { Badge, IdentityCell, Modal, Select, type BadgeTone } from "@/components/ui";
 import { formatUzDayShort, formatNum } from "@/lib/platform/format";
@@ -30,6 +31,12 @@ import type { TimelineBucket, TimelineItem } from "@/server/timeline";
 import type { CompanyTwin, StaffCapacity } from "@/lib/domains/accounting/twinCompute";
 import type { ConcernLevel, Score } from "@/lib/engines/analytics/twin";
 import type { DirectorCockpitFinance } from "@/lib/domains/accounting/directorCockpitFinance";
+import type { AdoptionResult } from "@/lib/domains/accounting/recommendations";
+import {
+  RECOMMENDATION_LABELS,
+  ADOPTION_TARGET_PERCENT,
+  type Recommendation,
+} from "@/lib/ai/recommendation";
 
 const LEVEL_TONE: Record<ConcernLevel, BadgeTone> = {
   unknown: "neutral",
@@ -148,11 +155,27 @@ function ItemRow({ item, onReassign }: { item: TimelineItem; onReassign?: (item:
   );
 }
 
-export default function CockpitPanel({ period, timeline, twins, capacity, finance, isDirector }: {
+export default function CockpitPanel({
+  period,
+  timeline,
+  twins,
+  capacity,
+  finance,
+  recommendations,
+  adoption,
+  isDirector,
+}: {
   period: string;
   timeline: TimelineBucket[];
   twins: CompanyTwin[];
   capacity: StaffCapacity[];
+  /** Javob kutayotgan tavsiyalar (M5.3) — eng eskisi birinchi. */
+  recommendations: Recommendation[];
+  /**
+   * 5-va'da o'lchovi. `null` ⇒ foydalanuvchi direktor emas: navbatni ko'radi,
+   * lekin o'lchov va qaror tugmalari unga tegishli emas.
+   */
+  adoption: AdoptionResult | null;
   /**
    * Moliyaviy blok. `null` ⇒ foydalanuvchi direktor EMAS (nazoratchi yoki
    * bosh buxgalter) va blok umuman chizilmaydi. Darvoza serverda
@@ -175,6 +198,8 @@ export default function CockpitPanel({ period, timeline, twins, capacity, financ
   const [approving, setApproving] = useState<DirectorCockpitFinance["pendingExpenses"][number] | null>(null);
   /** Qayta tayinlash modali — qaysi majburiyat. */
   const [reassigning, setReassigning] = useState<TimelineItem | null>(null);
+  /** Tavsiya qarori modali — qaysi tavsiya va qaysi qaror. */
+  const [deciding, setDeciding] = useState<{ row: Recommendation; decision: "accepted" | "dismissed" } | null>(null);
   const [reason, setReason] = useState("");
   const [toUserId, setToUserId] = useState("");
   const [candidates, setCandidates] = useState<{ id: string; fullName: string; role: string }[]>([]);
@@ -224,6 +249,11 @@ export default function CockpitPanel({ period, timeline, twins, capacity, financ
     setApproving(row);
   };
 
+  const openDecide = (row: Recommendation, decision: "accepted" | "dismissed") => {
+    setReason("");
+    setDeciding({ row, decision });
+  };
+
   const openReassign = (item: TimelineItem) => {
     setReason("");
     setToUserId("");
@@ -244,6 +274,7 @@ export default function CockpitPanel({ period, timeline, twins, capacity, financ
         toast.success(ok);
         setApproving(null);
         setReassigning(null);
+        setDeciding(null);
         router.refresh();
       } catch (e) {
         toast.error(friendlyError(e) || "Xatolik");
@@ -397,6 +428,81 @@ export default function CockpitPanel({ period, timeline, twins, capacity, financ
           )}
         </section>
       )}
+
+      {/* 7 — TAVSIYALAR. "Tizim nima qilish kerakligini aytadi" (5-va'da).
+
+          Blok navbat BO'SH bo'lsa ham chiziladi: yo'qligi ham ma'lumot —
+          "bugun sistema hech nima taklif qilmadi" bilan "blok umuman yo'q"
+          bir xil ko'rinsa, direktor ikkinchisini birinchisi deb o'qirdi.
+
+          Tugmalar FAQAT direktorda: qabul qilish payloadni BAJARADI (ish
+          ko'chadi, eskalatsiya yoziladi). Bosh buxgalter navbatni ko'radi —
+          ish oxir-oqibat uning bo'limida bajariladi — lekin hal qilmaydi.
+          Darvoza serverda (`server/recommendations.ts`). */}
+      <Block
+        title="Tizim tavsiyalari"
+        icon={<ClipboardCheck size={14} />}
+        hint={
+          adoption
+            ? adoption.percent == null
+              ? `${adoption.fromDate} dan beri qaror yo'q`
+              : `qabul ${adoption.percent}% (maqsad ${ADOPTION_TARGET_PERCENT}%) · ${adoption.total} qaror`
+            : undefined
+        }
+      >
+        {recommendations.length === 0 ? (
+          <Empty>Javob kutayotgan tavsiya yo&apos;q.</Empty>
+        ) : (
+          <div className="space-y-1.5">
+            {recommendations.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-start gap-3 px-2 py-2"
+                style={{ borderBottom: "1px solid var(--rule)" }}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-semibold" style={{ color: "var(--text-primary)" }}>
+                    {RECOMMENDATION_LABELS[r.kind]}
+                    <span className="font-normal" style={{ color: "var(--text-muted)" }}> · {r.companyName}</span>
+                  </span>
+                  <span className="block text-micro" style={{ color: "var(--text-secondary)" }}>
+                    {r.rationale}
+                  </span>
+                  {/* Tavsiya ostidagi raqamlar — manbasi bilan (Modda 7).
+                      Ular modeldan emas, o'lchov qatlamidan keladi. */}
+                  {r.claims.length > 0 && (
+                    <span className="block text-micro mt-0.5" style={{ color: "var(--text-muted)" }}>
+                      {r.claims.map((c) => `${c.label}: ${formatNum(c.value)}`).join(" · ")}
+                    </span>
+                  )}
+                </span>
+                {isDirector && (
+                  <span className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() => openDecide(r, "accepted")}
+                      title="Qabul qilish — amal bajariladi"
+                    >
+                      <Check size={12} />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() => openDecide(r, "dismissed")}
+                      title="Rad etish — hech narsa bajarilmaydi"
+                    >
+                      <X size={12} />
+                    </Button>
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Block>
 
       <div className="grid lg:grid-cols-2 gap-4">
         {/* 2 — Tanlangan ufqning ro'yxati. */}
@@ -618,6 +724,63 @@ export default function CockpitPanel({ period, timeline, twins, capacity, financ
         )}
       </Modal>
 
+      {/* SABAB IKKALASIDA HAM MAJBURIY — qabulda ham, radda ham.
+
+          Radda u YAGONA saqlanadigan ma'lumot: hech narsa bajarilmaydi,
+          faqat "nega bu tavsiya yaroqsiz" qoladi. Tavsiyalar sifatini
+          keyinchalik aynan shundan o'qiladi. */}
+      <Modal
+        open={deciding !== null}
+        onClose={() => setDeciding(null)}
+        size="md"
+        title={deciding?.decision === "accepted" ? "Tavsiyani qabul qilish" : "Tavsiyani rad etish"}
+      >
+        {deciding && (
+          <div className="space-y-3">
+            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+              <strong>{RECOMMENDATION_LABELS[deciding.row.kind]}</strong> · {deciding.row.companyName}
+            </p>
+            <p className="text-micro" style={{ color: "var(--text-muted)" }}>{deciding.row.rationale}</p>
+            <p className="text-micro" style={{ color: "var(--text-muted)" }}>
+              {deciding.decision === "accepted"
+                ? "Qabul qilinsa amal DARHOL bajariladi."
+                : "Rad etilsa hech qanday amal bajarilmaydi."}
+            </p>
+            <label htmlFor="cockpit-decide-reason" className="block text-meta font-semibold" style={{ color: "var(--text-muted)" }}>
+              Sabab (majburiy)
+            </label>
+            <textarea
+              id="cockpit-decide-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              className="erp-input w-full"
+              placeholder={deciding.decision === "accepted" ? "Nega qabul qilinmoqda?" : "Nega yaroqsiz?"}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" size="md" onClick={() => setDeciding(null)}>Bekor</Button>
+              <Button
+                variant="primary"
+                size="md"
+                disabled={!reason.trim() || pending}
+                onClick={() =>
+                  runAction(
+                    () =>
+                      decideRecommendation({
+                        id: deciding.row.id,
+                        decision: deciding.decision,
+                        note: reason,
+                      }),
+                    deciding.decision === "accepted" ? "Tavsiya qabul qilindi" : "Tavsiya rad etildi",
+                  )
+                }
+              >
+                {deciding.decision === "accepted" ? "Qabul qilish" : "Rad etish"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

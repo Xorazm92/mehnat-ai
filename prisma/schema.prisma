@@ -103,6 +103,7 @@ model User {
   chiefCompanies      Company[]             @relation("ChiefAccountantCompanies")
   auditLogs           AuditLog[]
   analyticsEvents     AnalyticsEvent[]
+  decidedRecommendations Recommendation[] @relation("RecommendationDecider")
   notifications       Notification[]
   contractAssignments ContractAssignment[]
   performanceRecords  MonthlyPerformance[]
@@ -297,6 +298,7 @@ model Company {
   documents            Document[]
   invoices             Invoice[]
   reportProofs         ReportProof[]
+  recommendations      Recommendation[]
   telegramGroups       TelegramGroup[]
   paymentReminders     PaymentReminder[]
   obligations          Obligation[]
@@ -1284,6 +1286,57 @@ model AnalyticsEvent {
   /// "Shu haftada nechta direktor tashrifi bo'ldi" — asosiy so'rov shakli.
   @@index([kind, createdAt])
   @@index([actorId])
+}
+
+/// AI/cron TAVSIYASI — "tizim nima qilish kerakligini aytadi" (M5.3).
+///
+/// Yozuv `AnalyticsEvent` kabi o'lchov emas, QAROR daftari: har qatorda
+/// bajarilishi mumkin bo'lgan amal (`payload`) va uni kim/qachon/nega hal
+/// qilgani turadi. Shuning uchun u soft-delete qilinmaydi ham, o'chirilmaydi
+/// ham — 5-va'da o'lchovi (qabul / (qabul+rad+eskirgan)) aynan shu tarixdan
+/// hisoblanadi.
+model Recommendation {
+  id String @id @default(uuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// "escalate_obligation" | "reassign_responsible" | ... — ro'yxat
+  /// `lib/ai/recommendation.ts` da. Erkin satr: yangi tur migratsiya talab
+  /// qilmasin (enum bo'lsa har tur uchun DDL kerak bo'lardi).
+  kind String
+
+  /// AI ning erkin matni — odam o'qiydi, tizim BUNGA TAYANMAYDI.
+  rationale String @db.Text
+
+  /// `AiClaim[]` — tavsiya ostidagi raqamlar, manbasi bilan (Modda 7).
+  claims Json
+
+  /// Amal parametrlari, `kind` sxemasi bo'yicha tekshirilgan. Tizim FAQAT
+  /// shuni bajaradi.
+  payload Json
+
+  /// "system" (cron) | "assistant" (suhbat).
+  source String
+
+  /// "pending" | "accepted" | "dismissed" | "expired".
+  status String @default("pending")
+
+  /// Xodim o'chirilsa qaror tarixi qoladi, faqat egasi uziladi (AuditLog qoidasi).
+  decidedBy    String?
+  decider      User?     @relation("RecommendationDecider", fields: [decidedBy], references: [id], onDelete: SetNull)
+  decidedAt    DateTime?
+  /// Sabab MAJBURIY — qabul ham, rad ham. Ustun nullable, chunki `pending`
+  /// qatorda sabab hali yo'q; qaror paytida server bo'sh sababni rad etadi.
+  decisionNote String?   @db.Text
+
+  createdAt DateTime @default(now())
+
+  /// Direktor ekranining asosiy so'rovi: doiradagi firmalarning pendinglari,
+  /// eng eskisi birinchi.
+  @@index([status, createdAt])
+  @@index([companyId, status])
+  @@index([kind])
 }
 
 model AuditLog {

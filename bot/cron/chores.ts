@@ -10,6 +10,7 @@
 import { prisma } from "../../lib/prisma";
 import { notifyUsers } from "../../lib/notify";
 import { purgeOldNotifications } from "../../lib/engines/automation/notificationRetention";
+import { expireStaleRecommendations } from "../../lib/domains/accounting/recommendations";
 import { SENIOR_REVIEW_ROLES } from "../../lib/reportPermissions";
 import { runBillingReminders } from "../contexts/billing/application/run-reminders";
 import { receiptButton } from "../contexts/billing/application/receipt-flow";
@@ -72,7 +73,25 @@ export async function runNotificationRetention(): Promise<void> {
   );
 }
 
-/** Ikkalasi ham idempotent — qayta ishga tushish hech narsani buzmaydi. */
+/**
+ * JAVOBSIZ TAVSIYALARNI ESKIRTIRISH (M5.3).
+ *
+ * `Recommendation` da `expiresAt` ustuni YO'Q — muddat `createdAt` dan
+ * hisoblanadi (`RECOMMENDATION_TTL_DAYS`), ya'ni ikkinchi haqiqat yaratilmaydi.
+ *
+ * Nega kerak: javobsiz qolgan tavsiya "rad etilgan" ham, "kutayotgan" ham
+ * emas. Uni `pending` da qoldirish 5-va'da o'lchovini ABADIY yaxshi
+ * ko'rsatardi — maxraj o'smasdi va "50% qabul" hech qachon pasaymasdi.
+ *
+ * IDEMPOTENT: faqat `pending` va yoshi yetganlar belgilanadi, ikkinchi
+ * yurish hech narsa topmaydi.
+ */
+export async function runRecommendationExpiry(): Promise<void> {
+  const res = await expireStaleRecommendations(prisma);
+  console.log(`[cron] recommendations expired=${res.expired}`);
+}
+
+/** Uchalasi ham idempotent — qayta ishga tushish hech narsani buzmaydi. */
 export async function runDailyChores(): Promise<void> {
   try {
     await runProofDigest();
@@ -83,6 +102,11 @@ export async function runDailyChores(): Promise<void> {
     await runNotificationRetention();
   } catch (err) {
     console.error(`[cron] retention failed: ${(err as Error).message}`);
+  }
+  try {
+    await runRecommendationExpiry();
+  } catch (err) {
+    console.error(`[cron] recommendation expiry failed: ${(err as Error).message}`);
   }
 }
 
