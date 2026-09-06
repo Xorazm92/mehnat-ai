@@ -50,6 +50,14 @@ export const NORMATIVE_RATES = {
   annualWaterTax: 60,
   /** Statistik shakl — qisqa, lekin ma'lumot yig'ish kerak. */
   statisticsForm: 45,
+  /**
+   * Choraklik statistika hisoboti (buxgalter tayyorlaydi) — 60.
+   *
+   * `statisticsForm` (45) dan og'irroq, `quarterlyReport` (90) dan yengil:
+   * u yillik shakl emas, lekin oddiy statistik so'rovnoma ham emas.
+   * Raqam P4A topshirig'ida aniq berilgan.
+   */
+  quarterlyStatistics: 60,
   /** Mehnat hujjati (ro'yxat, jadval). */
   laborDocument: 60,
   /** Ichki ish (1C, sverka, xat) — normadan tashqari, lekin vaqt oladi. */
@@ -123,8 +131,11 @@ export const NORMATIVE_PRESETS: Record<string, number> = {
   PNL_REPORT: R.internalTask,
   TAX_SCHEDULE: R.internalTask,
 
-  // ── P4 da qo'shiladigan mehnat hujjatlari ───────────────────────────
-  MEHNAT_SHARTNOMA: R.laborDocument,
+  // ── P4A da qo'shiladiganlar ─────────────────────────────────────────
+  STAT_BUXGALT: R.quarterlyStatistics,
+  MEHNAT_SHARTNOMA_ROYXAT: R.laborDocument,
+
+  // ── Intervyudan keyin qo'shiladigan nomzodlar ───────────────────────
   TATIL_JADVAL: R.laborDocument,
   KASABA_UYUSHMA: R.laborDocument,
 };
