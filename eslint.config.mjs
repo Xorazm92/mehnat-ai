@@ -76,7 +76,6 @@ const RAW_BUTTON_BASELINE = [
   "components/ReportProofModal.tsx",
   "components/RiskBadge.tsx",
   "components/RoleContextSwitcher.tsx",
-  "components/StaffDrawer.tsx",
   "components/StaffModule.tsx",
   "app/(dashboard)/kassa/kirim/KirimKassaClient.tsx",
   "app/(dashboard)/kassa/kirim/IncomeRegister.tsx",

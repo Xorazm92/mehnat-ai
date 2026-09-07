@@ -37,6 +37,12 @@ export interface ObligationFilter {
   status?: ObligationStatus;
   periodKey?: string;
   mine?: boolean; // faqat mas'ul men bo'lgan
+  /**
+   * Mas'ul MUAYYAN xodim bo'lgan majburiyatlar — xodim kartasi uchun.
+   * Ko'rish doirasini KENGAYTIRMAYDI: yuqoridagi `company` filtri baribir
+   * so'rovchining portfeliga cheklaydi, ya'ni bu faqat toraytiruvchi shart.
+   */
+  assigneeId?: string;
   overdue?: boolean;
 }
 
@@ -49,6 +55,7 @@ export async function getObligations(filter: ObligationFilter = {}) {
     ...(filter.status ? { status: filter.status } : {}),
     ...(filter.periodKey ? { periodKey: filter.periodKey } : {}),
     ...(filter.mine ? { responsibleUserId: actor.id } : {}),
+    ...(filter.assigneeId ? { responsibleUserId: filter.assigneeId } : {}),
     ...(filter.overdue ? { dueAt: { lt: now }, status: { in: NOT_DONE } } : {}),
   };
 

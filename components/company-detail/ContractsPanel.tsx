@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SHARTNOMALAR PANELI — `CompanyDrawer` ning "Shartnoma" yorlig'idagi ro'yxat.
+ * SHARTNOMALAR PANELI — firma kartasining "Shartnoma" yorlig'idagi ro'yxat.
  *
  * `CompanyDrawer.tsx` ichida yashardi, lekin unga HECH QANDAY bog'liq emas:
  * o'z ma'lumotini o'zi yuklaydi (`getCompanyContracts`) va faqat `companyId`

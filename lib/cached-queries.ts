@@ -219,43 +219,102 @@ export const getCachedArchivedCompanies = cache(
     isSeniorRole(role) ? _getCachedArchivedCompanies(userId, role, context) : []
 );
 
+const _getCachedCompanyById = unstable_cache(
+  async (userId: string, role: string, id: string, context?: string) => {
+    return prisma.company.findFirst({
+      where: { id, ...scopeFor(userId, role, context) },
+      include: COMPANY_INCLUDE,
+    });
+  },
+  ["company-by-id"],
+  { tags: ["companies"], revalidate: 300 }
+);
+
+/**
+ * BITTA FIRMA — `/organizations/[id]` kartasi uchun.
+ *
+ * Ro'yxat so'rovlaridan ATAYLAB farq qiladi:
+ *  · `isActive` filtri YO'Q — arxivdagi firma kartasi ham ochilishi kerak
+ *    (ro'yxatda u "Arxiv" tabida turadi va u yerdan bosiladi);
+ *  · `isOwnFirm` filtri YO'Q — o'z firmalarimiz "Ichki firmalar" tabidan
+ *    ochiladi.
+ * Portfel chegarasi esa saqlanadi: `scopeFor` — ro'yxat bilan bir xil
+ * darvoza, ya'ni URL'ga begona firma ID sini yozgan odam `null` oladi.
+ */
+export const getCachedCompanyById = cache(
+  async (userId: string, role: string, id: string, context?: string) =>
+    _getCachedCompanyById(userId, role, id, context)
+);
+
 // ─────────────────────────────────────────────
 // USERS
 // ─────────────────────────────────────────────
+
+/**
+ * Xodim kartochkasi va ro'yxati bir xil maydonlarni kutadi (`Staff`).
+ * Ikkinchi ro'yxat yozilsa, unga qo'shilgan maydon boshqasida jimgina
+ * yo'q bo'lardi — aynan shu `avatarRef` bilan bir marta sodir bo'lgan.
+ */
+const STAFF_SELECT = {
+      id: true,
+      email: true,
+      fullName: true,
+      role: true,
+      avatarColor: true,
+      // Rasm havolasi — `<Avatar>` uni ham "rasm bormi" belgisi, ham kesh
+      // versiyasi sifatida ishlatadi. Busiz xodimlar ro'yxati doim
+      // initsial doira chizardi, garchi rasm yuklangan bo'lsa ham:
+      // bu so'rov `SAFE_USER_SELECT` dan ALOHIDA maydon ro'yxatiga ega va
+      // u yerga qo'shilgan maydon bu yerga o'z-o'zidan kelmaydi.
+      avatarRef: true,
+      phone: true,
+      department: true,
+      gender: true,
+      birthDate: true,
+      education: true,
+      hiredAt: true,
+      status: true,
+      rating: true,
+      isActive: true,
+      createdAt: true,
+} as const;
 
 const _getCachedUsers = unstable_cache(
   async (userId: string, role: string) => {
     const ids = await scopedStaffIds(prisma, { id: userId, role });
     return prisma.user.findMany({
       where: { isActive: true, ...(ids ? { id: { in: ids } } : {}) },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        avatarColor: true,
-        // Rasm havolasi — `<Avatar>` uni ham "rasm bormi" belgisi, ham kesh
-        // versiyasi sifatida ishlatadi. Busiz xodimlar ro'yxati doim
-        // initsial doira chizardi, garchi rasm yuklangan bo'lsa ham:
-        // bu so'rov `SAFE_USER_SELECT` dan ALOHIDA maydon ro'yxatiga ega va
-        // u yerga qo'shilgan maydon bu yerga o'z-o'zidan kelmaydi.
-        avatarRef: true,
-        phone: true,
-        department: true,
-        gender: true,
-        birthDate: true,
-        education: true,
-        hiredAt: true,
-        status: true,
-        rating: true,
-        isActive: true,
-        createdAt: true,
-      },
+      select: STAFF_SELECT,
       orderBy: { fullName: "asc" },
     });
   },
   ["users-scoped"],
   { tags: ["users", "companies"], revalidate: 300 }
+);
+
+const _getCachedUserById = unstable_cache(
+  async (viewerId: string, viewerRole: string, id: string) => {
+    // Ko'rish doirasi ro'yxat bilan AYNAN bir xil: portfeldagi firmalarga
+    // biriktirilgan xodimlar (+ o'zi). `null` bo'lsa — admin, cheklov yo'q.
+    const ids = await scopedStaffIds(prisma, { id: viewerId, role: viewerRole });
+    if (ids && !ids.includes(id)) return null;
+    return prisma.user.findUnique({ where: { id }, select: STAFF_SELECT });
+  },
+  ["user-by-id"],
+  { tags: ["users", "companies"], revalidate: 300 }
+);
+
+/**
+ * BITTA XODIM — `/staff/[id]` kartasi uchun.
+ *
+ * `isActive` filtri ATAYLAB YO'Q: faolsizlantirilgan xodim kartasi ham
+ * ochilishi kerak (yozuvlari, oyligi va davomati saqlanib qoladi), holati esa
+ * sarlavhada badge bo'lib turadi. Portfel chegarasi saqlanadi — begona
+ * xodimning ID sini URL'ga yozgan odam `null` oladi va sahifa 404 beradi.
+ */
+export const getCachedUserById = cache(
+  async (viewerId: string, viewerRole: string, id: string) =>
+    _getCachedUserById(viewerId, viewerRole, id)
 );
 
 /** Xodimlarni cache'dan olish — portfeldagi firmalarga biriktirilganlar (+ o'zi). */

@@ -176,7 +176,7 @@ export default function GlobalSearch({
         id: `staff:${s.id}`,
         label: s.name,
         hint: ROLE_LABELS[s.role as UserRole] ?? s.role,
-        href: `/staff?userId=${s.id}`,
+        href: `/staff/${s.id}`,
         icon: Users,
         group: "Xodimlar",
       });

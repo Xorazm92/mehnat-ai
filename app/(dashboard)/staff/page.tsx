@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import {
   getCachedUsers,
@@ -9,7 +10,20 @@ import StaffClient from "./StaffClient";
 
 export const metadata = { title: "Xodimlar" };
 
-export default async function StaffPage() {
+export default async function StaffPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  // ESKI HAVOLA: `/staff?userId=<id>` yon panelni ochardi. Panel o'rniga endi
+  // alohida sahifa bor, shuning uchun havola SERVERDA ko'chiriladi — tashqarida
+  // qolgan havolalar (bildirishnoma, xatcho'p, kabinetdagi ro'yxat) o'lmasin va
+  // foydalanuvchi ro'yxatning bir kadrlik ko'rinishini ko'rmasin.
+  const legacyUserId = (await searchParams).userId;
+  if (legacyUserId) {
+    redirect(`/staff/${Array.isArray(legacyUserId) ? legacyUserId[0] : legacyUserId}`);
+  }
+
   const session = await auth();
   const userId = session?.user?.id ?? "";
   const userRole = session?.user?.role || "employee";

@@ -143,7 +143,7 @@ export function SupervisorCabinet({
                 );
                 return (
                   <Link
-                    href={`/staff?userId=${acc.id}`}
+                    href={`/staff/${acc.id}`}
                     key={acc.id}
                     className="flex items-center gap-4 p-4 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
                   >

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import StaffModule from "@/components/StaffModule";
-import { createUser, updateUser, deactivateUser, resetUserPassword } from "@/server/users";
+import { deactivateUser, resetUserPassword } from "@/server/users";
+import { saveEmployee } from "@/components/employee-detail/saveEmployee";
 import { Staff, Company, OperationEntry } from "@/types";
-import { isAdminRole, type UserRole } from "@/lib/platform/permissions";
+import { isAdminRole } from "@/lib/platform/permissions";
 
 interface Props {
   staff: Staff[];
@@ -27,40 +28,8 @@ export default function StaffClient({ staff, companies, operations, userRole }: 
   const canManageStaff = isAdminRole(userRole);
   const router = useRouter();
   useAutoRefresh();
-  const [, setSelectedStaff] = useState<Staff | null>(null);
-
   const handleSave = async (s: Partial<Staff>) => {
-    if (s.id) {
-      await updateUser(s.id, {
-        fullName: s.name,
-        phone: s.phone,
-        pinfl: s.pinfl,
-        department: s.department,
-        gender: s.gender,
-        birthDate: s.birthDate,
-        education: s.education,
-        hiredAt: s.hiredAt,
-        status: s.status,
-        role: s.role as UserRole,
-        avatarColor: s.avatarColor,
-      });
-    } else {
-      await createUser({
-        email: (s.email || "").trim(),
-        fullName: s.name || "Unknown",
-        password: s.password || "",
-        role: s.role as UserRole,
-        phone: s.phone,
-        pinfl: s.pinfl,
-        department: s.department,
-        gender: s.gender,
-        birthDate: s.birthDate,
-        education: s.education,
-        hiredAt: s.hiredAt,
-        status: s.status,
-        avatarColor: s.avatarColor,
-      });
-    }
+    await saveEmployee(s);
     router.refresh();
   };
 
@@ -83,7 +52,6 @@ export default function StaffClient({ staff, companies, operations, userRole }: 
       onSave={handleSave as (s: Staff) => Promise<void>}
       onDelete={handleDelete}
       onResetPassword={handleResetPassword}
-      onStaffSelect={setSelectedStaff}
     />
   );
 }

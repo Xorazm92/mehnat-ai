@@ -1,8 +1,8 @@
 /**
- * `CompanyDrawer` ning umumiy tiplari — panel va uning bo'limlari orasida.
+ * Firma kartasi sahifasining umumiy tiplari — panel va bo'limlari orasida.
  */
 
-/** Panel ichidagi yorliqlar. URL'da saqlanmaydi: panel modal, sahifa emas. */
+/** Firma kartasi yorliqlari. URL'da `?tab=` sifatida saqlanadi. */
 export type TabId =
   | "pasport"
   | "soliq"

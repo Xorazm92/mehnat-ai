@@ -9,6 +9,7 @@ import { Plus, Search, Edit3, Trash2, LayoutGrid, List, Eye, EyeOff, Download, F
 import { toast } from 'sonner';
 import { writeSheet } from '@/lib/exportTable';
 import OnboardingWizard from './OnboardingWizard';
+import { assignmentsFromCompany } from './company-detail/assignments';
 import { MonthPicker } from './ui/MonthPicker';
 import { periodsEqual } from '@/lib/periods';
 import { formatNum } from "@/lib/platform/format";
@@ -349,23 +350,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
       setForm(c);
       setEditingId(c.id);
 
-      // Kompaniyaning amaldagi qiymatlaridan boshlang'ich assignments yasaymiz
-      const defaultAssignments = [
-        c.accountantSum
-          ? { role: 'accountant', userId: c.accountantId || '', salaryType: 'fixed', salaryValue: Number(c.accountantSum) }
-          : { role: 'accountant', userId: c.accountantId || '', salaryType: 'percent', salaryValue: Number(c.accountantPerc ?? 0) },
-        c.chiefAccountantSum
-          ? { role: 'chief_accountant', userId: c.chiefAccountantId || '', salaryType: 'fixed', salaryValue: Number(c.chiefAccountantSum) }
-          : { role: 'chief_accountant', userId: c.chiefAccountantId || '', salaryType: 'percent', salaryValue: Number(c.chiefAccountantPerc ?? 0) },
-        c.supervisorSum
-          ? { role: 'controller', userId: c.supervisorId || '', salaryType: 'fixed', salaryValue: Number(c.supervisorSum) }
-          : { role: 'controller', userId: c.supervisorId || '', salaryType: 'percent', salaryValue: Number(c.supervisorPerc ?? 0) },
-        c.bankClientSum
-          ? { role: 'bank_manager', userId: c.bankClientId || '', salaryType: 'fixed', salaryValue: Number(c.bankClientSum) }
-          : { role: 'bank_manager', userId: c.bankClientId || '', salaryType: 'percent', salaryValue: Number(c.bankClientPerc ?? 0) }
-      ];
-
-      setEditingAssignments(defaultAssignments);
+      // Kompaniyaning amaldagi qiymatlaridan boshlang'ich assignments yasaymiz.
+      // Xarita firma kartasi sahifasi bilan UMUMIY (company-detail/assignments.ts).
+      setEditingAssignments(assignmentsFromCompany(c));
       setIsAdding(true);
     } catch (err: any) {
       console.error('[OrganizationModule] startEdit failed:', err);

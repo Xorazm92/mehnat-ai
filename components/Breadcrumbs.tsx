@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
 import { pathToView } from "@/lib/routeViews";
+import { useBreadcrumbTrail } from "@/components/BreadcrumbTrail";
 
 /**
  * BREADCRUMB — loyihada NOL ta edi (`grep -rni "breadcrumb"` hech narsa
@@ -70,6 +71,9 @@ export function Breadcrumbs({
   allowedViews?: string[];
 }) {
   const pathname = usePathname();
+  // Hooklar shartsiz chaqirilishi shart — ildiz sahifadagi erta qaytish
+  // pastda, `segments` hisoblangandan keyin.
+  const trail = useBreadcrumbTrail(pathname);
   const segments = pathname.split("/").filter(Boolean);
 
   // Bitta segment — bu allaqachon ildiz sahifa, breadcrumb ortiqcha shovqin.
@@ -93,12 +97,29 @@ export function Breadcrumbs({
     return view === null || allowedViews.includes(view);
   };
 
-  const crumbs = segments.map((seg, i) => ({
-    seg,
+  const derived = segments.map((seg, i) => ({
+    key: seg + i,
     href: "/" + segments.slice(0, i + 1).join("/"),
     label: isIdSegment(seg) ? "…" : LABELS[seg] ?? seg.replace(/-/g, " "),
     isLast: i === segments.length - 1,
   }));
+
+  /**
+   * Sahifa o'z bo'laklarini bildirgan bo'lsa (`<BreadcrumbTrail>`), bo'lim
+   * ildizidan KEYINGI hamma narsa o'shanikiga almashadi: `/organizations/clx…`
+   * uchun "…" o'rniga firma nomi va joriy yorliq chiqadi.
+   */
+  const crumbs = trail
+    ? [
+        { ...derived[0], isLast: false },
+        ...trail.map((c, i) => ({
+          key: `trail-${i}`,
+          href: c.href ?? "",
+          label: c.label,
+          isLast: i === trail.length - 1,
+        })),
+      ]
+    : derived;
 
   const rootHref = `/${segments[0]}`;
 
@@ -120,9 +141,9 @@ export function Breadcrumbs({
       )}
 
       {crumbs.map((c) => (
-        <span key={c.href} className="flex items-center gap-1">
+        <span key={c.key} className="flex items-center gap-1">
           <ChevronRight size={12} style={{ color: "var(--text-muted)", opacity: 0.5 }} aria-hidden="true" />
-          {c.isLast || !canOpen(c.href) ? (
+          {c.isLast || !c.href || !canOpen(c.href) ? (
             <span
               aria-current={c.isLast ? "page" : undefined}
               className="text-micro font-bold uppercase tracking-widest"

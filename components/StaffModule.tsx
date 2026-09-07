@@ -1,29 +1,22 @@
 "use client";
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useViewMode } from '@/hooks/useViewMode';
+import EmployeeForm from '@/components/employee-detail/EmployeeForm';
 import { Staff, Company, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
 import { ROLE_LABELS, type UserRole } from '@/lib/platform/permissions';
-import { generateMemorablePassword } from '@/lib/passwordUtils';
-import StaffDrawer from './StaffDrawer';
-import {
-  UserPlus, UserX, Phone, Briefcase, Edit3, X, Check, Search, Filter,
-  ShieldCheck, Mail, IdCard, GraduationCap, CalendarDays, Building, KeyRound, Loader2,
-  Eye, EyeOff, RefreshCw,
-} from 'lucide-react';
+import { UserPlus, UserX, Briefcase, Edit3, Search, Filter } from 'lucide-react';
 import { TableToolbar } from "@/components/ui/TableToolbar";
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataColumn } from '@/components/ui/DataTable';
 import { Avatar, Badge, IdentityCell, type BadgeTone } from '@/components/ui';
-import AvatarUploader from '@/components/AvatarUploader';
-import { Select } from '@/components/ui/Select';
 import { useTableState } from '@/hooks/useTableState';
 import { usePageSize } from "@/hooks/usePageSize";
 import { exportRowsToCsv, exportRowsToExcel } from '@/lib/exportTable';
 import { Button } from "@/components/ui/Button";
-import { friendlyError } from "@/lib/actionError";
-import { DateField } from "./ui/DateField";
 
 interface Props {
   staff: Staff[];
@@ -33,7 +26,6 @@ interface Props {
   onSave: (s: Staff) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onResetPassword?: (id: string, newPassword: string) => Promise<void>;
-  onStaffSelect?: (s: Staff) => void;
   /**
    * Xodim QO'SHISH va FAOLSIZLANTIRISH mumkinmi.
    * Server sharti: `["super_admin", "admin"]` (server/users.ts).
@@ -56,13 +48,10 @@ const STATUS_META: Record<string, { label: string; tone: BadgeTone }> = {
 
 const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete, onResetPassword, canManageStaff = true }) => {
   const confirm = useConfirm();
+  const router = useRouter();
   const t = translations[lang];
   const [isAdding, setIsAdding] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<Partial<Staff>>({});
-  const [selected, setSelected] = useState<Staff | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
   // Standart — RO'YXAT; tanlov brauzerda saqlanadi (hooks/useViewMode).
   const [viewMode, setViewMode] = useViewMode('xodimlar');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -81,34 +70,29 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
 
   const newParamHandledRef = React.useRef(false);
 
-  // URL'dan userId o'qish (masalan Buxgalterlar holati bo'limidan o'tganda),
-  // hamda `?new=1` bilan to'g'ridan-to'g'ri "yangi xodim" formasini ochish
+  // `?new=1` bilan to'g'ridan-to'g'ri "yangi xodim" formasini ochish
   // (Admin kabinetidagi "Yangi Xodim" tezkor havolasi shu yerga keladi).
+  // Eski `?userId=` esa endi serverda `/staff/[id]` ga ko'chiriladi.
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const uid = params.get('userId');
-      if (uid && staff.length > 0 && !selected) {
-        const u = staff.find(s => s.id === uid);
-        if (u) setSelected(u);
-      }
       // Bir martalik: `useAutoRefresh` har 15 soniyada `staff` propini yangilaydi
       // va bu effektni qayta ishga tushiradi. Qo'riqchisiz foydalanuvchi yopgan
       // forma har yangilanishda o'z-o'zidan qayta ochilib turardi.
       if (params.get('new') === '1' && !newParamHandledRef.current) {
         newParamHandledRef.current = true;
         setForm({ status: 'active', role: 'accountant' });
-        setNewPassword('');
         setIsAdding(true);
       }
     }
   }, [staff]);
 
-  const isEditing = Boolean(form.id);
+  const openAdd = () => { setForm({ status: 'active', role: 'accountant' }); setIsAdding(true); };
+  const openEdit = (person: Staff) => { setForm(person); setIsAdding(true); };
+  const closeForm = () => { setIsAdding(false); setForm({}); };
 
-  const openAdd = () => { setForm({ status: 'active', role: 'accountant' }); setNewPassword(''); setIsAdding(true); };
-  const openEdit = (person: Staff) => { setForm(person); setNewPassword(''); setIsAdding(true); };
-  const closeForm = () => { setIsAdding(false); setForm({}); setNewPassword(''); };
+  /** Xodim kartasi — alohida sahifa (`/staff/[id]`). */
+  const openCard = (person: Staff) => router.push(`/staff/${person.id}`);
 
   /**
    * Har bir xodimga biriktirilgan firmalar soni — BIR MARTA hisoblanadi.
@@ -156,15 +140,25 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       // Avatar ustidagi holat nuqtasi ham olib tashlandi: xuddi shu holat
       // o'ng tomonda "Holat" ustunida MATNI bilan turadi, ya'ni nuqta bir xil
       // narsani ikkinchi marta, faqat rang bilan aytardi.
+      // Ism HAQIQIY havola: butun qator ham bosiladi, lekin `onRowClick`
+      // o'rta tugmani ham, "yangi oynada ochish" menyusini ham bermaydi —
+      // xodim kartasini yonma-yon ochish esa kundalik ish (masalan oylik
+      // hisoblashda uch kishini solishtirish).
       cell: (person) => (
-        <IdentityCell
-          name={person.name}
-          color={person.avatarColor}
-          userId={person.id}
-          avatarRef={person.avatarRef}
-          size="md"
-          secondary={person.pinfl ? `JSHSHIR: ${person.pinfl}` : undefined}
-        />
+        <Link
+          href={`/staff/${person.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="block"
+        >
+          <IdentityCell
+            name={person.name}
+            color={person.avatarColor}
+            userId={person.id}
+            avatarRef={person.avatarRef}
+            size="md"
+            secondary={person.pinfl ? `JSHSHIR: ${person.pinfl}` : undefined}
+          />
+        </Link>
       ),
     },
     {
@@ -247,64 +241,6 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
       ),
     },
   ], [companyCountById, confirm, onDelete, canManageStaff]);
-
-  const handleSave = async () => {
-    if (!form.name || !form.role) {
-      import('sonner').then(({ toast }) => toast.error("Iltimos, F.I.SH va lavozimni kiriting"));
-      return;
-    }
-    if (!isEditing && !form.email?.trim()) {
-      import('sonner').then(({ toast }) => toast.error("Email (login) kiritilishi shart"));
-      return;
-    }
-    if (!isEditing && (!form.password || form.password.length < 6)) {
-      import('sonner').then(({ toast }) => toast.error("Parol kamida 6 ta belgidan iborat bo'lishi kerak"));
-      return;
-    }
-    if (form.pinfl && !/^\d{14}$/.test(form.pinfl)) {
-      import('sonner').then(({ toast }) => toast.error("JSHSHIR 14 ta raqamdan iborat bo'lishi kerak"));
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      await onSave({
-        ...(form as Staff),
-        id: form.id || '',
-        avatarColor: form.avatarColor || 'var(--brand)',
-      });
-      // Tahrirlashda ixtiyoriy parol tiklash
-      if (isEditing && newPassword && onResetPassword) {
-        if (newPassword.length < 6) {
-          import('sonner').then(({ toast }) => toast.error("Yangi parol kamida 6 ta belgi bo'lishi kerak"));
-          setIsSaving(false);
-          return;
-        }
-        await onResetPassword(form.id!, newPassword);
-      }
-      const createdEmail = form.email;
-      import('sonner').then(({ toast }) => {
-        if (isEditing) {
-          toast.success("Xodim yangilandi");
-        } else {
-          // Parol ATAYLAB ko'rsatilmaydi: uni administratorning o'zi shu formaga
-          // kiritgan, ya'ni allaqachon biladi — ekranga qayta chiqarish hech qanday
-          // ma'lumot bermaydi, faqat ochiq ofisda yelka ortidan o'qish xavfini yaratadi.
-          toast.success("Yangi xodim qo'shildi", {
-            description: `Login: ${createdEmail} — parolni xodimga alohida yetkazing`,
-            duration: 8000,
-          });
-        }
-      });
-      closeForm();
-    } catch (e) {
-      import('sonner').then(({ toast }) => toast.error(friendlyError(e, "Xatolik yuz berdi")));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const set = (k: keyof Staff, v: unknown) => setForm(prev => ({ ...prev, [k]: v }));
 
   return (
     <div className="space-y-6 animate-fade-in pb-20">
@@ -420,145 +356,21 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
         </div>
       </div>
 
-      {/* ANKETA — kengaytirilgan forma */}
+      {/* ANKETA — qo'shish/tahrirlash formasi.
+          Forma `components/employee-detail/EmployeeForm.tsx` da: xodim kartasi
+          sahifasidagi "Tahrirlash" ham AYNAN shu komponentni ochadi. */}
       {isAdding && (
-        <div className="dashboard-card p-5 border-t-[4px] animate-fade-in" style={{ borderTopColor: 'var(--accent-blue)' }}>
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm border" style={{ background: 'var(--accent-blue-light)', borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' }}>
-              <UserPlus size={22} />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-                {isEditing ? 'Xodim anketasini tahrirlash' : "Yangi xodim anketasi"}
-              </h3>
-              <p className="text-micro font-bold uppercase tracking-[0.2em] mt-1" style={{ color: 'var(--text-muted)' }}>
-                Barcha maydonlarni to&apos;ldiring
-              </p>
-            </div>
-          </div>
-
-          {/* 1. SHAXSIY */}
-          <FormSection icon={IdCard} title="Shaxsiy ma'lumotlar">
-            <Field label="F.I.SH *" icon={UserPlus}>
-              <input className="erp-input" autoFocus placeholder="Masalan: Aliyev Ali Valiyevich" value={form.name || ''} onChange={e => set('name', e.target.value)} />
-            </Field>
-            <Field label="JSHSHIR (14 raqam)" icon={IdCard}>
-              <input className="erp-input font-mono tracking-wider" placeholder="12345678901234" maxLength={14} value={form.pinfl || ''} onChange={e => set('pinfl', e.target.value.replace(/\D/g, ''))} />
-            </Field>
-            <Field label="Telefon" icon={Phone}>
-              <input className="erp-input" placeholder="+998 90 123 45 67" value={form.phone || ''} onChange={e => set('phone', e.target.value)} />
-            </Field>
-            <Field label="Jinsi">
-              <Select value={form.gender || ''} onChange={e => set('gender', e.target.value)}>
-                <option value="">Tanlanmagan</option>
-                <option value="erkak">Erkak</option>
-                <option value="ayol">Ayol</option>
-              </Select>
-            </Field>
-            <Field label="Tug'ilgan sana" icon={CalendarDays}>
-              <DateField value={form.birthDate ? String(form.birthDate).slice(0, 10) : ''} onChange={v => set('birthDate', v)} />
-            </Field>
-            <Field label="Ma'lumoti" icon={GraduationCap}>
-              <Select value={form.education || ''} onChange={e => set('education', e.target.value)}>
-                <option value="">Tanlanmagan</option>
-                <option value="orta">O&apos;rta / O&apos;rta-maxsus</option>
-                <option value="oliy">Oliy</option>
-                <option value="magistratura">Magistratura</option>
-              </Select>
-            </Field>
-          </FormSection>
-
-          {/* 2. LAVOZIM & LOGIN */}
-          <FormSection icon={ShieldCheck} title="Lavozim va tizimga kirish">
-            <Field label="Lavozim *" icon={Briefcase}>
-              <Select value={form.role || ''} onChange={e => set('role', e.target.value)}>
-                <option value="" disabled>Tanlang...</option>
-                {ROLE_OPTIONS.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
-              </Select>
-            </Field>
-            <Field label="Bo'lim" icon={Building}>
-              <input className="erp-input" placeholder="Masalan: Buxgalteriya" value={form.department || ''} onChange={e => set('department', e.target.value)} />
-            </Field>
-            <Field label={isEditing ? 'Email (login) — o\'zgartirib bo\'lmaydi' : 'Email (login) *'} icon={Mail}>
-              <input
-                className="erp-input"
-                type="email"
-                placeholder="ism@asro.uz"
-                value={form.email || ''}
-                disabled={isEditing}
-                style={isEditing ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
-                onChange={e => set('email', e.target.value)}
-              />
-            </Field>
-            {isEditing ? (
-              <Field label="Yangi parol (ixtiyoriy — tiklash)" icon={KeyRound}>
-                <PasswordInput
-                  value={newPassword}
-                  onChange={setNewPassword}
-                  show={showPw}
-                  onToggle={() => setShowPw(s => !s)}
-                  onGenerate={() => { setNewPassword(generateMemorablePassword(form.name)); setShowPw(true); }}
-                  placeholder="Bo'sh qoldiring — o'zgarmaydi"
-                />
-              </Field>
-            ) : (
-              <Field label="Parol * (xodimga beriladi)" icon={KeyRound}>
-                <PasswordInput
-                  value={form.password || ''}
-                  onChange={(v) => set('password', v)}
-                  show={showPw}
-                  onToggle={() => setShowPw(s => !s)}
-                  onGenerate={() => { set('password', generateMemorablePassword(form.name)); setShowPw(true); }}
-                  placeholder="Kamida 6 ta belgi — yoki yonidagi tugma bilan yarating"
-                />
-              </Field>
-            )}
-          </FormSection>
-
-          {/* 3. ISH SHARTI */}
-          <FormSection icon={CalendarDays} title="Ish sharti">
-            <Field label="Ishga kirgan sana" icon={CalendarDays}>
-              <DateField value={form.hiredAt ? String(form.hiredAt).slice(0, 10) : ''} onChange={v => set('hiredAt', v)} />
-            </Field>
-            <Field label="Holati">
-              <Select value={form.status || 'active'} onChange={e => set('status', e.target.value)}>
-                <option value="active">Faol (ishda)</option>
-                <option value="vacation">Mehnat ta&apos;tilida</option>
-                <option value="sick">Betob / kasal</option>
-              </Select>
-            </Field>
-            <Field label="Avatar rangi">
-              <div className="flex items-center gap-3">
-                <input type="color" className="w-12 h-11 rounded-lg cursor-pointer border" style={{ borderColor: 'var(--card-border)', background: 'var(--input-bg)' }} value={form.avatarColor || 'var(--brand)'} onChange={e => set('avatarColor', e.target.value)} />
-                <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{form.avatarColor || 'var(--brand)'}</span>
-              </div>
-            </Field>
-            {/* Rasm YANGI xodimda chiqmaydi: uni yuklash uchun avval yozuv
-                yaratilib, `id` olinishi kerak. Mavjud xodimda esa rasm shu
-                yerdan qo'yiladi va rang faqat rasmsiz holat uchun qoladi. */}
-            {form.id && (
-              <Field label="Avatar rasmi">
-                <AvatarUploader
-                  userId={form.id}
-                  name={form.name || '—'}
-                  color={form.avatarColor}
-                  avatarRef={form.avatarRef}
-                />
-              </Field>
-            )}
-          </FormSection>
-
-          {/* Actions */}
-          <div className="flex gap-4 pt-8 mt-4 justify-end" style={{ borderTop: '1px solid var(--card-border)' }}>
-            <button onClick={closeForm} className="px-8 py-3 rounded-xl text-meta font-semibold uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2" style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
-              <X size={16} /> Bekor qilish
-            </button>
-            <button onClick={handleSave} disabled={isSaving} className={`px-10 py-3 rounded-xl font-semibold text-meta uppercase tracking-widest flex items-center gap-3 shadow-md transition-all active:scale-95 ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-lg'}`} style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent-blue-hover))', color: 'white' }}>
-              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-              {isSaving ? 'SAQLANMOQDA...' : (isEditing ? 'YANGILASH' : "QO'SHISH")}
-            </button>
-          </div>
-        </div>
+        <EmployeeForm
+          // KALIT — forma ochiq turganda boshqa xodim "Tahrirlash" ga
+          // bosilsa, komponent QAYTA o'rnatilsin. Holat endi formaning
+          // ichida (`useState(initial)`), ya'ni kalitsiz eski xodimning
+          // qiymatlari ekranda qolib ketardi.
+          key={form.id ?? 'new'}
+          initial={form}
+          onSave={onSave}
+          onResetPassword={onResetPassword}
+          onCancel={closeForm}
+        />
       )}
 
       {/* MOBIL KARTOCHKA RO'YXATI (kichik ekranlar) */}
@@ -571,7 +383,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           const status = person.status || 'active';
           const sm = STATUS_META[status] || STATUS_META.active;
           return (
-            <div key={person.id} onClick={() => setSelected(person)} className="dashboard-card p-4 flex items-center gap-3 cursor-pointer active:scale-[0.99] transition-transform">
+            <div key={person.id} onClick={() => openCard(person)} className="dashboard-card p-4 flex items-center gap-3 cursor-pointer active:scale-[0.99] transition-transform">
               <Avatar name={person.name} color={person.avatarColor} userId={person.id} avatarRef={person.avatarRef} size="lg" className="shadow-sm" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -623,7 +435,7 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           onPageChange={table.setPage}
           selected={selectedIds}
           onSelectedChange={setSelectedIds}
-          onRowClick={person => setSelected(person)}
+          onRowClick={openCard}
           rowLabel={person => `${person.name} — kartochkani ochish`}
           emptyIcon={<Search size={36} />}
           emptyTitle="Xodim topilmadi"
@@ -656,66 +468,8 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
         />
       )}
 
-      {/* XODIM DETAL DRAWER */}
-      {selected && (
-        <StaffDrawer
-          person={selected}
-          companies={companies}
-          onClose={() => setSelected(null)}
-          onEdit={(p) => { setSelected(null); openEdit(p); }}
-          onResetPassword={onResetPassword}
-        />
-      )}
     </div>
   );
 };
-
-// ─── Kichik yordamchi komponentlar ─────────────────────────
-function FormSection({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-8">
-      <div className="flex items-center gap-2 mb-4">
-        <Icon size={15} style={{ color: 'var(--accent-blue)' }} />
-        <span className="text-meta font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--text-secondary)' }}>{title}</span>
-        <div className="flex-1 h-px ml-2" style={{ background: 'var(--card-border)' }} />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">{children}</div>
-    </div>
-  );
-}
-
-function PasswordInput({ value, onChange, show, onToggle, onGenerate, placeholder }: {
-  value: string; onChange: (v: string) => void; show: boolean; onToggle: () => void; onGenerate: () => void; placeholder?: string;
-}) {
-  const btn: React.CSSProperties = { background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' };
-  return (
-    <div className="flex items-center gap-2">
-      <input
-        className="erp-input tracking-wider font-mono"
-        type={show ? 'text' : 'password'}
-        placeholder={placeholder}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-      />
-      <button type="button" onClick={onToggle} aria-label="Parolni ko'rsatish yoki yashirish" className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg transition-all" style={btn} title={show ? 'Yashirish' : "Ko'rsatish"}>
-        {show ? <EyeOff size={15} /> : <Eye size={15} />}
-      </button>
-      <button type="button" onClick={onGenerate} aria-label="Yangi parol yaratish" className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg transition-all" style={btn} title="Parol yaratish">
-        <RefreshCw size={15} />
-      </button>
-    </div>
-  );
-}
-
-function Field({ label, icon: Icon, children }: { label: string; icon?: React.ElementType; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-micro font-semibold uppercase tracking-widest ml-1 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-        {Icon && <Icon size={12} />} {label}
-      </label>
-      {children}
-    </div>
-  );
-}
 
 export default StaffModule;

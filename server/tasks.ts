@@ -74,6 +74,11 @@ export interface TaskFilter {
   status?: TaskStatus;
   mine?: boolean;
   companyId?: string;
+  /**
+   * Bajaruvchisi MUAYYAN xodim bo'lgan vazifalar — xodim kartasi uchun.
+   * Yuqoridagi `scope` saqlanadi: bu faqat toraytiruvchi shart.
+   */
+  assigneeId?: string;
 }
 
 export async function getTasks(filter: TaskFilter = {}) {
@@ -89,6 +94,7 @@ export async function getTasks(filter: TaskFilter = {}) {
       ...scope,
       ...(filter.status ? { status: filter.status } : {}),
       ...(filter.mine ? { assigneeUserId: actor.id } : {}),
+      ...(filter.assigneeId ? { assigneeUserId: filter.assigneeId } : {}),
       ...(filter.companyId ? { companyId: filter.companyId } : {}),
     },
     include: {
