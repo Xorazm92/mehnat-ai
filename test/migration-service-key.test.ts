@@ -208,6 +208,18 @@ describe("2) dry-run", () => {
     expect(await statusOf(ids.oblCancel)).toBe("planned");
   });
 
+  it("--max-cancel=0 bekor qilish rejalashtirilganda to'xtatadi", async () => {
+    // Shu paytda 1 ta `planned` bekor qilinishi rejalashtirilgan.
+    let failed = false;
+    try {
+      runScript([`--manifest=${manifestPath}`, "--accept-drift", "--max-cancel=0"]);
+    } catch {
+      failed = true;
+    }
+    expect(failed).toBe(true);
+    expect(await statusOf(ids.oblCancel)).toBe("planned");
+  });
+
   it("--backup bo'lmasa APPLY rad etiladi", async () => {
     let failed = false;
     try {
@@ -270,7 +282,30 @@ describe("3) apply", () => {
     const out = runScript([`--post-audit=${rollbackPath}`, `--manifest=${manifestPath}`]);
     expect(out).toContain("POST-AUDIT: HAMMASI O'TDI");
     expect(out).toContain("chala ro'yxatli firmalar");
-    expect(out).toContain("tasdiqlanmagan moslik qo'shilmagan");
+    expect(out).toContain("rad etilgan moslik qo'shilmagan");
+    expect(out).toContain("dublikat qoida yo'q");
+    expect(out).toContain("qamrovdagi majburiyat soni o'zgarmagan");
+  });
+});
+
+describe("3b) dublikat himoyasi", () => {
+  it("takroriy apply yangi qoida yaratmaydi va mavjudini o'zgartirmaydi", async () => {
+    const out = runScript([
+      `--manifest=${manifestPath}`,
+      "--apply",
+      "--backup=vitest-backup-2",
+      "--accept-drift",
+      `--out=${join(workDir, "rb2.json")}`,
+    ]);
+    expect(out).toContain("qoida ALLAQACHON bor");
+    expect(await ruleCount()).toBe(1);
+  });
+
+  it("takroriy apply hech narsani bekor qilmaydi", async () => {
+    expect(await statusOf(ids.oblSent)).toBe("sent");
+    expect(await statusOf(ids.oblKeyless)).toBe("planned");
+    expect(await statusOf(ids.oblPartial)).toBe("planned");
+    expect(await statusOf(ids.oblKeep)).toBe("planned");
   });
 });
 

@@ -118,6 +118,12 @@ const ROLLBACK_FILE = val("--rollback");
 const BACKUP = val("--backup");
 const SCOPE = (val("--scope") ?? "active") as ScopeFilter;
 const ALLOW_DRIFT = has("--accept-drift");
+/**
+ * Ruxsat etilgan eng ko'p bekor qilish. `--max-cancel=0` — "bu yugurish
+ * birorta ham majburiyatga tegmasligi kerak" degan qat'iy kafolat.
+ * Tasdiqlangan 4 shablon draft bo'lgani uchun aynan shu rejim ishlatiladi.
+ */
+const MAX_CANCEL = val("--max-cancel") === undefined ? null : Number(val("--max-cancel"));
 
 const bold = (s: string) => `\x1b[1m${s}\x1b[0m`;
 const pad = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s.padEnd(n));
@@ -137,6 +143,8 @@ interface TemplatePlan {
   name: string;
   matrixKey: string;
   lifecycle: string;
+  /** Hozirgi applicability qatorlari — auditda ko'rsatiladi. */
+  criteria: Array<{ criteriaType: string; criteriaValue: string }>;
   hasKey: number;
   missingKeyCompanyIds: string[];
   excluded: number;
@@ -210,6 +218,7 @@ async function measure(db: Tx): Promise<Universe> {
       name: tpl.name,
       matrixKey: key,
       lifecycle: tpl.lifecycle,
+      criteria: tpl.applicability.map((a) => ({ criteriaType: a.criteriaType, criteriaValue: a.criteriaValue })),
       hasKey: scope.hasKey.length,
       missingKeyCompanyIds: missingIds,
       excluded: scope.excluded.length,
@@ -302,6 +311,10 @@ interface RollbackRecord {
     untouchableBefore: number;
     keylessPlannedBefore: number;
     otherTemplatesPlannedBefore: number;
+    /** Qamrovdagi shablonlarning JAMI majburiyati (har holatda). */
+    scopeObligationsBefore: number;
+    /** Shundan `planned`. */
+    scopePlannedBefore: number;
   };
 }
 
@@ -391,11 +404,28 @@ async function run(): Promise<void> {
   }
   let planApplicability = 0;
   let planCancel = 0;
+  let planAffected = 0;
   const planned: TemplatePlan[] = [];
+  const duplicates: Array<{ code: string; value: string }> = [];
+
+  // Tasdiqlangan kodlar orasida qoidasi ALLAQACHON bor shablonlar (§4):
+  // dublikat yaratilmaydi, mavjud qator o'zgartirilmaydi, auditga chiqadi.
+  const already = await prisma.templateApplicability.findMany({
+    where: { criteriaType: "service_key", template: { code: { in: sel.included.map((r) => r.code) } } },
+    select: { criteriaValue: true, template: { select: { code: true } } },
+  });
+  const alreadyByCode = new Map(already.map((a) => [a.template.code, a.criteriaValue]));
+
   for (const row of sel.included) {
+    const dup = alreadyByCode.get(row.code);
+    if (dup !== undefined) {
+      duplicates.push({ code: row.code, value: dup });
+      console.log(`  ${pad(row.code, 20)} ${pad(dup, 22)} — qoida ALLAQACHON bor, o'tkazib yuborildi`);
+      continue;
+    }
     const p = u.plans.get(row.code);
     if (!p) {
-      console.log(`  ${pad(row.code, 20)} — bazada nomzod emas, o'tkazib yuborildi`);
+      console.log(`  ${pad(row.code, 20)} — bazada topilmadi yoki matrixKey yo'q, o'tkazib yuborildi`);
       continue;
     }
     if (p.matrixKey !== row.matrixKey) {
@@ -404,6 +434,7 @@ async function run(): Promise<void> {
     planned.push(p);
     planApplicability++;
     planCancel += p.planned;
+    planAffected += p.affected;
     console.log(
       `  ${pad(p.code, 20)} ${pad(p.matrixKey, 22)} ${num(1, 7)} ${num(p.planned, 7)} ` +
         `${num(p.inProgress + p.sent + p.closed, 9)} ${num(p.excluded, 11)}`,
@@ -412,6 +443,47 @@ async function run(): Promise<void> {
   if (planned.length > 0) {
     hr("·");
     console.log(`  ${pad("JAMI", 20)} ${pad("", 22)} ${num(planApplicability, 7)} ${num(planCancel, 7)}`);
+  }
+  if (duplicates.length > 0) {
+    console.log(`\n  ℹ️  ${duplicates.length} ta shablonda qoida allaqachon bor — dublikat YARATILMAYDI,`);
+    console.log("      mavjud qator O'ZGARTIRILMAYDI.");
+  }
+
+  // ── Har shablon uchun to'liq kesim ──────────────────────────
+  if (planned.length > 0) {
+    console.log(`\n${bold("3b) HAR SHABLON UCHUN KESIM")}`);
+    hr();
+    for (const p of planned) {
+      const crit = p.criteria.length
+        ? p.criteria.map((c) => `${c.criteriaType}=${c.criteriaValue}`).join(", ")
+        : "— (UNIVERSAL, mezon yo'q)";
+      console.log(`\n  ${bold(p.code)}  ·  ${p.name}`);
+      console.log(`    lifecycle            : ${p.lifecycle}`);
+      console.log(`    hozirgi applicability: ${crit}`);
+      console.log(`    QO'SHILADIGAN QOIDA  : service_key = ${bold(p.matrixKey)}`);
+      console.log(`    kaliti bor firma     : ${p.hasKey}`);
+      console.log(`    tegiladigan firma    : ${p.companies}   (kaliti yo'q, ro'yxati to'liq: ${p.missingKeyCompanyIds.length})`);
+      console.log(`    chetlab o'tilgan     : ${p.excluded}`);
+      console.log(`    mavjud majburiyat    : ${p.affected}`);
+      console.log(`      planned (bekor)    : ${p.planned}`);
+      console.log(`      in_progress        : ${p.inProgress}`);
+      console.log(`      sent               : ${p.sent}`);
+      console.log(`      yopilgan           : ${p.closed}`);
+    }
+    hr();
+    console.log(`  JAMI mavjud majburiyat: ${planAffected}   BEKOR QILINADI: ${planCancel}`);
+  }
+
+  // ── Bekor qilish chegarasi ──────────────────────────────────
+  if (MAX_CANCEL !== null) {
+    if (!Number.isInteger(MAX_CANCEL) || MAX_CANCEL < 0) die(`--max-cancel butun manfiy bo'lmagan son bo'lishi kerak.`);
+    if (planCancel > MAX_CANCEL) {
+      die(
+        `--max-cancel=${MAX_CANCEL}, lekin reja ${planCancel} ta majburiyatni bekor qiladi.\n` +
+          "    Bu yugurish hech qanday majburiyatga tegmasligi kerak edi.",
+      );
+    }
+    console.log(`\n  ✅ --max-cancel=${MAX_CANCEL} chegarasi: reja ${planCancel} ta bekor qiladi`);
   }
 
   if (!APPLY) {
@@ -447,21 +519,52 @@ async function run(): Promise<void> {
     createdApplicabilityIds: [],
     cancelledObligations: [],
     statusEventIds: [],
-    snapshot: { untouchableBefore: -1, keylessPlannedBefore: -1, otherTemplatesPlannedBefore: -1 },
+    snapshot: {
+      untouchableBefore: -1,
+      keylessPlannedBefore: -1,
+      otherTemplatesPlannedBefore: -1,
+      scopeObligationsBefore: -1,
+      scopePlannedBefore: -1,
+    },
   };
 
   await prisma.$transaction(
     async (tx) => {
       // 4a) YAKUNIY O'LCHOV — tranzaksiya ichida, mutatsiyadan OLDIN.
       const fin = await measure(tx);
-      const finPlanned = planned.reduce((s, p) => s + (fin.plans.get(p.code)?.planned ?? -1), 0);
-      if (finPlanned !== planCancel) {
+      if (fin.plans.size !== u.plans.size) {
         throw new Error(
-          `YAKUNIY TEKSHIRUV YIQILDI: rejada ${planCancel} ta bekor qilish, tranzaksiya ichida ${finPlanned}. ` +
-            "Hech narsa o'zgartirilmadi.",
+          `YAKUNIY TEKSHIRUV: nomzod shablon soni ${u.plans.size} → ${fin.plans.size}. Hech narsa o'zgartirilmadi.`,
         );
       }
-      console.log(`  ✅ yakuniy tekshiruv: ${finPlanned} ta bekor qilish rejasi tasdiqlandi`);
+      // Har shablon bo'yicha ALOHIDA solishtiramiz — yig'indi bir xil bo'lib,
+      // ichida ikki shablon o'rin almashgan bo'lishi mumkin.
+      let finPlanned = 0;
+      let finAffected = 0;
+      for (const p of planned) {
+        const f = fin.plans.get(p.code);
+        if (!f) throw new Error(`YAKUNIY TEKSHIRUV: ${p.code} endi nomzod emas. Hech narsa o'zgartirilmadi.`);
+        if (f.planned !== p.planned || f.affected !== p.affected) {
+          throw new Error(
+            `YAKUNIY TEKSHIRUV: ${p.code} — rejada mavjud=${p.affected}/planned=${p.planned}, ` +
+              `hozir mavjud=${f.affected}/planned=${f.planned}. Hech narsa o'zgartirilmadi.`,
+          );
+        }
+        finPlanned += f.planned;
+        finAffected += f.affected;
+      }
+      if (finPlanned !== planCancel || finAffected !== planAffected) {
+        throw new Error(
+          `YAKUNIY TEKSHIRUV YIQILDI: rejada bekor=${planCancel}/mavjud=${planAffected}, ` +
+            `tranzaksiya ichida bekor=${finPlanned}/mavjud=${finAffected}. Hech narsa o'zgartirilmadi.`,
+        );
+      }
+      if (MAX_CANCEL !== null && finPlanned > MAX_CANCEL) {
+        throw new Error(`YAKUNIY TEKSHIRUV: --max-cancel=${MAX_CANCEL}, bekor qilinadigan ${finPlanned}.`);
+      }
+      console.log(
+        `  ✅ yakuniy tekshiruv: ${planned.length} shablon · mavjud majburiyat ${finAffected} · bekor ${finPlanned}`,
+      );
 
       // 4b) TEGILMASLIGI KERAK BO'LGANLARNI OLDINDAN SANAB OLAMIZ.
       const templateIds = planned.map((p) => p.templateId);
@@ -483,14 +586,32 @@ async function run(): Promise<void> {
       const otherTemplatesBefore = await tx.obligation.count({
         where: { templateId: { notIn: templateIds }, status: "planned" },
       });
+      const scopeObligationsBefore = await tx.obligation.count({ where: { templateId: { in: templateIds } } });
+      const scopePlannedBefore = await tx.obligation.count({
+        where: { templateId: { in: templateIds }, status: "planned" },
+      });
       record.snapshot = {
         untouchableBefore: untouchedBefore,
         keylessPlannedBefore: keylessBefore,
         otherTemplatesPlannedBefore: otherTemplatesBefore,
+        scopeObligationsBefore,
+        scopePlannedBefore,
       };
 
-      // 4c) QOIDA QATORLARI
+      // 4c) QOIDA QATORLARI — dublikat himoyasi bilan (§4).
+      let dupSkipped = 0;
       for (const p of planned) {
+        const exists = await tx.templateApplicability.findFirst({
+          where: { templateId: p.templateId, criteriaType: "service_key" },
+          select: { id: true, criteriaValue: true },
+        });
+        if (exists) {
+          // Mavjud qator O'ZGARTIRILMAYDI va rollback ro'yxatiga TUSHMAYDI —
+          // aks holda rollback biz yaratmagan qatorni o'chirardi.
+          console.log(`  ℹ️  ${p.code}: service_key="${exists.criteriaValue}" allaqachon bor — o'tkazildi`);
+          dupSkipped++;
+          continue;
+        }
         const created = await tx.templateApplicability.create({
           data: { templateId: p.templateId, criteriaType: "service_key", criteriaValue: p.matrixKey },
           select: { id: true },
@@ -503,7 +624,10 @@ async function run(): Promise<void> {
           applicabilityId: created.id,
         });
       }
-      console.log(`  ✅ ${record.createdApplicabilityIds.length} ta TemplateApplicability yaratildi`);
+      console.log(
+        `  ✅ ${record.createdApplicabilityIds.length} ta TemplateApplicability yaratildi` +
+          (dupSkipped ? `  (${dupSkipped} ta dublikat o'tkazildi)` : ""),
+      );
 
       // 4d) `planned` MAJBURIYATLARNI BEKOR QILISH — davridan qat'i nazar.
       for (const p of planned) {
@@ -666,7 +790,9 @@ async function postAudit(file: string): Promise<void> {
   hr();
 
   const manifest = parseMappingManifest(JSON.parse(readFileSync(MANIFEST_PATH, "utf8")));
-  const notConfirmed = manifest.mappings.filter((m) => m.confirmed !== true).map((m) => m.code);
+  const rejectedCodes = manifest.mappings.filter((m) => m.confirmed === false).map((m) => m.code);
+  const deferredCodes = manifest.mappings.filter((m) => m.confirmed === "later").map((m) => m.code);
+  const unansweredCodes = manifest.mappings.filter((m) => m.confirmed === null).map((m) => m.code);
   const templateIds = rec.affectedTemplateIds;
   const results: Array<[string, boolean, string]> = [];
   const check = (label: string, ok: boolean, detail: string) => results.push([label, ok, detail]);
@@ -681,13 +807,29 @@ async function postAudit(file: string): Promise<void> {
   check("tasdiqlangan shablonlarda service_key qoidasi bor", missingRule.length === 0,
     missingRule.length ? `yo'q: ${missingRule.join(", ")}` : `${rules.length} ta qoida`);
 
-  // 2) Tasdiqlanmagan moslik QO'SHILMAGAN
-  const strayRules = await prisma.templateApplicability.findMany({
-    where: { criteriaType: "service_key", template: { code: { in: notConfirmed } } },
-    select: { template: { select: { code: true } } },
-  });
-  check("tasdiqlanmagan moslik qo'shilmagan", strayRules.length === 0,
-    strayRules.length ? `⚠️ topildi: ${strayRules.map((r) => r.template.code).join(", ")}` : "toza");
+  // 2) Rad etilgan / keyinga qoldirilgan / javobsiz mosliklar QO'SHILMAGAN
+  for (const [label, codes] of [
+    ["rad etilgan moslik qo'shilmagan", rejectedCodes],
+    ["keyinga qoldirilgan moslik qo'shilmagan", deferredCodes],
+    ["javobsiz moslik qo'shilmagan", unansweredCodes],
+  ] as const) {
+    if (codes.length === 0) {
+      check(label, true, "(bunday moslik yo'q)");
+      continue;
+    }
+    const stray = await prisma.templateApplicability.findMany({
+      where: { criteriaType: "service_key", template: { code: { in: [...codes] } } },
+      select: { template: { select: { code: true } } },
+    });
+    check(`${label} (${codes.length} ta)`, stray.length === 0,
+      stray.length ? `⚠️ topildi: ${stray.map((r) => r.template.code).join(", ")}` : "toza");
+  }
+
+  // 2b) Dublikat yo'q — har shablonda ko'pi bilan bitta service_key qatori
+  const dupCheck = new Map<string, number>();
+  for (const r of rules) dupCheck.set(r.templateId, (dupCheck.get(r.templateId) ?? 0) + 1);
+  const dups = [...dupCheck.entries()].filter(([, n]) => n > 1);
+  check("dublikat qoida yo'q", dups.length === 0, dups.length ? `⚠️ ${dups.length} ta shablonda 2+ qator` : "toza");
 
   // 3) Kalitsiz firmalar o'zgarmagan
   const keyless = (
@@ -713,6 +855,17 @@ async function postAudit(file: string): Promise<void> {
   });
   check("in_progress mavjud (bekor qilinmagan)", inProg >= 0, `${inProg} ta`);
   check("sent mavjud (bekor qilinmagan)", sent >= 0, `${sent} ta`);
+
+  // 5b) Qamrovdagi majburiyatlar soni o'zgarmagan
+  const scopeNow = await prisma.obligation.count({ where: { templateId: { in: templateIds } } });
+  check("qamrovdagi majburiyat soni o'zgarmagan", scopeNow === rec.snapshot.scopeObligationsBefore,
+    `${rec.snapshot.scopeObligationsBefore} → ${scopeNow}`);
+  const scopePlannedNow = await prisma.obligation.count({
+    where: { templateId: { in: templateIds }, status: "planned" },
+  });
+  const expectedPlanned = rec.snapshot.scopePlannedBefore - rec.cancelledObligations.length;
+  check("planned soni faqat bekor qilinganlar qadar kamaygan", scopePlannedNow === expectedPlanned,
+    `${rec.snapshot.scopePlannedBefore} → ${scopePlannedNow} (kutilgan ${expectedPlanned})`);
 
   // 6) Kutilgan miqdorda bekor qilingan
   const stillCancelled = await prisma.obligation.count({
