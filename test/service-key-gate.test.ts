@@ -10,7 +10,12 @@
 import { describe, it, expect } from "vitest";
 import { templateApplies, type SubjectFacts } from "@/lib/engines/obligation/applicability";
 import { companyAttributes } from "@/lib/domains/accounting/subjects";
-import { needsServiceKeyRule, gateVerdict, gateScope } from "@/lib/domains/accounting/serviceKeyGate";
+import {
+  needsServiceKeyRule,
+  gateVerdict,
+  gateScope,
+  MIN_TRUSTED_KEYS,
+} from "@/lib/domains/accounting/serviceKeyGate";
 
 /** Prod ustunlaridan qurilgan firma — atributlar haqiqiy proyeksiyadan chiqadi. */
 const firm = (o: {
@@ -38,6 +43,9 @@ const firm = (o: {
 });
 
 const svc = (key: string) => [{ criteriaType: "service_key", criteriaValue: key }];
+
+/** Ro'yxatni "to'liq" qiladi — darvoza chegarasidan o'tsin (odatiy firmada 21+ kalit). */
+const full = (keys: string[]) => [...keys, "k1", "k2", "k3", "k4", "k5", "k6"];
 
 // ─────────────────────────────────────────────────────────────
 // §1 Xizmat kaliti darvozasi
@@ -67,22 +75,36 @@ describe("§2 kalitsiz firma avtomatik 'mos emas' qilinmaydi", () => {
     expect(templateApplies(svc("tovar_ostatka"), firm({ activeServices: [] }))).toBe(false);
   });
 
-  it("darvoza qarori: bo'sh ro'yxat 'missing_key' emas, 'unknown_no_keys'", () => {
-    expect(gateVerdict("tovar_ostatka", { id: "a", activeServices: [] })).toBe("unknown_no_keys");
-    expect(gateVerdict("tovar_ostatka", { id: "b", activeServices: ["qqs"] })).toBe("missing_key");
-    expect(gateVerdict("tovar_ostatka", { id: "c", activeServices: ["tovar_ostatka"] })).toBe("has_key");
+  it("darvoza qarori: bo'sh ro'yxat 'missing_key' emas, 'unknown_incomplete'", () => {
+    expect(gateVerdict("tovar_ostatka", { id: "a", activeServices: [] })).toBe("unknown_incomplete");
+    expect(gateVerdict("tovar_ostatka", { id: "b", activeServices: full(["qqs"]) })).toBe("missing_key");
+    expect(gateVerdict("tovar_ostatka", { id: "c", activeServices: full(["tovar_ostatka"]) })).toBe("has_key");
   });
 
-  it("qamrov: kalitsiz firmalar alohida to'plamga chiqadi, tegiladiganlarga QO'SHILMAYDI", () => {
+  it("CHALA ro'yxat ham 'bilmaymiz' — bo'sh ro'yxat bilan bir xil muomala", () => {
+    // UMID HOSPITAL prodda atigi bitta kalitga ega. Uni "qolgan 23 ta
+    // hisobotni topshirmaydi" deb o'qish bo'sh ro'yxatni shunday o'qish
+    // bilan bir xil xato — faqat bir qadam yashiringani bilan farq qiladi.
+    expect(gateVerdict("tovar_ostatka", { id: "umid", activeServices: ["ekologiya"] })).toBe("unknown_incomplete");
+    expect(MIN_TRUSTED_KEYS).toBe(6);
+  });
+
+  it("chegara: aynan MIN_TRUSTED_KEYS ta kalit → ishonchli", () => {
+    const five = ["a", "b", "c", "d", "e"];
+    expect(gateVerdict("qqs", { id: "x", activeServices: five })).toBe("unknown_incomplete");
+    expect(gateVerdict("qqs", { id: "y", activeServices: [...five, "f"] })).toBe("missing_key");
+  });
+
+  it("qamrov: chala ro'yxatlilar alohida to'plamga chiqadi, tegiladiganlarga QO'SHILMAYDI", () => {
     const s = gateScope("tovar_ostatka", [
-      { id: "bor", activeServices: ["tovar_ostatka"] },
-      { id: "yoq", activeServices: ["qqs"] },
-      { id: "bosh1", activeServices: [] },
-      { id: "bosh2", activeServices: [] },
+      { id: "bor", activeServices: full(["tovar_ostatka"]) },
+      { id: "yoq", activeServices: full(["qqs"]) },
+      { id: "bosh", activeServices: [] },
+      { id: "chala", activeServices: ["ekologiya"] },
     ]);
     expect(s.hasKey.map((c) => c.id)).toEqual(["bor"]);
     expect(s.missingKey.map((c) => c.id)).toEqual(["yoq"]);
-    expect(s.excluded.map((c) => c.id)).toEqual(["bosh1", "bosh2"]);
+    expect(s.excluded.map((c) => c.id)).toEqual(["bosh", "chala"]);
   });
 });
 

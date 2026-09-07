@@ -3,8 +3,16 @@
 **Sana:** 2026-09-06 · **Manba:** PROD (`16.192.135.23`, faqat `SELECT`, tunnel yopilgan)
 **Holat:** ⛔ PRODga hech qanday yozuv kiritilmadi. `INSERT`/`UPDATE`/`DELETE`/`CANCEL`/`migrate apply` — yo'q.
 
-> Bu hujjat **tasdiqlash uchun**. Bosh buxgalter §1 jadvalidagi ☐ katakchalarni
-> to'ldirmaguncha va §5 savollariga javob bermaguncha migratsiya yozilmaydi.
+> **2026-09-07 YANGILANISHI — TASDIQ OLINDI.** Bosh buxgalter 24 ta savolga
+> javob berdi; har javob prod ma'lumotiga qarshi o'lchandi. Natija:
+> **4 tasdiqlandi · 12 rad etildi · 8 keyinroq**. Tasdiqlangan 4 tasi ham
+> `draft` — ya'ni **hech qanday majburiyat bekor qilinmaydi**.
+> Qarorlar va sabablari: [service-key-migration-runbook.md](service-key-migration-runbook.md#qabul-qilingan-qarorlar--2026-09-07).
+>
+> Ikkita raqam ham o'zgardi: chetlab o'tiladigan firma **31 → 47**
+> (ro'yxati chala 16 ta firma qo'shildi), tegiladigan majburiyat
+> **1 868 → 1 394**. Quyidagi §1 jadvali BIRINCHI o'lchov (2026-09-06) —
+> tarix uchun saqlanadi.
 
 ---
 

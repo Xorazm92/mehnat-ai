@@ -22,9 +22,11 @@ const { prisma } = await import("@/lib/prisma");
 const TAG = `vitest-mig-${Date.now()}`;
 const KEY = `${TAG}-key`;
 const OTHER = `${TAG}-other`;
+/** Ro'yxatni "to'liq" qiladi — MIN_TRUSTED_KEYS chegarasidan o'tsin. */
+const FILL = ["f1", "f2", "f3", "f4", "f5"].map((f) => `${TAG}-${f}`);
 const SCRIPT = "scripts/migrate-service-key-applicability.ts";
 
-const ids = { user: "", withKey: "", missing: "", keyless: "", missingSent: "", tpl: "", oblCancel: "", oblSent: "", oblKeyless: "", oblKeep: "" };
+const ids = { user: "", withKey: "", missing: "", keyless: "", partial: "", missingSent: "", tpl: "", oblCancel: "", oblSent: "", oblKeyless: "", oblPartial: "", oblKeep: "" };
 let workDir = "";
 let manifestPath = "";
 let rollbackPath = "";
@@ -101,15 +103,19 @@ beforeAll(async () => {
     })
   ).id;
 
-  ids.withKey = await makeCompany("kaliti bor", `${TAG}-1`, [KEY]);
-  ids.missing = await makeCompany("kaliti yo'q", `${TAG}-2`, [OTHER]);
-  ids.missingSent = await makeCompany("kaliti yo'q, sent", `${TAG}-3`, [OTHER]);
+  ids.withKey = await makeCompany("kaliti bor", `${TAG}-1`, [KEY, ...FILL]);
+  ids.missing = await makeCompany("kaliti yo'q", `${TAG}-2`, [OTHER, ...FILL]);
+  ids.missingSent = await makeCompany("kaliti yo'q, sent", `${TAG}-3`, [OTHER, ...FILL]);
   ids.keyless = await makeCompany("kalitsiz", `${TAG}-4`, []);
+  // Ro'yxati CHALA — bo'sh emas, lekin chegaradan past. Bo'sh ro'yxat bilan
+  // bir xil muomala qilinishi kerak (UMID HOSPITAL holati).
+  ids.partial = await makeCompany("chala ro'yxat", `${TAG}-5`, [OTHER]);
 
   ids.oblCancel = await makeObl(ids.missing, "planned", "2099-M01"); // bekor bo'ladi
   ids.oblSent = await makeObl(ids.missingSent, "sent", "2099-M01"); // tegilmaydi
   ids.oblKeyless = await makeObl(ids.keyless, "planned", "2099-M01"); // TEGILMAYDI
   ids.oblKeep = await makeObl(ids.withKey, "planned", "2099-M01"); // tegilmaydi
+  ids.oblPartial = await makeObl(ids.partial, "planned", "2099-M01"); // TEGILMAYDI
 
   manifestPath = join(workDir, "manifest.json");
 });
@@ -120,7 +126,7 @@ afterAll(async () => {
   await prisma.templateApplicability.deleteMany({ where: { templateId: ids.tpl } });
   await prisma.deadlineTemplate.deleteMany({ where: { id: ids.tpl } });
   await prisma.company.deleteMany({
-    where: { id: { in: [ids.withKey, ids.missing, ids.missingSent, ids.keyless] } },
+    where: { id: { in: [ids.withKey, ids.missing, ids.missingSent, ids.keyless, ids.partial] } },
   });
   await prisma.user.deleteMany({ where: { id: ids.user } });
   rmSync(workDir, { recursive: true, force: true });
@@ -240,6 +246,10 @@ describe("3) apply", () => {
     expect(await statusOf(ids.oblKeyless)).toBe("planned");
   });
 
+  it("CHALA ro'yxatli firma ham TEGILMAYDI (MIN_TRUSTED_KEYS)", async () => {
+    expect(await statusOf(ids.oblPartial)).toBe("planned");
+  });
+
   it("kaliti BOR firma tegilmaydi", async () => {
     expect(await statusOf(ids.oblKeep)).toBe("planned");
   });
@@ -259,7 +269,7 @@ describe("3) apply", () => {
   it("post-audit hamma bandni o'tkazadi", () => {
     const out = runScript([`--post-audit=${rollbackPath}`, `--manifest=${manifestPath}`]);
     expect(out).toContain("POST-AUDIT: HAMMASI O'TDI");
-    expect(out).toContain("kalitsiz firmalar");
+    expect(out).toContain("chala ro'yxatli firmalar");
     expect(out).toContain("tasdiqlanmagan moslik qo'shilmagan");
   });
 });
@@ -282,6 +292,7 @@ describe("4) rollback", () => {
   it("rollback tegmasligi kerak bo'lganlarga tegmagan", async () => {
     expect(await statusOf(ids.oblSent)).toBe("sent");
     expect(await statusOf(ids.oblKeyless)).toBe("planned");
+    expect(await statusOf(ids.oblPartial)).toBe("planned");
     expect(await statusOf(ids.oblKeep)).toBe("planned");
   });
 });

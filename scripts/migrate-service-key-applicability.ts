@@ -50,7 +50,12 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { needsServiceKeyRule, gateScope, type CompanyGateFacts } from "@/lib/domains/accounting/serviceKeyGate";
+import {
+  needsServiceKeyRule,
+  gateScope,
+  MIN_TRUSTED_KEYS,
+  type CompanyGateFacts,
+} from "@/lib/domains/accounting/serviceKeyGate";
 import {
   parseMappingManifest,
   selectScope,
@@ -80,16 +85,25 @@ const ROLLBACK_DIR = resolve(process.cwd(), ".migrations");
  * qayta ko'rishi kerak, skript emas.
  */
 const BASELINE = {
-  measuredAt: "2026-09-06",
+  measuredAt: "2026-09-07",
   candidates: 24,
-  affected: 1868,
-  planned: 1673,
-  inProgress: 20,
-  sent: 11,
-  closed: 164,
-  companies: 226,
-  excludedCompanies: 31,
+  affected: 1394,
+  planned: 1228,
+  inProgress: 18,
+  sent: 9,
+  closed: 139,
+  companies: 210,
+  excludedCompanies: 47,
 } as const;
+
+/**
+ * 2026-09-06 dagi birinchi o'lchov (MIN_TRUSTED_KEYS kiritilishidan OLDIN):
+ *   1 868 / 1 673 / 20 / 11 / 164 / 226 firma / 31 chiqarilgan
+ *
+ * Farq qoidadan chiqdi, prod ma'lumoti o'zgarganidan emas: ro'yxati chala
+ * (6 tadan kam kalitli) 16 ta firma ham chetlab o'tiladigan bo'ldi.
+ * Ular bilan birga 474 ta majburiyat qamrovdan chiqdi.
+ */
 
 const OPEN_STATUSES = ["planned", "in_progress", "ready", "sent"] as const;
 const UNTOUCHABLE = ["in_progress", "ready", "sent", "accepted", "rejected", "cancelled"] as const;
@@ -161,7 +175,8 @@ async function measure(db: Tx): Promise<Universe> {
     select: { id: true, activeServices: true },
   });
   const facts: CompanyGateFacts[] = companies;
-  const keylessCount = companies.filter((c) => c.activeServices.length === 0).length;
+  // Chetlab o'tiladiganlar: ro'yxati bo'sh YOKI chala (MIN_TRUSTED_KEYS dan kam).
+  const keylessCount = companies.filter((c) => c.activeServices.length < MIN_TRUSTED_KEYS).length;
 
   const templates = await db.deadlineTemplate.findMany({
     where: { matrixKey: { not: null } },
@@ -260,7 +275,7 @@ function printComparison(u: Universe): void {
     ["sent → tegilmaydi", BASELINE.sent, t.sent],
     ["yopilgan → tegilmaydi", BASELINE.closed, t.closed],
     ["tegiladigan firma", BASELINE.companies, t.companies],
-    ["chiqarilgan firma (kalitsiz)", BASELINE.excludedCompanies, t.excludedCompanies],
+    ["chiqarilgan firma (chala ro'yxat)", BASELINE.excludedCompanies, t.excludedCompanies],
   ];
   for (const [label, exp, act] of rows) {
     const d = act - exp;
@@ -351,6 +366,7 @@ async function run(): Promise<void> {
   hr();
   console.log(`  ✅ tasdiqlangan (qamrovda) : ${sel.included.length}`);
   console.log(`  ⛔ rad etilgan             : ${sel.rejected.length}${sel.rejected.length ? " — " + sel.rejected.map((r) => r.code).join(", ") : ""}`);
+  console.log(`  🕓 keyinroq                : ${sel.deferred.length}${sel.deferred.length ? " — " + sel.deferred.map((r) => r.code).join(", ") : ""}`);
   console.log(`  ❔ javob berilmagan        : ${sel.unanswered.length}`);
   console.log(`  ↔  boshqa qamrovda         : ${sel.outOfScope.length}${sel.outOfScope.length ? " — " + sel.outOfScope.map((r) => r.code).join(", ") : ""}`);
 
@@ -452,12 +468,15 @@ async function run(): Promise<void> {
       const untouchedBefore = await tx.obligation.count({
         where: { templateId: { in: templateIds }, status: { in: UNTOUCHABLE as unknown as never } },
       });
+      // Prisma massiv uzunligi bo'yicha filtrlay olmaydi — JS'da kesamiz.
       const keyless = (
         await tx.company.findMany({
-          where: { isActive: true, isOwnFirm: false, activeServices: { isEmpty: true } },
-          select: { id: true },
+          where: { isActive: true, isOwnFirm: false },
+          select: { id: true, activeServices: true },
         })
-      ).map((c) => c.id);
+      )
+        .filter((c) => c.activeServices.length < MIN_TRUSTED_KEYS)
+        .map((c) => c.id);
       const keylessBefore = await tx.obligation.count({
         where: { templateId: { in: templateIds }, companyId: { in: keyless }, status: "planned" },
       });
@@ -673,14 +692,16 @@ async function postAudit(file: string): Promise<void> {
   // 3) Kalitsiz firmalar o'zgarmagan
   const keyless = (
     await prisma.company.findMany({
-      where: { isActive: true, isOwnFirm: false, activeServices: { isEmpty: true } },
-      select: { id: true },
+      where: { isActive: true, isOwnFirm: false },
+      select: { id: true, activeServices: true },
     })
-  ).map((c) => c.id);
+  )
+    .filter((c) => c.activeServices.length < MIN_TRUSTED_KEYS)
+    .map((c) => c.id);
   const keylessNow = await prisma.obligation.count({
     where: { templateId: { in: templateIds }, companyId: { in: keyless }, status: "planned" },
   });
-  check(`kalitsiz firmalar (${keyless.length}) tegilmagan`, keylessNow === rec.snapshot.keylessPlannedBefore,
+  check(`chala ro'yxatli firmalar (${keyless.length}) tegilmagan`, keylessNow === rec.snapshot.keylessPlannedBefore,
     `planned: ${rec.snapshot.keylessPlannedBefore} → ${keylessNow}`);
 
   // 4-5) in_progress va sent o'zgarmagan

@@ -1,6 +1,6 @@
 # service_key migratsiyasi — runbook
 
-**Holat:** 🟢 skript tayyor · ⛔ **APPLY BLOKLANGAN** — biznes tasdig'i kutilmoqda
+**Holat:** 🟢 skript tayyor · ✅ **tasdiq olindi (2026-09-07)** · APPLY sizning ruxsatingizni kutmoqda
 **Skript:** [`scripts/migrate-service-key-applicability.ts`](../../scripts/migrate-service-key-applicability.ts)
 **Tasdiq fayli:** [`scripts/data/service-key-mappings.json`](../../scripts/data/service-key-mappings.json)
 **Audit:** [`business-rule-audit-2026-09.md`](business-rule-audit-2026-09.md)
@@ -16,14 +16,20 @@ majburiyatlarini bekor qiladi.
 | Firma toifasi | Nima bo'ladi |
 |---|---|
 | kaliti **bor** | tegilmaydi |
-| kaliti **yo'q** (boshqa kalitlari bor) | `planned` majburiyati bekor qilinadi |
-| **hech qanday kaliti yo'q** (31 firma) | **butunlay chetlab o'tiladi** |
+| kaliti **yo'q**, ro'yxati to'liq (6+ kalit) | `planned` majburiyati bekor qilinadi |
+| ro'yxati **bo'sh yoki chala** (<6 kalit) — **47 firma** | **butunlay chetlab o'tiladi** |
+
+> **Nega 47, 31 emas.** Prodda odatiy firmada 21+ kalit bor. 31 tasida umuman
+> kalit yo'q, yana **16 tasida atigi 1–5 ta** (UMID HOSPITAL da bittasi:
+> `ekologiya`). Bunday ro'yxatni «firma qolgan 23 ta hisobotni topshirmaydi»
+> deb o'qish — bo'sh ro'yxatni shunday o'qish bilan bir xil xato, faqat bir
+> qadam yashiringani bilan farq qiladi. Chegara: `MIN_TRUSTED_KEYS = 6`.
 
 | Majburiyat holati | Nima bo'ladi |
 |---|---|
 | `planned` | ✅ `cancelled` + `ObligationStatusEvent` |
-| `in_progress` (20) · `sent` (11) | ❌ tegilmaydi — bajarilgan ish dalili |
-| `accepted` · `cancelled` (164) | ❌ tegilmaydi — yopilgan |
+| `in_progress` (18) · `sent` (9) | ❌ tegilmaydi — bajarilgan ish dalili |
+| `accepted` · `cancelled` (139) | ❌ tegilmaydi — yopilgan |
 
 > **Nega bekor qilishni generatorga tashlamaymiz.** `generateObligations` "mos emas"
 > tarmog'ida faqat **joriy oynadagi** qatorni qidiradi, runner esa joriy oy + 2 oyni
@@ -50,6 +56,34 @@ majburiyatlarini bekor qiladi.
 `null` va `false` ataylab ajratilgan: `false` — qaror, `null` — qarorsizlik.
 Bitta `null` qolsa ham migratsiya yurmaydi (yarim holat jimgina paydo bo'lmasligi uchun).
 
+### Qabul qilingan qarorlar — 2026-09-07
+
+Bosh buxgalter 24 ta savolga javob berdi; har javob prod ma'lumotiga qarshi o'lchandi.
+
+| Qaror | Soni | Shablonlar |
+|---|--:|---|
+| ✅ **tasdiqlandi** | **4** | `ITPARK_OYLIK` · `MOL_MULK_SOLIQ` · `SUV_SOLIQ` · `YER_SOLIQ` |
+| ⛔ rad etildi | 12 | `AR_AP` `ONEC_BASE` `TAX_SCHEDULE` `PAYROLL_CALC` `LETTERS` `INPS_IJTIMOIY` `QQS_DECL` `MOLIYAVIY_YILLIK` `AYLANMA_SOLIQ` `BUX_BALANS` `DIDOX_FLOW` `MY_MEHNAT` |
+| 🕓 keyinroq | 8 | `MATERIALS` `PNL_REPORT` `CASHFLOW` `FOYDA_YILLIK` `DAROMAD_AGENT` `AVTOKAMERAL` `BONAK` `EKOLOGIYA` |
+
+**Natija: tasdiqlangan 4 shablonning hammasi `draft` — bugun 0 ta majburiyat
+yaratadi. Ya'ni APPLY hech qanday majburiyatni bekor qilmaydi.**
+
+Rad etishning uch sababi:
+
+1. **«Hammaga»** (`AR_AP`, `ONEC_BASE`, `TAX_SCHEDULE`, `PAYROLL_CALC`) —
+   darvoza qo'yilsa 32–67 firma majburiyatini yo'qotardi.
+2. **«Hammaga, YaTT dan tashqari», lekin kalit buni ifodalamaydi**
+   (`LETTERS`, `INPS_IJTIMOIY`, `DIDOX_FLOW`, `MY_MEHNAT`) — o'lchov: kaliti
+   yo'q 22 firmadan faqat 4 tasi YaTT. Istisno `tax_regime` orqali qo'yiladi.
+3. **Mezon allaqachon bor** (`QQS_DECL` → `tax_regime=vat`,
+   `AYLANMA_SOLIQ` → `turnover`) — `service_key` qo'shilsa 13 va 22 ta
+   haqiqiy soliq to'lovchi tushib qolardi.
+
+**Keyingi ish (bu migratsiyaga kirmaydi):** `MOLIYAVIY_YILLIK` va `BUX_BALANS`
+uchun `tax_regime ∈ {vat, turnover, simplified_vat}` darvozasi — YaTT'ni aniq
+kesadi va chala `activeServices` ga bog'liq emas.
+
 ---
 
 ## 2. Bosqichlar — ataylab ajratilgan
@@ -57,14 +91,15 @@ Bitta `null` qolsa ham migratsiya yurmaydi (yarim holat jimgina paydo bo'lmaslig
 | Bosqich | Buyruq | Ta'sir | Xavf |
 |---|---|--:|---|
 | **(a)** draft shablonlar | `--scope=draft` | **0** majburiyat | juda past |
-| **(b)** active shablonlar | `--scope=active` | 1 673 bekor | yuqori |
+| **(b)** active shablonlar | `--scope=active` | **0** — qamrov bo'sh | — |
 
-10 ta draft shablon hozir 0 majburiyat yaratadi — ularga qoida qo'shish bugun
-**bepul**, faollashtirilgandan keyin esa 1 000+ soxta majburiyat oldini oladi
-(`EKOLOGIYA` 219, `ITPARK_OYLIK` 225).
+Tasdiqlangan 4 shablonning hammasi `draft`, ya'ni **bugun faqat (a) bosqichi
+bor** va u hech qanday majburiyatga tegmaydi. `--scope=active` yurgizilsa
+skript «qamrov bo'sh» deb to'xtaydi.
 
-**(a) ni birinchi qiling.** Xavfsiz o'zgarishni xavfli o'zgarish bilan bitta
-tranzaksiyaga qo'yish uchun sabab yo'q.
+Qoida qo'shish bugun **bepul**, faollashtirilgandan keyin esa soxta
+majburiyatlar oldini oladi: `ITPARK_OYLIK` qoidasiz faollashsa 225 ta
+(14 firma o'rniga 239), `YER_SOLIQ` 202 ta, `SUV_SOLIQ` 210 ta.
 
 ---
 
@@ -81,6 +116,7 @@ Har bandi bajarilmaguncha keyingisiga o'tmang.
       DATABASE_URL="postgresql://…@127.0.0.1:15432/inbola?schema=public" \
         npx tsx scripts/migrate-service-key-applicability.ts --scope=draft
       ```
+      (2026-09-07 da yurgizilgan: sakkizala ko'rsatkich ✅, reja — 4 qoida, 0 bekor)
 - [ ] **5.** «KUTILGAN vs HAQIQIY» jadvalida **hamma qator ✅** — bittasi ⚠️ bo'lsa **TO'XTANG**
       (auditni qayta yurgizing; raqamlar tabiiy o'sishi mumkin, lekin qarorni odam qabul qiladi)
 - [ ] **6.** «MIGRATSIYA REJASI» dagi shablonlar va sonlar kutilganidek
@@ -176,11 +212,12 @@ test bazasida yurgizadi, 15 ta holat:
 | apply: qoida yaratiladi, `planned` bekor qilinadi | ✅ |
 | `sent` tegilmaydi | ✅ |
 | **kalitsiz firma tegilmaydi** | ✅ |
+| **chala ro'yxatli firma tegilmaydi** (MIN_TRUSTED_KEYS) | ✅ |
 | kaliti bor firma tegilmaydi | ✅ |
 | bekor qilish `ObligationStatusEvent` bilan izlanadi | ✅ |
 | post-audit hamma bandni o'tkazadi | ✅ |
 | rollback: qoida o'chadi, majburiyat tiklanadi | ✅ |
 | rollback tegmasligi kerak bo'lganlarga tegmaydi | ✅ |
 
-Qo'shimcha: `test/mapping-manifest.test.ts` (12) · `test/service-key-gate.test.ts` (17) ·
+Qo'shimcha: `test/mapping-manifest.test.ts` (14) · `test/service-key-gate.test.ts` (19) ·
 `test/obligation-service-key-cancel.test.ts` (10).

@@ -113,4 +113,24 @@ describe("bloklash qoidasi", () => {
     const s = selectScope(manifest(row({ code: "A" }), row({ code: "B" })), "active");
     expect(blockingReasons(s).length).toBeGreaterThan(0);
   });
+
+  it("'later' bloklamaydi — bu qaror, qarorsizlik emas", () => {
+    const s = selectScope(
+      manifest(
+        row({ code: "A", confirmed: true, confirmedBy: "bb" }),
+        row({ code: "B", confirmed: "later" }),
+      ),
+      "active",
+    );
+    expect(s.deferred.map((r) => r.code)).toEqual(["B"]);
+    expect(s.included.map((r) => r.code)).toEqual(["A"]);
+    expect(blockingReasons(s)).toHaveLength(0);
+  });
+
+  it("'later' hech qachon qamrovga kirmaydi", () => {
+    for (const f of ["active", "draft", "all"] as const) {
+      const s = selectScope(manifest(row({ code: "L", confirmed: "later" })), f);
+      expect(s.included).toHaveLength(0);
+    }
+  });
 });

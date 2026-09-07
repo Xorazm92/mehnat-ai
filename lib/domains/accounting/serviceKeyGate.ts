@@ -35,24 +35,50 @@ export function needsServiceKeyRule(t: TemplateGateFacts): boolean {
   return !t.applicability.some((a) => a.criteriaType === "service_key");
 }
 
+/**
+ * Ma'lumot ishonchli deb sanaladigan eng kam kalit soni.
+ *
+ * PRODDA O'LCHANGAN TAQSIMOT (2026-09-07, 270 faol mijoz firma):
+ *
+ *     0 kalit      31 firma   ← ma'lumot umuman yo'q
+ *     1-2 kalit     4 firma  ┐
+ *     3-5 kalit    12 firma  ┘ 16 firma — ro'yxat aniq chala
+ *     6-10 kalit    4 firma
+ *     11-20 kalit  64 firma
+ *     21+ kalit   155 firma   ← odatiy to'liq firma
+ *
+ * Odatdagi firmada 21+ kalit bor. UMID HOSPITAL da bittasi ("ekologiya"),
+ * TEN BRANCHES da ikkitasi. Bunday ro'yxatni "firma qolgan 23 ta hisobotni
+ * topshirmaydi" deb o'qish — bo'sh ro'yxatni shunday o'qish bilan bir xil
+ * xato, faqat bir qadam yashiringani bilan farq qiladi.
+ *
+ * Shuning uchun chegara: 6 tadan kam kalit → BILMAYMIZ, tegilmaydi.
+ * Chetlab o'tiladigan firma 31 emas, 47 ta.
+ */
+export const MIN_TRUSTED_KEYS = 6;
+
 export type GateVerdict =
   /** Kaliti bor — qoida qo'shilsa hech narsa o'zgarmaydi. */
   | "has_key"
-  /** Kaliti yo'q, lekin BOSHQA kalitlari bor ⇒ ishonchli "topshirmaydi". */
+  /** Kaliti yo'q, lekin ro'yxati to'liq ⇒ ishonchli "topshirmaydi". */
   | "missing_key"
   /**
-   * Hech qanday kalit yozilmagan ⇒ firma nima topshirishini BILMAYMIZ.
+   * Kalitlar ro'yxati yo'q yoki chala ⇒ firma nima topshirishini BILMAYMIZ.
    *
-   * Bu "topshirmaydi" DEGANI EMAS. Engine uchun bo'sh ro'yxat `includes` ni
-   * false qaytaradi, ya'ni qoida qo'shilsa bu firmalar ham tushib qolardi —
+   * Bu "topshirmaydi" DEGANI EMAS. Engine uchun chala ro'yxat ham `includes`
+   * ni false qaytaradi, ya'ni qoida qo'shilsa bu firmalar tushib qolardi —
    * lekin bu ma'lumot yo'qligini qaror deb ko'rsatish bo'lardi. Shuning uchun
    * migratsiya bunday firmalarni butunlay chetlab o'tadi.
    */
-  | "unknown_no_keys";
+  | "unknown_incomplete";
 
 /** Bitta firma uchun qaror. */
-export function gateVerdict(matrixKey: string, c: CompanyGateFacts): GateVerdict {
-  if (c.activeServices.length === 0) return "unknown_no_keys";
+export function gateVerdict(
+  matrixKey: string,
+  c: CompanyGateFacts,
+  minKeys: number = MIN_TRUSTED_KEYS,
+): GateVerdict {
+  if (c.activeServices.length < minKeys) return "unknown_incomplete";
   return c.activeServices.includes(matrixKey) ? "has_key" : "missing_key";
 }
 
@@ -61,15 +87,19 @@ export interface GateScope {
   hasKey: CompanyGateFacts[];
   /** Kaliti yo'q — majburiyatlari bekor bo'ladi. */
   missingKey: CompanyGateFacts[];
-  /** Kalitsiz — HISOBDAN CHIQARILADI. */
+  /** Ro'yxati chala yoki yo'q — HISOBDAN CHIQARILADI. */
   excluded: CompanyGateFacts[];
 }
 
 /** Bitta shablon uchun firmalarni uch toifaga ajratadi. */
-export function gateScope(matrixKey: string, companies: CompanyGateFacts[]): GateScope {
+export function gateScope(
+  matrixKey: string,
+  companies: CompanyGateFacts[],
+  minKeys: number = MIN_TRUSTED_KEYS,
+): GateScope {
   const scope: GateScope = { hasKey: [], missingKey: [], excluded: [] };
   for (const c of companies) {
-    const v = gateVerdict(matrixKey, c);
+    const v = gateVerdict(matrixKey, c, minKeys);
     if (v === "has_key") scope.hasKey.push(c);
     else if (v === "missing_key") scope.missingKey.push(c);
     else scope.excluded.push(c);

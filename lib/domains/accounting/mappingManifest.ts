@@ -11,13 +11,18 @@
 // tasdiqlovchi va sana yonma-yon turadi va git tarixida qoladi.
 //
 // UCH HOLAT, ATAYLAB:
-//   true  → qamrovga kiradi
-//   false → RAD ETILDI; qaror yozilgan, migratsiya qo'shmaydi
-//   null  → hali javob yo'q ⇒ migratsiya BLOKLANADI
+//   true    → qamrovga kiradi
+//   false   → RAD ETILDI; qaror yozilgan, migratsiya qo'shmaydi
+//   "later" → KEYINROQ ko'riladi; bu ham qaror, shuning uchun bloklamaydi
+//   null    → hali javob yo'q ⇒ migratsiya BLOKLANADI
+//
+// To'rtta holat bosh buxgalterning o'z lug'atidan chiqdi: u har savolga
+// HA / YO'Q / KEYINROQ deb javob berdi. Uch javobni ikkita maydonga
+// siqish "keyinroq" ni "rad etildi" ga aylantirardi.
 //
 // `null` ni `false` bilan bir xil ko'rish eng xavfli xato bo'lardi: javob
 // berilmagan moslik "rad etilgan" bo'lib ko'rinardi va hech kim buni
-// sezmasdi. Shuning uchun `null` bloklaydi, `false` bloklamaydi.
+// sezmasdi. Shuning uchun `null` bloklaydi, qolgan uchtasi bloklamaydi.
 import { z } from "zod";
 
 export const MappingRowSchema = z.object({
@@ -25,7 +30,7 @@ export const MappingRowSchema = z.object({
   name: z.string(),
   matrixKey: z.string().min(1),
   lifecycle: z.enum(["draft", "approved", "active", "retired"]),
-  confirmed: z.boolean().nullable(),
+  confirmed: z.union([z.boolean(), z.literal("later")]).nullable(),
   confirmedBy: z.string().nullable(),
   confirmedAt: z.string().nullable(),
   auditAffected: z.number().int().nonnegative(),
@@ -66,6 +71,8 @@ export interface ScopeSelection {
   included: MappingRow[];
   /** Ataylab rad etilgan. */
   rejected: MappingRow[];
+  /** Ataylab keyinga qoldirilgan — bloklamaydi. */
+  deferred: MappingRow[];
   /** Javob berilmagan — bloklaydi. */
   unanswered: MappingRow[];
   /** `--scope` filtri tashqarisida qolgan (tasdiqlangan bo'lsa ham). */
@@ -82,7 +89,7 @@ export type ScopeFilter = "active" | "draft" | "all";
  * xavfsiz o'zgarishni xavfli o'zgarish bilan bir tranzaksiyaga qo'yish bo'lardi.
  */
 export function selectScope(m: MappingManifest, filter: ScopeFilter): ScopeSelection {
-  const sel: ScopeSelection = { included: [], rejected: [], unanswered: [], outOfScope: [] };
+  const sel: ScopeSelection = { included: [], rejected: [], deferred: [], unanswered: [], outOfScope: [] };
   const inFilter = (r: MappingRow) =>
     filter === "all" || (filter === "draft" ? r.lifecycle === "draft" : r.lifecycle === "active");
   for (const r of m.mappings) {
@@ -92,6 +99,10 @@ export function selectScope(m: MappingManifest, filter: ScopeFilter): ScopeSelec
     }
     if (r.confirmed === false) {
       sel.rejected.push(r);
+      continue;
+    }
+    if (r.confirmed === "later") {
+      sel.deferred.push(r);
       continue;
     }
     if (inFilter(r)) sel.included.push(r);
