@@ -315,6 +315,17 @@ interface RollbackRecord {
     scopeObligationsBefore: number;
     /** Shundan `planned`. */
     scopePlannedBefore: number;
+    /**
+     * Qamrovdan TASHQARI shablonlarda bekor qilingan majburiyat soni.
+     *
+     * NEGA `planned` EMAS. `planned` xodimlar ishlagani sayin tabiiy
+     * kamayadi (planned → in_progress → sent). Post-audit apply'dan bir
+     * necha soat keyin yurgizilsa, o'sha tabiiy kamayish "migratsiya
+     * boshqa shablonlarga tegdi" degan YOLG'ON signal berardi.
+     * Migratsiya boshqa shablonga faqat BEKOR QILISH orqali zarar
+     * yetkaza oladi — o'lchanadigan invariant shu.
+     */
+    otherTemplatesCancelledBefore?: number;
   };
 }
 
@@ -586,6 +597,9 @@ async function run(): Promise<void> {
       const otherTemplatesBefore = await tx.obligation.count({
         where: { templateId: { notIn: templateIds }, status: "planned" },
       });
+      const otherTemplatesCancelledBefore = await tx.obligation.count({
+        where: { templateId: { notIn: templateIds }, status: "cancelled" },
+      });
       const scopeObligationsBefore = await tx.obligation.count({ where: { templateId: { in: templateIds } } });
       const scopePlannedBefore = await tx.obligation.count({
         where: { templateId: { in: templateIds }, status: "planned" },
@@ -596,6 +610,7 @@ async function run(): Promise<void> {
         otherTemplatesPlannedBefore: otherTemplatesBefore,
         scopeObligationsBefore,
         scopePlannedBefore,
+        otherTemplatesCancelledBefore,
       };
 
       // 4c) QOIDA QATORLARI — dublikat himoyasi bilan (§4).
@@ -874,12 +889,31 @@ async function postAudit(file: string): Promise<void> {
   check("bekor qilinganlar kutilgan miqdorda", stillCancelled === rec.cancelledObligations.length,
     `${stillCancelled} / ${rec.cancelledObligations.length}`);
 
-  // 7) Boshqa majburiyatlar o'zgarmagan
-  const otherNow = await prisma.obligation.count({
-    where: { templateId: { notIn: templateIds }, status: "planned" },
-  });
-  check("boshqa shablonlar tegilmagan", otherNow === rec.snapshot.otherTemplatesPlannedBefore,
-    `planned: ${rec.snapshot.otherTemplatesPlannedBefore} → ${otherNow}`);
+  // 7) Boshqa shablonlar zarar ko'rmagan.
+  //
+  // Asosiy o'lchov — BEKOR QILINGAN soni. `planned` xodimlar ishlagani sayin
+  // tabiiy kamayadi, ya'ni uni invariant deb olish post-auditni bir necha
+  // soatdan keyin yurgizganda yolg'on signal berardi.
+  const otherCancelledBefore = rec.snapshot.otherTemplatesCancelledBefore;
+  if (otherCancelledBefore === undefined) {
+    // Eski yozuv — bu maydonsiz. `planned` bo'yicha faqat MA'LUMOT beramiz.
+    const otherNow = await prisma.obligation.count({
+      where: { templateId: { notIn: templateIds }, status: "planned" },
+    });
+    const delta = otherNow - rec.snapshot.otherTemplatesPlannedBefore;
+    check(
+      "boshqa shablonlar: bekor qilish o'lchanmagan (eski yozuv)",
+      true,
+      `planned ${rec.snapshot.otherTemplatesPlannedBefore} → ${otherNow}` +
+        (delta === 0 ? "" : ` (${delta > 0 ? "+" : ""}${delta} — odatda xodim ishi, bekor qilish emas)`),
+    );
+  } else {
+    const otherCancelledNow = await prisma.obligation.count({
+      where: { templateId: { notIn: templateIds }, status: "cancelled" },
+    });
+    check("boshqa shablonlarda bekor qilish ko'paymagan", otherCancelledNow <= otherCancelledBefore,
+      `cancelled: ${otherCancelledBefore} → ${otherCancelledNow}`);
+  }
   check("migratsiyadan tashqari bekor qilish yo'q", wronglyCancelled === 0,
     wronglyCancelled ? `⚠️ ${wronglyCancelled} ta begona cancelled` : "toza");
 
