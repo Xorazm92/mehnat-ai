@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { compressImageFile } from "@/lib/imageCompress";
 import { saveReportProof } from "@/server/proofs";
+import { proofScreensFor } from "@/lib/reportColumns";
 import { friendlyError } from "@/lib/actionError";
 
 interface Props {
@@ -24,14 +25,23 @@ export default function ProofUploader({ companies, columns, period }: Props) {
   const [colKey, setColKey] = useState(columns[0]?.key ?? "");
   const [note, setNote] = useState("");
   const [image, setImage] = useState<string | null>(null);
+  // IKKINCHI SKRINSHOT — faqat ikki ekran talab qiladigan ustunlarda
+  // (`lib/reportColumns.ts` → `PROOF_SCREENS`). Slot ko'rsatilmasa bu yo'l
+  // server tekshiruvidan o'ta olmasdi: qoida ustunga bog'langan, ekranga emas.
+  const [image2, setImage2] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const onPick = async (file: File | undefined) => {
+  const screens = proofScreensFor(colKey);
+  const needsSecond = screens.length > 1;
+
+  const onPick = async (file: File | undefined, slot: 0 | 1) => {
     if (!file) return;
     setResult(null);
     try {
-      setImage(await compressImageFile(file));
+      const compressed = await compressImageFile(file);
+      if (slot === 0) setImage(compressed);
+      else setImage2(compressed);
     } catch {
       setResult({ ok: false, text: "Rasmni o'qib bo'lmadi." });
     }
@@ -39,13 +49,20 @@ export default function ProofUploader({ companies, columns, period }: Props) {
 
   const submit = async () => {
     if (!companyId || !colKey || !image) return;
+    if (needsSecond && !image2) return;
     setBusy(true);
     setResult(null);
     try {
       const label = columns.find((c) => c.key === colKey)?.label;
-      await saveReportProof({ companyId, period, colKey, colLabel: label, imageData: image, note });
+      await saveReportProof({
+        companyId, period, colKey, colLabel: label,
+        imageData: image,
+        imageData2: needsSecond ? image2 ?? undefined : undefined,
+        note,
+      });
       setResult({ ok: true, text: "Yuborildi. Nazoratchi tekshiradi." });
       setImage(null);
+      setImage2(null);
       setNote("");
     } catch (e) {
       setResult({ ok: false, text: friendlyError(e) || "Yuborib bo'lmadi." });
@@ -97,7 +114,7 @@ export default function ProofUploader({ companies, columns, period }: Props) {
       </div>
 
       <div className="tg-field">
-        <label className="tg-label" htmlFor="shot">Skrinshot</label>
+        <label className="tg-label" htmlFor="shot">{screens[0]}</label>
         {/* `capture` bo'lmagani ataylab: buxgalterda skrinshot allaqachon
             galereyada bo'ladi, kamerani majburlash uni bloklab qo'yardi. */}
         <input
@@ -105,13 +122,28 @@ export default function ProofUploader({ companies, columns, period }: Props) {
           className="tg-input"
           type="file"
           accept="image/*"
-          onChange={(e) => void onPick(e.target.files?.[0])}
+          onChange={(e) => void onPick(e.target.files?.[0], 0)}
         />
         {/* next/image ataylab ishlatilmaydi: bu klientda yaratilgan data: URL,
             uni optimizator qayta ishlay olmaydi va faqat yuk qo'shadi. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        {image && <img className="tg-preview" src={image} alt="Tanlangan skrinshot" />}
+        {image && <img className="tg-preview" src={image} alt={screens[0]} />}
       </div>
+
+      {needsSecond && (
+        <div className="tg-field">
+          <label className="tg-label" htmlFor="shot2">{screens[1]}</label>
+          <input
+            id="shot2"
+            className="tg-input"
+            type="file"
+            accept="image/*"
+            onChange={(e) => void onPick(e.target.files?.[0], 1)}
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {image2 && <img className="tg-preview" src={image2} alt={screens[1]} />}
+        </div>
+      )}
 
       <div className="tg-field">
         <label className="tg-label" htmlFor="note">Izoh (ixtiyoriy)</label>
@@ -128,7 +160,7 @@ export default function ProofUploader({ companies, columns, period }: Props) {
         <div className={`tg-note ${result.ok ? "tg-note--ok" : "tg-note--err"}`}>{result.text}</div>
       )}
 
-      <button className="tg-btn" onClick={() => void submit()} disabled={busy || !image}>
+      <button className="tg-btn" onClick={() => void submit()} disabled={busy || !image || (needsSecond && !image2)}>
         {busy ? "Yuborilmoqda…" : "Yuborish"}
       </button>
     </>

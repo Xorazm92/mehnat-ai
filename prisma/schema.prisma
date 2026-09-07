@@ -522,6 +522,11 @@ model ReportProof {
   /// Diskdagi ombor havolasi ("disk://YYYY/MM/<sha256>.jpg") —
   /// `lib/engines/evidence/store.ts`. Yangi dalillar SHU yerga yoziladi.
   imageRef String?
+  /// IKKINCHI SKRINSHOT — faqat ikki ekran talab qiladigan ustunlarda
+  /// to'ladi (`lib/reportColumns.ts` `PROOF_SCREENS`, bugun — `my_mehnat`).
+  /// Eski base64 juftligi YO'Q: bu ustun diskdagi ombordan keyin paydo
+  /// bo'lgan, ya'ni ko'chiriladigan tarixi yo'q.
+  imageRef2 String?
   /// Hujjat fayli uchun o'sha ombor havolasi.
   fileRef  String?
 

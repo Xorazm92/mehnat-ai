@@ -38,8 +38,13 @@ export async function GET(
     }
 
     const isDownload = req.nextUrl.searchParams.get("download") === "1";
+    // `n=2` — ikki ekranli ustunlarning IKKINCHI skrinshoti (`imageRef2`).
+    // Uning eski base64 juftligi yo'q, shuning uchun ikkinchi yo'l `null`.
+    const isSecond = req.nextUrl.searchParams.get("n") === "2";
 
-    const stored = await readStoredFile(proof.imageRef, proof.imageData);
+    const stored = isSecond
+      ? await readStoredFile(proof.imageRef2, null)
+      : await readStoredFile(proof.imageRef, proof.imageData);
     if (!stored) {
       return NextResponse.json({ error: "Skrinshot topilmadi" }, { status: 404 });
     }
@@ -48,7 +53,7 @@ export async function GET(
 
     const safeColKey = proof.colKey.replace(/[^a-zA-Z0-9_-]/g, "_");
     const safeCompanyName = proof.company.name.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `skrinshot_${safeCompanyName}_${safeColKey}_${proof.period}.jpg`;
+    const filename = `skrinshot${isSecond ? "2" : ""}_${safeCompanyName}_${safeColKey}_${proof.period}.jpg`;
 
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,

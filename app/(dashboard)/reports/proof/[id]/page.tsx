@@ -28,6 +28,8 @@ export default async function ProofViewPage({
     where: { id },
     select: {
       id: true, companyId: true, period: true, colKey: true,
+      // Faqat BORLIGI kerak — baytlar `/api/proofs/[id]/image?n=2` dan keladi.
+      imageRef2: true,
       fileName: true, fileType: true, note: true, status: true,
       submittedById: true, submittedByName: true, submittedAt: true,
       reviewedById: true, reviewedByName: true, reviewedAt: true, rejectReason: true,
@@ -96,7 +98,7 @@ export default async function ProofViewPage({
   return (
     <div className="space-y-4">
       <ProofViewClient
-        proof={JSON.parse(JSON.stringify(proof))}
+        proof={{ ...JSON.parse(JSON.stringify(proof)), hasSecondImage: !!proof.imageRef2 }}
         userRole={role}
         canReview={canReview}
       />

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { X, Upload, Clipboard, Check, Ban, Loader2, ImageIcon, Clock, ZoomIn, ExternalLink } from "lucide-react";
 import { compressImageFile } from "@/lib/imageCompress";
 import { saveReportProof, getReportProof, reviewReportProof } from "@/server/proofs";
+import { proofScreensFor } from "@/lib/reportColumns";
 import { formatUzDateNumeric, formatUzTime } from "@/lib/platform/format";
 import { ImageZoomModal } from "@/components/ImageZoomModal";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +20,8 @@ interface ProofFull {
   fileName: string | null;
   fileType: string | null;
   note: string | null;
+  /** Ikki ekranli ustunlarda (`PROOF_SCREENS`) ikkinchi skrinshot bormi. */
+  hasSecondImage: boolean;
   status: string;
   submittedById: string;
   submittedByName: string;
@@ -63,6 +66,13 @@ const fmtDate = (iso?: string | null) => {
  * olmasdi (eslint aynan shuni ko'rsatib turardi). Qiymatlar o'zgarmas —
  * joyi shu yerda. Chegara serverda ham majburlanadi (`server/proofs.ts`).
  */
+/**
+ * Dalil rasmi manzili. Ikkinchi skrinshot ayni yo'ldan `?n=2` bilan olinadi
+ * (`app/api/proofs/[id]/image/route.ts`) — alohida endpoint yo'q.
+ */
+const imageUrlFor = (proofId: string, idx: number) =>
+  `/api/proofs/${proofId}/image${idx > 0 ? `?n=${idx + 1}` : ""}`;
+
 const FILE_MAX = 2 * 1024 * 1024;
 const FILE_TYPES = [
   "application/pdf",
@@ -73,7 +83,12 @@ const FILE_TYPES = [
 ];
 
 const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, onSubmitted, onReviewed }) => {
-  const [imgPreview, setImgPreview] = useState<string>("");
+  /**
+   * Skrinshotlar SLOT bo'yicha: `shots[i]` — `screens[i]` yorlig'iga tegishli
+   * rasm. Ustunlarning ko'pi bitta slotli, `my_mehnat` esa ikkita
+   * (`lib/reportColumns.ts` — talabning yagona manbai).
+   */
+  const [shots, setShots] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -81,22 +96,26 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
   const [loadingProof, setLoadingProof] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [lightbox, setLightbox] = useState(false); // to'liq ekran skrinshot ko'rinishi
-  const [uploadZoom, setUploadZoom] = useState(false); // yuklanayotgan skrinshot zoomi
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [lightbox, setLightbox] = useState<number | null>(null); // ko'rilayotgan skrinshot slotining raqami
+  const [uploadZoom, setUploadZoom] = useState<number | null>(null); // yuklanayotgan skrinshot zoomi
+  const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
 
   const open = !!state;
   const mode = state?.mode;
+  // Ustun uchun talab qilinadigan skrinshot yorliqlari (odatda bitta).
+  // `useMemo` — massiv Ctrl+V effektining bog'liqligi: har renderda yangisi
+  // yaralsa, hodisa tinglovchisi ham har renderda qayta ulanardi.
+  const screens = useMemo(() => proofScreensFor(state?.colKey ?? ""), [state?.colKey]);
 
   // Oyna ochilganda holatni tiklash
   useEffect(() => {
     if (!open) return;
-    setImgPreview("");
+    setShots([]);
     setNote("");
     setProof(null);
     setShowReject(false);
     setRejectReason("");
-    setLightbox(false);
+    setLightbox(null);
 
     if (mode === "review" && state) {
       setLoadingProof(true);
@@ -110,8 +129,8 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
 
   // Lightbox ochiq bo'lsa Esc bilan yopish
   useEffect(() => {
-    if (!lightbox) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(false); };
+    if (lightbox === null) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(null); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [lightbox]);
@@ -141,7 +160,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
     setDocFile({ data, name: file.name, type: file.type });
   }, []);
 
-  const handleFile = useCallback(async (file: File | null | undefined) => {
+  const handleFile = useCallback(async (idx: number, file: File | null | undefined) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error("Faqat rasm (skrinshot) yuklang");
@@ -149,7 +168,11 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
     }
     try {
       const compressed = await compressImageFile(file);
-      setImgPreview(compressed);
+      setShots((prev) => {
+        const next = [...prev];
+        next[idx] = compressed;
+        return next;
+      });
     } catch {
       toast.error("Rasmni qayta ishlashda xatolik");
     }
@@ -166,7 +189,10 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
           const file = it.getAsFile();
           if (file) {
             e.preventDefault();
-            await handleFile(file);
+            // Ctrl+V birinchi BO'SH slotga tushadi: ikki ekranli ustunda
+            // ikkinchi yopishtirish birinchisini almashtirib yubormaydi.
+            const empty = screens.findIndex((_, i) => !shots[i]);
+            await handleFile(empty === -1 ? 0 : empty, file);
           }
           return;
         }
@@ -174,12 +200,13 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [open, mode, handleFile]);
+  }, [open, mode, handleFile, screens, shots]);
 
   const handleSubmit = async () => {
     if (!state) return;
-    if (!imgPreview) {
-      toast.error("Skrinshot majburiy — iltimos rasm yuklang");
+    const missing = screens.findIndex((_, i) => !shots[i]);
+    if (missing !== -1) {
+      toast.error(`${screens[missing]} majburiy — iltimos rasm yuklang`);
       return;
     }
     setBusy(true);
@@ -189,7 +216,8 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
         period,
         colKey: state.colKey,
         colLabel: state.colLabel,
-        imageData: imgPreview,
+        imageData: shots[0],
+        imageData2: shots[1],
         fileData: docFile?.data,
         fileName: docFile?.name,
         fileType: docFile?.type,
@@ -263,51 +291,63 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
         <div className="p-5">
           {mode === "upload" ? (
             <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handleFile(e.target.files?.[0])}
-              />
-              {imgPreview ? (
-                <div className="relative group rounded-lg overflow-hidden border cursor-zoom-in" style={{ borderColor: "var(--card-border)", background: "var(--surface-2)" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imgPreview}
-                    alt="Skrinshot"
-                    onClick={() => setUploadZoom(true)}
-                    className="w-full rounded-lg"
-                    style={{ maxHeight: "40vh", objectFit: "contain" }}
+              {/* SKRINSHOT SLOTLARI. Ko'p ustunda bitta; `PROOF_SCREENS` da
+                  sanalgan ustunlarda (masalan "My Mehnat") har ekran uchun
+                  alohida slot — ikkinchi rasm birinchisini almashtirmaydi. */}
+              {screens.map((label, i) => (
+                <div key={label} className={i > 0 ? "mt-3" : ""}>
+                  {screens.length > 1 && (
+                    <label className="block text-meta font-bold uppercase tracking-widest mb-1.5" style={{ color: "var(--text-3)" }}>
+                      {label} · majburiy
+                    </label>
+                  )}
+                  <input
+                    ref={(el) => { fileInputs.current[i] = el; }}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFile(i, e.target.files?.[0])}
                   />
-                  <div
-                    onClick={() => setUploadZoom(true)}
-                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
-                  >
-                    <span className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur text-white text-xs font-bold border border-white/20 flex items-center gap-1.5">
-                      <ZoomIn size={15} /> Kattalashtirish
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute top-2 right-2 text-micro font-bold px-2.5 py-1 rounded-lg shadow-md z-10 hover:scale-105 transition-all"
-                    style={{ background: "var(--card-bg)", color: "var(--text)", border: "1px solid var(--card-border)" }}
-                  >
-                    O'zgartirish
-                  </button>
+                  {shots[i] ? (
+                    <div className="relative group rounded-lg overflow-hidden border cursor-zoom-in" style={{ borderColor: "var(--card-border)", background: "var(--surface-2)" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={shots[i]}
+                        alt={label}
+                        onClick={() => setUploadZoom(i)}
+                        className="w-full rounded-lg"
+                        style={{ maxHeight: screens.length > 1 ? "28vh" : "40vh", objectFit: "contain" }}
+                      />
+                      <div
+                        onClick={() => setUploadZoom(i)}
+                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                      >
+                        <span className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur text-white text-xs font-bold border border-white/20 flex items-center gap-1.5">
+                          <ZoomIn size={15} /> Kattalashtirish
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => fileInputs.current[i]?.click()}
+                        className="absolute top-2 right-2 text-micro font-bold px-2.5 py-1 rounded-lg shadow-md z-10 hover:scale-105 transition-all"
+                        style={{ background: "var(--card-bg)", color: "var(--text)", border: "1px solid var(--card-border)" }}
+                      >
+                        O&apos;zgartirish
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => fileInputs.current[i]?.click()}
+                      className="w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed transition-colors hover:border-[var(--primary)]"
+                      style={{ borderColor: "var(--card-border)", color: "var(--text-3)" }}
+                    >
+                      <Upload size={26} />
+                      <span className="text-xs font-bold" style={{ color: "var(--text-2)" }}>{label} yuklash</span>
+                      <span className="text-micro flex items-center gap-1"><Clipboard size={11} /> yoki Ctrl+V bilan yopishtiring</span>
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed transition-colors hover:border-[var(--primary)]"
-                  style={{ borderColor: "var(--card-border)", color: "var(--text-3)" }}
-                >
-                  <Upload size={26} />
-                  <span className="text-xs font-bold" style={{ color: "var(--text-2)" }}>Skrinshot yuklash</span>
-                  <span className="text-micro flex items-center gap-1"><Clipboard size={11} /> yoki Ctrl+V bilan yopishtiring</span>
-                </button>
-              )}
+              ))}
 
               {/* HISOBOT FAYLI — ixtiyoriy. Skrinshot tez ko'z yugurtirish
                   uchun, fayl esa nazoratchi hujjatning o'zini ochishi uchun. */}
@@ -356,7 +396,7 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                 <button onClick={onClose} disabled={busy} className="flex-1 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50" style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--card-border)" }}>
                   Bekor
                 </button>
-                <Button variant="primary" size="md" onClick={handleSubmit} disabled={busy || !imgPreview} className="flex-1">
+                <Button variant="primary" size="md" onClick={handleSubmit} disabled={busy || screens.some((_, i) => !shots[i])} className="flex-1">
                   {busy ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
                   Topshirish
                 </Button>
@@ -399,35 +439,46 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
                     </a>
                   )}
 
-                  {/* Skrinshot preview: ustiga bosilsa to'liq zoom rejimida ochiladi */}
-                  <div className="relative group rounded-lg overflow-hidden border cursor-zoom-in" style={{ borderColor: "var(--card-border)", background: "var(--surface-2)" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`/api/proofs/${proof.id}/image`}
-                      alt="Skrinshot"
-                      onClick={() => setLightbox(true)}
-                      className="w-full rounded-lg transition-transform duration-200 group-hover:scale-[1.01]"
-                      style={{ maxHeight: "42vh", objectFit: "contain" }}
-                    />
-                    <div
-                      onClick={() => setLightbox(true)}
-                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-bold pointer-events-auto"
-                    >
-                      <span className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur border border-white/20 flex items-center gap-1.5 shadow-lg">
-                        <ZoomIn size={15} /> Kattalashtirish
-                      </span>
-                      <a
-                        href={`/reports/proof/${proof.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur border border-white/20 flex items-center gap-1.5 shadow-lg text-white"
-                        title="Alohida to'liq sahifada ochish"
-                      >
-                        <ExternalLink size={14} /> Yangi oynada
-                      </a>
+                  {/* Skrinshot preview: ustiga bosilsa to'liq zoom rejimida ochiladi.
+                      Ikki ekranli ustunda ikkinchi rasm ham SHU YERDA ko'rinadi —
+                      nazoratchi tasdiqlashdan oldin ikkalasini ham ko'rishi shart. */}
+                  {(proof.hasSecondImage ? [0, 1] : [0]).map((i) => (
+                    <div key={i} className={i > 0 ? "mt-3" : ""}>
+                      {proof.hasSecondImage && (
+                        <div className="text-meta font-bold uppercase tracking-widest mb-1.5" style={{ color: "var(--text-3)" }}>
+                          {screens[i] ?? `${i + 1}-skrinshot`}
+                        </div>
+                      )}
+                      <div className="relative group rounded-lg overflow-hidden border cursor-zoom-in" style={{ borderColor: "var(--card-border)", background: "var(--surface-2)" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imageUrlFor(proof.id, i)}
+                          alt={screens[i] ?? "Skrinshot"}
+                          onClick={() => setLightbox(i)}
+                          className="w-full rounded-lg transition-transform duration-200 group-hover:scale-[1.01]"
+                          style={{ maxHeight: proof.hasSecondImage ? "30vh" : "42vh", objectFit: "contain" }}
+                        />
+                        <div
+                          onClick={() => setLightbox(i)}
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-bold pointer-events-auto"
+                        >
+                          <span className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur border border-white/20 flex items-center gap-1.5 shadow-lg">
+                            <ZoomIn size={15} /> Kattalashtirish
+                          </span>
+                          <a
+                            href={`/reports/proof/${proof.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur border border-white/20 flex items-center gap-1.5 shadow-lg text-white"
+                            title="Alohida to'liq sahifada ochish"
+                          >
+                            <ExternalLink size={14} /> Yangi oynada
+                          </a>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ))}
 
                   {proof.note && (
                     <div className="mt-3 text-xs rounded-lg px-3 py-2" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>
@@ -503,22 +554,25 @@ const ReportProofModal: React.FC<Props> = ({ state, period, canReview, onClose, 
     </ModalLayer>
 
     {/* ── Interaktiv to'liq ekran kattalashtirish (Zoom, Pan, Rotate, New Tab) ── */}
-    {lightbox && proof && (
+    {lightbox !== null && proof && (
       <ImageZoomModal
-        src={`/api/proofs/${proof.id}/image`}
+        src={imageUrlFor(proof.id, lightbox)}
         title={`${state?.companyName || ""} · ${state?.colLabel || proof.colKey}`}
-        subtitle={`${period} davri uchun topshirilgan skrinshot`}
-        proofId={proof.id}
-        onClose={() => setLightbox(false)}
+        subtitle={`${period} davri uchun topshirilgan ${screens[lightbox] ?? "skrinshot"}`}
+        // `proofId` FAQAT birinchi rasmga: modal undan yuklab olish/yangi oyna
+        // havolasini quradi va u har doim `?n` siz birinchi rasmni beradi.
+        // Ikkinchisida `src` ning o'zi ishlatiladi (u allaqachon `?n=2`).
+        proofId={lightbox === 0 ? proof.id : undefined}
+        onClose={() => setLightbox(null)}
       />
     )}
 
-    {uploadZoom && imgPreview && (
+    {uploadZoom !== null && shots[uploadZoom] && (
       <ImageZoomModal
-        src={imgPreview}
+        src={shots[uploadZoom]}
         title={`${state?.companyName || ""} · ${state?.colLabel || ""}`}
-        subtitle="Yuklanayotgan skrinshot preview"
-        onClose={() => setUploadZoom(false)}
+        subtitle={`Yuklanayotgan ${screens[uploadZoom] ?? "skrinshot"} preview`}
+        onClose={() => setUploadZoom(null)}
       />
     )}
     </>

@@ -131,6 +131,24 @@ export const BASE_REPORT_COLUMNS: ReportColumn[] = [
   { key: "ekologiya", label: "Ekologiya", short: "EK", group: "Maxsus" },
 ];
 
+// ── BIR KATAKKA IKKI SKRINSHOT ───────────────────────────────────
+//
+// Odatda katak dalili bitta ekran rasmidan iborat. `my_mehnat` bunday emas:
+// buxgalteriya bo'limi ishni ikki ekran bilan tasdiqlashni talab qiladi va
+// bitta rasm bilan topshirilgan katak nazoratchi tomonidan qaytarilardi.
+//
+// Talab ustun ta'rifi YONIDA turadi, chunki u ustunning xossasi — yuklash
+// oynasi ham, server tekshiruvi ham shu yagona ro'yxatdan o'qiydi.
+// Yorliqlar — yuklash oynasidagi slot nomlari.
+export const PROOF_SCREENS: Record<string, string[]> = {
+  my_mehnat: ["1-skrinshot", "2-skrinshot"],
+};
+
+/** Ustun uchun talab qilinadigan skrinshot yorliqlari (odatda — bitta). */
+export function proofScreensFor(colKey: string): string[] {
+  return PROOF_SCREENS[colKey] ?? ["Skrinshot"];
+}
+
 // ── DAVLAT BYUDJETI TO'LOV KODLARI ───────────────────────────────
 //
 // NEGA SHU YERDA: buxgalter to'lov topshiriqnomasini to'ldirayotganda kodni

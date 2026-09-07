@@ -38,6 +38,12 @@ const PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 const PNG_BYTES = Buffer.from(PNG.slice(PNG.indexOf(",") + 1), "base64");
 
+// IKKINCHI skrinshot BOSHQA baytlardan iborat bo'lishi shart: ombor
+// mazmun-adresli, ya'ni aynan bir xil rasm aynan bir xil havola berardi va
+// "ikki rasm ayri saqlandimi?" degan tekshiruv hech nimani isbotlamasdi.
+const PNG2_BYTES = Buffer.concat([PNG_BYTES, Buffer.from([0x0a])]);
+const PNG2 = `data:image/png;base64,${PNG2_BYTES.toString("base64")}`;
+
 const ids = { author: "", supervisor: "", outsider: "", company: "" };
 
 async function makeUser(suffix: string, role: "accountant" | "supervisor" | "chief_accountant" | "admin") {
@@ -157,5 +163,43 @@ describe("dalil saqlash", () => {
 
     expect(rows.map((r) => r.userId)).toEqual([ids.supervisor]);
     expect(rows.some((r) => r.userId === ids.outsider)).toBe(false);
+  });
+
+  // IKKI EKRANLI USTUN (`lib/reportColumns.ts` → `PROOF_SCREENS`).
+  // `my_mehnat` katagi ikki ekran bilan tasdiqlanadi; talab SERVERDA
+  // majburlanadi, chunki server action oynadan chetlab ham chaqirilishi
+  // mumkin va yarim dalil katakni "topshirildi" ga ochib yuborardi.
+  it("ikki ekranli ustun — ikkinchi skrinshotsiz topshirilmaydi", async () => {
+    await expect(
+      saveReportProof({
+        companyId: ids.company, period: PERIOD, colKey: "my_mehnat",
+        colLabel: "My Mehnat", imageData: PNG,
+      }),
+    ).rejects.toThrow(/2 ta skrinshot/);
+
+    // Katak OCHILMAYDI: rad etilgan topshirish hech qanday iz qoldirmaydi.
+    const none = await prisma.reportProof.findFirst({
+      where: { companyId: ids.company, period: PERIOD, colKey: "my_mehnat" },
+      select: { id: true },
+    });
+    expect(none).toBeNull();
+  });
+
+  it("ikki ekranli ustun — ikkala rasm ham ayri havola bilan saqlanadi", async () => {
+    await saveReportProof({
+      companyId: ids.company, period: PERIOD, colKey: "my_mehnat",
+      colLabel: "My Mehnat", imageData: PNG, imageData2: PNG2,
+    });
+
+    const proof = await prisma.reportProof.findFirstOrThrow({
+      where: { companyId: ids.company, period: PERIOD, colKey: "my_mehnat" },
+      select: { imageRef: true, imageRef2: true },
+    });
+
+    expect(proof.imageRef2).toMatch(/^disk:\/\/\d{4}\/\d{2}\/[a-f0-9]{64}\.png$/);
+    expect(proof.imageRef2).not.toBe(proof.imageRef);
+
+    const back = await evidenceStore.get(proof.imageRef2!);
+    expect(back.bytes.equals(PNG2_BYTES)).toBe(true);
   });
 });

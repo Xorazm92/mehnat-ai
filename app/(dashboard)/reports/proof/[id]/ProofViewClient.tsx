@@ -26,6 +26,8 @@ interface ProofData {
   period: string;
   colKey: string;
   note: string | null;
+  /** Ikki ekranli ustunda (`PROOF_SCREENS`) ikkinchi skrinshot bormi. */
+  hasSecondImage: boolean;
   status: string;
   submittedById: string;
   submittedByName: string;
@@ -53,7 +55,7 @@ export default function ProofViewClient({ proof: initialProof, canReview }: Prop
   const [busy, setBusy] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState<number | null>(null); // ochilgan skrinshot slotining raqami
 
   const fmtDate = (iso?: string | null) => {
     if (!iso) return "—";
@@ -93,7 +95,14 @@ export default function ProofViewClient({ proof: initialProof, canReview }: Prop
     }
   };
 
+  // Ikki ekranli ustunda ikkinchi rasm ayni yo'ldan `?n=2` bilan olinadi.
   const imageUrl = `/api/proofs/${proof.id}/image`;
+  const shots = proof.hasSecondImage
+    ? [
+        { idx: 0, label: "1-skrinshot", url: imageUrl },
+        { idx: 1, label: "2-skrinshot", url: `${imageUrl}?n=2` },
+      ]
+    : [{ idx: 0, label: "Topshirilgan skrinshot", url: imageUrl }];
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-primary)] p-4 md:p-6 overflow-y-auto space-y-6">
@@ -127,7 +136,7 @@ export default function ProofViewClient({ proof: initialProof, canReview }: Prop
             <ExternalLink size={15} />
             <span className="hidden sm:inline">Rasm havolasi</span>
           </a>
-          <Button variant="primary" size="md" onClick={() => setZoomOpen(true)}>
+          <Button variant="primary" size="md" onClick={() => setZoomOpen(0)}>
             <ZoomIn size={16} />
             <span>To'liq kattalashtirish</span>
           </Button>
@@ -136,36 +145,42 @@ export default function ProofViewClient({ proof: initialProof, canReview }: Prop
 
       {/* ── Main Content Grid ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Left 2 Cols: Interactive Image View */}
-        <div className="lg:col-span-2 dashboard-card p-4 flex flex-col items-center justify-center relative min-h-[450px] group">
-          <div className="w-full flex items-center justify-between mb-3 px-2">
-            <span className="text-micro font-bold uppercase tracking-widest text-[var(--text-3)] flex items-center gap-1">
-              <FileCheck size={14} /> Topshirilgan Skrinshot (bosing = kattalashadi)
-            </span>
-            <button
-              onClick={() => setZoomOpen(true)}
-              className="text-micro font-bold text-[var(--primary)] hover:underline flex items-center gap-1"
-            >
-              <ZoomIn size={13} /> Zoom rejimiga o'tish
-            </button>
-          </div>
+        {/* Left 2 Cols: Interactive Image View.
+            Ikki ekranli ustunda (`PROOF_SCREENS`) IKKALA skrinshot ham
+            chiziladi — nazoratchi qarorini ikkalasiga qarab beradi. */}
+        <div className="lg:col-span-2 dashboard-card p-4 flex flex-col gap-4 relative min-h-[450px]">
+          {shots.map((shot) => (
+            <div key={shot.idx} className="group">
+              <div className="w-full flex items-center justify-between mb-3 px-2">
+                <span className="text-micro font-bold uppercase tracking-widest text-[var(--text-3)] flex items-center gap-1">
+                  <FileCheck size={14} /> {shot.label} (bosing = kattalashadi)
+                </span>
+                <button
+                  onClick={() => setZoomOpen(shot.idx)}
+                  className="text-micro font-bold text-[var(--primary)] hover:underline flex items-center gap-1"
+                >
+                  <ZoomIn size={13} /> Zoom rejimiga o&apos;tish
+                </button>
+              </div>
 
-          <div
-            onClick={() => setZoomOpen(true)}
-            className="relative w-full flex items-center justify-center p-2 rounded-xl border border-[var(--card-border)] bg-[var(--surface-2)] cursor-zoom-in overflow-hidden transition-all hover:border-[var(--primary)]"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageUrl}
-              alt="Skrinshot"
-              className="max-h-[60vh] w-auto max-w-full object-contain rounded-lg shadow-md"
-            />
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <span className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-black/70 backdrop-blur border border-white/20 shadow-xl flex items-center gap-2">
-                <ZoomIn size={16} /> kattalashtirish uchun bosing
-              </span>
+              <div
+                onClick={() => setZoomOpen(shot.idx)}
+                className="relative w-full flex items-center justify-center p-2 rounded-xl border border-[var(--card-border)] bg-[var(--surface-2)] cursor-zoom-in overflow-hidden transition-all hover:border-[var(--primary)]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={shot.url}
+                  alt={shot.label}
+                  className={`${shots.length > 1 ? "max-h-[40vh]" : "max-h-[60vh]"} w-auto max-w-full object-contain rounded-lg shadow-md`}
+                />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-black/70 backdrop-blur border border-white/20 shadow-xl flex items-center gap-2">
+                    <ZoomIn size={16} /> kattalashtirish uchun bosing
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
 
         {/* Right 1 Col: Metadata & Approvals */}
@@ -292,13 +307,15 @@ export default function ProofViewClient({ proof: initialProof, canReview }: Prop
       </div>
 
       {/* ── Interactive Zoom Modal ── */}
-      {zoomOpen && (
+      {zoomOpen !== null && (
         <ImageZoomModal
-          src={imageUrl}
+          src={shots[zoomOpen]?.url ?? imageUrl}
           title={`${proof.company.name} · ${proof.colKey}`}
-          subtitle={`${proof.period} davri uchun topshirilgan skrinshot`}
-          proofId={proof.id}
-          onClose={() => setZoomOpen(false)}
+          subtitle={`${proof.period} davri uchun topshirilgan ${shots[zoomOpen]?.label ?? "skrinshot"}`}
+          // `proofId` faqat birinchi rasmga — modal undan yuklab olish havolasini
+          // quradi va u har doim `?n` siz birinchi rasmni beradi.
+          proofId={zoomOpen === 0 ? proof.id : undefined}
+          onClose={() => setZoomOpen(null)}
         />
       )}
     </div>

@@ -8,6 +8,7 @@ import { notifyUsers } from "@/lib/notify";
 import { evidenceStore, parseDataUrl } from "@/lib/evidenceStore";
 import { serialize } from "@/lib/serialize";
 import { FIELD_TO_DB_COLUMN } from "@/lib/operationTemplates";
+import { proofScreensFor } from "@/lib/reportColumns";
 import { normalizePeriodKey, isFuturePeriod, formatPeriodLabel } from "@/lib/periods";
 import type { OperationFieldKey } from "@/types";
 import { updateTag } from "next/cache";
@@ -142,6 +143,12 @@ export async function saveReportProof(input: {
   colKey: string;
   colLabel?: string;
   imageData: string;
+  /**
+   * IKKINCHI SKRINSHOT — faqat ikki ekran talab qiladigan ustunlarda
+   * (`lib/reportColumns.ts` `PROOF_SCREENS`). Boshqa ustunlarda berilsa
+   * saqlanadi, lekin majburiy emas.
+   */
+  imageData2?: string;
   /** Hisobotning o'zi — ixtiyoriy, skrinshotga qo'shimcha. */
   fileData?: string;
   fileName?: string;
@@ -163,6 +170,18 @@ export async function saveReportProof(input: {
 
   if (!input.imageData || !input.imageData.startsWith("data:image/")) {
     throw new Error("Skrinshot (rasm) talab qilinadi");
+  }
+  // IKKI EKRANLI USTUNLAR. Chegara SERVERDA: oyna ikkinchi slotni ko'rsatadi,
+  // lekin server action to'g'ridan-to'g'ri ham chaqirilishi mumkin va yarim
+  // dalil "topshirildi" holatini ochib yuborardi.
+  const screens = proofScreensFor(input.colKey);
+  if (input.imageData2 && !input.imageData2.startsWith("data:image/")) {
+    throw new Error("Ikkinchi skrinshot rasm formatida bo'lishi kerak");
+  }
+  if (screens.length > 1 && !input.imageData2) {
+    throw new Error(
+      `"${input.colLabel || input.colKey}" uchun ${screens.length} ta skrinshot talab qilinadi`,
+    );
   }
   assertProofFile(input.fileData, input.fileType);
   // KELAJAK DAVR — hisobot oldindan "topshirilishi" mumkin emas. Chegara
@@ -195,6 +214,9 @@ export async function saveReportProof(input: {
   const image = parseDataUrl(input.imageData);
   const stored = await evidenceStore.put(image.bytes, image.mime);
 
+  const image2 = input.imageData2 ? parseDataUrl(input.imageData2) : null;
+  const stored2 = image2 ? await evidenceStore.put(image2.bytes, image2.mime) : null;
+
   const file = input.fileData ? parseDataUrl(input.fileData) : null;
   const storedFile = file ? await evidenceStore.put(file.bytes, file.mime) : null;
 
@@ -212,6 +234,7 @@ export async function saveReportProof(input: {
       period: period,
       colKey: input.colKey,
       imageRef: stored.storageRef,
+      imageRef2: stored2?.storageRef ?? null,
       fileRef: storedFile?.storageRef ?? null,
       // `null`, bo'sh satr EMAS: baytlar diskda, bazada esa "ma'lumot yo'q".
       // Ustun D1 da nullable qilindi aynan shuning uchun.
@@ -226,6 +249,9 @@ export async function saveReportProof(input: {
     },
     update: {
       imageRef: stored.storageRef,
+      // Qayta topshirishda ikkinchi rasm ham ALMASHADI (berilmasa — o'chadi):
+      // aks holda yangi birinchi skrinshot eski ikkinchisiga yopishib qolardi.
+      imageRef2: stored2?.storageRef ?? null,
       // Eski base64 qoldig'i qayta topshirishda tozalanadi — aks holda
       // ko'chirilmagan qator yangi rasm bilan eski baytlarni yonma-yon
       // saqlab qolardi va o'qish yo'li eskisini ko'rsatardi.
@@ -364,13 +390,18 @@ export async function getReportProof(companyId: string, period: string, colKey: 
     where: { companyId_period_colKey: { companyId, period: normalizePeriodKey(period), colKey } },
     select: {
       id: true, companyId: true, period: true, colKey: true,
+      // Baytlar emas, faqat BORLIGI: ikkinchi rasm ham `/api/proofs/[id]/image?n=2`
+      // orqali olinadi.
+      imageRef2: true,
       fileName: true, fileType: true, note: true, status: true,
       submittedById: true, submittedByName: true, submittedAt: true,
       reviewedById: true, reviewedByName: true, reviewedAt: true, rejectReason: true,
     },
   });
 
-  return proof ? serialize(proof) : null;
+  if (!proof) return null;
+  const { imageRef2, ...rest } = proof;
+  return serialize({ ...rest, hasSecondImage: !!imageRef2 });
 }
 
 /**
