@@ -455,24 +455,36 @@ const TEMPLATES: TplSeed[] = [
   // intervyu talab qiladigan qism, va bo'sh applicability = universal, ya'ni
   // uni `draft` holatida qoldirish xavfsiz. `active` ga o'tkazishdan OLDIN
   // to'ldirilishi shart — aks holda 213 firmaga tegib ketadi.
+  //
+  // TO'RTTASIDA QOIDA ALLAQACHON BOR (2026-09-07, bosh buxgalter tasdig'i):
+  // YER_SOLIQ, MOL_MULK_SOLIQ, SUV_SOLIQ, ITPARK_OYLIK. Ular prodga
+  // `scripts/migrate-service-key-applicability.ts` orqali qo'llandi va SHU
+  // YERGA ham yozildi — 551-qatordagi `deleteMany` har deploy'da shablonning
+  // applicability'sini QAYTA QURADI, ya'ni bu yerda yozilmagan qoida
+  // keyingi `deploy.sh` da jimgina yo'q bo'lardi.
+  // Qamrov manbai: scripts/data/service-key-mappings.json (confirmed=true).
   { code: "BUX_BALANS", matrixKey: "buxgalteriya_balansi", name: "Buxgalteriya balansi",
     obligationType: "financial_statement", periodicity: "quarterly",
     anchorType: "fixed_day_of_month", dueDay: 30, lifecycle: "draft" },
   { code: "YER_SOLIQ", matrixKey: "yer_soligi", name: "Yer solig'i",
     obligationType: "tax_declaration", periodicity: "annual",
-    anchorType: "fixed_day_of_month", dueDay: 25, lifecycle: "draft" },
+    anchorType: "fixed_day_of_month", dueDay: 25, lifecycle: "draft",
+    applicability: [{ criteriaType: "service_key", criteriaValue: "yer_soligi" }] },
   { code: "MOL_MULK_SOLIQ", matrixKey: "mol_mulk_soligi", name: "Mol-mulk solig'i",
     obligationType: "tax_declaration", periodicity: "annual",
-    anchorType: "fixed_day_of_month", dueDay: 25, lifecycle: "draft" },
+    anchorType: "fixed_day_of_month", dueDay: 25, lifecycle: "draft",
+    applicability: [{ criteriaType: "service_key", criteriaValue: "mol_mulk_soligi" }] },
   { code: "SUV_SOLIQ", matrixKey: "suv_soligi", name: "Suv solig'i",
     obligationType: "tax_declaration", periodicity: "annual",
-    anchorType: "fixed_day_of_month", dueDay: 25, lifecycle: "draft" },
+    anchorType: "fixed_day_of_month", dueDay: 25, lifecycle: "draft",
+    applicability: [{ criteriaType: "service_key", criteriaValue: "suv_soligi" }] },
   { code: "BONAK", matrixKey: "bonak", name: "Bo'nak (avans)",
     obligationType: "tax_payment", periodicity: "monthly",
     anchorType: "fixed_day_of_month", dueDay: 10, lifecycle: "draft" },
   { code: "ITPARK_OYLIK", matrixKey: "itpark_oylik", name: "IT Park hisoboti",
     obligationType: "client_service", periodicity: "quarterly",
-    anchorType: "fixed_day_of_month", dueDay: 10, lifecycle: "draft" },
+    anchorType: "fixed_day_of_month", dueDay: 10, lifecycle: "draft",
+    applicability: [{ criteriaType: "service_key", criteriaValue: "itpark_oylik" }] },
   { code: "DIDOX_FLOW", matrixKey: "didox", name: "Didox (e-aylanma)",
     obligationType: "internal_task", periodicity: "monthly",
     anchorType: "fixed_day_of_month", dueDay: 10, lifecycle: "draft" },
