@@ -142,17 +142,22 @@ async function main() {
         // summasi. Cheklar ro'yxati chekma-chek keladi va yig'ilishi kerak,
         // kunlik hisobot esa allaqachon yig'ilgan.
         const hint = fmHintFromFileName(f);
-        const parsed = kind === "checks" ? parseChecksWorkbook(workbook) : parseFiscalWorkbook(workbook, hint);
+        // Fayl nomi kanal uchun OXIRGI chora bo'lib beriladi — parser avval
+        // varaq mazmunidan qaraydi.
+        const parsed = kind === "checks" ? parseChecksWorkbook(workbook) : parseFiscalWorkbook(workbook, hint, f);
         writeFileSync(join(jsonDir, `${basename(f, extname(f))}.kassa.json`), JSON.stringify(parsed, null, 1));
         const id = parsed.rows.find((r) => r.fmNumber)?.fmNumber ?? hint ?? f;
         // KANAL KESIMI: soliq kabineti to'lov turi bo'yicha filtrlangan
         // hisobotni beradi — unda naqd ham, terminal ham NOL, summa esa
         // "Жами" ustunida turadi. Bu ASOSIY hisobotning ichki bo'lagi;
         // uni kassa yig'indisiga qo'shish savdoni ikki marta sanardi.
-        const channel = /click|payme|uzum|humo|uzcard/i.exec(f)?.[0]?.toLowerCase() ?? null;
-        const isBreakdown =
-          channel !== null && parsed.rows.every((r) => r.cardAmount === 0 && r.cashAmount === 0 && r.totalAmount > 0);
-        if (isBreakdown) {
+        //
+        // Qarorni endi PARSER beradi (fayl mazmuni bo'yicha). Ilgari u shu
+        // yerda fayl NOMIDAN olinardi: nom mos kelmasa kesim jimgina asosiy
+        // summaga qo'shilib ketardi. Kanali topilmagan kesim esa parserda
+        // xato bilan rad etiladi va quyidagi `catch` da ko'rinadi.
+        if (parsed.isBreakdown) {
+          const channel = parsed.channel!;
           const m = (channelDays[channel] ??= new Map());
           for (const r of parsed.rows) m.set(dayKey(r.date), (m.get(dayKey(r.date)) ?? 0) + r.totalAmount);
           reports.push({

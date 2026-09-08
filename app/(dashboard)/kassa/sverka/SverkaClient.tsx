@@ -451,7 +451,15 @@ function DeviceTab({
                 setResult(r.data);
                 setMsg({
                   tone: "ok",
-                  text: `${r.data.deviceLabel}: ${r.data.rowsInserted} yangi, ${r.data.rowsUpdated} yangilandi (${r.data.periodFrom} – ${r.data.periodTo})`,
+                  // Kesim hisoboti kassa jamisini O'ZGARTIRMAYDI — buni
+                  // aytmaslik "yukladim, lekin jami o'smadi" degan savol
+                  // tug'dirardi.
+                  text:
+                    `${r.data.deviceLabel}: ${r.data.rowsInserted} yangi, ${r.data.rowsUpdated} yangilandi ` +
+                    `(${r.data.periodFrom} – ${r.data.periodTo})` +
+                    (r.data.channelLabel
+                      ? ` · ${r.data.channelLabel} kesimi — kassa jamisiga qo'shilmaydi`
+                      : ""),
                 });
                 onDone();
               } else {

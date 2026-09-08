@@ -137,6 +137,9 @@ export function parseChecksRows(rows: SheetRow[]): ParsedFiscalReport {
     periodFrom: new Date(Math.min(...times)),
     periodTo: new Date(Math.max(...times)),
     warnings,
+    // Cheklar ro'yxati har doim TO'LIQ savdo — kanal kesimi bo'lmaydi.
+    isBreakdown: false,
+    channel: null,
   };
 }
 

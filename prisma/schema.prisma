@@ -2680,6 +2680,15 @@ model FiscalDailyReport {
   /// "Чеклар сони".
   receiptCount   Int     @default(0)
 
+  /// To'lov kanallari kesimi: `{ "click": 1200000, "payme": 3400000 }`.
+  ///
+  /// Soliq kabineti to'lov turi bo'yicha FILTRLANGAN hisobot beradi — unda
+  /// naqd ham, terminal ham nol, summa esa "Жами" ustunida turadi. Bu ASOSIY
+  /// hisobotning ICHKI bo'lagi: `cardAmount` ga qo'shilmaydi va sverkaning
+  /// kassa yig'indisiga kirmaydi, aks holda savdo ikki marta sanaladi.
+  /// Kalitlar — `PosChannel` qiymatlari (`lib/pos/types.ts`).
+  channels Json?
+
   importId String?
   import   FiscalReportImport? @relation(fields: [importId], references: [id], onDelete: SetNull)
 

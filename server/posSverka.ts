@@ -129,7 +129,10 @@ export interface FiscalUploadResult {
   rowsParsed: number;
   rowsInserted: number;
   rowsUpdated: number;
+  /** Oddiy hisobotda — karta jami; KESIM hisobotida — o'sha kanal jami. */
   cardTotal: number;
+  /** Kesim hisobotining kanali (o'zbekcha nomi); oddiy hisobotda `null`. */
+  channelLabel: string | null;
   warnings: string[];
 }
 
@@ -156,7 +159,8 @@ export async function uploadFiscalReport(formData: FormData): Promise<SverkaOutc
   const hint = fmHintFromFileName(file.name);
   let parsed;
   try {
-    parsed = parseFiscalWorkbook(workbook, hint);
+    // Fayl nomi kanal uchun faqat OXIRGI chora — parser avval mazmunga qaraydi.
+    parsed = parseFiscalWorkbook(workbook, hint, file.name);
   } catch (e) {
     if (e instanceof FiscalReportParseError) return { ok: false, error: e.message };
     throw e;
@@ -199,8 +203,39 @@ export async function uploadFiscalReport(formData: FormData): Promise<SverkaOutc
   for (const row of parsed.rows) {
     const existing = await prisma.fiscalDailyReport.findUnique({
       where: { deviceId_date: { deviceId: device.id, date: row.date } },
-      select: { id: true },
+      select: { id: true, channels: true },
     });
+
+    // KESIM hisoboti FAQAT `channels` ga yoziladi. Uning naqd/terminal
+    // ustunlari nol — ularni asosiy hisobot ustidan yozish o'sha kunning
+    // savdosini o'chirib yuborardi. Kesim `cardAmount` ichidagi ulush,
+    // shuning uchun kassa yig'indisiga ham qo'shilmaydi.
+    if (parsed.isBreakdown) {
+      const before = (existing?.channels ?? null) as Record<string, number> | null;
+      const channels = { ...(before ?? {}), [parsed.channel!]: row.totalAmount };
+      if (existing) {
+        await prisma.fiscalDailyReport.update({
+          where: { id: existing.id },
+          data: { channels, importId: imp.id },
+        });
+        updated++;
+      } else {
+        await prisma.fiscalDailyReport.create({
+          data: {
+            deviceId: device.id,
+            date: row.date,
+            cashAmount: 0,
+            cardAmount: 0,
+            totalAmount: 0,
+            channels,
+            importId: imp.id,
+          },
+        });
+        inserted++;
+      }
+      continue;
+    }
+
     const data = {
       cashAmount: row.cashAmount,
       cardAmount: row.cardAmount,
@@ -227,7 +262,7 @@ export async function uploadFiscalReport(formData: FormData): Promise<SverkaOutc
     action: "create",
     tableName: "FiscalReportImport",
     recordId: imp.id,
-    newData: { fileName: file.name, device: device.fmNumber, inserted, updated },
+    newData: { fileName: file.name, device: device.fmNumber, channel: parsed.channel, inserted, updated },
   });
   revalidatePath("/kassa/sverka");
 
@@ -241,7 +276,8 @@ export async function uploadFiscalReport(formData: FormData): Promise<SverkaOutc
       rowsParsed: parsed.rows.length,
       rowsInserted: inserted,
       rowsUpdated: updated,
-      cardTotal: parsed.rows.reduce((s, r) => s + r.cardAmount, 0),
+      cardTotal: parsed.rows.reduce((s, r) => s + (parsed.isBreakdown ? r.totalAmount : r.cardAmount), 0),
+      channelLabel: parsed.channel ? CHANNEL_LABELS[parsed.channel] : null,
       warnings: parsed.warnings,
     },
   };

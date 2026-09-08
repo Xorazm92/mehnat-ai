@@ -190,6 +190,12 @@ export interface Company {
 
   // Optional/Extended fields
   department?: string;
+  /**
+   * Bo'lim RELATIONI (`Department`). Yuqoridagi `department` MATN ustuni
+   * prodda 270 firmaning hammasida bo'sh — bo'lim kesimi faqat shu relation
+   * orqali ishlaydi. `COMPANY_INCLUDE` uni har doim yuklaydi.
+   */
+  departmentRef?: { id: string; name: string; chiefAccountantId?: string | null } | null;
   login?: string;
   password?: string;
   ownerName?: string;

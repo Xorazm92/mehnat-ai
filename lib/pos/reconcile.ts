@@ -8,6 +8,40 @@
 // mijoz to'lagan to'liq summani ko'radi. Ularni to'g'ridan-to'g'ri
 // solishtirish har kuni komissiya hajmida "kamomad" ko'rsatardi.
 
+import type { PosChannel } from "./types";
+
+/**
+ * BITTA KANAL bo'yicha ikki tomon.
+ *
+ * Kassa tomoni — apparatning to'lov turi kesimi (`FiscalDailyReport.channels`),
+ * bank tomoni — o'sha kanalning ekvayring hisob-kitobi. Ikkisi bir-biriga
+ * bog'liq emas: kesim yuklanmagan kanal `kassa: 0` bo'lib turadi, bankda
+ * ko'rinmagan kanal esa `bankGross: 0`. Aynan shu ikki holat "pul qayerda?"
+ * savolini beradi, shuning uchun ular yashirilmaydi.
+ */
+export interface ChannelTotals {
+  kassa: number;
+  bankFact: number;
+  bankGross: number;
+  commission: number;
+  /**
+   * `kassa − bankGross`. Musbat = bankka yetib bormagan.
+   *
+   * ISHORA asosiy jadval bilan AYNI (`SverkaDay.diff`). Kanal kesimida uni
+   * teskari qilish bitta ekranda ikki xil "farq" ma'nosini yaratardi.
+   */
+  diff: number;
+}
+
+export type ChannelMap = Partial<Record<PosChannel, ChannelTotals>>;
+
+/** Kassa apparatining bir kunlik, bir kanallik kesimi. */
+export interface KassaChannelDay {
+  date: string; // YYYY-MM-DD
+  channel: PosChannel;
+  amount: number;
+}
+
 export interface DeviceDay {
   deviceId: string;
   date: string; // YYYY-MM-DD
@@ -17,6 +51,8 @@ export interface DeviceDay {
 
 export interface SettlementDay {
   terminalId: string;
+  /** Terminalning kanali — oy × kanal kesimi shu bo'yicha yig'iladi. */
+  channel: PosChannel;
   date: string; // YYYY-MM-DD — savdo sanasi
   factAmount: number;
   grossAmount: number;
@@ -40,6 +76,8 @@ export interface SverkaDay {
   diffFact: number;
   /** Shu kunda sanasi hujjatdan olingan tushum bor — kunlik farq shartli. */
   approximateDate: boolean;
+  /** Kanal kesimi. Faqat shu kunda uchragan kanallar bo'ladi. */
+  byChannel: ChannelMap;
 }
 
 export interface SverkaTotals {
@@ -52,6 +90,14 @@ export interface SverkaTotals {
   diffFact: number;
   /** Sanasi tafsilotdan emas, hujjatdan olingan tushum ulushi. */
   approximateAmount: number;
+  /**
+   * Kanal kesimi.
+   *
+   * DIQQAT: kanal qatorlari `kassaCard` ga QO'SHILMAYDI — ular karta
+   * tushumining ichki bo'lagi va faqat kesim yuklangan kanallar uchun
+   * to'ladi. Yig'indi sifatida emas, solishtiruv sifatida o'qiladi.
+   */
+  byChannel: ChannelMap;
 }
 
 export interface SverkaResult {
@@ -63,7 +109,15 @@ export interface SverkaResult {
 const zero = (): SverkaTotals => ({
   kassaCard: 0, kassaCash: 0, bankFact: 0, bankGross: 0,
   commission: 0, diff: 0, diffFact: 0, approximateAmount: 0,
+  byChannel: {},
 });
+
+const zeroChannel = (): ChannelTotals => ({ kassa: 0, bankFact: 0, bankGross: 0, commission: 0, diff: 0 });
+
+/** Kesimdagi kanal katagini oladi (yo'q bo'lsa ochadi). */
+function channelCell(map: ChannelMap, channel: PosChannel): ChannelTotals {
+  return (map[channel] ??= zeroChannel());
+}
 
 function addDay(t: SverkaTotals, d: SverkaDay, approx: number): void {
   t.kassaCard += d.kassaCard;
@@ -74,6 +128,14 @@ function addDay(t: SverkaTotals, d: SverkaDay, approx: number): void {
   t.diff += d.diff;
   t.diffFact += d.diffFact;
   t.approximateAmount += approx;
+  for (const [ch, src] of Object.entries(d.byChannel) as [PosChannel, ChannelTotals][]) {
+    const c = channelCell(t.byChannel, ch);
+    c.kassa += src.kassa;
+    c.bankFact += src.bankFact;
+    c.bankGross += src.bankGross;
+    c.commission += src.commission;
+    c.diff = c.kassa - c.bankGross;
+  }
 }
 
 /**
@@ -82,11 +144,16 @@ function addDay(t: SverkaTotals, d: SverkaDay, approx: number): void {
  * `from`/`to` berilsa, natija AYNAN shu oraliqdagi kunlardan iborat bo'ladi —
  * bank tomonida davrdan tashqarida qolgan hisob-kitoblar (masalan oldingi oy
  * savdosi) yig'indini shishirmasligi uchun.
+ *
+ * @param kassaChannels Kassa apparatining to'lov turi kesimlari. ALOHIDA
+ *   kirish: ular `cardAmount` ning ICHKI bo'lagi, shuning uchun `deviceDays`
+ *   ga qo'shilsa savdo ikki marta sanalardi.
  */
 export function reconcile(
   deviceDays: DeviceDay[],
   settlements: SettlementDay[],
   range?: { from: string; to: string },
+  kassaChannels: KassaChannelDay[] = [],
 ): SverkaResult {
   const inRange = (d: string) => !range || (d >= range.from && d <= range.to);
   const map = new Map<string, SverkaDay>();
@@ -97,6 +164,7 @@ export function reconcile(
       d = {
         date, byDevice: {}, kassaCard: 0, kassaCash: 0, byTerminal: {},
         bankFact: 0, bankGross: 0, commission: 0, diff: 0, diffFact: 0, approximateDate: false,
+        byChannel: {},
       };
       map.set(date, d);
     }
@@ -111,6 +179,11 @@ export function reconcile(
     d.kassaCash += r.cashAmount;
   }
 
+  for (const k of kassaChannels) {
+    if (!inRange(k.date)) continue;
+    channelCell(ensure(k.date).byChannel, k.channel).kassa += k.amount;
+  }
+
   const approxByDay = new Map<string, number>();
   for (const s of settlements) {
     if (!inRange(s.date)) continue;
@@ -122,6 +195,10 @@ export function reconcile(
     d.bankFact += s.factAmount;
     d.bankGross += s.grossAmount;
     d.commission += s.commissionAmount;
+    const c = channelCell(d.byChannel, s.channel);
+    c.bankFact += s.factAmount;
+    c.bankGross += s.grossAmount;
+    c.commission += s.commissionAmount;
     if (s.fromDocumentDate) {
       d.approximateDate = true;
       approxByDay.set(s.date, (approxByDay.get(s.date) ?? 0) + s.grossAmount);
@@ -132,6 +209,7 @@ export function reconcile(
   for (const d of days) {
     d.diff = d.kassaCard - d.bankGross;
     d.diffFact = d.kassaCard - d.bankFact;
+    for (const c of Object.values(d.byChannel)) c.diff = c.kassa - c.bankGross;
   }
 
   const totals = zero();

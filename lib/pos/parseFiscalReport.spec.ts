@@ -72,6 +72,76 @@ describe("oylik hisobot rad etiladi", () => {
   });
 });
 
+// ── KESIM (to'lov turi bo'yicha filtrlangan) HISOBOT ────────────────────
+//
+// Bu fayl asosiy hisobot bilan BIR XIL ustunlarga ega, farqi — naqd va
+// terminal nol, summa "Жами" da. Uni oddiy hisobot deb qabul qilish
+// savdoni ikki marta sanaydi, shuning uchun tanish qoidasi testda qotiriladi.
+
+/** Kesim qatori: naqd va terminal nol, savdo esa "Жами" ustunida. */
+const breakdownDay = (n: number, date: string, total: number) => ({
+  ...day(n, date, 0, 0, 0),
+  __EMPTY_4: total,
+});
+
+describe("kanal kesimi hisoboti", () => {
+  const TITLE = { "Кунлик ҳисобот": "Тўлов тури: CLICK" };
+
+  it("kanal varaq MAZMUNIDAN topiladi", () => {
+    const p = parseFiscalRows([TITLE, HEADER, breakdownDay(1, "01.08.2026", 1_200_000)], "0718");
+    expect(p.isBreakdown).toBe(true);
+    expect(p.channel).toBe("click");
+  });
+
+  it("kesim summasi karta ustuniga TUSHMAYDI — kassa jamisi shishmaydi", () => {
+    const p = parseFiscalRows([TITLE, HEADER, breakdownDay(1, "01.08.2026", 1_200_000)], "0718");
+    expect(p.rows.reduce((s, r) => s + r.cardAmount, 0)).toBe(0);
+    expect(p.rows.reduce((s, r) => s + r.cashAmount, 0)).toBe(0);
+    expect(p.rows[0].totalAmount).toBe(1_200_000);
+  });
+
+  it("kesimda \"naqd + karta ≠ jami\" ogohlantirishi chiqmaydi", () => {
+    const p = parseFiscalRows([TITLE, HEADER, breakdownDay(1, "01.08.2026", 1_200_000)], "0718");
+    expect(p.warnings).toHaveLength(0);
+  });
+
+  it("savdosiz kun kesimni buzmaydi", () => {
+    const p = parseFiscalRows(
+      [TITLE, HEADER, breakdownDay(1, "01.08.2026", 0), breakdownDay(2, "02.08.2026", 500)],
+      "0718",
+    );
+    expect(p.isBreakdown).toBe(true);
+    expect(p.channel).toBe("click");
+  });
+
+  it("kanal topilmasa fayl JIM QABUL QILINMAYDI", () => {
+    const rows = [HEADER, breakdownDay(1, "01.08.2026", 1_200_000)];
+    expect(() => parseFiscalRows(rows, "0718")).toThrow(FiscalReportParseError);
+    expect(() => parseFiscalRows(rows, "0718")).toThrow(/kanal aniqlanmadi/);
+  });
+
+  it("fayl nomi faqat OXIRGI chora sifatida ishlaydi", () => {
+    const rows = [HEADER, breakdownDay(1, "01.08.2026", 1_200_000)];
+    expect(parseFiscalRows(rows, "0718", "payme_avgust.xlsx").channel).toBe("payme");
+  });
+
+  it("mazmun fayl nomidan USTUN", () => {
+    const rows = [TITLE, HEADER, breakdownDay(1, "01.08.2026", 1_200_000)];
+    expect(parseFiscalRows(rows, "0718", "payme_avgust.xlsx").channel).toBe("click");
+  });
+
+  it("EPOS \"HUMO\" bilan chalkashmaydi", () => {
+    const rows = [{ "Кунлик ҳисобот": "HUMO EPOS" }, HEADER, breakdownDay(1, "01.08.2026", 10)];
+    expect(parseFiscalRows(rows, "0718").channel).toBe("humo_epos");
+  });
+
+  it("oddiy hisobot kesim deb belgilanmaydi", () => {
+    const p = parseFiscalRows([HEADER, day(1, "01.08.2026", 12930000, 24030000, 42)], "0718");
+    expect(p.isBreakdown).toBe(false);
+    expect(p.channel).toBeNull();
+  });
+});
+
 describe("fayl nomi bo'yicha apparatni topish", () => {
   const devices = [{ fmNumber: "VG343420020718" }, { fmNumber: "VG343420021518" }];
   it("fayl nomidan qisqartma", () => expect(fmHintFromFileName("0718.xlsx")).toBe("0718"));

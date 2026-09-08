@@ -3,7 +3,7 @@ import { Select } from "@/components/ui";
 import React, { useState, useMemo, useCallback } from 'react';
 import { ModalLayer } from '@/components/ui';
 import { useViewMode } from '@/hooks/useViewMode';
-import { Company, Staff, TaxType, Language, OperationEntry } from '@/types';
+import { Company, Staff, Language, OperationEntry } from '@/types';
 import { translations } from '@/lib/translations';
 import { Plus, Search, Edit3, Trash2, LayoutGrid, List, Eye, EyeOff, Download, Filter, Building2, Calculator, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,8 +21,9 @@ import { usePageSize } from '@/hooks/usePageSize';
 import { useTableState } from '@/hooks/useTableState';
 import type { TariffPreset } from '@/lib/tariffPresets';
 import { hiddenMatchOnly, matchesCompanySearch } from '@/lib/companySearch';
-import { TAX_REGIME_SHORT, normalizeTaxRegime } from '@/lib/taxRegimes';
+import { TAX_REGIME_SHORT, normalizeTaxRegime, taxRegimeLabel } from '@/lib/taxRegimes';
 import { friendlyError } from '@/lib/actionError';
+import { sortStaffForAssignmentRole } from '@/lib/platform/permissions';
 
 interface Props {
   companies: Company[];
@@ -66,6 +67,10 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
     defaultFilters: {
       active: 'true', tax: 'all', status: 'all', emp: 'all',
       risk: 'all', server: 'all', itpark: 'all', kpi: 'all',
+      // Bo'lim, qolgan uchta mas'ul, bo'sh o'rin kesimi va ichki shartnoma
+      // tomoni — hammasi URL'da, ya'ni "nazoratchisi yo'q 70 firma"
+      // ko'rinishini havola bilan yuborish mumkin.
+      dept: 'all', sup: 'all', chief: 'all', bank: 'all', gap: 'all', ctr: 'all',
       // 'exclude' — standart, mijozlar ro'yxati (avvalgi xatti-harakat).
       // 'only'    — "Ichki firmalar": ASRO'ning o'z yuridik shaxslari,
       // ularga ham buxgalter/bank-klient biriktiriladi va ish shu yerda
@@ -128,6 +133,18 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
   const setFilterKpi = (v: string) => table.setFilter('kpi', v);
   const filterOwn = table.filters.own;
   const setFilterOwn = (v: string) => table.setFilter('own', v);
+  const filterDept = table.filters.dept;
+  const setFilterDept = (v: string) => table.setFilter('dept', v);
+  const filterSupervisor = table.filters.sup;
+  const setFilterSupervisor = (v: string) => table.setFilter('sup', v);
+  const filterChief = table.filters.chief;
+  const setFilterChief = (v: string) => table.setFilter('chief', v);
+  const filterBank = table.filters.bank;
+  const setFilterBank = (v: string) => table.setFilter('bank', v);
+  const filterGap = table.filters.gap;
+  const setFilterGap = (v: string) => table.setFilter('gap', v);
+  const filterContractor = table.filters.ctr;
+  const setFilterContractor = (v: string) => table.setFilter('ctr', v);
   const [showFilters, setShowFilters] = useState(false);
 
   const [itemsPerPage, setItemsPerPage] = usePageSize("organizations", 100);
@@ -159,6 +176,58 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
     return m;
   }, [operations, selectedPeriod]);
 
+  /**
+   * "Belgilanmagan" uchun sentinel. Bo'sh satr `<option value="">` bilan
+   * chalkashadi (brauzer uni "tanlanmagan" deb o'qiydi), shuning uchun aniq
+   * qiymat.
+   */
+  const NONE = '__none__';
+
+  /**
+   * TANLASH VARIANTLARI MA'LUMOTDAN QURILADI, QO'LDA YOZILMAYDI.
+   *
+   * Sabab o'lchangan: "Server" filtri qo'lda `CR1/CR2/CR3` deb yozilgan edi,
+   * bazada esa `srv1c2` (117 firma), `srv1c3` (79), `srv1c1` (3) turadi —
+   * ya'ni 117 firmani tanlab BO'LMASDI, "CR1" esa bitta firma qaytarardi.
+   * Xuddi shu xato soliq turida ham bor edi: filtr eski `taxType` (3 qiymat)
+   * bo'yicha ishlab, `simplified_vat`/`yatt_*` dagi 15 firmani bitta
+   * "fixed" ga yig'ib qo'yardi. Endi ikkalasi ham RO'YXATDAGI haqiqiy
+   * qiymatlardan quriladi, shuning uchun ajralib keta olmaydi.
+   */
+  const facetOptions = useMemo(() => {
+    const regimes = new Map<string, string>();
+    const servers = new Set<string>();
+    const depts = new Map<string, string>();
+    let noDept = false;
+    let noServer = false;
+
+    for (const c of companies) {
+      if (c.isOwnFirm) continue;
+      const regime = normalizeTaxRegime(c.taxRegime ?? c.taxType);
+      if (regime) regimes.set(regime, taxRegimeLabel(regime));
+
+      const srv = (c.serverInfo || '').trim();
+      if (srv) servers.add(srv); else noServer = true;
+
+      if (c.departmentRef?.id) depts.set(c.departmentRef.id, c.departmentRef.name);
+      else noDept = true;
+    }
+
+    return {
+      regimes: [...regimes.entries()].sort((a, b) => a[1].localeCompare(b[1])),
+      servers: [...servers].sort(),
+      depts: [...depts.entries()].sort((a, b) => a[1].localeCompare(b[1])),
+      noDept,
+      noServer,
+    };
+  }, [companies]);
+
+  /** Mas'ul tanlagichi — odatdagi lavozim tepada (lib/permissions.ts). */
+  const staffOptionsFor = useCallback(
+    (role: string) => sortStaffForAssignmentRole(staff || [], role).map(p => ({ label: p.name, val: p.id })),
+    [staff]
+  );
+
   const filtered = useMemo(() => {
     return companies
       .filter(c => {
@@ -170,8 +239,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         // Active/Archive filter
         const matchesActive = filterActive === null || c.isActive === filterActive;
 
-        // Tax type filter
-        const matchesTax = filterTaxType === 'all' || c.taxType === filterTaxType;
+        // Soliq REJIMI (kanonik `taxRegime`; eski `taxType` faqat zaxira).
+        const matchesTax =
+          filterTaxType === 'all' || normalizeTaxRegime(c.taxRegime ?? c.taxType) === filterTaxType;
 
         // Status filter
         const matchesStatus = filterStatus === 'all' || (c.companyStatus || 'active') === filterStatus;
@@ -184,14 +254,51 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         // Risk filter
         const matchesRisk = filterRisk === 'all' || (c.riskLevel || 'low') === filterRisk;
 
-        // Server filter
-        const matchesServer = filterServer === 'all' || c.serverInfo === filterServer;
+        // Server (1C) — "belgilanmagan" ham tanlanadi: 68 firmada bu ustun bo'sh
+        // va aynan ular ko'zdan qochib ketardi.
+        const srv = (c.serverInfo || '').trim();
+        const matchesServer =
+          filterServer === 'all' || (filterServer === NONE ? !srv : srv === filterServer);
 
         // IT Park filter
         const matchesItPark = filterItPark === 'all' || (filterItPark === 'yes' ? c.itParkResident : !c.itParkResident);
 
         // KPI filter
         const matchesKpi = filterKpi === 'all' || (filterKpi === 'yes' ? c.kpiEnabled : !c.kpiEnabled);
+
+        // Bo'lim — RELATION bo'yicha (`department` matn ustuni bo'sh turadi).
+        const deptId = c.departmentRef?.id || '';
+        const matchesDept =
+          filterDept === 'all' || (filterDept === NONE ? !deptId : deptId === filterDept);
+
+        // Qolgan uchta mas'ul. Buxgalter yuqorida alohida: u tanlangan davrdagi
+        // TARIXIY biriktiruvni ham hisobga oladi (matritsadan keladi).
+        const matchesSupervisor = filterSupervisor === 'all' || c.supervisorId === filterSupervisor;
+        const matchesChief = filterChief === 'all' || c.chiefAccountantId === filterChief;
+        const matchesBank = filterBank === 'all' || c.bankClientId === filterBank;
+
+        // Ichki shartnoma tomoni — shartnoma qaysi O'Z firmamiz nomidan.
+        const matchesContractor =
+          filterContractor === 'all' ||
+          (filterContractor === NONE
+            ? !c.internalContractorId
+            : c.internalContractorId === filterContractor);
+
+        /**
+         * BO'SH O'RIN KESIMI — "kimdir biriktirilmagan" ro'yxati.
+         *
+         * Ish taqsimlashda eng ko'p so'raladigan savol shu ("nazoratchisi
+         * yo'q firmalar qaysi?"), lekin uni ro'yxatdan ko'z bilan topish
+         * kerak edi: prodda nazoratchisiz 70, bank-klientsiz 79 firma bor.
+         */
+        const matchesGap =
+          filterGap === 'all' ||
+          (filterGap === 'acc' && !currentAccountantId) ||
+          (filterGap === 'sup' && !c.supervisorId) ||
+          (filterGap === 'chief' && !c.chiefAccountantId) ||
+          (filterGap === 'bank' && !c.bankClientId) ||
+          (filterGap === 'dept' && !deptId) ||
+          (filterGap === 'ctr' && !c.internalContractorId);
 
         // Ichki firma / mijoz. Standart ('exclude') — ASRO'ning o'z yuridik
         // shaxslari mijozlar ro'yxatida ko'rinmaydi (moliyaviy qoida:
@@ -200,9 +307,12 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
         // qo'llanmaydi — ular sanoq jihatidan kam va alohida mantiqqa ega emas.
         const matchesOwn = filterOwn === 'only' ? Boolean(c.isOwnFirm) : !c.isOwnFirm;
 
-        return matchesSearch && matchesActive && matchesTax && matchesStatus && matchesEmployee && matchesRisk && matchesServer && matchesItPark && matchesKpi && matchesOwn;
+        return matchesSearch && matchesActive && matchesTax && matchesStatus && matchesEmployee
+          && matchesRisk && matchesServer && matchesItPark && matchesKpi && matchesOwn
+          && matchesDept && matchesSupervisor && matchesChief && matchesBank
+          && matchesContractor && matchesGap;
       });
-  }, [companies, table.debouncedSearch, filterActive, filterTaxType, filterStatus, filterEmployee, filterRisk, filterServer, filterItPark, filterKpi, filterOwn, opByCompany]);
+  }, [companies, table.debouncedSearch, filterActive, filterTaxType, filterStatus, filterEmployee, filterRisk, filterServer, filterItPark, filterKpi, filterOwn, filterDept, filterSupervisor, filterChief, filterBank, filterContractor, filterGap, opByCompany]);
 
   // Kartochka ko'rinishi uchun sahifalash (jadvalni DataTable o'zi sahifalaydi).
   const paginated = useMemo(
@@ -556,9 +666,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
             <h3 className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Aqlli Filtrlar</h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
             {[
-              { label: 'Soliq Turi', value: filterTaxType, onChange: setFilterTaxType, options: [{ label: 'Barchasi', val: 'all' }, ...Object.values(TaxType).map(v => ({ label: v.toUpperCase(), val: v }))] },
+              { label: 'Soliq Rejimi', value: filterTaxType, onChange: setFilterTaxType, options: [{ label: 'Barchasi', val: 'all' }, ...facetOptions.regimes.map(([val, label]) => ({ label, val }))] },
               {
                 label: 'Holati', value: filterStatus, onChange: setFilterStatus, options: [
                   { label: 'Barchasi', val: 'all' },
@@ -578,9 +688,25 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
                   { label: 'Yuqori', val: 'high' }
                 ]
               },
-              { label: 'Server', value: filterServer, onChange: setFilterServer, options: [{ label: 'Barchasi', val: 'all' }, { label: 'CR1', val: 'CR1' }, { label: 'CR2', val: 'CR2' }, { label: 'CR3', val: 'CR3' }] },
+              { label: 'Server', value: filterServer, onChange: setFilterServer, options: [{ label: 'Barchasi', val: 'all' }, ...facetOptions.servers.map(v => ({ label: v, val: v })), ...(facetOptions.noServer ? [{ label: 'Belgilanmagan', val: NONE }] : [])] },
               { label: 'IT Park', value: filterItPark, onChange: setFilterItPark, options: [{ label: 'Barchasi', val: 'all' }, { label: 'Rezident', val: 'yes' }, { label: 'No-Rezident', val: 'no' }] },
-              { label: 'KPI', value: filterKpi, onChange: setFilterKpi, options: [{ label: 'Barchasi', val: 'all' }, { label: 'Yoqilgan', val: 'yes' }, { label: "O'chirilgan", val: 'no' }] }
+              { label: 'KPI', value: filterKpi, onChange: setFilterKpi, options: [{ label: 'Barchasi', val: 'all' }, { label: 'Yoqilgan', val: 'yes' }, { label: "O'chirilgan", val: 'no' }] },
+              { label: "Bo'lim", value: filterDept, onChange: setFilterDept, options: [{ label: 'Barchasi', val: 'all' }, ...facetOptions.depts.map(([val, label]) => ({ label, val })), ...(facetOptions.noDept ? [{ label: 'Biriktirilmagan', val: NONE }] : [])] },
+              { label: 'Nazoratchi', value: filterSupervisor, onChange: setFilterSupervisor, options: [{ label: 'Barchasi', val: 'all' }, ...staffOptionsFor('controller')] },
+              { label: 'Bosh buxgalter', value: filterChief, onChange: setFilterChief, options: [{ label: 'Barchasi', val: 'all' }, ...staffOptionsFor('chief_accountant')] },
+              { label: 'Bank-klient', value: filterBank, onChange: setFilterBank, options: [{ label: 'Barchasi', val: 'all' }, ...staffOptionsFor('bank_manager')] },
+              { label: 'Shartnoma tomoni', value: filterContractor, onChange: setFilterContractor, options: [{ label: 'Barchasi', val: 'all' }, ...(internalContractors ?? []).map(o => ({ label: o.name, val: o.id })), { label: 'Belgilanmagan', val: NONE }] },
+              {
+                label: "Bo'sh o'rin", value: filterGap, onChange: setFilterGap, options: [
+                  { label: 'Barchasi', val: 'all' },
+                  { label: 'Buxgalteri yo\'q', val: 'acc' },
+                  { label: 'Nazoratchisi yo\'q', val: 'sup' },
+                  { label: 'Bosh buxgalteri yo\'q', val: 'chief' },
+                  { label: 'Bank-klienti yo\'q', val: 'bank' },
+                  { label: 'Bo\'limi yo\'q', val: 'dept' },
+                  { label: 'Shartnoma tomoni yo\'q', val: 'ctr' }
+                ]
+              }
             ].map((f, idx) => (
               <div key={idx} className="space-y-1">
                 <label className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{f.label}</label>
@@ -599,9 +725,13 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
           <div className="flex justify-end mt-4 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
             <button
               onClick={() => {
-                setFilterTaxType('all'); setFilterStatus('all'); setFilterEmployee('all');
-                setFilterRisk('all'); setFilterServer('all'); setFilterItPark('all');
-                setFilterKpi('all');
+                // BITTA yozuvda: `setFilter` ni ketma-ket chaqirish
+                // `useTableState` da oxirgisidan boshqasini yo'qotadi.
+                table.setFilters({
+                  tax: 'all', status: 'all', emp: 'all', risk: 'all', server: 'all',
+                  itpark: 'all', kpi: 'all', dept: 'all', sup: 'all', chief: 'all',
+                  bank: 'all', ctr: 'all', gap: 'all',
+                });
               }}
               className="px-3 py-1 text-micro font-bold transition-colors uppercase tracking-widest icon-btn-danger"
               style={{ color: 'var(--text-muted)' }}
