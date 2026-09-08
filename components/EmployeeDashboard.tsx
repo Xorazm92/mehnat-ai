@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { EmployeeSalarySummary, Language, MonthlyPerformance, Company, OperationEntry, KPIRule, PayrollAdjustment } from '@/types';
 import { calculateCompanySalaries } from '@/lib/kpiLogic';
-import { type KpiEntryInput, kpiBall } from '@/lib/kpiScoring';
+import { type KpiEntryInput, kpiBall, kpiMark } from '@/lib/kpiScoring';
 import { translations } from '@/lib/translations';
 import { Wallet, TrendingUp, AlertCircle, Award, TrendingDown, Activity } from 'lucide-react';
 import { getKpiRules, getMonthlyPerformance, upsertPerformance } from '@/server/kpi';
@@ -160,16 +160,17 @@ const EmployeeDashboard: React.FC<Props> = ({ currentUserId, companies, operatio
         return <div className="p-20 text-center text-[var(--text-muted)]">{t.noData}</div>;
     }
 
-    // "Samaradorlik" — Reyting (KpiLeaderboard) bilan AYNAN bir xil hisob
-    // (server/kpi.ts getKpiLeaderboard): green = calculatedScore > 0,
-    // red = calculatedScore < 0 YOKI selectedOption === 'red', so'ng
-    // kpiBall(green, red). Bu yerda AVVAL o'zboshimchalik bilan "musbat
-    // yozuvlar soni / 20" edi — haqiqiy qoida og'irliklariga bog'liq
-    // emas, faqat "gamification" deb izohlangan magic number. Natijada
-    // BITTA xodim uchun Dashboard'da bir raqam, Reyting'da BOSHQA raqam
-    // "KPI" nomi ostida ko'rinardi.
-    const positiveperf = performances.filter(p => p.calculatedScore > 0).length;
-    const negativeperf = performances.filter(p => p.calculatedScore < 0 || p.selectedOption === 'red').length;
+    // "Samaradorlik" — Reyting (KpiLeaderboard) bilan AYNAN bir xil hisob.
+    // Belgini `lib/kpiScoring.ts` dagi `kpiMark` beradi va server tomondagi
+    // `getKpiLeaderboard` ham SHU funksiyani chaqiradi — ilgari ikkala joyda
+    // shart qo'lda takrorlangani uchun ular bir-biridan ajralib ketishi
+    // mumkin edi. Bu yerda AVVAL o'zboshimchalik bilan "musbat yozuvlar
+    // soni / 20" edi — haqiqiy qoida og'irliklariga bog'liq emas, faqat
+    // "gamification" deb izohlangan magic number. Natijada BITTA xodim
+    // uchun Dashboard'da bir raqam, Reyting'da BOSHQA raqam ko'rinardi.
+    const marks = performances.map(p => kpiMark(p.calculatedScore));
+    const positiveperf = marks.filter(m => m === 'green').length;
+    const negativeperf = marks.filter(m => m === 'red').length;
     const efficiencyBall = kpiBall(positiveperf, negativeperf);
     // Baholanmagan oy — nol EMAS (leaderboard'dagi bilan bir xil qoida,
     // ADR-0013). Progress-bar 0% ko'rsatadi, lekin raqam o'zi "—".

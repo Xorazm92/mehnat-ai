@@ -6,7 +6,8 @@
  * bosqichli jarayon (belgilash + menejer tasdig'i) ASRO ning adolat kafolati.
  */
 import { describe, it, expect } from "vitest";
-import { verdictForObligation, combineVerdicts, EXCUSED_DELAY_REASONS } from "@/lib/kpiEvidence";
+import { verdictForObligation, combineVerdicts, ruleAcceptsVerdict, EXCUSED_DELAY_REASONS } from "@/lib/kpiEvidence";
+import { computeRuleScore } from "@/lib/kpiScoring";
 
 const DUE = new Date("2026-07-25T00:00:00Z");
 const BEFORE = new Date("2026-07-24T10:00:00Z");
@@ -104,5 +105,52 @@ describe("combineVerdicts — bir qoidaga bir nechta majburiyat tushganda", () =
     // Avvalgi kod oxirgi ishlangan majburiyatni g'olib qilardi, ya'ni natija
     // sikl tartibiga bog'liq edi.
     expect(combineVerdicts(["red", "green"])).toBe(combineVerdicts(["green", "red"]));
+  });
+});
+
+describe("ruleAcceptsVerdict — hukm tushmaydigan qoidaga yozilmaydi", () => {
+  // `LETTERS` shabloni `acc_letters` ga xaritalangan, u esa COUNTER qoida:
+  // kalitlari `received_letters` / `resolved_letters`, `selectedOption` ni
+  // umuman o'qimaydi. Hukm shunga uzatilganda `computeRuleScore` jimgina 0
+  // qaytarardi va qator bazaga `selectedOption='red'`, `calculatedScore=0`
+  // bo'lib tushardi: nazoratchining ekranida qizil, oylikda esa nol. Prodda
+  // shundayi 212 ta — 2026-07 ning har bir firmasi uchun bittadan.
+  const counterRule = {
+    options: [
+      { key: "received_letters", coeff_per_unit: 0 },
+      { key: "resolved_letters", coeff_per_unit: 0 },
+    ],
+  };
+  const selectRule = {
+    options: [
+      { key: "green", coeff: 0.2 },
+      { key: "yellow", coeff: 0 },
+      { key: "red", coeff: -0.2 },
+    ],
+  };
+
+  it("counter qoidasi uch holatli hukmni qabul qilmaydi", () => {
+    expect(ruleAcceptsVerdict(counterRule, "red")).toBe(false);
+    expect(ruleAcceptsVerdict(counterRule, "green")).toBe(false);
+  });
+
+  it("select qoidasi qabul qiladi", () => {
+    expect(ruleAcceptsVerdict(selectRule, "red")).toBe(true);
+    expect(ruleAcceptsVerdict(selectRule, "green")).toBe(true);
+    expect(ruleAcceptsVerdict(selectRule, "yellow")).toBe(true);
+  });
+
+  it("chala sozlangan qoida ham chetda qoladi", () => {
+    // Qizil varianti yo'q qoidaga qizil hukm yozilsa, ball 0 bo'lardi.
+    expect(ruleAcceptsVerdict({ options: [{ key: "green", coeff: 1 }] }, "red")).toBe(false);
+    expect(ruleAcceptsVerdict({ options: null }, "red")).toBe(false);
+    expect(ruleAcceptsVerdict({ options: "buzuq" }, "green")).toBe(false);
+  });
+
+  it("hukm qabul qilinsa, ball haqiqatan hisoblanadi", () => {
+    // Qo'riqchi kerakli qatorni to'sib qo'ymasligini ham qulflaymiz.
+    expect(ruleAcceptsVerdict(selectRule, "red")).toBe(true);
+    expect(computeRuleScore({ inputTypeV2: "select", options: selectRule.options }, { selectedOption: "red" }).percent).toBe(-0.2);
+    expect(computeRuleScore({ inputTypeV2: "counter", options: counterRule.options }, { selectedOption: "red" }).percent).toBe(0);
   });
 });

@@ -6,7 +6,7 @@ import { isSeniorRole, isAdminRole } from "@/lib/platform/permissions";
 import { companyScopeWhere, staffScopeFilter, assertCompanyPermission } from "@/lib/platform/access";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { serialize } from "@/lib/serialize";
-import { computeRuleScore, applyRuleOverride, capKpiPercent, kpiBall, kpiDaraja, type KpiEntryInput, type KpiRuleLike } from "@/lib/kpiScoring";
+import { computeRuleScore, applyRuleOverride, capKpiPercent, kpiBall, kpiDaraja, kpiMark, type KpiEntryInput, type KpiRuleLike } from "@/lib/kpiScoring";
 import { toPerformanceMonth } from "@/lib/periods";
 import { Prisma } from "@prisma/client";
 
@@ -640,6 +640,11 @@ export interface KpiLeaderRow {
 export async function getKpiLeaderboard(month: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
+  // Oy kaliti NORMALLASHTIRILADI. Bu yagona joy edi, qayerda `month` xom holida
+  // `where` ga tushardi: chaqiruvchi "2026-07" yuborsa jadval jimgina bo'sh
+  // qaytardi (yozuvlar "2026-07-01"), pastdagi `new Date(month + "T00:00:00")`
+  // esa Invalid Date berib 6 oylik grafikni ham o'chirardi.
+  const monthKey = toPerformanceMonth(month) || month;
   const userId = session.user.id as string;
   const role = session.user.role as string;
   const isSenior = isSeniorRole(role);
@@ -671,14 +676,13 @@ export async function getKpiLeaderboard(month: string) {
     // Portfeldan tashqaridagi firmalar bo'yicha KPI ko'rinmaydi (o'zinikidan
     // tashqari) — ilgari reyting butun tizim bo'ylab ochiq edi.
     where: {
-      month,
+      month: monthKey,
       status: "approved",
       ...companyFilter,
     },
     select: {
       employeeId: true,
       companyId: true,
-      selectedOption: true,
       calculatedScore: true,
       employee: { select: { fullName: true, role: true } },
       // `role` ham kerak: bonus rol konvertiga (5% / 2.5% / 1%) qirqiladi.
@@ -722,8 +726,10 @@ export async function getKpiLeaderboard(month: string) {
       byEmp.set(p.employeeId, { name: p.employee.fullName, role: p.employee.role, green: 0, red: 0, entries: 0, bonus: 0 }).get(p.employeeId)!;
     a.entries++;
     const sc = Number(p.calculatedScore);
-    if (sc > 0) a.green++;
-    else if (sc < 0 || p.selectedOption === "red") a.red++;
+    // Reyting belgisi FAQAT og'irlikdan chiqadi — qarang lib/kpiScoring kpiMark.
+    const mark = kpiMark(sc);
+    if (mark === "green") a.green++;
+    else if (mark === "red") a.red++;
 
     if (sc !== 0 && bonusable.has(`${p.companyId}|${p.employeeId}`)) {
       const byCompany = percentsByEmp.get(p.employeeId) ?? percentsByEmp.set(p.employeeId, new Map()).get(p.employeeId)!;
@@ -734,14 +740,14 @@ export async function getKpiLeaderboard(month: string) {
 
     const cat = p.rule.category || "other";
     const c = catAgg.get(cat) ?? catAgg.set(cat, { green: 0, scored: 0 }).get(cat)!;
-    if (sc > 0) { c.green++; c.scored++; }
-    else if (sc < 0 || p.selectedOption === "red") c.scored++;
+    if (mark === "green") { c.green++; c.scored++; }
+    else if (mark === "red") c.scored++;
 
     // Per-employee kesim
     const empCat = byEmpCat.get(p.employeeId) ?? byEmpCat.set(p.employeeId, new Map()).get(p.employeeId)!;
     const ec = empCat.get(cat) ?? empCat.set(cat, { green: 0, scored: 0 }).get(cat)!;
-    if (sc > 0) { ec.green++; ec.scored++; }
-    else if (sc < 0 || p.selectedOption === "red") ec.scored++;
+    if (mark === "green") { ec.green++; ec.scored++; }
+    else if (mark === "red") ec.scored++;
   }
 
   for (const [employeeId, byCompany] of percentsByEmp) {
@@ -800,7 +806,7 @@ export async function getKpiLeaderboard(month: string) {
 
   // 6-month team-average ball trend (jamoa dinamikasi)
   const months: string[] = [];
-  const baseD = new Date(month + "T00:00:00");
+  const baseD = new Date(monthKey + "T00:00:00");
   for (let i = 5; i >= 0; i--) {
     const d = new Date(baseD.getFullYear(), baseD.getMonth() - i, 1);
     months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`);
@@ -811,15 +817,15 @@ export async function getKpiLeaderboard(month: string) {
     // butun tizim o'rtachasini chizardi, jadval esa faqat portfelni, ya'ni
     // bitta ekranda ikki xil "jamoa" ko'rsatilardi.
     where: { month: { in: months }, status: "approved", ...companyFilter },
-    select: { month: true, employeeId: true, calculatedScore: true, selectedOption: true },
+    select: { month: true, employeeId: true, calculatedScore: true },
   });
   const perMonthEmp = new Map<string, Map<string, { green: number; red: number }>>();
   for (const p of trendPerfs) {
     const em = perMonthEmp.get(p.month) ?? perMonthEmp.set(p.month, new Map()).get(p.month)!;
     const a = em.get(p.employeeId) ?? em.set(p.employeeId, { green: 0, red: 0 }).get(p.employeeId)!;
-    const sc = Number(p.calculatedScore);
-    if (sc > 0) a.green++;
-    else if (sc < 0 || p.selectedOption === "red") a.red++;
+    const mark = kpiMark(p.calculatedScore);
+    if (mark === "green") a.green++;
+    else if (mark === "red") a.red++;
   }
   const monthlyTrend = months.map((mo) => {
     const em = perMonthEmp.get(mo);

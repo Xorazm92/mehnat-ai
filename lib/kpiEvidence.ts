@@ -239,6 +239,29 @@ const ruleFor = (
   applyRuleOverride(rule as KpiRuleLike, overrides.get(`${companyId}|${ruleId}`) ?? null);
 
 /**
+ * Uch holatli hukm ('green' / 'red') SHU QOIDAGA umuman tushadimi.
+ *
+ * NEGA KERAK: `evaluateObligationEvidence` hukmni qoidaning turiga qaramasdan
+ * `{ selectedOption: verdict }` qilib uzatardi. `counter` qoidalar esa
+ * `selectedOption` ni UMUMAN o'qimaydi (qarang `computeRuleScore`) — ular
+ * `counters` kalitlari bo'yicha sanaydi. Natijada `LETTERS` shabloni
+ * `acc_letters` (counter, kalitlari `received_letters` / `resolved_letters`)
+ * ga tushib, qator BAZAGA `selectedOption='red'`, `calculatedScore=0` bo'lib
+ * yozilardi: nazoratchining ekranida qizil, oylikda esa nol. Ishlab chiqish
+ * nusxasida shundayi 212 ta (2026-07 ning har bir firmasi uchun bittadan);
+ * prodda hozircha nol, chunki `LETTERS` muddati 10-sanada va eski jadval
+ * o'sha kunga umuman yetib bormasdi (qarang bot/queues/kpi.queue.ts).
+ *
+ * Tekshiruv `options` KALITLARI bo'yicha: hukm variantlar ro'yxatida bormi.
+ * Shu bilan `counter` / `amount_penalty` o'z-o'zidan chetda qoladi, va yashil
+ * yoki qizil varianti yo'q, chala sozlangan `select` qoida ham.
+ */
+export function ruleAcceptsVerdict(rule: { options: unknown }, verdict: EvidenceVerdict): boolean {
+  const options = Array.isArray(rule.options) ? (rule.options as { key?: string }[]) : [];
+  return options.some((o) => o.key === verdict);
+}
+
+/**
  * Bir nechta majburiyat BITTA qoidaga tushganda yakuniy baho.
  *
  * Masalan QQS, INPS, daromad-agent va soliq-jadvali — to'rttasi ham
@@ -344,6 +367,13 @@ export async function evaluateObligationEvidence(
     if (!verdict) continue;
     const rule = rules.find((r) => r.id === bucket.ruleId);
     if (!rule) continue;
+
+    // Hukmni qabul qila olmaydigan qoidaga YOZILMAYDI — aks holda ekranda
+    // rangi bor, bahosi nol bo'lgan yolg'on qator qolardi (ruleAcceptsVerdict).
+    if (!ruleAcceptsVerdict(rule, verdict)) {
+      skippedNeutral++;
+      continue;
+    }
 
     const score = computeRuleScore(
       ruleFor(rule, overrides, bucket.key.companyId, rule.id),

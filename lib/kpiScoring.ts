@@ -237,6 +237,32 @@ export function stateToInput(state: {
 // REYTING BALI (0-100) — ko'rsatish uchun, pulga tegmaydi
 // =====================================================
 
+export type KpiMark = "green" | "red" | null;
+
+/**
+ * Bitta `MonthlyPerformance` qatori reytingda QAYSI TOMONGA sanaladi.
+ * `null` — umuman sanalmaydi (o'lchanmagan).
+ *
+ * FAQAT OG'IRLIGI BOR QATOR SANALADI. Ilgari qoida ikki shoxli edi:
+ * `sc > 0` → yashil, `sc < 0` YOKI `selectedOption === 'red'` → qizil. Ikkinchi
+ * shox assimetriya yaratardi: koeffitsiyenti NOL bo'lgan qoidada — masalan
+ * `acc_payroll_posted`, uning uchala variantining ham `coeff` i 0 — qizil
+ * tanlov ballni pasaytirardi, yashil tanlov esa hech narsa bermasdi. Ya'ni
+ * og'irliksiz qoida faqat JAZOLAY olardi, mukofotlay olmasdi. PRODDA
+ * (2026-09-08 da o'lchandi) aynan shu holatdagi 275 qator — hammasi
+ * `acc_payroll_posted` — tasdiqlanishini kutib turibdi: `calculatedScore = 0`,
+ * `selectedOption = 'red'`. Tasdiqlangan kuni har birining egasi reytingda
+ * tekinga bitta qizil olardi, oyligiga esa hech narsa tushmasdi.
+ *
+ * Endi ball reglament HAQIQATAN o'lchaydigan narsani ko'rsatadi: manba —
+ * `calculatedScore`, nol esa "o'lchanmagan" (ADR-0013), jazo emas.
+ */
+export function kpiMark(calculatedScore: unknown): KpiMark {
+  const sc = num(calculatedScore);
+  if (sc === 0) return null;
+  return sc > 0 ? "green" : "red";
+}
+
 /**
  * Baholangan qatorlardan 0-100 ball.
  *

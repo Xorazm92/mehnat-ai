@@ -11,6 +11,7 @@ import {
   applyRuleOverride,
   kpiBall,
   kpiDaraja,
+  kpiMark,
   type KpiRuleLike,
 } from "@/lib/kpiScoring";
 
@@ -209,4 +210,43 @@ describe("determinizm", () => {
     // 3 × 0.04 = 0.12000000000000001 xom hisobda
     expect(computeRuleScore(attendanceRule, { counters: { early_days: 3 } }).percent).toBe(0.12);
   });
+});
+
+describe("kpiMark — reyting belgisi faqat og'irlikdan chiqadi", () => {
+    it("musbat ball — yashil, manfiy — qizil", () => {
+        expect(kpiMark(0.2)).toBe("green");
+        expect(kpiMark(-0.5)).toBe("red");
+    });
+
+    it("nol — o'lchanmagan, jazo EMAS", () => {
+        // Aynan shu yerda assimetriya bor edi: `getKpiLeaderboard` nol ballli
+        // qatorni `selectedOption === 'red'` bo'lsa QIZIL deb sanardi, yashil
+        // bo'lsa esa hech narsa qilmasdi. Ya'ni koeffitsiyenti nol qoida
+        // (`acc_payroll_posted` — uchala varianti ham 0) faqat jazolay olardi.
+        expect(kpiMark(0)).toBeNull();
+        expect(kpiMark(-0)).toBeNull();
+    });
+
+    it("Decimal/satr ko'rinishidagi ball ham to'g'ri o'qiladi", () => {
+        // Prisma Decimal RSC chegarasidan number bo'lib o'tadi, lekin qator
+        // boshqa yo'ldan satr bo'lib kelsa ham belgi buzilmasin.
+        expect(kpiMark("0.20")).toBe("green");
+        expect(kpiMark("-0.20")).toBe("red");
+    });
+
+    it("o'qib bo'lmaydigan qiymat — o'lchanmagan", () => {
+        expect(kpiMark(null)).toBeNull();
+        expect(kpiMark(undefined)).toBeNull();
+        expect(kpiMark("salom")).toBeNull();
+    });
+
+    it("kpiBall bilan birga: og'irliksiz qizil ballni pasaytirmaydi", () => {
+        const rows = [0.2, 0.2, 0]; // ikkita haqiqiy yashil + bitta og'irliksiz qator
+        const marks = rows.map(kpiMark);
+        const ball = kpiBall(
+            marks.filter((m) => m === "green").length,
+            marks.filter((m) => m === "red").length
+        );
+        expect(ball).toBe(100);
+    });
 });
