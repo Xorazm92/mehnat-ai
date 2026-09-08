@@ -62,6 +62,16 @@ export interface ParsedFiscalReport {
   periodTo: Date | null;
   /** Parser shubhali deb topgan holatlar — import to'xtamaydi, ekranda ko'rinadi. */
   warnings: string[];
+  /**
+   * To'lov turi bo'yicha FILTRLANGAN kesim hisoboti.
+   *
+   * Bunday faylda naqd ham, terminal ham nol, summa esa "Жами" ustunida
+   * turadi. U asosiy hisobotning ICHKI bo'lagi — kassa yig'indisiga
+   * qo'shilsa savdo ikki marta sanaladi.
+   */
+  isBreakdown: boolean;
+  /** Kesim kanali. Oddiy hisobotda har doim `null`. */
+  channel: PosChannel | null;
 }
 
 /** Parser tanimagan fayl — jim yutilmaydi. */

@@ -4,6 +4,11 @@ export const MONTHS_UZ = [
     'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'
 ];
 
+/** Yozish uchun qat'iy kalit; eski matnli davrlarni o'qish qoidasini o'zgartirmaydi. */
+export const isMonthPeriod = (value: unknown): value is string =>
+    typeof value === 'string' && value.length === 7 &&
+    /^(?!0000)\d{4}-(0[1-9]|1[0-2])$/.test(value);
+
 export const toYearMonthKey = (period: string) => {
     const raw = String(period || '').trim();
     if (!raw) return '';

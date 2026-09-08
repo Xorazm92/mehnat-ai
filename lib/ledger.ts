@@ -7,6 +7,7 @@
 // server action o'z auditini (recordAuditLog) o'zi yozadi.
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { randomUUID } from "crypto";
+import { isMonthPeriod } from "@/lib/periods";
 
 /** Hisoblar rejasi (soddalashtirilgan boshqaruv hisobi). */
 export const ACCOUNTS = {
@@ -146,22 +147,45 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
  * Σdebit == Σcredit (2 kasr aniqlikda). Buzilsa — xato, hech narsa yozilmaydi.
  */
 export function assertBalancedLegs(legs: LedgerLeg[]): void {
+  normalizeBalancedLegs(legs);
+}
+
+type NormalizedLedgerLeg = Omit<LedgerLeg, "debit" | "credit"> & {
+  debit: Prisma.Decimal;
+  credit: Prisma.Decimal;
+};
+
+function normalizeBalancedLegs(legs: LedgerLeg[]): NormalizedLedgerLeg[] {
   if (legs.length < 2) throw new Error("Ledger tranzaksiyasi kamida 2 oyoqdan iborat bo'lishi kerak");
-  let debit = 0;
-  let credit = 0;
-  for (const leg of legs) {
+  let debit = BigInt(0);
+  let credit = BigInt(0);
+  const normalized = legs.map((leg) => {
     const d = leg.debit ?? 0;
     const c = leg.credit ?? 0;
+    if (!Number.isFinite(d) || !Number.isFinite(c)) {
+      throw new Error("Ledger summasi chekli son bo'lishi kerak");
+    }
     if (d < 0 || c < 0) throw new Error("Ledger oyog'ida manfiy summa bo'lishi mumkin emas");
     if ((d > 0) === (c > 0)) {
       throw new Error("Har bir ledger oyog'i faqat debit YOKI credit bo'lishi kerak");
     }
-    debit += d;
-    credit += c;
+
+    // DB har bir oyoqni 2 kasrda saqlaydi: jami summani yaxlitlash boshqa
+    // natija beradi. Decimal yarim tiyinni yuqoriga yaxlitlaydi; aynan shu
+    // qiymatlar yoziladi. BigInt yig'indida suzuvchi nuqta xatosini yo'qotadi.
+    const roundedDebit = new Prisma.Decimal(d).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+    const roundedCredit = new Prisma.Decimal(c).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+    if (roundedDebit.isZero() && roundedCredit.isZero()) {
+      throw new Error("Ledger oyog'i yaxlitlangandan keyin kamida 0.01 bo'lishi kerak");
+    }
+    debit += BigInt(roundedDebit.toFixed(2).replace(".", ""));
+    credit += BigInt(roundedCredit.toFixed(2).replace(".", ""));
+    return { ...leg, debit: roundedDebit, credit: roundedCredit };
+  });
+  if (debit !== credit) {
+    throw new Error(`Ledger balanslashmagan: debit ${debit} tiyin != credit ${credit} tiyin`);
   }
-  if (r2(debit) !== r2(credit)) {
-    throw new Error(`Ledger balanslashmagan: debit ${r2(debit)} != credit ${r2(credit)}`);
-  }
+  return normalized;
 }
 
 /**
@@ -224,10 +248,10 @@ type Db = Prisma.TransactionClient;
  * chaqiradi, ya'ni netto nolga tushgan bo'ladi.
  */
 export async function postLedger(db: Db, input: PostLedgerInput): Promise<string> {
-  assertBalancedLegs(input.legs);
+  const legs = normalizeBalancedLegs(input.legs);
   assertLegDimensions(input.legs);
-  if (!/^\d{4}-\d{2}$/.test(input.period)) {
-    throw new Error("Ledger davri YYYY-MM formatida bo'lishi kerak");
+  if (!isMonthPeriod(input.period)) {
+    throw new Error("Ledger davri YYYY-MM formatida, oy esa 01–12 oralig'ida bo'lishi kerak");
   }
 
   const open = await netBySource(db, input.sourceTable, input.sourceId);
@@ -240,11 +264,11 @@ export async function postLedger(db: Db, input: PostLedgerInput): Promise<string
 
   const transactionId = randomUUID();
   await db.ledgerEntry.createMany({
-    data: input.legs.map((leg) => ({
+    data: legs.map((leg) => ({
       transactionId,
       accountId: leg.accountId,
-      debit: new Prisma.Decimal(r2(leg.debit ?? 0)),
-      credit: new Prisma.Decimal(r2(leg.credit ?? 0)),
+      debit: leg.debit,
+      credit: leg.credit,
       description: leg.description ?? input.description ?? null,
       sourceTable: input.sourceTable,
       sourceId: input.sourceId,

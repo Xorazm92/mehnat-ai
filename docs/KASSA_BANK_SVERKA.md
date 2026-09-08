@@ -36,7 +36,7 @@ Kunlik hisobot (.xlsx)     ──►  "Yuklash"  ──►  FiscalDailyReport
 | Model | Nima saqlaydi |
 |---|---|
 | `FiscalDevice` | kassa apparati (FM raqami, nom, STIR) |
-| `FiscalDailyReport` | apparatning bir kunlik yakuni; `(deviceId, date)` yagona |
+| `FiscalDailyReport` | apparatning bir kunlik yakuni; `(deviceId, date)` yagona. `channels` — to'lov turi kesimi (`{"click": 1200000}`) |
 | `FiscalReportImport` | yuklangan fayl izi (kim, qachon, nechta qator) |
 | `PosTerminal` | bank tomonidagi terminal/kanal + **`inScope`** bayrog'i |
 | `PosSettlement` | vipiska qatoridan ajratilgan sverka qatori (hosila) |
@@ -111,14 +111,52 @@ bo'yicha topiladi; sverka `Сумма (тўлов терминали)` ustuni bi
 - **Oylik** hisobot (apparatlar kesimi) qabul qilinmaydi — kunma-kun sverkaga
   yaramaydi va aniq xato bilan rad etiladi.
 
+## Kanal kesimi hisoboti
+
+Kabinet **to'lov turi bo'yicha filtrlangan** hisobotni ham beradi (faqat Click,
+faqat Payme...). Ustunlari asosiy hisobot bilan bir xil, farqi — naqd va
+terminal **nol**, savdo esa "Жами" ustunida.
+
+Bu ASOSIY hisobotning **ichki bo'lagi**: `cardAmount` ga qo'shilmaydi va
+sverkaning kassa yig'indisiga kirmaydi. Qo'shilsa savdo ikki marta sanalardi.
+Shuning uchun u `FiscalDailyReport.channels` (jsonb) ga alohida yoziladi va
+`reconcile()` ga ham alohida kirish bo'lib beriladi (`kassaChannels`).
+
+Kanal **fayl mazmunidan** aniqlanadi (`CHANNEL_MARKERS`), fayl nomidan emas.
+Ilgari u nomdan olinardi va bu jimgina buziladigan yo'l edi: nom mos kelmasa
+kesim asosiy summaga qo'shilib ketardi.
+
+> **Kafolat:** kesim shakli tanilib, kanal topilmasa fayl **rad etiladi**.
+> Jim qabul qilinmaydi — testi `parseFiscalReport.spec.ts` da.
+
+Kesim yuklanmagan kanal jadvalda `kassa = 0` bo'lib turadi. Bu **kamomad
+emas**, shuning uchun u "Kesim yo'q" deb (kulrang) belgilanadi.
+
+## Oy × kanal kesimi
+
+"Farq QAYSI kanalda?" — asosiy jadvaldan keyingi birinchi savol. Ekranda
+`Oy | Kanal | Kassa | Bank (brutto) | Komissiya | Farq | Holat` jadvali.
+
+Ikki tomon **mustaqil** yig'iladi: kassa tomoni `channels` dan, bank tomoni
+esa doiradagi terminalning kanalidan (`PosTerminal.channel`). Bir tomonda
+bo'lib ikkinchisida yo'q kanal — xato emas, aynan shu modul ko'rsatishi kerak
+bo'lgan holat.
+
+Farq ishorasi asosiy jadval bilan **bir xil**: `kassa − bank brutto`, musbat =
+bankka yetib bormagan.
+
+Excel eksporti **keng** shaklda chiqadi (oy = bitta qator, har kanal uchun
+`kassa | bank | farq` ustunlari) — buxgalter kanallarni yonma-yon
+solishtiradi. Ekranda esa kanal soni ustunlarga sig'maydi.
+
 ## Fayllar
 
 ```
 lib/pos/classifySettlement.ts   vipiska matnidan kanal/terminal/sana/komissiya
-lib/pos/parseFiscalReport.ts    «Кунлик ҳисобот» parseri
-lib/pos/reconcile.ts            kunlik va oylik yig'ish
+lib/pos/parseFiscalReport.ts    «Кунлик ҳисобот» + kanal kesimi parseri
+lib/pos/reconcile.ts            kunlik, oylik va KANAL bo'yicha yig'ish
 server/posSverka.ts             server action'lar (rol: requireStatementRole)
-app/(dashboard)/kassa/sverka/   ekran
+app/(dashboard)/kassa/sverka/   ekran (SverkaMatrix + ChannelMatrix)
 ```
 
 Uchala `lib/pos/*` moduli **bazasiz va sof** — testlari real vipiska

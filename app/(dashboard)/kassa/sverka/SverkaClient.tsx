@@ -20,6 +20,8 @@ import {
   type FiscalUploadResult,
 } from "@/server/posSverka";
 import SverkaMatrix, { type MatrixDay } from "./SverkaMatrix";
+import ChannelMatrix, { type ChannelTotalsView } from "./ChannelMatrix";
+import type { PosChannel } from "@/lib/pos/types";
 import { formatNum } from "@/lib/platform/format";
 import { useTabParam } from "@/hooks/useTabParam";
 import { SVERKA_TAB_IDS, type SverkaTab } from "@/lib/sverkaTabs";
@@ -32,6 +34,8 @@ interface Terminal {
 interface Totals {
   kassaCard: number; kassaCash: number; bankFact: number; bankGross: number;
   commission: number; diff: number; diffFact: number; approximateAmount: number;
+  /** Oy × kanal kesimi — faqat uchragan kanallar bo'ladi. */
+  byChannel: Partial<Record<PosChannel, ChannelTotalsView>>;
 }
 
 export interface SverkaData {
@@ -290,6 +294,10 @@ export default function SverkaClient({
           )}
           <SverkaMatrix days={data.days} devices={data.devices} terminals={inScope} totals={data.totals} />
           {data.months.length > 1 && <MonthlySummary months={data.months} />}
+          {/* Bitta oy bo'lganda ham ko'rsatiladi: oylik YAKUN qiyoslash uchun
+              kamida ikki oy talab qiladi, kanal kesimi esa bitta oyning
+              o'zida ham to'liq ma'noga ega. */}
+          <ChannelMatrix months={data.months} rangeLabel={`${data.range.from}_${data.range.to}`} />
         </div>
       )}
 
@@ -451,7 +459,15 @@ function DeviceTab({
                 setResult(r.data);
                 setMsg({
                   tone: "ok",
-                  text: `${r.data.deviceLabel}: ${r.data.rowsInserted} yangi, ${r.data.rowsUpdated} yangilandi (${r.data.periodFrom} – ${r.data.periodTo})`,
+                  // Kesim hisoboti kassa jamisini O'ZGARTIRMAYDI — buni
+                  // aytmaslik "yukladim, lekin jami o'smadi" degan savol
+                  // tug'dirardi.
+                  text:
+                    `${r.data.deviceLabel}: ${r.data.rowsInserted} yangi, ${r.data.rowsUpdated} yangilandi ` +
+                    `(${r.data.periodFrom} – ${r.data.periodTo})` +
+                    (r.data.channelLabel
+                      ? ` · ${r.data.channelLabel} kesimi — kassa jamisiga qo'shilmaydi`
+                      : ""),
                 });
                 onDone();
               } else {

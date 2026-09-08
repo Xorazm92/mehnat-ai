@@ -1,15 +1,13 @@
-// Ledger yadrosining SOF testi (DB'siz — CI shuni yuritadi).
-//
-// Nima uchun muhim: CI integratsiya testlarini umuman yuritmaydi
-// (.github/workflows/ci.yml → `npx vitest run bot/ lib/`). Ya'ni sof bo'la
-// oladigan har bir qoida sof BO'LISHI KERAK, aks holda uni faqat lokalda
-// eslab qolgan odam tekshiradi.
-import { describe, it, expect } from "vitest";
+// Ledger qoidalari va yozishga tayyorlangan qiymatlar DB'siz tekshiriladi.
+// Tranzaksiya va haqiqiy DB invariantlari test/ledger-core.test.ts da.
+import { describe, it, expect, vi } from "vitest";
+import type { Prisma } from "@prisma/client";
 import {
   ACCOUNTS,
   ACCOUNT_SPEC,
   assertBalancedLegs,
   assertLegDimensions,
+  postLedger,
   type LedgerLeg,
 } from "@/lib/ledger";
 
@@ -72,6 +70,182 @@ describe("assertBalancedLegs", () => {
         cash({ debit: undefined, credit: 5000, channelId: "bank" }),
       ])
     ).not.toThrow();
+  });
+});
+
+describe("ledger pul aniqligi", () => {
+  it.each([NaN, Infinity, -Infinity])("chekli bo'lmagan %s summani rad etadi", (amount) => {
+    expect(() => assertBalancedLegs([
+      cash({ debit: amount }),
+      { accountId: ACCOUNTS.KASSA_INCOME, credit: amount },
+    ])).toThrow(/chekli son/);
+  });
+
+  it("yaxlitlanganda nolga tushadigan oyoqni rad etadi", () => {
+    expect(() => assertBalancedLegs([
+      cash({ debit: 0.004 }),
+      cash({ debit: 0.004 }),
+      { accountId: ACCOUNTS.KASSA_INCOME, credit: 0.008 },
+    ])).toThrow(/kamida 0.01/);
+  });
+
+  it("jami emas, yoziladigan oyoqlar yig'indisini tekshiradi", () => {
+    expect(() => assertBalancedLegs([
+      cash({ debit: 0.104 }),
+      cash({ debit: 0.104 }),
+      { accountId: ACCOUNTS.KASSA_INCOME, credit: 0.208 },
+    ])).toThrow(/balanslashmagan/);
+  });
+
+  it("suzuvchi nuqta qoldig'ini muvozanatsizlik deb hisoblamaydi", () => {
+    expect(() => assertBalancedLegs([
+      cash({ debit: 0.1 }),
+      cash({ debit: 0.2 }),
+      { accountId: ACCOUNTS.KASSA_INCOME, credit: 0.1 + 0.2 },
+    ])).not.toThrow();
+  });
+
+  it("ikki tomonli oyoqni yaxlitlash orqali yashirmaydi", () => {
+    expect(() => assertBalancedLegs([
+      cash({ debit: 1, credit: 0.001 }),
+      { accountId: ACCOUNTS.KASSA_INCOME, credit: 1 },
+    ])).toThrow(/faqat debit YOKI credit/);
+  });
+});
+
+function ledgerDb() {
+  const findMany = vi.fn().mockResolvedValue([]);
+  const createMany = vi.fn(async ({ data }: { data: Prisma.LedgerEntryCreateManyInput[] }) => ({ count: data.length }));
+  const db = { ledgerEntry: { findMany, createMany } } as unknown as Prisma.TransactionClient;
+  return { db, findMany, createMany };
+}
+
+describe("postLedger — yoziladigan qiymatlar", () => {
+  it.each([
+    [0.005, "0.01"], [1.005, "1.01"], [2.675, "2.68"], [1000.01, "1000.01"],
+  ] as const)("%s ni decimal yarim-yuqoriga qoidasi bilan yozadi", async (amount, expected) => {
+    const { db, createMany } = ledgerDb();
+    const legs: LedgerLeg[] = [
+      cash({ debit: amount }),
+      { accountId: ACCOUNTS.CONTRACT_INCOME, credit: amount, subjectId: "firma-1" },
+    ];
+    const before = legs.map((leg) => ({ ...leg }));
+    const transactionId = await postLedger(db, {
+      legs, period: "2026-09", sourceTable: "Payment", sourceId: "payment-1",
+    });
+    expect(createMany).toHaveBeenCalledOnce();
+    const rows = createMany.mock.calls[0][0].data;
+    expect(rows[0].debit?.toString()).toBe(expected);
+    expect(rows[1].credit?.toString()).toBe(expected);
+    expect(Number(rows[0].credit)).toBe(0);
+    expect(Number(rows[1].debit)).toBe(0);
+    expect(rows.every((row) => row.transactionId === transactionId)).toBe(true);
+    expect(rows[0].channelId).toBe("kanal-1");
+    expect(rows[1].subjectId).toBe("firma-1");
+    expect(rows[1].subjectType).toBe("company");
+    expect(legs).toEqual(before);
+  });
+
+  it("yaxlitlashda balans buzilsa DB'ga tegmaydi", async () => {
+    const { db, findMany, createMany } = ledgerDb();
+    await expect(postLedger(db, {
+      legs: [cash({ debit: 0.104 }), cash({ debit: 0.104 }),
+        { accountId: ACCOUNTS.KASSA_INCOME, credit: 0.208 }],
+      period: "2026-09", sourceTable: "Payment", sourceId: "payment-1",
+    })).rejects.toThrow(/balanslashmagan/);
+    expect(findMany).not.toHaveBeenCalled();
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it.each(["2026-00", "2026-13", "2026-99", "2026-01\n", "0000-01"])(
+    "noto'g'ri %s davrda DB'ga tegmaydi", async (period) => {
+      const { db, findMany, createMany } = ledgerDb();
+      await expect(postLedger(db, {
+        legs: [cash(), { accountId: ACCOUNTS.KASSA_INCOME, credit: 1000 }],
+        period, sourceTable: "Payment", sourceId: "payment-1",
+      })).rejects.toThrow(/Ledger davri/);
+      expect(findMany).not.toHaveBeenCalled();
+      expect(createMany).not.toHaveBeenCalled();
+    }
+  );
+});
+
+describe("postLedger — yozishdan oldingi rad etishlar", () => {
+  const invalidCases: { name: string; legs: LedgerLeg[]; error: RegExp }[] = [
+    { name: "bo'sh yozuv", legs: [], error: /kamida 2 oyoq/ },
+    { name: "bitta oyoq", legs: [cash()], error: /kamida 2 oyoq/ },
+    ...[0, -0, 0.004, -0.001, NaN, Infinity, -Infinity].map((amount) => ({
+      name: `yaroqsiz summa ${amount}`,
+      legs: [cash({ debit: amount }), { accountId: ACCOUNTS.KASSA_INCOME, credit: amount }],
+      error: /faqat debit YOKI credit|kamida 0.01|manfiy|chekli son/,
+    })),
+    {
+      name: "faqat kreditda NaN",
+      legs: [cash(), { accountId: ACCOUNTS.KASSA_INCOME, credit: NaN }],
+      error: /chekli son/,
+    },
+    {
+      name: "ikkala tomon musbat",
+      legs: [cash({ credit: 0.001 }), { accountId: ACCOUNTS.KASSA_INCOME, credit: 1000 }],
+      error: /faqat debit YOKI credit/,
+    },
+    {
+      name: "daromad hisobida kanal",
+      legs: [cash(), { accountId: ACCOUNTS.KASSA_INCOME, credit: 1000, channelId: "kanal-1" }],
+      error: /kanal bo'lmaydi/,
+    },
+  ];
+
+  it.each(invalidCases)("$name bo'lsa DB'ga tegmaydi", async ({ legs, error }) => {
+    const { db, findMany, createMany } = ledgerDb();
+    await expect(postLedger(db, {
+      legs, period: "2026-09", sourceTable: "Payment", sourceId: "payment-1",
+    })).rejects.toThrow(error);
+    expect(findMany).not.toHaveBeenCalled();
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it("ochiq jurnal izi bor manbani qayta yozmaydi", async () => {
+    const { db, findMany, createMany } = ledgerDb();
+    findMany.mockResolvedValue([
+      { accountId: ACCOUNTS.CASH, debit: 1000, credit: 0, period: "2026-09",
+        channelId: "kanal-1", subjectType: null, subjectId: null },
+      { accountId: ACCOUNTS.KASSA_INCOME, debit: 0, credit: 1000, period: "2026-09",
+        channelId: null, subjectType: null, subjectId: null },
+    ]);
+    await expect(postLedger(db, {
+      legs: [cash(), { accountId: ACCOUNTS.KASSA_INCOME, credit: 1000 }],
+      period: "2026-09", sourceTable: "Payment", sourceId: "payment-1",
+    })).rejects.toThrow(/dublikat post bloklandi/);
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { sourceId: "payment-1", sourceTable: { in: ["Payment", "Payment-reversal"] } },
+    }));
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it.each(["read", "write"] as const)("DB %s xatosini yashirmaydi", async (stage) => {
+    const { db, findMany, createMany } = ledgerDb();
+    const error = new Error("DB amali bajarilmadi");
+    if (stage === "read") findMany.mockRejectedValue(error);
+    else createMany.mockRejectedValue(error);
+    await expect(postLedger(db, {
+      legs: [cash(), { accountId: ACCOUNTS.KASSA_INCOME, credit: 1000 }],
+      period: "2026-09", sourceTable: "Payment", sourceId: "payment-1",
+    })).rejects.toBe(error);
+    expect(createMany).toHaveBeenCalledTimes(stage === "read" ? 0 : 1);
+  });
+
+  it("bir necha oyoqning yozilgan summasi balansli qoladi", async () => {
+    const { db, createMany } = ledgerDb();
+    await postLedger(db, {
+      legs: [cash({ debit: 0.1 }), cash({ debit: 0.2 }),
+        { accountId: ACCOUNTS.KASSA_INCOME, credit: 0.1 + 0.2 }],
+      period: "2026-09", sourceTable: "Payment", sourceId: "payment-1",
+    });
+    const rows = createMany.mock.calls[0][0].data;
+    expect(rows.map((row) => [row.debit?.toString(), row.credit?.toString()])).toEqual([
+      ["0.1", "0"], ["0.2", "0"], ["0", "0.3"],
+    ]);
   });
 });
 

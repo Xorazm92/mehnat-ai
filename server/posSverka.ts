@@ -20,9 +20,9 @@ import { serialize } from "@/lib/serialize";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { readWorkbook } from "@/lib/bank/readWorkbook";
 import type { Workbook } from "@/lib/bank/types";
-import { classifySettlement, defaultInScope, settlementSign, CHANNEL_LABELS } from "@/lib/pos/classifySettlement";
+import { classifySettlement, defaultInScope, settlementSign, isPosChannel, CHANNEL_LABELS } from "@/lib/pos/classifySettlement";
 import { parseFiscalWorkbook, fmHintFromFileName, matchDeviceByHint } from "@/lib/pos/parseFiscalReport";
-import { reconcile, dayKey, type DeviceDay, type SettlementDay } from "@/lib/pos/reconcile";
+import { reconcile, dayKey, type DeviceDay, type SettlementDay, type KassaChannelDay } from "@/lib/pos/reconcile";
 import { FiscalReportParseError } from "@/lib/pos/types";
 
 /** Kutilgan xato (format tanilmadi, apparat topilmadi) otilmaydi — qaytariladi. */
@@ -61,14 +61,14 @@ export async function getSverkaData(input?: { from?: string; to?: string }) {
     }),
     prisma.fiscalDailyReport.findMany({
       where: { date: { gte: from, lt: toExclusive } },
-      select: { deviceId: true, date: true, cardAmount: true, cashAmount: true },
+      select: { deviceId: true, date: true, cardAmount: true, cashAmount: true, channels: true },
     }),
     prisma.posSettlement.findMany({
       where: { opDate: { gte: from, lt: toExclusive } },
       select: {
         terminalId: true, opDate: true, dateSource: true,
         factAmount: true, grossAmount: true, commissionAmount: true,
-        terminal: { select: { inScope: true } },
+        terminal: { select: { inScope: true, channel: true } },
       },
     }),
   ]);
@@ -85,6 +85,9 @@ export async function getSverkaData(input?: { from?: string; to?: string }) {
     .filter((s) => s.terminal.inScope)
     .map((s) => ({
       terminalId: s.terminalId,
+      // Kanal bazada oddiy matn — tanilmasa "other" bo'lib qoladi, jim
+      // ravishda boshqa kanalga qo'shilib ketmaydi.
+      channel: isPosChannel(s.terminal.channel) ? s.terminal.channel : ("other" as const),
       date: dayKey(s.opDate),
       factAmount: Number(s.factAmount),
       grossAmount: Number(s.grossAmount),
@@ -92,8 +95,24 @@ export async function getSverkaData(input?: { from?: string; to?: string }) {
       fromDocumentDate: s.dateSource === "document",
     }));
 
+  // Kassa apparatining to'lov turi kesimi. `deviceDays` ga QO'SHILMAYDI:
+  // u `cardAmount` ning ichki bo'lagi va qo'shilsa savdo ikki marta
+  // sanalardi — shuning uchun `reconcile` ga alohida kirish bo'lib beriladi.
+  const kassaChannels: KassaChannelDay[] = [];
+  for (const r of reports) {
+    if (!r.channels || typeof r.channels !== "object" || Array.isArray(r.channels)) continue;
+    for (const [key, value] of Object.entries(r.channels)) {
+      // Kalitlarni yuklash action'ining o'zi yozadi; notanish kalit — buzilgan
+      // ma'lumot belgisi, uni boshqa kanalga qo'shib yubormaymiz.
+      if (!isPosChannel(key)) continue;
+      const amount = Number(value);
+      if (!Number.isFinite(amount) || amount === 0) continue;
+      kassaChannels.push({ date: dayKey(r.date), channel: key, amount });
+    }
+  }
+
   const range = { from: dayKey(from), to: dayKey(to) };
-  const result = reconcile(deviceDays, inScope, range);
+  const result = reconcile(deviceDays, inScope, range, kassaChannels);
 
   // Doiradan tashqarida qolgan tushum — ekranda alohida ko'rsatiladi, chunki
   // "bu pul qayerda?" savoli aynan shu yerdan chiqadi.
@@ -129,7 +148,10 @@ export interface FiscalUploadResult {
   rowsParsed: number;
   rowsInserted: number;
   rowsUpdated: number;
+  /** Oddiy hisobotda — karta jami; KESIM hisobotida — o'sha kanal jami. */
   cardTotal: number;
+  /** Kesim hisobotining kanali (o'zbekcha nomi); oddiy hisobotda `null`. */
+  channelLabel: string | null;
   warnings: string[];
 }
 
@@ -156,7 +178,8 @@ export async function uploadFiscalReport(formData: FormData): Promise<SverkaOutc
   const hint = fmHintFromFileName(file.name);
   let parsed;
   try {
-    parsed = parseFiscalWorkbook(workbook, hint);
+    // Fayl nomi kanal uchun faqat OXIRGI chora — parser avval mazmunga qaraydi.
+    parsed = parseFiscalWorkbook(workbook, hint, file.name);
   } catch (e) {
     if (e instanceof FiscalReportParseError) return { ok: false, error: e.message };
     throw e;
@@ -199,8 +222,39 @@ export async function uploadFiscalReport(formData: FormData): Promise<SverkaOutc
   for (const row of parsed.rows) {
     const existing = await prisma.fiscalDailyReport.findUnique({
       where: { deviceId_date: { deviceId: device.id, date: row.date } },
-      select: { id: true },
+      select: { id: true, channels: true },
     });
+
+    // KESIM hisoboti FAQAT `channels` ga yoziladi. Uning naqd/terminal
+    // ustunlari nol — ularni asosiy hisobot ustidan yozish o'sha kunning
+    // savdosini o'chirib yuborardi. Kesim `cardAmount` ichidagi ulush,
+    // shuning uchun kassa yig'indisiga ham qo'shilmaydi.
+    if (parsed.isBreakdown) {
+      const before = (existing?.channels ?? null) as Record<string, number> | null;
+      const channels = { ...(before ?? {}), [parsed.channel!]: row.totalAmount };
+      if (existing) {
+        await prisma.fiscalDailyReport.update({
+          where: { id: existing.id },
+          data: { channels, importId: imp.id },
+        });
+        updated++;
+      } else {
+        await prisma.fiscalDailyReport.create({
+          data: {
+            deviceId: device.id,
+            date: row.date,
+            cashAmount: 0,
+            cardAmount: 0,
+            totalAmount: 0,
+            channels,
+            importId: imp.id,
+          },
+        });
+        inserted++;
+      }
+      continue;
+    }
+
     const data = {
       cashAmount: row.cashAmount,
       cardAmount: row.cardAmount,
@@ -227,7 +281,7 @@ export async function uploadFiscalReport(formData: FormData): Promise<SverkaOutc
     action: "create",
     tableName: "FiscalReportImport",
     recordId: imp.id,
-    newData: { fileName: file.name, device: device.fmNumber, inserted, updated },
+    newData: { fileName: file.name, device: device.fmNumber, channel: parsed.channel, inserted, updated },
   });
   revalidatePath("/kassa/sverka");
 
@@ -241,7 +295,8 @@ export async function uploadFiscalReport(formData: FormData): Promise<SverkaOutc
       rowsParsed: parsed.rows.length,
       rowsInserted: inserted,
       rowsUpdated: updated,
-      cardTotal: parsed.rows.reduce((s, r) => s + r.cardAmount, 0),
+      cardTotal: parsed.rows.reduce((s, r) => s + (parsed.isBreakdown ? r.totalAmount : r.cardAmount), 0),
+      channelLabel: parsed.channel ? CHANNEL_LABELS[parsed.channel] : null,
       warnings: parsed.warnings,
     },
   };

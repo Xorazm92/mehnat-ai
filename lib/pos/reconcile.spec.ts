@@ -1,14 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { reconcile, dayKey, type DeviceDay, type SettlementDay } from "./reconcile";
+import { reconcile, dayKey, type DeviceDay, type SettlementDay, type KassaChannelDay } from "./reconcile";
+import type { PosChannel } from "./types";
 
 const dev = (deviceId: string, date: string, cardAmount: number, cashAmount = 0): DeviceDay => ({
   deviceId, date, cardAmount, cashAmount,
 });
 const set = (
   terminalId: string, date: string, gross: number, commission = 0, fromDocumentDate = false,
+  channel: PosChannel = "uzcard",
 ): SettlementDay => ({
-  terminalId, date, grossAmount: gross, factAmount: gross - commission, commissionAmount: commission, fromDocumentDate,
+  terminalId, channel, date, grossAmount: gross, factAmount: gross - commission, commissionAmount: commission, fromDocumentDate,
 });
+const kas = (date: string, channel: PosChannel, amount: number): KassaChannelDay => ({ date, channel, amount });
 
 describe("kunlik yig'ish", () => {
   const r = reconcile(
@@ -64,4 +67,66 @@ describe("faqat bir tomonda bo'lgan kun ham ko'rinadi", () => {
 
 describe("dayKey", () => {
   it("UTC kun kaliti", () => expect(dayKey(new Date(Date.UTC(2026, 7, 1)))).toBe("2026-08-01"));
+});
+
+// ── OY × KANAL KESIMI ───────────────────────────────────────────────────
+//
+// Kesim ikki mustaqil manbadan yig'iladi: kassa tomoni apparatning to'lov
+// turi hisobotidan, bank tomoni esa o'sha kanalning ekvayring tushumidan.
+// Bir tomonda bo'lib, ikkinchisida yo'q kanal — bu XATO emas, aynan shu
+// modul ko'rsatishi kerak bo'lgan holat.
+
+describe("kanal kesimi", () => {
+  const r = reconcile(
+    [dev("k1", "2026-08-01", 300), dev("k1", "2026-09-01", 100)],
+    [
+      set("t1", "2026-08-01", 100, 1, false, "click"),
+      set("t2", "2026-08-01", 200, 0, false, "payme"),
+      set("t1", "2026-09-01", 100, 2, false, "click"),
+    ],
+    undefined,
+    [kas("2026-08-01", "click", 100), kas("2026-08-01", "payme", 190), kas("2026-09-01", "click", 100)],
+  );
+
+  it("kanal bo'yicha ikki tomon ham yig'iladi", () => {
+    expect(r.totals.byChannel.click).toMatchObject({ kassa: 200, bankGross: 200, commission: 3 });
+  });
+  it("mos kelgan kanalda farq nol", () => expect(r.totals.byChannel.click!.diff).toBe(0));
+  it("farq ISHORASI asosiy jadval bilan bir xil (kassa − bank)", () => {
+    // Payme: kassa 190, bank 200 → bankda ORTIQCHA, ya'ni manfiy farq.
+    expect(r.totals.byChannel.payme!.diff).toBe(-10);
+  });
+  it("oyma-oy ajratiladi", () => {
+    expect(r.months.map((m) => m.month)).toEqual(["2026-08", "2026-09"]);
+    expect(r.months[0].totals.byChannel.click!.kassa).toBe(100);
+    expect(r.months[1].totals.byChannel.click!.kassa).toBe(100);
+    expect(r.months[1].totals.byChannel.payme).toBeUndefined();
+  });
+  it("kanal kesimi kassa JAMISIGA qo'shilmaydi", () => {
+    // Kesim `cardAmount` ning ichida — qo'shilsa savdo ikki marta sanaladi.
+    expect(r.totals.kassaCard).toBe(400);
+  });
+  it("kunlik kesim ham to'ladi", () => {
+    expect(r.days[0].byChannel.payme).toMatchObject({ kassa: 190, bankGross: 200, diff: -10 });
+  });
+});
+
+describe("bir tomonda yo'q kanal", () => {
+  it("faqat bankda ko'ringan kanal kassa 0 bilan turadi", () => {
+    const r = reconcile([dev("k1", "2026-08-01", 50)], [set("t9", "2026-08-01", 50, 0, false, "uzum")]);
+    expect(r.totals.byChannel.uzum).toMatchObject({ kassa: 0, bankGross: 50, diff: -50 });
+  });
+  it("faqat kassada ko'ringan kanal bank 0 bilan turadi", () => {
+    const r = reconcile([dev("k1", "2026-08-01", 50)], [], undefined, [kas("2026-08-01", "uzum", 50)]);
+    expect(r.totals.byChannel.uzum).toMatchObject({ kassa: 50, bankGross: 0, diff: 50 });
+  });
+  it("davrdan tashqaridagi kesim kirmaydi", () => {
+    const r = reconcile(
+      [dev("k1", "2026-08-01", 50)],
+      [],
+      { from: "2026-08-01", to: "2026-08-31" },
+      [kas("2026-07-30", "uzum", 999), kas("2026-08-01", "uzum", 50)],
+    );
+    expect(r.totals.byChannel.uzum!.kassa).toBe(50);
+  });
 });

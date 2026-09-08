@@ -303,6 +303,17 @@ export const CHANNEL_LABELS: Record<PosChannel, string> = {
 };
 
 /**
+ * Matn haqiqiy kanal kalitimi.
+ *
+ * `PosTerminal.channel` bazada oddiy `String`, `FiscalDailyReport.channels`
+ * esa `Json` — ikkalasi ham tipdan tashqarida. Ro'yxat `CHANNEL_LABELS`
+ * dan olinadi, ya'ni yangi kanal qo'shilganda bu tekshiruv o'zi yangilanadi.
+ */
+export function isPosChannel(v: string): v is PosChannel {
+  return Object.prototype.hasOwnProperty.call(CHANNEL_LABELS, v);
+}
+
+/**
  * Yangi terminal doiraga O'ZI kiritiladimi.
  *
  * POS terminallari (UzCard, HUMO, Multicard) kassa apparati bilan bir xil

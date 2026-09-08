@@ -17,7 +17,22 @@ import {
   toYearMonthKey,
   periodsEqual,
   isFuturePeriod,
+  isMonthPeriod,
 } from "@/lib/periods";
+
+describe("isMonthPeriod — yozish uchun qat'iy davr", () => {
+  it.each(["0001-01", "2026-01", "2026-12", "9999-12"])("%s ni qabul qiladi", (value) => {
+    expect(isMonthPeriod(value)).toBe(true);
+  });
+
+  it.each([
+    "2026-00", "2026-13", "2026-99", "0000-01", "2026-1",
+    "26-01", "10000-01", "2026-01-01", "2026-01\n", " 2026-01",
+    "2026-01 ", "2026 Yanvar", "", null, undefined, 202601,
+  ])("%s ni rad etadi", (value) => {
+    expect(isMonthPeriod(value)).toBe(false);
+  });
+});
 
 describe("normalizePeriodKey — kanonik davr kaliti", () => {
   it("matnli davrni ISO ga keltiradi", () => {

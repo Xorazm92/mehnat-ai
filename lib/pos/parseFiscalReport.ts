@@ -12,7 +12,7 @@
 // Ustunlar NOMI bo'yicha topiladi, tartibi bo'yicha emas: eksport ustun
 // qo'shganda tartib suriladi, nom esa o'zgarmaydi.
 
-import { FiscalReportParseError, type FiscalDailyRow, type ParsedFiscalReport, type SheetRow } from "./types";
+import { FiscalReportParseError, type FiscalDailyRow, type ParsedFiscalReport, type PosChannel, type SheetRow } from "./types";
 
 /** Sarlavhalarni solishtirish uchun: registr, bo'shliq va qavslar tashlanadi. */
 function norm(v: unknown): string {
@@ -39,6 +39,56 @@ function isCardHeader(s: string): boolean {
 }
 function isCashHeader(s: string): boolean {
   return s.startsWith("сумм") && (s.includes("нақдпул") || s.includes("накдпул"));
+}
+
+// ── KESIM HISOBOTINING KANALI ───────────────────────────────────────────
+//
+// Soliq kabineti to'lov turi bo'yicha FILTRLANGAN hisobotni ham beradi
+// (faqat Click, faqat Payme...). Ustunlar shakli asosiy hisobot bilan bir
+// xil, farqi — naqd va terminal nol, summa "Жами" da.
+//
+// Kanal FAYL MAZMUNIDAN topiladi, fayl nomidan emas. Fayl nomiga tayanish
+// jimgina buziladigan yo'l edi: nom mos kelmasa kesim asosiy kassa
+// summasiga qo'shilib, savdoni IKKI MARTA sanardi.
+
+const CHANNEL_MARKERS: { channel: PosChannel; re: RegExp }[] = [
+  // Aniqrog'i umumiyroqdan OLDIN: "HUMO EPOS" ni "HUMO" yutib yubormasin.
+  { channel: "humo_epos", re: /\bepos\b/i },
+  { channel: "multicard", re: /multicard|мультикарт/i },
+  { channel: "paynet", re: /paynet|пайнет/i },
+  { channel: "click", re: /\bclick\b|клик/i },
+  { channel: "payme", re: /payme|пайме/i },
+  // "UzumCard" ham Uzum — shuning uchun `uzcard` dan oldin.
+  { channel: "uzum", re: /uzum|узум/i },
+  { channel: "humo", re: /\bhumo\b|хумо/i },
+  { channel: "uzcard", re: /uzcard|узкард|узкарт/i },
+  { channel: "qr", re: /qr[- ]?online|qr[- ]?код|qr[- ]?kod/i },
+];
+
+/** Matndagi birinchi tanilgan kanal belgisi. */
+function channelFromText(text: string): PosChannel | null {
+  for (const { channel, re } of CHANNEL_MARKERS) {
+    if (re.test(text)) return channel;
+  }
+  return null;
+}
+
+/**
+ * Kanalni varaq mazmunidan topadi.
+ *
+ * Kabinet eksporti filtrni sarlavha ustidagi qatorlarga yozadi, ba'zan esa
+ * alohida "Тўлов тури" ustunida beradi — ikkalasi ham shu oynaga tushadi.
+ */
+function detectChannel(rows: SheetRow[]): PosChannel | null {
+  for (const r of rows) {
+    for (const v of Object.values(r)) {
+      // Raqamlar tekshirilmaydi: kanal nomi faqat matnda bo'ladi.
+      if (typeof v !== "string") continue;
+      const found = channelFromText(v);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 type ColMap = Partial<Record<keyof typeof FIELDS, string>>;
@@ -85,8 +135,14 @@ function cellDate(v: unknown): Date | null {
  *
  * @param fallbackFm Faylda FM ustuni bo'lmasa (kunlik ko'rinish) ishlatiladi —
  *   odatda fayl nomidan olingan raqam.
+ * @param channelHint Kesim kanalini varaqdan topib bo'lmaganda OXIRGI chora
+ *   sifatida qaraladigan matn (odatda fayl nomi). Mazmun har doim ustun.
  */
-export function parseFiscalRows(rows: SheetRow[], fallbackFm: string | null = null): ParsedFiscalReport {
+export function parseFiscalRows(
+  rows: SheetRow[],
+  fallbackFm: string | null = null,
+  channelHint: string | null = null,
+): ParsedFiscalReport {
   if (!rows?.length) throw new FiscalReportParseError("Faylda ma'lumot yo'q");
 
   let cols: ColMap | null = null;
@@ -114,6 +170,10 @@ export function parseFiscalRows(rows: SheetRow[], fallbackFm: string | null = nu
 
   const out: FiscalDailyRow[] = [];
   const warnings: string[] = [];
+  // "naqd + karta ≠ jami" KESIM hisobotida qonuniy holat (ikkalasi ham nol,
+  // summa esa "Жами" da), shuning uchun ogohlantirishlar keyinga qoldiriladi
+  // va faqat oddiy hisobotda chiqariladi.
+  const mismatches: string[] = [];
   let skipped = 0;
   for (let i = start; i < rows.length; i++) {
     const r = rows[i];
@@ -131,7 +191,7 @@ export function parseFiscalRows(rows: SheetRow[], fallbackFm: string | null = nu
     // Naqd + karta = jami tenglikni faylning O'ZI buzsa, buni yashirmaymiz:
     // demak ustun noto'g'ri tanilgan yoki eksport buzuq.
     if (cols.total && Math.abs(cash + card - total) > 1) {
-      warnings.push(`${fm ?? "?"} · ${String(r[cols.date])}: naqd + karta ≠ jami (${cash} + ${card} ≠ ${total})`);
+      mismatches.push(`${fm ?? "?"} · ${String(r[cols.date])}: naqd + karta ≠ jami (${cash} + ${card} ≠ ${total})`);
     }
     out.push({
       fmNumber: fm,
@@ -147,12 +207,38 @@ export function parseFiscalRows(rows: SheetRow[], fallbackFm: string | null = nu
   if (!out.length) throw new FiscalReportParseError("Hisobotda birorta kunlik qator topilmadi");
   if (skipped) warnings.push(`${skipped} ta qator sanasi o'qilmadi va tashlab ketildi`);
 
+  // KESIM SHAKLI: hamma kunda naqd ham, terminal ham nol, lekin savdo bor.
+  // Nol kunlarga bardosh berish uchun "hammasi nol" emas, "hech birida
+  // naqd/terminal yo'q, lekin bittasida summa bor" deb tekshiriladi.
+  const isBreakdown =
+    out.every((r) => r.cashAmount === 0 && r.cardAmount === 0) && out.some((r) => r.totalAmount > 0);
+  let channel: PosChannel | null = null;
+  if (isBreakdown) {
+    // Sarlavha USTIDAGI qatorlarda filtr yozuvi bo'ladi, ustunda esa "Тўлов
+    // тури" — ikkalasi ham shu oynaga tushadi.
+    channel = detectChannel(rows.slice(0, start + 3)) ?? (channelHint ? channelFromText(channelHint) : null);
+    if (!channel) {
+      // JIM QABUL QILINMAYDI. Kanali noma'lum kesim asosiy hisobot bilan
+      // bir xil ko'rinadi va kassa yig'indisiga qo'shilib savdoni ikki
+      // marta sanaydi — aynan shu xato oldin fayl nomiga tayanish tufayli
+      // yuz bergan.
+      throw new FiscalReportParseError(
+        "Bu to'lov turi bo'yicha KESIM hisoboti (naqd va terminal ustunlari nol), " +
+          "lekin kanal aniqlanmadi. Fayl ichida kanal nomi (Click, Payme, Uzum, HUMO, UzCard...) topilmadi.",
+      );
+    }
+  } else {
+    warnings.push(...mismatches);
+  }
+
   const dates = out.map((r) => r.date.getTime());
   return {
     rows: out,
     periodFrom: new Date(Math.min(...dates)),
     periodTo: new Date(Math.max(...dates)),
     warnings,
+    isBreakdown,
+    channel,
   };
 }
 
@@ -160,13 +246,14 @@ export function parseFiscalRows(rows: SheetRow[], fallbackFm: string | null = nu
 export function parseFiscalWorkbook(
   workbook: Record<string, SheetRow[]>,
   fallbackFm: string | null = null,
+  channelHint: string | null = null,
 ): ParsedFiscalReport {
   const sheets = Object.entries(workbook);
   if (!sheets.length) throw new FiscalReportParseError("Faylda sahifa yo'q");
   const errors: string[] = [];
   for (const [name, rows] of sheets) {
     try {
-      return parseFiscalRows(rows, fallbackFm);
+      return parseFiscalRows(rows, fallbackFm, channelHint);
     } catch (e) {
       errors.push(`${name}: ${(e as Error).message}`);
     }
