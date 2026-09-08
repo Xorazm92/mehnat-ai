@@ -10,6 +10,11 @@ interface Options {
   enabled?: boolean;
   /** Also refresh the moment the tab regains visibility. Default true. */
   refreshOnFocus?: boolean;
+  /**
+   * Foydalanuvchi shuncha ms ichida ekranga tegingan bo'lsa — yangilanish
+   * KEYINGI aylanaga qoldiriladi. Default 5000.
+   */
+  idleMs?: number;
 }
 
 /**
@@ -44,20 +49,81 @@ function isDialogOpen(): boolean {
   return document.querySelector('[role="dialog"]') !== null;
 }
 
-export function useAutoRefresh({ intervalMs = 15000, enabled = true, refreshOnFocus = true }: Options = {}) {
+
+/**
+ * QO'LDA PAUZA — yozuv "uchayotgan" paytda.
+ *
+ * Server action yozuvi bilan bir vaqtda ketgan `router.refresh()` javobi
+ * yozuvdan KEYIN, lekin ESKI ma'lumot bilan qaytishi mumkin (kesh yoki
+ * so'rovlar tartibi). Matritsa buni "yozdim — o'chib ketdi" bo'lib
+ * ko'rsatardi. Yozuv boshlanganda hisoblagich oshadi, tugaganda kamayadi;
+ * noldan katta bo'lsa davriy yangilanish o'tkazib yuboriladi.
+ *
+ * Modul darajasida — bir nechta komponent bir vaqtda yozishi mumkin.
+ */
+let pauseCount = 0;
+
+/** `const done = pauseAutoRefresh(); try { ... } finally { done(); }` */
+export function pauseAutoRefresh(): () => void {
+  pauseCount += 1;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    pauseCount = Math.max(0, pauseCount - 1);
+  };
+}
+
+/**
+ * Foydalanuvchining OXIRGI harakati (bosish, klavish, aylantirish).
+ *
+ * Ish ustida turgan odamning tagidan jadvalni tortib olmaymiz: yangilanish
+ * u bir zum to'xtaganda bajariladi. Bu `role="dialog"` tekshiruvi
+ * ushlamaydigan holatlarni yopadi — matritsada katak bosish, ro'yxatni
+ * aylantirish, qidiruvga yozish.
+ *
+ * Modul darajasida: tinglovchi bitta, nechta ekran hook'dan foydalanishidan
+ * qat'i nazar.
+ */
+let lastInteractionAt = 0;
+if (typeof document !== "undefined") {
+  const touch = () => {
+    lastInteractionAt = Date.now();
+  };
+  for (const evt of ["pointerdown", "keydown", "wheel"] as const) {
+    document.addEventListener(evt, touch, { capture: true, passive: true });
+  }
+}
+
+export function useAutoRefresh({
+  intervalMs = 15000,
+  enabled = true,
+  refreshOnFocus = true,
+  idleMs = 5000,
+}: Options = {}) {
   const router = useRouter();
 
   useEffect(() => {
     if (!enabled) return;
 
+    /** Yangilanish MUMKIN bo'lgan payt — bitta joyda, ikkala qo'zg'atgich uchun. */
+    const isSafeToRefresh = () => {
+      if (typeof document === "undefined") return false;
+      if (document.hidden) return false;
+      if (pauseCount > 0) return false;
+      if (isDialogOpen()) return false;
+      return true;
+    };
+
     const id = setInterval(() => {
-      if (typeof document !== "undefined" && document.hidden) return;
-      if (isDialogOpen()) return;
+      if (!isSafeToRefresh()) return;
+      // Ish ustida turgan odam — keyingi aylanada.
+      if (Date.now() - lastInteractionAt < idleMs) return;
       router.refresh();
     }, intervalMs);
 
     const onVisible = () => {
-      if (!document.hidden && !isDialogOpen()) router.refresh();
+      if (isSafeToRefresh()) router.refresh();
     };
     if (refreshOnFocus) document.addEventListener("visibilitychange", onVisible);
 
@@ -65,5 +131,5 @@ export function useAutoRefresh({ intervalMs = 15000, enabled = true, refreshOnFo
       clearInterval(id);
       if (refreshOnFocus) document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [enabled, intervalMs, refreshOnFocus, router]);
+  }, [enabled, intervalMs, refreshOnFocus, idleMs, router]);
 }

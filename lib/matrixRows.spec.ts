@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  mergeRows,
   pendingCellKey,
   parsePendingCellKey,
   readRowCells,
@@ -143,5 +144,50 @@ describe("reconcilePendingCells", () => {
     const pending = new Map([[pendingCellKey("c1", "didox"), entry("nol")]]);
     reconcilePendingCells(pending, () => "nol", NOW, TTL);
     expect(pending.size).toBe(1);
+  });
+});
+
+/**
+ * `mergeRows` — sahifa har yangilanganda matritsaning butunlay qayta
+ * chizilishini to'xtatadi (havolalarni saqlab qoladi).
+ */
+describe("mergeRows", () => {
+  const build = () => [
+    { companyId: "a", qqs: "+", activeServices: ["qqs"] },
+    { companyId: "b", qqs: "", activeServices: [] },
+  ];
+
+  it("mazmun bir xil bo'lsa ESKI massivning o'zini qaytaradi", () => {
+    const prev = build();
+    expect(mergeRows(prev, build())).toBe(prev);
+  });
+
+  it("o'zgargan qator yangi, qolganlari eski havolada qoladi", () => {
+    const prev = build();
+    const next = build();
+    next[1].qqs = "topshirildi";
+
+    const merged = mergeRows(prev, next);
+    expect(merged).not.toBe(prev);
+    expect(merged[0]).toBe(prev[0]);
+    expect(merged[1]).toBe(next[1]);
+  });
+
+  /** `activeServices` massiv — havolasi har renderda yangi bo'ladi. */
+  it("massiv katakni MAZMUNI bo'yicha solishtiradi", () => {
+    const prev = [{ companyId: "a", activeServices: ["qqs", "inps"] }];
+    const next = [{ companyId: "a", activeServices: ["qqs", "inps"] }];
+    expect(mergeRows(prev, next)).toBe(prev);
+
+    const changed = [{ companyId: "a", activeServices: ["qqs"] }];
+    expect(mergeRows(prev, changed)).not.toBe(prev);
+  });
+
+  it("qatorlar soni o'zgarsa yangi massiv qaytadi", () => {
+    const prev = build();
+    const next = [...build(), { companyId: "c", qqs: "", activeServices: [] }];
+    const merged = mergeRows(prev, next);
+    expect(merged).toHaveLength(3);
+    expect(merged[0]).toBe(prev[0]);
   });
 });

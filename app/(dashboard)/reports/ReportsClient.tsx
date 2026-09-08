@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { useStableData } from "@/hooks/useStableData";
 import OperationModule from "@/components/OperationModule";
 import HisobotlarModule from "@/components/HisobotlarModule";
 import { getPeriodPaymentStatus } from "@/server/invoices";
@@ -67,8 +68,33 @@ export default function ReportsClient({
   obligationCoverage,
   initialTab = "matrix",
 }: Props) {
-  useAutoRefresh();
+  /**
+   * MATRITSA UCHUN SEYRAKROQ YANGILANISH.
+   *
+   * Sukut bo'yicha 15 soniya bu sahifa uchun juda tez edi: har yangilanish
+   * oltita og'ir so'rovni (firmalar, o'z firmalar, xodimlar, amallar,
+   * ustunlar konfiguratsiyasi, majburiyat qamrovi) qayta ishlatadi va 250
+   * qatorlik matritsani qaytadan yuboradi. Ustiga Next 16 da katakni
+   * yozadigan HAR BIR server action (`updateTag("operations")`) allaqachon
+   * sahifani serverda qayta chizib, yangi ma'lumotni javob bilan birga
+   * qaytaradi — ya'ni o'z yozuvimiz uchun davriy so'rov umuman kerak emas.
+   * Davriy so'rov faqat BOSHQA odamning yozuvini ko'rish uchun qoladi, unga
+   * esa bir daqiqa yetarli.
+   */
+  useAutoRefresh({ intervalMs: 60000 });
   const hasFocus = !!(focusCompany && focusCol);
+
+  /**
+   * Serverdan kelgan ma'lumot MAZMUNI bo'yicha barqarorlashtiriladi.
+   * Busiz har yangilanish (va har katak yozuvi) matritsaga yangi
+   * havolalar berib, butun jadvalni qaytadan chizishga majbur qilardi —
+   * `hooks/useStableData.ts` izohiga qarang.
+   */
+  const stableCompanies = useStableData(companies);
+  const stableOperations = useStableData(operations);
+  const stableStaff = useStableData(staff);
+  const stableReportColumns = useStableData(reportColumns);
+  const stableCoverage = useStableData(obligationCoverage);
   // Davr ham URL'da: "2026-07 matritsasiga qara" degan havolani yuborish
   // mumkin. Ilgari oy faqat komponent ichida yashardi va havola har doim
   // JORIY oyni ochardi.
@@ -171,7 +197,14 @@ export default function ReportsClient({
    *
    * Callback saqlanadi (modul shartnomasi), lekin endi u qayta yozmaydi.
    */
-  const handleUpdate = async () => {};
+  const handleUpdate = useCallback(async () => {}, []);
+
+  /**
+   * Firma tanlash bu ekranda hech narsa qilmaydi (kartochka alohida sahifada),
+   * lekin havolasi BARQAROR bo'lishi shart: inline `() => {}` har renderda
+   * yangi bo'lib, `OperationRow` ning `React.memo` taqqoslashini buzardi.
+   */
+  const handleCompanySelect = useCallback(() => {}, []);
 
   const tabs = [
     { id: "matrix" as const, label: "Amallar matritsasi", icon: Grid3x3, hint: "Firma × oy × amal — kundalik topshirish holati" },
@@ -198,26 +231,26 @@ export default function ReportsClient({
         className={`flex-1 min-h-0 ${tab === "matrix" ? "flex flex-col" : "overflow-auto"}`}
       >
         {tab === "reports" ? (
-          <HisobotlarModule companies={companies} staff={staff} lang="uz" userRole={userRole} />
+          <HisobotlarModule companies={stableCompanies} staff={stableStaff} lang="uz" userRole={userRole} />
         ) : (
           <OperationModule
-            companies={companies}
-            operations={operations}
-            staff={staff}
+            companies={stableCompanies}
+            operations={stableOperations}
+            staff={stableStaff}
             lang="uz"
             userRole={userRole}
             currentUserId={currentUserId}
             userName={userName}
             focusProof={hasFocus ? { companyId: focusCompany as string, colKey: focusCol as string } : null}
-            reportColumns={reportColumns}
-            obligationCoverage={obligationCoverage}
+            reportColumns={stableReportColumns}
+            obligationCoverage={stableCoverage}
             paymentByCompany={moneyByCompany}
             debtByCompany={debtByCompany}
             debtAsOf={debtAsOf}
             debtOpeningAsOf={debtOpeningAsOf}
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
-            onCompanySelect={() => {}}
+            onCompanySelect={handleCompanySelect}
             onUpdate={handleUpdate}
           />
         )}

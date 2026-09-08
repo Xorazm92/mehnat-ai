@@ -33,7 +33,8 @@ import {
   FILTER_URL_KEYS,
   type MatrixFilters,
 } from '@/lib/matrixFilters';
-import { pendingCellKey, readRowCells, reconcilePendingCells } from '@/lib/matrixRows';
+import { mergeRows, pendingCellKey, readRowCells, reconcilePendingCells } from '@/lib/matrixRows';
+import { pauseAutoRefresh } from '@/hooks/useAutoRefresh';
 import { normalizeTaxRegime } from '@/lib/taxRegimes';
 import { columnAppliesToRegime } from '@/lib/reportApplicability';
 import { paymentCodeFor, serviceFullLabel } from '@/lib/reportColumns';
@@ -467,7 +468,18 @@ const OperationModule: React.FC<Props> = ({
       return row;
     });
 
-    setRows(newRows);
+    /**
+     * MAZMUNI O'ZGARMAGAN QATOR ESKI HAVOLASI BILAN QOLADI.
+     *
+     * Bu effekt sahifaning HAR yangilanishida ishlaydi (davriy so'rov va har
+     * bir katak yozuvidan keyingi server render'i). `setRows(newRows)`
+     * bo'lganda 250 ta qatorning hammasi yangi obyekt bo'lardi va
+     * `React.memo` bilan o'ralgan qator/katak komponentlari — ko'rinadigan
+     * ~1500 katak — qaytadan chizilardi. Ekran "sakrardi", ochiq element
+     * fokusdan chiqardi, bosilgan katak boshqasiga tushib qolardi.
+     * `mergeRows` dan keyin faqat HAQIQATAN o'zgargan qator qayta chiziladi.
+     */
+    setRows(prev => mergeRows(prev, newRows));
     setIsLoading(false);
   }, [companies, operations, selectedPeriod, REPORT_COLUMNS]);
 
@@ -503,6 +515,22 @@ const OperationModule: React.FC<Props> = ({
   }, [REPORT_COLUMNS]);
 
   const handleCellUpdate = useCallback(async (companyId: string, colKey: string, newValue: string) => {
+    /**
+     * TAKROR BOSISH — YANGI YOZUV EMAS.
+     *
+     * Server action'lar Next'da NAVBAT bilan bajariladi va ularning har biri
+     * (`updateTag("operations")` tufayli) sahifani serverda qaytadan chizadi.
+     * Sekinlashgan ekranda foydalanuvchi o'sha katakni yana bosardi va navbat
+     * yana bir to'liq render bilan uzayardi. Ayni qiymat allaqachon yo'lda
+     * bo'lsa — hech narsa qilmaymiz (yozuv idempotent, natija o'zgarmaydi).
+     */
+    const pendingSame = pendingCellsRef.current.get(pendingCellKey(companyId, colKey));
+    if (pendingSame && pendingSame.value === newValue) return;
+
+    // Yozuv ketayotganda davriy yangilanish to'xtaydi: u eski ma'lumot bilan
+    // qaytib, hozirgina yozilgan katakni bo'shatib ketishi mumkin edi.
+    const resumeRefresh = pauseAutoRefresh();
+
     // 1. Optimistic Update — eski qiymatni saqlab qolamiz, chunki server
     // rad etishi mumkin (masalan buxgalter tasdiqlangan katakni o'zgartirsa).
     let prevValue: string | number | string[] | undefined;
@@ -574,6 +602,8 @@ const OperationModule: React.FC<Props> = ({
       // `friendlyError` — Next prod'da matnni yashirganda inglizcha texnik
       // matn o'rniga o'zbekcha xabar chiqishi uchun.
       toast.error(friendlyError(e, 'Saqlashda xatolik. Qaytadan urinib ko\'ring.'));
+    } finally {
+      resumeRefresh();
     }
   }, [selectedPeriod, onUpdate, REPORT_COLUMNS, markPendingCell]); // Minimal dependencies
 
@@ -1187,7 +1217,7 @@ const OperationModule: React.FC<Props> = ({
                     {/* Avval bu yerda "REAL-VAQT" yozuvi va pulsatsiyalanuvchi
                         nuqta turardi. Bu noto'g'ri edi: ma'lumot `unstable_cache`
                         orqali 5 daqiqagacha eskirgan bo'lishi mumkin, sahifa esa
-                        har 15 soniyada yangilanadi. Endi yorliq nimani anglatsa,
+                        har daqiqada yangilanadi. Endi yorliq nimani anglatsa,
                         shuni yozadi. `py-0.2` ham olib tashlandi — Tailwind'da
                         bunday qadam yo'q, u jim ravishda hech narsa bermasdi. */}
                     {/* Matn o'rniga nuqta: "AVTO-YANGILANISH" har doim bir xil
@@ -1195,7 +1225,7 @@ const OperationModule: React.FC<Props> = ({
                     <span
                       className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                       style={{ background: 'var(--success)' }}
-                      title="Avto-yangilanish yoqilgan — sahifa har 15 soniyada yangilanadi"
+                      title="Avto-yangilanish yoqilgan — sahifa har daqiqada, siz ish bilan band bo'lmaganingizda yangilanadi"
                     />
                   </div>
                   {/* Progress bar */}

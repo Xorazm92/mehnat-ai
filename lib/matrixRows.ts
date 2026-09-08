@@ -107,3 +107,60 @@ export function reconcilePendingCells(
 
   return { overrides, settled };
 }
+
+// ── Qatorlarni birlashtirish (havolalarni saqlab qolish) ─────────
+
+/** Matritsa qatorining bu modulga kerakli qismi: kalit → katak qiymati. */
+export type MatrixRowLike = Record<string, unknown>;
+
+/** Katak qiymati massiv ham bo'lishi mumkin (`activeServices`). */
+function cellsEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+  }
+  return false;
+}
+
+/** Ikki qator MAZMUNAN bir xilmi. */
+export function rowsEqual(a: MatrixRowLike, b: MatrixRowLike): boolean {
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  for (const key of keys) {
+    // `key in b` — ikkala qatorda kalitlar SONI bir xil bo'lib, to'plami
+    // farq qilishi mumkin (ustunlar ro'yxati o'zgarsa). Busiz ikkala tomonda
+    // `undefined` bo'lgan kalit "bir xil" deb hisoblanardi.
+    if (!(key in b) || !cellsEqual(a[key], b[key])) return false;
+  }
+  return true;
+}
+
+/**
+ * Yangi qurilgan qatorlarni ESKILARI bilan birlashtiradi: mazmuni
+ * o'zgarmagan qator eski OBYEKTI bilan qoladi.
+ *
+ * NEGA KERAK. Sahifa har yangilanganda (`router.refresh()` yoki katak
+ * yozuvidan keyingi server render'i) qatorlar noldan quriladi va hammasi
+ * yangi obyekt bo'ladi. `OperationRow`/`StatusCell` `React.memo` bilan
+ * o'ralgan, lekin memo taqqoslashi HAVOLA bo'yicha ishlaydi — natijada bitta
+ * katak o'zgarganda ham ko'rinadigan barcha qator va ~1500 katak qaytadan
+ * chizilardi. Bu ekranning "sakrashi" va bosilgan katakning boshqasiga
+ * tushib qolishining bevosita sababi edi.
+ *
+ * Massivning O'ZI ham hech narsa o'zgarmagan bo'lsa eski havolasi bilan
+ * qaytadi — bunda React umuman qayta chizmaydi.
+ *
+ * Qatorlar O'RIN bo'yicha solishtiriladi: ro'yxat tartibi bitta so'rovdan
+ * keladi va barqaror; tartib o'zgarsa qatorlar yangi obyekt bo'ladi, ya'ni
+ * eng yomon holatda hozirgi xatti-harakat qaytadi.
+ */
+export function mergeRows<T extends MatrixRowLike>(prev: readonly T[], next: T[]): T[] {
+  let changed = prev.length !== next.length;
+  const out = next.map((row, i) => {
+    const old = prev[i];
+    if (old && rowsEqual(old, row)) return old;
+    changed = true;
+    return row;
+  });
+  return changed ? out : (prev as T[]);
+}
