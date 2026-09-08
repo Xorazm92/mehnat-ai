@@ -4,8 +4,12 @@
  * OPERATION ROW — matritsaning bitta firma qatori.
  *
  * `React.memo` — qator faqat o'z ma'lumoti o'zgarganda qayta chiziladi.
- * Muzlatilgan (sticky) ustun offsetlari shu yerda qotirilgan piksel; ularni
- * o'lchanadigan qilish M8 ishiga bog'liq (docs/audit/UI_AUDIT_2026-07.md).
+ *
+ * Muzlatilgan (sticky) ustunlarning `left` siljishi endi QO'LDA yozilmaydi:
+ * u `MATRIX_COL_LEFT` dan keladi va jadvalning `colgroup` kengliklari bilan
+ * bitta manbadan hisoblanadi (matrixVisuals.ts). Ilgari bu ikkisi ajralgan
+ * edi — avtomatik kenglikda uzun INN yoki firma nomi ustunni kengaytirardi
+ * va muzlatilgan ustunlar bir-birining ustiga chiqib ketardi.
  */
 import React, { useMemo } from "react";
 import { formatNum } from "@/lib/platform/format";
@@ -15,7 +19,7 @@ import { columnAppliesToRegime, regimeBlockReason } from "@/lib/reportApplicabil
 import type { CompanyRelation } from "@/lib/platform/access";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { StatusCell } from "./StatusCell";
-import { buildGroupEdges, getGroupStyle, paymentCellBg, paymentCellColor } from "./matrixVisuals";
+import { MATRIX_COL_LEFT, buildGroupEdges, getGroupStyle, paymentCellBg, paymentCellColor } from "./matrixVisuals";
 import type { ProofMeta, ReportRow } from "./types";
 
 export const OperationRow = React.memo<{
@@ -93,22 +97,22 @@ export const OperationRow = React.memo<{
     // qo'yilgan ramka brauzer tomonidan UMUMAN chizilmaydi. Shuning uchun
     // matritsada vertikal chiziqlar bor edi, gorizontallari esa yo'q.
     <tr className="group transition-colors">
-      <td className="sticky left-0 z-20 px-2 py-1.5 text-center text-micro font-bold w-10 min-w-[40px] transition-colors" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
+      <td className="sticky z-20 px-2 py-1.5 text-center text-micro font-bold transition-colors" style={{ left: MATRIX_COL_LEFT.index, background: 'var(--surface-2)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
         {idx + 1}
       </td>
       <td
-        className="sticky left-10 z-20 px-3 py-1.5 transition-colors w-48 min-w-[192px] cursor-pointer"
-        style={{ background: 'var(--surface)', borderRight: '1px solid var(--border)' }}
+        className="sticky z-20 px-3 py-1.5 transition-colors cursor-pointer"
+        style={{ left: MATRIX_COL_LEFT.name, background: 'var(--surface)', borderRight: '1px solid var(--border)' }}
         onClick={() => row.companyId && onCompanySelect(row.companyId as string)}
       >
         <div className="max-w-[180px] truncate text-meta font-bold transition-colors icon-btn-accent" style={{ color: 'var(--text)' }} title={row.name}>
           {row.name}
         </div>
       </td>
-      <td className="md:sticky md:left-[232px] z-20 px-1.5 py-1.5 text-center text-micro font-bold w-20 min-w-[80px] transition-colors group-hover:bg-[var(--surface-2)]" style={{ background: 'var(--surface)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
+      <td className="md:sticky z-20 px-1.5 py-1.5 text-center text-micro font-bold transition-colors group-hover:bg-[var(--surface-2)]" style={{ left: MATRIX_COL_LEFT.inn, background: 'var(--surface)', color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}>
         {row.inn || '—'}
       </td>
-      <td className="md:sticky md:left-[312px] z-20 px-2 py-1.5 transition-colors w-24 min-w-[96px] group-hover:bg-[var(--surface-2)]" style={{ background: 'var(--surface)', borderRight: '2px solid var(--border)' }}>
+      <td className="md:sticky z-20 px-2 py-1.5 transition-colors group-hover:bg-[var(--surface-2)]" style={{ left: MATRIX_COL_LEFT.accountant, background: 'var(--surface)', borderRight: '2px solid var(--border)' }}>
         <div className="max-w-[90px] truncate text-micro font-bold" style={{ color: 'var(--text-2)' }} title={row.accountant}>
           {row.accountant || '—'}
         </div>

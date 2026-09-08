@@ -59,6 +59,9 @@ import { useDismissable } from '@/hooks/useDismissable';
 // katak menyusi va qator. Bu fayl endi ORKESTRATSIYA — ma'lumot, filtr, saqlash.
 import { OperationRow } from './operation/OperationRow';
 import {
+  MATRIX_COL_LEFT,
+  MATRIX_COL_W,
+  MATRIX_FROZEN_W,
   PENDING_TTL_MS,
   buildGroupEdges,
   getGroupStyle,
@@ -1570,11 +1573,33 @@ const OperationModule: React.FC<Props> = ({
             </div>
           </div>
         ) : (
-          <table className="w-full border-separate border-spacing-0 text-xs matrix-grid">
+          <table className="w-full table-fixed border-separate border-spacing-0 text-xs matrix-grid">
+            {/* `table-fixed` + `colgroup`: ustun kengligi ko'rinayotgan
+                qatorlarga BOG'LIQ EMAS. Busiz virtualizatsiya va avtomatik
+                kenglik bir-birini qo'zg'atib turardi, muzlatilgan ustunlarning
+                qo'lda yozilgan `left` siljishi esa mos kelmay qolardi
+                (matrixVisuals.ts → MATRIX_COL_W izohi). */}
+            <colgroup>
+              <col style={{ width: MATRIX_COL_W.index }} />
+              <col style={{ width: MATRIX_COL_W.name }} />
+              <col style={{ width: MATRIX_COL_W.inn }} />
+              <col style={{ width: MATRIX_COL_W.accountant }} />
+              {showPayment && <col style={{ width: MATRIX_COL_W.payment }} />}
+              {visibleColumns.map(col =>
+                (col as { isSplit?: boolean }).isSplit ? (
+                  <React.Fragment key={col.key}>
+                    <col style={{ width: MATRIX_COL_W.data }} />
+                    <col style={{ width: MATRIX_COL_W.data }} />
+                  </React.Fragment>
+                ) : (
+                  <col key={col.key} style={{ width: MATRIX_COL_W.data }} />
+                )
+              )}
+            </colgroup>
             <thead className="sticky top-0 z-50">
               {/* Group row */}
               <tr className="h-7">
-                <th colSpan={4} className="sticky top-0 left-0 z-[100] px-3 py-1.5 text-left text-micro font-semibold uppercase tracking-widest w-[408px] min-w-[408px]" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)', color: 'var(--text-3)' }}>
+                <th colSpan={4} className="sticky top-0 left-0 z-[100] px-3 py-1.5 text-left text-micro font-semibold uppercase tracking-widest" style={{ width: MATRIX_FROZEN_W, background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)', color: 'var(--text-3)' }}>
                   {t.firmTable}
                 </th>
                 {showPayment && (
@@ -1621,10 +1646,10 @@ const OperationModule: React.FC<Props> = ({
               </tr>
               {/* Column header row */}
               <tr className="h-9">
-                <th className="sticky top-[28px] left-0 z-[100] px-2 py-2 text-center text-micro font-bold w-10 min-w-[40px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>#</th>
-                <th className="sticky top-[28px] left-10 z-[100] px-3 py-2 text-left text-micro font-bold w-48 min-w-[192px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }} aria-sort={table.sortKey === 'name' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('name')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">{t.companyName}{table.sortKey === 'name' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
-                <th className="md:sticky md:top-[28px] md:left-[232px] z-[100] px-1.5 py-2 text-center text-micro font-bold w-20 min-w-[80px]" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }} aria-sort={table.sortKey === 'inn' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('inn')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">INN{table.sortKey === 'inn' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
-                <th className="md:sticky md:top-[28px] md:left-[312px] z-[100] px-2 py-2 text-left text-micro font-bold w-24 min-w-[96px] uppercase" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)' }} aria-sort={table.sortKey === 'accountant' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('accountant')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">BUXGALTER{table.sortKey === 'accountant' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
+                <th className="sticky top-[28px] z-[100] px-2 py-2 text-center text-micro font-bold" style={{ left: MATRIX_COL_LEFT.index, background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>#</th>
+                <th className="sticky top-[28px] z-[100] px-3 py-2 text-left text-micro font-bold uppercase" style={{ left: MATRIX_COL_LEFT.name, background: 'var(--surface-2)', color: 'var(--text-2)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }} aria-sort={table.sortKey === 'name' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('name')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">{t.companyName}{table.sortKey === 'name' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
+                <th className="md:sticky md:top-[28px] z-[100] px-1.5 py-2 text-center text-micro font-bold" style={{ left: MATRIX_COL_LEFT.inn, background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }} aria-sort={table.sortKey === 'inn' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('inn')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">INN{table.sortKey === 'inn' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
+                <th className="md:sticky md:top-[28px] z-[100] px-2 py-2 text-left text-micro font-bold uppercase" style={{ left: MATRIX_COL_LEFT.accountant, background: 'var(--surface-2)', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', borderRight: '2px solid var(--border)' }} aria-sort={table.sortKey === 'accountant' ? (table.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}><button type="button" onClick={() => table.toggleSort('accountant')} className="inline-flex items-center gap-1 hover:opacity-75" title="Saralash">BUXGALTER{table.sortKey === 'accountant' && (table.sortDir === 'asc' ? ' \u2191' : ' \u2193')}</button></th>
                 {visibleColumns.map(col => {
                   const st = getGroupStyle(col.group);
                   const groupEdges = buildGroupEdges(visibleColumns);

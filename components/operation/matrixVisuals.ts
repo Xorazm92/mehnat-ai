@@ -179,6 +179,59 @@ export const STATUS_STYLE: Record<CellStatus, { bg: string; text: string; icon: 
  */
 export const PENDING_TTL_MS = 60_000;
 
+// ── Ustun kengliklari — YAGONA MANBA ────────────────────────────
+
+/**
+ * MATRITSA USTUNLARI QAT'IY KENGLIKDA.
+ *
+ * MUAMMO. Jadval `table-layout: auto` edi, ya'ni brauzer ustun kengligini
+ * AYNI PAYTDA DOM'da turgan qatorlarning MAZMUNIDAN hisoblardi. Matritsa esa
+ * virtualizatsiyalangan — 279 qatordan DOM'da ~34 tasi bo'ladi va ular doim
+ * almashib turadi. Har almashuvda:
+ *
+ *   qatorlar to'plami o'zgardi → ustun kengligi qayta hisoblandi → jadval
+ *   umumiy kengligi o'zgardi → gorizontal skroll paydo bo'ldi/yo'qoldi →
+ *   konteyner o'lchami o'zgardi → virtualizator boshqa qatorlarni chizdi → …
+ *
+ * Bu o'z-o'zini qo'zg'atuvchi halqa: ekranda u "sahifa qayta yuklanayapti"
+ * bo'lib ko'rinadi — ustunlar sakraydi, bosilgan katak boshqasiga tushadi.
+ *
+ * IKKINCHI OQIBAT. Muzlatilgan to'rt ustunning `left` siljishi QO'LDA
+ * yozilgan piksel edi. U faqat ustun kengligi AYNAN o'sha qiymat bo'lgandagina
+ * to'g'ri; avtomatik kenglikda 14 xonali INN yoki uzun firma nomi ustunni
+ * kengaytirardi va muzlatilgan ustunlar bir-birining ustiga chiqib ketardi.
+ *
+ * YECHIM: `table-layout: fixed` + `<colgroup>`. Kenglik mazmunga umuman
+ * bog'liq emas, siljishlar esa SHU YERDAN hisoblanadi — sarlavha
+ * (`OperationModule`) va qator (`OperationRow`) bitta manbadan o'qiydi,
+ * ya'ni ular boshqa ajralib keta olmaydi.
+ */
+export const MATRIX_COL_W = {
+  /** Tartib raqami — uch xonagacha. */
+  index: 40,
+  /** Firma nomi — uzuni kesiladi (`truncate`). */
+  name: 192,
+  /** INN — eng uzuni 14 xona (jismoniy shaxs STIR'i). */
+  inn: 96,
+  /** Buxgalter ismi — kesiladi. */
+  accountant: 96,
+  /** "To'lov" ustuni — uch qatorli katak. */
+  payment: 96,
+  /** Hisobot yoki to'lov katagi. */
+  data: 40,
+} as const;
+
+/** Muzlatilgan ustunlarning chapdan siljishi — kengliklardan HISOBLANADI. */
+export const MATRIX_COL_LEFT = {
+  index: 0,
+  name: MATRIX_COL_W.index,
+  inn: MATRIX_COL_W.index + MATRIX_COL_W.name,
+  accountant: MATRIX_COL_W.index + MATRIX_COL_W.name + MATRIX_COL_W.inn,
+} as const;
+
+/** Muzlatilgan blokning to'liq kengligi — guruh sarlavhasi shuni egallaydi. */
+export const MATRIX_FROZEN_W = MATRIX_COL_LEFT.accountant + MATRIX_COL_W.accountant;
+
 export interface StatusStyle {
   bg: string;
   text: string;
